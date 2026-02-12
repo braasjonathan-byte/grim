@@ -9,7 +9,7 @@ interface PlanPickerProps {
   onDone: () => void;
 }
 
-type Step = "profile" | "select" | "1rm" | "loading";
+type Step = "select" | "profile" | "1rm" | "loading";
 
 const defaultProfile: FitnessProfile = {
   max_distance_km: null,
@@ -19,7 +19,7 @@ const defaultProfile: FitnessProfile = {
 };
 
 const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
-  const [step, setStep] = useState<Step>("profile");
+  const [step, setStep] = useState<Step>("select");
   const [selected, setSelected] = useState<number | null>(null);
   const [rms, setRms] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -28,13 +28,39 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
   const selectedTemplate = selected !== null && selected >= 0 ? planTemplates[selected] : null;
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
 
-  const handleNext = () => {
+  // Determine if selected plan needs running profile data
+  const needsRunningProfile = selectedTemplate && (
+    selectedTemplate.generateFromProfile !== undefined ||
+    selectedTemplate.name.toLowerCase().includes("löp") ||
+    selectedTemplate.name.toLowerCase().includes("löpning") ||
+    selectedTemplate.description.toLowerCase().includes("löp")
+  );
+
+  const handleSelect = () => {
     if (selected === -1) {
       onDone();
       return;
     }
+    if (!selectedTemplate) return;
+
+    // If the plan needs running profile, show profile form first
+    if (needsRunningProfile) {
+      setStep("profile");
+    } else if (needs1RM) {
+      const initial: Record<string, string> = {};
+      for (const lift of selectedTemplate.requiredLifts) {
+        initial[lift] = rms[lift] || "";
+      }
+      setRms(initial);
+      setStep("1rm");
+    } else {
+      applyTemplate(selectedTemplate);
+    }
+  };
+
+  const handleProfileDone = (profile: FitnessProfile) => {
+    setFitnessProfile(profile);
     if (needs1RM) {
-      // Pre-fill empty values
       const initial: Record<string, string> = {};
       for (const lift of selectedTemplate!.requiredLifts) {
         initial[lift] = rms[lift] || "";
@@ -42,7 +68,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       setRms(initial);
       setStep("1rm");
     } else {
-      applyTemplate(selectedTemplate!);
+      applyTemplate(selectedTemplate!, undefined, profile);
     }
   };
 
@@ -53,15 +79,17 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       })
     : false;
 
-  const applyTemplate = async (template: TemplatePlan, rmValues?: Record<string, number>) => {
+  const applyTemplate = async (template: TemplatePlan, rmValues?: Record<string, number>, profileOverride?: FitnessProfile) => {
     setLoading(true);
     setStep("loading");
 
+    const profile = profileOverride || fitnessProfile;
+
     let days = template.days;
     if (template.generateFromProfile) {
-      days = template.generateFromProfile(fitnessProfile);
+      days = template.generateFromProfile(profile);
     } else if (template.generateDays && rmValues) {
-      days = template.generateDays(rmValues, fitnessProfile);
+      days = template.generateDays(rmValues, profile);
     }
 
     if (!days) {
@@ -99,10 +127,8 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     return (
       <FitnessProfileForm
         userId={userId}
-        onDone={(profile) => {
-          setFitnessProfile(profile);
-          setStep("select");
-        }}
+        onDone={handleProfileDone}
+        runningOnly={!needsRunningProfile ? false : true}
       />
     );
   }
@@ -242,12 +268,14 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
 
       {selected !== null && (
         <button
-          onClick={handleNext}
+          onClick={handleSelect}
           disabled={loading}
           className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity animate-fade-in"
         >
           {selected === -1
             ? "Fortsätt utan plan"
+            : needsRunningProfile
+            ? "Nästa – Dina löpförutsättningar →"
             : needs1RM
             ? "Nästa – Ange din 1RM →"
             : "Använd denna plan"}
