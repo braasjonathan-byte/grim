@@ -121,6 +121,7 @@ export type Database = {
           day: string
           done: boolean
           id: string
+          skipped: boolean
           updated_at: string
           user_comment: string | null
           user_id: string
@@ -130,6 +131,7 @@ export type Database = {
           day: string
           done?: boolean
           id?: string
+          skipped?: boolean
           updated_at?: string
           user_comment?: string | null
           user_id: string
@@ -139,6 +141,7 @@ export type Database = {
           day?: string
           done?: boolean
           id?: string
+          skipped?: boolean
           updated_at?: string
           user_comment?: string | null
           user_id?: string
