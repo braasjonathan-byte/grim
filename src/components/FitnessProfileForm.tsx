@@ -7,6 +7,7 @@ interface FitnessProfileFormProps {
   userId: string;
   onDone: (profile: FitnessProfile) => void;
   runningOnly?: boolean;
+  strengthOnly?: boolean;
 }
 
 const experienceLevels = [
@@ -15,7 +16,7 @@ const experienceLevels = [
   { value: "avancerad", label: "Avancerad", description: "Tränat 3+ år regelbundet" },
 ];
 
-const FitnessProfileForm = ({ userId, onDone, runningOnly = false }: FitnessProfileFormProps) => {
+const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly = false }: FitnessProfileFormProps) => {
   const [maxDistance, setMaxDistance] = useState("");
   const [time10km, setTime10km] = useState("");
   const [experience, setExperience] = useState("");
@@ -68,35 +69,39 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false }: FitnessProf
       </div>
 
       <div className="space-y-4">
-        {/* Max distance */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">
-            Max långdistans du kan springa (km)
-          </label>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={maxDistance}
-            onChange={(e) => setMaxDistance(e.target.value)}
-            placeholder="t.ex. 15"
-            className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
-        </div>
+        {/* Max distance - hide for strength-only */}
+        {!strengthOnly && (
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">
+              Max långdistans du kan springa (km)
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={maxDistance}
+              onChange={(e) => setMaxDistance(e.target.value)}
+              placeholder="t.ex. 15"
+              className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+            />
+          </div>
+        )}
 
-        {/* 10km time */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">
-            Tid på 10 km (minuter)
-          </label>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={time10km}
-            onChange={(e) => setTime10km(e.target.value)}
-            placeholder="t.ex. 55"
-            className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
-        </div>
+        {/* 10km time - hide for strength-only */}
+        {!strengthOnly && (
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">
+              Tid på 10 km (minuter)
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={time10km}
+              onChange={(e) => setTime10km(e.target.value)}
+              placeholder="t.ex. 55"
+              className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+            />
+          </div>
+        )}
 
         {/* Experience level - always show */}
         <div className="space-y-2">
@@ -121,8 +126,8 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false }: FitnessProf
           </div>
         </div>
 
-        {/* Training days per week - only for non-running-only */}
-        {!runningOnly && (
+        {/* Training days per week - only for non-running-only and non-strength-only */}
+        {!runningOnly && !strengthOnly && (
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground block">
               Tillgängliga träningsdagar per vecka

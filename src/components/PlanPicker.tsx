@@ -36,6 +36,12 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     selectedTemplate.description.toLowerCase().includes("löpnivå")
   );
 
+  // Determine if selected plan is strength-only (no running fields, no training days selector)
+  const isStrengthOnly = selectedTemplate && (
+    selectedTemplate.name.toLowerCase().includes("styrke") ||
+    selectedTemplate.name.toLowerCase().includes("styrka")
+  ) && !needsRunningProfile;
+
   // Determine if selected plan needs any profile data (experience level etc.)
   const needsProfile = selectedTemplate && (
     selectedTemplate.generateFromProfile !== undefined
@@ -134,6 +140,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         userId={userId}
         onDone={handleProfileDone}
         runningOnly={!!needsRunningProfile}
+        strengthOnly={!!isStrengthOnly}
       />
     );
   }
