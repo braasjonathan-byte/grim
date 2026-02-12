@@ -4,6 +4,7 @@ import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moo
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
+import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -112,6 +113,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
   const [commentNicknames, setCommentNicknames] = useState<Record<string, string>>({});
+
+  // Replacement workout dialog state
+  const [replacementTarget, setReplacementTarget] = useState<{ planId: string; sessionName: string; week: number; day: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
@@ -948,7 +952,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     {isDone && <Check className="w-4 h-4 text-success-foreground" />}
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); toggleSkipped(plan.week, plan.day); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Open replacement dialog instead of directly skipping
+                      setReplacementTarget({
+                        planId: plan.id,
+                        sessionName: plan.session_name,
+                        week: plan.week,
+                        day: plan.day,
+                      });
+                    }}
                     className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
                       isSkipped ? "bg-destructive text-destructive-foreground" : "text-muted-foreground/40 hover:text-destructive"
                     }`}
@@ -1052,6 +1065,26 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           );
         })}
       </div>
+
+      {/* Replacement workout dialog */}
+      {replacementTarget && (
+        <ReplacementWorkoutDialog
+          userId={userId}
+          planId={replacementTarget.planId}
+          sessionName={replacementTarget.sessionName}
+          week={replacementTarget.week}
+          day={replacementTarget.day}
+          onClose={() => setReplacementTarget(null)}
+          onReplaced={() => {
+            setReplacementTarget(null);
+            fetchData();
+          }}
+          onSkipOnly={() => {
+            setReplacementTarget(null);
+            toggleSkipped(replacementTarget.week, replacementTarget.day);
+          }}
+        />
+      )}
     </div>
   );
 };

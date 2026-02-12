@@ -2,16 +2,17 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
 import { planTemplates, liftLabels, type TemplatePlan } from "@/data/planTemplates";
+import FitnessProfileForm from "@/components/FitnessProfileForm";
 
 interface PlanPickerProps {
   userId: string;
   onDone: () => void;
 }
 
-type Step = "select" | "1rm" | "loading";
+type Step = "profile" | "select" | "1rm" | "loading";
 
 const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
-  const [step, setStep] = useState<Step>("select");
+  const [step, setStep] = useState<Step>("profile");
   const [selected, setSelected] = useState<number | null>(null);
   const [rms, setRms] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -83,6 +84,15 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     }
     applyTemplate(selectedTemplate!, rmValues);
   };
+
+  if (step === "profile") {
+    return (
+      <FitnessProfileForm
+        userId={userId}
+        onDone={() => setStep("select")}
+      />
+    );
+  }
 
   if (step === "loading") {
     return (
