@@ -309,33 +309,36 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     return `${min}:${sec.toString().padStart(2, "0")}`;
   };
 
-  // Adaptive progression: adjust future weeks based on logged results
+  // Adaptive progression: adjust ALL future weeks based on logged results
   const adaptProgression = useCallback(async () => {
     if (mode !== "plan" || weeks.length === 0) return;
 
+    // Fetch ALL completed logs (not just current week)
     const { data: loggedData } = await supabase
       .from("workout_completions")
       .select("*")
       .eq("user_id", userId)
-      .eq("done", true)
-      .lte("week", currentWeek);
+      .eq("done", true);
 
     if (!loggedData || loggedData.length === 0) return;
 
+    // Find the highest week with a completed session
+    const maxLoggedWeek = Math.max(...loggedData.map(l => l.week));
+
+    // Fetch ALL plans after the latest logged week for continuous progression
     const { data: futurePlans } = await supabase
       .from("workout_plans")
       .select("*")
       .eq("user_id", userId)
-      .gt("week", currentWeek);
+      .gt("week", maxLoggedWeek);
 
     if (!futurePlans || futurePlans.length === 0) return;
 
-    // Also fetch current week plans to match logged data to session types
-    const { data: currentPlans } = await supabase
+    // Fetch all plans to match logged data to session types
+    const { data: allPlans } = await supabase
       .from("workout_plans")
       .select("*")
-      .eq("user_id", userId)
-      .lte("week", currentWeek);
+      .eq("user_id", userId);
 
     // Build weight history per exercise (latest logged weight)
     const latestWeight: Record<string, number> = {};
@@ -356,7 +359,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
       // Running: match log to its plan session to get session_name
       if (log.logged_tempo || log.logged_distance_km) {
-        const matchingPlan = currentPlans?.find(
+        const matchingPlan = allPlans?.find(
           (p) => p.week === log.week && p.day === log.day
         );
         if (matchingPlan) {
@@ -475,7 +478,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     if (updates.length > 0) {
       fetchData();
     }
-  }, [userId, mode, weeks, currentWeek, fetchData]);
+  }, [userId, mode, weeks, fetchData]);
 
   useEffect(() => {
     adaptProgression();
