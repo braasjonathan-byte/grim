@@ -68,20 +68,32 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          experience_level: string | null
           id: string
+          max_distance_km: number | null
           nickname: string
+          time_10km_min: number | null
+          training_days_per_week: number | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          experience_level?: string | null
           id?: string
+          max_distance_km?: number | null
           nickname: string
+          time_10km_min?: number | null
+          training_days_per_week?: number | null
           user_id: string
         }
         Update: {
           created_at?: string
+          experience_level?: string | null
           id?: string
+          max_distance_km?: number | null
           nickname?: string
+          time_10km_min?: number | null
+          training_days_per_week?: number | null
           user_id?: string
         }
         Relationships: []
