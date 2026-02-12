@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3 } from "lucide-react";
+import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, ShoppingCart } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -186,6 +186,10 @@ const Index = () => {
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg" }];
 
+  const handleShopClick = () => {
+    window.open("https://www.gymberget.se", "_blank");
+  };
+
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -292,6 +296,13 @@ const Index = () => {
               <span className="font-medium">{label}</span>
             </button>
           )}
+          <button
+            onClick={handleShopClick}
+            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span className="font-medium">Shop</span>
+          </button>
         </div>
       </nav>
     </div>);
