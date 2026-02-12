@@ -107,7 +107,15 @@ const Index = () => {
           week: c.week,
           timestamp: c.updated_at
         }));
-        setFriendActivities(activities);
+
+        // Filter out activities already seen (stored in localStorage)
+        const seenRaw = localStorage.getItem("seenFriendActivities");
+        const seenMap: Record<string, string> = seenRaw ? JSON.parse(seenRaw) : {};
+        const unseen = activities.filter((a) => {
+          const lastSeen = seenMap[a.nickname];
+          return !lastSeen || new Date(a.timestamp) > new Date(lastSeen);
+        });
+        setFriendActivities(unseen);
       }
 
       // Real-time subscription for new completions
@@ -217,7 +225,15 @@ const Index = () => {
           userId={user.id}
           friendActivities={friendActivities}
           onClearActivitiesForFriend={(nickname) => {
-            setFriendActivities((prev) => prev.filter((a) => a.nickname !== nickname));
+            setFriendActivities((prev) => {
+              const remaining = prev.filter((a) => a.nickname !== nickname);
+              // Persist seen timestamp in localStorage
+              const seenRaw = localStorage.getItem("seenFriendActivities");
+              const seenMap: Record<string, string> = seenRaw ? JSON.parse(seenRaw) : {};
+              seenMap[nickname] = new Date().toISOString();
+              localStorage.setItem("seenFriendActivities", JSON.stringify(seenMap));
+              return remaining;
+            });
           }} />
 
         }

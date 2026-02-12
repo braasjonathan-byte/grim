@@ -340,6 +340,19 @@ export const planTemplates: TemplatePlan[] = [
     generateDays: generateMachineStrength,
   },
   {
+    name: "🏠 Hemmaträning – Kroppsvikt",
+    description: "6 veckor, 4 pass/vecka. Ingen utrustning behövs. Progressiv kroppsviktsträning med fokus på styrka, kondition och rörlighet.",
+    weeks: 6,
+    requiredLifts: [],
+    days: generateWeeks(6, [
+      { day: "Mån", session_name: "Styrka – Överkropp", details: "Armhävningar 4×12; Diamond push-ups 3×8; Pike push-ups 3×10; Dips (stol) 3×10; Planka 3×45s; Superman hold 3×30s", tempo: "" },
+      { day: "Tis", session_name: "Styrka – Underkropp", details: "Knäböj 4×15; Utfallssteg 3×12/ben; Bulgarska utfall (stol) 3×10/ben; Hip thrust (golv) 3×15; Vadpress 3×20; Rumänsk marklyft (enbent, kroppsvikt) 3×10/ben", tempo: "" },
+      { day: "Ons", session_name: "Vila / Rörlighet", details: "20 min stretching eller yoga. Fokus på höfter, bröstrygg och axlar.", tempo: "" },
+      { day: "Tors", session_name: "HIIT + Core", details: "4 rundor: 40s arbete / 20s vila — Burpees; Mountain climbers; Jump squats; High knees. Vila 2 min mellan rundor. Core-finisher: Crunches 3×20; Cykelcrunches 3×15; Benlyft 3×12", tempo: "" },
+      { day: "Fre", session_name: "Helkropp – Volym", details: "Armhävningar 3×max; Knäböj 3×20; Rodd med vattenflaskor/ryggsäck 3×12; Axelpress (ryggsäck) 3×10; Utfallssteg 2×10/ben; Planka 2×60s", tempo: "" },
+    ]),
+  },
+  {
     name: "🏃 Löpfokus – Distansbygge",
     description: "8 veckor, 3 löppass + 2 styrkepass. Bygga löpkapacitet med stödjande styrketräning.",
     weeks: 8,
