@@ -1,12 +1,21 @@
+export interface FitnessProfile {
+  max_distance_km: number | null;
+  time_10km_min: number | null;
+  experience_level: string | null;
+  training_days_per_week: number | null;
+}
+
 export interface TemplatePlan {
   name: string;
   description: string;
   weeks: number;
   /** Which 1RM lifts this program needs. Empty = RPE-based / no calc needed */
   requiredLifts: string[];
-  /** Function that generates days given 1RM values. If not provided, uses static `days` */
-  generateDays?: (rms: Record<string, number>) => TemplatePlanDay[];
+  /** Function that generates days given 1RM values and optional fitness profile */
+  generateDays?: (rms: Record<string, number>, profile?: FitnessProfile) => TemplatePlanDay[];
   days?: TemplatePlanDay[];
+  /** Function that generates days from fitness profile only (no 1RM needed) */
+  generateFromProfile?: (profile: FitnessProfile) => TemplatePlanDay[];
 }
 
 export interface TemplatePlanDay {
@@ -34,93 +43,86 @@ const generateWeeks = (
   return days;
 };
 
-// ─── Original J/W plan (RPE-based, no 1RM needed) ───────────────────────────
-const originalPlanDays: TemplatePlanDay[] = [
-  { week: 1, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 1, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk 5×3 @ RPE 7; Lätta böj 3×5 @ RPE 6; Rodd/Chins 3×8; Axelpress 3×6", tempo: "RPE enligt text" },
-  { week: 1, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 1, day: "Tors", session_name: "Tröskellöpning", details: "3×10 min (2 min joggvila)", tempo: "5:45–5:40" },
-  { week: 1, day: "Fre", session_name: "Vila eller lätt jogg", details: "20–25 min", tempo: "6:20–6:40" },
-  { week: 1, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 4×3 @ RPE 7; Mark 3×3 @ RPE 7; Frontböj 3×3 @ RPE 6", tempo: "RPE enligt text" },
-  { week: 1, day: "Sön", session_name: "Långpass", details: "14 km", tempo: "6:05–6:20" },
-  { week: 2, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 2, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk 5×3 @ RPE 7–8; Lätta böj 3×5 @ RPE 6; Rodd 4×8", tempo: "RPE enligt text" },
-  { week: 2, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 2, day: "Tors", session_name: "Tröskellöpning", details: "4×8 min (2 min joggvila)", tempo: "5:45–5:40" },
-  { week: 2, day: "Fre", session_name: "Vila eller lätt jogg", details: "20–30 min", tempo: "6:20–6:40" },
-  { week: 2, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 5×2 @ RPE 8; Mark 4×2 @ RPE 7; Frontböj 3×3 @ RPE 6", tempo: "RPE enligt text" },
-  { week: 2, day: "Sön", session_name: "Långpass", details: "15 km", tempo: "6:05–6:20" },
-  { week: 3, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 3, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk 6×2 @ RPE 8; Lätta böj 3×5 @ RPE 6; Chins 4×AMRAP", tempo: "RPE enligt text" },
-  { week: 3, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 3, day: "Tors", session_name: "Tröskellöpning", details: "4×10 min (2 min joggvila)", tempo: "5:40–5:35" },
-  { week: 3, day: "Fre", session_name: "Vila eller lätt jogg", details: "25–30 min", tempo: "6:20–6:40" },
-  { week: 3, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 4×3 @ RPE 8; Mark 3×3 @ RPE 7–8; Enbensutfall 3×8", tempo: "RPE enligt text" },
-  { week: 3, day: "Sön", session_name: "Långpass", details: "16 km", tempo: "6:00–6:15" },
-  { week: 4, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 4, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk 4×4 @ RPE 8; Pausbänk 3×2 @ RPE 7; Böj teknik 3×5 @ 55%", tempo: "RPE enligt text" },
-  { week: 4, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 4, day: "Tors", session_name: "Tröskellöpning", details: "20 min + 10 min (3 min vila)", tempo: "5:40–5:35" },
-  { week: 4, day: "Fre", session_name: "Vila eller lätt jogg", details: "25–30 min", tempo: "6:20–6:40" },
-  { week: 4, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 3×2 @ RPE 8.5; Mark 5×1 @ RPE 8; Pausböj 3×2 @ RPE 6–7", tempo: "RPE enligt text" },
-  { week: 4, day: "Sön", session_name: "Långpass", details: "17 km", tempo: "6:00–6:15" },
-  { week: 5, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 5, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Deload: Bänk 3×3 @ RPE 6; Lätta böj 2×5 @ RPE 5–6; Rörlighet", tempo: "RPE enligt text" },
-  { week: 5, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 5, day: "Tors", session_name: "Tröskellöpning", details: "2×12 min (2 min joggvila) – deload", tempo: "5:50–5:45" },
-  { week: 5, day: "Fre", session_name: "Vila eller lätt jogg", details: "20–25 min", tempo: "6:20–6:40" },
-  { week: 5, day: "Lör", session_name: "Tung styrka ben + mark", details: "Deload: Böj 3×3 @ RPE 6; Mark 3×2 @ RPE 6; Bål 3×10", tempo: "RPE enligt text" },
-  { week: 5, day: "Sön", session_name: "Långpass", details: "14 km", tempo: "6:05–6:20" },
-  { week: 6, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 6, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk 5×3 @ RPE 8; Böj 3×3 @ RPE 6–7; Rodd 4×8", tempo: "RPE enligt text" },
-  { week: 6, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 6, day: "Tors", session_name: "Tröskellöpning", details: "5×6 min (90 s vila)", tempo: "5:35–5:30" },
-  { week: 6, day: "Fre", session_name: "Vila eller lätt jogg", details: "25–30 min", tempo: "6:20–6:40" },
-  { week: 6, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 5×2 @ RPE 8; Mark 4×2 @ RPE 8; Frontböj 3×2 @ RPE 7", tempo: "RPE enligt text" },
-  { week: 6, day: "Sön", session_name: "Långpass", details: "18 km", tempo: "5:55–6:10" },
-  { week: 7, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 7, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk 6×2 @ RPE 8; Axelpress 3×5 @ RPE 7; Chins 4×AMRAP", tempo: "RPE enligt text" },
-  { week: 7, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 7, day: "Tors", session_name: "Tröskellöpning", details: "6×5 min (90 s vila)", tempo: "5:35–5:30" },
-  { week: 7, day: "Fre", session_name: "Vila eller lätt jogg", details: "25–35 min", tempo: "6:20–6:40" },
-  { week: 7, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 4×3 @ RPE 8; Mark 3×3 @ RPE 8; Enbensarbete 3×8", tempo: "RPE enligt text" },
-  { week: 7, day: "Sön", session_name: "Långpass", details: "18 km", tempo: "5:55–6:10" },
-  { week: 8, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 8, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk 4×4 @ RPE 8; Pausbänk 3×2 @ RPE 7; Böj teknik 3×5 @ 55%", tempo: "RPE enligt text" },
-  { week: 8, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 8, day: "Tors", session_name: "Tröskellöpning", details: "3×12 min (2 min joggvila)", tempo: "5:30–5:25" },
-  { week: 8, day: "Fre", session_name: "Vila eller lätt jogg", details: "25–35 min", tempo: "6:20–6:40" },
-  { week: 8, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 3×2 @ RPE 8.5; Mark 5×1 @ RPE 8.5; Pausböj 3×2 @ RPE 7", tempo: "RPE enligt text" },
-  { week: 8, day: "Sön", session_name: "Långpass", details: "19 km", tempo: "5:55–6:10" },
-  { week: 9, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 9, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Bänk tung singel @ RPE 8, sedan 3×3 @ RPE 7; Lätta böj 3×5 @ RPE 6", tempo: "RPE enligt text" },
-  { week: 9, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 9, day: "Tors", session_name: "Tröskellöpning", details: "2×15 min (3 min joggvila)", tempo: "5:30–5:25" },
-  { week: 9, day: "Fre", session_name: "Vila eller lätt jogg", details: "25–35 min", tempo: "6:20–6:40" },
-  { week: 9, day: "Lör", session_name: "Tung styrka ben + mark", details: "Böj 4×2 @ RPE 8.5; Mark 4×1 @ RPE 8.5; Bål 3×10", tempo: "RPE enligt text" },
-  { week: 9, day: "Sön", session_name: "Långpass", details: "20 km", tempo: "5:55–6:10" },
-  { week: 10, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 10, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Taper: Bänk 3×3 @ RPE 7; Lätta böj 2×5 @ RPE 6", tempo: "RPE enligt text" },
-  { week: 10, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 10, day: "Tors", session_name: "Tröskellöpning", details: "4×6 min (90 s vila) – taper", tempo: "5:35–5:30" },
-  { week: 10, day: "Fre", session_name: "Vila eller lätt jogg", details: "20–25 min", tempo: "6:20–6:40" },
-  { week: 10, day: "Lör", session_name: "Tung styrka ben + mark", details: "Taper: Böj 3×2 @ RPE 7; Mark 3×1 @ RPE 7; Lätta hopp/koord", tempo: "RPE enligt text" },
-  { week: 10, day: "Sön", session_name: "Långpass", details: "16 km", tempo: "6:05–6:20" },
-  { week: 11, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 11, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Taper: Bänk 2×3 @ RPE 6–7; Rörlighet", tempo: "RPE enligt text" },
-  { week: 11, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 11, day: "Tors", session_name: "Tröskellöpning", details: "3×6 min (90 s vila) – taper", tempo: "5:40–5:35" },
-  { week: 11, day: "Fre", session_name: "Vila eller lätt jogg", details: "15–20 min", tempo: "6:20–6:40" },
-  { week: 11, day: "Lör", session_name: "Tung styrka ben + mark", details: "Taper: Böj 2×2 @ RPE 6–7; Mark 2×1 @ RPE 6–7; Bål 2×8", tempo: "RPE enligt text" },
-  { week: 11, day: "Sön", session_name: "Långpass", details: "14 km", tempo: "6:10–6:25" },
-  { week: 12, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
-  { week: 12, day: "Tis", session_name: "Styrka överkropp + lätt ben", details: "Tävlingsvecka: Bänk 2×2 @ RPE 6 (valfritt), rörlighet", tempo: "RPE enligt text" },
-  { week: 12, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
-  { week: 12, day: "Tors", session_name: "Tröskellöpning", details: "10–15 min lätt fartkänsla – tävlingsvecka", tempo: "5:40–5:35" },
-  { week: 12, day: "Fre", session_name: "Vila eller lätt jogg", details: "10–15 min", tempo: "6:20–6:40" },
-  { week: 12, day: "Lör", session_name: "Tung styrka ben + mark", details: "Tävlingsvecka: Lätt böj 2×3 @ RPE 6 (mån/tis om du vill) – ingen tung mark", tempo: "RPE enligt text" },
-  { week: 12, day: "Sön", session_name: "Långpass", details: "10 km", tempo: "6:15–6:30" },
-];
+// ─── Helper: Calculate pace from 10km time ──────────────────────────────────
+const calcPace = (time10km: number | null): { easy: string; threshold: string; long: string } => {
+  if (!time10km) return { easy: "6:05–6:20", threshold: "5:40–5:35", long: "6:10–6:25" };
+  const pacePerKm = time10km / 10; // min/km
+  const easyPace = pacePerKm + 1.0;
+  const thresholdPace = pacePerKm - 0.3;
+  const longPace = pacePerKm + 1.2;
+  const fmt = (p: number) => `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, "0")}`;
+  const range = (p: number, delta = 0.15) => `${fmt(p - delta)}–${fmt(p + delta)}`;
+  return { easy: range(easyPace), threshold: range(thresholdPace), long: range(longPace) };
+};
+
+// ─── Helper: Scale distance based on max distance ────────────────────────────
+const scaleDistance = (targetKm: number, maxDist: number | null): number => {
+  if (!maxDist) return targetKm;
+  // Scale proportionally: if user max is 10km and plan says 20km, scale to 10km
+  // Use a ratio that caps at the user's max and gradually builds
+  const ratio = Math.min(1, maxDist / 20); // 20km is the plan's max
+  return Math.max(3, Math.round(targetKm * ratio));
+};
+
+// ─── Helper: Adjust RPE based on experience ──────────────────────────────────
+const rpeAdjust = (baseRpe: number, experience: string | null): number => {
+  if (experience === "nybörjare") return Math.max(5, baseRpe - 1);
+  if (experience === "avancerad") return Math.min(10, baseRpe + 0.5);
+  return baseRpe;
+};
+
+// ─── Original J/W plan (RPE-based, adapts to profile) ───────────────────────
+function generateOriginalPlan(profile: FitnessProfile): TemplatePlanDay[] {
+  const pace = calcPace(profile.time_10km_min);
+  const exp = profile.experience_level;
+
+  // Base long run distances for weeks 1-12
+  const longRunKm = [14, 15, 16, 17, 14, 18, 18, 19, 20, 16, 14, 10];
+  // RPE values (lower for beginners)
+  const rpe7 = rpeAdjust(7, exp);
+  const rpe8 = rpeAdjust(8, exp);
+
+  const weekPlans: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 12; w++) {
+    const dist = scaleDistance(longRunKm[w - 1], profile.max_distance_km);
+    const isDeload = w === 5 || w >= 10;
+
+    weekPlans.push(
+      { week: w, day: "Mån", session_name: "Vila / promenad", details: "10–30 min lätt gång eller full vila", tempo: "—" },
+      {
+        week: w, day: "Tis", session_name: "Styrka överkropp + lätt ben",
+        details: isDeload
+          ? `Deload: Bänk 3×3 @ RPE ${rpeAdjust(6, exp)}; Lätta böj 2×5 @ RPE ${rpeAdjust(5, exp)}; Rörlighet`
+          : `Bänk 5×3 @ RPE ${rpe7}; Lätta böj 3×5 @ RPE ${rpeAdjust(6, exp)}; Rodd/Chins 3×8; Axelpress 3×6`,
+        tempo: "RPE enligt text",
+      },
+      { week: w, day: "Ons", session_name: "Återhämtning / lätt cykel", details: "20–30 min cykel + rörlighet 10 min", tempo: "—" },
+      {
+        week: w, day: "Tors", session_name: "Tröskellöpning",
+        details: isDeload
+          ? `2×12 min (2 min joggvila) – deload`
+          : w <= 4
+            ? `3×10 min (2 min joggvila)`
+            : `${Math.min(6, 3 + Math.floor((w - 1) / 2))}×${w <= 7 ? "6–8" : "10–12"} min`,
+        tempo: pace.threshold,
+      },
+      {
+        week: w, day: "Fre", session_name: "Vila eller lätt jogg",
+        details: `${isDeload ? "15–20" : "20–30"} min`,
+        tempo: pace.easy,
+      },
+      {
+        week: w, day: "Lör", session_name: "Tung styrka ben + mark",
+        details: isDeload
+          ? `Deload: Böj 3×3 @ RPE ${rpeAdjust(6, exp)}; Mark 3×2 @ RPE ${rpeAdjust(6, exp)}; Bål 3×10`
+          : `Böj 4×3 @ RPE ${rpe7}; Mark 3×3 @ RPE ${rpe7}; Frontböj 3×3 @ RPE ${rpeAdjust(6, exp)}`,
+        tempo: "RPE enligt text",
+      },
+      { week: w, day: "Sön", session_name: "Långpass", details: `${dist} km`, tempo: pace.long },
+    );
+  }
+  return weekPlans;
+}
 
 // ─── Wendler 5/3/1 (4-week cycles × 3 = 12 weeks) ──────────────────────────
 function generate531(rms: Record<string, number>): TemplatePlanDay[] {
@@ -296,13 +298,53 @@ function generateMachineStrength(rms: Record<string, number>): TemplatePlanDay[]
   return days;
 }
 
+// ─── Löpfokus med profilanpassning ───────────────────────────────────────────
+function generateRunningPlan(profile: FitnessProfile): TemplatePlanDay[] {
+  const pace = calcPace(profile.time_10km_min);
+  const days: TemplatePlanDay[] = [];
+  const baseLongMinutes = [70, 75, 80, 85, 70, 90, 80, 60]; // minutes per week
+
+  for (let w = 1; w <= 8; w++) {
+    const longMin = profile.max_distance_km
+      ? Math.round(baseLongMinutes[w - 1] * Math.min(1, profile.max_distance_km / 15))
+      : baseLongMinutes[w - 1];
+
+    days.push(
+      { week: w, day: "Mån", session_name: "Löpning – Lugn", details: `40–50 min i lugnt tempo. Prata-testet: du ska kunna prata.`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Tis", session_name: "Styrka – Helkropp", details: "Knäböj 3×8; Bänkpress 3×8; Rodd 3×10; Axelpress 3×10; Planka 3×45s", tempo: "" },
+      { week: w, day: "Ons", session_name: "Vila", details: "Vilodag. Lätt promenad okej.", tempo: "" },
+      { week: w, day: "Tors", session_name: "Löpning – Tröskellopp", details: "15 min uppvärmning; 20 min i tröskeltempo; 10 min nedvarvning", tempo: `${pace.threshold} min/km` },
+      { week: w, day: "Fre", session_name: "Styrka – Benstyrka", details: "Marklyft 3×5; Benpress 3×10; Hip thrust 3×12; Bencurl 3×12; Core-circuit", tempo: "" },
+      { week: w, day: "Lör", session_name: "Löpning – Långpass", details: `${longMin} min i lätt tempo. Bygg uthållighet.`, tempo: `${pace.long} min/km` },
+    );
+  }
+  return days;
+}
+
+// ─── Hemmaträning med profilanpassning ───────────────────────────────────────
+function generateHomeWorkout(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  // Adjust volume based on experience
+  const reps = exp === "nybörjare" ? { push: 8, sq: 10, rounds: 3 }
+    : exp === "avancerad" ? { push: 15, sq: 20, rounds: 5 }
+    : { push: 12, sq: 15, rounds: 4 };
+
+  return generateWeeks(6, [
+    { day: "Mån", session_name: "Styrka – Överkropp", details: `Armhävningar 4×${reps.push}; Diamond push-ups 3×${Math.max(5, reps.push - 4)}; Pike push-ups 3×${reps.push - 2}; Dips (stol) 3×${reps.push - 2}; Planka 3×45s; Superman hold 3×30s`, tempo: "" },
+    { day: "Tis", session_name: "Styrka – Underkropp", details: `Knäböj 4×${reps.sq}; Utfallssteg 3×${Math.round(reps.sq * 0.8)}/ben; Bulgarska utfall (stol) 3×${Math.round(reps.sq * 0.7)}/ben; Hip thrust (golv) 3×${reps.sq}; Vadpress 3×20`, tempo: "" },
+    { day: "Ons", session_name: "Vila / Rörlighet", details: "20 min stretching eller yoga. Fokus på höfter, bröstrygg och axlar.", tempo: "" },
+    { day: "Tors", session_name: "HIIT + Core", details: `${reps.rounds} rundor: 40s arbete / 20s vila — Burpees; Mountain climbers; Jump squats; High knees. Vila 2 min mellan rundor. Core-finisher: Crunches 3×20; Cykelcrunches 3×15; Benlyft 3×12`, tempo: "" },
+    { day: "Fre", session_name: "Helkropp – Volym", details: `Armhävningar 3×max; Knäböj 3×${reps.sq + 5}; Rodd med vattenflaskor/ryggsäck 3×12; Axelpress (ryggsäck) 3×10; Utfallssteg 2×10/ben; Planka 2×60s`, tempo: "" },
+  ]);
+}
+
 export const planTemplates: TemplatePlan[] = [
   {
     name: "💪 Styrka & Löpning – Kombination",
-    description: "12 veckor, 7 pass/vecka. Styrka + tröskellöpning + långpass. Progressiv periodisering med deload och taper. RPE-baserat.",
+    description: "12 veckor, 7 pass/vecka. Styrka + tröskellöpning + långpass. Anpassas efter din löpnivå och erfarenhet.",
     weeks: 12,
     requiredLifts: [],
-    days: originalPlanDays,
+    generateFromProfile: generateOriginalPlan,
   },
   {
     name: "📈 Wendler 5/3/1 – Långsiktig styrka",
@@ -341,30 +383,17 @@ export const planTemplates: TemplatePlan[] = [
   },
   {
     name: "🏠 Hemmaträning – Kroppsvikt",
-    description: "6 veckor, 4 pass/vecka. Ingen utrustning behövs. Progressiv kroppsviktsträning med fokus på styrka, kondition och rörlighet.",
+    description: "6 veckor, 4 pass/vecka. Ingen utrustning behövs. Anpassas efter din erfarenhetsnivå.",
     weeks: 6,
     requiredLifts: [],
-    days: generateWeeks(6, [
-      { day: "Mån", session_name: "Styrka – Överkropp", details: "Armhävningar 4×12; Diamond push-ups 3×8; Pike push-ups 3×10; Dips (stol) 3×10; Planka 3×45s; Superman hold 3×30s", tempo: "" },
-      { day: "Tis", session_name: "Styrka – Underkropp", details: "Knäböj 4×15; Utfallssteg 3×12/ben; Bulgarska utfall (stol) 3×10/ben; Hip thrust (golv) 3×15; Vadpress 3×20; Rumänsk marklyft (enbent, kroppsvikt) 3×10/ben", tempo: "" },
-      { day: "Ons", session_name: "Vila / Rörlighet", details: "20 min stretching eller yoga. Fokus på höfter, bröstrygg och axlar.", tempo: "" },
-      { day: "Tors", session_name: "HIIT + Core", details: "4 rundor: 40s arbete / 20s vila — Burpees; Mountain climbers; Jump squats; High knees. Vila 2 min mellan rundor. Core-finisher: Crunches 3×20; Cykelcrunches 3×15; Benlyft 3×12", tempo: "" },
-      { day: "Fre", session_name: "Helkropp – Volym", details: "Armhävningar 3×max; Knäböj 3×20; Rodd med vattenflaskor/ryggsäck 3×12; Axelpress (ryggsäck) 3×10; Utfallssteg 2×10/ben; Planka 2×60s", tempo: "" },
-    ]),
+    generateFromProfile: generateHomeWorkout,
   },
   {
     name: "🏃 Löpfokus – Distansbygge",
-    description: "8 veckor, 3 löppass + 2 styrkepass. Bygga löpkapacitet med stödjande styrketräning.",
+    description: "8 veckor, 3 löppass + 2 styrkepass. Tempo och distanser anpassas efter din löpnivå.",
     weeks: 8,
     requiredLifts: [],
-    days: generateWeeks(8, [
-      { day: "Mån", session_name: "Löpning – Lugn", details: "40–50 min i lugnt tempo. Prata-testet: du ska kunna prata.", tempo: "5:30–6:00 min/km" },
-      { day: "Tis", session_name: "Styrka – Helkropp", details: "Knäböj 3×8; Bänkpress 3×8; Rodd 3×10; Axelpress 3×10; Planka 3×45s", tempo: "" },
-      { day: "Ons", session_name: "Vila", details: "Vilodag. Lätt promenad okej.", tempo: "" },
-      { day: "Tors", session_name: "Löpning – Tröskellopp", details: "15 min uppvärmning; 20 min i tröskeltempo; 10 min nedvarvning", tempo: "4:50–5:10 min/km" },
-      { day: "Fre", session_name: "Styrka – Benstyrka", details: "Marklyft 3×5; Benpress 3×10; Hip thrust 3×12; Bencurl 3×12; Core-circuit", tempo: "" },
-      { day: "Lör", session_name: "Löpning – Långpass", details: "70–90 min i lätt tempo. Bygg uthållighet.", tempo: "5:40–6:15 min/km" },
-    ]),
+    generateFromProfile: generateRunningPlan,
   },
 ];
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
-import { planTemplates, liftLabels, type TemplatePlan } from "@/data/planTemplates";
+import { planTemplates, liftLabels, type TemplatePlan, type FitnessProfile } from "@/data/planTemplates";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 
 interface PlanPickerProps {
@@ -11,11 +11,19 @@ interface PlanPickerProps {
 
 type Step = "profile" | "select" | "1rm" | "loading";
 
+const defaultProfile: FitnessProfile = {
+  max_distance_km: null,
+  time_10km_min: null,
+  experience_level: null,
+  training_days_per_week: null,
+};
+
 const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
   const [step, setStep] = useState<Step>("profile");
   const [selected, setSelected] = useState<number | null>(null);
   const [rms, setRms] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile>(defaultProfile);
 
   const selectedTemplate = selected !== null && selected >= 0 ? planTemplates[selected] : null;
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
@@ -50,8 +58,10 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     setStep("loading");
 
     let days = template.days;
-    if (template.generateDays && rmValues) {
-      days = template.generateDays(rmValues);
+    if (template.generateFromProfile) {
+      days = template.generateFromProfile(fitnessProfile);
+    } else if (template.generateDays && rmValues) {
+      days = template.generateDays(rmValues, fitnessProfile);
     }
 
     if (!days) {
@@ -89,7 +99,10 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     return (
       <FitnessProfileForm
         userId={userId}
-        onDone={() => setStep("select")}
+        onDone={(profile) => {
+          setFitnessProfile(profile);
+          setStep("select");
+        }}
       />
     );
   }
@@ -192,6 +205,11 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
                 {template.requiredLifts.length > 0 && (
                   <p className="text-xs text-primary mt-1.5 font-medium">
                     📊 Beräknar vikter från din 1RM
+                  </p>
+                )}
+                {template.generateFromProfile && (
+                  <p className="text-xs text-primary mt-1.5 font-medium">
+                    ✨ Anpassas efter dina förutsättningar
                   </p>
                 )}
               </div>

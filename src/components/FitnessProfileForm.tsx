@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, ArrowRight } from "lucide-react";
+import type { FitnessProfile } from "@/data/planTemplates";
 
 interface FitnessProfileFormProps {
   userId: string;
-  onDone: () => void;
+  onDone: (profile: FitnessProfile) => void;
 }
 
 const experienceLevels = [
@@ -20,19 +21,31 @@ const FitnessProfileForm = ({ userId, onDone }: FitnessProfileFormProps) => {
   const [trainingDays, setTrainingDays] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const buildProfile = (): FitnessProfile => ({
+    max_distance_km: maxDistance ? parseFloat(maxDistance) : null,
+    time_10km_min: time10km ? parseFloat(time10km) : null,
+    experience_level: experience || null,
+    training_days_per_week: trainingDays ? parseInt(trainingDays) : null,
+  });
+
   const handleSave = async () => {
     setSaving(true);
+    const profile = buildProfile();
     await supabase
       .from("profiles")
       .update({
-        max_distance_km: maxDistance ? parseFloat(maxDistance) : null,
-        time_10km_min: time10km ? parseFloat(time10km) : null,
-        experience_level: experience || null,
-        training_days_per_week: trainingDays ? parseInt(trainingDays) : null,
+        max_distance_km: profile.max_distance_km,
+        time_10km_min: profile.time_10km_min,
+        experience_level: profile.experience_level,
+        training_days_per_week: profile.training_days_per_week,
       })
       .eq("user_id", userId);
     setSaving(false);
-    onDone();
+    onDone(profile);
+  };
+
+  const handleSkip = () => {
+    onDone(buildProfile());
   };
 
   return (
@@ -124,7 +137,7 @@ const FitnessProfileForm = ({ userId, onDone }: FitnessProfileFormProps) => {
 
       <div className="flex gap-2">
         <button
-          onClick={onDone}
+          onClick={handleSkip}
           className="flex-1 py-3 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors"
         >
           Hoppa över
