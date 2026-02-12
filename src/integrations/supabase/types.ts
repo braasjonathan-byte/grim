@@ -187,6 +187,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_suggested_friends: {
+        Args: { requesting_user_id: string }
+        Returns: {
+          mutual_count: number
+          nickname: string
+          user_id: string
+        }[]
+      }
       search_users_by_nickname: {
         Args: { requesting_user_id: string; search_term: string }
         Returns: {
