@@ -88,6 +88,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [weeks, setWeeks] = useState<number[]>([]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<"loading" | "choose" | "plan" | "single">("loading");
 
   // Single workout form
@@ -213,13 +214,22 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   const saveComment = async (week: number, day: string) => {
     const key = `${week}-${day}`;
+    const newText = commentInput[key]?.trim();
+    if (!newText) return;
+
+    const existing = comments[key]?.trim();
+    const updated = existing ? `${existing}\n${newText}` : newText;
+
+    setComments((prev) => ({ ...prev, [key]: updated }));
+    setCommentInput((prev) => ({ ...prev, [key]: "" }));
+
     await supabase.from("workout_completions").upsert(
       {
         user_id: userId,
         week,
         day,
         done: completions[key]?.done || false,
-        user_comment: comments[key] || "",
+        user_comment: updated,
       },
       { onConflict: "user_id,week,day" }
     );
@@ -475,9 +485,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   </div>
                   <div className="flex items-center gap-1">
                     {(() => {
-                      const hasOwnComment = !!(comments[key]?.trim());
+                      const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
                       const dayFriendComments = friendComments.filter(c => c.week === 0 && c.day === plan.day);
-                      const totalComments = (hasOwnComment ? 1 : 0) + dayFriendComments.length;
+                      const totalComments = ownLines + dayFriendComments.length;
                       return totalComments > 0 ? (
                         <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
                           <MessageCircle className="w-3 h-3" /> {totalComments}
@@ -664,13 +674,17 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       ) : null;
                     })()}
 
-                    {/* Own comment display */}
+                    {/* Own comments display */}
                     {comments[key]?.trim() && (
-                      <div className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
-                        <p className="text-xs flex items-start gap-1.5">
-                          <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
-                          <span className="text-foreground">{comments[key]}</span>
-                        </p>
+                      <div className="space-y-1">
+                        {comments[key].trim().split("\n").filter(Boolean).map((line, i) => (
+                          <div key={i} className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
+                            <p className="text-xs flex items-start gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
+                              <span className="text-foreground">{line}</span>
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     )}
 
@@ -680,11 +694,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                         <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                         <input
                           type="text"
-                          value={comments[key] || ""}
-                          onChange={(e) => setComments((prev) => ({ ...prev, [key]: e.target.value }))}
-                          onBlur={() => saveComment(0, plan.day)}
+                          value={commentInput[key] || ""}
+                          onChange={(e) => setCommentInput((prev) => ({ ...prev, [key]: e.target.value }))}
                           onKeyDown={(e) => e.key === "Enter" && saveComment(0, plan.day)}
-                          placeholder={comments[key]?.trim() ? "Redigera kommentar..." : "Lägg till kommentar..."}
+                          placeholder="Skriv en kommentar..."
                           className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                         />
                       </div>
@@ -878,9 +891,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                     {(() => {
-                      const hasOwnComment = !!(comments[key]?.trim());
+                      const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
                       const dayFriendComments = friendComments.filter(c => c.week === plan.week && c.day === plan.day);
-                      const totalComments = (hasOwnComment ? 1 : 0) + dayFriendComments.length;
+                      const totalComments = ownLines + dayFriendComments.length;
                       return totalComments > 0 ? (
                         <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full animate-fade-in">
                           <MessageCircle className="w-3 h-3" /> {totalComments}
@@ -917,13 +930,17 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     ) : null;
                   })()}
 
-                  {/* Own comment display */}
+                  {/* Own comments display */}
                   {comments[key]?.trim() && (
-                    <div className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
-                      <p className="text-xs flex items-start gap-1.5">
-                        <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
-                        <span className="text-foreground">{comments[key]}</span>
-                      </p>
+                    <div className="space-y-1">
+                      {comments[key].trim().split("\n").filter(Boolean).map((line, i) => (
+                        <div key={i} className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
+                          <p className="text-xs flex items-start gap-1.5">
+                            <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
+                            <span className="text-foreground">{line}</span>
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -932,11 +949,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                       <input
                         type="text"
-                        value={comments[key] || ""}
-                        onChange={(e) => setComments((prev) => ({ ...prev, [key]: e.target.value }))}
-                        onBlur={() => saveComment(plan.week, plan.day)}
+                        value={commentInput[key] || ""}
+                        onChange={(e) => setCommentInput((prev) => ({ ...prev, [key]: e.target.value }))}
                         onKeyDown={(e) => e.key === "Enter" && saveComment(plan.week, plan.day)}
-                        placeholder={comments[key]?.trim() ? "Redigera kommentar..." : "Lägg till kommentar..."}
+                        placeholder="Skriv en kommentar..."
                         className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                       />
                     </div>
