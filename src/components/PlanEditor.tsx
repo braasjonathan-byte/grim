@@ -18,6 +18,14 @@ interface PlanDay {
   tempo: string;
 }
 
+interface CustomExercise {
+  id: string;
+  name: string;
+  category: string;
+  muscle_group: string;
+  created_by: string;
+}
+
 const PlanEditor = ({ userId }: PlanEditorProps) => {
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -30,8 +38,16 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
   const [showAddDay, setShowAddDay] = useState(false);
   const [newDay, setNewDay] = useState<PlanDay>({ week: 1, day: "Mån", session_name: "", details: "", tempo: "" });
 
+  // Custom exercises state
+  const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [newExName, setNewExName] = useState("");
+  const [newExCategory, setNewExCategory] = useState("styrka");
+  const [newExMuscle, setNewExMuscle] = useState("Helkropp");
+
   useEffect(() => {
     fetchPlans();
+    fetchCustomExercises();
   }, [userId]);
 
   const fetchPlans = async () => {
@@ -48,6 +64,44 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
       if (wks.length > 0) setWeeks(wks);
     }
   };
+
+  const fetchCustomExercises = async () => {
+    const { data } = await supabase
+      .from("custom_exercises")
+      .select("*")
+      .order("name");
+    if (data) setCustomExercises(data);
+  };
+
+  const addCustomExercise = async () => {
+    if (!newExName.trim()) return;
+    await supabase.from("custom_exercises").insert({
+      name: newExName.trim(),
+      category: newExCategory,
+      muscle_group: newExMuscle,
+      created_by: userId,
+    });
+    setNewExName("");
+    setShowAddExercise(false);
+    fetchCustomExercises();
+  };
+
+  const deleteCustomExercise = async (id: string) => {
+    await supabase.from("custom_exercises").delete().eq("id", id);
+    fetchCustomExercises();
+  };
+
+  // Merge built-in + custom exercises
+  const allExercises = [
+    ...exerciseLibrary.map((e) => ({ ...e, id: "", muscleGroup: e.muscleGroup, isCustom: false, created_by: "" })),
+    ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true, created_by: e.created_by })),
+  ];
+
+  const filteredExercises = allExercises.filter((e) => {
+    const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
+    const matchesMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
+    return matchesSearch && matchesMuscle;
+  });
 
   const weekDays = plans
     .filter((p) => p.week === selectedWeek)
@@ -105,12 +159,6 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
     });
   };
 
-  const filteredExercises = exerciseLibrary.filter((e) => {
-    const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
-    const matchesMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
-    return matchesSearch && matchesMuscle;
-  });
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -160,13 +208,72 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
             ))}
           </div>
           <div className="max-h-48 overflow-y-auto space-y-1">
-            {filteredExercises.map((e) => (
-              <div key={e.name} className="flex items-center justify-between p-2 bg-secondary rounded-md text-sm">
-                <span>{e.name}</span>
-                <span className="text-xs text-muted-foreground">{e.muscleGroup}</span>
+            {filteredExercises.map((e, i) => (
+              <div key={`${e.name}-${i}`} className="flex items-center justify-between p-2 bg-secondary rounded-md text-sm">
+                <div className="flex items-center gap-2">
+                  <span>{e.name}</span>
+                  {e.isCustom && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary">Egendefinierad</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{e.muscleGroup}</span>
+                  {e.isCustom && e.created_by === userId && (
+                    <button onClick={() => deleteCustomExercise(e.id)} className="text-destructive hover:text-destructive/80">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
+
+          {/* Add custom exercise */}
+          {showAddExercise ? (
+            <div className="border border-primary/30 rounded-md p-3 space-y-2 animate-fade-in">
+              <input
+                type="text"
+                value={newExName}
+                onChange={(e) => setNewExName(e.target.value)}
+                placeholder="Övningens namn"
+                className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={newExCategory}
+                  onChange={(e) => setNewExCategory(e.target.value)}
+                  className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-md border-none outline-none"
+                >
+                  <option value="styrka">Styrka</option>
+                  <option value="kondition">Kondition</option>
+                  <option value="rörlighet">Rörlighet</option>
+                  <option value="core">Core</option>
+                </select>
+                <select
+                  value={newExMuscle}
+                  onChange={(e) => setNewExMuscle(e.target.value)}
+                  className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-md border-none outline-none"
+                >
+                  {muscleGroups.map((mg) => (
+                    <option key={mg} value={mg}>{mg}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={addCustomExercise} className="flex-1 py-1.5 bg-primary text-primary-foreground font-semibold rounded-md text-xs">
+                  Spara
+                </button>
+                <button onClick={() => setShowAddExercise(false)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">
+                  Avbryt
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddExercise(true)}
+              className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> Lägg till egen övning (synlig för alla)
+            </button>
+          )}
         </div>
       )}
 

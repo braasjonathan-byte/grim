@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import PlanPicker from "@/components/PlanPicker";
 
 interface WorkoutViewProps {
@@ -130,6 +130,17 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const doneCount = weekDays.filter((d) => completions[`${d.week}-${d.day}`]?.done).length;
   const progress = weekDays.length > 0 ? Math.round((doneCount / weekDays.length) * 100) : 0;
 
+  const leavePlan = async () => {
+    if (!confirm("Är du säker? Hela ditt schema och all progress raderas.")) return;
+    await Promise.all([
+      supabase.from("workout_plans").delete().eq("user_id", userId),
+      supabase.from("workout_completions").delete().eq("user_id", userId),
+    ]);
+    setPlans([]);
+    setWeeks([]);
+    setCompletions({});
+  };
+
   if (weeks.length === 0) {
     return <PlanPicker userId={userId} onDone={fetchData} />;
   }
@@ -138,7 +149,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     <div className="space-y-4">
       {/* Week navigation */}
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between relative">
           <button
             onClick={() => weekIdx > 0 && setCurrentWeek(weeks[weekIdx - 1])}
             disabled={weekIdx <= 0}
@@ -150,6 +161,13 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             <h2 className="text-2xl font-black tracking-tight">Vecka {currentWeek}</h2>
             <p className="text-sm text-muted-foreground">av {weeks.length} veckor</p>
           </div>
+          <button
+            onClick={leavePlan}
+            className="absolute right-14 top-3 p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+            title="Lämna plan"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
           <button
             onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
             disabled={weekIdx >= weeks.length - 1}
