@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -27,6 +27,16 @@ interface Completion {
   day: string;
   done: boolean;
   user_comment: string;
+}
+
+interface FriendComment {
+  id: string;
+  author_id: string;
+  target_user_id: string;
+  week: number;
+  day: string;
+  comment: string;
+  created_at: string;
 }
 
 interface CustomExercise {
@@ -97,10 +107,15 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [weightDialog, setWeightDialog] = useState<{ planId: string; exerciseName: string; lastWeight: string | null } | null>(null);
   const [weightInput, setWeightInput] = useState("");
 
+  // Friend comments on own workouts
+  const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
+  const [commentNicknames, setCommentNicknames] = useState<Record<string, string>>({});
+
   const fetchData = useCallback(async () => {
-    const [{ data: planData }, { data: compData }] = await Promise.all([
+    const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
       supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
       supabase.from("workout_completions").select("*").eq("user_id", userId),
+      supabase.from("workout_comments").select("*").eq("target_user_id", userId).order("created_at", { ascending: true }),
     ]);
 
     if (planData) {
@@ -132,6 +147,22 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         commentMap[`${c.week}-${c.day}`] = c.user_comment || "";
       }
       setComments((prev) => ({ ...commentMap, ...prev }));
+    }
+
+    if (friendCommentsData && friendCommentsData.length > 0) {
+      setFriendComments(friendCommentsData);
+      const authorIds = [...new Set(friendCommentsData.map((c) => c.author_id))];
+      const { data: authorProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, nickname")
+        .in("user_id", authorIds);
+      if (authorProfiles) {
+        const map: Record<string, string> = {};
+        for (const p of authorProfiles) map[p.user_id] = p.nickname;
+        setCommentNicknames(map);
+      }
+    } else {
+      setFriendComments([]);
     }
   }, [userId, currentWeek]);
 
@@ -600,6 +631,29 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       </div>
                     ) : null}
 
+                    {/* Friend comments */}
+                    {(() => {
+                      const dayComments = friendComments.filter(c => c.week === 0 && c.day === plan.day);
+                      return dayComments.length > 0 ? (
+                        <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
+                          <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+                            <MessageCircle className="w-3.5 h-3.5" /> Kommentarer från vänner
+                          </p>
+                          {dayComments.map((c) => (
+                            <div key={c.id} className="bg-background/80 rounded-md px-3 py-2">
+                              <p className="text-xs">
+                                <span className="font-semibold text-primary">{commentNicknames[c.author_id] || "..."}</span>{" "}
+                                <span className="text-foreground">{c.comment}</span>
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {new Date(c.created_at).toLocaleDateString("sv-SE")}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
+
                     {/* Comment */}
                     <div className="flex gap-2">
                       <div className="relative flex-1">
@@ -802,13 +856,45 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     <span className="text-xs text-muted-foreground font-mono">{plan.tempo}</span>
                   )}
                 </div>
-                <div className="text-muted-foreground">
-                  {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    {(() => {
+                      const dayComments = friendComments.filter(c => c.week === plan.week && c.day === plan.day);
+                      return dayComments.length > 0 ? (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full animate-fade-in">
+                          <MessageCircle className="w-3 h-3" /> {dayComments.length}
+                        </span>
+                      ) : null;
+                    })()}
+                    {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </div>
               </div>
               {expanded && (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                   <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+
+                  {/* Friend comments */}
+                  {(() => {
+                    const dayComments = friendComments.filter(c => c.week === plan.week && c.day === plan.day);
+                    return dayComments.length > 0 ? (
+                      <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
+                        <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+                          <MessageCircle className="w-3.5 h-3.5" /> Kommentarer från vänner
+                        </p>
+                        {dayComments.map((c) => (
+                          <div key={c.id} className="bg-background/80 rounded-md px-3 py-2">
+                            <p className="text-xs">
+                              <span className="font-semibold text-primary">{commentNicknames[c.author_id] || "..."}</span>{" "}
+                              <span className="text-foreground">{c.comment}</span>
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              {new Date(c.created_at).toLocaleDateString("sv-SE")}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
