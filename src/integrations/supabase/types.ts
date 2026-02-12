@@ -86,6 +86,36 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_comments: {
+        Row: {
+          author_id: string
+          comment: string
+          created_at: string
+          day: string
+          id: string
+          target_user_id: string
+          week: number
+        }
+        Insert: {
+          author_id: string
+          comment: string
+          created_at?: string
+          day: string
+          id?: string
+          target_user_id: string
+          week: number
+        }
+        Update: {
+          author_id?: string
+          comment?: string
+          created_at?: string
+          day?: string
+          id?: string
+          target_user_id?: string
+          week?: number
+        }
+        Relationships: []
+      }
       workout_completions: {
         Row: {
           day: string
