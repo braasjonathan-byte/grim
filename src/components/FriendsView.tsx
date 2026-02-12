@@ -2,8 +2,16 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight } from "lucide-react";
 
+interface FriendActivity {
+  nickname: string;
+  day: string;
+  week: number;
+  timestamp: string;
+}
+
 interface FriendsViewProps {
   userId: string;
+  friendActivities?: FriendActivity[];
 }
 
 interface FriendProfile {
@@ -63,7 +71,7 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
-const FriendsView = ({ userId }: FriendsViewProps) => {
+const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<(Friendship & { profile: FriendProfile })[]>([]);
@@ -521,21 +529,29 @@ const FriendsView = ({ userId }: FriendsViewProps) => {
             <p className="text-sm text-muted-foreground">Inga vänner ännu. Sök efter användarnamn ovan!</p>
           </div>
         ) : (
-          friends.map((friend) => (
-            <button
-              key={friend.id}
-              onClick={() => viewFriendWorkouts(friend)}
-              className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+          friends.map((friend) => {
+            const recentCount = friendActivities.filter(a => a.nickname === friend.profile.nickname).length;
+            return (
+              <button
+                key={friend.id}
+                onClick={() => viewFriendWorkouts(friend)}
+                className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+                  </div>
+                  <span className="font-semibold text-sm">{friend.profile.nickname}</span>
+                  {recentCount > 0 && (
+                    <span className="px-1.5 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full">
+                      🔥 {recentCount} pass
+                    </span>
+                  )}
                 </div>
-                <span className="font-semibold text-sm">{friend.profile.nickname}</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </button>
-          ))
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </button>
+            );
+          })
         )}
       </div>
     </div>
