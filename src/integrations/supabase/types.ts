@@ -187,7 +187,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      search_users_by_nickname: {
+        Args: { requesting_user_id: string; search_term: string }
+        Returns: {
+          nickname: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

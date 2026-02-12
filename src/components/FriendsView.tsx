@@ -145,11 +145,10 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
     setSearching(true);
 
     const { data } = await supabase
-      .from("profiles")
-      .select("user_id, nickname")
-      .ilike("nickname", `%${searchQuery.trim()}%`)
-      .neq("user_id", userId)
-      .limit(10);
+      .rpc("search_users_by_nickname", {
+        search_term: searchQuery.trim(),
+        requesting_user_id: userId,
+      });
 
     setSearchResults(data || []);
     setSearching(false);
