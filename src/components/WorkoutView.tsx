@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Heart, Timer, Route } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
 import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
-import WorkoutLogDialog from "@/components/WorkoutLogDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -121,7 +120,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   // Replacement workout dialog state
   const [replacementTarget, setReplacementTarget] = useState<{ planId: string; sessionName: string; week: number; day: string } | null>(null);
-  const [logTarget, setLogTarget] = useState<{ week: number; day: string; sessionName: string; details: string } | null>(null);
+  
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
@@ -1026,14 +1025,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
                 <div className="flex items-center gap-1 flex-shrink-0">
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isDone) {
-                          toggleDone(plan.week, plan.day);
-                        } else {
-                          setLogTarget({ week: plan.week, day: plan.day, sessionName: plan.session_name, details: plan.details });
-                        }
-                      }}
+                      onClick={(e) => { e.stopPropagation(); toggleDone(plan.week, plan.day); }}
                       className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                         isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
                       }`}
@@ -1090,28 +1082,66 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
               </div>
               {expanded && (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
-                  <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
-
-                  {/* Logged workout data */}
+                  {/* Inline weight inputs for strength exercises */}
                   {(() => {
+                    const s = (plan.session_name + " " + plan.details).toLowerCase();
+                    const isStrength = s.includes("styrka") || s.includes("bänk") || s.includes("böj") || s.includes("mark") || s.includes("press") || s.includes("rodd") || s.includes("chins") || s.includes("tung") || s.includes("rpe") || s.includes("×") || s.includes("x");
+                    if (!isStrength) return <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>;
+
+                    // Extract exercises from details
+                    const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
                     const comp = completions[key];
-                    const hasLog = comp && ((comp as any).logged_tempo || (comp as any).logged_pulse || (comp as any).logged_distance_km || (comp as any).logged_weights);
-                    if (!hasLog) return null;
+                    const savedWeights = (comp?.logged_weights || {}) as Record<string, number>;
+
                     return (
-                      <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-1.5">
-                        <p className="text-xs font-bold text-success flex items-center gap-1.5">📊 Dina loggade resultat</p>
-                        {(comp as any).logged_tempo && (
-                          <p className="text-xs flex items-center gap-1.5"><Timer className="w-3 h-3 text-muted-foreground" /> Tempo: <span className="font-mono font-semibold">{(comp as any).logged_tempo}</span></p>
-                        )}
-                        {(comp as any).logged_pulse && (
-                          <p className="text-xs flex items-center gap-1.5"><Heart className="w-3 h-3 text-muted-foreground" /> Puls: <span className="font-mono font-semibold">{(comp as any).logged_pulse} bpm</span></p>
-                        )}
-                        {(comp as any).logged_distance_km && (
-                          <p className="text-xs flex items-center gap-1.5"><Route className="w-3 h-3 text-muted-foreground" /> Distans: <span className="font-mono font-semibold">{(comp as any).logged_distance_km} km</span></p>
-                        )}
-                        {(comp as any).logged_weights && Object.entries((comp as any).logged_weights).map(([ex, w]: [string, any]) => (
-                          <p key={ex} className="text-xs flex items-center gap-1.5"><Dumbbell className="w-3 h-3 text-muted-foreground" /> {ex}: <span className="font-mono font-semibold">{w} kg</span></p>
-                        ))}
+                      <div className="space-y-2">
+                        {parts.map((part, i) => {
+                          // Extract exercise name (text before first digit pattern)
+                          const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
+                          const exerciseName = nameMatch ? nameMatch[1].trim() : null;
+                          const isLoggable = exerciseName && exerciseName.length > 2 && !exerciseName.toLowerCase().includes("vila") && !exerciseName.toLowerCase().includes("vilodag");
+                          const weightKey = `${key}-${i}`;
+
+                          return (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                              <span className="text-sm text-foreground flex-1">{part}</span>
+                              {isLoggable && (
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    placeholder="kg"
+                                    defaultValue={savedWeights[exerciseName] || ""}
+                                    onBlur={async (e) => {
+                                      const val = parseFloat(e.target.value);
+                                      if (isNaN(val) || val <= 0) return;
+                                      const existing = (completions[key]?.logged_weights || {}) as Record<string, number>;
+                                      const updated = { ...existing, [exerciseName]: val };
+                                      await supabase.from("workout_completions").upsert(
+                                        {
+                                          user_id: userId,
+                                          week: plan.week,
+                                          day: plan.day,
+                                          done: completions[key]?.done || false,
+                                          skipped: completions[key]?.skipped || false,
+                                          logged_weights: updated,
+                                        } as any,
+                                        { onConflict: "user_id,week,day" }
+                                      );
+                                      setCompletions(prev => ({
+                                        ...prev,
+                                        [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                      }));
+                                    }}
+                                    className="w-16 bg-secondary text-foreground text-xs px-2 py-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground text-right font-mono"
+                                  />
+                                  <span className="text-[10px] text-muted-foreground">kg</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })()}
@@ -1196,32 +1226,6 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           onSkipOnly={() => {
             setReplacementTarget(null);
             toggleSkipped(replacementTarget.week, replacementTarget.day);
-          }}
-        />
-      )}
-
-      {/* Workout log dialog */}
-      {logTarget && (
-        <WorkoutLogDialog
-          userId={userId}
-          week={logTarget.week}
-          day={logTarget.day}
-          sessionName={logTarget.sessionName}
-          details={logTarget.details}
-          existingLog={(() => {
-            const comp = completions[`${logTarget.week}-${logTarget.day}`];
-            if (!comp) return undefined;
-            return {
-              logged_tempo: comp.logged_tempo || null,
-              logged_pulse: comp.logged_pulse || null,
-              logged_distance_km: comp.logged_distance_km || null,
-              logged_weights: comp.logged_weights || null,
-            };
-          })()}
-          onClose={() => setLogTarget(null)}
-          onSaved={() => {
-            setLogTarget(null);
-            fetchData();
           }}
         />
       )}
