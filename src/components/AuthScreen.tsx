@@ -27,8 +27,8 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
       setLoading(false);
       return;
     }
-    if (password.length < 4) {
-      setError("Lösenord måste vara minst 4 tecken");
+    if (password.length < 8) {
+      setError("Lösenord måste vara minst 8 tecken");
       setLoading(false);
       return;
     }
@@ -46,19 +46,6 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         return;
       }
     } else {
-      // Check if nickname is taken
-      const { data: existing } = await supabase
-        .from("profiles")
-        .select("nickname")
-        .eq("nickname", trimmedNick)
-        .maybeSingle();
-
-      if (existing) {
-        setError("Namnet är redan taget");
-        setLoading(false);
-        return;
-      }
-
       const { error: signupError } = await supabase.auth.signUp({
         email,
         password,
@@ -67,11 +54,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         },
       });
       if (signupError) {
-        if (signupError.message.includes("already registered")) {
-          setError("Namnet är redan taget");
-        } else {
-          setError(signupError.message);
-        }
+        setError("Registrering misslyckades. Försök med ett annat namn.");
         setLoading(false);
         return;
       }

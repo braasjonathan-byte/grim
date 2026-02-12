@@ -18,8 +18,8 @@ const ChangePassword = ({ onClose }: ChangePasswordProps) => {
     e.preventDefault();
     setError("");
 
-    if (newPassword.length < 4) {
-      setError("Lösenord måste vara minst 4 tecken");
+    if (newPassword.length < 8) {
+      setError("Lösenord måste vara minst 8 tecken");
       return;
     }
     if (newPassword !== confirmPassword) {
