@@ -14,18 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      profile_pins: {
+      friendships: {
         Row: {
-          pin_hash: string
-          profile: string
+          created_at: string
+          friend_id: string
+          id: string
+          status: string
+          user_id: string
         }
         Insert: {
-          pin_hash: string
-          profile: string
+          created_at?: string
+          friend_id: string
+          id?: string
+          status?: string
+          user_id: string
         }
         Update: {
-          pin_hash?: string
-          profile?: string
+          created_at?: string
+          friend_id?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          nickname: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nickname: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nickname?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -34,27 +64,63 @@ export type Database = {
           day: string
           done: boolean
           id: string
-          profile: string
           updated_at: string
           user_comment: string | null
+          user_id: string
           week: number
         }
         Insert: {
           day: string
           done?: boolean
           id?: string
-          profile: string
           updated_at?: string
           user_comment?: string | null
+          user_id: string
           week: number
         }
         Update: {
           day?: string
           done?: boolean
           id?: string
-          profile?: string
           updated_at?: string
           user_comment?: string | null
+          user_id?: string
+          week?: number
+        }
+        Relationships: []
+      }
+      workout_plans: {
+        Row: {
+          created_at: string
+          day: string
+          details: string
+          id: string
+          session_name: string
+          tempo: string | null
+          updated_at: string
+          user_id: string
+          week: number
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          details?: string
+          id?: string
+          session_name?: string
+          tempo?: string | null
+          updated_at?: string
+          user_id: string
+          week: number
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          details?: string
+          id?: string
+          session_name?: string
+          tempo?: string | null
+          updated_at?: string
+          user_id?: string
           week?: number
         }
         Relationships: []
