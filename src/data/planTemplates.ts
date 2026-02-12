@@ -451,7 +451,235 @@ function generateMartialArtsPlan(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
+// ─── Styrka 1 dag/vecka – Helkropp (8v) ─────────────────────────────────────
+function generateStrength1Day(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const sets = isDeload ? 2 : Math.min(4, 3 + Math.floor(w / 4));
+    const reps = isDeload ? 8 : w <= 4 ? 8 : 6;
+    days.push({
+      week: w, day: "Mån", session_name: isDeload ? "Helkropp – Deload" : "Helkropp – Styrka",
+      details: isDeload
+        ? `Knäböj 2×8 @ RPE ${r}\nBänkpress 2×8 @ RPE ${r}\nRodd 2×10\nAxelpress 2×10\nPlanka 2×30s`
+        : `Knäböj ${sets}×${reps} @ RPE ${r}\nBänkpress ${sets}×${reps} @ RPE ${r}\nRodd ${sets}×${reps + 2}\nAxelpress 3×${reps + 2}\nMarklyft 3×${Math.max(3, reps - 2)} @ RPE ${r}\nBicepscurl 2×12\nTriceps pushdown 2×12\nPlanka 3×${30 + w * 5}s`,
+      tempo: isDeload ? "Deload" : `RPE ${r}`,
+    });
+  }
+  return days;
+}
+
+// ─── Styrka 2 dagar/vecka – Överkropp/Underkropp (8v) ────────────────────────
+function generateStrength2Days(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const sets = isDeload ? 2 : Math.min(4, 3 + Math.floor(w / 4));
+    const reps = isDeload ? 8 : w <= 4 ? 10 : 8;
+    days.push(
+      {
+        week: w, day: "Mån", session_name: isDeload ? "Överkropp – Deload" : "Överkropp – Styrka",
+        details: isDeload
+          ? `Bänkpress 2×8 @ RPE ${r}\nRodd 2×10\nAxelpress 2×10\nStretching 10 min`
+          : `Bänkpress ${sets}×${reps} @ RPE ${r}\nRodd ${sets}×${reps}\nAxelpress 3×${reps}\nChins 3×max\nSidolyft 3×15\nBicepscurl 3×12\nTriceps pushdown 3×12\nFace pulls 3×15`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Tors", session_name: isDeload ? "Underkropp – Deload" : "Underkropp – Styrka",
+        details: isDeload
+          ? `Knäböj 2×8 @ RPE ${r}\nRumänsk marklyft 2×8\nPlanka 2×30s`
+          : `Knäböj ${sets}×${reps} @ RPE ${r}\nRumänsk marklyft ${sets}×${reps} @ RPE ${r}\nBenpress 3×${reps + 2}\nBencurl 3×12\nHip thrust 3×${reps + 2}\nVadpress 4×15\nHängande benlyft 3×${10 + Math.floor(w / 2)}`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      }
+    );
+  }
+  return days;
+}
+
+// ─── Styrka 3 dagar/vecka – Helkropp A/B/C (8v) ─────────────────────────────
+function generateStrength3Days(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const sets = isDeload ? 2 : Math.min(4, 3 + Math.floor(w / 4));
+    const mainReps = isDeload ? 8 : w <= 4 ? 5 : 3;
+    const accReps = isDeload ? 10 : 8 + Math.floor(w / 3);
+    days.push(
+      {
+        week: w, day: "Mån", session_name: isDeload ? "Helkropp A – Deload" : "Helkropp A – Knäböj & Press",
+        details: isDeload
+          ? `Knäböj 2×8 @ RPE ${r}\nBänkpress 2×8 @ RPE ${r}\nRodd 2×10\nPlanka 2×30s`
+          : `Knäböj ${sets}×${mainReps} @ RPE ${r}\nBänkpress ${sets}×${mainReps} @ RPE ${r}\nRodd ${sets}×${accReps}\nSidolyft 3×15\nFace pulls 3×15\nPlanka 3×${30 + w * 5}s`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Ons", session_name: isDeload ? "Helkropp B – Deload" : "Helkropp B – Marklyft & Chins",
+        details: isDeload
+          ? `Marklyft 2×5 @ RPE ${r}\nAxelpress 2×8 @ RPE ${r}\nLatsdrag 2×10`
+          : `Marklyft ${sets}×${Math.max(3, mainReps)} @ RPE ${r}\nAxelpress ${sets}×${accReps} @ RPE ${r}\nChins ${sets}×max\nBencurl 3×12\nHip thrust 3×12\nAb wheel 3×${8 + Math.floor(w / 2)}`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Fre", session_name: isDeload ? "Helkropp C – Deload" : "Helkropp C – Volym",
+        details: isDeload
+          ? `Frontböj/Goblet squat 2×8\nIncline hantelpress 2×10\nStretching 15 min`
+          : `Frontböj/Goblet squat 3×${accReps} @ RPE ${(rpe - 1).toFixed(1).replace(".0", "")}\nIncline hantelpress 3×${accReps}\nKabelrodd 3×${accReps + 2}\nBulgarska utfall 3×${accReps}/ben\nBicepscurl 3×12\nTriceps pushdown 3×12\nVadpress 4×15`,
+        tempo: isDeload ? "Deload" : `RPE ${(rpe - 1).toFixed(1).replace(".0", "")}`,
+      }
+    );
+  }
+  return days;
+}
+
+// ─── Styrka 4 dagar/vecka – Överkropp/Underkropp × 2 (8v) ───────────────────
+function generateStrength4Days(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const rLow = (rpe - 1).toFixed(1).replace(".0", "");
+    const heavySets = isDeload ? 2 : Math.min(5, 3 + Math.floor(w / 3));
+    const heavyReps = isDeload ? 8 : w <= 4 ? 5 : 3;
+    const volReps = isDeload ? 10 : 10 + Math.floor(w / 3);
+    days.push(
+      {
+        week: w, day: "Mån", session_name: isDeload ? "Överkropp Styrka – Deload" : "Överkropp – Styrka",
+        details: isDeload
+          ? `Bänkpress 2×8 @ RPE ${r}\nRodd 2×10\nAxelpress 2×10`
+          : `Bänkpress ${heavySets}×${heavyReps} @ RPE ${r}\nRodd ${heavySets}×${heavyReps + 2} @ RPE ${r}\nAxelpress 3×${heavyReps + 2} @ RPE ${r}\nChins 3×max\nFace pulls 3×15`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Tis", session_name: isDeload ? "Underkropp Styrka – Deload" : "Underkropp – Styrka",
+        details: isDeload
+          ? `Knäböj 2×8 @ RPE ${r}\nRumänsk marklyft 2×8\nPlanka 2×30s`
+          : `Knäböj ${heavySets}×${heavyReps} @ RPE ${r}\nMarklyft ${heavySets}×${Math.max(2, heavyReps - 1)} @ RPE ${r}\nBenpress 3×${heavyReps + 4}\nBencurl 3×12\nPlanka 3×${30 + w * 5}s`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Tors", session_name: isDeload ? "Överkropp Volym – Deload" : "Överkropp – Volym",
+        details: isDeload
+          ? `Incline hantelpress 2×10\nKabelrodd 2×10\nSidolyft 2×12`
+          : `Incline hantelpress 4×${volReps} @ RPE ${rLow}\nKabelrodd 4×${volReps}\nSidolyft 4×15\nBicepscurl 3×12\nTriceps pushdown 3×12\nSkallkross 3×12`,
+        tempo: isDeload ? "Deload" : `RPE ${rLow}`,
+      },
+      {
+        week: w, day: "Fre", session_name: isDeload ? "Underkropp Volym – Deload" : "Underkropp – Volym",
+        details: isDeload
+          ? `Frontböj 2×8\nHip thrust 2×10\nVadpress 2×15`
+          : `Frontböj/Goblet squat 4×${volReps} @ RPE ${rLow}\nHip thrust 4×${volReps}\nBulgarska utfall 3×${volReps}/ben\nVadpress 4×15\nHängande benlyft 3×${10 + Math.floor(w / 2)}`,
+        tempo: isDeload ? "Deload" : `RPE ${rLow}`,
+      }
+    );
+  }
+  return days;
+}
+
+// ─── Styrka 5 dagar/vecka – Push/Pull/Legs/Överkropp/Underkropp (8v) ────────
+function generateStrength5Days(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const rLow = (rpe - 1).toFixed(1).replace(".0", "");
+    const heavySets = isDeload ? 2 : Math.min(5, 3 + Math.floor(w / 3));
+    const heavyReps = isDeload ? 8 : w <= 4 ? 5 : 3;
+    const accReps = isDeload ? 10 : 10 + Math.floor(w / 3);
+    days.push(
+      {
+        week: w, day: "Mån", session_name: isDeload ? "Push – Deload" : "Push – Bröst, Axlar & Triceps",
+        details: isDeload
+          ? `Bänkpress 2×8 @ RPE ${r}\nAxelpress 2×8\nSidolyft 2×12\nTriceps pushdown 2×12`
+          : `Bänkpress ${heavySets}×${heavyReps} @ RPE ${r}\nAxelpress ${heavySets}×${heavyReps + 2} @ RPE ${r}\nIncline hantelpress 3×${accReps}\nSidolyft 4×15\nSkallkross 3×12\nTriceps pushdown 3×12\nKabel-flyes 3×15`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Tis", session_name: isDeload ? "Pull – Deload" : "Pull – Rygg & Biceps",
+        details: isDeload
+          ? `Rodd 2×10\nLatsdrag 2×10\nFace pulls 2×12\nBicepscurl 2×12`
+          : `Rodd ${heavySets}×${heavyReps + 2} @ RPE ${r}\nChins ${heavySets}×max\nLatsdrag 3×${accReps}\nFace pulls 3×15\nHammarcurl 3×12\nBicepscurl 3×12\nRear delt flyes 3×15`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Ons", session_name: isDeload ? "Legs – Deload" : "Legs – Knäböj & Marklyft",
+        details: isDeload
+          ? `Knäböj 2×8 @ RPE ${r}\nRumänsk marklyft 2×8\nBenpress 2×10\nVadpress 2×15`
+          : `Knäböj ${heavySets}×${heavyReps} @ RPE ${r}\nMarklyft ${heavySets}×${Math.max(2, heavyReps - 1)} @ RPE ${r}\nBenpress 3×${accReps}\nBencurl 3×12\nVadpress 4×15\nHängande benlyft 3×${10 + Math.floor(w / 2)}`,
+        tempo: isDeload ? "Deload" : `RPE ${r}`,
+      },
+      {
+        week: w, day: "Tors", session_name: isDeload ? "Överkropp Volym – Deload" : "Överkropp – Volym & Hypertrofi",
+        details: isDeload
+          ? `Incline hantelpress 2×10\nKabelrodd 2×10\nSidolyft 2×12`
+          : `Incline hantelpress 4×${accReps} @ RPE ${rLow}\nKabelrodd 4×${accReps}\nLateral raise 4×15\nBicepscurl 3×15\nTriceps pushdown 3×15\nFace pulls 3×15\nKabel-flyes 3×${accReps}`,
+        tempo: isDeload ? "Deload" : `RPE ${rLow}`,
+      },
+      {
+        week: w, day: "Fre", session_name: isDeload ? "Underkropp Volym – Deload" : "Underkropp – Volym & Hypertrofi",
+        details: isDeload
+          ? `Frontböj 2×8\nHip thrust 2×10\nVadpress 2×15`
+          : `Frontböj/Goblet squat 4×${accReps} @ RPE ${rLow}\nHip thrust 4×${accReps}\nBulgarska utfall 3×${accReps}/ben\nBencurl 3×12\nVadpress 4×20\nAb wheel 3×${8 + Math.floor(w / 2)}`,
+        tempo: isDeload ? "Deload" : `RPE ${rLow}`,
+      }
+    );
+  }
+  return days;
+}
+
 export const planTemplates: TemplatePlan[] = [
+  {
+    name: "🏋️ Styrka 1 dag/vecka – Helkropp",
+    description: "8 veckor, 1 pass/vecka. Maximalt effektivt helkroppspass med alla stora lyft. Perfekt om du har begränsat med tid.",
+    weeks: 8,
+    requiredLifts: [],
+    generateFromProfile: generateStrength1Day,
+  },
+  {
+    name: "🏋️ Styrka 2 dagar/vecka – Överkropp/Underkropp",
+    description: "8 veckor, 2 pass/vecka. Optimal split för att hinna träna hela kroppen med god återhämtning.",
+    weeks: 8,
+    requiredLifts: [],
+    generateFromProfile: generateStrength2Days,
+  },
+  {
+    name: "🏋️ Styrka 3 dagar/vecka – Helkropp A/B/C",
+    description: "8 veckor, 3 pass/vecka. Tre unika helkroppspass med varierande fokus: styrka, lyft och volym. Optimal frekvens för de flesta.",
+    weeks: 8,
+    requiredLifts: [],
+    generateFromProfile: generateStrength3Days,
+  },
+  {
+    name: "🏋️ Styrka 4 dagar/vecka – Övre/Undre × 2",
+    description: "8 veckor, 4 pass/vecka. Två styrkepass och två volympass. Tränar varje muskelgrupp 2× i veckan för snabb progression.",
+    weeks: 8,
+    requiredLifts: [],
+    generateFromProfile: generateStrength4Days,
+  },
+  {
+    name: "🏋️ Styrka 5 dagar/vecka – Push/Pull/Legs + Volym",
+    description: "8 veckor, 5 pass/vecka. Push/Pull/Legs följt av överkropp- och underkroppsvolym. Maximal träningsfrekvens och variation.",
+    weeks: 8,
+    requiredLifts: [],
+    generateFromProfile: generateStrength5Days,
+  },
   {
     name: "💪 Styrka & Löpning – Kombination",
     description: "12 veckor, 7 pass/vecka. Styrka + tröskellöpning + långpass. Anpassas efter din löpnivå och erfarenhet.",
