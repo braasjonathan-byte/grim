@@ -133,6 +133,10 @@ export type Database = {
           day: string
           done: boolean
           id: string
+          logged_distance_km: number | null
+          logged_pulse: number | null
+          logged_tempo: string | null
+          logged_weights: Json | null
           skipped: boolean
           updated_at: string
           user_comment: string | null
@@ -143,6 +147,10 @@ export type Database = {
           day: string
           done?: boolean
           id?: string
+          logged_distance_km?: number | null
+          logged_pulse?: number | null
+          logged_tempo?: string | null
+          logged_weights?: Json | null
           skipped?: boolean
           updated_at?: string
           user_comment?: string | null
@@ -153,6 +161,10 @@ export type Database = {
           day?: string
           done?: boolean
           id?: string
+          logged_distance_km?: number | null
+          logged_pulse?: number | null
+          logged_tempo?: string | null
+          logged_weights?: Json | null
           skipped?: boolean
           updated_at?: string
           user_comment?: string | null
