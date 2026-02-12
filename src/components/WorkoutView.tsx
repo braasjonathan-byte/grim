@@ -474,6 +474,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
+                    {(() => {
+                      const hasOwnComment = !!(comments[key]?.trim());
+                      const dayFriendComments = friendComments.filter(c => c.week === 0 && c.day === plan.day);
+                      const totalComments = (hasOwnComment ? 1 : 0) + dayFriendComments.length;
+                      return totalComments > 0 ? (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                          <MessageCircle className="w-3 h-3" /> {totalComments}
+                        </span>
+                      ) : null;
+                    })()}
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteSingleWorkout(plan); }}
                       className="p-1 text-muted-foreground hover:text-destructive transition-colors"
@@ -654,7 +664,17 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       ) : null;
                     })()}
 
-                    {/* Comment */}
+                    {/* Own comment display */}
+                    {comments[key]?.trim() && (
+                      <div className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
+                        <p className="text-xs flex items-start gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">{comments[key]}</span>
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Comment input */}
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -664,7 +684,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                           onChange={(e) => setComments((prev) => ({ ...prev, [key]: e.target.value }))}
                           onBlur={() => saveComment(0, plan.day)}
                           onKeyDown={(e) => e.key === "Enter" && saveComment(0, plan.day)}
-                          placeholder="Lägg till kommentar..."
+                          placeholder={comments[key]?.trim() ? "Redigera kommentar..." : "Lägg till kommentar..."}
                           className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                         />
                       </div>
@@ -858,10 +878,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                     {(() => {
-                      const dayComments = friendComments.filter(c => c.week === plan.week && c.day === plan.day);
-                      return dayComments.length > 0 ? (
+                      const hasOwnComment = !!(comments[key]?.trim());
+                      const dayFriendComments = friendComments.filter(c => c.week === plan.week && c.day === plan.day);
+                      const totalComments = (hasOwnComment ? 1 : 0) + dayFriendComments.length;
+                      return totalComments > 0 ? (
                         <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full animate-fade-in">
-                          <MessageCircle className="w-3 h-3" /> {dayComments.length}
+                          <MessageCircle className="w-3 h-3" /> {totalComments}
                         </span>
                       ) : null;
                     })()}
@@ -895,6 +917,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     ) : null;
                   })()}
 
+                  {/* Own comment display */}
+                  {comments[key]?.trim() && (
+                    <div className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
+                      <p className="text-xs flex items-start gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
+                        <span className="text-foreground">{comments[key]}</span>
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -904,7 +936,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                         onChange={(e) => setComments((prev) => ({ ...prev, [key]: e.target.value }))}
                         onBlur={() => saveComment(plan.week, plan.day)}
                         onKeyDown={(e) => e.key === "Enter" && saveComment(plan.week, plan.day)}
-                        placeholder="Lägg till kommentar..."
+                        placeholder={comments[key]?.trim() ? "Redigera kommentar..." : "Lägg till kommentar..."}
                         className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                       />
                     </div>
