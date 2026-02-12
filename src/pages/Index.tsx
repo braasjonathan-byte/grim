@@ -296,13 +296,14 @@ const Index = () => {
               <span className="font-medium">{label}</span>
             </button>
           )}
-          <button
-            onClick={handleShopClick}
+          <a
+            href="https://www.gymberget.se"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors text-muted-foreground hover:text-foreground">
-
             <ShoppingCart className="w-5 h-5" />
             <span className="font-medium">Gymberget</span>
-          </button>
+          </a>
         </div>
       </nav>
     </div>);
