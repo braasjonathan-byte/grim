@@ -507,24 +507,24 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                 className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""}`}
               >
                 <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleDone(0, plan.day); }}
-                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                         isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
                       }`}
                       title="Genomfört"
                     >
-                      {isDone && <Check className="w-3.5 h-3.5 text-success-foreground" />}
+                      {isDone && <Check className="w-4 h-4 text-success-foreground" />}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleSkipped(0, plan.day); }}
-                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                        isSkipped ? "bg-destructive border-destructive" : "border-muted-foreground/30 hover:border-destructive"
+                      className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                        isSkipped ? "bg-destructive text-destructive-foreground" : "text-muted-foreground/40 hover:text-destructive"
                       }`}
-                      title="Missat"
+                      title="Markera som missat"
                     >
-                      {isSkipped && <X className="w-3.5 h-3.5 text-destructive-foreground" />}
+                      <XCircle className="w-4 h-4" />
                     </button>
                   </div>
                   <div className={`flex-shrink-0 ${colorClass}`}>
@@ -937,24 +937,24 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
               className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}
             >
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
-                <div className="flex flex-col gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleDone(plan.week, plan.day); }}
-                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                       isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
                     }`}
                     title="Genomfört"
                   >
-                    {isDone && <Check className="w-3.5 h-3.5 text-success-foreground" />}
+                    {isDone && <Check className="w-4 h-4 text-success-foreground" />}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleSkipped(plan.week, plan.day); }}
-                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
-                      isSkipped ? "bg-destructive border-destructive" : "border-muted-foreground/30 hover:border-destructive"
+                    className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                      isSkipped ? "bg-destructive text-destructive-foreground" : "text-muted-foreground/40 hover:text-destructive"
                     }`}
-                    title="Missat"
+                    title="Markera som missat"
                   >
-                    {isSkipped && <X className="w-3.5 h-3.5 text-destructive-foreground" />}
+                    <XCircle className="w-4 h-4" />
                   </button>
                 </div>
                 <div className={`flex-shrink-0 ${colorClass}`}>
