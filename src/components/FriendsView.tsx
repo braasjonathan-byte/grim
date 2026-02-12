@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 interface FriendActivity {
   nickname: string;
@@ -77,6 +77,7 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
   const [friends, setFriends] = useState<(Friendship & { profile: FriendProfile })[]>([]);
   const [pendingRequests, setPendingRequests] = useState<(Friendship & { profile: FriendProfile })[]>([]);
   const [searching, setSearching] = useState(false);
+  const [suggestedFriends, setSuggestedFriends] = useState<{ user_id: string; nickname: string; mutual_count: number }[]>([]);
 
   // Viewing a friend's workouts
   const [viewingFriend, setViewingFriend] = useState<(Friendship & { profile: FriendProfile }) | null>(null);
@@ -93,6 +94,7 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
 
   useEffect(() => {
     fetchFriends();
+    fetchSuggestions();
   }, [userId]);
 
   const fetchFriends = async () => {
@@ -140,6 +142,14 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
     setPendingRequests(pending);
   };
 
+  const fetchSuggestions = async () => {
+    const { data } = await supabase.rpc("get_suggested_friends", {
+      requesting_user_id: userId,
+    });
+    setSuggestedFriends((data || []).map((d: any) => ({ ...d, mutual_count: Number(d.mutual_count) })));
+  };
+
+
   const searchUsers = async () => {
     if (searchQuery.trim().length < 2) return;
     setSearching(true);
@@ -163,6 +173,7 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
     setSearchResults([]);
     setSearchQuery("");
     fetchFriends();
+    fetchSuggestions();
   };
 
   const acceptRequest = async (friendshipId: string) => {
@@ -512,6 +523,36 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
                   <X className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Suggested friends */}
+      {suggestedFriends.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" /> Föreslagna vänner
+          </h3>
+          {suggestedFriends.map((suggestion) => (
+            <div key={suggestion.user_id} className="flex items-center justify-between p-3 bg-card border border-border rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-accent/30 flex items-center justify-center">
+                  <span className="text-sm font-bold text-accent-foreground">{suggestion.nickname[0]?.toUpperCase()}</span>
+                </div>
+                <div>
+                  <span className="font-semibold text-sm block">{suggestion.nickname}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {suggestion.mutual_count} gemensam{suggestion.mutual_count !== 1 ? "ma" : ""} vän{suggestion.mutual_count !== 1 ? "ner" : ""}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => sendRequest(suggestion.user_id)}
+                className="flex items-center gap-1 text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded-md"
+              >
+                <UserPlus className="w-3 h-3" /> Lägg till
+              </button>
             </div>
           ))}
         </div>
