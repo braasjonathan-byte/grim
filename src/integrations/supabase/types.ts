@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profile_pins: {
+        Row: {
+          pin_hash: string
+          profile: string
+        }
+        Insert: {
+          pin_hash: string
+          profile: string
+        }
+        Update: {
+          pin_hash?: string
+          profile?: string
+        }
+        Relationships: []
+      }
+      workout_completions: {
+        Row: {
+          day: string
+          done: boolean
+          id: string
+          profile: string
+          updated_at: string
+          user_comment: string | null
+          week: number
+        }
+        Insert: {
+          day: string
+          done?: boolean
+          id?: string
+          profile: string
+          updated_at?: string
+          user_comment?: string | null
+          week: number
+        }
+        Update: {
+          day?: string
+          done?: boolean
+          id?: string
+          profile?: string
+          updated_at?: string
+          user_comment?: string | null
+          week?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
