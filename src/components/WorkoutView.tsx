@@ -293,6 +293,22 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     );
   };
 
+  // Helper: parse tempo string like "5:30" to seconds
+  const tempoToSeconds = (t: string): number | null => {
+    const m = t.match(/^(\d+)[:\.](\d+)$/);
+    if (m) return parseInt(m[1]) * 60 + parseInt(m[2]);
+    const m2 = t.match(/^(\d+)$/);
+    if (m2) return parseInt(m2[1]) * 60;
+    return null;
+  };
+
+  // Helper: seconds back to "m:ss"
+  const secondsToTempo = (s: number): string => {
+    const min = Math.floor(s / 60);
+    const sec = Math.round(s % 60);
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
+
   // Adaptive progression: adjust future weeks based on logged results
   const adaptProgression = useCallback(async () => {
     if (mode !== "plan" || weeks.length === 0) return;
@@ -314,23 +330,58 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
     if (!futurePlans || futurePlans.length === 0) return;
 
+    // Also fetch current week plans to match logged data to session types
+    const { data: currentPlans } = await supabase
+      .from("workout_plans")
+      .select("*")
+      .eq("user_id", userId)
+      .lte("week", currentWeek);
+
     // Build weight history per exercise (latest logged weight)
     const latestWeight: Record<string, number> = {};
     const sortedLogs = [...loggedData].sort((a, b) => a.week - b.week);
+
+    // Build running performance history: latest logged tempo & distance per session type
+    const latestRunTempo: Record<string, number> = {}; // session_name -> seconds per km
+    const latestRunDistance: Record<string, number> = {}; // session_name -> km
+
     for (const log of sortedLogs) {
+      // Weights
       const weights = log.logged_weights as Record<string, number> | null;
-      if (!weights) continue;
-      for (const [ex, w] of Object.entries(weights)) {
-        latestWeight[ex] = w as number;
+      if (weights) {
+        for (const [ex, w] of Object.entries(weights)) {
+          latestWeight[ex] = w as number;
+        }
+      }
+
+      // Running: match log to its plan session to get session_name
+      if (log.logged_tempo || log.logged_distance_km) {
+        const matchingPlan = currentPlans?.find(
+          (p) => p.week === log.week && p.day === log.day
+        );
+        if (matchingPlan) {
+          const sn = matchingPlan.session_name.toLowerCase();
+          const isRun = sn.includes("löpning") || sn.includes("jogg") || sn.includes("långpass") || sn.includes("tröskel");
+          if (isRun) {
+            if (log.logged_tempo) {
+              const secs = tempoToSeconds(log.logged_tempo);
+              if (secs) latestRunTempo[matchingPlan.session_name] = secs;
+            }
+            if (log.logged_distance_km) {
+              latestRunDistance[matchingPlan.session_name] = Number(log.logged_distance_km);
+            }
+          }
+        }
       }
     }
 
-    // Update future strength plans based on logged weights
-    const updates: { id: string; details: string }[] = [];
+    const updates: { id: string; details: string; tempo: string | null }[] = [];
     for (const plan of futurePlans) {
       let details = plan.details;
+      let tempo = plan.tempo;
       let changed = false;
 
+      // --- Strength progression ---
       for (const [exercise, lastW] of Object.entries(latestWeight)) {
         const escaped = exercise.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(`(${escaped}[^;\\n]*?)\\b(\\d+(?:[.,]\\d+)?)\\s*kg`, "gi");
@@ -338,8 +389,6 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           const old = parseFloat(oldWeight.replace(",", "."));
           if (old > 0 && lastW > 0) {
             changed = true;
-            // Scale planned weight proportionally: new = planned * (logged / expected_for_that_week)
-            // Simple: use logged weight + small increment for progressive overload
             const step = 2.5;
             const adjusted = Math.round((lastW + step) / step) * step;
             return `${prefix}${adjusted}kg`;
@@ -348,13 +397,79 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         });
       }
 
+      // --- Running progression ---
+      const sn = plan.session_name.toLowerCase();
+      const isRunPlan = sn.includes("löpning") || sn.includes("jogg") || sn.includes("långpass") || sn.includes("tröskel");
+      if (isRunPlan) {
+        // Find best matching logged session by name similarity
+        const matchKey = Object.keys(latestRunTempo).find(
+          (k) => k.toLowerCase() === plan.session_name.toLowerCase()
+        ) || Object.keys(latestRunTempo).find((k) => {
+          const kl = k.toLowerCase();
+          return (kl.includes("tröskel") && sn.includes("tröskel")) ||
+                 (kl.includes("långpass") && sn.includes("långpass")) ||
+                 (kl.includes("jogg") && sn.includes("jogg"));
+        });
+
+        // Adjust tempo range based on logged tempo
+        if (matchKey && latestRunTempo[matchKey] && tempo) {
+          const loggedSecs = latestRunTempo[matchKey];
+          // Parse existing tempo range like "6:31–6:49"
+          const tempoRangeMatch = tempo.match(/(\d+:\d+)\s*[–-]\s*(\d+:\d+)/);
+          if (tempoRangeMatch) {
+            const oldLow = tempoToSeconds(tempoRangeMatch[1]);
+            const oldHigh = tempoToSeconds(tempoRangeMatch[2]);
+            if (oldLow && oldHigh) {
+              const rangeSpread = oldHigh - oldLow;
+              // Center the range around logged tempo, shift slightly faster for progression
+              const shift = 5; // 5 sec faster per km as progression target
+              const newCenter = loggedSecs - shift;
+              const newLow = Math.max(newCenter - Math.floor(rangeSpread / 2), 120); // min 2:00/km
+              const newHigh = newLow + rangeSpread;
+              const newTempo = `${secondsToTempo(newLow)}–${secondsToTempo(newHigh)}`;
+              if (newTempo !== tempo) {
+                tempo = newTempo;
+                changed = true;
+              }
+            }
+          }
+        }
+
+        // Adjust distance in details based on logged distance (for Långpass-type)
+        const distMatchKey = Object.keys(latestRunDistance).find(
+          (k) => k.toLowerCase() === plan.session_name.toLowerCase()
+        ) || Object.keys(latestRunDistance).find((k) => {
+          const kl = k.toLowerCase();
+          return (kl.includes("långpass") && sn.includes("långpass"));
+        });
+
+        if (distMatchKey && latestRunDistance[distMatchKey]) {
+          const loggedDist = latestRunDistance[distMatchKey];
+          // Replace distance in details like "8 km" → based on logged + small increment
+          const distRegex = /(\d+(?:[.,]\d+)?)\s*km/i;
+          const distMatch = details.match(distRegex);
+          if (distMatch) {
+            const oldDist = parseFloat(distMatch[1].replace(",", "."));
+            if (oldDist > 0) {
+              // If user ran more than planned, bump future by 0.5-1 km
+              const increment = loggedDist >= oldDist ? 0.5 : 0;
+              const newDist = Math.round((loggedDist + increment) * 2) / 2; // round to 0.5
+              if (newDist !== oldDist) {
+                details = details.replace(distRegex, `${newDist} km`);
+                changed = true;
+              }
+            }
+          }
+        }
+      }
+
       if (changed) {
-        updates.push({ id: plan.id, details });
+        updates.push({ id: plan.id, details, tempo });
       }
     }
 
     for (const upd of updates) {
-      await supabase.from("workout_plans").update({ details: upd.details }).eq("id", upd.id);
+      await supabase.from("workout_plans").update({ details: upd.details, tempo: upd.tempo }).eq("id", upd.id);
     }
 
     if (updates.length > 0) {
