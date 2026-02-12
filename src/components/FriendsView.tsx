@@ -124,6 +124,7 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
 
     const accepted: typeof friends = [];
     const pending: typeof pendingRequests = [];
+    const seenUserIds = new Set<string>();
 
     for (const f of friendships) {
       const otherId = f.user_id === userId ? f.friend_id : f.user_id;
@@ -132,9 +133,14 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
 
       const entry = { ...f, profile };
       if (f.status === "accepted") {
-        accepted.push(entry);
+        if (!seenUserIds.has(otherId)) {
+          seenUserIds.add(otherId);
+          accepted.push(entry);
+        }
       } else if (f.status === "pending" && f.friend_id === userId) {
-        pending.push(entry);
+        if (!seenUserIds.has(otherId)) {
+          pending.push(entry);
+        }
       }
     }
 
@@ -165,11 +171,28 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
   };
 
   const sendRequest = async (friendId: string) => {
-    await supabase.from("friendships").insert({
-      user_id: userId,
-      friend_id: friendId,
-      status: "pending",
-    });
+    // Check if a friendship already exists in either direction
+    const { data: existing } = await supabase
+      .from("friendships")
+      .select("id, status, user_id, friend_id")
+      .or(`and(user_id.eq.${userId},friend_id.eq.${friendId}),and(user_id.eq.${friendId},friend_id.eq.${userId})`)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      const row = existing[0];
+      // If they sent us a pending request, auto-accept it
+      if (row.status === "pending" && row.friend_id === userId) {
+        await supabase.from("friendships").update({ status: "accepted" }).eq("id", row.id);
+      }
+      // Otherwise already friends or we already sent a request — do nothing
+    } else {
+      await supabase.from("friendships").insert({
+        user_id: userId,
+        friend_id: friendId,
+        status: "pending",
+      });
+    }
+
     setSearchResults([]);
     setSearchQuery("");
     fetchFriends();
