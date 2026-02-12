@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getWeekProgress } from "@/data/workoutData";
+import { getWeekProgressFromCache } from "@/lib/cloudSync";
+import { getWeekDays } from "@/data/workoutData";
 import type { Profile } from "@/data/workoutData";
 
 interface WeekSelectorProps {
@@ -11,7 +12,8 @@ interface WeekSelectorProps {
 
 const WeekSelector = ({ weeks, currentWeek, onSelect, profile }: WeekSelectorProps) => {
   const idx = weeks.indexOf(currentWeek);
-  const progress = getWeekProgress(profile, currentWeek);
+  const days = getWeekDays(profile, currentWeek);
+  const progress = getWeekProgressFromCache(profile, currentWeek, days);
 
   return (
     <div className="flex flex-col gap-3">
@@ -40,7 +42,6 @@ const WeekSelector = ({ weeks, currentWeek, onSelect, profile }: WeekSelectorPro
         </button>
       </div>
 
-      {/* Progress bar */}
       <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
         <div
           className="h-full bg-primary rounded-full transition-all duration-500"

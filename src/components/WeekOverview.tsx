@@ -1,19 +1,20 @@
-import { getWeeks, getWeekProgress } from "@/data/workoutData";
+import { getWeekProgressFromCache } from "@/lib/cloudSync";
 import type { Profile } from "@/data/workoutData";
+import { getWeekDays } from "@/data/workoutData";
 
 interface WeekOverviewProps {
   profile: Profile;
   currentWeek: number;
   onSelect: (w: number) => void;
+  weeks: number[];
 }
 
-const WeekOverview = ({ profile, currentWeek, onSelect }: WeekOverviewProps) => {
-  const weeks = getWeeks(profile);
-
+const WeekOverview = ({ profile, currentWeek, onSelect, weeks }: WeekOverviewProps) => {
   return (
     <div className="grid grid-cols-6 gap-1.5">
       {weeks.map((w) => {
-        const progress = getWeekProgress(profile, w);
+        const days = getWeekDays(profile, w);
+        const progress = getWeekProgressFromCache(profile, w, days);
         const isCurrent = w === currentWeek;
         return (
           <button

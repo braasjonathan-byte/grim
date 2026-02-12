@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike } from "lucide-react";
 import type { WorkoutDay, Profile, CompletionData } from "@/data/workoutData";
-import { getCompletion, setCompletion } from "@/data/workoutData";
+import { getCompletionFromCache, updateCompletionInCache, upsertCompletion } from "@/lib/cloudSync";
 
 interface WorkoutCardProps {
   workout: WorkoutDay;
@@ -32,7 +32,7 @@ const isRestDay = (session: string) => {
 };
 
 const WorkoutCard = ({ workout, profile, onUpdate }: WorkoutCardProps) => {
-  const completion = getCompletion(profile, workout.week, workout.day);
+  const completion = getCompletionFromCache(profile, workout.week, workout.day);
   const [expanded, setExpanded] = useState(false);
   const [comment, setComment] = useState(completion.userComment);
   const Icon = getSessionIcon(workout.session);
@@ -44,15 +44,15 @@ const WorkoutCard = ({ workout, profile, onUpdate }: WorkoutCardProps) => {
       done: !completion.done,
       userComment: comment,
     };
-    setCompletion(profile, workout.week, workout.day, newData);
+    updateCompletionInCache(profile, workout.week, workout.day, newData);
+    upsertCompletion(profile, workout.week, workout.day, newData);
     onUpdate();
   };
 
   const saveComment = () => {
-    setCompletion(profile, workout.week, workout.day, {
-      ...completion,
-      userComment: comment,
-    });
+    const newData: CompletionData = { ...completion, userComment: comment };
+    updateCompletionInCache(profile, workout.week, workout.day, newData);
+    upsertCompletion(profile, workout.week, workout.day, newData);
     onUpdate();
   };
 
@@ -66,7 +66,6 @@ const WorkoutCard = ({ workout, profile, onUpdate }: WorkoutCardProps) => {
         className="flex items-center gap-3 p-4 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
-        {/* Done toggle */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -81,12 +80,10 @@ const WorkoutCard = ({ workout, profile, onUpdate }: WorkoutCardProps) => {
           {completion.done && <Check className="w-4 h-4 text-success-foreground" />}
         </button>
 
-        {/* Icon */}
         <div className={`flex-shrink-0 ${colorClass}`}>
           <Icon className="w-5 h-5" />
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
             <span className="text-xs font-mono text-muted-foreground uppercase">
@@ -103,7 +100,6 @@ const WorkoutCard = ({ workout, profile, onUpdate }: WorkoutCardProps) => {
           )}
         </div>
 
-        {/* Expand */}
         <div className="text-muted-foreground">
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </div>
@@ -111,19 +107,16 @@ const WorkoutCard = ({ workout, profile, onUpdate }: WorkoutCardProps) => {
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
-          {/* Details */}
           <div>
             <p className="text-sm text-foreground leading-relaxed">{workout.details}</p>
           </div>
 
-          {/* Pre-filled comment from plan */}
           {workout.comment && (
             <div className="text-xs text-muted-foreground bg-secondary rounded-md p-2">
               📝 {workout.comment}
             </div>
           )}
 
-          {/* User comment */}
           <div className="flex gap-2">
             <div className="relative flex-1">
               <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
