@@ -1,0 +1,1 @@
+ALTER TABLE public.workout_completions ADD COLUMN skipped boolean NOT NULL DEFAULT false;

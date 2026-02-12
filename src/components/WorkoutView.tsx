@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -26,6 +26,7 @@ interface Completion {
   week: number;
   day: string;
   done: boolean;
+  skipped: boolean;
   user_comment: string;
 }
 
@@ -140,7 +141,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     if (compData) {
       const map: Record<string, Completion> = {};
       for (const c of compData) {
-        map[`${c.week}-${c.day}`] = c;
+        map[`${c.week}-${c.day}`] = { ...c, skipped: (c as any).skipped || false };
       }
       setCompletions(map);
       const commentMap: Record<string, string> = {};
@@ -197,7 +198,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
     setCompletions((prev) => ({
       ...prev,
-      [key]: { week, day, done: newDone, user_comment: comments[key] || "" },
+      [key]: { week, day, done: newDone, skipped: false, user_comment: comments[key] || "" },
     }));
 
     await supabase.from("workout_completions").upsert(
@@ -206,8 +207,32 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         week,
         day,
         done: newDone,
+        skipped: false,
         user_comment: comments[key] || "",
-      },
+      } as any,
+      { onConflict: "user_id,week,day" }
+    );
+  };
+
+  const toggleSkipped = async (week: number, day: string) => {
+    const key = `${week}-${day}`;
+    const current = completions[key];
+    const newSkipped = !current?.skipped;
+
+    setCompletions((prev) => ({
+      ...prev,
+      [key]: { week, day, done: false, skipped: newSkipped, user_comment: comments[key] || "" },
+    }));
+
+    await supabase.from("workout_completions").upsert(
+      {
+        user_id: userId,
+        week,
+        day,
+        done: false,
+        skipped: newSkipped,
+        user_comment: comments[key] || "",
+      } as any,
       { onConflict: "user_id,week,day" }
     );
   };
@@ -470,6 +495,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             const key = `0-${plan.day}`;
             const completion = completions[key];
             const isDone = completion?.done || false;
+            const isSkipped = completion?.skipped || false;
             const expanded = expandedDay === key;
             const Icon = getSessionIcon(plan.session_name);
             const colorClass = getSessionColor(plan.session_name);
@@ -478,17 +504,29 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             return (
               <div
                 key={plan.id}
-                className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""}`}
+                className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""}`}
               >
                 <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleDone(0, plan.day); }}
-                    className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                      isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
-                    }`}
-                  >
-                    {isDone && <Check className="w-4 h-4 text-success-foreground" />}
-                  </button>
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleDone(0, plan.day); }}
+                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
+                      }`}
+                      title="Genomfört"
+                    >
+                      {isDone && <Check className="w-3.5 h-3.5 text-success-foreground" />}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleSkipped(0, plan.day); }}
+                      className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isSkipped ? "bg-destructive border-destructive" : "border-muted-foreground/30 hover:border-destructive"
+                      }`}
+                      title="Missat"
+                    >
+                      {isSkipped && <X className="w-3.5 h-3.5 text-destructive-foreground" />}
+                    </button>
+                  </div>
                   <div className={`flex-shrink-0 ${colorClass}`}>
                     <Icon className="w-5 h-5" />
                   </div>
@@ -887,6 +925,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           const key = `${plan.week}-${plan.day}`;
           const completion = completions[key];
           const isDone = completion?.done || false;
+          const isSkipped = completion?.skipped || false;
           const expanded = expandedDay === key;
           const Icon = getSessionIcon(plan.session_name);
           const colorClass = getSessionColor(plan.session_name);
@@ -895,17 +934,29 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           return (
             <div
               key={key}
-              className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isRest ? "workout-rest" : ""}`}
+              className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}
             >
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleDone(plan.week, plan.day); }}
-                  className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                    isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
-                  }`}
-                >
-                  {isDone && <Check className="w-4 h-4 text-success-foreground" />}
-                </button>
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleDone(plan.week, plan.day); }}
+                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                      isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
+                    }`}
+                    title="Genomfört"
+                  >
+                    {isDone && <Check className="w-3.5 h-3.5 text-success-foreground" />}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleSkipped(plan.week, plan.day); }}
+                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${
+                      isSkipped ? "bg-destructive border-destructive" : "border-muted-foreground/30 hover:border-destructive"
+                    }`}
+                    title="Missat"
+                  >
+                    {isSkipped && <X className="w-3.5 h-3.5 text-destructive-foreground" />}
+                  </button>
+                </div>
                 <div className={`flex-shrink-0 ${colorClass}`}>
                   <Icon className="w-5 h-5" />
                 </div>

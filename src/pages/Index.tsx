@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound } from "lucide-react";
+import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -9,8 +9,9 @@ import FriendsView from "@/components/FriendsView";
 import OneRMCalculator from "@/components/OneRMCalculator";
 import PulseZoneCalculator from "@/components/PulseZoneCalculator";
 import ChangePassword from "@/components/ChangePassword";
+import WorkoutStats from "@/components/WorkoutStats";
 
-type Tab = "workout" | "plan" | "friends" | "calc";
+type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
 
 interface FriendActivity {
   nickname: string;
@@ -181,6 +182,7 @@ const Index = () => {
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "plan", icon: Edit3, label: "Schema" },
+  { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg" }];
 
@@ -237,6 +239,7 @@ const Index = () => {
           }} />
 
         }
+        {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
             <OneRMCalculator />
