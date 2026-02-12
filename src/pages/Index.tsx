@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell } from "lucide-react";
+import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -8,6 +8,7 @@ import PlanEditor from "@/components/PlanEditor";
 import FriendsView from "@/components/FriendsView";
 import OneRMCalculator from "@/components/OneRMCalculator";
 import PulseZoneCalculator from "@/components/PulseZoneCalculator";
+import ChangePassword from "@/components/ChangePassword";
 
 type Tab = "workout" | "plan" | "friends" | "calc";
 
@@ -25,6 +26,7 @@ const Index = () => {
   const [nickname, setNickname] = useState("");
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -189,6 +191,13 @@ const Index = () => {
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-primary">{nickname}</span>
             <button
+              onClick={() => setShowChangePassword(true)}
+              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              title="Byt lösenord"
+            >
+              <KeyRound className="w-4 h-4" />
+            </button>
+            <button
               onClick={handleLogout}
               className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
               title="Logga ut"
@@ -228,6 +237,9 @@ const Index = () => {
           </div>
         </div>
       )}
+
+      {/* Change password modal */}
+      {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
 
       {/* Bottom tab bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-50">
