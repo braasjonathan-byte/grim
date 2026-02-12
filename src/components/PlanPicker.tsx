@@ -28,12 +28,17 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
   const selectedTemplate = selected !== null && selected >= 0 ? planTemplates[selected] : null;
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
 
-  // Determine if selected plan needs running profile data
+  // Determine if selected plan needs running profile data (only actual running plans)
   const needsRunningProfile = selectedTemplate && (
-    selectedTemplate.generateFromProfile !== undefined ||
     selectedTemplate.name.toLowerCase().includes("löp") ||
     selectedTemplate.name.toLowerCase().includes("löpning") ||
-    selectedTemplate.description.toLowerCase().includes("löp")
+    selectedTemplate.description.toLowerCase().includes("löppass") ||
+    selectedTemplate.description.toLowerCase().includes("löpnivå")
+  );
+
+  // Determine if selected plan needs any profile data (experience level etc.)
+  const needsProfile = selectedTemplate && (
+    selectedTemplate.generateFromProfile !== undefined
   );
 
   const handleSelect = () => {
@@ -43,8 +48,8 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     }
     if (!selectedTemplate) return;
 
-    // If the plan needs running profile, show profile form first
-    if (needsRunningProfile) {
+    // If the plan needs profile data, show profile form first
+    if (needsProfile) {
       setStep("profile");
     } else if (needs1RM) {
       const initial: Record<string, string> = {};
@@ -128,7 +133,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       <FitnessProfileForm
         userId={userId}
         onDone={handleProfileDone}
-        runningOnly={!needsRunningProfile ? false : true}
+        runningOnly={!!needsRunningProfile}
       />
     );
   }
@@ -274,8 +279,10 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         >
           {selected === -1
             ? "Fortsätt utan plan"
-            : needsRunningProfile
-            ? "Nästa – Dina löpförutsättningar →"
+            : needsProfile
+            ? needsRunningProfile
+              ? "Nästa – Dina löpförutsättningar →"
+              : "Nästa – Dina förutsättningar →"
             : needs1RM
             ? "Nästa – Ange din 1RM →"
             : "Använd denna plan"}
