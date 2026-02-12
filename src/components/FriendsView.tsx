@@ -12,6 +12,7 @@ interface FriendActivity {
 interface FriendsViewProps {
   userId: string;
   friendActivities?: FriendActivity[];
+  onClearActivitiesForFriend?: (nickname: string) => void;
 }
 
 interface FriendProfile {
@@ -71,7 +72,7 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
-const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
+const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend }: FriendsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<(Friendship & { profile: FriendProfile })[]>([]);
@@ -219,6 +220,7 @@ const FriendsView = ({ userId, friendActivities = [] }: FriendsViewProps) => {
   // View friend's workouts
   const viewFriendWorkouts = async (friend: typeof friends[0]) => {
     setViewingFriend(friend);
+    onClearActivitiesForFriend?.(friend.profile.nickname);
     const fid = friend.profile.user_id;
 
     const [{ data: plans }, { data: completions }, { data: commentsData }] = await Promise.all([

@@ -212,7 +212,15 @@ const Index = () => {
       <main className="max-w-lg mx-auto px-4 py-4">
         {tab === "workout" && <WorkoutView userId={user.id} />}
         {tab === "plan" && <PlanEditor userId={user.id} />}
-        {tab === "friends" && <FriendsView userId={user.id} friendActivities={friendActivities} />}
+        {tab === "friends" && (
+          <FriendsView
+            userId={user.id}
+            friendActivities={friendActivities}
+            onClearActivitiesForFriend={(nickname) => {
+              setFriendActivities((prev) => prev.filter((a) => a.nickname !== nickname));
+            }}
+          />
+        )}
         {tab === "calc" && (
           <div className="py-2 space-y-4">
             <OneRMCalculator />
