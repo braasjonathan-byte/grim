@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FriendsViewProps {
   userId: string;
@@ -18,26 +18,70 @@ interface Friendship {
   status: string;
 }
 
+interface FriendPlanDay {
+  week: number;
+  day: string;
+  session_name: string;
+  details: string;
+  tempo: string | null;
+}
+
 interface FriendCompletion {
   week: number;
   day: string;
   done: boolean;
+  user_comment: string | null;
 }
 
-interface FriendPlan {
+interface WorkoutComment {
+  id: string;
+  target_user_id: string;
   week: number;
   day: string;
-  session_name: string;
+  author_id: string;
+  comment: string;
+  created_at: string;
+  authorNickname?: string;
 }
+
+const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+
+const getSessionIcon = (session: string) => {
+  const s = session.toLowerCase();
+  if (s.includes("styrka") || s.includes("tung")) return Dumbbell;
+  if (s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel")) return Footprints;
+  if (s.includes("cykel") || s.includes("återhämtning") || s.includes("crosstrainer")) return Bike;
+  return Moon;
+};
+
+const getSessionColor = (session: string) => {
+  const s = session.toLowerCase();
+  if (s.includes("styrka") || s.includes("tung")) return "text-primary";
+  if (s.includes("löpning") || s.includes("tröskel")) return "text-warning";
+  if (s.includes("långpass")) return "text-destructive";
+  if (s.includes("vila")) return "text-muted-foreground";
+  return "text-secondary-foreground";
+};
 
 const FriendsView = ({ userId }: FriendsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<(Friendship & { profile: FriendProfile })[]>([]);
   const [pendingRequests, setPendingRequests] = useState<(Friendship & { profile: FriendProfile })[]>([]);
-  const [expandedFriend, setExpandedFriend] = useState<string | null>(null);
-  const [friendProgress, setFriendProgress] = useState<Record<string, { plans: FriendPlan[]; completions: FriendCompletion[] }>>({});
   const [searching, setSearching] = useState(false);
+
+  // Viewing a friend's workouts
+  const [viewingFriend, setViewingFriend] = useState<(Friendship & { profile: FriendProfile }) | null>(null);
+  const [friendPlans, setFriendPlans] = useState<FriendPlanDay[]>([]);
+  const [friendCompletions, setFriendCompletions] = useState<Record<string, FriendCompletion>>({});
+  const [friendWeeks, setFriendWeeks] = useState<number[]>([]);
+  const [friendCurrentWeek, setFriendCurrentWeek] = useState(1);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+
+  // Comments
+  const [comments, setComments] = useState<WorkoutComment[]>([]);
+  const [newComment, setNewComment] = useState<Record<string, string>>({});
+  const [nicknameMap, setNicknameMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchFriends();
@@ -51,7 +95,6 @@ const FriendsView = ({ userId }: FriendsViewProps) => {
 
     if (!friendships) return;
 
-    // Get all related user IDs
     const otherIds = friendships.map((f) =>
       f.user_id === userId ? f.friend_id : f.user_id
     );
@@ -81,7 +124,6 @@ const FriendsView = ({ userId }: FriendsViewProps) => {
       if (f.status === "accepted") {
         accepted.push(entry);
       } else if (f.status === "pending" && f.friend_id === userId) {
-        // Incoming request
         pending.push(entry);
       }
     }
@@ -129,31 +171,271 @@ const FriendsView = ({ userId }: FriendsViewProps) => {
     fetchFriends();
   };
 
-  const loadFriendProgress = async (friendUserId: string) => {
-    if (friendProgress[friendUserId]) {
-      setExpandedFriend(expandedFriend === friendUserId ? null : friendUserId);
-      return;
-    }
-
-    const [{ data: plans }, { data: completions }] = await Promise.all([
-      supabase.from("workout_plans").select("week, day, session_name").eq("user_id", friendUserId).order("week"),
-      supabase.from("workout_completions").select("week, day, done").eq("user_id", friendUserId),
-    ]);
-
-    setFriendProgress((prev) => ({
-      ...prev,
-      [friendUserId]: {
-        plans: plans || [],
-        completions: completions || [],
-      },
-    }));
-    setExpandedFriend(friendUserId);
-  };
-
   const isAlreadyFriend = (uid: string) =>
     friends.some((f) => f.profile.user_id === uid) ||
     pendingRequests.some((f) => f.profile.user_id === uid);
 
+  // View friend's workouts
+  const viewFriendWorkouts = async (friend: typeof friends[0]) => {
+    setViewingFriend(friend);
+    const fid = friend.profile.user_id;
+
+    const [{ data: plans }, { data: completions }, { data: commentsData }] = await Promise.all([
+      supabase.from("workout_plans").select("week, day, session_name, details, tempo").eq("user_id", fid).order("week").order("day"),
+      supabase.from("workout_completions").select("week, day, done, user_comment").eq("user_id", fid),
+      supabase.from("workout_comments").select("*").eq("target_user_id", fid),
+    ]);
+
+    if (plans) {
+      setFriendPlans(plans);
+      const wks = [...new Set(plans.map((p) => p.week))].sort((a, b) => a - b);
+      setFriendWeeks(wks);
+      if (wks.length > 0) setFriendCurrentWeek(wks[0]);
+    }
+
+    if (completions) {
+      const map: Record<string, FriendCompletion> = {};
+      for (const c of completions) {
+        map[`${c.week}-${c.day}`] = c;
+      }
+      setFriendCompletions(map);
+    }
+
+    // Fetch nicknames for comment authors
+    if (commentsData && commentsData.length > 0) {
+      setComments(commentsData);
+      const authorIds = [...new Set(commentsData.map((c) => c.author_id))];
+      const { data: authorProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, nickname")
+        .in("user_id", authorIds);
+      if (authorProfiles) {
+        const map: Record<string, string> = {};
+        for (const p of authorProfiles) map[p.user_id] = p.nickname;
+        setNicknameMap(map);
+      }
+    } else {
+      setComments([]);
+    }
+  };
+
+  const postComment = async (week: number, day: string) => {
+    const key = `${week}-${day}`;
+    const text = newComment[key]?.trim();
+    if (!text || !viewingFriend) return;
+
+    const { data } = await supabase.from("workout_comments").insert({
+      target_user_id: viewingFriend.profile.user_id,
+      week,
+      day,
+      author_id: userId,
+      comment: text,
+    }).select().single();
+
+    if (data) {
+      setComments((prev) => [...prev, data]);
+      // Make sure our nickname is in the map
+      if (!nicknameMap[userId]) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("nickname")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (profile) {
+          setNicknameMap((prev) => ({ ...prev, [userId]: profile.nickname }));
+        }
+      }
+    }
+    setNewComment((prev) => ({ ...prev, [key]: "" }));
+  };
+
+  // Friend workout detail view
+  if (viewingFriend) {
+    const weekDays = friendPlans
+      .filter((p) => p.week === friendCurrentWeek)
+      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+
+    const weekIdx = friendWeeks.indexOf(friendCurrentWeek);
+    const doneCount = weekDays.filter((d) => friendCompletions[`${d.week}-${d.day}`]?.done).length;
+    const progress = weekDays.length > 0 ? Math.round((doneCount / weekDays.length) * 100) : 0;
+
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <button
+          onClick={() => { setViewingFriend(null); setExpandedDay(null); }}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" /> Tillbaka till vänner
+        </button>
+
+        <div className="text-center space-y-1">
+          <h2 className="text-xl font-black">{viewingFriend.profile.nickname}</h2>
+          <p className="text-sm text-muted-foreground">Träningsschema</p>
+        </div>
+
+        {friendPlans.length === 0 ? (
+          <div className="text-center py-8">
+            <Dumbbell className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Inget schema ännu</p>
+          </div>
+        ) : (
+          <>
+            {/* Week navigation */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => weekIdx > 0 && setFriendCurrentWeek(friendWeeks[weekIdx - 1])}
+                disabled={weekIdx <= 0}
+                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="text-center">
+                <h3 className="text-lg font-black">Vecka {friendCurrentWeek}</h3>
+                <p className="text-xs text-muted-foreground">av {friendWeeks.length} veckor</p>
+              </div>
+              <button
+                onClick={() => weekIdx < friendWeeks.length - 1 && setFriendCurrentWeek(friendWeeks[weekIdx + 1])}
+                disabled={weekIdx >= friendWeeks.length - 1}
+                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Progress bar */}
+            <div>
+              <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="text-xs text-muted-foreground text-center mt-1">{progress}% avklarat</p>
+            </div>
+
+            {/* Week overview */}
+            <div className="grid grid-cols-6 gap-1.5">
+              {friendWeeks.map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setFriendCurrentWeek(w)}
+                  className={`flex flex-col items-center p-2 rounded-md text-xs transition-all ${
+                    w === friendCurrentWeek
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      : "bg-secondary text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <span className="font-bold">V{w}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Workout cards */}
+            <div className="space-y-2">
+              {weekDays.map((plan) => {
+                const key = `${plan.week}-${plan.day}`;
+                const completion = friendCompletions[key];
+                const isDone = completion?.done || false;
+                const expanded = expandedDay === key;
+                const Icon = getSessionIcon(plan.session_name);
+                const colorClass = getSessionColor(plan.session_name);
+                const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
+                const dayComments = comments.filter((c) => c.week === plan.week && c.day === plan.day);
+
+                return (
+                  <div
+                    key={key}
+                    className={`rounded-lg border bg-card transition-all ${isDone ? "opacity-80" : ""} ${isRest ? "opacity-60" : ""}`}
+                  >
+                    <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                        isDone ? "bg-success border-success" : "border-muted-foreground/30"
+                      }`}>
+                        {isDone && <Check className="w-4 h-4 text-success-foreground" />}
+                      </div>
+                      <div className={`flex-shrink-0 ${colorClass}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xs font-mono text-muted-foreground uppercase">{plan.day}</span>
+                          <span className={`font-semibold text-sm truncate ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                            {plan.session_name}
+                          </span>
+                        </div>
+                        {plan.tempo && plan.tempo !== "—" && (
+                          <span className="text-xs text-muted-foreground font-mono">{plan.tempo}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {dayComments.length > 0 && (
+                          <span className="text-xs text-primary font-semibold">{dayComments.length} 💬</span>
+                        )}
+                        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                      </div>
+                    </div>
+
+                    {expanded && (
+                      <div className="px-4 pb-4 space-y-3 border-t border-border pt-3 animate-fade-in">
+                        {/* Workout details */}
+                        <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+
+                        {/* User's own comment */}
+                        {completion?.user_comment && (
+                          <div className="bg-secondary/50 rounded-md p-2">
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-semibold text-foreground">{viewingFriend.profile.nickname}:</span>{" "}
+                              {completion.user_comment}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Comments from friends */}
+                        {dayComments.length > 0 && (
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-semibold text-muted-foreground">Kommentarer</p>
+                            {dayComments.map((c) => (
+                              <div key={c.id} className="bg-secondary/50 rounded-md p-2">
+                                <p className="text-xs">
+                                  <span className="font-semibold text-primary">{nicknameMap[c.author_id] || "..."}</span>{" "}
+                                  <span className="text-muted-foreground">{c.comment}</span>
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Add comment */}
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                            <input
+                              type="text"
+                              value={newComment[key] || ""}
+                              onChange={(e) => setNewComment((prev) => ({ ...prev, [key]: e.target.value }))}
+                              onKeyDown={(e) => e.key === "Enter" && postComment(plan.week, plan.day)}
+                              placeholder="Skriv en kommentar..."
+                              className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                            />
+                          </div>
+                          <button
+                            onClick={() => postComment(plan.week, plan.day)}
+                            disabled={!newComment[key]?.trim()}
+                            className="px-3 py-2 bg-primary text-primary-foreground rounded-md disabled:opacity-40"
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Friends list view
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-black">Vänner</h2>
@@ -239,58 +521,21 @@ const FriendsView = ({ userId }: FriendsViewProps) => {
             <p className="text-sm text-muted-foreground">Inga vänner ännu. Sök efter användarnamn ovan!</p>
           </div>
         ) : (
-          friends.map((friend) => {
-            const fid = friend.profile.user_id;
-            const isExpanded = expandedFriend === fid;
-            const progress = friendProgress[fid];
-
-            return (
-              <div key={friend.id} className="bg-card border border-border rounded-lg overflow-hidden">
-                <button
-                  onClick={() => loadFriendProgress(fid)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors"
-                >
-                  <span className="font-semibold text-sm">{friend.profile.nickname}</span>
-                  {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                </button>
-
-                {isExpanded && progress && (
-                  <div className="px-4 pb-4 border-t border-border pt-3 animate-fade-in">
-                    {progress.plans.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Inget schema ännu</p>
-                    ) : (
-                      (() => {
-                        const weeks = [...new Set(progress.plans.map((p) => p.week))].sort((a, b) => a - b);
-                        const compMap = new Map(progress.completions.map((c) => [`${c.week}-${c.day}`, c.done]));
-
-                        return (
-                          <div className="space-y-3">
-                            {weeks.map((w) => {
-                              const weekPlans = progress.plans.filter((p) => p.week === w);
-                              const done = weekPlans.filter((p) => compMap.get(`${p.week}-${p.day}`)).length;
-                              const pct = Math.round((done / weekPlans.length) * 100);
-
-                              return (
-                                <div key={w} className="space-y-1">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="font-semibold">V{w}</span>
-                                    <span className="text-muted-foreground">{done}/{weekPlans.length} ({pct}%)</span>
-                                  </div>
-                                  <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
-                                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()
-                    )}
-                  </div>
-                )}
+          friends.map((friend) => (
+            <button
+              key={friend.id}
+              onClick={() => viewFriendWorkouts(friend)}
+              className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+                </div>
+                <span className="font-semibold text-sm">{friend.profile.nickname}</span>
               </div>
-            );
-          })
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          ))
         )}
       </div>
     </div>
