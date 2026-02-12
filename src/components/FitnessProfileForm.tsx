@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, ArrowRight } from "lucide-react";
+import { Dumbbell, ArrowRight, Footprints } from "lucide-react";
 import type { FitnessProfile } from "@/data/planTemplates";
 
 interface FitnessProfileFormProps {
   userId: string;
   onDone: (profile: FitnessProfile) => void;
+  runningOnly?: boolean;
 }
 
 const experienceLevels = [
@@ -14,7 +15,7 @@ const experienceLevels = [
   { value: "avancerad", label: "Avancerad", description: "Tränat 3+ år regelbundet" },
 ];
 
-const FitnessProfileForm = ({ userId, onDone }: FitnessProfileFormProps) => {
+const FitnessProfileForm = ({ userId, onDone, runningOnly = false }: FitnessProfileFormProps) => {
   const [maxDistance, setMaxDistance] = useState("");
   const [time10km, setTime10km] = useState("");
   const [experience, setExperience] = useState("");
@@ -51,10 +52,18 @@ const FitnessProfileForm = ({ userId, onDone }: FitnessProfileFormProps) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="text-center space-y-2">
-        <Dumbbell className="w-10 h-10 text-primary mx-auto" />
-        <h2 className="text-xl font-black tracking-tight">Dina förutsättningar</h2>
+        {runningOnly ? (
+          <Footprints className="w-10 h-10 text-primary mx-auto" />
+        ) : (
+          <Dumbbell className="w-10 h-10 text-primary mx-auto" />
+        )}
+        <h2 className="text-xl font-black tracking-tight">
+          {runningOnly ? "Dina löpförutsättningar" : "Dina förutsättningar"}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Fyll i så anpassas planen efter dig. Du kan hoppa över om du vill.
+          {runningOnly
+            ? "Fyll i så anpassas tempo och distans efter din nivå."
+            : "Fyll i så anpassas planen efter dig. Du kan hoppa över om du vill."}
         </p>
       </div>
 
@@ -89,7 +98,7 @@ const FitnessProfileForm = ({ userId, onDone }: FitnessProfileFormProps) => {
           />
         </div>
 
-        {/* Experience level */}
+        {/* Experience level - always show */}
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground block">
             Träningserfarenhet
@@ -112,27 +121,29 @@ const FitnessProfileForm = ({ userId, onDone }: FitnessProfileFormProps) => {
           </div>
         </div>
 
-        {/* Training days per week */}
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">
-            Tillgängliga träningsdagar per vecka
-          </label>
-          <div className="flex gap-2">
-            {[2, 3, 4, 5, 6, 7].map((d) => (
-              <button
-                key={d}
-                onClick={() => setTrainingDays(String(d))}
-                className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
-                  trainingDays === String(d)
-                    ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
-                    : "bg-secondary text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
+        {/* Training days per week - only for non-running-only */}
+        {!runningOnly && (
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground block">
+              Tillgängliga träningsdagar per vecka
+            </label>
+            <div className="flex gap-2">
+              {[2, 3, 4, 5, 6, 7].map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setTrainingDays(String(d))}
+                  className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${
+                    trainingDays === String(d)
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      : "bg-secondary text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="flex gap-2">

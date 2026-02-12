@@ -382,6 +382,75 @@ function generateHomeWorkout(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
+// ─── Cykling – Uthållighet & Intervaller (8v) ────────────────────────────────
+function generateCyclingPlan(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 5;
+    const baseMin = exp === "nybörjare" ? 30 : exp === "avancerad" ? 50 : 40;
+    const longMin = baseMin + w * 5;
+    const intervalMin = isDeload ? 10 : 12 + Math.floor(w / 2) * 2;
+
+    days.push(
+      { week: w, day: "Mån", session_name: "Cykling – Lugnt", details: `${baseMin + w * 2} min i lugnt tempo. Fokus på kadens 80–90 rpm.`, tempo: "Zon 2" },
+      { week: w, day: "Tis", session_name: "Styrka – Ben & Core", details: `Knäböj 3×${8 + Math.floor(w / 3)}; Utfallssteg 3×10/ben; Bencurl 3×12; Hip thrust 3×12; Planka 3×${30 + w * 5}s`, tempo: "" },
+      { week: w, day: "Ons", session_name: isDeload ? "Vila" : "Cykling – Intervaller", details: isDeload ? "Vilodag – deload-vecka" : `15 min uppvärmning; ${Math.floor(intervalMin / 3)}×${3 + Math.floor(w / 3)} min i zon 4 (2 min vila); 10 min nedvarvning`, tempo: isDeload ? "" : "Zon 4" },
+      { week: w, day: "Tors", session_name: "Vila / Stretching", details: "Vilodag. 20 min stretching eller yoga.", tempo: "" },
+      { week: w, day: "Fre", session_name: "Cykling – Tempokörning", details: `${20 + w * 2} min tempokörning i zon 3. Jämnt och fokuserat.`, tempo: "Zon 3" },
+      { week: w, day: "Lör", session_name: "Cykling – Långpass", details: `${isDeload ? Math.round(longMin * 0.7) : longMin} min. Lugnt tempo, bygg uthållighet.`, tempo: "Zon 2" },
+    );
+  }
+  return days;
+}
+
+// ─── Simning – Teknik & Uthållighet (6v) ────────────────────────────────────
+function generateSwimmingPlan(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  const baseDist = exp === "nybörjare" ? 800 : exp === "avancerad" ? 2000 : 1400;
+
+  for (let w = 1; w <= 6; w++) {
+    const dist = baseDist + w * 200;
+    const intervalDist = exp === "nybörjare" ? 50 : 100;
+    const intervalCount = 4 + Math.floor(w / 2);
+
+    days.push(
+      { week: w, day: "Mån", session_name: "Simning – Teknik", details: `200m uppvärmning; 4×${intervalDist}m teknikfokus (crawl); 4×50m kick; 200m nedvarvning. Total: ~${600 + intervalDist * 4}m`, tempo: "Lugnt" },
+      { week: w, day: "Tis", session_name: "Styrka – Överkropp & Core", details: `Latsdrag 3×10; Rodd 3×10; Axelpress 3×10; Triceps 3×12; Planka 3×${30 + w * 5}s; Russian twist 3×12`, tempo: "" },
+      { week: w, day: "Ons", session_name: "Vila", details: "Vilodag", tempo: "" },
+      { week: w, day: "Tors", session_name: "Simning – Intervaller", details: `300m uppvärmning; ${intervalCount}×${intervalDist}m i hög intensitet (30s vila); 200m nedvarvning`, tempo: "Hög intensitet" },
+      { week: w, day: "Fre", session_name: "Styrka – Helkropp", details: `Knäböj 3×10; Marklyft 3×8; Bänkpress 3×10; Chins 3×max; Core-circuit`, tempo: "" },
+      { week: w, day: "Lör", session_name: "Simning – Distans", details: `${dist}m sammanhängande simning i jämnt tempo. Fokus uthållighet.`, tempo: "Zon 2" },
+    );
+  }
+  return days;
+}
+
+// ─── Kampsport – Styrka & Kondition (8v) ─────────────────────────────────────
+function generateMartialArtsPlan(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  const baseRounds = exp === "nybörjare" ? 3 : exp === "avancerad" ? 6 : 4;
+
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 5;
+    const rounds = isDeload ? baseRounds : baseRounds + Math.floor(w / 2);
+    const roundMin = 3;
+    const restSec = Math.max(30, 60 - w * 3);
+
+    days.push(
+      { week: w, day: "Mån", session_name: "Styrka – Funktionell", details: `Marklyft 4×${isDeload ? 3 : 5}; Knäböj 3×${isDeload ? 5 : 8}; Kettlebell swings 3×15; Pull-ups 3×max; Farmers walk 3×40m`, tempo: "" },
+      { week: w, day: "Tis", session_name: "Kondition – Intervaller", details: `${rounds} rundor à ${roundMin} min: Skuggboxning/slag+spark-combo. Vila ${restSec}s mellan rundor.`, tempo: `${roundMin} min rundor` },
+      { week: w, day: "Ons", session_name: "Vila / Rörlighet", details: "Rörlighetspass 30 min. Höfter, axlar, handleder.", tempo: "" },
+      { week: w, day: "Tors", session_name: "Styrka – Explosiv", details: `Box jumps 4×5; Medicinbollskast 3×10; Enbens-knäböj 3×8/ben; Ab wheel 3×10; Planka 3×${35 + w * 5}s`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Kondition – HIIT", details: `${rounds} rundor: 30s burpees / 30s mountain climbers / 30s jump squats / ${restSec}s vila. Avsluta med 5 min skipping.`, tempo: "Max intensitet" },
+      { week: w, day: "Lör", session_name: "Teknik & Sparring", details: `15 min uppvärmning; ${Math.max(3, rounds - 1)} rundor teknisk sparring/padwork; 10 min stretching`, tempo: "" },
+    );
+  }
+  return days;
+}
+
 export const planTemplates: TemplatePlan[] = [
   {
     name: "💪 Styrka & Löpning – Kombination",
@@ -438,6 +507,27 @@ export const planTemplates: TemplatePlan[] = [
     weeks: 8,
     requiredLifts: [],
     generateFromProfile: generateRunningPlan,
+  },
+  {
+    name: "🚴 Cykling – Uthållighet & Intervaller",
+    description: "8 veckor, 4 cykelpass + 1 styrkepass. Bygg uthållighet med långa pass och förbättra effekt med intervaller.",
+    weeks: 8,
+    requiredLifts: [],
+    generateFromProfile: generateCyclingPlan,
+  },
+  {
+    name: "🏊 Simning – Teknik & Distans",
+    description: "6 veckor, 3 simpass + 2 styrkepass. Förbättra teknik och bygg distans. Anpassas efter erfarenhet.",
+    weeks: 6,
+    requiredLifts: [],
+    generateFromProfile: generateSwimmingPlan,
+  },
+  {
+    name: "🥊 Kampsport – Styrka & Kondition",
+    description: "8 veckor, 5 pass/vecka. Funktionell styrka, explosivitet och konditionsintervaller för kampsportare.",
+    weeks: 8,
+    requiredLifts: [],
+    generateFromProfile: generateMartialArtsPlan,
   },
 ];
 
