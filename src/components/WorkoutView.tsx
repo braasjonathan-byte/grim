@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
 import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
+import WorkoutLogDialog from "@/components/WorkoutLogDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -120,6 +121,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   // Replacement workout dialog state
   const [replacementTarget, setReplacementTarget] = useState<{ planId: string; sessionName: string; week: number; day: string } | null>(null);
+  const [runLogTarget, setRunLogTarget] = useState<{ week: number; day: string; sessionName: string; details: string } | null>(null);
   
 
   const fetchData = useCallback(async () => {
@@ -1025,7 +1027,20 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
                 <div className="flex items-center gap-1 flex-shrink-0">
                     <button
-                      onClick={(e) => { e.stopPropagation(); toggleDone(plan.week, plan.day); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isDone) {
+                          toggleDone(plan.week, plan.day);
+                        } else {
+                          const sLower = (plan.session_name + " " + plan.details).toLowerCase();
+                          const isRunning = sLower.includes("löpning") || sLower.includes("jogg") || sLower.includes("långpass") || sLower.includes("tröskel");
+                          if (isRunning) {
+                            setRunLogTarget({ week: plan.week, day: plan.day, sessionName: plan.session_name, details: plan.details });
+                          } else {
+                            toggleDone(plan.week, plan.day);
+                          }
+                        }
+                      }}
                       className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                         isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
                       }`}
@@ -1086,7 +1101,23 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   {(() => {
                     const s = (plan.session_name + " " + plan.details).toLowerCase();
                     const isStrength = s.includes("styrka") || s.includes("bänk") || s.includes("böj") || s.includes("mark") || s.includes("press") || s.includes("rodd") || s.includes("chins") || s.includes("tung") || s.includes("rpe") || s.includes("×") || s.includes("x");
-                    if (!isStrength) return <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>;
+                    if (!isStrength) {
+                      const isRunning = s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel");
+                      const comp = completions[key];
+                      return (
+                        <div className="space-y-2">
+                          <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                          {isRunning && comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km) && (
+                            <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-1">
+                              <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
+                              {comp.logged_tempo && <p className="text-xs">⏱ Tempo: <span className="font-mono font-semibold">{comp.logged_tempo}</span></p>}
+                              {comp.logged_pulse && <p className="text-xs">❤️ Puls: <span className="font-mono font-semibold">{comp.logged_pulse} bpm</span></p>}
+                              {comp.logged_distance_km && <p className="text-xs">📏 Distans: <span className="font-mono font-semibold">{comp.logged_distance_km} km</span></p>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
 
                     // Extract exercises from details
                     const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
@@ -1226,6 +1257,32 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           onSkipOnly={() => {
             setReplacementTarget(null);
             toggleSkipped(replacementTarget.week, replacementTarget.day);
+          }}
+        />
+      )}
+
+      {/* Run log dialog */}
+      {runLogTarget && (
+        <WorkoutLogDialog
+          userId={userId}
+          week={runLogTarget.week}
+          day={runLogTarget.day}
+          sessionName={runLogTarget.sessionName}
+          details={runLogTarget.details}
+          existingLog={(() => {
+            const comp = completions[`${runLogTarget.week}-${runLogTarget.day}`];
+            if (!comp) return undefined;
+            return {
+              logged_tempo: comp.logged_tempo || null,
+              logged_pulse: comp.logged_pulse || null,
+              logged_distance_km: comp.logged_distance_km || null,
+              logged_weights: null,
+            };
+          })()}
+          onClose={() => setRunLogTarget(null)}
+          onSaved={() => {
+            setRunLogTarget(null);
+            fetchData();
           }}
         />
       )}
