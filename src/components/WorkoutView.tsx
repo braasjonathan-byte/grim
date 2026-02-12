@@ -235,6 +235,24 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     );
   };
 
+  const deleteCommentLine = async (week: number, day: string, lineIndex: number) => {
+    const key = `${week}-${day}`;
+    const lines = (comments[key] || "").split("\n").filter(Boolean);
+    lines.splice(lineIndex, 1);
+    const updated = lines.join("\n");
+    setComments((prev) => ({ ...prev, [key]: updated }));
+    await supabase.from("workout_completions").upsert(
+      {
+        user_id: userId,
+        week,
+        day,
+        done: completions[key]?.done || false,
+        user_comment: updated,
+      },
+      { onConflict: "user_id,week,day" }
+    );
+  };
+
   const leavePlan = async () => {
     if (!confirm("Är du säker? Alla pass och all progress raderas.")) return;
     await Promise.all([
@@ -678,11 +696,18 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     {comments[key]?.trim() && (
                       <div className="space-y-1">
                         {comments[key].trim().split("\n").filter(Boolean).map((line, i) => (
-                          <div key={i} className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
-                            <p className="text-xs flex items-start gap-1.5">
+                          <div key={i} className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50 flex items-start justify-between gap-2">
+                            <p className="text-xs flex items-start gap-1.5 flex-1">
                               <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
                               <span className="text-foreground">{line}</span>
                             </p>
+                            <button
+                              onClick={() => deleteCommentLine(0, plan.day, i)}
+                              className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                              title="Ta bort kommentar"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -934,11 +959,18 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   {comments[key]?.trim() && (
                     <div className="space-y-1">
                       {comments[key].trim().split("\n").filter(Boolean).map((line, i) => (
-                        <div key={i} className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50">
-                          <p className="text-xs flex items-start gap-1.5">
+                        <div key={i} className="bg-accent/30 rounded-lg px-3 py-2 border border-accent/50 flex items-start justify-between gap-2">
+                          <p className="text-xs flex items-start gap-1.5 flex-1">
                             <MessageSquare className="w-3.5 h-3.5 text-accent-foreground mt-0.5 flex-shrink-0" />
                             <span className="text-foreground">{line}</span>
                           </p>
+                          <button
+                            onClick={() => deleteCommentLine(plan.week, plan.day, i)}
+                            className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                            title="Ta bort kommentar"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         </div>
                       ))}
                     </div>
