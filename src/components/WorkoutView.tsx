@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -92,6 +92,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+
+  // Weight selection for exercises
+  const [weightDialog, setWeightDialog] = useState<{ planId: string; exerciseName: string; lastWeight: string | null } | null>(null);
+  const [weightInput, setWeightInput] = useState("");
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }] = await Promise.all([
@@ -236,6 +240,53 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         .eq("day", plan.day);
       fetchData();
     }
+  };
+
+  // Parse weight from a detail line like "Bänkpress — 80 kg"
+  const parseExerciseWeight = (line: string): { name: string; weight: string | null } => {
+    const match = line.match(/^(.+?)\s*—\s*(.+)$/);
+    if (match) return { name: match[1].trim(), weight: match[2].trim() };
+    return { name: line.trim(), weight: null };
+  };
+
+  // Find last weight used for an exercise across all single workouts
+  const findLastWeight = (exerciseName: string): string | null => {
+    const singlePlans = plans.filter(p => p.week === 0);
+    for (const plan of singlePlans) {
+      if (!plan.details) continue;
+      for (const line of plan.details.split("\n")) {
+        const { name, weight } = parseExerciseWeight(line);
+        if (name.toLowerCase() === exerciseName.toLowerCase() && weight) {
+          return weight;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Open weight dialog when selecting an exercise
+  const handleExerciseSelect = (planId: string, exerciseName: string) => {
+    const lastWeight = findLastWeight(exerciseName);
+    setWeightDialog({ planId, exerciseName, lastWeight });
+    setWeightInput(lastWeight || "");
+  };
+
+  // Add exercise with weight to plan
+  const addExerciseWithWeight = async (useWeight: string | null) => {
+    if (!weightDialog) return;
+    const plan = plans.find(p => p.id === weightDialog.planId);
+    if (!plan) return;
+
+    const entry = useWeight
+      ? `${weightDialog.exerciseName} — ${useWeight}`
+      : weightDialog.exerciseName;
+
+    const newDetails = plan.details ? `${plan.details}\n${entry}` : entry;
+
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+    setWeightDialog(null);
+    setWeightInput("");
   };
 
   const addExerciseToPlan = async (plan: PlanDay, exerciseName: string) => {
@@ -406,17 +457,80 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     {/* Exercises / details */}
                     {plan.details && (
                       <div className="space-y-1">
-                        {plan.details.split("\n").filter(Boolean).map((line, i) => (
-                          <div key={i} className="flex items-center gap-2 text-sm text-foreground">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                            {line}
+                        {plan.details.split("\n").filter(Boolean).map((line, i) => {
+                          const { name, weight } = parseExerciseWeight(line);
+                          return (
+                            <div key={i} className="flex items-center gap-2 text-sm text-foreground">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                              <span className="flex-1">{name}</span>
+                              {weight && (
+                                <span className="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                  {weight}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Weight dialog */}
+                    {weightDialog && weightDialog.planId === plan.id && (
+                      <div className="bg-secondary/50 rounded-lg p-3 space-y-3 animate-fade-in border border-primary/30">
+                        <h4 className="text-xs font-semibold flex items-center gap-1.5">
+                          <Weight className="w-3.5 h-3.5 text-primary" />
+                          {weightDialog.exerciseName}
+                        </h4>
+                        {weightDialog.lastWeight ? (
+                          <div className="text-xs text-muted-foreground">
+                            Senast: <span className="font-mono text-foreground">{weightDialog.lastWeight}</span>
                           </div>
-                        ))}
+                        ) : (
+                          <div className="text-xs text-muted-foreground">Ingen tidigare vikt registrerad</div>
+                        )}
+                        <div>
+                          <label className="text-[11px] text-muted-foreground mb-1 block">Vikt (t.ex. 80 kg, 3×8 @ 60 kg)</label>
+                          <input
+                            type="text"
+                            value={weightInput}
+                            onChange={(e) => setWeightInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && weightInput.trim() && addExerciseWithWeight(weightInput.trim())}
+                            placeholder="Ange vikt..."
+                            className="w-full bg-background text-foreground text-xs px-3 py-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          {weightDialog.lastWeight && (
+                            <button
+                              onClick={() => addExerciseWithWeight(weightDialog.lastWeight)}
+                              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-secondary text-foreground rounded-md text-xs font-medium hover:bg-muted transition-colors"
+                            >
+                              <Equal className="w-3 h-3" /> Samma vikt
+                            </button>
+                          )}
+                          <button
+                            onClick={() => addExerciseWithWeight(weightInput.trim() || null)}
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-medium"
+                          >
+                            {weightInput.trim() ? (
+                              <><TrendingUp className="w-3 h-3" /> Spara</>
+                            ) : (
+                              <>Utan vikt</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => { setWeightDialog(null); setWeightInput(""); }}
+                            className="px-2 py-1.5 text-muted-foreground hover:text-foreground text-xs"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     )}
 
                     {/* Add exercise button */}
-                    {!isExercisePickerOpen ? (
+                    {!isExercisePickerOpen && !weightDialog ? (
                       <button
                         onClick={() => {
                           setShowExercisePicker(plan.id);
@@ -427,7 +541,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       >
                         <Plus className="w-3 h-3" /> Lägg till övning
                       </button>
-                    ) : (
+                    ) : isExercisePickerOpen && !weightDialog ? (
                       <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-semibold">Välj övning</h4>
@@ -464,19 +578,27 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                           ))}
                         </div>
                         <div className="max-h-32 overflow-y-auto space-y-0.5">
-                          {filteredExercises.map((e, i) => (
-                            <button
-                              key={`${e.name}-${i}`}
-                              onClick={() => addExerciseToPlan(plan, e.name)}
-                              className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors"
-                            >
-                              <span>{e.name}</span>
-                              <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
-                            </button>
-                          ))}
+                          {filteredExercises.map((e, i) => {
+                            const lastW = findLastWeight(e.name);
+                            return (
+                              <button
+                                key={`${e.name}-${i}`}
+                                onClick={() => handleExerciseSelect(plan.id, e.name)}
+                                className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors"
+                              >
+                                <span>{e.name}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {lastW && (
+                                    <span className="text-[10px] font-mono text-primary">{lastW}</span>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Comment */}
                     <div className="flex gap-2">
