@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight } from "lucide-react";
+import PlanPicker from "@/components/PlanPicker";
 
 interface WorkoutViewProps {
   userId: string;
@@ -130,13 +131,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const progress = weekDays.length > 0 ? Math.round((doneCount / weekDays.length) * 100) : 0;
 
   if (weeks.length === 0) {
-    return (
-      <div className="text-center py-16 space-y-4">
-        <Dumbbell className="w-12 h-12 text-muted-foreground mx-auto" />
-        <p className="text-muted-foreground">Inget schema ännu!</p>
-        <p className="text-sm text-muted-foreground">Gå till Schema-fliken för att skapa ditt träningsprogram.</p>
-      </div>
-    );
+    return <PlanPicker userId={userId} onDone={fetchData} />;
   }
 
   return (
