@@ -438,13 +438,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             </p>
           </div>
           {singlePlans.length > 0 && (
-            <button
-              onClick={leavePlan}
-              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-              title="Rensa alla pass"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex flex-col items-center gap-0.5">
+              <button
+                onClick={leavePlan}
+                className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                title="Rensa alla pass"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+              <span className="text-[9px] text-muted-foreground leading-tight">Rensa alla</span>
+            </div>
           )}
         </div>
 
@@ -834,13 +837,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             <h2 className="text-2xl font-black tracking-tight">Vecka {currentWeek}</h2>
             <p className="text-sm text-muted-foreground">av {weeks.length} veckor</p>
           </div>
-          <button
-            onClick={leavePlan}
-            className="absolute right-14 top-3 p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-            title="Lämna plan"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div className="absolute right-14 top-2 flex flex-col items-center gap-0.5">
+            <button
+              onClick={leavePlan}
+              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+              title="Lämna plan"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+            <span className="text-[9px] text-muted-foreground leading-tight">Avsluta plan</span>
+          </div>
           <button
             onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
             disabled={weekIdx >= weeks.length - 1}
