@@ -298,10 +298,10 @@ const Index = () => {
           )}
           <button
             onClick={handleShopClick}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors text-muted-foreground hover:text-foreground"
-          >
+            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors text-muted-foreground hover:text-foreground">
+
             <ShoppingCart className="w-5 h-5" />
-            <span className="font-medium">Shop</span>
+            <span className="font-medium">Gymberget</span>
           </button>
         </div>
       </nav>
