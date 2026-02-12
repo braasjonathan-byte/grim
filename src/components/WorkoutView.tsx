@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Heart, Timer, Route } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
 import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
+import WorkoutLogDialog from "@/components/WorkoutLogDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -29,6 +30,10 @@ interface Completion {
   done: boolean;
   skipped: boolean;
   user_comment: string;
+  logged_tempo?: string | null;
+  logged_pulse?: number | null;
+  logged_distance_km?: number | null;
+  logged_weights?: Record<string, number> | null;
 }
 
 interface FriendComment {
@@ -116,6 +121,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   // Replacement workout dialog state
   const [replacementTarget, setReplacementTarget] = useState<{ planId: string; sessionName: string; week: number; day: string } | null>(null);
+  const [logTarget, setLogTarget] = useState<{ week: number; day: string; sessionName: string; details: string } | null>(null);
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
@@ -145,7 +151,11 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     if (compData) {
       const map: Record<string, Completion> = {};
       for (const c of compData) {
-        map[`${c.week}-${c.day}`] = { ...c, skipped: (c as any).skipped || false };
+        map[`${c.week}-${c.day}`] = {
+          ...c,
+          skipped: (c as any).skipped || false,
+          logged_weights: c.logged_weights as Record<string, number> | null,
+        };
       }
       setCompletions(map);
       const commentMap: Record<string, string> = {};
@@ -281,6 +291,79 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       { onConflict: "user_id,week,day" }
     );
   };
+
+  // Adaptive progression: adjust future weeks based on logged results
+  const adaptProgression = useCallback(async () => {
+    if (mode !== "plan" || weeks.length === 0) return;
+
+    const { data: loggedData } = await supabase
+      .from("workout_completions")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("done", true)
+      .lte("week", currentWeek);
+
+    if (!loggedData || loggedData.length === 0) return;
+
+    const { data: futurePlans } = await supabase
+      .from("workout_plans")
+      .select("*")
+      .eq("user_id", userId)
+      .gt("week", currentWeek);
+
+    if (!futurePlans || futurePlans.length === 0) return;
+
+    // Build weight history per exercise (latest logged weight)
+    const latestWeight: Record<string, number> = {};
+    const sortedLogs = [...loggedData].sort((a, b) => a.week - b.week);
+    for (const log of sortedLogs) {
+      const weights = log.logged_weights as Record<string, number> | null;
+      if (!weights) continue;
+      for (const [ex, w] of Object.entries(weights)) {
+        latestWeight[ex] = w as number;
+      }
+    }
+
+    // Update future strength plans based on logged weights
+    const updates: { id: string; details: string }[] = [];
+    for (const plan of futurePlans) {
+      let details = plan.details;
+      let changed = false;
+
+      for (const [exercise, lastW] of Object.entries(latestWeight)) {
+        const escaped = exercise.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escaped}[^;\\n]*?)\\b(\\d+(?:[.,]\\d+)?)\\s*kg`, "gi");
+        details = details.replace(regex, (_match, prefix, oldWeight) => {
+          const old = parseFloat(oldWeight.replace(",", "."));
+          if (old > 0 && lastW > 0) {
+            changed = true;
+            // Scale planned weight proportionally: new = planned * (logged / expected_for_that_week)
+            // Simple: use logged weight + small increment for progressive overload
+            const step = 2.5;
+            const adjusted = Math.round((lastW + step) / step) * step;
+            return `${prefix}${adjusted}kg`;
+          }
+          return _match;
+        });
+      }
+
+      if (changed) {
+        updates.push({ id: plan.id, details });
+      }
+    }
+
+    for (const upd of updates) {
+      await supabase.from("workout_plans").update({ details: upd.details }).eq("id", upd.id);
+    }
+
+    if (updates.length > 0) {
+      fetchData();
+    }
+  }, [userId, mode, weeks, currentWeek, fetchData]);
+
+  useEffect(() => {
+    adaptProgression();
+  }, [currentWeek, adaptProgression]);
 
   const leavePlan = async () => {
     if (!confirm("Är du säker? Alla pass och all progress raderas.")) return;
@@ -942,15 +1025,22 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             >
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => setExpandedDay(expanded ? null : key)}>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleDone(plan.week, plan.day); }}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                      isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
-                    }`}
-                    title="Genomfört"
-                  >
-                    {isDone && <Check className="w-4 h-4 text-success-foreground" />}
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isDone) {
+                          toggleDone(plan.week, plan.day);
+                        } else {
+                          setLogTarget({ week: plan.week, day: plan.day, sessionName: plan.session_name, details: plan.details });
+                        }
+                      }}
+                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                        isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
+                      }`}
+                      title="Genomfört"
+                    >
+                      {isDone && <Check className="w-4 h-4 text-success-foreground" />}
+                    </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1001,6 +1091,30 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
               {expanded && (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                   <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+
+                  {/* Logged workout data */}
+                  {(() => {
+                    const comp = completions[key];
+                    const hasLog = comp && ((comp as any).logged_tempo || (comp as any).logged_pulse || (comp as any).logged_distance_km || (comp as any).logged_weights);
+                    if (!hasLog) return null;
+                    return (
+                      <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-1.5">
+                        <p className="text-xs font-bold text-success flex items-center gap-1.5">📊 Dina loggade resultat</p>
+                        {(comp as any).logged_tempo && (
+                          <p className="text-xs flex items-center gap-1.5"><Timer className="w-3 h-3 text-muted-foreground" /> Tempo: <span className="font-mono font-semibold">{(comp as any).logged_tempo}</span></p>
+                        )}
+                        {(comp as any).logged_pulse && (
+                          <p className="text-xs flex items-center gap-1.5"><Heart className="w-3 h-3 text-muted-foreground" /> Puls: <span className="font-mono font-semibold">{(comp as any).logged_pulse} bpm</span></p>
+                        )}
+                        {(comp as any).logged_distance_km && (
+                          <p className="text-xs flex items-center gap-1.5"><Route className="w-3 h-3 text-muted-foreground" /> Distans: <span className="font-mono font-semibold">{(comp as any).logged_distance_km} km</span></p>
+                        )}
+                        {(comp as any).logged_weights && Object.entries((comp as any).logged_weights).map(([ex, w]: [string, any]) => (
+                          <p key={ex} className="text-xs flex items-center gap-1.5"><Dumbbell className="w-3 h-3 text-muted-foreground" /> {ex}: <span className="font-mono font-semibold">{w} kg</span></p>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   {/* Friend comments */}
                   {(() => {
@@ -1082,6 +1196,32 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           onSkipOnly={() => {
             setReplacementTarget(null);
             toggleSkipped(replacementTarget.week, replacementTarget.day);
+          }}
+        />
+      )}
+
+      {/* Workout log dialog */}
+      {logTarget && (
+        <WorkoutLogDialog
+          userId={userId}
+          week={logTarget.week}
+          day={logTarget.day}
+          sessionName={logTarget.sessionName}
+          details={logTarget.details}
+          existingLog={(() => {
+            const comp = completions[`${logTarget.week}-${logTarget.day}`];
+            if (!comp) return undefined;
+            return {
+              logged_tempo: comp.logged_tempo || null,
+              logged_pulse: comp.logged_pulse || null,
+              logged_distance_km: comp.logged_distance_km || null,
+              logged_weights: comp.logged_weights || null,
+            };
+          })()}
+          onClose={() => setLogTarget(null)}
+          onSaved={() => {
+            setLogTarget(null);
+            fetchData();
           }}
         />
       )}
