@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2 } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
+import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 interface WorkoutViewProps {
   userId: string;
@@ -23,6 +29,14 @@ interface Completion {
   user_comment: string;
 }
 
+interface CustomExercise {
+  id: string;
+  name: string;
+  category: string;
+  muscle_group: string;
+  created_by: string;
+}
+
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
 const getSessionIcon = (session: string) => {
@@ -42,6 +56,21 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
+// Format a day key for display - if it looks like an ISO date, format it nicely
+const formatDayDisplay = (day: string) => {
+  try {
+    // Check if it starts with a date pattern (YYYY-MM-DD)
+    const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      const date = parseISO(dateMatch[1]);
+      return format(date, "d MMM yyyy", { locale: sv });
+    }
+  } catch {
+    // not a date
+  }
+  return day;
+};
+
 const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
@@ -56,6 +85,13 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [singleName, setSingleName] = useState("");
   const [singleDetails, setSingleDetails] = useState("");
   const [singleTempo, setSingleTempo] = useState("");
+  const [singleDate, setSingleDate] = useState<Date>(new Date());
+
+  // Exercise browser for single workouts
+  const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
+  const [exerciseSearch, setExerciseSearch] = useState("");
+  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
+  const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }] = await Promise.all([
@@ -98,6 +134,25 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (mode === "single") {
+      supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
+        if (data) setCustomExercises(data);
+      });
+    }
+  }, [mode]);
+
+  const allExercises = [
+    ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false })),
+    ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true })),
+  ];
+
+  const filteredExercises = allExercises.filter((e) => {
+    const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
+    const matchesMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
+    return matchesSearch && matchesMuscle;
+  });
 
   const toggleDone = async (week: number, day: string) => {
     const key = `${week}-${day}`;
@@ -150,13 +205,14 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const addSingleWorkout = async () => {
     if (!singleName.trim()) return;
 
-    const existingSingle = plans.filter(p => p.week === 0);
-    const dayKey = `Pass ${existingSingle.length + 1}`;
+    // Use date + timestamp for unique day key
+    const dateStr = format(singleDate, "yyyy-MM-dd");
+    const uniqueKey = `${dateStr}_${Date.now()}`;
 
     await supabase.from("workout_plans").insert({
       user_id: userId,
       week: 0,
-      day: dayKey,
+      day: uniqueKey,
       session_name: singleName.trim(),
       details: singleDetails.trim(),
       tempo: singleTempo.trim() || null,
@@ -165,6 +221,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     setSingleName("");
     setSingleDetails("");
     setSingleTempo("");
+    setSingleDate(new Date());
     setShowAddSingle(false);
     fetchData();
   };
@@ -179,6 +236,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         .eq("day", plan.day);
       fetchData();
     }
+  };
+
+  const addExerciseToPlan = async (plan: PlanDay, exerciseName: string) => {
+    const newDetails = plan.details
+      ? `${plan.details}\n${exerciseName}`
+      : exerciseName;
+
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
   };
 
   if (mode === "loading") {
@@ -243,7 +310,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   // Single workouts mode
   if (mode === "single") {
-    const singlePlans = plans.filter(p => p.week === 0);
+    const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => {
+      // Sort by date descending (newest first)
+      const dateA = a.day.match(/^(\d{4}-\d{2}-\d{2})/) ? a.day : "0000";
+      const dateB = b.day.match(/^(\d{4}-\d{2}-\d{2})/) ? b.day : "0000";
+      return dateB.localeCompare(dateA);
+    });
     const doneCount = singlePlans.filter(p => completions[`0-${p.day}`]?.done).length;
 
     return (
@@ -288,6 +360,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             const expanded = expandedDay === key;
             const Icon = getSessionIcon(plan.session_name);
             const colorClass = getSessionColor(plan.session_name);
+            const isExercisePickerOpen = showExercisePicker === plan.id;
 
             return (
               <div
@@ -307,11 +380,15 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className={`font-semibold text-sm truncate ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                    <span className={`font-semibold text-sm truncate block ${isDone ? "line-through text-muted-foreground" : ""}`}>
                       {plan.session_name}
                     </span>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CalendarIcon className="w-3 h-3" />
+                      {formatDayDisplay(plan.day)}
+                    </span>
                     {plan.tempo && plan.tempo !== "—" && (
-                      <p className="text-xs text-muted-foreground font-mono">{plan.tempo}</p>
+                      <span className="text-xs text-muted-foreground font-mono block">{plan.tempo}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
@@ -326,7 +403,82 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                 </div>
                 {expanded && (
                   <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
-                    {plan.details && <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>}
+                    {/* Exercises / details */}
+                    {plan.details && (
+                      <div className="space-y-1">
+                        {plan.details.split("\n").filter(Boolean).map((line, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm text-foreground">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add exercise button */}
+                    {!isExercisePickerOpen ? (
+                      <button
+                        onClick={() => {
+                          setShowExercisePicker(plan.id);
+                          setExerciseSearch("");
+                          setSelectedMuscle(null);
+                        }}
+                        className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Lägg till övning
+                      </button>
+                    ) : (
+                      <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-semibold">Välj övning</h4>
+                          <button onClick={() => setShowExercisePicker(null)} className="text-muted-foreground hover:text-foreground">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground" />
+                          <input
+                            type="text"
+                            value={exerciseSearch}
+                            onChange={(e) => setExerciseSearch(e.target.value)}
+                            placeholder="Sök övning..."
+                            className="w-full bg-background text-foreground text-xs pl-8 pr-3 py-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            onClick={() => setSelectedMuscle(null)}
+                            className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${!selectedMuscle ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}
+                          >
+                            Alla
+                          </button>
+                          {muscleGroups.map((mg) => (
+                            <button
+                              key={mg}
+                              onClick={() => setSelectedMuscle(mg === selectedMuscle ? null : mg)}
+                              className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${selectedMuscle === mg ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}
+                            >
+                              {mg}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="max-h-32 overflow-y-auto space-y-0.5">
+                          {filteredExercises.map((e, i) => (
+                            <button
+                              key={`${e.name}-${i}`}
+                              onClick={() => addExerciseToPlan(plan, e.name)}
+                              className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors"
+                            >
+                              <span>{e.name}</span>
+                              <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Comment */}
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -348,9 +500,38 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           })}
         </div>
 
+        {/* Add single workout form */}
         {showAddSingle ? (
           <div className="bg-card border border-primary/30 rounded-lg p-4 space-y-3 animate-fade-in">
             <h3 className="text-sm font-semibold">Nytt pass</h3>
+
+            {/* Date picker */}
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Datum</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "w-full flex items-center gap-2 bg-secondary text-foreground text-sm p-2 rounded-md text-left",
+                      !singleDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                    {singleDate ? format(singleDate, "d MMMM yyyy", { locale: sv }) : "Välj datum"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-[80]" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={singleDate}
+                    onSelect={(date) => date && setSingleDate(date)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <input
               type="text"
               value={singleName}
