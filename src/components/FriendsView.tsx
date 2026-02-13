@@ -18,6 +18,7 @@ interface FriendsViewProps {
 interface FriendProfile {
   user_id: string;
   nickname: string;
+  avatar_url: string | null;
 }
 
 interface Friendship {
@@ -118,7 +119,7 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
 
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, nickname")
+      .select("user_id, nickname, avatar_url")
       .in("user_id", otherIds);
 
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
@@ -167,7 +168,7 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
         requesting_user_id: userId,
       });
 
-    setSearchResults(data || []);
+    setSearchResults((data || []).map((d: any) => ({ ...d, avatar_url: null })));
     setSearching(false);
   };
 
@@ -311,7 +312,14 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
           <ChevronLeft className="w-4 h-4" /> Tillbaka till vänner
         </button>
 
-        <div className="text-center space-y-1">
+        <div className="text-center space-y-2">
+          <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden mx-auto">
+            {viewingFriend.profile.avatar_url ? (
+              <img src={viewingFriend.profile.avatar_url} alt={viewingFriend.profile.nickname} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xl font-bold text-primary">{viewingFriend.profile.nickname[0]?.toUpperCase()}</span>
+            )}
+          </div>
           <h2 className="text-xl font-black">{viewingFriend.profile.nickname}</h2>
           <p className="text-sm text-muted-foreground">Träningsschema</p>
         </div>
@@ -562,7 +570,7 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
           {suggestedFriends.map((suggestion) => (
             <div key={suggestion.user_id} className="flex items-center justify-between p-3 bg-card border border-border rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-accent/30 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-accent/30 flex items-center justify-center overflow-hidden">
                   <span className="text-sm font-bold text-accent-foreground">{suggestion.nickname[0]?.toUpperCase()}</span>
                 </div>
                 <div>
@@ -603,8 +611,12 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
                 className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+                  <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {friend.profile.avatar_url ? (
+                      <img src={friend.profile.avatar_url} alt={friend.profile.nickname} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+                    )}
                   </div>
                   <span className="font-semibold text-sm">{friend.profile.nickname}</span>
                   {recentCount > 0 && (
