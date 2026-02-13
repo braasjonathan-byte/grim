@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator } from "lucide-react";
+import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
 
 interface WorkoutLogDialogProps {
   userId: string;
@@ -131,6 +132,9 @@ const WorkoutLogDialog = ({
       { onConflict: "user_id,week,day" }
     );
 
+    // Send push notification to friends
+    notifyFriendsOfCompletion(day, week, sessionName);
+
     setSaving(false);
     onSaved();
   };
@@ -216,6 +220,7 @@ const WorkoutLogDialog = ({
                 { user_id: userId, week, day, done: true, skipped: false } as any,
                 { onConflict: "user_id,week,day" }
               );
+              notifyFriendsOfCompletion(day, week, sessionName);
               onSaved();
             }}
             className="flex-1 py-3 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"

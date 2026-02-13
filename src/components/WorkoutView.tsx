@@ -10,6 +10,7 @@ import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
 
 interface WorkoutViewProps {
   userId: string;
@@ -235,6 +236,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       } as any,
       { onConflict: "user_id,week,day" }
     );
+
+    // Send push notification to friends
+    if (newDone) {
+      const plan = plans.find((p) => p.week === week && p.day === day);
+      notifyFriendsOfCompletion(day, week, plan?.session_name || day);
+    }
   };
 
   const toggleSkipped = async (week: number, day: string) => {
