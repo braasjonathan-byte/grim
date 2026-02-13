@@ -45,11 +45,11 @@ const Index = () => {
         setUser(session?.user ?? null);
         if (session?.user) {
           setTimeout(async () => {
-            const { data } = await supabase
-              .from("profiles")
-              .select("nickname, must_change_password")
-              .eq("user_id", session.user.id)
-              .single();
+            const { data } = await supabase.
+            from("profiles").
+            select("nickname, must_change_password").
+            eq("user_id", session.user.id).
+            single();
             if (data) {
               setNickname(data.nickname);
               if (data.must_change_password) {
@@ -57,11 +57,11 @@ const Index = () => {
                 setShowChangePassword(true);
               }
             }
-            const { data: roleData } = await supabase
-              .from("user_roles")
-              .select("role")
-              .eq("user_id", session.user.id)
-              .maybeSingle();
+            const { data: roleData } = await supabase.
+            from("user_roles").
+            select("role").
+            eq("user_id", session.user.id).
+            maybeSingle();
             if (roleData) setUserRole(roleData.role);
           }, 0);
         }
@@ -72,28 +72,28 @@ const Index = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        supabase
-          .from("profiles")
-          .select("nickname, must_change_password")
-          .eq("user_id", session.user.id)
-          .single()
-          .then(({ data }) => {
-            if (data) {
-              setNickname(data.nickname);
-              if (data.must_change_password) {
-                setForceChangePassword(true);
-                setShowChangePassword(true);
-              }
+        supabase.
+        from("profiles").
+        select("nickname, must_change_password").
+        eq("user_id", session.user.id).
+        single().
+        then(({ data }) => {
+          if (data) {
+            setNickname(data.nickname);
+            if (data.must_change_password) {
+              setForceChangePassword(true);
+              setShowChangePassword(true);
             }
-          });
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .maybeSingle()
-          .then(({ data: roleData }) => {
-            if (roleData) setUserRole(roleData.role);
-          });
+          }
+        });
+        supabase.
+        from("user_roles").
+        select("role").
+        eq("user_id", session.user.id).
+        maybeSingle().
+        then(({ data: roleData }) => {
+          if (roleData) setUserRole(roleData.role);
+        });
       }
       setLoading(false);
     });
@@ -105,10 +105,10 @@ const Index = () => {
     if (!user) return;
     const checkUnread = async () => {
       const lastRead = localStorage.getItem("gymberget_last_read_announcements") || "1970-01-01T00:00:00Z";
-      const { count } = await supabase
-        .from("announcements")
-        .select("*", { count: "exact", head: true })
-        .gt("created_at", lastRead);
+      const { count } = await supabase.
+      from("announcements").
+      select("*", { count: "exact", head: true }).
+      gt("created_at", lastRead);
       setUnreadAnnouncements(count || 0);
     };
     checkUnread();
@@ -247,8 +247,8 @@ const Index = () => {
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Dumbbell className="w-5 h-5 text-primary" />
-            <h1 className="text-base font-black tracking-tight">
-              GYMBERGET<span className="text-primary">.</span>
+            <h1 className="text-base font-black tracking-tight">PowerBase.
+              <span className="text-primary">.</span>
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -331,20 +331,20 @@ const Index = () => {
       <WhatsNewDialog />
 
       {/* Change password modal */}
-      {showChangePassword && (
-        <ChangePassword
-          forced={forceChangePassword}
-          onClose={() => {
-            if (!forceChangePassword) {
-              setShowChangePassword(false);
-            }
-          }}
-          onChanged={() => {
-            setForceChangePassword(false);
+      {showChangePassword &&
+      <ChangePassword
+        forced={forceChangePassword}
+        onClose={() => {
+          if (!forceChangePassword) {
             setShowChangePassword(false);
-          }}
-        />
-      )}
+          }
+        }}
+        onChanged={() => {
+          setForceChangePassword(false);
+          setShowChangePassword(false);
+        }} />
+
+      }
 
       {/* Bottom tab bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-50">
