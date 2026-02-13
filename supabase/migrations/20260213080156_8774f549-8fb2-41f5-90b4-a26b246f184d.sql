@@ -1,0 +1,1 @@
+CREATE POLICY "Deny anon access to user_emails" ON public.user_emails FOR ALL TO anon USING (false) WITH CHECK (false);
