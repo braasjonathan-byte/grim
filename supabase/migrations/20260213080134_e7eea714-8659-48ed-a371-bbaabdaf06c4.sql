@@ -1,0 +1,1 @@
+CREATE POLICY "Deny anon access to profiles" ON public.profiles FOR ALL TO anon USING (false) WITH CHECK (false);
