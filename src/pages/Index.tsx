@@ -247,8 +247,8 @@ const Index = () => {
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Dumbbell className="w-5 h-5 text-primary" />
-            <h1 className="text-base font-black tracking-tight">PowerBase.
-              <span className="text-primary">.</span>
+            <h1 className="text-base font-black tracking-tight">Grim
+              <span className="text-primary"></span>
             </h1>
           </div>
           <div className="flex items-center gap-3">
