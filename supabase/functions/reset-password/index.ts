@@ -49,21 +49,18 @@ Deno.serve(async (req) => {
         .order("question_index", { ascending: true });
 
       if (!secData || secData.length < 4) {
-        // No security questions set up - fall back to email
         if (!profile.email) {
           return new Response(
             JSON.stringify({ success: false, hasQuestions: false, message: "Inga säkerhetsfrågor eller e-post konfigurerade." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
         return new Response(
           JSON.stringify({ success: true, hasQuestions: false, hasEmail: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Parse question indices from stored data
       const SECURITY_QUESTIONS = [
         "Vad hette ditt första husdjur?",
         "Vilken stad föddes du i?",
@@ -89,7 +86,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Step 2: Verify answers and reset password
+    // Helper: generate temp password and store it (without changing the real password)
+    const generateAndStoreTempPassword = async (userId: string) => {
+      const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
+      let tempPassword = "";
+      for (let i = 0; i < 12; i++) {
+        tempPassword += chars[Math.floor(Math.random() * chars.length)];
+      }
+
+      // Invalidate previous temp passwords for this user
+      await supabaseAdmin
+        .from("temp_passwords")
+        .delete()
+        .eq("user_id", userId);
+
+      // Store new temp password
+      const { error } = await supabaseAdmin
+        .from("temp_passwords")
+        .insert({
+          user_id: userId,
+          temp_password: tempPassword,
+        });
+
+      if (error) {
+        console.error("Failed to store temp password:", error);
+        return null;
+      }
+      return tempPassword;
+    };
+
+    // Step 2: Verify answers and generate temp password (don't change real password)
     if (action === "verify-answers") {
       if (!answers || !Array.isArray(answers) || answers.length !== 4) {
         return new Response(
@@ -111,7 +137,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Verify each answer
       let allCorrect = true;
       for (let i = 0; i < 4; i++) {
         const stored = secData[i].answer_hash;
@@ -130,33 +155,21 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Generate and set new password
-      const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
-      let tempPassword = "";
-      for (let i = 0; i < 12; i++) {
-        tempPassword += chars[Math.floor(Math.random() * chars.length)];
-      }
-
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        profile.user_id,
-        { password: tempPassword }
-      );
-
-      if (updateError) {
-        console.error("Failed to reset password:", updateError);
+      const tempPassword = await generateAndStoreTempPassword(profile.user_id);
+      if (!tempPassword) {
         return new Response(
-          JSON.stringify({ error: "Kunde inte återställa lösenordet" }),
+          JSON.stringify({ error: "Kunde inte skapa tillfälligt lösenord" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
-        JSON.stringify({ success: true, tempPassword, message: "Lösenordet har återställts!" }),
+        JSON.stringify({ success: true, tempPassword, message: "Tillfälligt lösenord skapat! Ditt gamla lösenord fungerar fortfarande." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Step 3: Email-based reset (fallback)
+    // Step 3: Email-based reset (also stores temp password without changing real one)
     if (action === "email-reset") {
       if (!profile.email) {
         return new Response(
@@ -165,20 +178,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
-      let tempPassword = "";
-      for (let i = 0; i < 12; i++) {
-        tempPassword += chars[Math.floor(Math.random() * chars.length)];
-      }
-
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        profile.user_id,
-        { password: tempPassword }
-      );
-
-      if (updateError) {
+      const tempPassword = await generateAndStoreTempPassword(profile.user_id);
+      if (!tempPassword) {
         return new Response(
-          JSON.stringify({ error: "Kunde inte återställa lösenordet" }),
+          JSON.stringify({ error: "Kunde inte skapa tillfälligt lösenord" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -194,11 +197,11 @@ Deno.serve(async (req) => {
       const emailHtml = `
         <div style="font-family: -apple-system, sans-serif; max-width: 420px; margin: 0 auto; padding: 32px 24px;">
           <h2 style="margin: 0 0 16px; font-size: 20px;">Lösenordsåterställning</h2>
-          <p style="color: #444; line-height: 1.5;">Hej! Ditt lösenord har återställts.</p>
+          <p style="color: #444; line-height: 1.5;">Hej! Här är ditt tillfälliga lösenord. Ditt gamla lösenord fungerar fortfarande.</p>
           <div style="background: #f4f4f5; border-radius: 8px; padding: 16px; text-align: center; font-family: monospace; font-size: 22px; letter-spacing: 2px; margin: 20px 0; color: #111;">
             ${tempPassword}
           </div>
-          <p style="font-size: 14px; color: #666;">Logga in och byt sedan lösenord i inställningarna.</p>
+          <p style="font-size: 14px; color: #666;">Logga in med antingen ditt gamla eller det tillfälliga lösenordet. Byt sedan lösenord i inställningarna.</p>
           <p style="font-size: 12px; color: #999; margin-top: 32px;">Om du inte begärt detta kan du ignorera detta mail.</p>
         </div>
       `;
@@ -212,7 +215,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           from: "TRÄNING <onboarding@resend.dev>",
           to: [profile.email],
-          subject: "Ditt nya tillfälliga lösenord",
+          subject: "Ditt tillfälliga lösenord",
           html: emailHtml,
         }),
       });
@@ -230,12 +233,63 @@ Deno.serve(async (req) => {
       const maskedEmail = emailParts[0].substring(0, 2) + "***@" + emailParts[1];
 
       return new Response(
-        JSON.stringify({ success: true, message: `Nytt lösenord skickat till ${maskedEmail}.` }),
+        JSON.stringify({ success: true, message: `Tillfälligt lösenord skickat till ${maskedEmail}. Ditt gamla lösenord fungerar fortfarande.` }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Default: just get-questions
+    // Step 4: Login with temp password
+    if (action === "temp-login") {
+      const { tempPassword } = body;
+      if (!tempPassword) {
+        return new Response(
+          JSON.stringify({ error: "Lösenord saknas" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check temp_passwords table
+      const { data: tempData } = await supabaseAdmin
+        .from("temp_passwords")
+        .select("*")
+        .eq("user_id", profile.user_id)
+        .eq("temp_password", tempPassword.trim())
+        .eq("used", false)
+        .gte("expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (!tempData) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Ogiltigt eller utgånget tillfälligt lösenord" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Temp password is valid - update the real password to the temp one and mark as used
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        profile.user_id,
+        { password: tempPassword.trim() }
+      );
+
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ error: "Kunde inte uppdatera lösenordet" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Mark temp password as used
+      await supabaseAdmin
+        .from("temp_passwords")
+        .update({ used: true })
+        .eq("id", tempData.id);
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Lösenordet har uppdaterats. Logga in med det tillfälliga lösenordet." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Ogiltig åtgärd" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

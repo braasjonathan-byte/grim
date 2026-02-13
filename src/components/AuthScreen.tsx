@@ -56,6 +56,26 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         password,
       });
       if (loginError) {
+        // Normal login failed - try temp password flow
+        try {
+          const { data: tempData } = await supabase.functions.invoke("reset-password", {
+            body: { nickname: trimmedNick, action: "temp-login", tempPassword: password },
+          });
+          if (tempData?.success) {
+            // Temp password was valid, real password is now updated - retry login
+            const { error: retryError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            if (!retryError) {
+              setLoading(false);
+              onAuth();
+              return;
+            }
+          }
+        } catch {
+          // Ignore temp login errors, fall through to error message
+        }
         setError("Fel användarnamn eller lösenord");
         setLoading(false);
         return;

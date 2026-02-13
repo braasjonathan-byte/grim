@@ -152,6 +152,33 @@ export type Database = {
         }
         Relationships: []
       }
+      temp_passwords: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          temp_password: string
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          temp_password: string
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          temp_password?: string
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       vapid_keys: {
         Row: {
           created_at: string
