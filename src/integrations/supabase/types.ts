@@ -68,7 +68,6 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
-          email: string | null
           experience_level: string | null
           id: string
           max_distance_km: number | null
@@ -80,7 +79,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          email?: string | null
           experience_level?: string | null
           id?: string
           max_distance_km?: number | null
@@ -92,7 +90,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          email?: string | null
           experience_level?: string | null
           id?: string
           max_distance_km?: number | null
@@ -178,6 +175,27 @@ export type Database = {
           id?: string
           temp_password?: string
           used?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
           user_id?: string
         }
         Relationships: []
