@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, ShoppingCart, Megaphone, Download, X, Smartphone } from "lucide-react";
+import { Dumbbell, Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, ShoppingCart, Megaphone, Download, X, Smartphone } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
-import PlanEditor from "@/components/PlanEditor";
+// PlanEditor removed - Schema tab no longer used
 import FriendsView from "@/components/FriendsView";
 import OneRMCalculator from "@/components/OneRMCalculator";
 import PulseZoneCalculator from "@/components/PulseZoneCalculator";
@@ -18,7 +18,7 @@ import AdminUserList from "@/components/AdminUserList";
 import NotificationSettings from "@/components/NotificationSettings";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
+type Tab = "workout" | "friends" | "calc" | "stats";
 
 interface FriendActivity {
   nickname: string;
@@ -264,7 +264,6 @@ const Index = () => {
 
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
-  { key: "plan", icon: Edit3, label: "Schema" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
@@ -377,7 +376,6 @@ const Index = () => {
       {/* Content */}
       <main className="max-w-lg mx-auto px-4 py-4">
         {tab === "workout" && <WorkoutView userId={user.id} />}
-        {tab === "plan" && <PlanEditor userId={user.id} />}
         {tab === "friends" &&
         <FriendsView
           userId={user.id}
