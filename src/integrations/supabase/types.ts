@@ -375,6 +375,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_jonne: { Args: never; Returns: boolean }
       search_users_by_nickname: {
         Args: { requesting_user_id: string; search_term: string }
         Returns: {

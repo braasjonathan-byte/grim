@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageSquarePlus, Loader2, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -6,10 +6,47 @@ interface SuggestionBoxProps {
   userId: string;
 }
 
+interface Suggestion {
+  id: string;
+  message: string;
+  created_at: string;
+  user_id: string;
+}
+
 const SuggestionBox = ({ userId }: SuggestionBoxProps) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [nicknames, setNicknames] = useState<Record<string, string>>({});
+
+  const fetchSuggestions = async () => {
+    const { data } = await supabase
+      .from("suggestions")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setSuggestions(data as Suggestion[]);
+      // Fetch nicknames for unique user_ids
+      const userIds = [...new Set(data.map((s: Suggestion) => s.user_id))];
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, nickname")
+          .in("user_id", userIds);
+        if (profiles) {
+          const map: Record<string, string> = {};
+          profiles.forEach((p) => { map[p.user_id] = p.nickname; });
+          setNicknames(map);
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchSuggestions();
+  }, []);
 
   const handleSubmit = async () => {
     const trimmed = message.trim();
@@ -23,9 +60,15 @@ const SuggestionBox = ({ userId }: SuggestionBoxProps) => {
     if (!error) {
       setMessage("");
       setSent(true);
+      fetchSuggestions();
       setTimeout(() => setSent(false), 3000);
     }
     setSending(false);
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
   };
 
   return (
@@ -67,6 +110,24 @@ const SuggestionBox = ({ userId }: SuggestionBoxProps) => {
         <p className="text-xs text-center text-success flex items-center justify-center gap-1">
           <Check className="w-3 h-3" /> Tack för ditt förslag!
         </p>
+      )}
+
+      {/* List of suggestions */}
+      {suggestions.length > 0 && (
+        <div className="border-t border-border pt-3 space-y-2">
+          <h4 className="text-xs font-semibold text-muted-foreground">Inskickade förslag</h4>
+          {suggestions.map((s) => (
+            <div key={s.id} className="bg-secondary rounded-lg p-3 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-primary">
+                  {nicknames[s.user_id] || "Okänd"}
+                </span>
+                <span className="text-[10px] text-muted-foreground">{formatDate(s.created_at)}</span>
+              </div>
+              <p className="text-sm text-foreground">{s.message}</p>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
