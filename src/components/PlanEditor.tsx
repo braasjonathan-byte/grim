@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Save, Search, X } from "lucide-react";
+import { Plus, Trash2, Save, Search, X, Info } from "lucide-react";
+import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 
 interface PlanEditorProps {
@@ -44,6 +45,7 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
   const [newExName, setNewExName] = useState("");
   const [newExCategory, setNewExCategory] = useState("styrka");
   const [newExMuscle, setNewExMuscle] = useState("Helkropp");
+  const [exerciseInfoName, setExerciseInfoName] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPlans();
@@ -211,6 +213,13 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
             {filteredExercises.map((e, i) => (
               <div key={`${e.name}-${i}`} className="flex items-center justify-between p-2 bg-secondary rounded-md text-sm">
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setExerciseInfoName(e.name)}
+                    className="p-0.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                    title="Visa övningsinfo"
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                  </button>
                   <span>{e.name}</span>
                   {e.isCustom && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary">Egendefinierad</span>}
                 </div>
@@ -417,6 +426,9 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
         >
           <Plus className="w-4 h-4" /> Lägg till dag
         </button>
+      )}
+      {exerciseInfoName && (
+        <ExerciseInfoDialog exerciseName={exerciseInfoName} onClose={() => setExerciseInfoName(null)} />
       )}
     </div>
   );
