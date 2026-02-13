@@ -15,6 +15,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import SuggestionBox from "@/components/SuggestionBox";
 import AnnouncementInbox from "@/components/AnnouncementInbox";
 import AdminUserList from "@/components/AdminUserList";
+import NotificationSettings from "@/components/NotificationSettings";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
@@ -375,6 +376,7 @@ const Index = () => {
             <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
             {userRole === "admin" && <AdminUserList userId={user.id} />}
             <SettingsPanel userId={user.id} />
+            <NotificationSettings userId={user.id} />
             <OneRMCalculator />
             <PulseZoneCalculator />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
