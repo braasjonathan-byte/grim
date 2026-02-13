@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Footprints, Heart, Timer, Route, Save } from "lucide-react";
+import { X, Footprints, Heart, Timer, Route, Save, Calculator } from "lucide-react";
 
 interface WorkoutLogDialogProps {
   userId: string;
@@ -18,6 +18,50 @@ interface WorkoutLogDialogProps {
   onSaved: () => void;
 }
 
+// Parse tempo string like "5:30" to seconds per km
+const tempoToSeconds = (t: string): number | null => {
+  const m = t.match(/^(\d+)[:\.](\d+)$/);
+  if (m) return parseInt(m[1]) * 60 + parseInt(m[2]);
+  const m2 = t.match(/^(\d+)$/);
+  if (m2) return parseInt(m2[1]) * 60;
+  return null;
+};
+
+// Parse total running minutes from session details
+// Supports formats like:
+// "3×10 min (2 min joggvila)" → 3*10 = 30 min running
+// "4×8 min (2 min joggvila)" → 4*8 = 32 min running
+// "21–31 min" → average = 26 min
+// "8 km" → null (distance already specified)
+const parseRunningMinutes = (details: string): number | null => {
+  // Interval format: "3×10 min" or "4x8 min"
+  const intervalMatch = details.match(/(\d+)\s*[×x]\s*(\d+)\s*min/i);
+  if (intervalMatch) {
+    return parseInt(intervalMatch[1]) * parseInt(intervalMatch[2]);
+  }
+
+  // Range format: "21–31 min" or "21-31 min"
+  const rangeMatch = details.match(/(\d+)\s*[–-]\s*(\d+)\s*min/i);
+  if (rangeMatch) {
+    return (parseInt(rangeMatch[1]) + parseInt(rangeMatch[2])) / 2;
+  }
+
+  // Single duration: "30 min"
+  const singleMatch = details.match(/^(\d+)\s*min/i);
+  if (singleMatch) {
+    return parseInt(singleMatch[1]);
+  }
+
+  return null;
+};
+
+// Check if details already specify a distance (e.g. "8 km")
+const parseExistingDistance = (details: string): number | null => {
+  const match = details.match(/^(\d+(?:[.,]\d+)?)\s*km$/i);
+  if (match) return parseFloat(match[1].replace(",", "."));
+  return null;
+};
+
 const WorkoutLogDialog = ({
   userId,
   week,
@@ -32,6 +76,43 @@ const WorkoutLogDialog = ({
   const [pulse, setPulse] = useState(existingLog?.logged_pulse?.toString() || "");
   const [distance, setDistance] = useState(existingLog?.logged_distance_km?.toString() || "");
   const [saving, setSaving] = useState(false);
+  const [autoCalculated, setAutoCalculated] = useState(false);
+
+  // Auto-calculate distance when tempo changes
+  const calculateDistance = useCallback(() => {
+    if (!tempo.trim()) return;
+
+    const secsPerKm = tempoToSeconds(tempo.trim());
+    if (!secsPerKm || secsPerKm <= 0) return;
+
+    // First check if details has a fixed distance (e.g. "8 km" for långpass)
+    const existingDist = parseExistingDistance(details);
+    if (existingDist) {
+      // Distance is already known from the plan, use it directly
+      if (!distance) {
+        setDistance(existingDist.toString());
+        setAutoCalculated(true);
+      }
+      return;
+    }
+
+    // Calculate from duration
+    const runMinutes = parseRunningMinutes(details);
+    if (!runMinutes) return;
+
+    const distanceKm = runMinutes / (secsPerKm / 60);
+    const rounded = Math.round(distanceKm * 100) / 100;
+
+    setDistance(rounded.toString());
+    setAutoCalculated(true);
+  }, [tempo, details, distance]);
+
+  useEffect(() => {
+    // Only auto-calculate if user hasn't manually entered distance
+    if (!existingLog?.logged_distance_km && tempo.trim()) {
+      calculateDistance();
+    }
+  }, [tempo, calculateDistance, existingLog]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -80,7 +161,10 @@ const WorkoutLogDialog = ({
             <input
               type="text"
               value={tempo}
-              onChange={(e) => setTempo(e.target.value)}
+              onChange={(e) => {
+                setTempo(e.target.value);
+                setAutoCalculated(false);
+              }}
               placeholder="t.ex. 5:30"
               className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               autoFocus
@@ -102,14 +186,25 @@ const WorkoutLogDialog = ({
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground flex items-center gap-1">
               <Route className="w-3 h-3" /> Distans (km)
+              {autoCalculated && (
+                <span className="flex items-center gap-0.5 text-primary ml-1">
+                  <Calculator className="w-3 h-3" />
+                  <span className="text-[10px]">Beräknad</span>
+                </span>
+              )}
             </label>
             <input
               type="number"
               inputMode="decimal"
               value={distance}
-              onChange={(e) => setDistance(e.target.value)}
+              onChange={(e) => {
+                setDistance(e.target.value);
+                setAutoCalculated(false);
+              }}
               placeholder="t.ex. 10"
-              className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              className={`w-full text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground ${
+                autoCalculated ? "bg-primary/10 ring-1 ring-primary/30" : "bg-secondary"
+              }`}
             />
           </div>
         </div>
