@@ -10,9 +10,11 @@ const exerciseTranslations: Record<string, string> = {
   // Bröst
   "bänkpress": "barbell bench press",
   "incline bänkpress": "incline barbell bench press",
+  "incline hantelpress": "incline dumbbell press",
   "pausbänk": "barbell bench press",
   "close-grip bänkpress": "close grip barbell bench press",
   "hantlar bänkpress": "dumbbell bench press",
+  "hantelpress": "dumbbell bench press",
   "hantlar flyes": "dumbbell fly",
   "kabelflyes": "cable fly",
   "dips": "chest dip",
@@ -90,6 +92,76 @@ const exerciseTranslations: Record<string, string> = {
   "dynamisk uppvärmning": "dynamic stretching",
 };
 
+function cleanExerciseName(raw: string): string {
+  return raw.trim()
+    .replace(/\s*\d+\s*[×x]\s*\d+.*/i, "")
+    .replace(/\s*@\s*[\d.,]+\s*kg.*/i, "")
+    .replace(/\s*[\d.,]+\s*kg.*/i, "")
+    .replace(/\s*\d+\s*min.*/i, "")
+    .replace(/\s*[\d:.]+\/km.*/i, "")
+    .replace(/\s*RPE\s*[\d.]+.*/i, "")
+    .replace(/\s*\d+\s*set.*/i, "")
+    .replace(/\s*\d+\s*rep.*/i, "")
+    .replace(/\s*\d+s$/i, "")
+    .replace(/\s*\d+×\d+s$/i, "")
+    .replace(/\/ben$/i, "")
+    .replace(/\/sida$/i, "")
+    .trim();
+}
+
+function getSearchTerms(cleanName: string): string[] {
+  const terms: string[] = [];
+  const lower = cleanName.toLowerCase();
+
+  // Direct translation
+  if (exerciseTranslations[lower]) {
+    terms.push(exerciseTranslations[lower]);
+  }
+
+  // Handle slash-separated names like "Frontböj/Goblet squat"
+  if (cleanName.includes("/")) {
+    const parts = cleanName.split("/").map(p => p.trim());
+    for (const part of parts) {
+      const partLower = part.toLowerCase();
+      if (exerciseTranslations[partLower]) {
+        terms.push(exerciseTranslations[partLower]);
+      } else {
+        terms.push(part);
+      }
+    }
+  }
+
+  // If no translation found, use the clean name itself (might already be English)
+  if (terms.length === 0) {
+    terms.push(cleanName);
+  }
+
+  // Also try broader single-word searches as last resort
+  const english = exerciseTranslations[lower] || cleanName;
+  const mainWord = english.split(" ").pop();
+  if (mainWord && mainWord.length > 3 && !terms.includes(mainWord)) {
+    terms.push(mainWord);
+  }
+
+  return [...new Set(terms)];
+}
+
+async function searchExerciseDB(term: string): Promise<any | null> {
+  try {
+    const apiUrl = `https://exercisedb-api.vercel.app/api/v1/exercises/search?q=${encodeURIComponent(term)}&limit=3`;
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    if (data.success && data.data && data.data.length > 0) {
+      // Prefer results that have a gifUrl
+      const withGif = data.data.find((e: any) => e.gifUrl);
+      return withGif || data.data[0];
+    }
+  } catch (e) {
+    console.error(`Search failed for "${term}":`, e);
+  }
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -104,34 +176,14 @@ serve(async (req) => {
       });
     }
 
-    // Clean the exercise name: strip sets/reps/weight patterns
-    let cleanName = exerciseName.trim()
-      .replace(/\s*\d+\s*[×x]\s*\d+.*/i, "")  // Remove "3×10 @ 80 kg" etc
-      .replace(/\s*@\s*[\d.,]+\s*kg.*/i, "")
-      .replace(/\s*[\d.,]+\s*kg.*/i, "")
-      .replace(/\s*\d+\s*min.*/i, "")
-      .replace(/\s*[\d:.]+\/km.*/i, "")
-      .replace(/\s*RPE\s*\d+.*/i, "")
-      .replace(/\s*\d+\s*set.*/i, "")
-      .replace(/\s*\d+\s*rep.*/i, "")
-      .trim();
-    
+    let cleanName = cleanExerciseName(exerciseName);
     if (!cleanName) cleanName = exerciseName.trim();
 
-    // Translate Swedish name to English search term
-    const searchTerm = exerciseTranslations[cleanName.toLowerCase()] || exerciseTranslations[exerciseName.toLowerCase()] || cleanName;
+    const searchTerms = getSearchTerms(cleanName);
 
-    // Try exact search first, then fallback to broader search
-    const searches = [searchTerm];
-    if (searchTerm !== cleanName) searches.push(cleanName);
-    
-    for (const term of searches) {
-      const apiUrl = `https://exercisedb-api.vercel.app/api/v1/exercises/search?q=${encodeURIComponent(term)}&limit=1`;
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-
-      if (data.success && data.data && data.data.length > 0) {
-        const exercise = data.data[0];
+    for (const term of searchTerms) {
+      const exercise = await searchExerciseDB(term);
+      if (exercise?.gifUrl) {
         return new Response(JSON.stringify({
           gifUrl: exercise.gifUrl,
           name: exercise.name,
@@ -141,42 +193,6 @@ serve(async (req) => {
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      }
-    }
-
-    // Fallback: generate an AI image for the exercise
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY) {
-      try {
-        const prompt = `A clear, simple illustration showing the correct form for the exercise "${searchTerm}". Show a fit person performing the exercise with proper technique on a plain white background. Anatomical style, clean lines, no text.`;
-        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash-image",
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["image", "text"],
-          }),
-        });
-        const aiData = await aiResp.json();
-        const generatedUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-        if (generatedUrl) {
-          return new Response(JSON.stringify({
-            gifUrl: generatedUrl,
-            name: searchTerm,
-            instructions: [],
-            targetMuscles: [],
-            equipments: [],
-            aiGenerated: true,
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      } catch (aiErr) {
-        console.error("AI image generation failed:", aiErr);
       }
     }
 
