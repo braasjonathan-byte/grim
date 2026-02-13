@@ -420,6 +420,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_suggestion_nicknames: {
+        Args: { user_ids: string[] }
+        Returns: {
+          nickname: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
