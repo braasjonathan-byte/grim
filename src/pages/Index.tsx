@@ -41,8 +41,19 @@ const Index = () => {
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   usePushNotifications(user?.id ?? null);
+
+  // Capture beforeinstallprompt for native Android install
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -277,7 +288,17 @@ const Index = () => {
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
             {!window.matchMedia('(display-mode: standalone)').matches && (
               <button
-                onClick={() => setShowInstallGuide(true)}
+                onClick={async () => {
+                  if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                      setDeferredPrompt(null);
+                    }
+                  } else {
+                    setShowInstallGuide(true);
+                  }
+                }}
                 className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
