@@ -1142,18 +1142,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
             {/* Copy from previous session */}
             {(() => {
-              const uniqueSessions = new Map<string, PlanDay>();
-              const singlePlans2 = plans.filter(p => p.week === 0);
-              // Get latest version of each session name
-              for (const p of singlePlans2) {
-                const existing = uniqueSessions.get(p.session_name);
-                if (!existing || p.day > existing.day) {
-                  uniqueSessions.set(p.session_name, p);
-                }
-              }
-              const previousSessions = Array.from(uniqueSessions.values());
+              const singlePlans2 = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
 
-              if (previousSessions.length > 0) {
+              if (singlePlans2.length > 0) {
                 return (
                   <div className="space-y-2">
                     <button
@@ -1163,14 +1154,20 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       <TrendingUp className="w-3 h-3" /> Kopiera tidigare pass (+2.5 kg)
                     </button>
                     {showCopyPicker && (
-                      <div className="space-y-1 max-h-40 overflow-y-auto animate-fade-in">
-                        {previousSessions.map((p) => (
+                      <div className="space-y-1 max-h-52 overflow-y-auto animate-fade-in">
+                        {singlePlans2.map((p) => (
                           <button
                             key={p.id}
                             onClick={() => addSingleWorkout(p)}
                             className="w-full text-left p-2.5 bg-secondary rounded-md text-xs hover:bg-primary/10 transition-colors"
                           >
-                            <span className="font-semibold block">{p.session_name}</span>
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold">{p.session_name}</span>
+                              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <CalendarIcon className="w-3 h-3" />
+                                {formatDayDisplay(p.day)}
+                              </span>
+                            </div>
                             {p.details && (
                               <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
                                 {p.details.split("\n").slice(0, 2).join(", ")}
