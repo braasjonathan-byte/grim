@@ -12,6 +12,7 @@ import ChangePassword from "@/components/ChangePassword";
 import WorkoutStats from "@/components/WorkoutStats";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
 import SettingsPanel from "@/components/SettingsPanel";
+import SuggestionBox from "@/components/SuggestionBox";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
@@ -267,6 +268,7 @@ const Index = () => {
             <SettingsPanel userId={user.id} />
             <OneRMCalculator />
             <PulseZoneCalculator />
+            <SuggestionBox userId={user.id} />
           </div>
         }
       </main>
