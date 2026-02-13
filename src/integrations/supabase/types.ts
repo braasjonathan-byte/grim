@@ -67,8 +67,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          age: number | null
+          avatar_url: string | null
           created_at: string
           experience_level: string | null
+          gender: string | null
           id: string
           max_distance_km: number | null
           must_change_password: boolean
@@ -78,8 +81,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          age?: number | null
+          avatar_url?: string | null
           created_at?: string
           experience_level?: string | null
+          gender?: string | null
           id?: string
           max_distance_km?: number | null
           must_change_password?: boolean
@@ -89,8 +95,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          age?: number | null
+          avatar_url?: string | null
           created_at?: string
           experience_level?: string | null
+          gender?: string | null
           id?: string
           max_distance_km?: number | null
           must_change_password?: boolean

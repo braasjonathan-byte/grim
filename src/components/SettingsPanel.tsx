@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Moon, Sun, Mail, Check, Loader2, ShieldQuestion } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import ProfileSection from "@/components/ProfileSection";
 
 const THEME_KEY = "gymberget_theme";
 
@@ -158,6 +159,13 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
   return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-4">
       <h3 className="text-sm font-bold">⚙️ Inställningar</h3>
+
+      {/* Profile section */}
+      {userId && (
+        <div className="pb-2 border-b border-border">
+          <ProfileSection userId={userId} />
+        </div>
+      )}
 
       {/* Theme toggle */}
       <div className="flex items-center justify-between">
