@@ -634,8 +634,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` :
     `${editingExercise.name} — ${sets}×${reps}`;
 
-    const separator = plan.details.includes("\n") ? "\n" : "\n";
-    const lines = plan.details.split(separator).filter(Boolean);
+    const lines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
     lines[editingExercise.lineIndex] = entry;
     const newDetails = lines.join("\n");
 
