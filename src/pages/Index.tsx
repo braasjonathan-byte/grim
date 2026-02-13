@@ -438,7 +438,7 @@ const Index = () => {
             rel="noopener noreferrer"
             className="flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors text-muted-foreground hover:text-foreground">
             <ShoppingCart className="w-5 h-5" />
-            <span className="font-medium">Gymberget</span>
+            <span className="font-medium">Shop</span>
           </a>
         </div>
       </nav>
