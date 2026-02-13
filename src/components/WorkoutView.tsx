@@ -601,7 +601,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     `${weightDialog.exerciseName} — ${sets}×${reps} @ ${weightStr} kg` :
     `${weightDialog.exerciseName} — ${sets}×${reps}`;
 
-    const newDetails = plan.details ? `${plan.details}\n${entry}` : entry;
+    const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+    const newDetails = plan.details ? `${plan.details}${joinSep}${entry}` : entry;
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
@@ -612,8 +613,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   };
 
   const addExerciseToPlan = async (plan: PlanDay, exerciseName: string) => {
+    const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
     const newDetails = plan.details ?
-    `${plan.details}\n${exerciseName}` :
+    `${plan.details}${joinSep}${exerciseName}` :
     exerciseName;
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
@@ -634,9 +636,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` :
     `${editingExercise.name} — ${sets}×${reps}`;
 
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
     const lines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
     lines[editingExercise.lineIndex] = entry;
-    const newDetails = lines.join("\n");
+    const newDetails = lines.join(separator);
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
