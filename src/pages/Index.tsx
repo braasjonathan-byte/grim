@@ -298,7 +298,7 @@ const Index = () => {
               {showInboxDropdown &&
               <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowInboxDropdown(false)} />
-                  <div className="fixed left-2 right-2 top-14 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="fixed left-1/2 -translate-x-1/2 top-14 w-[calc(100vw-1rem)] max-w-sm bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
                     <div className="p-3 border-b border-border">
                       <h4 className="text-sm font-bold">📢 Inkorg</h4>
                     </div>
