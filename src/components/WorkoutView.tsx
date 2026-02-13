@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -123,6 +123,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   // Inline editing of existing exercise
   const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;sets: string;reps: string;weight: string;} | null>(null);
+
+  // Conditioning exercise dialog
+  const [conditioningDialog, setConditioningDialog] = useState<{planId: string;exerciseName: string;} | null>(null);
+  const [condTempoInput, setCondTempoInput] = useState("");
+  const [condTimeInput, setCondTimeInput] = useState("");
+  const [condDistanceInput, setCondDistanceInput] = useState("");
 
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
@@ -580,6 +586,15 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   // Open weight dialog when selecting an exercise
   const handleExerciseSelect = (planId: string, exerciseName: string) => {
+    // Check if exercise is conditioning type
+    const exercise = allExercises.find((e) => e.name === exerciseName);
+    if (exercise && exercise.category === "kondition") {
+      setConditioningDialog({ planId, exerciseName });
+      setCondTempoInput("");
+      setCondTimeInput("");
+      setCondDistanceInput("");
+      return;
+    }
     const lastWeight = findLastWeight(exerciseName);
     setWeightDialog({ planId, exerciseName, lastWeight });
     setWeightInput(lastWeight?.replace(/.*@\s*/, "").replace(/\s*kg.*/, "") || "");
@@ -610,6 +625,31 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     setWeightInput("");
     setRepsInput("10");
     setSetsInput("3");
+  };
+
+  // Add conditioning exercise with tempo, time, distance
+  const addConditioningExercise = async () => {
+    if (!conditioningDialog) return;
+    const plan = plans.find((p) => p.id === conditioningDialog.planId);
+    if (!plan) return;
+
+    const parts: string[] = [conditioningDialog.exerciseName];
+    const infoParts: string[] = [];
+    if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+    if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
+    if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+    
+    const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
+
+    const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+    const newDetails = plan.details ? `${plan.details}${joinSep}${entry}` : entry;
+
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+    setConditioningDialog(null);
+    setCondTempoInput("");
+    setCondTimeInput("");
+    setCondDistanceInput("");
   };
 
   const addExerciseToPlan = async (plan: PlanDay, exerciseName: string) => {
@@ -832,6 +872,60 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   <div className="space-y-2">
                         {plan.details.split("\n").filter(Boolean).map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
+                      
+                      // Check if this is a conditioning exercise (format includes "min", "/km")
+                      const isCondFormat = weight && (weight.includes("min") || weight.includes("/km"));
+                      
+                      if (isCondFormat) {
+                        const condTimeM = weight.match(/(\d+)\s*min/);
+                        const condTempoM = weight.match(/([\d:.]+)\/km/);
+                        const condDistM = weight.match(/([\d.,]+)\s*km(?!\/)/);
+                        const condTime = condTimeM ? condTimeM[1] : null;
+                        const condTempo = condTempoM ? condTempoM[1] : null;
+                        const condDist = condDistM ? condDistM[1] : null;
+                        
+                        return (
+                          <div key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                                    <Footprints className="w-3.5 h-3.5 text-warning" />
+                                    {name}
+                                  </span>
+                                  <button
+                                onClick={async () => {
+                                  const lines = plan.details.split("\n").filter(Boolean);
+                                  lines.splice(i, 1);
+                                  const newDetails = lines.join("\n");
+                                  await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                  setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                }}
+                                className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {condTime &&
+                              <div className="flex items-center gap-1 bg-warning/10 rounded-md px-2 py-1 border border-warning/20">
+                                      <Timer className="w-3 h-3 text-warning" />
+                                      <span className="text-xs font-bold text-warning">{condTime} min</span>
+                                    </div>
+                              }
+                                  {condTempo &&
+                              <div className="flex items-center gap-1 bg-warning/10 rounded-md px-2 py-1 border border-warning/20">
+                                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
+                                      <span className="text-xs font-bold text-warning">{condTempo}/km</span>
+                                    </div>
+                              }
+                                  {condDist &&
+                              <div className="flex items-center gap-1 bg-warning/10 rounded-md px-2 py-1 border border-warning/20">
+                                      <Route className="w-3 h-3 text-warning" />
+                                      <span className="text-xs font-bold text-warning">{condDist} km</span>
+                                    </div>
+                              }
+                                </div>
+                              </div>);
+                      }
+                      
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
                       const structMatch = weight?.match(/^(\d+)×(\d+)(?:\s*@\s*(.+))?$/);
                       const sets = structMatch ? structMatch[1] : null;
@@ -882,7 +976,6 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                 })}
                                 className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
                                 title="Redigera">
-
                                     <Dumbbell className="w-3 h-3" />
                                   </button>
                                   <button
@@ -894,7 +987,6 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
                                 }}
                                 className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
-
                                     <X className="w-3 h-3" />
                                   </button>
                                 </div>
@@ -997,8 +1089,92 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       </div>
                   }
 
+                    {/* Conditioning exercise dialog */}
+                    {conditioningDialog && conditioningDialog.planId === plan.id &&
+                  <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-warning/30">
+                        <h4 className="text-sm font-bold flex items-center gap-1.5">
+                          <Footprints className="w-4 h-4 text-warning" />
+                          {conditioningDialog.exerciseName}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                            <input
+                          type="number"
+                          inputMode="numeric"
+                          value={condTimeInput}
+                          onChange={(e) => {
+                            setCondTimeInput(e.target.value);
+                            // Auto-calculate distance
+                            if (condTempoInput.trim()) {
+                              const tempoMatch = condTempoInput.trim().match(/^(\d+)[:\.](\d+)$/);
+                              if (tempoMatch) {
+                                const secsPerKm = parseInt(tempoMatch[1]) * 60 + parseInt(tempoMatch[2]);
+                                const mins = parseFloat(e.target.value);
+                                if (secsPerKm > 0 && mins > 0) {
+                                  const dist = mins / (secsPerKm / 60);
+                                  setCondDistanceInput((Math.round(dist * 100) / 100).toString());
+                                }
+                              }
+                            }
+                          }}
+                          placeholder="t.ex. 30"
+                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
+                            <input
+                          type="text"
+                          value={condTempoInput}
+                          onChange={(e) => {
+                            setCondTempoInput(e.target.value);
+                            // Auto-calculate distance
+                            const tempoMatch = e.target.value.trim().match(/^(\d+)[:\.](\d+)$/);
+                            if (tempoMatch && condTimeInput.trim()) {
+                              const secsPerKm = parseInt(tempoMatch[1]) * 60 + parseInt(tempoMatch[2]);
+                              const mins = parseFloat(condTimeInput);
+                              if (secsPerKm > 0 && mins > 0) {
+                                const dist = mins / (secsPerKm / 60);
+                                setCondDistanceInput((Math.round(dist * 100) / 100).toString());
+                              }
+                            }
+                          }}
+                          placeholder="t.ex. 5:30"
+                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                            <Route className="w-3 h-3" /> Distans (km)
+                            {condTempoInput && condTimeInput && <span className="text-primary text-[9px] ml-1">Beräknad</span>}
+                          </label>
+                          <input
+                        type="number"
+                        inputMode="decimal"
+                        value={condDistanceInput}
+                        onChange={(e) => setCondDistanceInput(e.target.value)}
+                        placeholder="Beräknas automatiskt"
+                        className={`w-full text-foreground text-sm px-3 py-2 rounded-md border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal ${
+                          condTempoInput && condTimeInput ? "bg-warning/10 border-warning/30" : "bg-background border-border"
+                        }`} />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                        onClick={addConditioningExercise}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-warning text-warning-foreground rounded-md text-xs font-semibold">
+                            <Plus className="w-3.5 h-3.5" /> Lägg till
+                          </button>
+                          <button
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");}}
+                        className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                            Avbryt
+                          </button>
+                        </div>
+                      </div>
+                  }
+
                     {/* Add exercise button */}
-                    {!isExercisePickerOpen && !weightDialog ?
+                    {!isExercisePickerOpen && !weightDialog && !conditioningDialog ?
                   <button
                     onClick={() => {
                       setShowExercisePicker(plan.id);
@@ -1009,7 +1185,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
                         <Plus className="w-3 h-3" /> Lägg till övning
                       </button> :
-                  isExercisePickerOpen && !weightDialog ?
+                  isExercisePickerOpen && !weightDialog && !conditioningDialog ?
                   <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-semibold">Välj övning</h4>
