@@ -28,16 +28,17 @@ const SuggestionBox = ({ userId }: SuggestionBoxProps) => {
 
     if (data) {
       setSuggestions(data as Suggestion[]);
-      // Fetch nicknames for unique user_ids
+      // Fetch nicknames via secure RPC function
       const userIds = [...new Set(data.map((s: Suggestion) => s.user_id))];
       if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, nickname")
-          .in("user_id", userIds);
-        if (profiles) {
+        const { data: nicknameData } = await supabase.rpc("get_suggestion_nicknames", {
+          user_ids: userIds,
+        });
+        if (nicknameData) {
           const map: Record<string, string> = {};
-          profiles.forEach((p) => { map[p.user_id] = p.nickname; });
+          (nicknameData as { user_id: string; nickname: string }[]).forEach((p) => {
+            map[p.user_id] = p.nickname;
+          });
           setNicknames(map);
         }
       }

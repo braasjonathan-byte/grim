@@ -44,6 +44,18 @@ const AnnouncementInbox = ({ userId, isAdmin }: AnnouncementInboxProps) => {
       .insert({ author_id: userId, title: trimmedTitle, message: trimmedMsg });
 
     if (!error) {
+      // Send push notifications to all users
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          await supabase.functions.invoke("notify-announcement", {
+            body: { title: trimmedTitle },
+          });
+        }
+      } catch (e) {
+        console.error("Failed to send push notifications:", e);
+      }
+
       setTitle("");
       setMessage("");
       setSent(true);
