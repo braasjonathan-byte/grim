@@ -35,6 +35,7 @@ const Index = () => {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [forceChangePassword, setForceChangePassword] = useState(false);
   const [userRole, setUserRole] = useState<string>("member");
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
 
   usePushNotifications(user?.id ?? null);
 
@@ -99,6 +100,19 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+  // Check for unread announcements
+  useEffect(() => {
+    if (!user) return;
+    const checkUnread = async () => {
+      const lastRead = localStorage.getItem("gymberget_last_read_announcements") || "1970-01-01T00:00:00Z";
+      const { count } = await supabase
+        .from("announcements")
+        .select("*", { count: "exact", head: true })
+        .gt("created_at", lastRead);
+      setUnreadAnnouncements(count || 0);
+    };
+    checkUnread();
+  }, [user]);
 
   // Subscribe to friend workout completions in real-time
   useEffect(() => {
@@ -219,7 +233,7 @@ const Index = () => {
   { key: "plan", icon: Edit3, label: "Schema" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
-  { key: "calc", icon: Calculator, label: "Verktyg" }];
+  { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
   const handleShopClick = () => {
     window.open("https://www.gymberget.se", "_blank");
@@ -338,7 +352,13 @@ const Index = () => {
           {tabs.map(({ key, icon: Icon, label, badge }) =>
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => {
+              setTab(key);
+              if (key === "calc" && unreadAnnouncements > 0) {
+                localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
+                setUnreadAnnouncements(0);
+              }
+            }}
             className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors relative ${
             tab === key ?
             "text-primary" :

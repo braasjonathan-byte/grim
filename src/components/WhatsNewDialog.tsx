@@ -2,10 +2,23 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sparkles } from "lucide-react";
 
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const WHATS_NEW_KEY = "gymberget_last_seen_version";
 
 const changelog = [
+  {
+    version: "1.3.0",
+    date: "2026-02-13",
+    items: [
+      "📢 Inkorg – admin kan publicera meddelanden till alla användare",
+      "🔔 Push-notis vid nya meddelanden i inkorgen",
+      "💡 Förslagslåda – skicka in idéer och feedback",
+      "👑 Rollsystem – admin och medlem visas under Verktyg",
+      "🔒 Förbättrad säkerhet – anonym åtkomst blockerad på känsliga tabeller",
+      "👤 Profilbild visas nu i vänlistan",
+      "📂 Profil och säkerhetsfrågor öppnas som dropdown i inställningar",
+    ],
+  },
   {
     version: "1.2.0",
     date: "2026-02-13",
@@ -24,7 +37,6 @@ const WhatsNewDialog = () => {
   useEffect(() => {
     const lastSeen = localStorage.getItem(WHATS_NEW_KEY);
     if (lastSeen !== APP_VERSION) {
-      // Small delay so the app loads first
       const timer = setTimeout(() => setOpen(true), 800);
       return () => clearTimeout(timer);
     }
