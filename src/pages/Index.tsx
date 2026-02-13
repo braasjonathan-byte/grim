@@ -251,7 +251,7 @@ const Index = () => {
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
-            <SettingsPanel />
+            <SettingsPanel userId={user.id} />
             <OneRMCalculator />
             <PulseZoneCalculator />
           </div>
