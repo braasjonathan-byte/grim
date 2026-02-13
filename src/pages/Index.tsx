@@ -13,6 +13,7 @@ import WorkoutStats from "@/components/WorkoutStats";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
 import SettingsPanel from "@/components/SettingsPanel";
 import SuggestionBox from "@/components/SuggestionBox";
+import AnnouncementInbox from "@/components/AnnouncementInbox";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
@@ -33,6 +34,7 @@ const Index = () => {
   const [notification, setNotification] = useState<FriendActivity | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [forceChangePassword, setForceChangePassword] = useState(false);
+  const [userRole, setUserRole] = useState<string>("member");
 
   usePushNotifications(user?.id ?? null);
 
@@ -54,6 +56,12 @@ const Index = () => {
                 setShowChangePassword(true);
               }
             }
+            const { data: roleData } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", session.user.id)
+              .maybeSingle();
+            if (roleData) setUserRole(roleData.role);
           }, 0);
         }
         setLoading(false);
@@ -76,6 +84,14 @@ const Index = () => {
                 setShowChangePassword(true);
               }
             }
+          });
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .maybeSingle()
+          .then(({ data: roleData }) => {
+            if (roleData) setUserRole(roleData.role);
           });
       }
       setLoading(false);
@@ -265,6 +281,13 @@ const Index = () => {
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
+            {/* Role badge */}
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${userRole === "admin" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                {userRole === "admin" ? "👑 Admin" : "👤 Medlem"}
+              </span>
+            </div>
+            <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
             <SettingsPanel userId={user.id} />
             <OneRMCalculator />
             <PulseZoneCalculator />
