@@ -128,6 +128,30 @@ export type Database = {
         }
         Relationships: []
       }
+      security_answers: {
+        Row: {
+          answer_hash: string
+          created_at: string
+          id: string
+          question_index: number
+          user_id: string
+        }
+        Insert: {
+          answer_hash: string
+          created_at?: string
+          id?: string
+          question_index: number
+          user_id: string
+        }
+        Update: {
+          answer_hash?: string
+          created_at?: string
+          id?: string
+          question_index?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       vapid_keys: {
         Row: {
           created_at: string
