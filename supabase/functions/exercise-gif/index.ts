@@ -144,6 +144,42 @@ serve(async (req) => {
       }
     }
 
+    // Fallback: generate an AI image for the exercise
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (LOVABLE_API_KEY) {
+      try {
+        const prompt = `A clear, simple illustration showing the correct form for the exercise "${searchTerm}". Show a fit person performing the exercise with proper technique on a plain white background. Anatomical style, clean lines, no text.`;
+        const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [{ role: "user", content: prompt }],
+            modalities: ["image", "text"],
+          }),
+        });
+        const aiData = await aiResp.json();
+        const generatedUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        if (generatedUrl) {
+          return new Response(JSON.stringify({
+            gifUrl: generatedUrl,
+            name: searchTerm,
+            instructions: [],
+            targetMuscles: [],
+            equipments: [],
+            aiGenerated: true,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (aiErr) {
+        console.error("AI image generation failed:", aiErr);
+      }
+    }
+
     return new Response(JSON.stringify({ error: "Exercise not found", gifUrl: null }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
