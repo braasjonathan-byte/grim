@@ -12,6 +12,7 @@ import ChangePassword from "@/components/ChangePassword";
 import WorkoutStats from "@/components/WorkoutStats";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
 import SettingsPanel from "@/components/SettingsPanel";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
 
@@ -30,6 +31,8 @@ const Index = () => {
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
+
+  usePushNotifications(user?.id ?? null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
