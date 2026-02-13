@@ -527,7 +527,17 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     if (copyFrom && copyFrom.details) {
       details = copyFrom.details.replace(/(\d+(?:[.,]\d+)?)\s*kg/g, (_match, weight) => {
         const w = parseFloat(weight.replace(",", "."));
-        const increased = Math.round((w + 2.5) / 2.5) * 2.5;
+        // Progressive increase scaled to weight level
+        let increment: number;
+        if (w < 20) {
+          increment = 1.25;
+        } else if (w <= 50) {
+          increment = 2.5;
+        } else {
+          // ~2.5% increase for heavier weights, rounded to nearest 2.5kg
+          increment = Math.max(2.5, Math.round((w * 0.025) / 2.5) * 2.5);
+        }
+        const increased = Math.round((w + increment) / 1.25) * 1.25;
         return `${increased} kg`;
       });
     }
@@ -1160,7 +1170,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     onClick={() => setShowCopyPicker(!showCopyPicker)}
                     className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1">
 
-                      <TrendingUp className="w-3 h-3" /> Kopiera tidigare pass (+2.5 kg)
+                      <TrendingUp className="w-3 h-3" /> Kopiera tidigare pass (progressiv ökning)
                     </button>
                     {showCopyPicker &&
                   <div className="space-y-1 max-h-40 overflow-y-auto animate-fade-in">
