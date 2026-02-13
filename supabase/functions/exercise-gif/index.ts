@@ -104,25 +104,44 @@ serve(async (req) => {
       });
     }
 
-    // Translate Swedish name to English search term
-    const searchTerm = exerciseTranslations[exerciseName.toLowerCase()] || exerciseName;
-
-    const apiUrl = `https://exercisedb-api.vercel.app/api/v1/exercises/search?q=${encodeURIComponent(searchTerm)}&limit=1`;
+    // Clean the exercise name: strip sets/reps/weight patterns
+    let cleanName = exerciseName.trim()
+      .replace(/\s*\d+\s*[×x]\s*\d+.*/i, "")  // Remove "3×10 @ 80 kg" etc
+      .replace(/\s*@\s*[\d.,]+\s*kg.*/i, "")
+      .replace(/\s*[\d.,]+\s*kg.*/i, "")
+      .replace(/\s*\d+\s*min.*/i, "")
+      .replace(/\s*[\d:.]+\/km.*/i, "")
+      .replace(/\s*RPE\s*\d+.*/i, "")
+      .replace(/\s*\d+\s*set.*/i, "")
+      .replace(/\s*\d+\s*rep.*/i, "")
+      .trim();
     
-    const response = await fetch(apiUrl);
-    const data = await response.json();
+    if (!cleanName) cleanName = exerciseName.trim();
 
-    if (data.success && data.data && data.data.length > 0) {
-      const exercise = data.data[0];
-      return new Response(JSON.stringify({
-        gifUrl: exercise.gifUrl,
-        name: exercise.name,
-        instructions: exercise.instructions || [],
-        targetMuscles: exercise.targetMuscles || [],
-        equipments: exercise.equipments || [],
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Translate Swedish name to English search term
+    const searchTerm = exerciseTranslations[cleanName.toLowerCase()] || exerciseTranslations[exerciseName.toLowerCase()] || cleanName;
+
+    // Try exact search first, then fallback to broader search
+    const searches = [searchTerm];
+    if (searchTerm !== cleanName) searches.push(cleanName);
+    
+    for (const term of searches) {
+      const apiUrl = `https://exercisedb-api.vercel.app/api/v1/exercises/search?q=${encodeURIComponent(term)}&limit=1`;
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      if (data.success && data.data && data.data.length > 0) {
+        const exercise = data.data[0];
+        return new Response(JSON.stringify({
+          gifUrl: exercise.gifUrl,
+          name: exercise.name,
+          instructions: exercise.instructions || [],
+          targetMuscles: exercise.targetMuscles || [],
+          equipments: exercise.equipments || [],
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     return new Response(JSON.stringify({ error: "Exercise not found", gifUrl: null }), {
