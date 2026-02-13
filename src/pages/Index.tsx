@@ -399,8 +399,8 @@ const Index = () => {
         </div>
       }
 
-      {/* What's new dialog */}
-      <WhatsNewDialog />
+      {/* What's new dialog - hide when forced password change is active to avoid focus trap conflict */}
+      {!forceChangePassword && <WhatsNewDialog />}
 
       {/* Change password modal */}
       {showChangePassword &&
