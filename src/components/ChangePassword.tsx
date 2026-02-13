@@ -4,9 +4,11 @@ import { Eye, EyeOff, X, KeyRound } from "lucide-react";
 
 interface ChangePasswordProps {
   onClose: () => void;
+  onChanged?: () => void;
+  forced?: boolean;
 }
 
-const ChangePassword = ({ onClose }: ChangePasswordProps) => {
+const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +24,10 @@ const ChangePassword = ({ onClose }: ChangePasswordProps) => {
       setError("Lösenord måste vara minst 8 tecken");
       return;
     }
+    if (newPassword === "12345678") {
+      setError("Välj ett annat lösenord");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError("Lösenorden matchar inte");
       return;
@@ -35,8 +41,19 @@ const ChangePassword = ({ onClose }: ChangePasswordProps) => {
     if (updateError) {
       setError(updateError.message);
     } else {
+      // Clear the forced flag in the database
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({ must_change_password: false })
+          .eq("user_id", user.id);
+      }
       setSuccess(true);
-      setTimeout(onClose, 1500);
+      setTimeout(() => {
+        onChanged?.();
+        onClose();
+      }, 1500);
     }
     setLoading(false);
   };
@@ -49,10 +66,18 @@ const ChangePassword = ({ onClose }: ChangePasswordProps) => {
             <KeyRound className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-black">Byt lösenord</h2>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-5 h-5" />
-          </button>
+          {!forced && (
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
+
+        {forced && (
+          <p className="text-sm text-destructive font-semibold">
+            ⚠️ Du måste byta lösenord innan du kan fortsätta.
+          </p>
+        )}
 
         {success ? (
           <p className="text-sm text-success text-center py-4">Lösenordet har ändrats! ✅</p>

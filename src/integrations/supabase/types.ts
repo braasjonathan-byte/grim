@@ -72,6 +72,7 @@ export type Database = {
           experience_level: string | null
           id: string
           max_distance_km: number | null
+          must_change_password: boolean
           nickname: string
           time_10km_min: number | null
           training_days_per_week: number | null
@@ -83,6 +84,7 @@ export type Database = {
           experience_level?: string | null
           id?: string
           max_distance_km?: number | null
+          must_change_password?: boolean
           nickname: string
           time_10km_min?: number | null
           training_days_per_week?: number | null
@@ -94,6 +96,7 @@ export type Database = {
           experience_level?: string | null
           id?: string
           max_distance_km?: number | null
+          must_change_password?: boolean
           nickname?: string
           time_10km_min?: number | null
           training_days_per_week?: number | null

@@ -31,6 +31,7 @@ const Index = () => {
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [forceChangePassword, setForceChangePassword] = useState(false);
 
   usePushNotifications(user?.id ?? null);
 
@@ -40,12 +41,18 @@ const Index = () => {
         setUser(session?.user ?? null);
         if (session?.user) {
           setTimeout(async () => {
-            const { data } = await supabase.
-            from("profiles").
-            select("nickname").
-            eq("user_id", session.user.id).
-            single();
-            if (data) setNickname(data.nickname);
+            const { data } = await supabase
+              .from("profiles")
+              .select("nickname, must_change_password")
+              .eq("user_id", session.user.id)
+              .single();
+            if (data) {
+              setNickname(data.nickname);
+              if (data.must_change_password) {
+                setForceChangePassword(true);
+                setShowChangePassword(true);
+              }
+            }
           }, 0);
         }
         setLoading(false);
@@ -55,14 +62,20 @@ const Index = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        supabase.
-        from("profiles").
-        select("nickname").
-        eq("user_id", session.user.id).
-        single().
-        then(({ data }) => {
-          if (data) setNickname(data.nickname);
-        });
+        supabase
+          .from("profiles")
+          .select("nickname, must_change_password")
+          .eq("user_id", session.user.id)
+          .single()
+          .then(({ data }) => {
+            if (data) {
+              setNickname(data.nickname);
+              if (data.must_change_password) {
+                setForceChangePassword(true);
+                setShowChangePassword(true);
+              }
+            }
+          });
       }
       setLoading(false);
     });
@@ -279,7 +292,20 @@ const Index = () => {
       <WhatsNewDialog />
 
       {/* Change password modal */}
-      {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
+      {showChangePassword && (
+        <ChangePassword
+          forced={forceChangePassword}
+          onClose={() => {
+            if (!forceChangePassword) {
+              setShowChangePassword(false);
+            }
+          }}
+          onChanged={() => {
+            setForceChangePassword(false);
+            setShowChangePassword(false);
+          }}
+        />
+      )}
 
       {/* Bottom tab bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-50">
