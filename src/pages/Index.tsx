@@ -38,7 +38,7 @@ const Index = () => {
   const [userRole, setUserRole] = useState<string>("member");
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
-  const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string; title: string; message: string; created_at: string}[]>([]);
+  const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
 
   usePushNotifications(user?.id ?? null);
 
@@ -125,11 +125,11 @@ const Index = () => {
 
       setUnreadAnnouncements((announcementCount || 0) + suggestionCount);
 
-      const { data } = await supabase
-        .from("announcements")
-        .select("id, title, message, created_at")
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const { data } = await supabase.
+      from("announcements").
+      select("id, title, message, created_at").
+      order("created_at", { ascending: false }).
+      limit(5);
       if (data) setHeaderAnnouncements(data);
     };
     checkUnread();
@@ -272,7 +272,7 @@ const Index = () => {
               <span className="text-primary"></span>
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mx-[2px] px-[15px]">
             <div className="relative">
               <button
                 onClick={() => {
@@ -286,28 +286,28 @@ const Index = () => {
                   }
                 }}
                 className="p-1.5 text-muted-foreground hover:text-foreground transition-colors relative"
-                title="Inkorg"
-              >
-                <Megaphone className="w-4 h-4" />
-                {unreadAnnouncements > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                title="Inkorg">
+
+                <Megaphone className="h-[20px] w-[20px]" />
+                {unreadAnnouncements > 0 &&
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                     {unreadAnnouncements > 9 ? "9+" : unreadAnnouncements}
                   </span>
-                )}
+                }
               </button>
-              {showInboxDropdown && (
-                <>
+              {showInboxDropdown &&
+              <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowInboxDropdown(false)} />
                   <div className="fixed left-2 right-2 top-14 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-72 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
                     <div className="p-3 border-b border-border">
                       <h4 className="text-sm font-bold">📢 Inkorg</h4>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
-                      {headerAnnouncements.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-4">Inga meddelanden.</p>
-                      ) : (
-                        headerAnnouncements.map((a) => (
-                          <div key={a.id} className="p-3 border-b border-border last:border-b-0 space-y-1">
+                      {headerAnnouncements.length === 0 ?
+                    <p className="text-xs text-muted-foreground text-center py-4">Inga meddelanden.</p> :
+
+                    headerAnnouncements.map((a) =>
+                    <div key={a.id} className="p-3 border-b border-border last:border-b-0 space-y-1">
                             <div className="flex items-center justify-between">
                               <h5 className="text-xs font-bold text-foreground">{a.title}</h5>
                               <span className="text-[10px] text-muted-foreground">
@@ -316,14 +316,14 @@ const Index = () => {
                             </div>
                             <p className="text-xs text-muted-foreground line-clamp-2">{a.message}</p>
                           </div>
-                        ))
-                      )}
+                    )
+                    }
                     </div>
                   </div>
                 </>
-              )}
+              }
             </div>
-            <span className="text-sm font-semibold text-primary">{nickname}</span>
+            <span className="text-sm font-semibold text-primary text-center font-sans">{nickname}</span>
             <button
               onClick={() => setShowChangePassword(true)}
               className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
@@ -425,7 +425,7 @@ const Index = () => {
           <button
             key={key}
             onClick={() => {
-            setTab(key);
+              setTab(key);
               if (key === "calc" && unreadAnnouncements > 0) {
                 localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
                 if (userRole === "admin") {
