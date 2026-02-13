@@ -1730,6 +1730,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                         return (
                           <div key={i} className="flex items-center gap-2">
                               <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                              <button
+                                onClick={(e) => {e.stopPropagation();setExerciseInfoName(partName);}}
+                                className="p-0.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                                title="Visa övningsinformation">
+                                <Info className="w-3.5 h-3.5" />
+                              </button>
                               <span
                               className="text-sm text-foreground flex-1 cursor-pointer hover:text-primary transition-colors"
                               onClick={() => setEditingExercise({
