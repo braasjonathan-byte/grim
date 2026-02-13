@@ -13,7 +13,6 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem(THEME_KEY);
       if (stored) return stored === "dark";
-      return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
     return false;
   });
