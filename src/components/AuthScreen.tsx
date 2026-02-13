@@ -75,9 +75,9 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             }
           }
         } catch {
+
           // Ignore temp login errors, fall through to error message
-        }
-        setError("Fel användarnamn eller lösenord");
+        }setError("Fel användarnamn eller lösenord");
         setLoading(false);
         return;
       }
@@ -352,7 +352,9 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         <div className="text-center space-y-2">
           <Dumbbell className="w-12 h-12 text-primary mx-auto" />
           <h1 className="text-3xl font-black tracking-tight">Grim.
-            <span className="text-primary">.</span>
+            <span className="text-primary">
+
+            </span>
           </h1>
           <p className="text-sm text-muted-foreground">
             {isLogin ? "Logga in" : "Skapa konto"}
@@ -362,9 +364,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Användarnamn</label>
-            <input
-              type="text"
-              value={nickname}
+            <input type="text" value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="Ditt namn"
               maxLength={20}
