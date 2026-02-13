@@ -62,7 +62,8 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             body: { nickname: trimmedNick, action: "temp-login", tempPassword: password }
           });
           if (tempData?.success) {
-            // Temp password was valid, real password is now updated - retry login
+            // Temp password was valid, real password is now updated - wait briefly for propagation then retry login
+            await new Promise((resolve) => setTimeout(resolve, 500));
             const { error: retryError } = await supabase.auth.signInWithPassword({
               email,
               password
@@ -74,9 +75,9 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             }
           }
         } catch {
-
           // Ignore temp login errors, fall through to error message
-        }setError("Fel användarnamn eller lösenord");
+        }
+        setError("Fel användarnamn eller lösenord");
         setLoading(false);
         return;
       }

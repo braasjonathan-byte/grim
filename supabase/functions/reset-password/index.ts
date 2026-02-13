@@ -288,11 +288,17 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Mark temp password as used
-      await supabaseAdmin
-        .from("temp_passwords")
-        .update({ used: true })
-        .eq("id", tempData.id);
+      // Mark temp password as used and force password change on next login
+      await Promise.all([
+        supabaseAdmin
+          .from("temp_passwords")
+          .update({ used: true })
+          .eq("id", tempData.id),
+        supabaseAdmin
+          .from("profiles")
+          .update({ must_change_password: true })
+          .eq("user_id", profile.user_id),
+      ]);
 
       return new Response(
         JSON.stringify({ success: true, message: "Lösenordet har uppdaterats. Logga in med det tillfälliga lösenordet." }),
