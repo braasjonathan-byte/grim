@@ -5,10 +5,23 @@ export interface FitnessProfile {
   training_days_per_week: number | null;
 }
 
+export type PlanCategory = "styrka" | "löpning" | "cykling" | "simning" | "kampsport" | "kroppsvikt" | "kombination";
+
+export const planCategoryLabels: Record<PlanCategory, string> = {
+  styrka: "🏋️ Styrka",
+  löpning: "🏃 Löpning",
+  cykling: "🚴 Cykling",
+  simning: "🏊 Simning",
+  kampsport: "🥊 Kampsport",
+  kroppsvikt: "🏠 Kroppsvikt",
+  kombination: "💪 Kombination",
+};
+
 export interface TemplatePlan {
   name: string;
   description: string;
   weeks: number;
+  category: PlanCategory;
   /** Which 1RM lifts this program needs. Empty = RPE-based / no calc needed */
   requiredLifts: string[];
   /** Function that generates days given 1RM values and optional fitness profile */
@@ -649,6 +662,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏋️ Styrka 1 dag/vecka – Helkropp",
     description: "8 veckor, 1 pass/vecka. Maximalt effektivt helkroppspass med alla stora lyft. Perfekt om du har begränsat med tid.",
     weeks: 8,
+    category: "styrka",
     requiredLifts: [],
     generateFromProfile: generateStrength1Day,
   },
@@ -656,6 +670,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏋️ Styrka 2 dagar/vecka – Överkropp/Underkropp",
     description: "8 veckor, 2 pass/vecka. Optimal split för att hinna träna hela kroppen med god återhämtning.",
     weeks: 8,
+    category: "styrka",
     requiredLifts: [],
     generateFromProfile: generateStrength2Days,
   },
@@ -663,6 +678,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏋️ Styrka 3 dagar/vecka – Helkropp A/B/C",
     description: "8 veckor, 3 pass/vecka. Tre unika helkroppspass med varierande fokus: styrka, lyft och volym. Optimal frekvens för de flesta.",
     weeks: 8,
+    category: "styrka",
     requiredLifts: [],
     generateFromProfile: generateStrength3Days,
   },
@@ -670,6 +686,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏋️ Styrka 4 dagar/vecka – Övre/Undre × 2",
     description: "8 veckor, 4 pass/vecka. Två styrkepass och två volympass. Tränar varje muskelgrupp 2× i veckan för snabb progression.",
     weeks: 8,
+    category: "styrka",
     requiredLifts: [],
     generateFromProfile: generateStrength4Days,
   },
@@ -677,6 +694,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏋️ Styrka 5 dagar/vecka – Push/Pull/Legs + Volym",
     description: "8 veckor, 5 pass/vecka. Push/Pull/Legs följt av överkropp- och underkroppsvolym. Maximal träningsfrekvens och variation.",
     weeks: 8,
+    category: "styrka",
     requiredLifts: [],
     generateFromProfile: generateStrength5Days,
   },
@@ -684,6 +702,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "💪 Styrka & Löpning – Kombination",
     description: "12 veckor, 7 pass/vecka. Styrka + tröskellöpning + långpass. Anpassas efter din löpnivå och erfarenhet.",
     weeks: 12,
+    category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateOriginalPlan,
   },
@@ -691,6 +710,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "📈 Wendler 5/3/1 – Långsiktig styrka",
     description: "12 veckor (3 cykler). Klassiskt procentbaserat program för att bygga styrka i bänk, knäböj, marklyft och press. Beräknar vikter från din 1RM.",
     weeks: 12,
+    category: "styrka",
     requiredLifts: ["knäböj", "bänk", "marklyft", "press"],
     generateDays: generate531,
   },
@@ -698,6 +718,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏋️ Kraftlyft – Tävlingsförberedelse",
     description: "12 veckor periodisering: hypertrofi → styrka → peaking → taper. För dig som vill nå nya maxlyft. Alla vikter beräknas från din 1RM.",
     weeks: 12,
+    category: "styrka",
     requiredLifts: ["knäböj", "bänk", "marklyft"],
     generateDays: generatePowerlifting,
   },
@@ -705,6 +726,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "💎 Hypertrofi – Muskelbygge",
     description: "8 veckor, 4 pass/vecka. Överkropp/underkropp-split med progressiv belastning. Blandning av styrka och volym för maximal muskeltillväxt.",
     weeks: 8,
+    category: "styrka",
     requiredLifts: ["knäböj", "bänk", "marklyft", "press"],
     generateDays: generateHypertrophy,
   },
@@ -712,6 +734,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🌱 Nybörjare – Linjär progression",
     description: "8 veckor, 3 pass/vecka. Helkroppsträning som ökar gradvis från 55% till 80% av din 1RM. Perfekt för att lära sig grundövningarna.",
     weeks: 8,
+    category: "styrka",
     requiredLifts: ["knäböj", "bänk", "marklyft", "press"],
     generateDays: generateBeginner,
   },
@@ -719,6 +742,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🔰 Kom igång – Maskiner & Fria vikter",
     description: "6 veckor, 3 pass/vecka. Blandning av maskiner och fria vikter. Lämplig om du är helt ny på gymmet.",
     weeks: 6,
+    category: "styrka",
     requiredLifts: ["knäböj", "bänk"],
     generateDays: generateMachineStrength,
   },
@@ -726,6 +750,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏠 Hemmaträning – Kroppsvikt",
     description: "6 veckor, 4 pass/vecka. Ingen utrustning behövs. Anpassas efter din erfarenhetsnivå.",
     weeks: 6,
+    category: "kroppsvikt",
     requiredLifts: [],
     generateFromProfile: generateHomeWorkout,
   },
@@ -733,6 +758,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏃 Löpfokus – Distansbygge",
     description: "8 veckor, 3 löppass + 2 styrkepass. Tempo och distanser anpassas efter din löpnivå.",
     weeks: 8,
+    category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateRunningPlan,
   },
@@ -740,6 +766,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🚴 Cykling – Uthållighet & Intervaller",
     description: "8 veckor, 4 cykelpass + 1 styrkepass. Bygg uthållighet med långa pass och förbättra effekt med intervaller.",
     weeks: 8,
+    category: "cykling",
     requiredLifts: [],
     generateFromProfile: generateCyclingPlan,
   },
@@ -747,6 +774,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🏊 Simning – Teknik & Distans",
     description: "6 veckor, 3 simpass + 2 styrkepass. Förbättra teknik och bygg distans. Anpassas efter erfarenhet.",
     weeks: 6,
+    category: "simning",
     requiredLifts: [],
     generateFromProfile: generateSwimmingPlan,
   },
@@ -754,6 +782,7 @@ export const planTemplates: TemplatePlan[] = [
     name: "🥊 Kampsport – Styrka & Kondition",
     description: "8 veckor, 5 pass/vecka. Funktionell styrka, explosivitet och konditionsintervaller för kampsportare.",
     weeks: 8,
+    category: "kampsport",
     requiredLifts: [],
     generateFromProfile: generateMartialArtsPlan,
   },

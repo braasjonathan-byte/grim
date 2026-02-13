@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
-import { planTemplates, liftLabels, type TemplatePlan, type FitnessProfile } from "@/data/planTemplates";
+import { planTemplates, liftLabels, planCategoryLabels, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 
 interface PlanPickerProps {
@@ -24,6 +24,12 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
   const [rms, setRms] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile>(defaultProfile);
+  const [activeFilter, setActiveFilter] = useState<PlanCategory | null>(null);
+
+  const categories = Array.from(new Set(planTemplates.map(t => t.category)));
+  const filteredTemplates = activeFilter
+    ? planTemplates.filter(t => t.category === activeFilter)
+    : planTemplates;
 
   const selectedTemplate = selected !== null && selected >= 0 ? planTemplates[selected] : null;
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
@@ -223,38 +229,68 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         </p>
       </div>
 
-      <div className="space-y-3">
-        {planTemplates.map((template, idx) => (
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => { setActiveFilter(null); setSelected(null); }}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+            activeFilter === null
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Alla
+        </button>
+        {categories.map((cat) => (
           <button
-            key={idx}
-            onClick={() => setSelected(idx)}
-            disabled={loading}
-            className={`w-full text-left p-4 rounded-lg border transition-all ${
-              selected === idx
-                ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-background"
-                : "border-border bg-card hover:border-primary/50"
+            key={cat}
+            onClick={() => { setActiveFilter(cat); setSelected(null); }}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              activeFilter === cat
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
             }`}
           >
-            <div className="flex items-start gap-3">
-              <Sparkles className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selected === idx ? "text-primary" : "text-muted-foreground"}`} />
-              <div className="flex-1">
-                <h3 className="font-bold text-sm">{template.name}</h3>
-                <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
-                {template.requiredLifts.length > 0 && (
-                  <p className="text-xs text-primary mt-1.5 font-medium">
-                    📊 Beräknar vikter från din 1RM
-                  </p>
-                )}
-                {template.generateFromProfile && (
-                  <p className="text-xs text-primary mt-1.5 font-medium">
-                    ✨ Anpassas efter dina förutsättningar
-                  </p>
-                )}
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
-            </div>
+            {planCategoryLabels[cat]}
           </button>
         ))}
+      </div>
+
+      <div className="space-y-3">
+        {filteredTemplates.map((template) => {
+          const realIdx = planTemplates.indexOf(template);
+          return (
+            <button
+              key={realIdx}
+              onClick={() => setSelected(realIdx)}
+              disabled={loading}
+              className={`w-full text-left p-4 rounded-lg border transition-all ${
+                selected === realIdx
+                  ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                  : "border-border bg-card hover:border-primary/50"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <Sparkles className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selected === realIdx ? "text-primary" : "text-muted-foreground"}`} />
+                <div className="flex-1">
+                  <h3 className="font-bold text-sm">{template.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                  {template.requiredLifts.length > 0 && (
+                    <p className="text-xs text-primary mt-1.5 font-medium">
+                      📊 Beräknar vikter från din 1RM
+                    </p>
+                  )}
+                  {template.generateFromProfile && (
+                    <p className="text-xs text-primary mt-1.5 font-medium">
+                      ✨ Anpassas efter dina förutsättningar
+                    </p>
+                  )}
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
+              </div>
+            </button>
+          );
+        })}
 
         <button
           onClick={() => setSelected(-1)}
