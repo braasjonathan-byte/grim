@@ -64,6 +64,21 @@ const SuggestionBox = ({ userId, isAdmin = false }: SuggestionBoxProps) => {
       setSent(true);
       fetchSuggestions();
       setTimeout(() => setSent(false), 3000);
+
+      // Notify admins via push notification
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("nickname")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        await supabase.functions.invoke("notify-suggestion", {
+          body: { nickname: profile?.nickname || "Okänd" },
+        });
+      } catch (e) {
+        console.error("Failed to send suggestion push:", e);
+      }
     }
     setSending(false);
   };

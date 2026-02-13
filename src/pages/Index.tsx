@@ -103,16 +103,27 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, []);
-  // Check for unread announcements
+  // Check for unread announcements + suggestions (for admins)
   useEffect(() => {
     if (!user) return;
     const checkUnread = async () => {
       const lastRead = localStorage.getItem("gymberget_last_read_announcements") || "1970-01-01T00:00:00Z";
-      const { count } = await supabase.
+      const { count: announcementCount } = await supabase.
       from("announcements").
       select("*", { count: "exact", head: true }).
       gt("created_at", lastRead);
-      setUnreadAnnouncements(count || 0);
+
+      let suggestionCount = 0;
+      if (userRole === "admin") {
+        const lastReadSuggestions = localStorage.getItem("grim_last_read_suggestions") || "1970-01-01T00:00:00Z";
+        const { count } = await supabase.
+        from("suggestions").
+        select("*", { count: "exact", head: true }).
+        gt("created_at", lastReadSuggestions);
+        suggestionCount = count || 0;
+      }
+
+      setUnreadAnnouncements((announcementCount || 0) + suggestionCount);
 
       const { data } = await supabase
         .from("announcements")
@@ -122,7 +133,7 @@ const Index = () => {
       if (data) setHeaderAnnouncements(data);
     };
     checkUnread();
-  }, [user]);
+  }, [user, userRole]);
 
   // Subscribe to friend workout completions in real-time
   useEffect(() => {
@@ -268,6 +279,9 @@ const Index = () => {
                   setShowInboxDropdown((prev) => !prev);
                   if (unreadAnnouncements > 0) {
                     localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
+                    if (userRole === "admin") {
+                      localStorage.setItem("grim_last_read_suggestions", new Date().toISOString());
+                    }
                     setUnreadAnnouncements(0);
                   }
                 }}
@@ -284,7 +298,7 @@ const Index = () => {
               {showInboxDropdown && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowInboxDropdown(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="absolute -right-2 top-full mt-2 w-72 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
                     <div className="p-3 border-b border-border">
                       <h4 className="text-sm font-bold">📢 Inkorg</h4>
                     </div>
@@ -411,9 +425,12 @@ const Index = () => {
           <button
             key={key}
             onClick={() => {
-              setTab(key);
+            setTab(key);
               if (key === "calc" && unreadAnnouncements > 0) {
                 localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
+                if (userRole === "admin") {
+                  localStorage.setItem("grim_last_read_suggestions", new Date().toISOString());
+                }
                 setUnreadAnnouncements(0);
               }
             }}
