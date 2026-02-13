@@ -8,6 +8,7 @@ interface FitnessProfileFormProps {
   onDone: (profile: FitnessProfile) => void;
   runningOnly?: boolean;
   strengthOnly?: boolean;
+  bodyweightOnly?: boolean;
 }
 
 const experienceLevels = [
@@ -16,7 +17,7 @@ const experienceLevels = [
   { value: "avancerad", label: "Avancerad", description: "Tränat 3+ år regelbundet" },
 ];
 
-const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly = false }: FitnessProfileFormProps) => {
+const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly = false, bodyweightOnly = false }: FitnessProfileFormProps) => {
   const [maxDistance, setMaxDistance] = useState("");
   const [time10km, setTime10km] = useState("");
   const [experience, setExperience] = useState("");
@@ -59,18 +60,20 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
         )}
         <h2 className="text-xl font-black tracking-tight">
-          {runningOnly ? "Dina löpförutsättningar" : "Dina förutsättningar"}
+          {runningOnly ? "Dina löpförutsättningar" : bodyweightOnly ? "Dina träningsförutsättningar" : "Dina förutsättningar"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {runningOnly
             ? "Fyll i så anpassas tempo och distans efter din nivå."
+            : bodyweightOnly
+            ? "Fyll i så anpassas övningar och volym efter din nivå."
             : "Fyll i så anpassas planen efter dig. Du kan hoppa över om du vill."}
         </p>
       </div>
 
       <div className="space-y-4">
-        {/* Max distance - hide for strength-only */}
-        {!strengthOnly && (
+        {/* Max distance - hide for strength-only and bodyweight-only */}
+        {!strengthOnly && !bodyweightOnly && (
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground block">
               Max långdistans du kan springa (km)
@@ -86,8 +89,8 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
           </div>
         )}
 
-        {/* 10km time - hide for strength-only */}
-        {!strengthOnly && (
+        {/* 10km time - hide for strength-only and bodyweight-only */}
+        {!strengthOnly && !bodyweightOnly && (
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground block">
               Tid på 10 km (minuter)
@@ -126,7 +129,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
           </div>
         </div>
 
-        {/* Training days per week - only for non-running-only and non-strength-only */}
+        {/* Training days per week - show for bodyweight and general, hide for running-only and strength-only */}
         {!runningOnly && !strengthOnly && (
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground block">

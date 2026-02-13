@@ -48,6 +48,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     selectedTemplate.name.toLowerCase().includes("styrka")
   ) && !needsRunningProfile;
 
+  // Determine if selected plan is bodyweight/home workout
+  const isBodyweightOnly = selectedTemplate && selectedTemplate.category === "kroppsvikt";
+
   // Determine if selected plan needs any profile data (experience level etc.)
   const needsProfile = selectedTemplate && (
     selectedTemplate.generateFromProfile !== undefined
@@ -147,6 +150,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         onDone={handleProfileDone}
         runningOnly={!!needsRunningProfile}
         strengthOnly={!!isStrengthOnly}
+        bodyweightOnly={!!isBodyweightOnly}
       />
     );
   }

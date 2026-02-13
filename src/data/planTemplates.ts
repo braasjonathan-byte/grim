@@ -356,40 +356,53 @@ function generateRunningPlan(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
-// ─── Hemmaträning med progressiv ökning ──────────────────────────────────────
+// ─── Hemmaträning med anpassning efter dagar & erfarenhet ────────────────────
 function generateHomeWorkout(profile: FitnessProfile): TemplatePlanDay[] {
   const exp = profile.experience_level;
+  const daysPerWeek = profile.training_days_per_week || 4;
+
   // Base reps by experience
   const baseReps = exp === "nybörjare" ? { push: 6, sq: 8, rounds: 3, plank: 25 }
     : exp === "avancerad" ? { push: 12, sq: 16, rounds: 5, plank: 40 }
     : { push: 10, sq: 12, rounds: 4, plank: 35 };
 
+  // Session templates pool – pick based on available days
+  const allSessions = (w: number, push: number, sq: number, rounds: number, plank: number, weekBoost: number) => [
+    { day: "Mån", session_name: "Styrka – Överkropp", details: `Armhävningar 4×${push}; Diamond push-ups 3×${Math.max(5, push - 4)}; Pike push-ups 3×${push - 2}; Dips (stol) 3×${push - 2}; Planka 3×${plank}s; Superman hold 3×${Math.min(45, 25 + weekBoost * 3)}s`, tempo: `Vecka ${w}/6` },
+    { day: "Tis", session_name: "Styrka – Underkropp", details: `Knäböj 4×${sq}; Utfallssteg 3×${Math.round(sq * 0.7)}/ben; Bulgarska utfall (stol) 3×${Math.round(sq * 0.6)}/ben; Hip thrust (golv) 3×${sq}; Vadpress 3×${18 + weekBoost * 2}`, tempo: `Vecka ${w}/6` },
+    { day: "Ons", session_name: "HIIT + Core", details: `${rounds} rundor: ${35 + weekBoost * 2}s arbete / ${Math.max(15, 25 - weekBoost * 2)}s vila — Burpees; Mountain climbers; Jump squats; High knees. Vila ${Math.max(60, 120 - weekBoost * 10)}s mellan rundor. Core: Crunches 3×${18 + weekBoost * 2}; Cykelcrunches 3×${14 + weekBoost}; Benlyft 3×${10 + weekBoost}`, tempo: `Vecka ${w}/6` },
+    { day: "Tors", session_name: "Helkropp – Volym", details: `Armhävningar 3×max; Knäböj 3×${sq + 5}; Rodd med ryggsäck 3×12; Axelpress (ryggsäck) 3×${8 + weekBoost}; Utfallssteg 2×${8 + weekBoost}/ben; Planka 2×${plank + 10}s`, tempo: `Vecka ${w}/6` },
+    { day: "Fre", session_name: "Rörlighet & Core", details: `20 min stretching eller yoga. Fokus på höfter, bröstrygg och axlar. Planka 3×${plank}s; Dead bug 3×10; Sidoplanka 2×${Math.round(plank * 0.6)}s/sida`, tempo: "" },
+    { day: "Lör", session_name: "Kondition", details: `${25 + weekBoost * 3} min löpning, cykling eller snabb promenad. Valfri aktivitet med hög puls.`, tempo: "" },
+  ];
+
   const days: TemplatePlanDay[] = [];
   for (let w = 1; w <= 6; w++) {
-    // Progressive increase: ~10-15% more reps/duration per week
     const weekBoost = w - 1;
     const push = baseReps.push + weekBoost;
     const sq = baseReps.sq + weekBoost * 2;
     const rounds = Math.min(6, baseReps.rounds + Math.floor(weekBoost / 2));
     const plank = baseReps.plank + weekBoost * 5;
-    const isDeload = w === 4; // Light week mid-program
+    const isDeload = w === 4;
 
     if (isDeload) {
-      days.push(
-        { week: w, day: "Mån", session_name: "Styrka – Överkropp (lätt)", details: `Armhävningar 3×${Math.round(push * 0.7)}; Pike push-ups 2×${Math.round(push * 0.6)}; Planka 2×${plank}s; Stretching 10 min`, tempo: "Deload" },
-        { week: w, day: "Tis", session_name: "Styrka – Underkropp (lätt)", details: `Knäböj 3×${Math.round(sq * 0.7)}; Utfallssteg 2×8/ben; Hip thrust (golv) 3×12; Vadpress 2×15`, tempo: "Deload" },
-        { week: w, day: "Ons", session_name: "Vila / Rörlighet", details: "25 min stretching eller yoga. Fokus på höfter, bröstrygg och axlar.", tempo: "" },
-        { week: w, day: "Tors", session_name: "Lätt rörelse", details: "30 min promenad eller lätt yoga. Aktiv återhämtning.", tempo: "Deload" },
-        { week: w, day: "Fre", session_name: "Helkropp – Lätt", details: `Armhävningar 2×${Math.round(push * 0.6)}; Knäböj 2×${Math.round(sq * 0.7)}; Planka 2×${plank}s`, tempo: "Deload" },
-      );
+      // Deload week: lighter sessions, fewer days
+      const deloadSessions = [
+        { day: "Mån", session_name: "Styrka – Överkropp (lätt)", details: `Armhävningar 3×${Math.round(push * 0.7)}; Pike push-ups 2×${Math.round(push * 0.6)}; Planka 2×${plank}s; Stretching 10 min`, tempo: "Deload" },
+        { day: "Ons", session_name: "Styrka – Underkropp (lätt)", details: `Knäböj 3×${Math.round(sq * 0.7)}; Utfallssteg 2×8/ben; Hip thrust (golv) 3×12; Vadpress 2×15`, tempo: "Deload" },
+        { day: "Fre", session_name: "Helkropp – Lätt", details: `Armhävningar 2×${Math.round(push * 0.6)}; Knäböj 2×${Math.round(sq * 0.7)}; Planka 2×${plank}s`, tempo: "Deload" },
+      ];
+      const deloadCount = Math.min(daysPerWeek, deloadSessions.length);
+      for (let i = 0; i < deloadCount; i++) {
+        days.push({ week: w, ...deloadSessions[i] });
+      }
     } else {
-      days.push(
-        { week: w, day: "Mån", session_name: "Styrka – Överkropp", details: `Armhävningar 4×${push}; Diamond push-ups 3×${Math.max(5, push - 4)}; Pike push-ups 3×${push - 2}; Dips (stol) 3×${push - 2}; Planka 3×${plank}s; Superman hold 3×${Math.min(45, 25 + weekBoost * 3)}s`, tempo: `Vecka ${w}/6` },
-        { week: w, day: "Tis", session_name: "Styrka – Underkropp", details: `Knäböj 4×${sq}; Utfallssteg 3×${Math.round(sq * 0.7)}/ben; Bulgarska utfall (stol) 3×${Math.round(sq * 0.6)}/ben; Hip thrust (golv) 3×${sq}; Vadpress 3×${18 + weekBoost * 2}`, tempo: `Vecka ${w}/6` },
-        { week: w, day: "Ons", session_name: "Vila / Rörlighet", details: "20 min stretching eller yoga. Fokus på höfter, bröstrygg och axlar.", tempo: "" },
-        { week: w, day: "Tors", session_name: "HIIT + Core", details: `${rounds} rundor: ${35 + weekBoost * 2}s arbete / ${Math.max(15, 25 - weekBoost * 2)}s vila — Burpees; Mountain climbers; Jump squats; High knees. Vila ${Math.max(60, 120 - weekBoost * 10)}s mellan rundor. Core: Crunches 3×${18 + weekBoost * 2}; Cykelcrunches 3×${14 + weekBoost}; Benlyft 3×${10 + weekBoost}`, tempo: `Vecka ${w}/6` },
-        { week: w, day: "Fre", session_name: "Helkropp – Volym", details: `Armhävningar 3×max; Knäböj 3×${sq + 5}; Rodd med ryggsäck ${3 + Math.floor(weekBoost / 2)}×12; Axelpress (ryggsäck) 3×${8 + weekBoost}; Utfallssteg 2×${8 + weekBoost}/ben; Planka 2×${plank + 10}s`, tempo: `Vecka ${w}/6` },
-      );
+      // Pick the right number of sessions from the pool
+      const pool = allSessions(w, push, sq, rounds, plank, weekBoost);
+      const selected = pool.slice(0, Math.min(daysPerWeek, pool.length));
+      for (const s of selected) {
+        days.push({ week: w, ...s });
+      }
     }
   }
   return days;
@@ -748,7 +761,7 @@ export const planTemplates: TemplatePlan[] = [
   },
   {
     name: "🏠 Hemmaträning – Kroppsvikt",
-    description: "6 veckor, 4 pass/vecka. Ingen utrustning behövs. Anpassas efter din erfarenhetsnivå.",
+    description: "6 veckor, 2–6 pass/vecka. Ingen utrustning behövs. Anpassas efter erfarenhet och tillgängliga dagar.",
     weeks: 6,
     category: "kroppsvikt",
     requiredLifts: [],
