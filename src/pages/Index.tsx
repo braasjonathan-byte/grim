@@ -14,6 +14,7 @@ import WhatsNewDialog from "@/components/WhatsNewDialog";
 import SettingsPanel from "@/components/SettingsPanel";
 import SuggestionBox from "@/components/SuggestionBox";
 import AnnouncementInbox from "@/components/AnnouncementInbox";
+import AdminUserList from "@/components/AdminUserList";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
@@ -358,6 +359,7 @@ const Index = () => {
               </span>
             </div>
             <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
+            {userRole === "admin" && <AdminUserList userId={user.id} />}
             <SettingsPanel userId={user.id} />
             <OneRMCalculator />
             <PulseZoneCalculator />
