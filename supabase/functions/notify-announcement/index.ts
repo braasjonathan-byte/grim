@@ -22,6 +22,79 @@ function base64UrlEncode(buffer: ArrayBuffer): string {
     .replace(/=+$/, "");
 }
 
+async function createVapidJwt(
+  endpoint: string,
+  vapidPublicKey: string,
+  vapidPrivateKey: string
+): Promise<{ authorization: string; cryptoKey: string }> {
+  const audience = new URL(endpoint).origin;
+  const header = { typ: "JWT", alg: "ES256" };
+  const payload = {
+    aud: audience,
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12,
+    sub: "mailto:admin@grim.app",
+  };
+
+  const encHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const encPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const unsignedToken = `${encHeader}.${encPayload}`;
+
+  // Import VAPID private key for signing
+  const privateKeyBytes = base64UrlDecode(vapidPrivateKey);
+  const jwk = {
+    kty: "EC",
+    crv: "P-256",
+    d: base64UrlEncode(privateKeyBytes),
+    x: base64UrlEncode(base64UrlDecode(vapidPublicKey).slice(1, 33)),
+    y: base64UrlEncode(base64UrlDecode(vapidPublicKey).slice(33, 65)),
+  };
+
+  const signingKey = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+
+  const signatureBuffer = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    signingKey,
+    new TextEncoder().encode(unsignedToken)
+  );
+
+  // Convert DER signature to raw r||s format if needed
+  const sigBytes = new Uint8Array(signatureBuffer);
+  let r: Uint8Array, s: Uint8Array;
+  if (sigBytes.length === 64) {
+    r = sigBytes.slice(0, 32);
+    s = sigBytes.slice(32, 64);
+  } else {
+    // DER encoded - parse it
+    let offset = 2;
+    const rLen = sigBytes[offset + 1];
+    offset += 2;
+    const rRaw = sigBytes.slice(offset, offset + rLen);
+    r = rRaw.length > 32 ? rRaw.slice(rRaw.length - 32) : rRaw;
+    offset += rLen;
+    const sLen = sigBytes[offset + 1];
+    offset += 2;
+    const sRaw = sigBytes.slice(offset, offset + sLen);
+    s = sRaw.length > 32 ? sRaw.slice(sRaw.length - 32) : sRaw;
+  }
+
+  const rawSig = new Uint8Array(64);
+  rawSig.set(r.length < 32 ? (() => { const p = new Uint8Array(32); p.set(r, 32 - r.length); return p; })() : r, 0);
+  rawSig.set(s.length < 32 ? (() => { const p = new Uint8Array(32); p.set(s, 32 - s.length); return p; })() : s, 32);
+
+  const token = `${unsignedToken}.${base64UrlEncode(rawSig.buffer)}`;
+
+  return {
+    authorization: `vapid t=${token}, k=${vapidPublicKey}`,
+    cryptoKey: `p256ecdsa=${vapidPublicKey}`,
+  };
+}
+
 async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: string,
@@ -29,6 +102,13 @@ async function sendWebPush(
   vapidPrivateKey: string
 ): Promise<boolean> {
   try {
+    // Generate VAPID auth headers
+    const vapidHeaders = await createVapidJwt(
+      subscription.endpoint,
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
     const localKeyPair = await crypto.subtle.generateKey(
       { name: "ECDH", namedCurve: "P-256" },
       true,
@@ -107,10 +187,15 @@ async function sendWebPush(
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Encoding": "aes128gcm",
+        "Authorization": vapidHeaders.authorization,
         TTL: "86400",
       },
       body,
     });
+
+    if (!response.ok) {
+      console.error(`Push failed: ${response.status} ${await response.text()}`);
+    }
 
     return response.ok || response.status === 201;
   } catch (e) {
