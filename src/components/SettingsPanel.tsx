@@ -52,10 +52,10 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
   useEffect(() => {
     if (!userId) return;
     supabase
-      .from("profiles")
+      .from("user_emails")
       .select("email")
       .eq("user_id", userId)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data?.email) {
           setEmail(data.email);
@@ -93,9 +93,8 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
 
     setEmailLoading(true);
     const { error } = await supabase
-      .from("profiles")
-      .update({ email: trimmed })
-      .eq("user_id", userId);
+      .from("user_emails")
+      .upsert({ user_id: userId, email: trimmed }, { onConflict: "user_id" });
 
     if (!error) {
       setSavedEmail(trimmed);

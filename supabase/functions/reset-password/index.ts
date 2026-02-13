@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     // Look up profile by nickname
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("user_id, email")
+      .select("user_id")
       .ilike("nickname", nickname.trim())
       .maybeSingle();
 
@@ -40,6 +40,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Look up email from secure table
+    const { data: emailData } = await supabaseAdmin
+      .from("user_emails")
+      .select("email")
+      .eq("user_id", profile.user_id)
+      .maybeSingle();
+
+    const userEmail = emailData?.email || null;
+
+
     // Step 1: Get security questions for user
     if (action === "get-questions") {
       const { data: secData } = await supabaseAdmin
@@ -49,7 +59,7 @@ Deno.serve(async (req) => {
         .order("question_index", { ascending: true });
 
       if (!secData || secData.length < 4) {
-        if (!profile.email) {
+        if (!userEmail) {
           return new Response(
             JSON.stringify({ success: false, hasQuestions: false, message: "Inga säkerhetsfrågor eller e-post konfigurerade." }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -171,7 +181,7 @@ Deno.serve(async (req) => {
 
     // Step 3: Email-based reset (also stores temp password without changing real one)
     if (action === "email-reset") {
-      if (!profile.email) {
+      if (!userEmail) {
         return new Response(
           JSON.stringify({ error: "Ingen e-post konfigurerad" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -214,7 +224,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           from: "TRÄNING <onboarding@resend.dev>",
-          to: [profile.email],
+          to: [userEmail],
           subject: "Ditt tillfälliga lösenord",
           html: emailHtml,
         }),
@@ -229,7 +239,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const emailParts = profile.email.split("@");
+      const emailParts = userEmail.split("@");
       const maskedEmail = emailParts[0].substring(0, 2) + "***@" + emailParts[1];
 
       return new Response(
