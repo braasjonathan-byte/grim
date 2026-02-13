@@ -17,7 +17,6 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
 
   // Forgot password state
   const [forgotNickname, setForgotNickname] = useState("");
-  const [resetResult, setResetResult] = useState<{ tempPassword: string; maskedEmail: string } | null>(null);
   const [resetMessage, setResetMessage] = useState("");
 
   const fakeEmail = (nick: string) => `${nick.toLowerCase().trim()}@trainapp.local`;
@@ -73,7 +72,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setResetResult(null);
+    setResetMessage("");
     setResetMessage("");
     setLoading(true);
 
@@ -95,11 +94,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         return;
       }
 
-      if (data.tempPassword) {
-        setResetResult({ tempPassword: data.tempPassword, maskedEmail: data.maskedEmail });
-      } else {
-        setResetMessage(data.message || "Om kontot finns och har en e-post skickas instruktioner.");
-      }
+      setResetMessage(data.message || "Om kontot finns och har en e-post skickas ett nytt lösenord dit.");
     } catch {
       setError("Något gick fel. Försök igen.");
     }
@@ -119,26 +114,20 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             <p className="text-sm text-muted-foreground">Återställ lösenord</p>
           </div>
 
-          {resetResult ? (
+          {resetMessage ? (
             <div className="space-y-4">
               <div className="bg-card border border-border rounded-lg p-4 space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Lösenordet har återställts för kontot kopplat till <strong>{resetResult.maskedEmail}</strong>
+                  ✉️ {resetMessage}
                 </p>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Nytt tillfälligt lösenord</label>
-                  <div className="bg-secondary rounded-lg p-3 font-mono text-lg text-primary select-all text-center tracking-wider">
-                    {resetResult.tempPassword}
-                  </div>
-                </div>
                 <p className="text-xs text-muted-foreground">
-                  ⚠️ Kopiera lösenordet och logga in. Byt sedan lösenord i inställningarna.
+                  Kolla din inkorg och logga in med det nya lösenordet. Byt sedan lösenord i inställningarna.
                 </p>
               </div>
               <button
                 onClick={() => {
                   setShowForgot(false);
-                  setResetResult(null);
+                  setResetMessage("");
                   setForgotNickname("");
                 }}
                 className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
