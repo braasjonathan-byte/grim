@@ -101,9 +101,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   // Single workout form
   const [showAddSingle, setShowAddSingle] = useState(false);
   const [singleName, setSingleName] = useState("");
-  const [singleDetails, setSingleDetails] = useState("");
-  const [singleTempo, setSingleTempo] = useState("");
   const [singleDate, setSingleDate] = useState<Date>(new Date());
+  const [showCopyPicker, setShowCopyPicker] = useState(false);
 
   // Exercise browser for single workouts
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
@@ -505,27 +504,37 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     setMode("choose");
   };
 
-  const addSingleWorkout = async () => {
-    if (!singleName.trim()) return;
+  const addSingleWorkout = async (copyFrom?: PlanDay) => {
+    const name = copyFrom ? copyFrom.session_name : singleName.trim();
+    if (!name) return;
 
     // Use date + timestamp for unique day key
     const dateStr = format(singleDate, "yyyy-MM-dd");
     const uniqueKey = `${dateStr}_${Date.now()}`;
 
+    // If copying, apply progressive increase to weights
+    let details = "";
+    if (copyFrom && copyFrom.details) {
+      details = copyFrom.details.replace(/(\d+(?:[.,]\d+)?)\s*kg/g, (_match, weight) => {
+        const w = parseFloat(weight.replace(",", "."));
+        const increased = Math.round((w + 2.5) / 2.5) * 2.5;
+        return `${increased} kg`;
+      });
+    }
+
     await supabase.from("workout_plans").insert({
       user_id: userId,
       week: 0,
       day: uniqueKey,
-      session_name: singleName.trim(),
-      details: singleDetails.trim(),
-      tempo: singleTempo.trim() || null,
+      session_name: name,
+      details,
+      tempo: null,
     });
 
     setSingleName("");
-    setSingleDetails("");
-    setSingleTempo("");
     setSingleDate(new Date());
     setShowAddSingle(false);
+    setShowCopyPicker(false);
     fetchData();
   };
 
@@ -1047,6 +1056,52 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           <div className="bg-card border border-primary/30 rounded-lg p-4 space-y-3 animate-fade-in">
             <h3 className="text-sm font-semibold">Nytt pass</h3>
 
+            {/* Copy from previous session */}
+            {(() => {
+              const uniqueSessions = new Map<string, PlanDay>();
+              const singlePlans2 = plans.filter(p => p.week === 0);
+              // Get latest version of each session name
+              for (const p of singlePlans2) {
+                const existing = uniqueSessions.get(p.session_name);
+                if (!existing || p.day > existing.day) {
+                  uniqueSessions.set(p.session_name, p);
+                }
+              }
+              const previousSessions = Array.from(uniqueSessions.values());
+
+              if (previousSessions.length > 0) {
+                return (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setShowCopyPicker(!showCopyPicker)}
+                      className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <TrendingUp className="w-3 h-3" /> Kopiera tidigare pass (+2.5 kg)
+                    </button>
+                    {showCopyPicker && (
+                      <div className="space-y-1 max-h-40 overflow-y-auto animate-fade-in">
+                        {previousSessions.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => addSingleWorkout(p)}
+                            className="w-full text-left p-2.5 bg-secondary rounded-md text-xs hover:bg-primary/10 transition-colors"
+                          >
+                            <span className="font-semibold block">{p.session_name}</span>
+                            {p.details && (
+                              <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
+                                {p.details.split("\n").slice(0, 2).join(", ")}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
             {/* Date picker */}
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Datum</label>
@@ -1082,25 +1137,14 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
               className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
               autoFocus
             />
-            <textarea
-              value={singleDetails}
-              onChange={(e) => setSingleDetails(e.target.value)}
-              placeholder="Detaljer (t.ex. Bänk 5×3 @ RPE 7; Rodd 3×8)"
-              rows={3}
-              className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
-            />
-            <input
-              type="text"
-              value={singleTempo}
-              onChange={(e) => setSingleTempo(e.target.value)}
-              placeholder="Tempo/RPE (valfritt)"
-              className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-            />
+            <p className="text-[10px] text-muted-foreground">
+              Lägg till övningar efter att passet skapats
+            </p>
             <div className="flex gap-2">
-              <button onClick={addSingleWorkout} disabled={!singleName.trim()} className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-md text-sm disabled:opacity-40">
-                Spara
+              <button onClick={() => addSingleWorkout()} disabled={!singleName.trim()} className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-md text-sm disabled:opacity-40">
+                Skapa pass
               </button>
-              <button onClick={() => setShowAddSingle(false)} className="px-4 py-2 bg-secondary text-muted-foreground rounded-md text-sm">
+              <button onClick={() => { setShowAddSingle(false); setShowCopyPicker(false); }} className="px-4 py-2 bg-secondary text-muted-foreground rounded-md text-sm">
                 Avbryt
               </button>
             </div>

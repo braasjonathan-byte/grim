@@ -10,6 +10,8 @@ import OneRMCalculator from "@/components/OneRMCalculator";
 import PulseZoneCalculator from "@/components/PulseZoneCalculator";
 import ChangePassword from "@/components/ChangePassword";
 import WorkoutStats from "@/components/WorkoutStats";
+import WhatsNewDialog from "@/components/WhatsNewDialog";
+import SettingsPanel from "@/components/SettingsPanel";
 
 type Tab = "workout" | "plan" | "friends" | "calc" | "stats";
 
@@ -246,6 +248,7 @@ const Index = () => {
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
+            <SettingsPanel />
             <OneRMCalculator />
             <PulseZoneCalculator />
           </div>
@@ -268,6 +271,9 @@ const Index = () => {
           </div>
         </div>
       }
+
+      {/* What's new dialog */}
+      <WhatsNewDialog />
 
       {/* Change password modal */}
       {showChangePassword && <ChangePassword onClose={() => setShowChangePassword(false)} />}
