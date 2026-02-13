@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { MessageSquarePlus, Loader2, Check } from "lucide-react";
+import { MessageSquarePlus, Loader2, Check, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SuggestionBoxProps {
   userId: string;
+  isAdmin?: boolean;
 }
 
 interface Suggestion {
@@ -13,7 +14,7 @@ interface Suggestion {
   user_id: string;
 }
 
-const SuggestionBox = ({ userId }: SuggestionBoxProps) => {
+const SuggestionBox = ({ userId, isAdmin = false }: SuggestionBoxProps) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -65,6 +66,11 @@ const SuggestionBox = ({ userId }: SuggestionBoxProps) => {
       setTimeout(() => setSent(false), 3000);
     }
     setSending(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("suggestions").delete().eq("id", id);
+    fetchSuggestions();
   };
 
   const formatDate = (dateStr: string) => {
@@ -123,7 +129,18 @@ const SuggestionBox = ({ userId }: SuggestionBoxProps) => {
                 <span className="text-xs font-semibold text-primary">
                   {nicknames[s.user_id] || "Okänd"}
                 </span>
-                <span className="text-[10px] text-muted-foreground">{formatDate(s.created_at)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">{formatDate(s.created_at)}</span>
+                  {isAdmin && (
+                    <button
+                      onClick={() => handleDelete(s.id)}
+                      className="p-1 text-destructive hover:opacity-70 transition-opacity"
+                      title="Ta bort"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-sm text-foreground">{s.message}</p>
             </div>

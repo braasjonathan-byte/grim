@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, ShoppingCart } from "lucide-react";
+import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, ShoppingCart, Megaphone } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -36,6 +36,8 @@ const Index = () => {
   const [forceChangePassword, setForceChangePassword] = useState(false);
   const [userRole, setUserRole] = useState<string>("member");
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+  const [showInboxDropdown, setShowInboxDropdown] = useState(false);
+  const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string; title: string; message: string; created_at: string}[]>([]);
 
   usePushNotifications(user?.id ?? null);
 
@@ -110,6 +112,13 @@ const Index = () => {
       select("*", { count: "exact", head: true }).
       gt("created_at", lastRead);
       setUnreadAnnouncements(count || 0);
+
+      const { data } = await supabase
+        .from("announcements")
+        .select("id, title, message, created_at")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (data) setHeaderAnnouncements(data);
     };
     checkUnread();
   }, [user]);
@@ -252,6 +261,53 @@ const Index = () => {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowInboxDropdown((prev) => !prev);
+                  if (unreadAnnouncements > 0) {
+                    localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
+                    setUnreadAnnouncements(0);
+                  }
+                }}
+                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors relative"
+                title="Inkorg"
+              >
+                <Megaphone className="w-4 h-4" />
+                {unreadAnnouncements > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadAnnouncements > 9 ? "9+" : unreadAnnouncements}
+                  </span>
+                )}
+              </button>
+              {showInboxDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowInboxDropdown(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                    <div className="p-3 border-b border-border">
+                      <h4 className="text-sm font-bold">📢 Inkorg</h4>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {headerAnnouncements.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4">Inga meddelanden.</p>
+                      ) : (
+                        headerAnnouncements.map((a) => (
+                          <div key={a.id} className="p-3 border-b border-border last:border-b-0 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-xs font-bold text-foreground">{a.title}</h5>
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(a.created_at).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{a.message}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
             <span className="text-sm font-semibold text-primary">{nickname}</span>
             <button
               onClick={() => setShowChangePassword(true)}
@@ -305,7 +361,7 @@ const Index = () => {
             <SettingsPanel userId={user.id} />
             <OneRMCalculator />
             <PulseZoneCalculator />
-            <SuggestionBox userId={user.id} />
+            <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
           </div>
         }
       </main>
