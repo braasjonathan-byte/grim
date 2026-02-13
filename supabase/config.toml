@@ -1,1 +1,19 @@
 project_id = "gnhbkevtoajzdpsengki"
+
+[functions.reset-password]
+verify_jwt = false
+
+[functions.exercise-gif]
+verify_jwt = false
+
+[functions.get-vapid-key]
+verify_jwt = false
+
+[functions.notify-announcement]
+verify_jwt = false
+
+[functions.notify-friends]
+verify_jwt = false
+
+[functions.notify-suggestion]
+verify_jwt = false
