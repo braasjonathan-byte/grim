@@ -1347,6 +1347,33 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     const comp = completions[key];
                     const savedWeights = (comp?.logged_weights || {}) as Record<string, number>;
 
+                    // Helper: find previously logged weight for an exercise from earlier weeks
+                    const findPreviousWeight = (exerciseName: string): number | null => {
+                      // Look through completions from previous weeks for this exercise
+                      for (let w = plan.week - 1; w >= 1; w--) {
+                        // Check all days in that week
+                        for (const p of plans.filter(pp => pp.week === w)) {
+                          const compKey = `${w}-${p.day}`;
+                          const comp = completions[compKey];
+                          const weights = comp?.logged_weights as Record<string, number> | null;
+                          if (weights && weights[exerciseName]) {
+                            return weights[exerciseName];
+                          }
+                        }
+                      }
+                      return null;
+                    };
+
+                    // Progressive increase: vary by rep range
+                    const getProgression = (weight: number, repsStr: string | null): number => {
+                      const reps = repsStr ? parseInt(repsStr) : 10;
+                      // High reps (8+) = smaller increase, low reps (1-5) = larger increase
+                      if (reps <= 3) return Math.round((weight + 5) / 2.5) * 2.5;
+                      if (reps <= 5) return Math.round((weight + 2.5) / 2.5) * 2.5;
+                      if (reps <= 8) return Math.round((weight + 2.5) / 2.5) * 2.5;
+                      return Math.round((weight + 1.25) / 1.25) * 1.25; // 12+ reps = +1.25 kg
+                    };
+
                     return (
                       <div className="space-y-2">
                         {parts.map((part, i) => {
@@ -1354,7 +1381,23 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                           const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
                           const exerciseName = nameMatch ? nameMatch[1].trim() : null;
                           const isLoggable = exerciseName && exerciseName.length > 2 && !exerciseName.toLowerCase().includes("vila") && !exerciseName.toLowerCase().includes("vilodag");
-                          const weightKey = `${key}-${i}`;
+
+                          // Extract reps from part for progression calculation
+                          const repsMatch = part.match(/\d+\s*[×x]\s*(\d+)/i);
+                          const repsStr = repsMatch ? repsMatch[1] : null;
+
+                          // Determine default value: saved > previous week with progression
+                          let defaultWeight: number | string = "";
+                          if (exerciseName && isLoggable) {
+                            if (savedWeights[exerciseName]) {
+                              defaultWeight = savedWeights[exerciseName];
+                            } else {
+                              const prevWeight = findPreviousWeight(exerciseName);
+                              if (prevWeight) {
+                                defaultWeight = getProgression(prevWeight, repsStr);
+                              }
+                            }
+                          }
 
                           return (
                             <div key={i} className="flex items-center gap-2">
@@ -1366,7 +1409,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     type="number"
                                     inputMode="decimal"
                                     placeholder="kg"
-                                    defaultValue={savedWeights[exerciseName] || ""}
+                                    defaultValue={defaultWeight}
                                     onBlur={async (e) => {
                                       const val = parseFloat(e.target.value);
                                       if (isNaN(val) || val <= 0) return;
@@ -1393,6 +1436,19 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   <span className="text-[10px] text-muted-foreground">kg</span>
                                 </div>
                               )}
+                              <button
+                                onClick={async () => {
+                                  const newParts = [...parts];
+                                  newParts.splice(i, 1);
+                                  const newDetails = newParts.join(plan.details.includes("\n") ? "\n" : "; ");
+                                  await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                  setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                }}
+                                className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                                title="Ta bort övning"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
                             </div>
                           );
                         })}
