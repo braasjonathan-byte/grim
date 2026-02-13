@@ -15,13 +15,6 @@ function base64UrlDecode(str: string): Uint8Array {
   return bytes;
 }
 
-function base64UrlEncode(buffer: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
 async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: string,
@@ -125,54 +118,32 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const { nickname } = await req.json();
 
-    const { data: { user } } = await supabaseUser.auth.getUser();
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Check if user is admin
-    const { data: roleData } = await supabaseAdmin
+    // Get admin user IDs
+    const { data: adminRoles } = await supabaseAdmin
       .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
+      .select("user_id")
+      .eq("role", "admin");
 
-    if (!roleData || roleData.role !== "admin") {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
+    if (!adminRoles || adminRoles.length === 0) {
+      return new Response(JSON.stringify({ sent: 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { title } = await req.json();
+    const adminIds = adminRoles.map((r: any) => r.user_id);
 
-    // Get ALL push subscriptions (except admin's own)
+    // Get push subscriptions for admins only
     const { data: subscriptions } = await supabaseAdmin
       .from("push_subscriptions")
       .select("*")
-      .neq("user_id", user.id);
+      .in("user_id", adminIds);
 
     if (!subscriptions || subscriptions.length === 0) {
       return new Response(JSON.stringify({ sent: 0 }), {
@@ -195,8 +166,8 @@ serve(async (req) => {
     }
 
     const payload = JSON.stringify({
-      title: "📢 Grim",
-      body: `Nytt meddelande: ${title}`,
+      title: "💡 Grim",
+      body: `Nytt förslag från ${nickname || "en användare"}`,
       icon: "/favicon.ico",
       data: { url: "/" },
     });
