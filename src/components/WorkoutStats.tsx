@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, XCircle, CalendarDays } from "lucide-react";
+import { BarChart3, CheckCircle, XCircle, CalendarDays, Footprints } from "lucide-react";
 
 interface WorkoutStatsProps {
   userId: string;
@@ -12,6 +12,8 @@ interface CompletionRecord {
   done: boolean;
   skipped: boolean;
   updated_at: string;
+  logged_distance_km: number | null;
+  logged_tempo: string | null;
 }
 
 type View = "week" | "month" | "year";
@@ -23,7 +25,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   useEffect(() => {
     supabase
       .from("workout_completions")
-      .select("week, day, done, skipped, updated_at")
+      .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo")
       .eq("user_id", userId)
       .then(({ data }) => {
         if (data) setCompletions(data as CompletionRecord[]);
@@ -31,14 +33,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   }, [userId]);
 
   const stats = useMemo(() => {
-    const now = new Date();
-
     const getWeekNumber = (d: Date) => {
       const onejan = new Date(d.getFullYear(), 0, 1);
       return Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
     };
 
-    type Bucket = { label: string; done: number; skipped: number; total: number };
+    type Bucket = { label: string; done: number; skipped: number; total: number; distanceKm: number };
     const buckets = new Map<string, Bucket>();
 
     for (const c of completions) {
@@ -64,12 +64,15 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       if (!buckets.has(key)) {
-        buckets.set(key, { label, done: 0, skipped: 0, total: 0 });
+        buckets.set(key, { label, done: 0, skipped: 0, total: 0, distanceKm: 0 });
       }
       const b = buckets.get(key)!;
       b.total++;
       if (c.done) b.done++;
       if (c.skipped) b.skipped++;
+      if (c.logged_distance_km && c.done) {
+        b.distanceKm += Number(c.logged_distance_km);
+      }
     }
 
     return Array.from(buckets.values()).reverse();
@@ -78,6 +81,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const totalDone = completions.filter((c) => c.done).length;
   const totalSkipped = completions.filter((c) => c.skipped).length;
   const totalAll = completions.length;
+  const totalDistanceKm = completions
+    .filter((c) => c.done && c.logged_distance_km)
+    .reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -87,7 +93,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <CheckCircle className="w-5 h-5 text-success mx-auto mb-1" />
           <p className="text-2xl font-black">{totalDone}</p>
@@ -102,6 +108,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <CalendarDays className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-2xl font-black">{totalAll}</p>
           <p className="text-[10px] text-muted-foreground">Totalt</p>
+        </div>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <Footprints className="w-5 h-5 text-warning mx-auto mb-1" />
+          <p className="text-2xl font-black">{Math.round(totalDistanceKm * 10) / 10}</p>
+          <p className="text-[10px] text-muted-foreground">km sprungit</p>
         </div>
       </div>
 
@@ -132,9 +143,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
               <div key={b.label} className="bg-card border border-border rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold">{b.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {b.done} ✓ · {b.skipped} ✗ · {b.total} totalt
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {b.distanceKm > 0 && (
+                      <span className="text-xs text-warning font-mono flex items-center gap-0.5">
+                        <Footprints className="w-3 h-3" />
+                        {Math.round(b.distanceKm * 10) / 10} km
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {b.done} ✓ · {b.skipped} ✗
+                    </span>
+                  </div>
                 </div>
                 <div className="w-full bg-secondary rounded-full h-2 overflow-hidden flex">
                   <div
