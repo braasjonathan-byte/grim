@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
+import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 
 interface WorkoutViewProps {
   userId: string;
@@ -137,6 +138,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   // Replacement workout dialog state
   const [replacementTarget, setReplacementTarget] = useState<{planId: string;sessionName: string;week: number;day: string;} | null>(null);
   const [runLogTarget, setRunLogTarget] = useState<{week: number;day: string;sessionName: string;details: string;} | null>(null);
+
+  // Exercise info dialog
+  const [exerciseInfoName, setExerciseInfoName] = useState<string | null>(null);
 
 
   const fetchData = useCallback(async () => {
@@ -757,6 +761,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     const doneCount = singlePlans.filter((p) => completions[`0-${p.day}`]?.done).length;
 
     return (
+      <>
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <div>
@@ -891,17 +896,25 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     <Footprints className="w-3.5 h-3.5 text-warning" />
                                     {name}
                                   </span>
-                                  <button
-                                onClick={async () => {
-                                  const lines = plan.details.split("\n").filter(Boolean);
-                                  lines.splice(i, 1);
-                                  const newDetails = lines.join("\n");
-                                  await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                                  setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
-                                }}
-                                className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
-                                    <X className="w-3 h-3" />
-                                  </button>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                  onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
+                                  className="p-0.5 text-muted-foreground hover:text-warning transition-colors"
+                                  title="Visa övningsinformation">
+                                      <Info className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                  onClick={async () => {
+                                    const lines = plan.details.split("\n").filter(Boolean);
+                                    lines.splice(i, 1);
+                                    const newDetails = lines.join("\n");
+                                    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                    setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                  }}
+                                  className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {condTime &&
@@ -965,6 +978,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                               <div className="flex items-center justify-between mb-1.5">
                                 <span className="font-semibold text-sm text-foreground">{name}</span>
                                 <div className="flex items-center gap-1">
+                                  <button
+                                onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
+                                className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                title="Visa övningsinformation">
+                                    <Info className="w-3.5 h-3.5" />
+                                  </button>
                                   <button
                                 onClick={() => setEditingExercise({
                                   planId: plan.id,
@@ -1230,8 +1249,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                             onClick={() => handleExerciseSelect(plan.id, e.name)}
                             className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors">
 
-                                <span>{e.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <span>{e.name}</span>
+                                </div>
                                 <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={(ev) => {ev.stopPropagation();setExerciseInfoName(e.name);}}
+                                    className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                    title="Info">
+                                    <Info className="w-3 h-3" />
+                                  </button>
                                   {lastW &&
                               <span className="text-[10px] font-mono text-primary">{lastW}</span>
                               }
@@ -1415,7 +1442,14 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             <Plus className="w-4 h-4" /> Lägg till pass
           </button>
         }
-      </div>);
+      </div>
+      {exerciseInfoName && (
+        <ExerciseInfoDialog
+          exerciseName={exerciseInfoName}
+          onClose={() => setExerciseInfoName(null)}
+        />
+      )}
+      </>);
 
   }
 
@@ -1429,6 +1463,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const progress = weekDays.length > 0 ? Math.round(doneCount / weekDays.length * 100) : 0;
 
   return (
+    <>
     <div className="space-y-4">
       {/* Week navigation */}
       <div className="flex flex-col gap-3">
@@ -1966,7 +2001,15 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         }} />
 
       }
-    </div>);
+    </div>
+
+    {exerciseInfoName && (
+      <ExerciseInfoDialog
+        exerciseName={exerciseInfoName}
+        onClose={() => setExerciseInfoName(null)}
+      />
+    )}
+    </>);
 
 };
 
