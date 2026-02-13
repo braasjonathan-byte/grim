@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, ShoppingCart, Megaphone } from "lucide-react";
+import { Dumbbell, Users, Edit3, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, ShoppingCart, Megaphone, Download, X, Smartphone } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -40,6 +40,7 @@ const Index = () => {
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   usePushNotifications(user?.id ?? null);
 
@@ -273,7 +274,14 @@ const Index = () => {
               <span className="text-primary"></span>
             </h1>
           </div>
-          <div className="flex items-center gap-3 mx-[2px] px-[15px]">
+          <div className="flex items-center gap-2 mx-[2px] px-[15px]">
+            <button
+              onClick={() => setShowInstallGuide(true)}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Installera
+            </button>
             <div className="relative">
               <button
                 onClick={() => {
@@ -403,6 +411,55 @@ const Index = () => {
 
       {/* What's new dialog - hide when forced password change is active to avoid focus trap conflict */}
       {!forceChangePassword && <WhatsNewDialog />}
+
+      {/* Install guide modal */}
+      {showInstallGuide && (
+        <>
+          <div className="fixed inset-0 bg-black/60 z-[70]" onClick={() => setShowInstallGuide(false)} />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[80] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-primary" />
+                <h3 className="text-sm font-bold">Installera Grim</h3>
+              </div>
+              <button onClick={() => setShowInstallGuide(false)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+              {/* iPhone */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold flex items-center gap-1.5">🍎 iPhone / iPad</h4>
+                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
+                  <li>Öppna <strong className="text-foreground">grim.lovable.app</strong> i <strong className="text-foreground">Safari</strong></li>
+                  <li>Tryck på <strong className="text-foreground">dela-ikonen</strong> (rutan med pil uppåt) längst ner</li>
+                  <li>Scrolla ner och tryck <strong className="text-foreground">"Lägg till på hemskärmen"</strong></li>
+                  <li>Tryck <strong className="text-foreground">"Lägg till"</strong> uppe till höger</li>
+                  <li>Öppna appen från hemskärmen – den körs nu i helskärm!</li>
+                </ol>
+                <p className="text-[10px] text-muted-foreground italic">
+                  💡 Push-notiser kräver iOS 16.4+ och att appen öppnas via hemskärmen.
+                </p>
+              </div>
+
+              {/* Android */}
+              <div className="space-y-2 border-t border-border pt-4">
+                <h4 className="text-sm font-bold flex items-center gap-1.5">🤖 Android</h4>
+                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
+                  <li>Öppna <strong className="text-foreground">grim.lovable.app</strong> i <strong className="text-foreground">Chrome</strong></li>
+                  <li>Tryck på <strong className="text-foreground">⋮ menyn</strong> (tre prickar uppe till höger)</li>
+                  <li>Tryck <strong className="text-foreground">"Installera app"</strong> eller <strong className="text-foreground">"Lägg till på startskärmen"</strong></li>
+                  <li>Bekräfta genom att trycka <strong className="text-foreground">"Installera"</strong></li>
+                  <li>Appen syns nu som en vanlig app på din startskärm!</li>
+                </ol>
+                <p className="text-[10px] text-muted-foreground italic">
+                  💡 Chrome visar ofta en installationsbanner automatiskt – tryck på den om den dyker upp.
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Change password modal */}
       {showChangePassword &&
