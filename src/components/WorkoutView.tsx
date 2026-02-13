@@ -120,6 +120,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [repsInput, setRepsInput] = useState("10");
   const [setsInput, setSetsInput] = useState("3");
 
+  // Inline editing of existing exercise
+  const [editingExercise, setEditingExercise] = useState<{ planId: string; lineIndex: number; name: string; sets: string; reps: string; weight: string } | null>(null);
+
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
   const [commentNicknames, setCommentNicknames] = useState<Record<string, string>>({});
@@ -615,6 +618,29 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
   };
 
+  // Save edited exercise line (sets/reps/weight)
+  const saveEditedExercise = async () => {
+    if (!editingExercise) return;
+    const plan = plans.find(p => p.id === editingExercise.planId);
+    if (!plan) return;
+
+    const sets = parseInt(editingExercise.sets) || 3;
+    const reps = parseInt(editingExercise.reps) || 10;
+    const w = editingExercise.weight.trim();
+    const entry = w
+      ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg`
+      : `${editingExercise.name} — ${sets}×${reps}`;
+
+    const separator = plan.details.includes("\n") ? "\n" : "\n";
+    const lines = plan.details.split(separator).filter(Boolean);
+    lines[editingExercise.lineIndex] = entry;
+    const newDetails = lines.join("\n");
+
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+    setEditingExercise(null);
+  };
+
   if (mode === "loading") {
     return (
       <div className="flex items-center justify-center py-16">
@@ -807,24 +833,75 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                           const reps = structMatch ? structMatch[2] : null;
                           const kg = structMatch && structMatch[3] ? structMatch[3] : (!structMatch && weight ? weight : null);
 
+                          const isEditing = editingExercise?.planId === plan.id && editingExercise?.lineIndex === i;
+
+                          if (isEditing) {
+                            return (
+                              <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
+                                <span className="font-semibold text-sm text-foreground">{editingExercise.name}</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
+                                    <input type="number" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise(prev => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
+                                    <input type="number" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise(prev => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
+                                    <input type="number" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise(prev => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={saveEditedExercise} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
+                                  <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
+                                </div>
+                              </div>
+                            );
+                          }
+
                           return (
                             <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-border/50">
                               <div className="flex items-center justify-between mb-1.5">
                                 <span className="font-semibold text-sm text-foreground">{name}</span>
-                                <button
-                                  onClick={async () => {
-                                    const lines = plan.details.split("\n").filter(Boolean);
-                                    lines.splice(i, 1);
-                                    const newDetails = lines.join("\n");
-                                    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                                    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
-                                  }}
-                                  className="p-0.5 text-muted-foreground hover:text-destructive transition-colors"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => setEditingExercise({
+                                      planId: plan.id,
+                                      lineIndex: i,
+                                      name,
+                                      sets: sets || "3",
+                                      reps: reps || "10",
+                                      weight: kg?.replace(/\s*kg\s*/i, "").trim() || "",
+                                    })}
+                                    className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                    title="Redigera"
+                                  >
+                                    <Dumbbell className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      const lines = plan.details.split("\n").filter(Boolean);
+                                      lines.splice(i, 1);
+                                      const newDetails = lines.join("\n");
+                                      await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                    }}
+                                    className="p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingExercise({
+                                planId: plan.id,
+                                lineIndex: i,
+                                name,
+                                sets: sets || "3",
+                                reps: reps || "10",
+                                weight: kg?.replace(/\s*kg\s*/i, "").trim() || "",
+                              })}>
                                 {sets && (
                                   <div className="flex items-center gap-1 bg-background rounded-md px-2 py-1 border border-border/50">
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</span>
@@ -844,7 +921,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   </div>
                                 )}
                                 {!sets && !reps && !kg && (
-                                  <span className="text-xs text-muted-foreground italic">Inga detaljer</span>
+                                  <span className="text-xs text-muted-foreground italic">Tryck för att ange set/reps/vikt</span>
                                 )}
                               </div>
                             </div>
@@ -1399,10 +1476,57 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                             }
                           }
 
+                          // Parse structured format from the part text
+                          const partStructMatch = part.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(.+?)\s*kg)?$/i);
+                          const partName = partStructMatch ? partStructMatch[1].trim() : (exerciseName || part);
+                          const partSets = partStructMatch ? partStructMatch[2] : null;
+                          const partReps = partStructMatch ? partStructMatch[3] : null;
+                          const partKg = partStructMatch && partStructMatch[4] ? partStructMatch[4].trim() : null;
+
+                          const isEditing = editingExercise?.planId === plan.id && editingExercise?.lineIndex === i;
+
+                          if (isEditing) {
+                            return (
+                              <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
+                                <span className="font-semibold text-sm text-foreground">{editingExercise.name}</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
+                                    <input type="number" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise(prev => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
+                                    <input type="number" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise(prev => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
+                                    <input type="number" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise(prev => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={saveEditedExercise} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
+                                  <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
+                                </div>
+                              </div>
+                            );
+                          }
+
                           return (
                             <div key={i} className="flex items-center gap-2">
                               <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                              <span className="text-sm text-foreground flex-1">{part}</span>
+                              <span
+                                className="text-sm text-foreground flex-1 cursor-pointer hover:text-primary transition-colors"
+                                onClick={() => setEditingExercise({
+                                  planId: plan.id,
+                                  lineIndex: i,
+                                  name: partName,
+                                  sets: partSets || "3",
+                                  reps: partReps || repsStr || "10",
+                                  weight: partKg || "",
+                                })}
+                              >
+                                {part}
+                              </span>
                               {isLoggable && (
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <input
