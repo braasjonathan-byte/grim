@@ -1456,8 +1456,49 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     );
                   })()}
 
+                  {/* Reps/sets/weight dialog for plan exercises */}
+                  {weightDialog && weightDialog.planId === plan.id && (
+                    <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30">
+                      <h4 className="text-sm font-bold flex items-center gap-1.5">
+                        <Dumbbell className="w-4 h-4 text-primary" />
+                        {weightDialog.exerciseName}
+                      </h4>
+                      {weightDialog.lastWeight && (
+                        <p className="text-xs text-muted-foreground">Senast: {weightDialog.lastWeight}</p>
+                      )}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
+                          <input type="number" inputMode="numeric" value={setsInput} onChange={(e) => setSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
+                          <input type="number" inputMode="numeric" value={repsInput} onChange={(e) => setRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
+                          <input type="number" inputMode="decimal" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} placeholder="—" className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => addExerciseWithWeight(weightInput.trim() || null)}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Lägg till
+                        </button>
+                        <button
+                          onClick={() => { setWeightDialog(null); setWeightInput(""); setRepsInput("10"); setSetsInput("3"); }}
+                          className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md"
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Add exercise to plan session */}
-                  {showExercisePicker === plan.id ? (
+                  {showExercisePicker === plan.id && !weightDialog ? (
                     <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-semibold">Lägg till övning</h4>
@@ -1477,7 +1518,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       </div>
                       <div className="max-h-36 overflow-y-auto space-y-0.5">
                         {filteredExercises.map((e, i) => (
-                          <button key={`${e.name}-${i}`} onClick={() => { addExerciseToPlan(plan, e.name); setShowExercisePicker(null); }} className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors">
+                          <button key={`${e.name}-${i}`} onClick={() => handleExerciseSelect(plan.id, e.name)} className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors">
                             <span>{e.name}</span>
                             <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
                           </button>
@@ -1505,11 +1546,11 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                         </button>
                       )}
                     </div>
-                  ) : (
+                  ) : !weightDialog ? (
                     <button onClick={() => { setShowExercisePicker(plan.id); setExerciseSearch(""); setSelectedMuscle(null); setShowAddCustomExercise(false); }} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till övning
                     </button>
-                  )}
+                  ) : null}
 
                   {/* Friend comments */}
                   {(() => {
