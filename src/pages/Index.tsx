@@ -275,13 +275,15 @@ const Index = () => {
             </h1>
           </div>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
-            <button
-              onClick={() => setShowInstallGuide(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Installera
-            </button>
+            {!window.matchMedia('(display-mode: standalone)').matches && (
+              <button
+                onClick={() => setShowInstallGuide(true)}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Installera
+              </button>
+            )}
             <div className="relative">
               <button
                 onClick={() => {
