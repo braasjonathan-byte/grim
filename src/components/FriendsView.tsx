@@ -463,7 +463,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                     {expanded && (
                       <div className="px-4 pb-4 space-y-3 border-t border-border pt-3 animate-fade-in">
                         {/* Admin edit button */}
-                        {isAdmin && isWithinOneHour(plan.created_at) && editingPlanId !== plan.id && (
+                        {isAdmin && editingPlanId !== plan.id && (
                           <button
                             onClick={() => startEditing(plan)}
                             className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline"
