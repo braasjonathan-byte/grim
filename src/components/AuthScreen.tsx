@@ -419,25 +419,15 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         </form>
 
         {isLogin && (
-          <div className="space-y-3">
-            <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
-              <p className="text-xs text-primary font-semibold">
-                🔑 Nytt temporärt lösenord: <span className="font-mono tracking-wider">12345678</span>
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Använd detta vid första inloggningen – du kommer att uppmanas byta lösenord.
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setShowForgot(true);
-                setError("");
-              }}
-              className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Glömt lösenord?
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setShowForgot(true);
+              setError("");
+            }}
+            className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Glömt lösenord?
+          </button>
         )}
 
         <button
