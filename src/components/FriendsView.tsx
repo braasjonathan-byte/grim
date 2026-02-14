@@ -728,7 +728,21 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                           </div>
                         ) : (
                           /* Workout details */
-                          <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                          (() => {
+                            const detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+                            return detailParts.length > 1 ? (
+                              <ul className="space-y-1.5">
+                                {detailParts.map((line, i) => (
+                                  <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                                    <span className="text-muted-foreground">•</span>
+                                    <span className="flex-1">{line}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                            );
+                          })()
                         )}
 
                         {/* User's own comment */}
