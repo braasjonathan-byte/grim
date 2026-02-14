@@ -73,23 +73,23 @@ const exerciseTranslations: Record<string, string> = {
   "sidoplanka": "side plank",
   "bålrotation": "cable wood chop",
   "sit-ups": "sit up",
-  // Kondition
-  "löpning": "running",
-  "tröskellöpning": "running",
-  "intervaller": "running",
-  "långpass": "running",
-  "cykling": "cycling",
-  "crosstrainer": "elliptical",
-  "roddmaskin": "rowing machine",
-  "simning": "swimming",
-  "promenad": "walking",
-  "trappmaskin": "stair climber",
+// Kondition - these don't have GIFs in ExerciseDB
+  "löpning": "_CARDIO_",
+  "tröskellöpning": "_CARDIO_",
+  "intervaller": "_CARDIO_",
+  "långpass": "_CARDIO_",
+  "cykling": "_CARDIO_",
+  "crosstrainer": "elliptical trainer",
+  "roddmaskin": "_CARDIO_",
+  "simning": "_CARDIO_",
+  "promenad": "_CARDIO_",
+  "trappmaskin": "_CARDIO_",
   // Rörlighet
-  "stretching": "stretching",
-  "yoga": "yoga",
-  "foam rolling": "foam rolling",
-  "rörlighetspass": "stretching",
-  "dynamisk uppvärmning": "dynamic stretching",
+  "stretching": "_CARDIO_",
+  "yoga": "_CARDIO_",
+  "foam rolling": "_CARDIO_",
+  "rörlighetspass": "_CARDIO_",
+  "dynamisk uppvärmning": "_CARDIO_",
 };
 
 function cleanExerciseName(raw: string): string {
@@ -181,7 +181,25 @@ serve(async (req) => {
 
     const searchTerms = getSearchTerms(cleanName);
 
-    for (const term of searchTerms) {
+    // Check if this is a cardio/mobility exercise without GIF support
+    if (searchTerms.length === 1 && searchTerms[0] === "_CARDIO_") {
+      return new Response(JSON.stringify({
+        gifUrl: null,
+        name: cleanName,
+        instructions: [],
+        targetMuscles: [],
+        equipments: [],
+        isCardio: true,
+        error: "Konditions- och rörlighetsövningar har ingen GIF-demonstration.",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Filter out any _CARDIO_ markers from search terms
+    const validTerms = searchTerms.filter(t => t !== "_CARDIO_");
+
+    for (const term of validTerms) {
       const exercise = await searchExerciseDB(term);
       if (exercise?.gifUrl) {
         return new Response(JSON.stringify({

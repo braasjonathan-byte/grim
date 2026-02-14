@@ -1843,8 +1843,60 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     </div>
                 }
 
+                  {/* Conditioning exercise dialog for plan mode */}
+                  {conditioningDialog && conditioningDialog.planId === plan.id &&
+                <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-warning/30">
+                      <h4 className="text-sm font-bold flex items-center gap-1.5">
+                        <Footprints className="w-4 h-4 text-warning" />
+                        {conditioningDialog.exerciseName}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                          <input
+                        type="number"
+                        inputMode="numeric"
+                        value={condTimeInput}
+                        onChange={(e) => setCondTimeInput(e.target.value)}
+                        placeholder="t.ex. 30"
+                        className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
+                          <input
+                        type="text"
+                        value={condTempoInput}
+                        onChange={(e) => setCondTempoInput(e.target.value)}
+                        placeholder="t.ex. 5:30"
+                        className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
+                        <input
+                      type="text"
+                      value={condDistanceInput}
+                      onChange={(e) => setCondDistanceInput(e.target.value)}
+                      placeholder="t.ex. 5"
+                      className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                      onClick={addConditioningExercise}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
+                          <Plus className="w-3.5 h-3.5" /> Lägg till
+                        </button>
+                        <button
+                      onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");}}
+                      className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                          Avbryt
+                        </button>
+                      </div>
+                    </div>
+                }
+
                   {/* Add exercise to plan session */}
-                  {showExercisePicker === plan.id && !weightDialog ?
+                  {showExercisePicker === plan.id && !weightDialog && !conditioningDialog ?
                 <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                       <div className="flex items-center justify-between">
                         <h4 className="text-xs font-semibold">Lägg till övning</h4>
