@@ -144,7 +144,7 @@ function generateOriginalPlan(profile: FitnessProfile): TemplatePlanDay[] {
           : `Böj ${squatSets}×${squatReps} @ RPE ${rpe(7)}; Mark ${Math.min(5, 3 + Math.floor(w / 3))}×${squatReps} @ RPE ${rpe(7)}; ${w <= 6 ? `Frontböj 3×3 @ RPE ${rpe(6)}` : `Enbensarbete 3×8`}`,
         tempo: "RPE enligt text",
       },
-      { week: w, day: "Sön", session_name: "Långpass", details: `${dist} km`, tempo: pace.long },
+      { week: w, day: "Sön", session_name: "Långpass", details: `Löpning ${dist} km`, tempo: pace.long },
     );
   }
   return weekPlans;
