@@ -8,12 +8,12 @@ const corsHeaders = {
 // Swedish to English exercise name mapping
 const exerciseTranslations: Record<string, string> = {
   // Ben & Sätesmuskler
-  "knäböj": "barbell squat",
-  "böj": "barbell squat",
-  "lätta böj": "barbell squat",
-  "pausböj": "barbell squat",
+  "knäböj": "barbell full squat",
+  "böj": "barbell full squat",
+  "lätta böj": "barbell full squat",
+  "pausböj": "barbell full squat",
   "frontböj": "barbell front squat",
-  "pausböj": "barbell squat",
+  "pausböj": "barbell full squat",
   "marklyft": "barbell deadlift",
   "mark": "barbell deadlift",
   "stela marklyft": "barbell stiff leg deadlift",
@@ -38,7 +38,7 @@ const exerciseTranslations: Record<string, string> = {
   "inåtförande av höft": "hip adductor",
   "goblet squat": "dumbbell goblet squat",
   "goblet squats": "dumbbell goblet squat",
-  "box squat": "barbell squat",
+  "box squat": "barbell full squat",
   "boxhopp": "box jump",
   "steg-ups": "step up",
   "step-ups": "step up",
@@ -248,13 +248,24 @@ function getSearchTerms(cleanName: string): string[] {
 
 async function searchExerciseDB(term: string): Promise<any | null> {
   try {
-    const apiUrl = `https://exercisedb-api.vercel.app/api/v1/exercises/search?q=${encodeURIComponent(term)}&limit=3`;
+    const apiUrl = `https://exercisedb-api.vercel.app/api/v1/exercises/search?q=${encodeURIComponent(term)}&limit=10`;
     const response = await fetch(apiUrl);
     const data = await response.json();
     if (data.success && data.data && data.data.length > 0) {
-      // Prefer results that have a gifUrl
-      const withGif = data.data.find((e: any) => e.gifUrl);
-      return withGif || data.data[0];
+      const results = data.data.filter((e: any) => e.gifUrl);
+      if (results.length === 0) return data.data[0];
+      // Prefer exact name match
+      const exact = results.find((e: any) => e.name?.toLowerCase() === term.toLowerCase());
+      if (exact) return exact;
+      // Prefer shortest name without parenthetical qualifiers — closest to the search term
+      const scored = results
+        .map((e: any) => ({
+          exercise: e,
+          hasParens: e.name?.includes("(") ? 1 : 0,
+          nameLen: (e.name || "").length,
+        }))
+        .sort((a: any, b: any) => a.hasParens - b.hasParens || a.nameLen - b.nameLen);
+      return scored[0].exercise;
     }
   } catch (e) {
     console.error(`Search failed for "${term}":`, e);
