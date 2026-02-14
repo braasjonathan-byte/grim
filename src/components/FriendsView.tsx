@@ -691,12 +691,14 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           friends.map((friend) => {
             const recentCount = friendActivities.filter(a => a.nickname === friend.profile.nickname).length;
             return (
-              <button
+              <div
                 key={friend.id}
-                onClick={() => viewFriendWorkouts(friend)}
                 className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
+                <button
+                  onClick={() => viewFriendWorkouts(friend)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                >
                   <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {friend.profile.avatar_url ? (
                       <img src={friend.profile.avatar_url} alt={friend.profile.nickname} className="w-full h-full object-cover" />
@@ -710,9 +712,22 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                       🔥 {recentCount} pass
                     </span>
                   )}
+                </button>
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <button
+                      onClick={() => viewFriendWorkouts(friend)}
+                      className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors"
+                      title="Redigera pass"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button onClick={() => viewFriendWorkouts(friend)} className="text-muted-foreground">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
+              </div>
             );
           })
         )}
