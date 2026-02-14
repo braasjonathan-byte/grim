@@ -1631,9 +1631,43 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   if (!isStrength) {
                     const isRunning = s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel");
                     const comp = completions[key];
+                    const detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
                     return (
                       <div className="space-y-2">
-                          <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                          {detailParts.length > 1 ? (
+                            <ul className="space-y-1.5">
+                              {detailParts.map((line, i) => {
+                                const cleanName = line.replace(/\s*[—\-]\s*\d+[×x].*$/i, "").replace(/\s*@\s*\d+.*$/i, "").trim();
+                                return (
+                                  <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                                    <span className="text-muted-foreground">•</span>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setExerciseInfoName(cleanName); }}
+                                      className="p-0.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                                      title="Visa övningsinformation">
+                                      <Info className="w-3.5 h-3.5" />
+                                    </button>
+                                    <span className="flex-1">{line}</span>
+                                    <button
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        const lines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+                                        lines.splice(i, 1);
+                                        const separator = plan.details.includes("\n") ? "\n" : "; ";
+                                        const newDetails = lines.join(separator);
+                                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                      }}
+                                      className="p-0.5 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                          )}
                           {isRunning && comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km) &&
                         <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-1">
                               <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
