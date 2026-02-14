@@ -107,6 +107,18 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [adminExerciseSearch, setAdminExerciseSearch] = useState("");
   const [adminSelectedMuscle, setAdminSelectedMuscle] = useState<string | null>(null);
   const [customExercises, setCustomExercises] = useState<{ id: string; name: string; category: string; muscle_group: string }[]>([]);
+  
+  // Admin weight/reps/sets dialog
+  const [adminWeightDialog, setAdminWeightDialog] = useState<{ exerciseName: string } | null>(null);
+  const [adminWeightInput, setAdminWeightInput] = useState("");
+  const [adminRepsInput, setAdminRepsInput] = useState("10");
+  const [adminSetsInput, setAdminSetsInput] = useState("3");
+  
+  // Admin conditioning dialog
+  const [adminCondDialog, setAdminCondDialog] = useState<{ exerciseName: string } | null>(null);
+  const [adminCondTimeInput, setAdminCondTimeInput] = useState("");
+  const [adminCondTempoInput, setAdminCondTempoInput] = useState("");
+  const [adminCondDistanceInput, setAdminCondDistanceInput] = useState("");
 
   useEffect(() => {
     fetchFriends();
@@ -321,11 +333,48 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setEditDetails(parts.join(getEditSeparator()));
   };
 
-  const addEditExercise = (name: string) => {
-    const sep = editDetails ? getEditSeparator() : "";
-    setEditDetails(editDetails ? `${editDetails}${sep}${name}` : name);
+  const handleAdminExerciseSelect = (exerciseName: string) => {
+    const exercise = allExercises.find((e) => e.name === exerciseName);
     setShowAdminExercisePicker(false);
     setAdminExerciseSearch("");
+    if (exercise && exercise.category === "kondition") {
+      setAdminCondDialog({ exerciseName });
+      setAdminCondTimeInput("");
+      setAdminCondTempoInput("");
+      setAdminCondDistanceInput("");
+    } else {
+      setAdminWeightDialog({ exerciseName });
+      setAdminWeightInput("");
+      setAdminRepsInput("10");
+      setAdminSetsInput("3");
+    }
+  };
+
+  const addAdminExerciseWithWeight = () => {
+    if (!adminWeightDialog) return;
+    const sets = parseInt(adminSetsInput) || 3;
+    const reps = parseInt(adminRepsInput) || 10;
+    const w = adminWeightInput.trim();
+    const entry = w
+      ? `${adminWeightDialog.exerciseName} — ${sets}×${reps} @ ${w} kg`
+      : `${adminWeightDialog.exerciseName} — ${sets}×${reps}`;
+    const sep = editDetails ? getEditSeparator() : "";
+    setEditDetails(editDetails ? `${editDetails}${sep}${entry}` : entry);
+    setAdminWeightDialog(null);
+  };
+
+  const addAdminCondExercise = () => {
+    if (!adminCondDialog) return;
+    const infoParts: string[] = [];
+    if (adminCondTimeInput.trim()) infoParts.push(`${adminCondTimeInput.trim()} min`);
+    if (adminCondTempoInput.trim()) infoParts.push(`${adminCondTempoInput.trim()}/km`);
+    if (adminCondDistanceInput.trim()) infoParts.push(`${adminCondDistanceInput.trim()} km`);
+    const entry = infoParts.length > 0
+      ? `${adminCondDialog.exerciseName} — ${infoParts.join(", ")}`
+      : adminCondDialog.exerciseName;
+    const sep = editDetails ? getEditSeparator() : "";
+    setEditDetails(editDetails ? `${editDetails}${sep}${entry}` : entry);
+    setAdminCondDialog(null);
   };
 
   const saveEdit = async (planId: string) => {
@@ -579,7 +628,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                   {filteredAdminExercises.slice(0, 30).map((ex) => (
                                     <button
                                       key={ex.name}
-                                      onClick={() => addEditExercise(ex.name)}
+                                      onClick={() => handleAdminExerciseSelect(ex.name)}
                                       className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-primary/10 text-foreground transition-colors"
                                     >
                                       {ex.name}
@@ -595,6 +644,70 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                               >
                                 <Plus className="w-3 h-3" /> Lägg till övning
                               </button>
+                            )}
+
+                            {/* Weight/reps/sets dialog */}
+                            {adminWeightDialog && (
+                              <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30">
+                                <h4 className="text-sm font-bold flex items-center gap-1.5">
+                                  <Dumbbell className="w-4 h-4 text-primary" />
+                                  {adminWeightDialog.exerciseName}
+                                </h4>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
+                                    <input type="number" inputMode="numeric" value={adminSetsInput} onChange={(e) => setAdminSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
+                                    <input type="number" inputMode="numeric" value={adminRepsInput} onChange={(e) => setAdminRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
+                                    <input type="number" inputMode="decimal" value={adminWeightInput} onChange={(e) => setAdminWeightInput(e.target.value)} placeholder="—" className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={addAdminExerciseWithWeight} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
+                                    <Plus className="w-3.5 h-3.5" /> Lägg till
+                                  </button>
+                                  <button onClick={() => setAdminWeightDialog(null)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                    Avbryt
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Conditioning dialog */}
+                            {adminCondDialog && (
+                              <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-warning/30">
+                                <h4 className="text-sm font-bold flex items-center gap-1.5">
+                                  <Footprints className="w-4 h-4 text-warning" />
+                                  {adminCondDialog.exerciseName}
+                                </h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                                    <input type="number" inputMode="numeric" value={adminCondTimeInput} onChange={(e) => setAdminCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
+                                    <input type="text" value={adminCondTempoInput} onChange={(e) => setAdminCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
+                                  <input type="number" inputMode="decimal" value={adminCondDistanceInput} onChange={(e) => setAdminCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={addAdminCondExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
+                                    <Plus className="w-3.5 h-3.5" /> Lägg till
+                                  </button>
+                                  <button onClick={() => setAdminCondDialog(null)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                    Avbryt
+                                  </button>
+                                </div>
+                              </div>
                             )}
 
                             <div className="flex gap-2">
