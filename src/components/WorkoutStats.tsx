@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, CheckCircle, XCircle, CalendarDays, Footprints } from "lucide-react";
+import WeightProgressionChart from "@/components/WeightProgressionChart";
+import PersonalRecords from "@/components/PersonalRecords";
+import TrainingCalendar from "@/components/TrainingCalendar";
 
 interface WorkoutStatsProps {
   userId: string;
@@ -170,6 +173,15 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           })}
         </div>
       )}
+
+      {/* Weight progression chart */}
+      <WeightProgressionChart userId={userId} />
+
+      {/* Personal records */}
+      <PersonalRecords userId={userId} />
+
+      {/* Training calendar */}
+      <TrainingCalendar userId={userId} />
     </div>
   );
 };
