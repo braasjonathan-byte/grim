@@ -25,15 +25,15 @@ const exerciseTranslations: Record<string, string> = {
   "bulgarska utfall": "dumbbell bulgarian split squat",
   "enbensutfall": "dumbbell lunge",
   "benpress": "leg press",
-  "benspark": "leg extension",
-  "benextension": "leg extension",
+  "benspark": "lever leg extension",
+  "benextension": "lever leg extension",
   "lårcurl": "leg curl",
   "bencurl": "leg curl",
   "höftlyft": "barbell glute bridge",
   "hip thrust": "barbell glute bridge",
   "vadpress": "calf raise",
   "sittande vadpress": "seated calf raise",
-  "hacklift": "hack squat machine",
+  "hacklift": "sled hack squat",
   "bortförande av höft": "hip abductor",
   "inåtförande av höft": "hip adductor",
   "goblet squat": "dumbbell goblet squat",
@@ -62,7 +62,7 @@ const exerciseTranslations: Record<string, string> = {
   "cabel-flyes": "cable fly",
   "cable crossovers": "cable fly",
   "dips": "chest dip",
-  "armhävningar": "push up",
+  "armhävningar": "push-up",
   "bröstpress": "chest press machine",
   "pec-deck": "pec deck machine",
 
@@ -88,9 +88,9 @@ const exerciseTranslations: Record<string, string> = {
   "pull-overs": "dumbbell pullover",
 
   // Axlar
-  "militärpress": "barbell overhead press",
-  "axelpress": "dumbbell shoulder press",
-  "hantelpress sittande": "dumbbell shoulder press",
+  "militärpress": "barbell standing military press",
+  "axelpress": "dumbbell seated shoulder press",
+  "hantelpress sittande": "dumbbell seated shoulder press",
   "axelpress i maskin": "machine shoulder press",
   "sidolyft": "dumbbell lateral raise",
   "sidolyft med hantlar": "dumbbell lateral raise",
@@ -106,7 +106,7 @@ const exerciseTranslations: Record<string, string> = {
   "shrugs": "dumbbell shrug",
 
   // Armar - Biceps
-  "bicepscurl": "dumbbell bicep curl",
+  "bicepscurl": "dumbbell alternate biceps curl",
   "bicepscurl med skivstång": "barbell curl",
   "hantelcurl": "dumbbell curl",
   "hammarcurl": "dumbbell hammer curl",
@@ -120,9 +120,9 @@ const exerciseTranslations: Record<string, string> = {
   "21-an": "barbell curl",
 
   // Armar - Triceps
-  "tricepspress": "cable tricep pushdown",
-  "triceps pushdown": "cable tricep pushdown",
-  "triceps pushdowns": "cable tricep pushdown",
+  "tricepspress": "cable pushdown",
+  "triceps pushdown": "cable pushdown",
+  "triceps pushdowns": "cable pushdown",
   "skallkross": "barbell lying triceps extension",
   "fransk press": "barbell lying triceps extension",
   "tricepsdips": "triceps dip",
