@@ -30,10 +30,38 @@ interface FriendActivity {
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>(() => {
+  const [tab, setTabState] = useState<Tab>(() => {
     const saved = localStorage.getItem("grim_active_tab");
     return (saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats") ? saved : "workout";
   });
+
+  // Wrap setTab to push browser history for Android back button support
+  const setTab = useCallback((newTab: Tab) => {
+    setTabState(newTab);
+    localStorage.setItem("grim_active_tab", newTab);
+    window.history.pushState({ tab: newTab }, "", "");
+  }, []);
+
+  // Listen for popstate (Android back button / browser back)
+  useEffect(() => {
+    // Replace current state with initial tab
+    window.history.replaceState({ tab }, "", "");
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state?.tab) {
+        setTabState(e.state.tab);
+        localStorage.setItem("grim_active_tab", e.state.tab);
+      } else {
+        // Push state back to prevent closing the app
+        window.history.pushState({ tab: "workout" }, "", "");
+        setTabState("workout");
+        localStorage.setItem("grim_active_tab", "workout");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [nickname, setNickname] = useState("");
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
@@ -509,7 +537,6 @@ const Index = () => {
             key={key}
             onClick={() => {
               setTab(key);
-              localStorage.setItem("grim_active_tab", key);
               if (key === "calc" && unreadAnnouncements > 0) {
                 localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
                 if (userRole === "admin") {
