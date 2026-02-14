@@ -30,7 +30,10 @@ interface FriendActivity {
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("workout");
+  const [tab, setTab] = useState<Tab>(() => {
+    const saved = localStorage.getItem("grim_active_tab");
+    return (saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats") ? saved : "workout";
+  });
   const [nickname, setNickname] = useState("");
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
@@ -506,6 +509,7 @@ const Index = () => {
             key={key}
             onClick={() => {
               setTab(key);
+              localStorage.setItem("grim_active_tab", key);
               if (key === "calc" && unreadAnnouncements > 0) {
                 localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
                 if (userRole === "admin") {
