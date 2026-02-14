@@ -199,6 +199,7 @@ function cleanExerciseName(raw: string): string {
     .replace(/\s*\d+×\d+s$/i, "")
     .replace(/\/ben$/i, "")
     .replace(/\/sida$/i, "")
+    .replace(/[\s—–\-]+$/g, "")
     .trim();
 }
 
