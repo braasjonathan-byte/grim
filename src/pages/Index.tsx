@@ -379,11 +379,11 @@ const Index = () => {
         {tab === "friends" &&
         <FriendsView
           userId={user.id}
+          isAdmin={userRole === "admin"}
           friendActivities={friendActivities}
           onClearActivitiesForFriend={(nickname) => {
             setFriendActivities((prev) => {
               const remaining = prev.filter((a) => a.nickname !== nickname);
-              // Persist seen timestamp in localStorage
               const seenRaw = localStorage.getItem("seenFriendActivities");
               const seenMap: Record<string, string> = seenRaw ? JSON.parse(seenRaw) : {};
               seenMap[nickname] = new Date().toISOString();

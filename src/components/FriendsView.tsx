@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save } from "lucide-react";
 
 interface FriendActivity {
   nickname: string;
@@ -11,6 +11,7 @@ interface FriendActivity {
 
 interface FriendsViewProps {
   userId: string;
+  isAdmin?: boolean;
   friendActivities?: FriendActivity[];
   onClearActivitiesForFriend?: (nickname: string) => void;
 }
@@ -29,11 +30,13 @@ interface Friendship {
 }
 
 interface FriendPlanDay {
+  id: string;
   week: number;
   day: string;
   session_name: string;
   details: string;
   tempo: string | null;
+  created_at: string;
 }
 
 interface FriendCompletion {
@@ -73,7 +76,7 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
-const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend }: FriendsViewProps) => {
+const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearActivitiesForFriend }: FriendsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<(Friendship & { profile: FriendProfile })[]>([]);
@@ -93,6 +96,12 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
   const [comments, setComments] = useState<WorkoutComment[]>([]);
   const [newComment, setNewComment] = useState<Record<string, string>>({});
   const [nicknameMap, setNicknameMap] = useState<Record<string, string>>({});
+  
+  // Admin editing
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editDetails, setEditDetails] = useState("");
+  const [editSessionName, setEditSessionName] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     fetchFriends();
@@ -225,7 +234,7 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
     const fid = friend.profile.user_id;
 
     const [{ data: plans }, { data: completions }, { data: commentsData }] = await Promise.all([
-      supabase.from("workout_plans").select("week, day, session_name, details, tempo").eq("user_id", fid).order("week").order("day"),
+      supabase.from("workout_plans").select("id, week, day, session_name, details, tempo, created_at").eq("user_id", fid).order("week").order("day"),
       supabase.from("workout_completions").select("week, day, done, user_comment").eq("user_id", fid),
       supabase.from("workout_comments").select("*").eq("target_user_id", fid),
     ]);
@@ -261,6 +270,34 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
     } else {
       setComments([]);
     }
+  };
+
+  const isWithinOneHour = (createdAt: string) => {
+    const created = new Date(createdAt).getTime();
+    const now = Date.now();
+    return now - created < 60 * 60 * 1000;
+  };
+
+  const startEditing = (plan: FriendPlanDay) => {
+    setEditingPlanId(plan.id);
+    setEditDetails(plan.details);
+    setEditSessionName(plan.session_name);
+  };
+
+  const saveEdit = async (planId: string) => {
+    setSavingEdit(true);
+    await supabase.from("workout_plans").update({
+      details: editDetails,
+      session_name: editSessionName,
+    }).eq("id", planId);
+    
+    setFriendPlans((prev) =>
+      prev.map((p) =>
+        p.id === planId ? { ...p, details: editDetails, session_name: editSessionName } : p
+      )
+    );
+    setEditingPlanId(null);
+    setSavingEdit(false);
   };
 
   const postComment = async (week: number, day: string) => {
@@ -425,8 +462,57 @@ const FriendsView = ({ userId, friendActivities = [], onClearActivitiesForFriend
 
                     {expanded && (
                       <div className="px-4 pb-4 space-y-3 border-t border-border pt-3 animate-fade-in">
-                        {/* Workout details */}
-                        <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                        {/* Admin edit button */}
+                        {isAdmin && isWithinOneHour(plan.created_at) && editingPlanId !== plan.id && (
+                          <button
+                            onClick={() => startEditing(plan)}
+                            className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline"
+                          >
+                            <Pencil className="w-3.5 h-3.5" /> Redigera pass
+                          </button>
+                        )}
+
+                        {/* Admin editing mode */}
+                        {editingPlanId === plan.id ? (
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <label className="text-xs text-muted-foreground">Passnamn</label>
+                              <input
+                                type="text"
+                                value={editSessionName}
+                                onChange={(e) => setEditSessionName(e.target.value)}
+                                className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs text-muted-foreground">Övningar</label>
+                              <textarea
+                                value={editDetails}
+                                onChange={(e) => setEditDetails(e.target.value)}
+                                rows={6}
+                                className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary resize-y"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => saveEdit(plan.id)}
+                                disabled={savingEdit}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-40"
+                              >
+                                <Save className="w-3.5 h-3.5" /> Spara
+                              </button>
+                              <button
+                                onClick={() => setEditingPlanId(null)}
+                                className="px-3 py-1.5 bg-secondary text-muted-foreground text-xs font-semibold rounded-md hover:text-foreground"
+                              >
+                                Avbryt
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Workout details */
+                          <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                        )}
 
                         {/* User's own comment */}
                         {completion?.user_comment && (
