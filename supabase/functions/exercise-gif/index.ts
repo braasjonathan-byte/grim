@@ -9,6 +9,9 @@ const corsHeaders = {
 const exerciseTranslations: Record<string, string> = {
   // Ben & Sätesmuskler
   "knäböj": "barbell squat",
+  "böj": "barbell squat",
+  "lätta böj": "barbell squat",
+  "pausböj": "barbell squat",
   "frontböj": "barbell front squat",
   "pausböj": "barbell squat",
   "marklyft": "barbell deadlift",
@@ -42,6 +45,7 @@ const exerciseTranslations: Record<string, string> = {
   "glute ham raises": "glute ham raise",
 
   // Bröst
+  "bänk": "barbell bench press",
   "bänkpress": "barbell bench press",
   "incline bänkpress": "incline barbell bench press",
   "lutande bänkpress": "incline barbell bench press",
@@ -127,6 +131,8 @@ const exerciseTranslations: Record<string, string> = {
   "kickbacks": "dumbbell tricep kickback",
 
   // Core
+  "bål": "crunch",
+  "bålträning": "crunch",
   "planka": "plank",
   "plankan": "plank",
   "sidoplanka": "side plank",
