@@ -13,6 +13,7 @@ interface ExerciseData {
   instructions: string[];
   targetMuscles: string[];
   equipments: string[];
+  isCardio?: boolean;
 }
 
 const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) => {
@@ -27,7 +28,9 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
           body: { exerciseName },
         });
         if (fnError) throw fnError;
-        if (result?.gifUrl) {
+        if (result?.isCardio) {
+          setData(result);
+        } else if (result?.gifUrl) {
           setData(result);
         } else {
           setError("Ingen demonstration hittades för denna övning.");
@@ -70,6 +73,14 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
 
           {data && (
             <>
+              {data.isCardio && !data.gifUrl && (
+                <div className="text-center py-6 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Konditions- och rörlighetsövningar har ingen GIF-demonstration.
+                  </p>
+                </div>
+              )}
+
               {data.gifUrl && (
                 <div className="rounded-lg overflow-hidden bg-secondary border border-border">
                   <img
