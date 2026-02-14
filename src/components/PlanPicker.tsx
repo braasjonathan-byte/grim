@@ -56,25 +56,29 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     selectedTemplate.generateFromProfile !== undefined
   );
 
-  const handleSelect = () => {
-    if (selected === -1) {
+  const handleSelect = (index: number) => {
+    if (index === -1) {
       onDone();
       return;
     }
-    if (!selectedTemplate) return;
+    const template = planTemplates[index];
+    if (!template) return;
+    setSelected(index);
 
-    // If the plan needs profile data, show profile form first
-    if (needsProfile) {
+    const templateNeedsProfile = template.generateFromProfile !== undefined;
+    const templateNeeds1RM = template.requiredLifts.length > 0;
+
+    if (templateNeedsProfile) {
       setStep("profile");
-    } else if (needs1RM) {
+    } else if (templateNeeds1RM) {
       const initial: Record<string, string> = {};
-      for (const lift of selectedTemplate.requiredLifts) {
+      for (const lift of template.requiredLifts) {
         initial[lift] = rms[lift] || "";
       }
       setRms(initial);
       setStep("1rm");
     } else {
-      applyTemplate(selectedTemplate);
+      applyTemplate(template);
     }
   };
 
@@ -266,7 +270,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
           return (
             <button
               key={realIdx}
-              onClick={() => setSelected(realIdx)}
+              onClick={() => handleSelect(realIdx)}
               disabled={loading}
               className={`w-full text-left p-4 rounded-lg border transition-all ${
                 selected === realIdx
@@ -297,7 +301,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         })}
 
         <button
-          onClick={() => setSelected(-1)}
+          onClick={() => handleSelect(-1)}
           disabled={loading}
           className={`w-full text-left p-4 rounded-lg border transition-all ${
             selected === -1
@@ -318,23 +322,6 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         </button>
       </div>
 
-      {selected !== null && (
-        <button
-          onClick={handleSelect}
-          disabled={loading}
-          className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity animate-fade-in"
-        >
-          {selected === -1
-            ? "Fortsätt utan plan"
-            : needsProfile
-            ? needsRunningProfile
-              ? "Nästa – Dina löpförutsättningar →"
-              : "Nästa – Dina förutsättningar →"
-            : needs1RM
-            ? "Nästa – Ange din 1RM →"
-            : "Använd denna plan"}
-        </button>
-      )}
     </div>
   );
 };
