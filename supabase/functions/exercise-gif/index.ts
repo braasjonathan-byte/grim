@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -274,6 +276,35 @@ async function searchExerciseDB(term: string): Promise<any | null> {
   return null;
 }
 
+async function translateToSwedish(instructions: string[]): Promise<string[]> {
+  if (!instructions || instructions.length === 0 || !LOVABLE_API_KEY) return instructions;
+  try {
+    const text = instructions.map((s, i) => `${i + 1}. ${s}`).join("\n");
+    const res = await fetch(AI_GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: "Du är en översättare. Översätt träningsinstruktionerna till naturlig svenska. Behåll numreringen. Svara BARA med de översatta instruktionerna, inget annat." },
+          { role: "user", content: text },
+        ],
+        temperature: 0.3,
+      }),
+    });
+    const data = await res.json();
+    const translated = data.choices?.[0]?.message?.content || "";
+    const lines = translated.split("\n").filter((l: string) => l.trim());
+    return lines.map((l: string) => l.replace(/^\d+\.\s*/, "").trim()).filter((l: string) => l.length > 0);
+  } catch (e) {
+    console.error("Translation failed:", e);
+    return instructions;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -314,10 +345,12 @@ serve(async (req) => {
     for (const term of validTerms) {
       const exercise = await searchExerciseDB(term);
       if (exercise?.gifUrl) {
+        const rawInstructions = exercise.instructions || [];
+        const instructions = await translateToSwedish(rawInstructions);
         return new Response(JSON.stringify({
           gifUrl: exercise.gifUrl,
           name: exercise.name,
-          instructions: exercise.instructions || [],
+          instructions,
           targetMuscles: exercise.targetMuscles || [],
           equipments: exercise.equipments || [],
         }), {
