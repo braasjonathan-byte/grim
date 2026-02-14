@@ -80,17 +80,17 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
 
     setSecSaving(true);
 
-    await supabase.from("security_answers").delete().eq("user_id", userId);
+    // Hash answers server-side via edge function
+    const { data, error } = await supabase.functions.invoke("reset-password", {
+      body: {
+        nickname: "_save_",
+        action: "save-answers",
+        questionIndices: secQuestions,
+        answerTexts: secAnswers.map(a => a.trim()),
+      },
+    });
 
-    const rows = secQuestions.map((qIdx, i) => ({
-      user_id: userId,
-      question_index: i,
-      answer_hash: `${qIdx}:${secAnswers[i].trim().toLowerCase()}`,
-    }));
-
-    const { error } = await supabase.from("security_answers").insert(rows);
-
-    if (!error) {
+    if (!error && data?.success) {
       setSecSaved(true);
       setSecHasExisting(true);
       setSecAnswers(["", "", "", ""]);
