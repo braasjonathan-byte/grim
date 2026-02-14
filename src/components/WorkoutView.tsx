@@ -676,9 +676,20 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     const sets = parseInt(editingExercise.sets) || 3;
     const reps = parseInt(editingExercise.reps) || 10;
     const w = editingExercise.weight.trim();
-    const entry = w ?
-    `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` :
-    `${editingExercise.name} — ${sets}×${reps}`;
+
+    // Check if the original line had structured format (with —)
+    const originalLines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+    const originalLine = originalLines[editingExercise.lineIndex] || "";
+    const hadStructuredFormat = originalLine.includes("—");
+
+    let entry: string;
+    if (hadStructuredFormat || w) {
+      entry = w
+        ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg`
+        : `${editingExercise.name} — ${sets}×${reps}`;
+    } else {
+      entry = editingExercise.name;
+    }
 
     const separator = plan.details.includes("\n") ? "\n" : "; ";
     const lines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
