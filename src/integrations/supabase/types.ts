@@ -385,6 +385,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_security_question_indices: {
+        Args: never
+        Returns: {
+          question_index: number
+        }[]
+      }
       get_suggested_friends: {
         Args: { requesting_user_id: string }
         Returns: {

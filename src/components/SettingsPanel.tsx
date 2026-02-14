@@ -53,18 +53,14 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
 
     // Load existing security questions
     supabase
-      .from("security_answers")
-      .select("question_index, answer_hash")
-      .eq("user_id", userId)
-      .order("question_index", { ascending: true })
+      .rpc("get_my_security_question_indices")
       .then(({ data }) => {
         if (data && data.length > 0) {
           setSecHasExisting(true);
           const qs: (number | null)[] = [null, null, null, null];
-          data.forEach((row, i) => {
+          (data as { question_index: number }[]).forEach((row, i) => {
             if (i < 4) {
-              const parts = row.answer_hash.split(":");
-              qs[i] = parseInt(parts[0]) || row.question_index;
+              qs[i] = row.question_index;
             }
           });
           setSecQuestions(qs);
