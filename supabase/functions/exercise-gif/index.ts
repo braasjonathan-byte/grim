@@ -21,6 +21,7 @@ const exerciseTranslations: Record<string, string> = {
   "armhävningar": "push up",
   // Rygg
   "marklyft": "barbell deadlift",
+  "mark": "barbell deadlift",
   "rumänsk marklyft": "barbell romanian deadlift",
   "sumo marklyft": "barbell sumo deadlift",
   "rodd": "barbell bent over row",
