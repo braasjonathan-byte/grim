@@ -89,6 +89,33 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_attempts: {
+        Row: {
+          attempt_count: number
+          id: string
+          ip_address: string
+          last_attempt_at: string
+          locked_until: string | null
+          nickname_attempted: string
+        }
+        Insert: {
+          attempt_count?: number
+          id?: string
+          ip_address: string
+          last_attempt_at?: string
+          locked_until?: string | null
+          nickname_attempted: string
+        }
+        Update: {
+          attempt_count?: number
+          id?: string
+          ip_address?: string
+          last_attempt_at?: string
+          locked_until?: string | null
+          nickname_attempted?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
