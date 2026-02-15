@@ -1054,9 +1054,11 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
                       const { clean: cleanWeight, rpe: singleRpe } = extractRpe(weight || '');
                       const structMatch = cleanWeight?.match(/^(\d+)[×x](\d+)(?:\s*@\s*(.+))?$/i);
-                      const sets = structMatch ? structMatch[1] : null;
+                      // Fallback: extract sets from "NxSomething" patterns like "3×AMRAP", "3×60s"
+                      const fallbackSetsMatch = !structMatch && cleanWeight ? cleanWeight.match(/^(\d+)\s*[×x]\s*\S+/) : null;
+                      const sets = structMatch ? structMatch[1] : fallbackSetsMatch ? fallbackSetsMatch[1] : null;
                       const reps = structMatch ? structMatch[2] : null;
-                      const rawKg = structMatch && structMatch[3] ? structMatch[3] : !structMatch && cleanWeight ? cleanWeight : null;
+                      const rawKg = structMatch && structMatch[3] ? structMatch[3] : !structMatch && !fallbackSetsMatch && cleanWeight ? cleanWeight : null;
                       const kg = rawKg ? rawKg.replace(/\s*kg\s*/i, '').trim() || null : null;
 
                       const isEditing = editingExercise?.planId === plan.id && editingExercise?.lineIndex === i;
@@ -1852,8 +1854,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                         // Extract RPE first, then parse structured format
                         const { clean: cleanPart, rpe: partRpe } = extractRpe(part);
                         const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                        // Fallback: try to extract just sets from "NxM" or "Nx..." pattern
+                        const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
                         const partName = partStructMatch ? partStructMatch[1].trim() : exerciseName || cleanPart;
-                        const partSets = partStructMatch ? partStructMatch[2] : null;
+                        const partSets = partStructMatch ? partStructMatch[2] : fallbackSetsMatch ? fallbackSetsMatch[1] : null;
                         const partReps = partStructMatch ? partStructMatch[3] : null;
                         const partKg = partStructMatch && partStructMatch[4] ? partStructMatch[4].trim() : null;
 
