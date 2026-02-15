@@ -23,18 +23,18 @@ function base64UrlEncode(buffer: ArrayBuffer | Uint8Array): string {
     .replace(/=+$/, "");
 }
 
-async function createVapidJwt(
-  endpoint: string,
-  vapidPublicKey: string,
-  vapidPrivateKey: string
-): Promise<{ authorization: string }> {
+function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
+  const totalLength = arrays.reduce((sum, a) => sum + a.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const a of arrays) { result.set(a, offset); offset += a.length; }
+  return result;
+}
+
+async function createVapidJwt(endpoint: string, vapidPublicKey: string, vapidPrivateKey: string): Promise<string> {
   const audience = new URL(endpoint).origin;
   const header = { typ: "JWT", alg: "ES256" };
-  const payload = {
-    aud: audience,
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12,
-    sub: "mailto:push@gymberget.se",
-  };
+  const payload = { aud: audience, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12, sub: "mailto:push@gymberget.se" };
 
   const encHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
   const encPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
@@ -42,156 +42,82 @@ async function createVapidJwt(
 
   const privateKeyBytes = base64UrlDecode(vapidPrivateKey);
   const pubKeyBytes = base64UrlDecode(vapidPublicKey);
-  const jwk = {
-    kty: "EC",
-    crv: "P-256",
-    d: base64UrlEncode(privateKeyBytes),
-    x: base64UrlEncode(pubKeyBytes.slice(1, 33)),
-    y: base64UrlEncode(pubKeyBytes.slice(33, 65)),
-  };
+  const jwk = { kty: "EC", crv: "P-256", d: base64UrlEncode(privateKeyBytes), x: base64UrlEncode(pubKeyBytes.slice(1, 33)), y: base64UrlEncode(pubKeyBytes.slice(33, 65)) };
 
-  const signingKey = await crypto.subtle.importKey(
-    "jwk",
-    jwk,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-
-  const signatureBuffer = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    signingKey,
-    new TextEncoder().encode(unsignedToken)
-  );
+  const signingKey = await crypto.subtle.importKey("jwk", jwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  const signatureBuffer = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, signingKey, new TextEncoder().encode(unsignedToken));
 
   const sigBytes = new Uint8Array(signatureBuffer);
   let r: Uint8Array, s: Uint8Array;
-  if (sigBytes.length === 64) {
-    r = sigBytes.slice(0, 32);
-    s = sigBytes.slice(32, 64);
-  } else {
-    let offset = 2;
-    const rLen = sigBytes[offset + 1];
-    offset += 2;
-    const rRaw = sigBytes.slice(offset, offset + rLen);
-    r = rRaw.length > 32 ? rRaw.slice(rRaw.length - 32) : rRaw;
-    offset += rLen;
-    const sLen = sigBytes[offset + 1];
-    offset += 2;
-    const sRaw = sigBytes.slice(offset, offset + sLen);
-    s = sRaw.length > 32 ? sRaw.slice(sRaw.length - 32) : sRaw;
+  if (sigBytes.length === 64) { r = sigBytes.slice(0, 32); s = sigBytes.slice(32, 64); }
+  else {
+    let offset = 2; const rLen = sigBytes[offset + 1]; offset += 2;
+    const rRaw = sigBytes.slice(offset, offset + rLen); r = rRaw.length > 32 ? rRaw.slice(rRaw.length - 32) : rRaw;
+    offset += rLen; const sLen = sigBytes[offset + 1]; offset += 2;
+    const sRaw = sigBytes.slice(offset, offset + sLen); s = sRaw.length > 32 ? sRaw.slice(sRaw.length - 32) : sRaw;
   }
-
   const rawSig = new Uint8Array(64);
-  rawSig.set(r.length < 32 ? (() => { const p = new Uint8Array(32); p.set(r, 32 - r.length); return p; })() : r, 0);
-  rawSig.set(s.length < 32 ? (() => { const p = new Uint8Array(32); p.set(s, 32 - s.length); return p; })() : s, 32);
+  if (r.length < 32) { rawSig.set(r, 32 - r.length); } else { rawSig.set(r, 0); }
+  if (s.length < 32) { const p = new Uint8Array(32); p.set(s, 32 - s.length); rawSig.set(p, 32); } else { rawSig.set(s, 32); }
 
-  const token = `${unsignedToken}.${base64UrlEncode(rawSig)}`;
-  return { authorization: `vapid t=${token}, k=${vapidPublicKey}` };
+  return `vapid t=${unsignedToken}.${base64UrlEncode(rawSig)}, k=${vapidPublicKey}`;
+}
+
+async function encryptPayload(payload: string, subscriptionPublicKey: Uint8Array, authSecret: Uint8Array): Promise<Uint8Array> {
+  const localKeyPair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+  const localPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", localKeyPair.publicKey));
+
+  const subscriberKey = await crypto.subtle.importKey("raw", subscriptionPublicKey, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const ecdhSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: subscriberKey }, localKeyPair.privateKey, 256));
+
+  // IKM = HKDF(salt=auth, ikm=ecdh, info="WebPush: info\0" + ua_pub + as_pub)
+  const keyInfo = concatUint8Arrays(new TextEncoder().encode("WebPush: info\x00"), subscriptionPublicKey, localPublicKeyRaw);
+  const ecdhHkdfKey = await crypto.subtle.importKey("raw", ecdhSecret, "HKDF", false, ["deriveBits"]);
+  const ikm = new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: authSecret, info: keyInfo }, ecdhHkdfKey, 256));
+
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const ikmHkdfKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+
+  const cekBits = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info: new TextEncoder().encode("Content-Encoding: aes128gcm\x00") }, ikmHkdfKey, 128);
+  const nonceBits = new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info: new TextEncoder().encode("Content-Encoding: nonce\x00") }, ikmHkdfKey, 96));
+
+  const payloadBytes = new TextEncoder().encode(payload);
+  const paddedPayload = new Uint8Array(payloadBytes.length + 1);
+  paddedPayload.set(payloadBytes);
+  paddedPayload[payloadBytes.length] = 2;
+
+  const cek = await crypto.subtle.importKey("raw", cekBits, "AES-GCM", false, ["encrypt"]);
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonceBits, tagLength: 128 }, cek, paddedPayload));
+
+  const recordSize = new Uint8Array(4);
+  new DataView(recordSize.buffer).setUint32(0, payloadBytes.length + 1 + 16 + 1, false);
+
+  const header = new Uint8Array(16 + 4 + 1 + localPublicKeyRaw.length);
+  header.set(salt, 0); header.set(recordSize, 16); header[20] = localPublicKeyRaw.length; header.set(localPublicKeyRaw, 21);
+
+  return concatUint8Arrays(header, encrypted);
 }
 
 async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
-  payload: string,
-  vapidPublicKey: string,
-  vapidPrivateKey: string
+  payload: string, vapidPublicKey: string, vapidPrivateKey: string
 ): Promise<boolean> {
   try {
-    const vapidHeaders = await createVapidJwt(subscription.endpoint, vapidPublicKey, vapidPrivateKey);
-
-    const localKeyPair = await crypto.subtle.generateKey(
-      { name: "ECDH", namedCurve: "P-256" },
-      true,
-      ["deriveBits"]
-    );
-
-    const localPublicKeyRaw = await crypto.subtle.exportKey("raw", localKeyPair.publicKey);
-
-    const subscriberPublicKey = await crypto.subtle.importKey(
-      "raw",
-      base64UrlDecode(subscription.p256dh),
-      { name: "ECDH", namedCurve: "P-256" },
-      false,
-      []
-    );
-
-    const sharedSecret = await crypto.subtle.deriveBits(
-      { name: "ECDH", public: subscriberPublicKey },
-      localKeyPair.privateKey,
-      256
-    );
-
-    const authSecret = base64UrlDecode(subscription.auth);
-    const payloadBytes = new TextEncoder().encode(payload);
-
-    const prkKey = await crypto.subtle.importKey("raw", authSecret, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-    const prk = await crypto.subtle.sign("HMAC", prkKey, sharedSecret);
-
-    const keyInfoBuf = new TextEncoder().encode("Content-Encoding: aes128gcm\x00");
-    const nonceInfoBuf = new TextEncoder().encode("Content-Encoding: nonce\x00");
-
-    const prkImport = await crypto.subtle.importKey("raw", prk, "HKDF", false, ["deriveBits"]);
-
-    const cekBits = await crypto.subtle.deriveBits(
-      { name: "HKDF", hash: "SHA-256", salt: authSecret, info: keyInfoBuf },
-      prkImport,
-      128
-    );
-
-    const nonceBits = await crypto.subtle.deriveBits(
-      { name: "HKDF", hash: "SHA-256", salt: authSecret, info: nonceInfoBuf },
-      prkImport,
-      96
-    );
-
-    const cek = await crypto.subtle.importKey("raw", cekBits, "AES-GCM", false, ["encrypt"]);
-
-    const paddedPayload = new Uint8Array(payloadBytes.length + 2);
-    paddedPayload.set(payloadBytes);
-    paddedPayload[payloadBytes.length] = 2;
-    paddedPayload[payloadBytes.length + 1] = 0;
-
-    const encrypted = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv: nonceBits, tagLength: 128 },
-      cek,
-      paddedPayload
-    );
-
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    const recordSize = new Uint8Array(4);
-    new DataView(recordSize.buffer).setUint32(0, paddedPayload.length + 16 + 1, false);
-
-    const localPubKeyBytes = new Uint8Array(localPublicKeyRaw);
-    const header = new Uint8Array(16 + 4 + 1 + localPubKeyBytes.length);
-    header.set(salt, 0);
-    header.set(recordSize, 16);
-    header[20] = localPubKeyBytes.length;
-    header.set(localPubKeyBytes, 21);
-
-    const body = new Uint8Array(header.length + new Uint8Array(encrypted).length);
-    body.set(header);
-    body.set(new Uint8Array(encrypted), header.length);
+    const authorization = await createVapidJwt(subscription.endpoint, vapidPublicKey, vapidPrivateKey);
+    const body = await encryptPayload(payload, base64UrlDecode(subscription.p256dh), base64UrlDecode(subscription.auth));
 
     const response = await fetch(subscription.endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Encoding": "aes128gcm",
-        "Authorization": vapidHeaders.authorization,
-        TTL: "86400",
-      },
+      headers: { "Content-Type": "application/octet-stream", "Content-Encoding": "aes128gcm", "Authorization": authorization, "TTL": "86400" },
       body,
     });
 
-    if (!response.ok) {
+    if (!response.ok && response.status !== 201) {
       console.error(`Push failed: ${response.status} ${await response.text()}`);
+      return false;
     }
-
-    return response.ok || response.status === 201;
-  } catch (e) {
-    console.error("Push send error:", e);
-    return false;
-  }
+    return true;
+  } catch (e) { console.error("Push send error:", e); return false; }
 }
 
 serve(async (req) => {
@@ -202,79 +128,38 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabaseUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
 
     const { data: { user } } = await supabaseUser.auth.getUser();
     if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { day, week, sessionName } = await req.json();
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("nickname")
-      .eq("user_id", user.id)
-      .single();
-
+    const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();
     const nickname = profile?.nickname || "En vän";
 
-    const { data: friendships } = await supabaseAdmin
-      .from("friendships")
-      .select("user_id, friend_id")
-      .eq("status", "accepted")
-      .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+    const { data: friendships } = await supabaseAdmin.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
     if (!friendships || friendships.length === 0) {
-      return new Response(JSON.stringify({ sent: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const friendIds = friendships.map((f) =>
-      f.user_id === user.id ? f.friend_id : f.user_id
-    );
+    const friendIds = friendships.map((f) => f.user_id === user.id ? f.friend_id : f.user_id);
 
-    const { data: subscriptions } = await supabaseAdmin
-      .from("push_subscriptions")
-      .select("*")
-      .in("user_id", friendIds);
-
+    const { data: subscriptions } = await supabaseAdmin.from("push_subscriptions").select("*").in("user_id", friendIds);
     if (!subscriptions || subscriptions.length === 0) {
-      return new Response(JSON.stringify({ sent: 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: vapid } = await supabaseAdmin
-      .from("vapid_keys")
-      .select("*")
-      .eq("id", 1)
-      .single();
-
+    const { data: vapid } = await supabaseAdmin.from("vapid_keys").select("*").eq("id", 1).single();
     if (!vapid) {
-      return new Response(JSON.stringify({ error: "VAPID keys not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "VAPID keys not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const payload = JSON.stringify({
@@ -288,34 +173,17 @@ serve(async (req) => {
     const staleEndpoints: string[] = [];
 
     for (const sub of subscriptions) {
-      const ok = await sendWebPush(
-        { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-        payload,
-        vapid.public_key,
-        vapid.private_key
-      );
-      if (ok) {
-        sent++;
-      } else {
-        staleEndpoints.push(sub.endpoint);
-      }
+      const ok = await sendWebPush({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, payload, vapid.public_key, vapid.private_key);
+      if (ok) { sent++; } else { staleEndpoints.push(sub.endpoint); }
     }
 
     if (staleEndpoints.length > 0) {
-      await supabaseAdmin
-        .from("push_subscriptions")
-        .delete()
-        .in("endpoint", staleEndpoints);
+      await supabaseAdmin.from("push_subscriptions").delete().in("endpoint", staleEndpoints);
     }
 
-    return new Response(JSON.stringify({ sent }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ sent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
