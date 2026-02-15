@@ -71,20 +71,20 @@ const CalorieCalculator = () => {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="border border-border rounded-lg bg-card overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
         onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-4 hover:bg-secondary transition-colors"
       >
-        <div className="flex items-center gap-2">
-          <Flame className="w-4 h-4 text-primary" />
-          <span className="text-sm font-bold">Kalorikalkylator</span>
-        </div>
-        <span className="text-xs text-muted-foreground">{open ? "▲" : "▼"}</span>
+        <Flame className="w-5 h-5 text-primary" />
+        <span className="font-semibold text-sm">Kalorikalkylator</span>
+        <span className="ml-auto text-xs text-muted-foreground">
+          {open ? "Stäng" : "Öppna"}
+        </span>
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-3">
+        <div className="p-4 border-t border-border space-y-3">
           {/* Gender */}
           <div className="flex gap-2">
             <Button
