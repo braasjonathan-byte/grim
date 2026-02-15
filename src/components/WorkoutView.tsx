@@ -114,6 +114,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   // Exercise browser for single workouts
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
   const [isWarmupMode, setIsWarmupMode] = useState(false);
+  const [deleteExerciseConfirm, setDeleteExerciseConfirm] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
@@ -831,6 +832,19 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     setEditingExercise(null);
   };
 
+  const executeDeleteExercise = async () => {
+    if (!deleteExerciseConfirm) return;
+    const plan = plans.find(p => p.id === deleteExerciseConfirm.planId);
+    if (!plan) { setDeleteExerciseConfirm(null); return; }
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    lines.splice(deleteExerciseConfirm.lineIndex, 1);
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+    setDeleteExerciseConfirm(null);
+  };
+
   if (mode === "loading") {
     return (
       <div className="flex items-center justify-center py-16">
@@ -1045,13 +1059,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                  onClick={async () => {
-                                    const lines = plan.details.split("\n").filter(Boolean);
-                                    lines.splice(i, 1);
-                                    const newDetails = lines.join("\n");
-                                    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                                    setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
-                                  }}
+                                  onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) })}
                                   className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
                                       <X className="w-3 h-3" />
                                     </button>
@@ -1149,13 +1157,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     <Dumbbell className="w-3 h-3" />
                                   </button>
                                   <button
-                                onClick={async () => {
-                                  const lines = plan.details.split("\n").filter(Boolean);
-                                  lines.splice(i, 1);
-                                  const newDetails = lines.join("\n");
-                                  await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                                  setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
-                                }}
+                                onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) })}
                                 className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
                                     <X className="w-3 h-3" />
                                   </button>
@@ -1792,14 +1794,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     </button>
                                     <span className="flex-1">{line}</span>
                                     <button
-                                      onClick={async (e) => {
+                                      onClick={(e) => {
                                         e.stopPropagation();
-                                        const lines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
-                                        lines.splice(i, 1);
-                                        const separator = plan.details.includes("\n") ? "\n" : "; ";
-                                        const newDetails = lines.join(separator);
-                                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                        setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });
                                       }}
                                       className="p-0.5 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
                                       <X className="w-3 h-3" />
@@ -1947,13 +1944,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <button
-                                    onClick={async () => {
-                                      const newParts = [...parts];
-                                      newParts.splice(i, 1);
-                                      const newDetails = newParts.join(plan.details.includes("\n") ? "\n" : "; ");
-                                      await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                                      setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
-                                    }}
+                                    onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) })}
                                     className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
                                     title="Ta bort övning">
                                     <X className="w-3 h-3" />
@@ -2260,6 +2251,25 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     )}
     {showFireworks && (
       <FireworksOverlay onComplete={() => setShowFireworks(false)} />
+    )}
+    {deleteExerciseConfirm && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setDeleteExerciseConfirm(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-sm">Ta bort övning?</h3>
+          <p className="text-sm text-muted-foreground">
+            Är du säker på att du vill ta bort <span className="font-semibold text-foreground">{deleteExerciseConfirm.name}</span>?
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setDeleteExerciseConfirm(null)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+              Avbryt
+            </button>
+            <button onClick={executeDeleteExercise} className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
+              Ta bort
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>);
 
