@@ -66,6 +66,9 @@ const exerciseTranslations: Record<string, string> = {
   "cable crossovers": "cable fly",
   "dips": "chest dip",
   "armhävningar": "push-up",
+  "pike push up": "pike-to-cobra push-up",
+  "pike push-up": "pike-to-cobra push-up",
+  "pike pushup": "pike-to-cobra push-up",
   "bröstpress": "chest press machine",
   "pec-deck": "pec deck machine",
 
