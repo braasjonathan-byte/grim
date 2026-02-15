@@ -13,6 +13,10 @@ import { cn } from "@/lib/utils";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
+import { Checkbox } from "@/components/ui/checkbox";
+
+const toTitleCase = (str: string): string =>
+  str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
 
 interface WorkoutViewProps {
   userId: string;
@@ -333,6 +337,36 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       },
       { onConflict: "user_id,week,day" }
     );
+  };
+
+  // Set completion tracking helpers
+  const getSetsDone = (weekDayKey: string, exerciseName: string): string => {
+    const comp = completions[weekDayKey];
+    const weights = comp?.logged_weights as Record<string, any> | null;
+    return (weights?.[`__sets__${exerciseName}`] as string) || "";
+  };
+
+  const toggleSetDone = async (week: number, day: string, exerciseName: string, setIndex: number, totalSets: number) => {
+    const k = `${week}-${day}`;
+    const current = getSetsDone(k, exerciseName);
+    const arr = Array.from({ length: totalSets }, (_, i) => current[i] === "1");
+    arr[setIndex] = !arr[setIndex];
+    const setsStr = arr.map(b => b ? "1" : "0").join("");
+
+    const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
+    const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
+
+    setCompletions(prev => ({
+      ...prev,
+      [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
+    }));
+
+    await supabase.from("workout_completions").upsert({
+      user_id: userId, week, day,
+      done: completions[k]?.done || false,
+      skipped: completions[k]?.skipped || false,
+      logged_weights: updated
+    } as any, { onConflict: "user_id,week,day" });
   };
 
   // Helper: parse tempo string like "5:30" to seconds
@@ -922,11 +956,11 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                 <div className="flex items-center justify-between mb-1.5">
                                   <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
                                     <Footprints className="w-3.5 h-3.5 text-warning" />
-                                    {name}
-                                  </span>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                  onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
+                                    {toTitleCase(name)}
+                                   </span>
+                                   <div className="flex items-center gap-1">
+                                     <button
+                                   onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
                                   className="p-0.5 text-muted-foreground hover:text-warning transition-colors"
                                   title="Visa övningsinformation">
                                       <Info className="w-3.5 h-3.5" />
@@ -1001,10 +1035,13 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
                       }
 
+                      const setsCountSingle = sets ? parseInt(sets) : 0;
+                      const setsStrSingle = getSetsDone(key, name);
+
                       return (
                         <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-border/50">
                               <div className="flex items-center justify-between mb-1.5">
-                                <span className="font-semibold text-sm text-foreground">{name}</span>
+                                <span className="font-semibold text-sm text-foreground">{toTitleCase(name)}</span>
                                 <div className="flex items-center gap-1">
                                   <button
                                 onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
@@ -1038,36 +1075,38 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   </button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingExercise({
-                            planId: plan.id,
-                            lineIndex: i,
-                            name,
-                            sets: sets || "3",
-                            reps: reps || "10",
-                            weight: kg?.replace(/\s*kg\s*/i, "").trim() || ""
-                          })}>
-                                {sets &&
-                            <div className="flex items-center gap-1 bg-background rounded-md px-2 py-1 border border-border/50">
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</span>
-                                    <span className="text-xs font-bold text-foreground">{sets}</span>
-                                  </div>
-                            }
-                                {reps &&
-                            <div className="flex items-center gap-1 bg-background rounded-md px-2 py-1 border border-border/50">
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</span>
-                                    <span className="text-xs font-bold text-foreground">{reps}</span>
-                                  </div>
-                            }
-                                {kg &&
-                            <div className="flex items-center gap-1 bg-primary/10 rounded-md px-2 py-1 border border-primary/20">
-                                    <Weight className="w-3 h-3 text-primary" />
-                                    <span className="text-xs font-bold text-primary">{kg}</span>
-                                  </div>
-                            }
-                                {!sets && !reps && !kg &&
-                            <span className="text-xs text-muted-foreground italic">Tryck för att ange set/reps/vikt</span>
-                            }
-                              </div>
+                              {setsCountSingle > 0 ? (
+                                <div className="space-y-0.5">
+                                  {Array.from({ length: setsCountSingle }, (_, si) => {
+                                    const isSetDone = setsStrSingle[si] === "1";
+                                    return (
+                                      <div key={si} className={`flex items-center gap-2 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
+                                        <Checkbox
+                                          checked={isSetDone}
+                                          onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle)}
+                                          className="h-3.5 w-3.5"
+                                        />
+                                        <span className={`text-xs font-mono ${isSetDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                          Set {si + 1}{reps ? ` · ${reps} reps` : ""}{kg ? ` · ${kg}` : ""}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingExercise({
+                                  planId: plan.id,
+                                  lineIndex: i,
+                                  name,
+                                  sets: sets || "3",
+                                  reps: reps || "10",
+                                  weight: kg?.replace(/\s*kg\s*/i, "").trim() || ""
+                                })}>
+                                  {!sets && !reps && !kg &&
+                                    <span className="text-xs text-muted-foreground italic">Tryck för att ange set/reps/vikt</span>
+                                  }
+                                </div>
+                              )}
                             </div>);
 
                     })}
@@ -1789,74 +1828,93 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
                         }
 
+                        const setsCountPlan = partSets ? parseInt(partSets) : 0;
+                        const setsStrPlan = getSetsDone(key, partName);
+
                         return (
-                          <div key={i} className="flex items-center gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                              <button
-                                onClick={(e) => {e.stopPropagation();setExerciseInfoName(partName);}}
-                                className="p-0.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
-                                title="Visa övningsinformation">
-                                <Info className="w-3.5 h-3.5" />
-                              </button>
-                              <span
-                              className="text-sm text-foreground flex-1 cursor-pointer hover:text-primary transition-colors"
-                              onClick={() => setEditingExercise({
-                                planId: plan.id,
-                                lineIndex: i,
-                                name: partName,
-                                sets: partSets || "3",
-                                reps: partReps || repsStr || "10",
-                                weight: partKg || ""
-                              })}>
-
-                                {part}
-                              </span>
-                              {isLoggable &&
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                                  <input
-                                type="number"
-                                inputMode="decimal"
-                                placeholder="kg"
-                                defaultValue={defaultWeight}
-                                onBlur={async (e) => {
-                                  const val = parseFloat(e.target.value);
-                                  if (isNaN(val) || val <= 0) return;
-                                  const existing = (completions[key]?.logged_weights || {}) as Record<string, number>;
-                                  const updated = { ...existing, [exerciseName]: val };
-                                  await supabase.from("workout_completions").upsert(
-                                    {
-                                      user_id: userId,
-                                      week: plan.week,
-                                      day: plan.day,
-                                      done: completions[key]?.done || false,
-                                      skipped: completions[key]?.skipped || false,
-                                      logged_weights: updated
-                                    } as any,
-                                    { onConflict: "user_id,week,day" }
-                                  );
-                                  setCompletions((prev) => ({
-                                    ...prev,
-                                    [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
-                                  }));
-                                }}
-                                className="w-16 bg-secondary text-foreground text-xs px-2 py-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground text-right font-mono" />
-
-                                  <span className="text-[10px] text-muted-foreground">kg</span>
+                          <div key={i} className="bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={(e) => {e.stopPropagation();setExerciseInfoName(partName);}}
+                                    className="p-0.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                                    title="Visa övningsinformation">
+                                    <Info className="w-3.5 h-3.5" />
+                                  </button>
+                                  <span
+                                    className="font-semibold text-sm text-foreground cursor-pointer hover:text-primary transition-colors"
+                                    onClick={() => setEditingExercise({
+                                      planId: plan.id,
+                                      lineIndex: i,
+                                      name: partName,
+                                      sets: partSets || "3",
+                                      reps: partReps || repsStr || "10",
+                                      weight: partKg || ""
+                                    })}>
+                                    {toTitleCase(partName)}
+                                  </span>
                                 </div>
-                            }
-                              <button
-                              onClick={async () => {
-                                const newParts = [...parts];
-                                newParts.splice(i, 1);
-                                const newDetails = newParts.join(plan.details.includes("\n") ? "\n" : "; ");
-                                await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                                setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
-                              }}
-                              className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
-                              title="Ta bort övning">
-
-                                <X className="w-3 h-3" />
-                              </button>
+                                <div className="flex items-center gap-1">
+                                  {isLoggable && (
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        placeholder="kg"
+                                        defaultValue={defaultWeight}
+                                        onBlur={async (e) => {
+                                          const val = parseFloat(e.target.value);
+                                          if (isNaN(val) || val <= 0) return;
+                                          const existing = (completions[key]?.logged_weights || {}) as Record<string, number>;
+                                          const updated = { ...existing, [exerciseName!]: val };
+                                          await supabase.from("workout_completions").upsert({
+                                            user_id: userId, week: plan.week, day: plan.day,
+                                            done: completions[key]?.done || false,
+                                            skipped: completions[key]?.skipped || false,
+                                            logged_weights: updated
+                                          } as any, { onConflict: "user_id,week,day" });
+                                          setCompletions((prev) => ({
+                                            ...prev,
+                                            [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                          }));
+                                        }}
+                                        className="w-14 bg-secondary text-foreground text-xs px-1.5 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground text-right font-mono" />
+                                      <span className="text-[10px] text-muted-foreground">kg</span>
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={async () => {
+                                      const newParts = [...parts];
+                                      newParts.splice(i, 1);
+                                      const newDetails = newParts.join(plan.details.includes("\n") ? "\n" : "; ");
+                                      await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                      setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                    }}
+                                    className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                                    title="Ta bort övning">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              {setsCountPlan > 0 && (
+                                <div className="space-y-0.5 pl-1">
+                                  {Array.from({ length: setsCountPlan }, (_, si) => {
+                                    const isSetDone = setsStrPlan[si] === "1";
+                                    return (
+                                      <div key={si} className={`flex items-center gap-2 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
+                                        <Checkbox
+                                          checked={isSetDone}
+                                          onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan)}
+                                          className="h-3.5 w-3.5"
+                                        />
+                                        <span className={`text-xs font-mono ${isSetDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                          Set {si + 1}{partReps ? ` · ${partReps} reps` : ""}{partKg ? ` · ${partKg} kg` : ""}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>);
 
                       })}
