@@ -85,7 +85,19 @@ REGLER:
 - Format för styrkeövning: "Övningsnamn 3×10 80kg" eller bara "Övningsnamn 3×10"
 - Format för konditionsövning: bara övningsnamnet i session_name
 - Vila-dagar har tom session_name och tom details
-- Du kan ändra vecka om användaren ber om det, men standard är vecka ${currentWeek}`;
+- Du kan ändra vecka om användaren ber om det, men standard är vecka ${currentWeek}
+
+FÖRESLÅ ALTERNATIVA ÖVNINGAR:
+- Om användaren ber om alternativ till en övning, föreslå 2-3 övningar som tränar samma muskelgrupp
+- Förklara kort varför varje alternativ är bra (t.ex. liknande rörelse, samma muskelgrupp, enklare/svårare variant)
+- Fråga om användaren vill byta ut övningen direkt, och i så fall använd workout_action
+- Exempel på muskelgruppsalternativ:
+  * Bänkpress → Hantelpress, Maskinbänkpress, Dips
+  * Knäböj → Benpress, Bulgarsplitböj, Gobletböj
+  * Marklyft → Rumänsk marklyft, Hipthrust, Good mornings
+  * Axelpress → Hantelpress stående, Arnold press, Laterala höjningar
+  * Rodd → Enhandsrodd, Kabelrodd, T-barrodd
+- Ta hänsyn till användarens utrustning och erfarenhetsnivå om det framgår av konversationen`;
 
     const tools = [
       {
