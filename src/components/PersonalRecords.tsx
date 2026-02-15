@@ -50,7 +50,8 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
     for (const c of completions) {
       if (!c.logged_weights) continue;
       for (const [ex, w] of Object.entries(c.logged_weights)) {
-        if (w <= 0) continue;
+        if (ex.startsWith("__")) continue;
+        if (typeof w !== "number" || w <= 0) continue;
         const existing = prMap.get(ex);
         if (!existing || w > existing.weight) {
           prMap.set(ex, {
