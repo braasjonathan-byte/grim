@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bot, Send, X, Loader2 } from "lucide-react";
+import { Send, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+const GRIM_AVATAR = "https://gnhbkevtoajzdpsengki.supabase.co/storage/v1/object/public/avatars/25c48738-eb8e-4180-8755-034d01dc5ccc/avatar.jpg";
 
 interface Message {
   role: "user" | "assistant";
@@ -91,10 +93,10 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-all active:scale-95"
-          aria-label="Öppna AI-assistent"
+          className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full shadow-lg overflow-hidden ring-2 ring-primary/50 hover:ring-primary transition-all active:scale-95"
+          aria-label="Öppna Grim AI"
         >
-          <Bot className="w-6 h-6" />
+          <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover" />
         </button>
       )}
 
@@ -103,10 +105,12 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
         <div className="fixed inset-0 z-50 flex flex-col bg-background">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/95 backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-primary" />
-              <span className="font-bold text-sm">AI-assistent</span>
-              <span className="text-xs text-muted-foreground">Vecka {currentWeek}</span>
+            <div className="flex items-center gap-2.5">
+              <img src={GRIM_AVATAR} alt="Grim" className="w-8 h-8 rounded-full object-cover ring-1 ring-primary/30" />
+              <div>
+                <span className="font-bold text-sm block leading-tight">Grim</span>
+                <span className="text-[10px] text-muted-foreground">AI-assistent · Vecka {currentWeek}</span>
+              </div>
             </div>
             <button onClick={() => setOpen(false)} className="p-1.5 text-muted-foreground hover:text-foreground">
               <X className="w-5 h-5" />
@@ -116,10 +120,11 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
           {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {messages.length === 0 && (
-              <div className="text-center text-muted-foreground text-sm mt-8 space-y-2">
-                <Bot className="w-10 h-10 mx-auto text-primary/40" />
-                <p className="font-medium">Hej! Jag kan hjälpa dig med ditt schema.</p>
-                <div className="text-xs space-y-1">
+              <div className="text-center text-muted-foreground text-sm mt-8 space-y-3">
+                <img src={GRIM_AVATAR} alt="Grim" className="w-16 h-16 rounded-full mx-auto object-cover ring-2 ring-primary/20" />
+                <p className="font-medium text-foreground">Hej! Jag är Grim.</p>
+                <p className="text-xs">Jag kan hjälpa dig med ditt träningsschema.</p>
+                <div className="text-xs space-y-1.5 mt-2">
                   <p>💪 "Lägg till bänkpress 3×10 80kg på tisdag"</p>
                   <p>🗑️ "Ta bort knäböj från onsdag"</p>
                   <p>✏️ "Ändra vikten på marklyft till 120kg"</p>
@@ -128,21 +133,28 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
               </div>
             )}
             {messages.map((m, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap",
-                  m.role === "user"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "mr-auto bg-muted text-foreground"
+              <div key={i} className={cn("flex items-end gap-2", m.role === "user" ? "justify-end" : "justify-start")}>
+                {m.role === "assistant" && (
+                  <img src={GRIM_AVATAR} alt="Grim" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" />
                 )}
-              >
-                {m.content}
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap shadow-sm",
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-md"
+                      : "bg-muted text-foreground rounded-bl-md"
+                  )}
+                >
+                  {m.content}
+                </div>
               </div>
             ))}
             {loading && (
-              <div className="mr-auto bg-muted rounded-2xl px-3.5 py-2.5">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              <div className="flex items-end gap-2">
+                <img src={GRIM_AVATAR} alt="Grim" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" />
+                <div className="bg-muted rounded-2xl rounded-bl-md px-3.5 py-2.5 shadow-sm">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
               </div>
             )}
           </div>
@@ -155,8 +167,8 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-                placeholder="Skriv ett kommando..."
-                className="flex-1 bg-muted rounded-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Skriv till Grim..."
+                className="flex-1 bg-muted rounded-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
                 disabled={loading}
               />
               <button
