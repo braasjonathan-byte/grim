@@ -357,17 +357,46 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
     const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
 
+    // Check if all sets across all exercises in this workout are now done
+    const plan = plans.find(p => p.week === week && p.day === day);
+    let allExercisesDone = false;
+    if (plan && plan.details) {
+      const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      allExercisesDone = parts.every(part => {
+        // Skip conditioning exercises
+        const { name: pName, weight: pWeight } = parseExerciseWeight(part);
+        const isCondFormat = pWeight && (pWeight.includes("min") || pWeight.includes("/km"));
+        if (isCondFormat) return true; // conditioning doesn't need set tracking
+        
+        const { clean: cp } = extractRpe(pWeight || '');
+        const sm = cp?.match(/^(\d+)[×x](\d+)/i);
+        const fbm = !sm && cp ? cp.match(/(\d+)\s*[×x]\s*\S+/) : null;
+        const sc = sm ? parseInt(sm[1]) : fbm ? parseInt(fbm[1]) : 1;
+        
+        const setsKey = `__sets__${pName}`;
+        const setsVal = setsKey === `__sets__${exerciseName}` ? setsStr : (updated[setsKey] as string || "");
+        return setsVal.length >= sc && !setsVal.includes("0") && setsVal.split("").filter(c => c === "1").length >= sc;
+      });
+    }
+
+    const newDone = allExercisesDone || (completions[k]?.done || false);
+
     setCompletions(prev => ({
       ...prev,
-      [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
+      [k]: { ...prev[k], week, day, done: newDone, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
     }));
 
     await supabase.from("workout_completions").upsert({
       user_id: userId, week, day,
-      done: completions[k]?.done || false,
+      done: newDone,
       skipped: completions[k]?.skipped || false,
       logged_weights: updated
     } as any, { onConflict: "user_id,week,day" });
+
+    // Notify friends if workout was just completed
+    if (allExercisesDone && !completions[k]?.done && plan) {
+      notifyFriendsOfCompletion(day, week, plan.session_name || day);
+    }
   };
 
   // Get per-set logged data (kg/reps)
