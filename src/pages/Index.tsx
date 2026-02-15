@@ -8,6 +8,7 @@ import WorkoutView from "@/components/WorkoutView";
 import FriendsView from "@/components/FriendsView";
 import OneRMCalculator from "@/components/OneRMCalculator";
 import PulseZoneCalculator from "@/components/PulseZoneCalculator";
+import CalorieCalculator from "@/components/CalorieCalculator";
 import ChangePassword from "@/components/ChangePassword";
 import WorkoutStats from "@/components/WorkoutStats";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
@@ -427,6 +428,7 @@ const Index = () => {
         <div className="py-2 space-y-4">
             <OneRMCalculator />
             <PulseZoneCalculator />
+            <CalorieCalculator />
           </div>
         }
         {tab === "settings" &&
