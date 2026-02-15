@@ -119,7 +119,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
                   <ol className="space-y-1 list-decimal list-inside">
                     {data.instructions.map((inst, i) => (
                       <li key={i} className="text-xs text-muted-foreground">
-                        {inst.replace(/^Step:\d+\s*/i, "")}
+                        {inst.replace(/^(Step|Steg)\s*:?\s*\d+\s*:?\s*/i, "")}
                       </li>
                     ))}
                   </ol>
