@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
+import FireworksOverlay from "@/components/FireworksOverlay";
 
 interface WorkoutViewProps {
   userId: string;
@@ -142,6 +143,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   // Exercise info dialog
   const [exerciseInfoName, setExerciseInfoName] = useState<string | null>(null);
 
+  // Fireworks celebration
+  const [showFireworks, setShowFireworks] = useState(false);
+
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
@@ -251,6 +255,20 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
       notifyFriendsOfCompletion(day, week, plan?.session_name || day);
+
+      // Check if all days in this week are now completed (plan mode only)
+      if (week > 0) {
+        const weekPlans = plans.filter((p) => p.week === week);
+        const updatedCompletions = { ...completions, [key]: { week, day, done: true, skipped: false, user_comment: comments[key] || "" } };
+        const allDone = weekPlans.every((p) => {
+          const k = `${p.week}-${p.day}`;
+          return updatedCompletions[k]?.done || updatedCompletions[k]?.skipped;
+        });
+        const anyDone = weekPlans.some((p) => updatedCompletions[`${p.week}-${p.day}`]?.done);
+        if (allDone && anyDone) {
+          setShowFireworks(true);
+        }
+      }
     }
   };
 
@@ -2111,6 +2129,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         exerciseName={exerciseInfoName}
         onClose={() => setExerciseInfoName(null)}
       />
+    )}
+    {showFireworks && (
+      <FireworksOverlay onComplete={() => setShowFireworks(false)} />
     )}
     </>);
 
