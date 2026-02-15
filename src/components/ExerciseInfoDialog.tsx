@@ -94,7 +94,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
 
               {data.name && (
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">Engelsk benämning:</span> {data.name}
+                  <span className="font-semibold text-foreground">Engelsk benämning:</span> {data.name.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 </p>
               )}
 
