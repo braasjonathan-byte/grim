@@ -369,6 +369,49 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     } as any, { onConflict: "user_id,week,day" });
   };
 
+  // Get per-set logged data (kg/reps)
+  const getSetData = (weekDayKey: string, exerciseName: string): Array<{kg: string; reps: string}> => {
+    const comp = completions[weekDayKey];
+    const weights = comp?.logged_weights as Record<string, any> | null;
+    const raw = weights?.[`__setdata__${exerciseName}`];
+    if (raw) {
+      if (typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return []; }
+      }
+      if (Array.isArray(raw)) return raw;
+    }
+    return [];
+  };
+
+  const saveSetFieldData = async (week: number, day: string, exerciseName: string, setIndex: number, field: 'kg' | 'reps', value: string, totalSets: number, defaultKg: string, defaultReps: string) => {
+    const k = `${week}-${day}`;
+    const currentData = getSetData(k, exerciseName);
+    const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: defaultKg, reps: defaultReps });
+    data[setIndex] = { ...data[setIndex], [field]: value };
+    
+    const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
+    const updated = { ...existing, [`__setdata__${exerciseName}`]: JSON.stringify(data) };
+    
+    setCompletions(prev => ({
+      ...prev,
+      [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
+    }));
+    
+    await supabase.from("workout_completions").upsert({
+      user_id: userId, week, day,
+      done: completions[k]?.done || false,
+      skipped: completions[k]?.skipped || false,
+      logged_weights: updated
+    } as any, { onConflict: "user_id,week,day" });
+  };
+
+  // Extract RPE from exercise text
+  const extractRpe = (text: string): { clean: string; rpe: string | null } => {
+    const m = text.match(/(?:\s*@\s*|\s+)RPE\s*([\d.]+)/i);
+    if (m) return { clean: text.replace(m[0], '').trim(), rpe: `RPE ${m[1]}` };
+    return { clean: text, rpe: null };
+  };
+
   // Helper: parse tempo string like "5:30" to seconds
   const tempoToSeconds = (t: string): number | null => {
     const m = t.match(/^(\d+)[:\.](\d+)$/);
@@ -1002,10 +1045,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       }
                       
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
-                      const structMatch = weight?.match(/^(\d+)×(\d+)(?:\s*@\s*(.+))?$/);
+                      const { clean: cleanWeight, rpe: singleRpe } = extractRpe(weight || '');
+                      const structMatch = cleanWeight?.match(/^(\d+)[×x](\d+)(?:\s*@\s*(.+))?$/i);
                       const sets = structMatch ? structMatch[1] : null;
                       const reps = structMatch ? structMatch[2] : null;
-                      const kg = structMatch && structMatch[3] ? structMatch[3] : !structMatch && weight ? weight : null;
+                      const rawKg = structMatch && structMatch[3] ? structMatch[3] : !structMatch && cleanWeight ? cleanWeight : null;
+                      const kg = rawKg ? rawKg.replace(/\s*kg\s*/i, '').trim() || null : null;
 
                       const isEditing = editingExercise?.planId === plan.id && editingExercise?.lineIndex === i;
 
@@ -1041,7 +1086,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       return (
                         <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-border/50">
                               <div className="flex items-center justify-between mb-1.5">
-                                <span className="font-semibold text-sm text-foreground">{toTitleCase(name)}</span>
+                                <span className="font-semibold text-sm text-foreground">
+                                  {toTitleCase(name)}
+                                  {singleRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{singleRpe}</span>}
+                                </span>
                                 <div className="flex items-center gap-1">
                                   <button
                                 onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
@@ -1076,22 +1124,26 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                 </div>
                               </div>
                               {setsCountSingle > 0 ? (
-                                <div className="space-y-0.5">
-                                  {Array.from({ length: setsCountSingle }, (_, si) => {
-                                    const isSetDone = setsStrSingle[si] === "1";
-                                    return (
-                                      <div key={si} className={`flex items-center gap-2 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
-                                        <Checkbox
-                                          checked={isSetDone}
-                                          onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle)}
-                                          className="h-3.5 w-3.5"
-                                        />
-                                        <span className={`text-xs font-mono ${isSetDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                                          Set {si + 1}{reps ? ` · ${reps} reps` : ""}{kg ? ` · ${kg}` : ""}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
+                                <div className="space-y-1">
+                                  {(() => {
+                                    const setData = getSetData(key, name);
+                                    const defaultKg = kg || "";
+                                    const defaultReps = reps || "10";
+                                    return Array.from({ length: setsCountSingle }, (_, si) => {
+                                      const isSetDone = setsStrSingle[si] === "1";
+                                      const saved = setData[si];
+                                      return (
+                                        <div key={si} className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
+                                          <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle)} className="h-3.5 w-3.5" />
+                                          <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
+                                          <input type="number" inputMode="numeric" defaultValue={saved?.reps || defaultReps} onBlur={(e) => saveSetFieldData(0, plan.day, name, si, 'reps', e.target.value, setsCountSingle, defaultKg, defaultReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
+                                          <span className="text-[10px] text-muted-foreground">reps</span>
+                                          <input type="number" inputMode="decimal" defaultValue={saved?.kg || defaultKg} onBlur={(e) => saveSetFieldData(0, plan.day, name, si, 'kg', e.target.value, setsCountSingle, defaultKg, defaultReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                          <span className="text-[10px] text-muted-foreground">kg</span>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingExercise({
@@ -1793,9 +1845,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                           }
                         }
 
-                        // Parse structured format from the part text
-                        const partStructMatch = part.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(.+?)\s*kg)?$/i);
-                        const partName = partStructMatch ? partStructMatch[1].trim() : exerciseName || part;
+                        // Extract RPE first, then parse structured format
+                        const { clean: cleanPart, rpe: partRpe } = extractRpe(part);
+                        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                        const partName = partStructMatch ? partStructMatch[1].trim() : exerciseName || cleanPart;
                         const partSets = partStructMatch ? partStructMatch[2] : null;
                         const partReps = partStructMatch ? partStructMatch[3] : null;
                         const partKg = partStructMatch && partStructMatch[4] ? partStructMatch[4].trim() : null;
@@ -1852,36 +1905,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                       weight: partKg || ""
                                     })}>
                                     {toTitleCase(partName)}
+                                    {partRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{partRpe}</span>}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  {isLoggable && (
-                                    <div className="flex items-center gap-1 flex-shrink-0">
-                                      <input
-                                        type="number"
-                                        inputMode="decimal"
-                                        placeholder="kg"
-                                        defaultValue={defaultWeight}
-                                        onBlur={async (e) => {
-                                          const val = parseFloat(e.target.value);
-                                          if (isNaN(val) || val <= 0) return;
-                                          const existing = (completions[key]?.logged_weights || {}) as Record<string, number>;
-                                          const updated = { ...existing, [exerciseName!]: val };
-                                          await supabase.from("workout_completions").upsert({
-                                            user_id: userId, week: plan.week, day: plan.day,
-                                            done: completions[key]?.done || false,
-                                            skipped: completions[key]?.skipped || false,
-                                            logged_weights: updated
-                                          } as any, { onConflict: "user_id,week,day" });
-                                          setCompletions((prev) => ({
-                                            ...prev,
-                                            [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
-                                          }));
-                                        }}
-                                        className="w-14 bg-secondary text-foreground text-xs px-1.5 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground text-right font-mono" />
-                                      <span className="text-[10px] text-muted-foreground">kg</span>
-                                    </div>
-                                  )}
                                   <button
                                     onClick={async () => {
                                       const newParts = [...parts];
@@ -1897,22 +1924,26 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                 </div>
                               </div>
                               {setsCountPlan > 0 && (
-                                <div className="space-y-0.5 pl-1">
-                                  {Array.from({ length: setsCountPlan }, (_, si) => {
-                                    const isSetDone = setsStrPlan[si] === "1";
-                                    return (
-                                      <div key={si} className={`flex items-center gap-2 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
-                                        <Checkbox
-                                          checked={isSetDone}
-                                          onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan)}
-                                          className="h-3.5 w-3.5"
-                                        />
-                                        <span className={`text-xs font-mono ${isSetDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                                          Set {si + 1}{partReps ? ` · ${partReps} reps` : ""}{partKg ? ` · ${partKg} kg` : ""}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
+                                <div className="space-y-1 pl-1">
+                                  {(() => {
+                                    const planSetData = getSetData(key, partName);
+                                    const defKg = partKg || "";
+                                    const defReps = partReps || repsStr || "10";
+                                    return Array.from({ length: setsCountPlan }, (_, si) => {
+                                      const isSetDone = setsStrPlan[si] === "1";
+                                      const saved = planSetData[si];
+                                      return (
+                                        <div key={si} className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
+                                          <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan)} className="h-3.5 w-3.5" />
+                                          <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
+                                          <input type="number" inputMode="numeric" defaultValue={saved?.reps || defReps} onBlur={(e) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', e.target.value, setsCountPlan, defKg, defReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
+                                          <span className="text-[10px] text-muted-foreground">reps</span>
+                                          <input type="number" inputMode="decimal" defaultValue={saved?.kg || defKg} onBlur={(e) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', e.target.value, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                          <span className="text-[10px] text-muted-foreground">kg</span>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               )}
                             </div>);
