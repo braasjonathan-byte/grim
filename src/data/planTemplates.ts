@@ -42,6 +42,26 @@ export interface TemplatePlanDay {
 const round = (v: number, step = 2.5) => Math.round(v / step) * step;
 const pct = (rm: number, p: number) => round(rm * p);
 
+const ALL_DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+
+/** Ensure every week has exactly 7 days. Missing days get an empty "Vila" entry. */
+export const padWeeksTo7Days = (days: TemplatePlanDay[]): TemplatePlanDay[] => {
+  const weeks = new Map<number, Map<string, TemplatePlanDay>>();
+  for (const d of days) {
+    if (!weeks.has(d.week)) weeks.set(d.week, new Map());
+    weeks.get(d.week)!.set(d.day, d);
+  }
+  const result: TemplatePlanDay[] = [];
+  const sortedWeeks = Array.from(weeks.keys()).sort((a, b) => a - b);
+  for (const w of sortedWeeks) {
+    const weekMap = weeks.get(w)!;
+    for (const dayName of ALL_DAYS) {
+      result.push(weekMap.get(dayName) || { week: w, day: dayName, session_name: "", details: "", tempo: "" });
+    }
+  }
+  return result;
+};
+
 // Helper to generate repeating weekly structure across N weeks
 const generateWeeks = (
   weekCount: number,
