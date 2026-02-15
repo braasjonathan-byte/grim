@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone } from "lucide-react";
+import { Dumbbell, Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -18,7 +18,7 @@ import AdminUserList from "@/components/AdminUserList";
 import NotificationSettings from "@/components/NotificationSettings";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-type Tab = "workout" | "friends" | "calc" | "stats";
+type Tab = "workout" | "friends" | "calc" | "stats" | "settings";
 
 interface FriendActivity {
   nickname: string;
@@ -32,7 +32,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTabState] = useState<Tab>(() => {
     const saved = localStorage.getItem("grim_active_tab");
-    return (saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats") ? saved : "workout";
+    return (saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats" || saved === "settings") ? saved : "workout";
   });
 
   // Wrap setTab to push browser history for Android back button support
@@ -297,7 +297,8 @@ const Index = () => {
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
-  { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
+  { key: "calc", icon: Calculator, label: "Verktyg" },
+  { key: "settings", icon: Settings, label: "Inställningar", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
 
@@ -424,6 +425,12 @@ const Index = () => {
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
+            <OneRMCalculator />
+            <PulseZoneCalculator />
+          </div>
+        }
+        {tab === "settings" &&
+        <div className="py-2 space-y-4">
             {/* Role badge */}
             <div className="flex items-center gap-2">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${userRole === "admin" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
@@ -434,8 +441,6 @@ const Index = () => {
             {userRole === "admin" && <AdminUserList userId={user.id} />}
             <SettingsPanel userId={user.id} />
             <NotificationSettings userId={user.id} />
-            <OneRMCalculator />
-            <PulseZoneCalculator />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
           </div>
         }
@@ -534,7 +539,7 @@ const Index = () => {
             key={key}
             onClick={() => {
               setTab(key);
-              if (key === "calc" && unreadAnnouncements > 0) {
+              if (key === "settings" && unreadAnnouncements > 0) {
                 localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
                 if (userRole === "admin") {
                   localStorage.setItem("grim_last_read_suggestions", new Date().toISOString());
