@@ -54,6 +54,7 @@ const WeightProgressionChart = ({ userId }: WeightProgressionChartProps) => {
     for (const c of completions) {
       if (c.logged_weights) {
         for (const name of Object.keys(c.logged_weights)) {
+          if (name.startsWith("__")) continue;
           exerciseSet.add(name);
         }
       }
@@ -75,7 +76,8 @@ const WeightProgressionChart = ({ userId }: WeightProgressionChartProps) => {
       let hasRelevant = false;
 
       for (const [ex, w] of Object.entries(c.logged_weights)) {
-        if (w > 0) {
+        if (ex.startsWith("__")) continue;
+        if (typeof w === "number" && w > 0) {
           point[ex] = w;
           lastKnown[ex] = w;
           hasRelevant = true;
