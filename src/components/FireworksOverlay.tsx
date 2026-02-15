@@ -79,22 +79,23 @@ const FireworksOverlay = ({ onComplete }: { onComplete: () => void }) => {
 
     // Schedule bursts
     const burstTimers: ReturnType<typeof setTimeout>[] = [];
-    const totalBursts = 8;
+    const totalBursts = 6;
+    const burstInterval = 250;
     for (let i = 0; i < totalBursts; i++) {
       burstTimers.push(
         setTimeout(() => {
           const x = canvas.width * (0.15 + Math.random() * 0.7);
           const y = canvas.height * (0.15 + Math.random() * 0.5);
           createBurst(x, y);
-        }, i * 350 + Math.random() * 200)
+        }, i * burstInterval + Math.random() * 150)
       );
     }
 
-    // End after all bursts
+    // End after ~3 seconds
     const endTimer = setTimeout(() => {
       setVisible(false);
       onComplete();
-    }, totalBursts * 350 + 1800);
+    }, 3000);
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
