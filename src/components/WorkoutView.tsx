@@ -1870,6 +1870,107 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   return (
                     <div className="space-y-2">
                         {parts.map((part, i) => {
+                        // Check if this is a conditioning exercise
+                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång/i.test(part);
+                        
+                        if (isCondExercise) {
+                          // Parse conditioning data from the part
+                          const { name: condName } = parseExerciseWeight(part);
+                          const condTimeM = part.match(/(\d+)\s*min/);
+                          const condTempoM = part.match(/([\d:.]+)\s*\/km/);
+                          const condDistM = part.match(/([\d.,]+)\s*km(?!\/)/);
+                          const planTime = condTimeM ? condTimeM[1] : "";
+                          const planTempo = condTempoM ? condTempoM[1] : "";
+                          const planDist = condDistM ? condDistM[1] : "";
+                          
+                          // Get saved conditioning data from completions
+                          const condComp = completions[key];
+                          const condWeights = (condComp?.logged_weights || {}) as Record<string, any>;
+                          const savedCondData = condWeights[`__cond__${condName || part}`];
+                          const condSaved = savedCondData ? (typeof savedCondData === 'string' ? JSON.parse(savedCondData) : savedCondData) : null;
+                          
+                          const displayTime = condSaved?.time || planTime;
+                          const displayDist = condSaved?.dist || planDist;
+                          let displayTempo = condSaved?.tempo || planTempo;
+                          
+                          // Auto-calculate tempo if time and distance exist but no tempo
+                          if (!displayTempo && displayTime && displayDist) {
+                            const t = parseFloat(displayTime);
+                            const d = parseFloat(String(displayDist).replace(',', '.'));
+                            if (t > 0 && d > 0) {
+                              const tempoMin = t / d;
+                              const mins = Math.floor(tempoMin);
+                              const secs = Math.round((tempoMin - mins) * 60);
+                              displayTempo = `${mins}:${secs.toString().padStart(2, '0')}`;
+                            }
+                          }
+                          
+                          const saveCondField = async (field: string, value: string) => {
+                            const currentData = condSaved || { time: planTime, dist: planDist, tempo: planTempo };
+                            const updated = { ...currentData, [field]: value };
+                            
+                            // Auto-calculate tempo
+                            if ((field === 'time' || field === 'dist') && !updated.tempo) {
+                              const t = parseFloat(field === 'time' ? value : updated.time || '0');
+                              const d = parseFloat(String(field === 'dist' ? value : updated.dist || '0').replace(',', '.'));
+                              if (t > 0 && d > 0) {
+                                const tempoMin = t / d;
+                                const mins = Math.floor(tempoMin);
+                                const secs = Math.round((tempoMin - mins) * 60);
+                                updated.tempo = `${mins}:${secs.toString().padStart(2, '0')}`;
+                              }
+                            }
+                            
+                            const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                            const newWeights = { ...existing, [`__cond__${condName || part}`]: JSON.stringify(updated) };
+                            
+                            setCompletions(prev => ({
+                              ...prev,
+                              [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: newWeights }
+                            }));
+                            
+                            await supabase.from("workout_completions").upsert({
+                              user_id: userId, week: plan.week, day: plan.day,
+                              done: completions[key]?.done || false,
+                              skipped: completions[key]?.skipped || false,
+                              logged_weights: newWeights
+                            } as any, { onConflict: "user_id,week,day" });
+                          };
+                          
+                          return (
+                            <div key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                                  <Footprints className="w-3.5 h-3.5 text-warning" />
+                                  {toTitleCase(condName || part)}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={(e) => { e.stopPropagation(); setExerciseInfoName(condName || part); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
+                                    <Info className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) })} className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-0.5">
+                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
+                                  <input type="number" inputMode="numeric" defaultValue={displayTime} onBlur={(e) => saveCondField('time', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
+                                  <input type="text" inputMode="decimal" defaultValue={displayDist} onBlur={(e) => saveCondField('dist', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                </div>
+                                <div className="space-y-0.5">
+                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
+                                  <input type="text" defaultValue={displayTempo} onBlur={(e) => saveCondField('tempo', e.target.value)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         // Extract exercise name (text before first digit pattern)
                         const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
                         const exerciseName = nameMatch ? nameMatch[1].trim() : null;
