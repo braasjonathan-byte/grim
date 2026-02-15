@@ -262,10 +262,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         const updatedCompletions = { ...completions, [key]: { week, day, done: true, skipped: false, user_comment: comments[key] || "" } };
         const allDone = weekPlans.every((p) => {
           const k = `${p.week}-${p.day}`;
-          return updatedCompletions[k]?.done || updatedCompletions[k]?.skipped;
+          return updatedCompletions[k]?.done;
         });
-        const anyDone = weekPlans.some((p) => updatedCompletions[`${p.week}-${p.day}`]?.done);
-        if (allDone && anyDone) {
+        if (allDone) {
           setShowFireworks(true);
         }
       }
