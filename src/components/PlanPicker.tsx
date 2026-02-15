@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
-import { planTemplates, liftLabels, planCategoryLabels, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
+import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 
 interface PlanPickerProps {
@@ -122,7 +122,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       return;
     }
 
-    const rows = days.map((d) => ({
+    const paddedDays = padWeeksTo7Days(days);
+
+    const rows = paddedDays.map((d) => ({
       user_id: userId,
       week: d.week,
       day: d.day,
