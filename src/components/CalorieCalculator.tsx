@@ -21,12 +21,19 @@ const trainingLevels = [
 ];
 
 const goals = [
-  { value: "-500", label: "Gå ner i vikt", desc: "−500 kcal/dag" },
-  { value: "-250", label: "Lätt nedgång", desc: "−250 kcal/dag" },
-  { value: "0", label: "Behålla vikt", desc: "±0 kcal" },
-  { value: "250", label: "Lätt uppgång", desc: "+250 kcal/dag" },
-  { value: "500", label: "Bygga muskler", desc: "+500 kcal/dag" },
-];
+  { value: "-500", label: "Gå ner i vikt", desc: "−500 kcal/dag", macro: "cut" },
+  { value: "-250", label: "Lätt nedgång", desc: "−250 kcal/dag", macro: "cut" },
+  { value: "0", label: "Behålla vikt", desc: "±0 kcal", macro: "maintain" },
+  { value: "250", label: "Lätt uppgång", desc: "+250 kcal/dag", macro: "bulk" },
+  { value: "500", label: "Bygga muskler", desc: "+500 kcal/dag", macro: "bulk" },
+] as const;
+
+// Macro splits per goal type (protein%, carbs%, fat%)
+const macroSplits: Record<string, { protein: number; carbs: number; fat: number; label: string }> = {
+  cut:      { protein: 40, carbs: 30, fat: 30, label: "Viktminskning" },
+  maintain: { protein: 30, carbs: 40, fat: 30, label: "Underhåll" },
+  bulk:     { protein: 30, carbs: 45, fat: 25, label: "Muskeluppbyggnad" },
+};
 
 const CalorieCalculator = () => {
   const [open, setOpen] = useState(false);
@@ -37,7 +44,7 @@ const CalorieCalculator = () => {
   const [activity, setActivity] = useState("1.375");
   const [training, setTraining] = useState("350");
   const [goal, setGoal] = useState("0");
-  const [result, setResult] = useState<{ bmr: number; tdee: number; target: number } | null>(null);
+  const [result, setResult] = useState<{ bmr: number; tdee: number; target: number; macroType: string } | null>(null);
 
   const calculate = () => {
     const a = parseFloat(age);
@@ -53,12 +60,14 @@ const CalorieCalculator = () => {
     const activityFactor = parseFloat(activity);
     const trainingExtra = parseFloat(training);
     const goalAdj = parseFloat(goal);
+    const selectedGoal = goals.find((g) => g.value === goal);
+    const macroType = selectedGoal?.macro ?? "maintain";
 
     // TDEE = BMR × activity factor + weekly training average per day
     const tdee = bmr * activityFactor + trainingExtra / 7 * activityFactor;
     const target = tdee + goalAdj;
 
-    setResult({ bmr: Math.round(bmr), tdee: Math.round(tdee), target: Math.round(target) });
+    setResult({ bmr: Math.round(bmr), tdee: Math.round(tdee), target: Math.round(target), macroType });
   };
 
   return (
@@ -159,25 +168,61 @@ const CalorieCalculator = () => {
 
           <Button size="sm" className="w-full text-xs" onClick={calculate}>Beräkna</Button>
 
-          {result && (
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              <div className="rounded-lg bg-muted p-2 text-center">
-                <p className="text-[10px] text-muted-foreground">BMR</p>
-                <p className="text-sm font-bold">{result.bmr}</p>
-                <p className="text-[10px] text-muted-foreground">kcal</p>
+          {result && (() => {
+            const split = macroSplits[result.macroType];
+            const proteinG = Math.round((result.target * split.protein / 100) / 4);
+            const carbsG = Math.round((result.target * split.carbs / 100) / 4);
+            const fatG = Math.round((result.target * split.fat / 100) / 9);
+            return (
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-lg bg-muted p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">BMR</p>
+                    <p className="text-sm font-bold">{result.bmr}</p>
+                    <p className="text-[10px] text-muted-foreground">kcal</p>
+                  </div>
+                  <div className="rounded-lg bg-muted p-2 text-center">
+                    <p className="text-[10px] text-muted-foreground">TDEE</p>
+                    <p className="text-sm font-bold">{result.tdee}</p>
+                    <p className="text-[10px] text-muted-foreground">kcal</p>
+                  </div>
+                  <div className="rounded-lg bg-primary/10 border border-primary/30 p-2 text-center">
+                    <p className="text-[10px] text-primary">Mål</p>
+                    <p className="text-sm font-bold text-primary">{result.target}</p>
+                    <p className="text-[10px] text-primary">kcal</p>
+                  </div>
+                </div>
+
+                {/* Macros */}
+                <div className="rounded-lg border border-border p-3 space-y-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Makrofördelning – {split.label}</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-red-400">{proteinG}g</p>
+                      <p className="text-[10px] text-muted-foreground">Protein</p>
+                      <p className="text-[10px] text-muted-foreground">{split.protein}%</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-amber-400">{carbsG}g</p>
+                      <p className="text-[10px] text-muted-foreground">Kolhydrater</p>
+                      <p className="text-[10px] text-muted-foreground">{split.carbs}%</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-emerald-400">{fatG}g</p>
+                      <p className="text-[10px] text-muted-foreground">Fett</p>
+                      <p className="text-[10px] text-muted-foreground">{split.fat}%</p>
+                    </div>
+                  </div>
+                  {/* Visual bar */}
+                  <div className="flex h-2 rounded-full overflow-hidden">
+                    <div className="bg-red-400" style={{ width: `${split.protein}%` }} />
+                    <div className="bg-amber-400" style={{ width: `${split.carbs}%` }} />
+                    <div className="bg-emerald-400" style={{ width: `${split.fat}%` }} />
+                  </div>
+                </div>
               </div>
-              <div className="rounded-lg bg-muted p-2 text-center">
-                <p className="text-[10px] text-muted-foreground">TDEE</p>
-                <p className="text-sm font-bold">{result.tdee}</p>
-                <p className="text-[10px] text-muted-foreground">kcal</p>
-              </div>
-              <div className="rounded-lg bg-primary/10 border border-primary/30 p-2 text-center">
-                <p className="text-[10px] text-primary">Mål</p>
-                <p className="text-sm font-bold text-primary">{result.target}</p>
-                <p className="text-[10px] text-primary">kcal</p>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>
