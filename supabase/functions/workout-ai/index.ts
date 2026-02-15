@@ -56,7 +56,19 @@ serve(async (req) => {
 
     const allWeeks = [...new Set((plans || []).map((p: any) => p.week))].sort((a: number, b: number) => a - b);
 
+    const dayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+    const now = new Date();
+    const todayName = dayNames[now.getDay()];
+    const todayDate = now.toISOString().split("T")[0];
+    const todayPlan = weekPlans.find((p: any) => p.day === todayName);
+    const todayContext = todayPlan
+      ? `${todayPlan.session_name || '(Vila)'}${todayPlan.details ? '\n  Övningar: ' + todayPlan.details : ''}`
+      : "(Inget pass schemalagt)";
+
     const systemPrompt = `Du är en AI-träningsassistent för appen Grim. Du hjälper användaren att redigera sitt träningsschema.
+
+DAGENS DATUM: ${todayDate} (${todayName})
+DAGENS PASS: ${todayContext}
 
 AKTUELLT SCHEMA (Vecka ${currentWeek}):
 ${planContext || "(Inget schema hittades)"}
