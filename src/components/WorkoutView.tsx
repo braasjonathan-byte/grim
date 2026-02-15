@@ -1087,7 +1087,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
                       }
 
-                      const setsCountSingle = sets ? parseInt(sets) : 0;
+                      const setsCountSingle = sets ? parseInt(sets) : 1;
                       const setsStrSingle = getSetsDone(key, name);
 
                       return (
@@ -1130,8 +1130,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   </button>
                                 </div>
                               </div>
-                              {setsCountSingle > 0 ? (
-                                <div className="space-y-1">
+                              <div className="space-y-1">
                                   {(() => {
                                     const setData = getSetData(key, name);
                                     const defaultKg = kg || "";
@@ -1152,20 +1151,6 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     });
                                   })()}
                                 </div>
-                              ) : (
-                                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingExercise({
-                                  planId: plan.id,
-                                  lineIndex: i,
-                                  name,
-                                  sets: sets || "3",
-                                  reps: reps || "10",
-                                  weight: kg?.replace(/\s*kg\s*/i, "").trim() || ""
-                                })}>
-                                  {!sets && !reps && !kg &&
-                                    <span className="text-xs text-muted-foreground italic">Tryck för att ange set/reps/vikt</span>
-                                  }
-                                </div>
-                              )}
                             </div>);
 
                     })}
@@ -1900,7 +1885,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
                         }
 
-                        const setsCountPlan = partSets ? parseInt(partSets) : 0;
+                        const setsCountPlan = partSets ? parseInt(partSets) : 1;
                         const setsStrPlan = getSetsDone(key, partName);
 
                         return (
@@ -1942,8 +1927,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   </button>
                                 </div>
                               </div>
-                              {setsCountPlan > 0 && (
-                                <div className="space-y-1 pl-1">
+                              <div className="space-y-1 pl-1">
                                   {(() => {
                                     const planSetData = getSetData(key, partName);
                                     const defKg = partKg || "";
@@ -1964,7 +1948,6 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     });
                                   })()}
                                 </div>
-                              )}
                             </div>);
 
                       })}
