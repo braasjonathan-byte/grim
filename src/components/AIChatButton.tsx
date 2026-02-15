@@ -24,6 +24,55 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Draggable button state
+  const [btnPos, setBtnPos] = useState<{ x: number; y: number }>(() => ({
+    x: window.innerWidth - 72,
+    y: window.innerHeight - 160,
+  }));
+  const dragging = useRef(false);
+  const dragStart = useRef({ px: 0, py: 0, bx: 0, by: 0 });
+  const didMove = useRef(false);
+  const btnSize = 56;
+  const edgePad = 8;
+
+  const clampToEdge = useCallback((x: number, y: number) => {
+    const maxX = window.innerWidth - btnSize - edgePad;
+    const maxY = window.innerHeight - btnSize - edgePad;
+    const cx = Math.max(edgePad, Math.min(x, maxX));
+    const cy = Math.max(edgePad, Math.min(y, maxY));
+    // Snap to nearest horizontal edge
+    const snapX = cx < window.innerWidth / 2 ? edgePad : maxX;
+    return { x: snapX, y: cy };
+  }, []);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    dragging.current = true;
+    didMove.current = false;
+    dragStart.current = { px: e.clientX, py: e.clientY, bx: btnPos.x, by: btnPos.y };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [btnPos]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - dragStart.current.px;
+    const dy = e.clientY - dragStart.current.py;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
+    const nx = dragStart.current.bx + dx;
+    const ny = dragStart.current.by + dy;
+    const maxX = window.innerWidth - btnSize - edgePad;
+    const maxY = window.innerHeight - btnSize - edgePad;
+    setBtnPos({
+      x: Math.max(edgePad, Math.min(nx, maxX)),
+      y: Math.max(edgePad, Math.min(ny, maxY)),
+    });
+  }, []);
+
+  const onPointerUp = useCallback(() => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    setBtnPos((prev) => clampToEdge(prev.x, prev.y));
+  }, [clampToEdge]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -92,8 +141,12 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
       {/* Floating button */}
       {!open && (
         <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full shadow-lg overflow-hidden ring-2 ring-primary/50 hover:ring-primary transition-all active:scale-95"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onClick={() => { if (!didMove.current) setOpen(true); }}
+          style={{ left: btnPos.x, top: btnPos.y, touchAction: "none" }}
+          className="fixed z-50 w-14 h-14 rounded-full shadow-lg overflow-hidden ring-2 ring-primary/50 hover:ring-primary transition-shadow active:scale-95 cursor-grab active:cursor-grabbing"
           aria-label="Öppna Grim AI"
         >
           <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover" />
