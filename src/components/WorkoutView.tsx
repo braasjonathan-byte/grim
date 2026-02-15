@@ -265,8 +265,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       // Check if all days in this week are now completed (plan mode only)
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
+        const scheduledPlans = weekPlans.filter((p) => p.session_name.trim() !== "" && p.details.trim() !== "");
         const updatedCompletions = { ...completions, [key]: { week, day, done: true, skipped: false, user_comment: comments[key] || "" } };
-        const allDone = weekPlans.every((p) => {
+        const allDone = scheduledPlans.length > 0 && scheduledPlans.every((p) => {
           const k = `${p.week}-${p.day}`;
           return updatedCompletions[k]?.done;
         });
@@ -394,9 +395,23 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       logged_weights: updated
     } as any, { onConflict: "user_id,week,day" });
 
-    // Notify friends if workout was just completed
+    // Notify friends and check fireworks if workout was just completed
     if (allExercisesDone && !completions[k]?.done && plan) {
       notifyFriendsOfCompletion(day, week, plan.session_name || day);
+
+      // Check if all scheduled workouts in this week are now done
+      if (week > 0) {
+        const weekPlans = plans.filter(p => p.week === week);
+        const scheduledPlans = weekPlans.filter(p => p.session_name.trim() !== "" && p.details.trim() !== "");
+        const updatedCompletions = { ...completions, [k]: { ...completions[k], week, day, done: true } };
+        const allWeekDone = scheduledPlans.length > 0 && scheduledPlans.every(p => {
+          const wk = `${p.week}-${p.day}`;
+          return updatedCompletions[wk]?.done;
+        });
+        if (allWeekDone) {
+          setShowFireworks(true);
+        }
+      }
     }
   };
 
