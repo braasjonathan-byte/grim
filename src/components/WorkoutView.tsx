@@ -113,6 +113,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   // Exercise browser for single workouts
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
+  const [isWarmupMode, setIsWarmupMode] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
@@ -715,7 +716,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     `${weightDialog.exerciseName} — ${sets}×${reps}`;
 
     const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
-    const newDetails = plan.details ? `${plan.details}${joinSep}${entry}` : entry;
+    const newDetails = isWarmupMode
+      ? (plan.details ? `${entry}${joinSep}${plan.details}` : entry)
+      : (plan.details ? `${plan.details}${joinSep}${entry}` : entry);
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
@@ -723,6 +726,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     setWeightInput("");
     setRepsInput("10");
     setSetsInput("3");
+    setIsWarmupMode(false);
   };
 
   // Add conditioning exercise with tempo, time, distance
@@ -740,7 +744,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
 
     const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
-    const newDetails = plan.details ? `${plan.details}${joinSep}${entry}` : entry;
+    const newDetails = isWarmupMode
+      ? (plan.details ? `${entry}${joinSep}${plan.details}` : entry)
+      : (plan.details ? `${plan.details}${joinSep}${entry}` : entry);
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
@@ -748,6 +754,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     setCondTempoInput("");
     setCondTimeInput("");
     setCondDistanceInput("");
+    setIsWarmupMode(false);
   };
 
   const addExerciseToPlan = async (plan: PlanDay, exerciseName: string) => {
@@ -1311,23 +1318,35 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       </div>
                   }
 
-                    {/* Add exercise button */}
+                    {/* Add warmup & exercise buttons */}
                     {!isExercisePickerOpen && !weightDialog && !conditioningDialog ?
-                  <button
-                    onClick={() => {
-                      setShowExercisePicker(plan.id);
-                      setExerciseSearch("");
-                      setSelectedMuscle(null);
-                    }}
-                    className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
-
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={() => {
+                        setShowExercisePicker(plan.id);
+                        setExerciseSearch("");
+                        setSelectedMuscle(null);
+                        setIsWarmupMode(true);
+                      }}
+                      className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-muted-foreground hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                        <Plus className="w-3 h-3" /> Lägg till uppvärmning
+                      </button>
+                    <button
+                      onClick={() => {
+                        setShowExercisePicker(plan.id);
+                        setExerciseSearch("");
+                        setSelectedMuscle(null);
+                        setIsWarmupMode(false);
+                      }}
+                      className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <Plus className="w-3 h-3" /> Lägg till övning
-                      </button> :
+                      </button>
+                  </div> :
                   isExercisePickerOpen && !weightDialog && !conditioningDialog ?
                   <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold">Välj övning</h4>
-                          <button onClick={() => setShowExercisePicker(null)} className="text-muted-foreground hover:text-foreground">
+                         <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-semibold">{isWarmupMode ? "Välj uppvärmning" : "Välj övning"}</h4>
+                          <button onClick={() => { setShowExercisePicker(null); setIsWarmupMode(false); }} className="text-muted-foreground hover:text-foreground">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -2050,8 +2069,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   {showExercisePicker === plan.id && !weightDialog && !conditioningDialog ?
                 <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold">Lägg till övning</h4>
-                        <button onClick={() => {setShowExercisePicker(null);setShowAddCustomExercise(false);}} className="text-muted-foreground hover:text-foreground">
+                        <h4 className="text-xs font-semibold">{isWarmupMode ? "Välj uppvärmning" : "Lägg till övning"}</h4>
+                        <button onClick={() => {setShowExercisePicker(null);setShowAddCustomExercise(false);setIsWarmupMode(false);}} className="text-muted-foreground hover:text-foreground">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -2096,9 +2115,14 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                   }
                     </div> :
                 !weightDialog ?
-                <button onClick={() => {setShowExercisePicker(plan.id);setExerciseSearch("");setSelectedMuscle(null);setShowAddCustomExercise(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
+                <div className="space-y-1.5">
+                  <button onClick={() => {setShowExercisePicker(plan.id);setExerciseSearch("");setSelectedMuscle(null);setShowAddCustomExercise(false);setIsWarmupMode(true);}} className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-muted-foreground hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                      <Plus className="w-3 h-3" /> Lägg till uppvärmning
+                    </button>
+                  <button onClick={() => {setShowExercisePicker(plan.id);setExerciseSearch("");setSelectedMuscle(null);setShowAddCustomExercise(false);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till övning
-                    </button> :
+                    </button>
+                </div> :
                 null}
 
                   {/* Friend comments */}
