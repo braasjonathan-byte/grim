@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sparkles } from "lucide-react";
 
@@ -31,7 +31,7 @@ const changelog = [
   },
 ];
 
-const WhatsNewDialog = () => {
+const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -81,6 +81,7 @@ const WhatsNewDialog = () => {
       </DialogContent>
     </Dialog>
   );
-};
+});
+WhatsNewDialog.displayName = "WhatsNewDialog";
 
 export default WhatsNewDialog;
