@@ -4,6 +4,7 @@ import { Dumbbell, Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, 
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
+import AIChatButton from "@/components/AIChatButton";
 // PlanEditor removed - Schema tab no longer used
 import FriendsView from "@/components/FriendsView";
 import OneRMCalculator from "@/components/OneRMCalculator";
@@ -64,6 +65,7 @@ const Index = () => {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [nickname, setNickname] = useState("");
+  const [workoutRefreshKey, setWorkoutRefreshKey] = useState(0);
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -405,7 +407,7 @@ const Index = () => {
 
       {/* Content */}
       <main className="max-w-lg mx-auto px-4 py-4">
-        {tab === "workout" && <WorkoutView userId={user.id} />}
+        {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} />}
         {tab === "friends" &&
         <FriendsView
           userId={user.id}
@@ -532,6 +534,12 @@ const Index = () => {
         }} />
 
       }
+
+      {/* AI Chat Button */}
+      <AIChatButton
+        userId={user.id}
+        onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)}
+      />
 
       {/* Bottom tab bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-50">

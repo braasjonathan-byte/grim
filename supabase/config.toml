@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.notify-suggestion]
 verify_jwt = false
+
+[functions.workout-ai]
+verify_jwt = false
