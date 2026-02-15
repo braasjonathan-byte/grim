@@ -289,7 +289,7 @@ async function translateToSwedish(instructions: string[]): Promise<string[]> {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-lite",
         messages: [
-          { role: "system", content: "Du är en översättare. Översätt träningsinstruktionerna till naturlig svenska. Behåll numreringen. Svara BARA med de översatta instruktionerna, inget annat." },
+          { role: "system", content: "Du är en översättare. Översätt träningsinstruktionerna till naturlig svenska. Behåll numreringen (1. 2. 3. osv). Skriv INTE 'Steg' före numret. Svara BARA med de översatta instruktionerna, inget annat." },
           { role: "user", content: text },
         ],
         temperature: 0.3,
