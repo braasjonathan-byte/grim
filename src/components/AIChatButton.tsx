@@ -25,6 +25,7 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Draggable button state
+  const btnRef = useRef<HTMLButtonElement>(null);
   const [btnPos, setBtnPos] = useState<{ x: number; y: number }>(() => ({
     x: window.innerWidth - 72,
     y: window.innerHeight - 160,
@@ -35,43 +36,73 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
   const btnSize = 56;
   const edgePad = 8;
 
-  const clampToEdge = useCallback((x: number, y: number) => {
+  // Keep button in bounds on resize
+  useEffect(() => {
+    const onResize = () => setBtnPos(prev => {
+      const maxX = window.innerWidth - btnSize - edgePad;
+      const maxY = window.innerHeight - btnSize - edgePad;
+      return {
+        x: Math.max(edgePad, Math.min(prev.x, maxX)),
+        y: Math.max(edgePad, Math.min(prev.y, maxY)),
+      };
+    });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const snapToEdge = useCallback((x: number, y: number) => {
     const maxX = window.innerWidth - btnSize - edgePad;
     const maxY = window.innerHeight - btnSize - edgePad;
-    const cx = Math.max(edgePad, Math.min(x, maxX));
     const cy = Math.max(edgePad, Math.min(y, maxY));
-    // Snap to nearest horizontal edge
-    const snapX = cx < window.innerWidth / 2 ? edgePad : maxX;
+    const snapX = x < window.innerWidth / 2 ? edgePad : maxX;
     return { x: snapX, y: cy };
   }, []);
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    dragging.current = true;
-    didMove.current = false;
-    dragStart.current = { px: e.clientX, py: e.clientY, bx: btnPos.x, by: btnPos.y };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [btnPos]);
+  useEffect(() => {
+    const el = btnRef.current;
+    if (!el) return;
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const dx = e.clientX - dragStart.current.px;
-    const dy = e.clientY - dragStart.current.py;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
-    const nx = dragStart.current.bx + dx;
-    const ny = dragStart.current.by + dy;
-    const maxX = window.innerWidth - btnSize - edgePad;
-    const maxY = window.innerHeight - btnSize - edgePad;
-    setBtnPos({
-      x: Math.max(edgePad, Math.min(nx, maxX)),
-      y: Math.max(edgePad, Math.min(ny, maxY)),
-    });
-  }, []);
+    const onDown = (e: PointerEvent) => {
+      e.preventDefault();
+      dragging.current = true;
+      didMove.current = false;
+      const rect = el.getBoundingClientRect();
+      dragStart.current = { px: e.clientX, py: e.clientY, bx: rect.left, by: rect.top };
+      el.setPointerCapture(e.pointerId);
+    };
 
-  const onPointerUp = useCallback(() => {
-    if (!dragging.current) return;
-    dragging.current = false;
-    setBtnPos((prev) => clampToEdge(prev.x, prev.y));
-  }, [clampToEdge]);
+    const onMove = (e: PointerEvent) => {
+      if (!dragging.current) return;
+      const dx = e.clientX - dragStart.current.px;
+      const dy = e.clientY - dragStart.current.py;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
+      const nx = dragStart.current.bx + dx;
+      const ny = dragStart.current.by + dy;
+      const maxX = window.innerWidth - btnSize - edgePad;
+      const maxY = window.innerHeight - btnSize - edgePad;
+      setBtnPos({
+        x: Math.max(edgePad, Math.min(nx, maxX)),
+        y: Math.max(edgePad, Math.min(ny, maxY)),
+      });
+    };
+
+    const onUp = () => {
+      if (!dragging.current) return;
+      dragging.current = false;
+      setBtnPos(prev => snapToEdge(prev.x, prev.y));
+    };
+
+    el.addEventListener("pointerdown", onDown);
+    el.addEventListener("pointermove", onMove);
+    el.addEventListener("pointerup", onUp);
+    el.addEventListener("pointercancel", onUp);
+    return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointermove", onMove);
+      el.removeEventListener("pointerup", onUp);
+      el.removeEventListener("pointercancel", onUp);
+    };
+  }, [snapToEdge]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -141,12 +172,10 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
       {/* Floating button */}
       {!open && (
         <button
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
+          ref={btnRef}
           onClick={() => { if (!didMove.current) setOpen(true); }}
           style={{ left: btnPos.x, top: btnPos.y, touchAction: "none" }}
-          className="fixed z-50 w-14 h-14 rounded-full shadow-lg overflow-hidden ring-2 ring-primary/50 hover:ring-primary transition-shadow active:scale-95 cursor-grab active:cursor-grabbing"
+          className="fixed z-50 w-14 h-14 rounded-full shadow-lg overflow-hidden ring-2 ring-primary/50 hover:ring-primary transition-shadow cursor-grab active:cursor-grabbing select-none"
           aria-label="Öppna Grim AI"
         >
           <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover" />
