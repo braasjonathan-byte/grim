@@ -175,7 +175,7 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
           ref={btnRef}
           onClick={() => { if (!didMove.current) setOpen(true); }}
           style={{ left: btnPos.x, top: btnPos.y, touchAction: "none" }}
-          className="fixed z-50 w-14 h-14 rounded-full shadow-lg overflow-hidden ring-2 ring-primary/50 hover:ring-primary transition-shadow cursor-grab active:cursor-grabbing select-none"
+          className="fixed z-50 w-14 h-14 rounded-full shadow-lg overflow-hidden border-0 bg-transparent cursor-grab active:cursor-grabbing select-none"
           aria-label="Öppna Grim AI"
         >
           <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover" />
