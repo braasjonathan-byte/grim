@@ -131,6 +131,15 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    color-scheme: light dark;
+  }
+
+  html.light body {
+    color-scheme: light;
+  }
+
+  html.dark body {
+    color-scheme: dark;
   }
 
   h1, h2, h3, h4, h5, h6 {

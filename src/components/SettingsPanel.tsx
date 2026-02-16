@@ -41,10 +41,17 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
   useEffect(() => {
     if (dark) {
       document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
     } else {
       document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
     }
     localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+    // Update meta theme-color for mobile browsers
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute("content", dark ? "#000000" : "#ffffff");
+    }
   }, [dark]);
 
   useEffect(() => {
