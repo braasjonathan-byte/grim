@@ -23,8 +23,7 @@ interface SettingsPanelProps {
 const SettingsPanel = ({ userId }: SettingsPanelProps) => {
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(THEME_KEY);
-      if (stored) return stored === "dark";
+      return document.documentElement.classList.contains("dark");
     }
     return false;
   });

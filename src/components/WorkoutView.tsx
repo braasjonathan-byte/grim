@@ -130,7 +130,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [setsInput, setSetsInput] = useState("3");
 
   // Inline editing of existing exercise
-  const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;sets: string;reps: string;weight: string;} | null>(null);
+  const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;originalName: string;sets: string;reps: string;weight: string;} | null>(null);
 
   // Conditioning exercise dialog
   const [conditioningDialog, setConditioningDialog] = useState<{planId: string;exerciseName: string;} | null>(null);
@@ -152,6 +152,14 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   // Fireworks celebration
   const [showFireworks, setShowFireworks] = useState(false);
 
+  // Edit plan propagation dialog
+  const [propagateDialog, setPropagateDialog] = useState<{
+    entry: string;
+    originalName: string;
+    newName: string;
+    plan: PlanDay;
+    lineIndex: number;
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
@@ -164,8 +172,20 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       setPlans(planData);
       const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
-      if (wks.length > 0 && !wks.includes(currentWeek)) {
-        setCurrentWeek(wks[0]);
+
+      // Auto-navigate to the first incomplete week
+      if (wks.length > 0) {
+        const compMap: Record<string, boolean> = {};
+        if (compData) {
+          for (const c of compData) {
+            if (c.done) compMap[`${c.week}-${c.day}`] = true;
+          }
+        }
+        const targetWeek = wks.find(w => {
+          const weekPlans = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
+          return weekPlans.length > 0 && !weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
+        });
+        setCurrentWeek(targetWeek ?? wks[wks.length - 1]);
       }
 
       if (planData.length === 0) {
@@ -814,7 +834,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   };
 
   // Save edited exercise line (sets/reps/weight)
-  const saveEditedExercise = async () => {
+  const saveEditedExercise = async (propagate = false) => {
     if (!editingExercise) return;
     const plan = plans.find((p) => p.id === editingExercise.planId);
     if (!plan) return;
@@ -823,7 +843,6 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     const reps = parseInt(editingExercise.reps) || 10;
     const w = editingExercise.weight.trim();
 
-    // Check if the original line had structured format (with —)
     const originalLines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
     const originalLine = originalLines[editingExercise.lineIndex] || "";
     const hadStructuredFormat = originalLine.includes("—");
@@ -844,7 +863,64 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+
+    // In plan mode, ask about propagation to future weeks
+    if (mode === "plan" && plan.week > 0 && !propagate) {
+      setPropagateDialog({ entry, originalName: editingExercise.originalName, newName: editingExercise.name, plan, lineIndex: editingExercise.lineIndex });
+      setEditingExercise(null);
+      return;
+    }
+
+    // Propagate to future weeks on same weekday
+    if (propagate && mode === "plan" && plan.week > 0) {
+      const futurePlans = plans.filter(p => p.day === plan.day && p.week > plan.week);
+      const baseWeight = w ? parseFloat(w) : 0;
+      const repsNum = reps;
+      const step = repsNum <= 3 ? 5 : repsNum <= 8 ? 2.5 : 1.25;
+
+      for (let fi = 0; fi < futurePlans.length; fi++) {
+        const fp = futurePlans[fi];
+        const fpLines = fp.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+        // Find the original exercise by name
+        const matchIdx = fpLines.findIndex(l => {
+          const { name: ln } = parseExerciseWeight(l);
+          return ln.toLowerCase() === editingExercise.originalName.toLowerCase();
+        });
+        if (matchIdx >= 0) {
+          const progressiveWeight = baseWeight > 0 ? Math.round((baseWeight + step * (fi + 1)) * 4) / 4 : 0;
+          const fpEntry = progressiveWeight > 0
+            ? `${editingExercise.name} — ${sets}×${reps} @ ${progressiveWeight} kg`
+            : w ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` : `${editingExercise.name} — ${sets}×${reps}`;
+          fpLines[matchIdx] = fpEntry;
+          const fpSep = fp.details.includes("\n") ? "\n" : "; ";
+          const fpNewDetails = fpLines.join(fpSep);
+          await supabase.from("workout_plans").update({ details: fpNewDetails }).eq("id", fp.id);
+        }
+      }
+      fetchData();
+    }
+
     setEditingExercise(null);
+  };
+
+  const handlePropagate = async (doPropagate: boolean) => {
+    if (doPropagate && propagateDialog) {
+      // Re-run save with propagation
+      const { plan, originalName, newName, entry, lineIndex } = propagateDialog;
+      const w = entry.match(/@\s*([\d.,]+)\s*kg/)?.[1] || "";
+      const setsMatch = entry.match(/(\d+)[×x](\d+)/i);
+      const sets = setsMatch ? setsMatch[1] : "3";
+      const reps = setsMatch ? setsMatch[2] : "10";
+      
+      setEditingExercise({ planId: plan.id, lineIndex, name: newName, originalName, sets, reps, weight: w });
+      setPropagateDialog(null);
+      // Use setTimeout to let state update
+      setTimeout(() => {
+        saveEditedExercise(true);
+      }, 0);
+      return;
+    }
+    setPropagateDialog(null);
   };
 
   const executeDeleteExercise = async () => {
@@ -1134,7 +1210,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={saveEditedExercise} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
+                                  <button onClick={() => saveEditedExercise()} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
                                   <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
                                 </div>
                               </div>);
@@ -1163,6 +1239,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   planId: plan.id,
                                   lineIndex: i,
                                   name,
+                                  originalName: name,
                                   sets: sets || "3",
                                   reps: reps || "10",
                                   weight: kg?.replace(/\s*kg\s*/i, "").trim() || ""
@@ -1630,8 +1707,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
 
   const weekIdx = weeks.indexOf(currentWeek);
-  const doneCount = weekDays.filter((d) => completions[`${d.week}-${d.day}`]?.done).length;
-  const progress = weekDays.length > 0 ? Math.round(doneCount / weekDays.length * 100) : 0;
+  const scheduledDays = weekDays.filter(d => d.session_name.trim() !== "" && d.details.trim() !== "");
+  const doneCount = scheduledDays.filter((d) => completions[`${d.week}-${d.day}`]?.done).length;
+  const progress = scheduledDays.length > 0 ? Math.round(doneCount / scheduledDays.length * 100) : 0;
 
   return (
     <>
@@ -1650,15 +1728,16 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             <h2 className="text-2xl font-black tracking-tight">Vecka {currentWeek}</h2>
             <p className="text-sm text-muted-foreground">av {weeks.length} veckor</p>
           </div>
-          <div className="absolute right-14 top-2 flex flex-col items-center gap-0.5">
-            <button
-              onClick={leavePlan}
-              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-              title="Lämna plan">
-
-              <LogOut className="w-4 h-4" />
-            </button>
-            <span className="text-[9px] text-muted-foreground leading-tight">Avsluta plan</span>
+          <div className="absolute right-14 top-1 flex gap-3">
+            <div className="flex flex-col items-center gap-0.5">
+              <button
+                onClick={leavePlan}
+                className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                title="Lämna plan">
+                <LogOut className="w-4 h-4" />
+              </button>
+              <span className="text-[9px] text-muted-foreground leading-tight">Avsluta</span>
+            </div>
           </div>
           <button
             onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
@@ -2008,7 +2087,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                         if (isEditing) {
                           return (
                             <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
-                                <span className="font-semibold text-sm text-foreground">{editingExercise.name}</span>
+                                <div className="space-y-0.5">
+                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Övning</label>
+                                  <input type="text" value={editingExercise.name} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, name: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary font-semibold" />
+                                </div>
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
@@ -2024,7 +2106,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
-                                  <button onClick={saveEditedExercise} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
+                                  <button onClick={() => saveEditedExercise()} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
                                   <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
                                 </div>
                               </div>);
@@ -2050,6 +2132,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                       planId: plan.id,
                                       lineIndex: i,
                                       name: partName,
+                                      originalName: partName,
                                       sets: partSets || "3",
                                       reps: partReps || repsStr || "10",
                                       weight: partKg || ""
@@ -2227,7 +2310,20 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                             </select>
                           </div>
                           <div className="flex gap-1.5">
-                            <button onClick={async () => {if (!newExName.trim()) return;await supabase.from("custom_exercises").insert({ name: newExName.trim(), category: newExCategory, muscle_group: newExMuscle, created_by: userId });setNewExName("");setShowAddCustomExercise(false);const { data } = await supabase.from("custom_exercises").select("*").order("name");if (data) setCustomExercises(data);}} className="flex-1 py-1 bg-primary text-primary-foreground font-semibold rounded-md text-[10px]">Spara</button>
+                            <button onClick={async () => {
+                              if (!newExName.trim()) return;
+                              const trimmedName = newExName.trim();
+                              // Check for duplicates in built-in exercises
+                              const builtInDupe = exerciseLibrary.find(e => e.name.toLowerCase() === trimmedName.toLowerCase());
+                              if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
+                              // Check for duplicates in custom exercises
+                              const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmedName.toLowerCase());
+                              if (customDupe) { alert("Övningen finns redan."); return; }
+                              await supabase.from("custom_exercises").insert({ name: trimmedName, category: newExCategory, muscle_group: newExMuscle, created_by: userId });
+                              setNewExName("");setShowAddCustomExercise(false);
+                              const { data } = await supabase.from("custom_exercises").select("*").order("name");
+                              if (data) setCustomExercises(data);
+                            }} className="flex-1 py-1 bg-primary text-primary-foreground font-semibold rounded-md text-[10px]">Spara</button>
                             <button onClick={() => setShowAddCustomExercise(false)} className="px-2 py-1 bg-secondary text-muted-foreground rounded-md text-[10px]">Avbryt</button>
                           </div>
                         </div> :
@@ -2382,6 +2478,25 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
             </button>
             <button onClick={executeDeleteExercise} className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
               Ta bort
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {propagateDialog && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setPropagateDialog(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-sm">Tillämpa på framtida veckor?</h3>
+          <p className="text-sm text-muted-foreground">
+            Vill du tillämpa ändringen på alla <span className="font-semibold text-foreground">{propagateDialog.plan.day}</span>-pass i efterföljande veckor? Vikten ökas progressivt.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => handlePropagate(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+              Bara denna vecka
+            </button>
+            <button onClick={() => handlePropagate(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
+              Alla framtida
             </button>
           </div>
         </div>

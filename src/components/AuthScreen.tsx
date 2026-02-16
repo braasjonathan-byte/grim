@@ -365,11 +365,11 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
       <div className="w-full max-w-sm space-y-8 animate-fade-in">
         <div className="text-center space-y-2">
           <Dumbbell className="w-12 h-12 text-primary mx-auto" />
-          <h1 className="text-3xl font-black tracking-tight">Grim.
-            <span className="text-primary">
-            </span>
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-black tracking-tight">Grim.</h1>
+          <p className="text-xs text-muted-foreground italic">
+            lift heavier than runners, run faster than lifters
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
             {isLogin ? "Logga in" : "Skapa konto"}
           </p>
         </div>

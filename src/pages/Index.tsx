@@ -10,6 +10,7 @@ import FriendsView from "@/components/FriendsView";
 import OneRMCalculator from "@/components/OneRMCalculator";
 import PulseZoneCalculator from "@/components/PulseZoneCalculator";
 import CalorieCalculator from "@/components/CalorieCalculator";
+import WorkoutTimer from "@/components/WorkoutTimer";
 import ChangePassword from "@/components/ChangePassword";
 import WorkoutStats from "@/components/WorkoutStats";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
@@ -19,6 +20,7 @@ import AnnouncementInbox from "@/components/AnnouncementInbox";
 import AdminUserList from "@/components/AdminUserList";
 import NotificationSettings from "@/components/NotificationSettings";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 
 type Tab = "workout" | "friends" | "calc" | "stats" | "settings";
 
@@ -78,6 +80,7 @@ const Index = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   usePushNotifications(user?.id ?? null);
+  useOfflineSync();
 
   // Capture beforeinstallprompt for native Android install
   useEffect(() => {
@@ -428,6 +431,7 @@ const Index = () => {
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
+            <WorkoutTimer />
             <OneRMCalculator />
             <PulseZoneCalculator />
             <CalorieCalculator />
