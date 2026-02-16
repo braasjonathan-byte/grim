@@ -99,6 +99,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
+  const [initialWeekSet, setInitialWeekSet] = useState(false);
   const [weeks, setWeeks] = useState<number[]>([]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [comments, setComments] = useState<Record<string, string>>({});
@@ -180,8 +181,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
 
-      // Auto-navigate to the first incomplete week
-      if (wks.length > 0) {
+      // Auto-navigate to the first incomplete week only on initial load
+      if (wks.length > 0 && !initialWeekSet) {
         const compMap: Record<string, boolean> = {};
         if (compData) {
           for (const c of compData) {
@@ -193,6 +194,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           return weekPlans.length > 0 && !weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
         });
         setCurrentWeek(targetWeek ?? wks[wks.length - 1]);
+        setInitialWeekSet(true);
       }
 
       if (planData.length === 0) {
@@ -237,7 +239,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     } else {
       setFriendComments([]);
     }
-  }, [userId, currentWeek]);
+  }, [userId]);
 
   useEffect(() => {
     fetchData();
