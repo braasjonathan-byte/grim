@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 
 interface FriendActivity {
@@ -21,6 +21,7 @@ interface FriendProfile {
   user_id: string;
   nickname: string;
   avatar_url: string | null;
+  is_honorary?: boolean;
 }
 
 interface Friendship {
@@ -165,7 +166,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, nickname, avatar_url")
+      .select("user_id, nickname, avatar_url, is_honorary")
       .in("user_id", otherIds);
 
     const profileMap = new Map((profiles || []).map((p) => [p.user_id, p]));
@@ -930,11 +931,16 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                   onClick={() => viewFriendWorkouts(friend)}
                   className="flex items-center gap-3 flex-1 min-w-0 text-left"
                 >
-                  <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  <div className="relative w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {friend.profile.avatar_url ? (
                       <img src={friend.profile.avatar_url} alt={friend.profile.nickname} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+                    )}
+                    {friend.profile.is_honorary && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center z-10">
+                        <Crown className="w-3.5 h-3.5 text-warning drop-shadow-sm" />
+                      </div>
                     )}
                   </div>
                   <span className="font-semibold text-sm">{friend.profile.nickname}</span>

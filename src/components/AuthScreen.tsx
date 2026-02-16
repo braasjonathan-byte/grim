@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dumbbell, Eye, EyeOff, ArrowLeft, ShieldQuestion } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,6 +29,18 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   const [hasEmail, setHasEmail] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  // Capture referral code from URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      setReferralCode(ref);
+      // Clean URL without losing state
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const fakeEmail = (nick: string) => `${nick.toLowerCase().trim()}@trainapp.local`;
 
@@ -62,7 +74,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         return;
       }
     } else {
-      const { error: signupError } = await supabase.auth.signUp({
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -73,6 +85,13 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         setError("Registrering misslyckades. Försök med ett annat namn.");
         setLoading(false);
         return;
+      }
+      // Process referral code if present
+      if (referralCode && signupData?.user) {
+        // Small delay to ensure profile is created by trigger
+        setTimeout(async () => {
+          await supabase.rpc("process_referral", { referral_code_input: referralCode });
+        }, 1000);
       }
     }
 
