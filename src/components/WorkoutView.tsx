@@ -239,7 +239,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     } else {
       setFriendComments([]);
     }
-  }, [userId]);
+  }, [userId, initialWeekSet]);
 
   useEffect(() => {
     fetchData();
