@@ -184,7 +184,7 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
         className="fixed z-50 w-14 h-14 rounded-full overflow-hidden cursor-grab active:cursor-grabbing select-none border-none shadow-none outline-none ring-0 p-0"
         aria-label="Öppna Grim AI"
       >
-        <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover block scale-[1.15] translate-y-[10%]" draggable={false} />
+        <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover block scale-[1.05] translate-y-[20%]" draggable={false} />
       </div>
 
       {/* Chat popup - Messenger style */}
