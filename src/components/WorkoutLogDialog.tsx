@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Footprints, Heart, Timer, Route, Save, Calculator } from "lucide-react";
+import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
 
 interface WorkoutLogDialogProps {
@@ -76,20 +76,34 @@ const WorkoutLogDialog = ({
   const [tempo, setTempo] = useState(existingLog?.logged_tempo || "");
   const [pulse, setPulse] = useState(existingLog?.logged_pulse?.toString() || "");
   const [distance, setDistance] = useState(existingLog?.logged_distance_km?.toString() || "");
+  const [duration, setDuration] = useState("");
   const [saving, setSaving] = useState(false);
   const [autoCalculated, setAutoCalculated] = useState(false);
+  const [tempoAutoCalculated, setTempoAutoCalculated] = useState(false);
 
-  // Auto-calculate distance when tempo changes
+  // Auto-calculate tempo from duration and distance
+  const calculateTempoFromDurationAndDistance = useCallback(() => {
+    if (!duration.trim() || !distance.trim()) return;
+    const distKm = parseFloat(distance.replace(",", "."));
+    const durMin = parseFloat(duration.replace(",", "."));
+    if (!distKm || distKm <= 0 || !durMin || durMin <= 0) return;
+
+    const minPerKm = durMin / distKm;
+    const mins = Math.floor(minPerKm);
+    const secs = Math.round((minPerKm - mins) * 60);
+    setTempo(`${mins}:${secs.toString().padStart(2, "0")}`);
+    setTempoAutoCalculated(true);
+  }, [duration, distance]);
+
+  // Auto-calculate distance when tempo changes (original logic)
   const calculateDistance = useCallback(() => {
     if (!tempo.trim()) return;
 
     const secsPerKm = tempoToSeconds(tempo.trim());
     if (!secsPerKm || secsPerKm <= 0) return;
 
-    // First check if details has a fixed distance (e.g. "8 km" for långpass)
     const existingDist = parseExistingDistance(details);
     if (existingDist) {
-      // Distance is already known from the plan, use it directly
       if (!distance) {
         setDistance(existingDist.toString());
         setAutoCalculated(true);
@@ -97,7 +111,6 @@ const WorkoutLogDialog = ({
       return;
     }
 
-    // Calculate from duration
     const runMinutes = parseRunningMinutes(details);
     if (!runMinutes) return;
 
@@ -110,10 +123,16 @@ const WorkoutLogDialog = ({
 
   useEffect(() => {
     // Only auto-calculate if user hasn't manually entered distance
-    if (!existingLog?.logged_distance_km && tempo.trim()) {
+    if (!existingLog?.logged_distance_km && tempo.trim() && !tempoAutoCalculated) {
       calculateDistance();
     }
-  }, [tempo, calculateDistance, existingLog]);
+  }, [tempo, calculateDistance, existingLog, tempoAutoCalculated]);
+
+  useEffect(() => {
+    if (duration.trim() && distance.trim()) {
+      calculateTempoFromDurationAndDistance();
+    }
+  }, [duration, distance, calculateTempoFromDurationAndDistance]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -158,9 +177,58 @@ const WorkoutLogDialog = ({
         <p className="text-xs text-muted-foreground">{details}</p>
 
         <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Tid (min)
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={duration}
+                onChange={(e) => {
+                  setDuration(e.target.value);
+                  setTempoAutoCalculated(false);
+                }}
+                placeholder="t.ex. 30"
+                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground flex items-center gap-1">
+                <Route className="w-3 h-3" /> Distans (km)
+                {autoCalculated && (
+                  <span className="flex items-center gap-0.5 text-primary ml-1">
+                    <Calculator className="w-3 h-3" />
+                    <span className="text-[10px]">Beräknad</span>
+                  </span>
+                )}
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={distance}
+                onChange={(e) => {
+                  setDistance(e.target.value);
+                  setAutoCalculated(false);
+                }}
+                placeholder="t.ex. 10"
+                className={`w-full text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground ${
+                  autoCalculated ? "bg-primary/10 ring-1 ring-primary/30" : "bg-secondary"
+                }`}
+              />
+            </div>
+          </div>
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground flex items-center gap-1">
               <Timer className="w-3 h-3" /> Tempo (min/km)
+              {tempoAutoCalculated && (
+                <span className="flex items-center gap-0.5 text-primary ml-1">
+                  <Calculator className="w-3 h-3" />
+                  <span className="text-[10px]">Beräknad</span>
+                </span>
+              )}
             </label>
             <input
               type="text"
@@ -168,10 +236,12 @@ const WorkoutLogDialog = ({
               onChange={(e) => {
                 setTempo(e.target.value);
                 setAutoCalculated(false);
+                setTempoAutoCalculated(false);
               }}
               placeholder="t.ex. 5:30"
-              className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-              autoFocus
+              className={`w-full text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground ${
+                tempoAutoCalculated ? "bg-primary/10 ring-1 ring-primary/30" : "bg-secondary"
+              }`}
             />
           </div>
           <div className="space-y-1">
@@ -185,30 +255,6 @@ const WorkoutLogDialog = ({
               onChange={(e) => setPulse(e.target.value)}
               placeholder="t.ex. 155"
               className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground flex items-center gap-1">
-              <Route className="w-3 h-3" /> Distans (km)
-              {autoCalculated && (
-                <span className="flex items-center gap-0.5 text-primary ml-1">
-                  <Calculator className="w-3 h-3" />
-                  <span className="text-[10px]">Beräknad</span>
-                </span>
-              )}
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={distance}
-              onChange={(e) => {
-                setDistance(e.target.value);
-                setAutoCalculated(false);
-              }}
-              placeholder="t.ex. 10"
-              className={`w-full text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground ${
-                autoCalculated ? "bg-primary/10 ring-1 ring-primary/30" : "bg-secondary"
-              }`}
             />
           </div>
         </div>
