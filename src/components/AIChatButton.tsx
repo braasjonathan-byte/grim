@@ -169,25 +169,23 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
 
   return (
     <>
-      {/* Floating button */}
-      {!open && (
-        <div
-          ref={btnRef as any}
-          onClick={() => { if (!didMove.current) setOpen(true); }}
-          role="button"
-          tabIndex={0}
-          style={{
-            left: btnPos.x,
-            top: btnPos.y,
-            touchAction: "none",
-          }}
-          className="fixed z-50 w-14 h-14 rounded-full overflow-hidden cursor-grab active:cursor-grabbing select-none border-none shadow-none outline-none ring-0 p-0"
-          aria-label="Öppna Grim AI"
-        >
-          <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover block scale-[1.15]" draggable={false} />
-          <div className="absolute inset-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.5)]" />
-        </div>
-      )}
+      {/* Floating button - always rendered to keep drag state, hidden when chat open */}
+      <div
+        ref={btnRef as any}
+        onClick={() => { if (!didMove.current && !open) setOpen(true); }}
+        role="button"
+        tabIndex={0}
+        style={{
+          left: btnPos.x,
+          top: btnPos.y,
+          touchAction: "none",
+          display: open ? "none" : undefined,
+        }}
+        className="fixed z-50 w-14 h-14 rounded-full overflow-hidden cursor-grab active:cursor-grabbing select-none border-none shadow-none outline-none ring-0 p-0"
+        aria-label="Öppna Grim AI"
+      >
+        <img src={GRIM_AVATAR} alt="Grim" className="w-full h-full object-cover block scale-[1.15]" draggable={false} />
+      </div>
 
       {/* Chat popup - Messenger style */}
       {open && (
