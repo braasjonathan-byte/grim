@@ -203,8 +203,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         const allSingle = planData.every((p) => p.week === 0);
         setMode(allSingle ? "single" : "plan");
       }
-    } else {
-      setMode("choose");
+    }
+    // If planData is null (query failed / auth not ready), stay in "loading" and retry
+    if (!planData) {
+      return;
     }
 
     if (compData) {
@@ -243,6 +245,11 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
 
   useEffect(() => {
     fetchData();
+    // Retry once after a short delay if auth session may not be ready yet
+    const retryTimer = setTimeout(() => {
+      if (mode === "loading") fetchData();
+    }, 1500);
+    return () => clearTimeout(retryTimer);
   }, [fetchData]);
 
   useEffect(() => {
