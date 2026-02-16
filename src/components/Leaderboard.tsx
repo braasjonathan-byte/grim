@@ -136,14 +136,16 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
               </div>
 
               {/* Avatar */}
-              <div className="relative w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {entry.avatar_url ? (
-                  <img src={entry.avatar_url} alt={entry.nickname} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xs font-bold text-primary">{entry.nickname[0]?.toUpperCase()}</span>
-                )}
+              <div className="relative w-8 h-8 flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                  {entry.avatar_url ? (
+                    <img src={entry.avatar_url} alt={entry.nickname} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-primary">{entry.nickname[0]?.toUpperCase()}</span>
+                  )}
+                </div>
                 {entry.is_honorary && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center">
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
                     <Crown className="w-3.5 h-3.5 text-warning drop-shadow-sm" />
                   </div>
                 )}

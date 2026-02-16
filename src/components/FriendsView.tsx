@@ -931,15 +931,17 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                   onClick={() => viewFriendWorkouts(friend)}
                   className="flex items-center gap-3 flex-1 min-w-0 text-left"
                 >
-                  <div className="relative w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {friend.profile.avatar_url ? (
-                      <img src={friend.profile.avatar_url} alt={friend.profile.nickname} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
-                    )}
+                  <div className="relative w-9 h-9 flex-shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+                      {friend.profile.avatar_url ? (
+                        <img src={friend.profile.avatar_url} alt={friend.profile.nickname} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+                      )}
+                    </div>
                     {friend.profile.is_honorary && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center z-10">
-                        <Crown className="w-3.5 h-3.5 text-warning drop-shadow-sm" />
+                      <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
+                        <Crown className="w-4 h-4 text-warning drop-shadow-sm" />
                       </div>
                     )}
                   </div>
