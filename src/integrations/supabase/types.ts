@@ -116,6 +116,54 @@ export type Database = {
         }
         Relationships: []
       }
+      pr_goals: {
+        Row: {
+          created_at: string
+          exercise: string
+          id: string
+          target_date: string | null
+          target_weight: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise: string
+          id?: string
+          target_date?: string | null
+          target_weight: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise?: string
+          id?: string
+          target_date?: string | null
+          target_weight?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pr_stars: {
+        Row: {
+          created_at: string
+          exercise: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exercise?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
@@ -124,9 +172,12 @@ export type Database = {
           experience_level: string | null
           gender: string | null
           id: string
+          is_honorary: boolean
           max_distance_km: number | null
           must_change_password: boolean
           nickname: string
+          referral_code: string | null
+          referred_by: string | null
           time_10km_min: number | null
           training_days_per_week: number | null
           user_id: string
@@ -138,9 +189,12 @@ export type Database = {
           experience_level?: string | null
           gender?: string | null
           id?: string
+          is_honorary?: boolean
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname: string
+          referral_code?: string | null
+          referred_by?: string | null
           time_10km_min?: number | null
           training_days_per_week?: number | null
           user_id: string
@@ -152,9 +206,12 @@ export type Database = {
           experience_level?: string | null
           gender?: string | null
           id?: string
+          is_honorary?: boolean
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname?: string
+          referral_code?: string | null
+          referred_by?: string | null
           time_10km_min?: number | null
           training_days_per_week?: number | null
           user_id?: string
@@ -412,6 +469,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_leaderboard: {
+        Args: { filter_month?: number; filter_year: number }
+        Returns: {
+          avatar_url: string
+          done_count: number
+          is_honorary: boolean
+          nickname: string
+          user_id: string
+        }[]
+      }
       get_my_security_question_indices: {
         Args: never
         Returns: {
@@ -441,6 +508,10 @@ export type Database = {
         Returns: boolean
       }
       is_jonne: { Args: never; Returns: boolean }
+      process_referral: {
+        Args: { referral_code_input: string }
+        Returns: boolean
+      }
       search_users_by_nickname: {
         Args: { requesting_user_id: string; search_term: string }
         Returns: {

@@ -15,6 +15,7 @@ import ChangePassword from "@/components/ChangePassword";
 import WorkoutStats from "@/components/WorkoutStats";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
 import SettingsPanel from "@/components/SettingsPanel";
+import ReferralLink from "@/components/ReferralLink";
 import SuggestionBox from "@/components/SuggestionBox";
 import AnnouncementInbox from "@/components/AnnouncementInbox";
 import AdminUserList from "@/components/AdminUserList";
@@ -73,6 +74,7 @@ const Index = () => {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [forceChangePassword, setForceChangePassword] = useState(false);
   const [userRole, setUserRole] = useState<string>("member");
+  const [isHonorary, setIsHonorary] = useState(false);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
@@ -100,11 +102,12 @@ const Index = () => {
           setTimeout(async () => {
             const { data } = await supabase.
             from("profiles").
-            select("nickname, must_change_password").
+            select("nickname, must_change_password, is_honorary").
             eq("user_id", session.user.id).
             single();
             if (data) {
               setNickname(data.nickname);
+              setIsHonorary((data as any).is_honorary || false);
               if (data.must_change_password) {
                 setForceChangePassword(true);
                 setShowChangePassword(true);
@@ -127,12 +130,13 @@ const Index = () => {
       if (session?.user) {
         supabase.
         from("profiles").
-        select("nickname, must_change_password").
+        select("nickname, must_change_password, is_honorary").
         eq("user_id", session.user.id).
         single().
         then(({ data }) => {
           if (data) {
             setNickname(data.nickname);
+            setIsHonorary((data as any).is_honorary || false);
             if (data.must_change_password) {
               setForceChangePassword(true);
               setShowChangePassword(true);
@@ -431,6 +435,7 @@ const Index = () => {
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
+            <ReferralLink userId={user.id} />
             <WorkoutTimer />
             <OneRMCalculator />
             <PulseZoneCalculator />
@@ -441,8 +446,8 @@ const Index = () => {
         <div className="py-2 space-y-4">
             {/* Role badge */}
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${userRole === "admin" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
-                {userRole === "admin" ? "👑 Admin" : "👤 Medlem"}
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${userRole === "admin" ? "bg-primary/20 text-primary" : isHonorary ? "bg-warning/20 text-warning" : "bg-secondary text-muted-foreground"}`}>
+                {userRole === "admin" ? "👑 Admin" : isHonorary ? "👑 Hedersmedlem" : "👤 Medlem"}
               </span>
             </div>
             <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />

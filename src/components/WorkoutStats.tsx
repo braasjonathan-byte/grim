@@ -4,6 +4,7 @@ import { BarChart3, CheckCircle, XCircle, CalendarDays, Footprints } from "lucid
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
+import Leaderboard from "@/components/Leaderboard";
 
 interface WorkoutStatsProps {
   userId: string;
@@ -173,6 +174,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           })}
         </div>
       )}
+
+      {/* Leaderboard */}
+      <Leaderboard userId={userId} />
 
       {/* Weight progression chart */}
       <WeightProgressionChart userId={userId} />
