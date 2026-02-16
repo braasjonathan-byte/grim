@@ -145,8 +145,8 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
                   )}
                 </div>
                 {entry.is_honorary && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
-                    <Crown className="w-3.5 h-3.5 text-warning drop-shadow-sm" />
+                  <div className="absolute -top-2 -right-2 z-10">
+                    <Crown className="w-4.5 h-4.5 text-warning drop-shadow-sm" />
                   </div>
                 )}
               </div>
