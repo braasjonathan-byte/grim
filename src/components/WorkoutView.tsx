@@ -161,6 +161,13 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     lineIndex: number;
   } | null>(null);
 
+  // Confirm unchecked sets dialog
+  const [uncheckedSetsDialog, setUncheckedSetsDialog] = useState<{
+    week: number;
+    day: string;
+    uncheckedCount: number;
+  } | null>(null);
+
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
     supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
@@ -255,7 +262,47 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     return matchesSearch && matchesMuscle;
   });
 
+  // Helper: count unchecked sets for a workout
+  const countUncheckedSets = (week: number, day: string): number => {
+    const k = `${week}-${day}`;
+    const plan = plans.find(p => p.week === week && p.day === day);
+    if (!plan || !plan.details) return 0;
+    const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    let unchecked = 0;
+    for (const part of parts) {
+      const { name: pName, weight: pWeight } = parseExerciseWeight(part);
+      const isCondFormat = pWeight && (pWeight.includes("min") || pWeight.includes("/km"));
+      if (isCondFormat) continue;
+      const { clean: cp } = extractRpe(pWeight || '');
+      const sm = cp?.match(/^(\d+)[×x](\d+)/i);
+      const fbm = !sm && cp ? cp.match(/(\d+)\s*[×x]\s*\S+/) : null;
+      const sc = sm ? parseInt(sm[1]) : fbm ? parseInt(fbm[1]) : 1;
+      const setsVal = getSetsDone(k, pName);
+      for (let i = 0; i < sc; i++) {
+        if (setsVal[i] !== "1") unchecked++;
+      }
+    }
+    return unchecked;
+  };
+
   const toggleDone = async (week: number, day: string) => {
+    const key = `${week}-${day}`;
+    const current = completions[key];
+    const newDone = !current?.done;
+
+    // If marking as done, check for unchecked sets first
+    if (newDone) {
+      const unchecked = countUncheckedSets(week, day);
+      if (unchecked > 0) {
+        setUncheckedSetsDialog({ week, day, uncheckedCount: unchecked });
+        return;
+      }
+    }
+
+    await performToggleDone(week, day);
+  };
+
+  const performToggleDone = async (week: number, day: string) => {
     const key = `${week}-${day}`;
     const current = completions[key];
     const newDone = !current?.done;
@@ -277,12 +324,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       { onConflict: "user_id,week,day" }
     );
 
-    // Send push notification to friends
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
       notifyFriendsOfCompletion(day, week, plan?.session_name || day);
 
-      // Check if all days in this week are now completed (plan mode only)
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
         const scheduledPlans = weekPlans.filter((p) => p.session_name.trim() !== "" && p.details.trim() !== "");
@@ -2463,6 +2508,35 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     )}
     {showFireworks && (
       <FireworksOverlay onComplete={() => setShowFireworks(false)} />
+    )}
+    {uncheckedSetsDialog && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-base">Obockade set</h3>
+          <p className="text-sm text-muted-foreground">
+            Du har {uncheckedSetsDialog.uncheckedCount} set som inte är avbockade. Vill du klarmarkera passet ändå?
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setUncheckedSetsDialog(null)}
+              className="flex-1 py-2 bg-secondary text-secondary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={async () => {
+                const { week, day } = uncheckedSetsDialog;
+                setUncheckedSetsDialog(null);
+                await performToggleDone(week, day);
+              }}
+              className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
+            >
+              Klarmarkera
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     {deleteExerciseConfirm && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
