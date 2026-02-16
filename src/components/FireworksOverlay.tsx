@@ -35,6 +35,8 @@ const FireworksOverlay = ({ onComplete }: { onComplete: () => void }) => {
   const animFrameRef = useRef<number>(0);
   const [visible, setVisible] = useState(true);
   const burstCountRef = useRef(0);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -94,7 +96,7 @@ const FireworksOverlay = ({ onComplete }: { onComplete: () => void }) => {
     // End after ~3 seconds
     const endTimer = setTimeout(() => {
       setVisible(false);
-      onComplete();
+      onCompleteRef.current();
     }, 3000);
 
     const animate = () => {
@@ -104,7 +106,7 @@ const FireworksOverlay = ({ onComplete }: { onComplete: () => void }) => {
         for (const p of burst.particles) {
           p.x += p.vx;
           p.y += p.vy;
-          p.vy += 0.06; // gravity
+          p.vy += 0.06;
           p.vx *= 0.98;
           p.life--;
 
@@ -116,11 +118,9 @@ const FireworksOverlay = ({ onComplete }: { onComplete: () => void }) => {
           ctx.fill();
         }
 
-        // Remove dead particles
         burst.particles = burst.particles.filter((p) => p.life > 0);
       }
 
-      // Remove empty bursts
       burstsRef.current = burstsRef.current.filter((b) => b.particles.length > 0);
 
       ctx.globalAlpha = 1;
@@ -135,7 +135,7 @@ const FireworksOverlay = ({ onComplete }: { onComplete: () => void }) => {
       clearTimeout(endTimer);
       window.removeEventListener("resize", resize);
     };
-  }, [onComplete]);
+  }, []);
 
   if (!visible) return null;
 
