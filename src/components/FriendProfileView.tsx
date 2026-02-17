@@ -27,10 +27,11 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: cfg }, { data: eqItems }, { data: completions }, { data: prData }, { data: profile }] = await Promise.all([
+      const now = new Date();
+      const [{ data: cfg }, { data: eqItems }, { data: leaderboard }, { data: prData }, { data: profile }] = await Promise.all([
         supabase.from("avatar_config").select("*").eq("user_id", friendUserId).maybeSingle(),
         supabase.from("avatar_equipped_items").select("slot, item_id, avatar_shop_items(*)").eq("user_id", friendUserId),
-        supabase.from("workout_completions").select("id").eq("user_id", friendUserId).eq("done", true),
+        supabase.rpc("get_leaderboard", { filter_year: now.getFullYear() }),
         supabase.from("workout_completions").select("logged_weights").eq("user_id", friendUserId).eq("done", true).not("logged_weights", "is", null),
         supabase.from("profiles").select("gender").eq("user_id", friendUserId).single(),
       ]);
@@ -57,7 +58,10 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         setEquipped(eq);
       }
 
-      const totalWorkouts = completions?.length || 0;
+      // Get workout count from leaderboard
+      const friendEntry = leaderboard?.find((e: any) => e.user_id === friendUserId);
+      const totalWorkouts = friendEntry?.done_count || 0;
+
       let bestExercise = "";
       let bestWeight = 0;
       if (prData) {
