@@ -11,6 +11,7 @@ export interface AvatarConfig {
   hair_style: string;
   hair_color: string;
   gender?: string;
+  mouth_expression?: string;
 }
 
 export interface EquippedItems {
@@ -31,6 +32,12 @@ const FAT: Record<string, number> = { low: 0.85, medium: 1, high: 1.25 };
 const MUSCLE: Record<string, number> = { low: 0.88, medium: 1, high: 1.2 };
 
 const S = 48;
+
+// Head constants - used everywhere for consistent positioning
+const HEAD_Y = 1.62;
+const HEAD_R = 0.22;
+const HEAD_TOP = HEAD_Y + HEAD_R; // ~1.84
+const HEAD_SURFACE = HEAD_R + 0.015; // minimum offset to stay outside head
 
 /* ─── Finger helper ─── */
 function Finger({ position, rotation, material, length = 0.06, radius = 0.012 }: any) {
@@ -64,31 +71,24 @@ function Hand({ position, material, side = 1 }: any) {
 
 /* ─── Hat Styles ─── */
 function HatStyle({ type, headR, hatMat }: { type: string; headR: number; hatMat: THREE.MeshStandardMaterial }) {
-  const darkBandMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#222222", roughness: 0.4 }), []);
-
   switch (type) {
     case "cap":
     case "snapback":
       return (
         <group>
-          {/* Fitted cap crown - follows head shape */}
-          <mesh position={[0, 1.73, -0.01]} material={hatMat}>
-            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
+          <mesh position={[0, HEAD_Y + 0.12, -0.01]} material={hatMat}>
+            <sphereGeometry args={[headR + 0.04, S, S, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
           </mesh>
-          {/* Structured front panel - slightly raised */}
-          <mesh position={[0, 1.74, 0.04]} material={hatMat}>
-            <sphereGeometry args={[headR + 0.035, S, S, 0, Math.PI * 2, 0, Math.PI * 0.35]} />
+          <mesh position={[0, HEAD_Y + 0.13, 0.04]} material={hatMat}>
+            <sphereGeometry args={[headR + 0.045, S, S, 0, Math.PI * 2, 0, Math.PI * 0.35]} />
           </mesh>
-          {/* Curved brim - extending forward */}
-          <mesh position={[0, 1.71, 0.12]} material={hatMat} rotation={[0.25, 0, 0]}>
+          <mesh position={[0, HEAD_Y + 0.09, 0.14]} material={hatMat} rotation={[0.25, 0, 0]}>
             <boxGeometry args={[0.22, 0.012, 0.12]} />
           </mesh>
-          {/* Brim curvature - rounded front edge */}
-          <mesh position={[0, 1.7, 0.18]} material={hatMat} rotation={[0.3, 0, 0]}>
+          <mesh position={[0, HEAD_Y + 0.08, 0.20]} material={hatMat} rotation={[0.3, 0, 0]}>
             <cylinderGeometry args={[0.11, 0.11, 0.012, S, 1, false, -Math.PI * 0.5, Math.PI]} />
           </mesh>
-          {/* Button on top */}
-          <mesh position={[0, 1.76 + headR * 0.13, -0.01]} material={hatMat}>
+          <mesh position={[0, HEAD_TOP + 0.06, -0.01]} material={hatMat}>
             <sphereGeometry args={[0.015, 12, 12]} />
           </mesh>
         </group>
@@ -97,23 +97,19 @@ function HatStyle({ type, headR, hatMat }: { type: string; headR: number; hatMat
     case "beanie":
       return (
         <group>
-          {/* Snug beanie that hugs the head */}
-          <mesh position={[0, 1.72, -0.01]} material={hatMat}>
-            <sphereGeometry args={[headR + 0.025, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          <mesh position={[0, HEAD_Y + 0.11, -0.01]} material={hatMat}>
+            <sphereGeometry args={[headR + 0.035, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
           </mesh>
-          {/* Folded brim band */}
-          <mesh position={[0, 1.68, 0]} material={hatMat}>
-            <cylinderGeometry args={[headR + 0.028, headR + 0.03, 0.04, S]} />
+          <mesh position={[0, HEAD_Y + 0.06, 0]} material={hatMat}>
+            <cylinderGeometry args={[headR + 0.038, headR + 0.04, 0.04, S]} />
           </mesh>
-          {/* Ribbed texture lines on brim */}
           {[0, 1, 2].map((i) => (
-            <mesh key={i} position={[0, 1.665 + i * 0.012, 0]}>
-              <torusGeometry args={[headR + 0.03, 0.003, 6, S]} />
+            <mesh key={i} position={[0, HEAD_Y + 0.045 + i * 0.012, 0]}>
+              <torusGeometry args={[headR + 0.04, 0.003, 6, S]} />
               <meshStandardMaterial color={hatMat.color} roughness={0.8} />
             </mesh>
           ))}
-          {/* Slight slouch at top */}
-          <mesh position={[0, 1.78, -0.02]} material={hatMat}>
+          <mesh position={[0, HEAD_TOP + 0.08, -0.02]} material={hatMat}>
             <sphereGeometry args={[0.06, S, S]} />
           </mesh>
         </group>
@@ -121,42 +117,36 @@ function HatStyle({ type, headR, hatMat }: { type: string; headR: number; hatMat
 
     case "headband":
       return (
-        <group>
-          {/* Thin elastic headband */}
-          <mesh position={[0, 1.72, 0]} material={hatMat}>
-            <torusGeometry args={[headR + 0.015, 0.018, 12, S]} />
-          </mesh>
-        </group>
+        <mesh position={[0, HEAD_Y + 0.1, 0]} material={hatMat}>
+          <torusGeometry args={[headR + 0.025, 0.018, 12, S]} />
+        </mesh>
       );
 
     case "crown":
       return (
         <group>
-          {/* Crown base band */}
-          <mesh position={[0, 1.73, 0]} material={hatMat}>
-            <cylinderGeometry args={[headR + 0.02, headR + 0.025, 0.04, S]} />
+          <mesh position={[0, HEAD_Y + 0.12, 0]} material={hatMat}>
+            <cylinderGeometry args={[headR + 0.03, headR + 0.035, 0.04, S]} />
           </mesh>
-          {/* Crown points */}
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
             const angle = (i / 8) * Math.PI * 2;
             return (
               <mesh key={i} position={[
-                Math.sin(angle) * (headR + 0.02),
-                1.78,
-                Math.cos(angle) * (headR + 0.02)
+                Math.sin(angle) * (headR + 0.03),
+                HEAD_Y + 0.18,
+                Math.cos(angle) * (headR + 0.03)
               ]} material={hatMat}>
                 <coneGeometry args={[0.02, 0.05, 6]} />
               </mesh>
             );
           })}
-          {/* Gem accents on alternating points */}
           {[0, 2, 4, 6].map((i) => {
             const angle = (i / 8) * Math.PI * 2;
             return (
               <mesh key={`gem${i}`} position={[
-                Math.sin(angle) * (headR + 0.025),
-                1.755,
-                Math.cos(angle) * (headR + 0.025)
+                Math.sin(angle) * (headR + 0.035),
+                HEAD_Y + 0.155,
+                Math.cos(angle) * (headR + 0.035)
               ]}>
                 <sphereGeometry args={[0.01, 8, 8]} />
                 <meshStandardMaterial color="#FF0000" roughness={0.1} metalness={0.8} />
@@ -169,25 +159,22 @@ function HatStyle({ type, headR, hatMat }: { type: string; headR: number; hatMat
     case "bucket_hat":
       return (
         <group>
-          {/* Rounded crown */}
-          <mesh position={[0, 1.74, -0.01]} material={hatMat}>
-            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
+          <mesh position={[0, HEAD_Y + 0.13, -0.01]} material={hatMat}>
+            <sphereGeometry args={[headR + 0.04, S, S, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
           </mesh>
-          {/* Wide downward-angled brim all around */}
-          <mesh position={[0, 1.7, 0]} material={hatMat} rotation={[0.05, 0, 0]}>
-            <cylinderGeometry args={[headR + 0.03, headR + 0.12, 0.015, S]} />
+          <mesh position={[0, HEAD_Y + 0.08, 0]} material={hatMat} rotation={[0.05, 0, 0]}>
+            <cylinderGeometry args={[headR + 0.04, headR + 0.14, 0.015, S]} />
           </mesh>
         </group>
       );
 
     default:
-      // Fallback generic hat
       return (
         <group>
-          <mesh position={[0, 1.73, -0.01]} material={hatMat}>
-            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
+          <mesh position={[0, HEAD_Y + 0.12, -0.01]} material={hatMat}>
+            <sphereGeometry args={[headR + 0.04, S, S, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
           </mesh>
-          <mesh position={[0, 1.71, 0.02]} material={hatMat} rotation={[0.1, 0, 0]}>
+          <mesh position={[0, HEAD_Y + 0.09, 0.02]} material={hatMat} rotation={[0.1, 0, 0]}>
             <cylinderGeometry args={[0.25, 0.25, 0.015, S]} />
           </mesh>
         </group>
@@ -195,84 +182,61 @@ function HatStyle({ type, headR, hatMat }: { type: string; headR: number; hatMat
   }
 }
 
-/* ─── Hair cap base ─── */
-function HairCap({ headR, hairMat, coverage = 0.52 }: { headR: number; hairMat: THREE.MeshStandardMaterial; coverage?: number }) {
-  return (
-    <group>
-      <mesh position={[0, 1.64, 0]} material={hairMat}>
-        <sphereGeometry args={[headR + 0.02, S, S, 0, Math.PI * 2, 0, Math.PI * coverage]} />
-      </mesh>
-      {/* Side volume flush with head */}
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (headR * 0.6), 1.62, -0.03]} material={hairMat}>
-          <sphereGeometry args={[0.06, S, S]} />
-        </mesh>
-      ))}
-      {/* Back volume */}
-      <mesh position={[0, 1.58, -(headR * 0.65)]} material={hairMat}>
-        <sphereGeometry args={[0.08, S, S]} />
-      </mesh>
-    </group>
-  );
-}
-
-/* ─── Hair strand helper ─── */
-function HairStrand({ position, length, radius, rotation, material }: any) {
-  return (
-    <mesh position={position} rotation={rotation || [0, 0, 0]} material={material}>
-      <capsuleGeometry args={[radius, length, 6, 16]} />
-    </mesh>
-  );
-}
-
-/* ─── Hair Styles ─── */
+/* ─── Hair Styles ─── 
+   All hair positioned OUTSIDE the head sphere.
+   Head: center=(0, 1.62, 0), radius=0.22
+   Surface at top: y ≈ 1.84, sides: x ≈ ±0.22, back: z ≈ -0.22
+*/
 function HairStyle({ style, headR, hairMat }: { style: string; headR: number; hairMat: THREE.MeshStandardMaterial }) {
-  // Center Y of head is 1.62, top ~1.84
-  const headY = 1.62;
-  const topY = headY + headR;
-  
+  // Helper: position on head surface given spherical coords
+  // theta: 0=top, pi/2=equator; phi: 0=front, pi=back
+  const onSurface = (theta: number, phi: number, offset: number = 0.02) => {
+    const r = headR + offset;
+    return [
+      r * Math.sin(theta) * Math.sin(phi),
+      HEAD_Y + r * Math.cos(theta),
+      r * Math.sin(theta) * Math.cos(phi)
+    ] as [number, number, number];
+  };
+
   switch (style) {
     case "buzz":
       return (
-        <mesh position={[0, headY + 0.04, -0.01]} material={hairMat}>
-          <sphereGeometry args={[headR + 0.008, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+        <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+          <sphereGeometry args={[headR + 0.012, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
         </mesh>
       );
 
     case "short":
       return (
         <group>
-          {/* Tight cap */}
-          <mesh position={[0, headY + 0.04, 0]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.02, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          {/* Main cap sitting on top of head */}
+          <mesh position={[0, HEAD_Y + 0.04, 0]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.025, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
           </mesh>
-          {/* Slight volume on top */}
-          <mesh position={[0, topY - 0.02, 0.02]} material={hairMat}>
+          {/* Volume on top */}
+          <mesh position={[0, HEAD_TOP + 0.02, 0.02]} material={hairMat}>
             <sphereGeometry args={[0.08, S, S]} />
           </mesh>
-          {/* Side taper */}
-          {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.17, headY, -0.02]} material={hairMat}>
-              <sphereGeometry args={[0.04, 16, 16]} />
-            </mesh>
-          ))}
         </group>
       );
 
     case "medium":
       return (
         <group>
-          <HairCap headR={headR} hairMat={hairMat} coverage={0.55} />
-          {/* Back hair draping to neck */}
-          <mesh position={[0, 1.46, -0.12]} material={hairMat}>
+          {/* Full cap covering top and sides */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.035, S, S, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
+          </mesh>
+          {/* Back hair draping to neck - positioned behind head surface */}
+          <mesh position={[0, HEAD_Y - 0.12, -(headR + 0.04)]} material={hairMat}>
             <capsuleGeometry args={[0.1, 0.12, 12, S]} />
           </mesh>
-          {/* Side strands over ears */}
+          {/* Side volume over ears */}
           {[-1, 1].map((s) => (
-            <group key={s}>
-              <HairStrand position={[s * 0.18, 1.55, 0.02]} length={0.08} radius={0.03} rotation={[0, 0, s * 0.12]} material={hairMat} />
-              <HairStrand position={[s * 0.19, 1.47, -0.04]} length={0.07} radius={0.025} rotation={[0, 0, s * 0.08]} material={hairMat} />
-            </group>
+            <mesh key={s} position={[s * (headR + 0.03), HEAD_Y - 0.06, -0.02]} material={hairMat}>
+              <capsuleGeometry args={[0.03, 0.08, 8, 16]} />
+            </mesh>
           ))}
         </group>
       );
@@ -280,33 +244,44 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "long":
       return (
         <group>
-          <HairCap headR={headR} hairMat={hairMat} coverage={0.55} />
-          {/* Flowing back layers */}
+          {/* Top cap */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.035, S, S, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
+          </mesh>
+          {/* Back layers flowing down - all behind head */}
           {[0, 1, 2].map((layer) => (
             <group key={layer}>
-              {[-1, -0.5, 0, 0.5, 1].map((s) => (
-                <HairStrand
-                  key={s}
-                  position={[s * 0.09, 1.38 - layer * 0.09, -0.11 - layer * 0.02]}
-                  length={0.12 + layer * 0.04}
-                  radius={0.03 - layer * 0.004}
-                  rotation={[0.1 + layer * 0.05, s * 0.04, 0]}
+              {[-0.08, -0.04, 0, 0.04, 0.08].map((x) => (
+                <mesh
+                  key={x}
+                  position={[x, HEAD_Y - 0.18 - layer * 0.1, -(headR + 0.03 + layer * 0.015)]}
                   material={hairMat}
-                />
+                  rotation={[0.1 + layer * 0.05, x * 0.3, 0]}
+                >
+                  <capsuleGeometry args={[0.028 - layer * 0.004, 0.1 + layer * 0.04, 6, 16]} />
+                </mesh>
               ))}
             </group>
           ))}
-          {/* Side hair flowing down */}
+          {/* Side hair flowing down - outside of head */}
           {[-1, 1].map((s) => (
             <group key={`side${s}`}>
-              <HairStrand position={[s * 0.2, 1.5, 0.04]} length={0.12} radius={0.028} rotation={[0, 0, s * 0.1]} material={hairMat} />
-              <HairStrand position={[s * 0.21, 1.38, -0.02]} length={0.14} radius={0.024} rotation={[0.05, 0, s * 0.08]} material={hairMat} />
-              <HairStrand position={[s * 0.19, 1.26, -0.04]} length={0.1} radius={0.02} rotation={[0.08, 0, s * 0.06]} material={hairMat} />
+              <mesh position={[s * (headR + 0.03), HEAD_Y - 0.06, 0.04]} material={hairMat}>
+                <capsuleGeometry args={[0.028, 0.1, 8, 16]} />
+              </mesh>
+              <mesh position={[s * (headR + 0.025), HEAD_Y - 0.18, -0.02]} material={hairMat}>
+                <capsuleGeometry args={[0.024, 0.12, 8, 16]} />
+              </mesh>
+              <mesh position={[s * (headR + 0.02), HEAD_Y - 0.32, -0.04]} material={hairMat}>
+                <capsuleGeometry args={[0.02, 0.08, 6, 12]} />
+              </mesh>
             </group>
           ))}
           {/* Face-framing strands */}
           {[-1, 1].map((s) => (
-            <HairStrand key={`fr${s}`} position={[s * 0.14, 1.52, 0.12]} length={0.1} radius={0.018} rotation={[0.15, 0, s * 0.12]} material={hairMat} />
+            <mesh key={`fr${s}`} position={[s * (headR * 0.6), HEAD_Y - 0.06, headR + 0.01]} material={hairMat}>
+              <capsuleGeometry args={[0.018, 0.08, 6, 12]} />
+            </mesh>
           ))}
         </group>
       );
@@ -314,27 +289,25 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "curly":
       return (
         <group>
-          {/* Base cap tight to head */}
-          <mesh position={[0, headY + 0.04, -0.01]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.015, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          {/* Base cap */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.02, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
           </mesh>
-          {/* Curls arranged around head surface */}
+          {/* Curls placed on surface of a sphere slightly larger than head */}
           {[0, 1, 2].map((layer) => {
-            const count = layer === 0 ? 8 : layer === 1 ? 10 : 7;
-            const r = headR + 0.035 + layer * 0.02;
-            const baseY = headY + 0.06 - layer * 0.07;
+            const count = layer === 0 ? 10 : layer === 1 ? 12 : 8;
+            const curlR = headR + 0.04 + layer * 0.025;
             return [...Array(count)].map((_, i) => {
-              const angle = (i / count) * Math.PI * 2 + layer * 0.3;
-              const curlSize = 0.028 + layer * 0.004;
-              // Only show curls on top half
-              const cosA = Math.cos(angle);
-              if (layer > 0 && cosA > 0.5) return null;
+              const theta = 0.2 + layer * 0.25; // angle from top
+              const phi = (i / count) * Math.PI * 2 + layer * 0.3;
+              const x = curlR * Math.sin(theta) * Math.sin(phi);
+              const y = HEAD_Y + curlR * Math.cos(theta);
+              const z = curlR * Math.sin(theta) * Math.cos(phi);
+              // Don't place curls in front of face
+              if (z > headR * 0.6 && Math.abs(x) < headR * 0.5) return null;
+              const curlSize = 0.025 + layer * 0.005;
               return (
-                <mesh key={`${layer}-${i}`} position={[
-                  Math.sin(angle) * r * 0.85,
-                  baseY + Math.sin(i * 1.5) * 0.012,
-                  Math.cos(angle) * r * 0.65 - 0.02
-                ]} material={hairMat}>
+                <mesh key={`${layer}-${i}`} position={[x, y, z]} material={hairMat}>
                   <sphereGeometry args={[curlSize, 10, 10]} />
                 </mesh>
               );
@@ -346,18 +319,29 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "wavy":
       return (
         <group>
-          <HairCap headR={headR} hairMat={hairMat} coverage={0.54} />
+          {/* Top cap */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.035, S, S, 0, Math.PI * 2, 0, Math.PI * 0.56]} />
+          </mesh>
+          {/* Wavy strands flowing back - positioned outside head */}
           {[-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((s) => {
-            const xOffset = s * 0.065;
+            const xOff = s * 0.055;
             return (
               <group key={s}>
-                <HairStrand position={[xOffset, 1.5, -0.1]} length={0.1} radius={0.024} rotation={[0.1, s * 0.06, Math.sin(s) * 0.08]} material={hairMat} />
-                <HairStrand position={[xOffset * 1.1, 1.4, -0.12]} length={0.08} radius={0.02} rotation={[0.15, s * 0.04, Math.sin(s + 1) * 0.1]} material={hairMat} />
+                <mesh position={[xOff, HEAD_Y - 0.1, -(headR + 0.03)]} rotation={[0.1, s * 0.06, Math.sin(s) * 0.08]} material={hairMat}>
+                  <capsuleGeometry args={[0.024, 0.1, 6, 16]} />
+                </mesh>
+                <mesh position={[xOff * 1.1, HEAD_Y - 0.2, -(headR + 0.04)]} rotation={[0.15, s * 0.04, Math.sin(s + 1) * 0.1]} material={hairMat}>
+                  <capsuleGeometry args={[0.02, 0.08, 6, 12]} />
+                </mesh>
               </group>
             );
           })}
+          {/* Side strands */}
           {[-1, 1].map((s) => (
-            <HairStrand key={`sw${s}`} position={[s * 0.19, 1.5, 0.03]} length={0.1} radius={0.025} rotation={[0, 0, s * 0.15]} material={hairMat} />
+            <mesh key={`sw${s}`} position={[s * (headR + 0.03), HEAD_Y - 0.06, 0.03]} rotation={[0, 0, s * 0.15]} material={hairMat}>
+              <capsuleGeometry args={[0.025, 0.1, 6, 16]} />
+            </mesh>
           ))}
         </group>
       );
@@ -365,40 +349,52 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "mohawk":
       return (
         <group>
-          {/* Shaved sides - very thin */}
-          {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.16, headY, -0.02]} material={hairMat}>
-              <sphereGeometry args={[0.035, 10, 10]} />
-            </mesh>
-          ))}
-          {/* Central ridge */}
+          {/* Central ridge - on top of head */}
           {[0, 1, 2, 3, 4, 5].map((i) => {
             const t = i / 5;
-            const height = 0.05 + Math.sin(t * Math.PI) * 0.035;
-            const width = 0.025 + Math.sin(t * Math.PI) * 0.012;
+            const spikeH = 0.05 + Math.sin(t * Math.PI) * 0.04;
+            const spikeW = 0.025 + Math.sin(t * Math.PI) * 0.012;
+            // Position along head from front to back, always on top
+            const z = 0.08 - t * 0.25;
+            const surfaceY = HEAD_Y + Math.sqrt(Math.max(0, headR * headR - z * z));
             return (
-              <mesh key={i} position={[0, topY - 0.02 + i * 0.005, -0.12 * t + 0.02]} material={hairMat} rotation={[0.2 - t * 0.1, 0, 0]}>
-                <capsuleGeometry args={[width, height, 8, 16]} />
+              <mesh key={i} position={[0, surfaceY + spikeH * 0.5, z]} material={hairMat}>
+                <capsuleGeometry args={[spikeW, spikeH, 8, 16]} />
               </mesh>
             );
           })}
+          {/* Subtle shaved sides */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * (headR + 0.005), HEAD_Y, -0.02]} material={hairMat}>
+              <sphereGeometry args={[0.03, 10, 10]} />
+            </mesh>
+          ))}
         </group>
       );
 
     case "ponytail":
       return (
         <group>
-          <HairCap headR={headR} hairMat={hairMat} coverage={0.5} />
-          {/* Hair band */}
-          <mesh position={[0, 1.58, -0.18]}>
+          {/* Cap on top */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+          </mesh>
+          {/* Hair band at back of head */}
+          <mesh position={[0, HEAD_Y - 0.02, -(headR + 0.02)]}>
             <torusGeometry args={[0.035, 0.007, 8, 16]} />
             <meshStandardMaterial color="#333333" roughness={0.3} />
           </mesh>
-          {/* Ponytail hanging down */}
-          <HairStrand position={[0, 1.5, -0.22]} length={0.1} radius={0.04} rotation={[0.2, 0, 0]} material={hairMat} />
-          <HairStrand position={[0, 1.38, -0.25]} length={0.1} radius={0.035} rotation={[0.25, 0, 0]} material={hairMat} />
-          <HairStrand position={[0, 1.28, -0.26]} length={0.07} radius={0.028} rotation={[0.3, 0, 0]} material={hairMat} />
-          <mesh position={[0, 1.22, -0.26]} material={hairMat}>
+          {/* Ponytail hanging down behind head */}
+          <mesh position={[0, HEAD_Y - 0.1, -(headR + 0.06)]} material={hairMat} rotation={[0.2, 0, 0]}>
+            <capsuleGeometry args={[0.04, 0.1, 8, S]} />
+          </mesh>
+          <mesh position={[0, HEAD_Y - 0.22, -(headR + 0.08)]} material={hairMat} rotation={[0.25, 0, 0]}>
+            <capsuleGeometry args={[0.035, 0.1, 8, S]} />
+          </mesh>
+          <mesh position={[0, HEAD_Y - 0.34, -(headR + 0.09)]} material={hairMat} rotation={[0.3, 0, 0]}>
+            <capsuleGeometry args={[0.028, 0.07, 6, S]} />
+          </mesh>
+          <mesh position={[0, HEAD_Y - 0.4, -(headR + 0.09)]} material={hairMat}>
             <sphereGeometry args={[0.025, 10, 10]} />
           </mesh>
         </group>
@@ -407,18 +403,21 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "bun":
       return (
         <group>
-          <HairCap headR={headR} hairMat={hairMat} coverage={0.5} />
-          {/* Bun on top-back */}
-          <mesh position={[0, topY + 0.02, -0.06]} material={hairMat}>
+          {/* Cap */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+          </mesh>
+          {/* Bun sitting on top-back of head */}
+          <mesh position={[0, HEAD_TOP + 0.04, -0.06]} material={hairMat}>
             <sphereGeometry args={[0.07, S, S]} />
           </mesh>
-          {/* Wrapping detail */}
-          <mesh position={[0, topY + 0.02, -0.06]} rotation={[0.5, 0, 0]}>
+          {/* Wrap detail */}
+          <mesh position={[0, HEAD_TOP + 0.04, -0.06]} rotation={[0.5, 0, 0]}>
             <torusGeometry args={[0.05, 0.015, 8, 20]} />
             <meshStandardMaterial color={hairMat.color} roughness={0.6} metalness={0.1} />
           </mesh>
           {/* Hair band */}
-          <mesh position={[0, topY - 0.02, -0.06]}>
+          <mesh position={[0, HEAD_TOP, -0.06]}>
             <torusGeometry args={[0.04, 0.007, 8, 16]} />
             <meshStandardMaterial color="#333333" roughness={0.3} />
           </mesh>
@@ -428,19 +427,23 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "braids":
       return (
         <group>
-          <HairCap headR={headR} hairMat={hairMat} coverage={0.52} />
+          {/* Cap */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.025, S, S, 0, Math.PI * 2, 0, Math.PI * 0.54]} />
+          </mesh>
+          {/* Two braids - starting at sides of head, going down */}
           {[-1, 1].map((s) => (
             <group key={s}>
               {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                 <mesh key={i} position={[
-                  s * 0.15 + Math.sin(i * Math.PI) * 0.008,
-                  1.5 - i * 0.04,
-                  -0.07 + Math.cos(i * Math.PI) * 0.004
+                  s * (headR + 0.02) + Math.sin(i * Math.PI) * 0.008,
+                  HEAD_Y - 0.06 - i * 0.04,
+                  -(headR * 0.3) + Math.cos(i * Math.PI) * 0.004
                 ]} material={hairMat} rotation={[0.04, 0, s * 0.06]}>
                   <sphereGeometry args={[0.022, 10, 10]} />
                 </mesh>
               ))}
-              <mesh position={[s * 0.15, 1.2, -0.07]}>
+              <mesh position={[s * (headR + 0.02), HEAD_Y - 0.36, -(headR * 0.3)]}>
                 <sphereGeometry args={[0.012, 8, 8]} />
                 <meshStandardMaterial color="#ff6b6b" roughness={0.3} />
               </mesh>
@@ -453,15 +456,16 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
       const slickMat = new THREE.MeshStandardMaterial({ color: hairMat.color, roughness: 0.2, metalness: 0.2 });
       return (
         <group>
-          <mesh position={[0, headY + 0.04, -0.01]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.015, S, S, 0, Math.PI * 2, 0, Math.PI * 0.48]} />
+          {/* Tight top layer */}
+          <mesh position={[0, HEAD_Y + 0.04, -0.01]} material={slickMat}>
+            <sphereGeometry args={[headR + 0.018, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
           </mesh>
-          {/* Shiny slicked top */}
-          <mesh position={[0, topY - 0.06, 0.02]} material={slickMat}>
-            <sphereGeometry args={[headR * 0.6, S, S, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+          {/* Slicked top with sheen */}
+          <mesh position={[0, HEAD_TOP - 0.04, 0.02]} material={slickMat}>
+            <sphereGeometry args={[headR * 0.55, S, S, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
           </mesh>
-          {/* Back collection */}
-          <mesh position={[0, 1.52, -0.16]} material={hairMat}>
+          {/* Back collection - behind head */}
+          <mesh position={[0, HEAD_Y - 0.06, -(headR + 0.03)]} material={hairMat}>
             <capsuleGeometry args={[0.07, 0.05, 8, S]} />
           </mesh>
         </group>
@@ -471,26 +475,26 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "afro":
       return (
         <group>
-          {/* Large spherical volume centered on head */}
-          <mesh position={[0, headY + 0.06, 0]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.09, S, S]} />
+          {/* Large spherical volume around head - clearly outside */}
+          <mesh position={[0, HEAD_Y + 0.06, 0]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.1, S, S]} />
           </mesh>
           {/* Extra top volume */}
-          <mesh position={[0, topY + 0.04, 0]} material={hairMat}>
-            <sphereGeometry args={[headR * 0.6, S, S]} />
+          <mesh position={[0, HEAD_TOP + 0.06, 0]} material={hairMat}>
+            <sphereGeometry args={[headR * 0.65, S, S]} />
           </mesh>
-          {/* Texture bumps */}
+          {/* Texture bumps on outer surface */}
           {[...Array(20)].map((_, i) => {
             const phi = Math.acos(1 - 2 * (i + 0.5) / 20);
             const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-            const r = headR + 0.09;
+            const r = headR + 0.12; // outside the afro volume
             const y = r * Math.cos(phi) * 0.65;
             if (y < -0.05) return null;
             return (
               <mesh key={i} position={[
-                r * Math.sin(phi) * Math.cos(theta) * 0.8,
-                headY + 0.06 + y,
-                r * Math.sin(phi) * Math.sin(theta) * 0.8
+                r * Math.sin(phi) * Math.cos(theta) * 0.85,
+                HEAD_Y + 0.06 + y,
+                r * Math.sin(phi) * Math.sin(theta) * 0.85
               ]} material={hairMat}>
                 <sphereGeometry args={[0.025, 8, 8]} />
               </mesh>
@@ -502,20 +506,20 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
     case "undercut":
       return (
         <group>
-          {/* Shaved sides - very subtle */}
+          {/* Shaved sides - very subtle, on surface */}
           {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.17, headY, -0.03]} material={hairMat}>
-              <sphereGeometry args={[0.035, 10, 10]} />
+            <mesh key={s} position={[s * (headR + 0.008), HEAD_Y, -0.03]} material={hairMat}>
+              <sphereGeometry args={[0.03, 10, 10]} />
             </mesh>
           ))}
-          {/* Long top swept to one side */}
-          <mesh position={[0, topY - 0.05, 0]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.025, S, S, 0, Math.PI * 2, 0, Math.PI * 0.38]} />
+          {/* Long top swept to one side - sitting on top of head */}
+          <mesh position={[0, HEAD_TOP - 0.03, 0]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.35]} />
           </mesh>
-          <mesh position={[-0.08, topY - 0.06, 0.04]} material={hairMat} rotation={[0, 0, 0.3]}>
+          <mesh position={[-0.08, HEAD_TOP - 0.04, 0.04]} material={hairMat} rotation={[0, 0, 0.3]}>
             <capsuleGeometry args={[0.035, 0.07, 8, 16]} />
           </mesh>
-          <mesh position={[-0.14, topY - 0.1, 0.06]} material={hairMat} rotation={[0.1, 0, 0.5]}>
+          <mesh position={[-0.14, HEAD_TOP - 0.08, 0.06]} material={hairMat} rotation={[0.1, 0, 0.5]}>
             <capsuleGeometry args={[0.025, 0.05, 6, 12]} />
           </mesh>
         </group>
@@ -523,6 +527,172 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
 
     default:
       return null;
+  }
+}
+
+/* ─── Mouth Expressions ─── */
+function MouthExpression({ expression, lipMat }: { expression: string; lipMat: THREE.MeshStandardMaterial }) {
+  const teethMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#f5f0e8", roughness: 0.3 }), []);
+  const tongueMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#cc5555", roughness: 0.5 }), []);
+  const mouthDarkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3a1010", roughness: 0.8 }), []);
+
+  switch (expression) {
+    case "smile":
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          {/* Upper lip - smile curve */}
+          <mesh rotation={[0.15, 0, 0]}>
+            <torusGeometry args={[0.035, 0.008, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          {/* Lower lip */}
+          <mesh position={[0, -0.008, 0.003]} rotation={[-0.1, Math.PI, 0]}>
+            <torusGeometry args={[0.03, 0.01, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.35} />
+          </mesh>
+          {/* Smile corners turning up */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.035, 0.005, 0.005]}>
+              <sphereGeometry args={[0.006, 6, 6]} />
+              <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
+      );
+
+    case "big_smile":
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          {/* Wide smile upper lip */}
+          <mesh rotation={[0.2, 0, 0]}>
+            <torusGeometry args={[0.04, 0.008, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          {/* Lower lip wider */}
+          <mesh position={[0, -0.012, 0.003]} rotation={[-0.15, Math.PI, 0]}>
+            <torusGeometry args={[0.035, 0.01, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.35} />
+          </mesh>
+          {/* Visible teeth */}
+          <mesh position={[0, -0.003, 0.008]} material={teethMat}>
+            <boxGeometry args={[0.045, 0.012, 0.005]} />
+          </mesh>
+          {/* Smile corners */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.04, 0.008, 0.005]}>
+              <sphereGeometry args={[0.007, 6, 6]} />
+              <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
+      );
+
+    case "neutral":
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          {/* Flat upper lip */}
+          <mesh rotation={[0, 0, 0]}>
+            <capsuleGeometry args={[0.007, 0.05, 6, 12]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          {/* Flat lower lip */}
+          <mesh position={[0, -0.012, 0.002]}>
+            <capsuleGeometry args={[0.008, 0.04, 6, 12]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.35} />
+          </mesh>
+        </group>
+      );
+
+    case "surprised":
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          {/* O-shaped mouth */}
+          <mesh rotation={[0, 0, 0]}>
+            <torusGeometry args={[0.022, 0.008, 10, 20]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          {/* Dark inside */}
+          <mesh position={[0, 0, 0.003]} material={mouthDarkMat}>
+            <circleGeometry args={[0.018, 16]} />
+          </mesh>
+        </group>
+      );
+
+    case "sad":
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          {/* Downturned upper lip */}
+          <mesh rotation={[Math.PI + 0.15, 0, 0]}>
+            <torusGeometry args={[0.03, 0.007, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          {/* Lower lip */}
+          <mesh position={[0, -0.015, 0.003]} rotation={[Math.PI - 0.1, Math.PI, 0]}>
+            <torusGeometry args={[0.025, 0.009, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.35} />
+          </mesh>
+          {/* Sad corners */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.03, -0.01, 0.005]}>
+              <sphereGeometry args={[0.005, 6, 6]} />
+              <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+            </mesh>
+          ))}
+        </group>
+      );
+
+    case "smirk":
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          {/* Asymmetric lip - one side up */}
+          <mesh rotation={[0.1, 0, 0.15]}>
+            <torusGeometry args={[0.032, 0.007, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, -0.008, 0.003]} rotation={[-0.05, Math.PI, -0.1]}>
+            <torusGeometry args={[0.028, 0.009, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.35} />
+          </mesh>
+          {/* Raised corner */}
+          <mesh position={[0.035, 0.01, 0.005]}>
+            <sphereGeometry args={[0.006, 6, 6]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+        </group>
+      );
+
+    case "tongue_out":
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          {/* Smile */}
+          <mesh rotation={[0.15, 0, 0]}>
+            <torusGeometry args={[0.035, 0.007, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, -0.008, 0.003]} rotation={[-0.1, Math.PI, 0]}>
+            <torusGeometry args={[0.03, 0.009, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.35} />
+          </mesh>
+          {/* Tongue sticking out */}
+          <mesh position={[0, -0.02, 0.015]} material={tongueMat} rotation={[0.4, 0, 0]}>
+            <capsuleGeometry args={[0.012, 0.02, 6, 12]} />
+          </mesh>
+        </group>
+      );
+
+    default: // fallback to smile
+      return (
+        <group position={[0, 1.49, 0.18]}>
+          <mesh rotation={[0.15, 0, 0]}>
+            <torusGeometry args={[0.035, 0.008, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, -0.008, 0.003]} rotation={[-0.1, Math.PI, 0]}>
+            <torusGeometry args={[0.03, 0.01, 8, 20, Math.PI]} />
+            <meshStandardMaterial color={lipMat.color} roughness={0.35} />
+          </mesh>
+        </group>
+      );
   }
 }
 
@@ -547,17 +717,14 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
   const forearmR = armR * 0.85;
   const thighR = isFemale ? 0.065 * f * m : 0.07 * f * m;
   const calfR = thighR * 0.78;
-  const headR = 0.22;
+  const headR = HEAD_R;
 
   const shirtType = equipped?.shirt?.style_data?.type || "tshirt";
   const pantsType = equipped?.pants?.style_data?.type || "pants";
   const hatType = equipped?.hat?.style_data?.type || "cap";
 
-  // Determine if arms should show skin (sleeveless garments)
   const isSleeveless = shirtType === "tank_top" || shirtType === "sports_bra" || shirtType === "crop_top";
-  // Determine if torso is cropped (sports bra / crop top)
   const isCropped = shirtType === "sports_bra" || shirtType === "crop_top";
-  // Determine if pants are shorts
   const isShorts = pantsType === "shorts";
 
   const skinMat = useMemo(() => new THREE.MeshStandardMaterial({
@@ -573,6 +740,13 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
   const hairMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: config.hair_color, roughness: 0.75, metalness: 0.08
   }), [config.hair_color]);
+
+  const lipMat = useMemo(() => {
+    const c = new THREE.Color(config.skin_color);
+    c.multiplyScalar(0.75);
+    c.lerp(new THREE.Color("#cc5555"), 0.35);
+    return new THREE.MeshStandardMaterial({ color: c, roughness: 0.4 });
+  }, [config.skin_color]);
 
   const pantsMat = useMemo(() => {
     const c = equipped?.pants?.style_data?.color || "#1a365d";
@@ -640,17 +814,14 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
   });
 
   const legSpacing = hipW * 0.38;
-
-  // Upper arm material: skin if sleeveless, shirt if not
   const upperArmMat = isSleeveless ? skinMat : shirtMat;
-  // Lower torso material: skin if cropped, shirt if not
   const lowerTorsoMat = isCropped ? skinMat : shirtMat;
 
   return (
     <group ref={groupRef} scale={[1, h, 1]}>
 
       {/* ══════ HEAD ══════ */}
-      <mesh position={[0, 1.62, 0]} material={skinMat}>
+      <mesh position={[0, HEAD_Y, 0]} material={skinMat}>
         <sphereGeometry args={[headR, S, S]} />
       </mesh>
       <mesh position={[0, 1.5, 0.04]} material={skinMat}>
@@ -718,16 +889,7 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
       </mesh>
 
       {/* Mouth */}
-      <group position={[0, 1.49, 0.18]}>
-        <mesh rotation={[0.15, 0, 0]}>
-          <torusGeometry args={[0.035, 0.007, 8, 20, Math.PI]} />
-          <meshStandardMaterial color="#c06060" roughness={0.4} />
-        </mesh>
-        <mesh position={[0, -0.008, 0.003]} rotation={[-0.1, Math.PI, 0]}>
-          <torusGeometry args={[0.03, 0.009, 8, 20, Math.PI]} />
-          <meshStandardMaterial color="#cc6666" roughness={0.35} />
-        </mesh>
-      </group>
+      <MouthExpression expression={config.mouth_expression || "smile"} lipMat={lipMat} />
 
       {/* Cheeks */}
       {[-1, 1].map((side) => (
@@ -758,21 +920,17 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
       )}
 
       {/* ══════ TORSO ══════ */}
-      {/* Shoulders - always visible with shirt material */}
       {[-1, 1].map((side) => (
         <mesh key={`shoulder${side}`} position={[side * shoulderW * 0.5, 1.28, 0]} material={isSleeveless ? skinMat : shirtMat}>
           <sphereGeometry args={[armR * 1.6, S, S]} />
         </mesh>
       ))}
-      {/* Upper chest */}
       <mesh position={[0, 1.22, 0]} material={shirtMat}>
         <capsuleGeometry args={[shoulderW * 0.42, 0.08, 16, S]} />
       </mesh>
-      {/* Mid torso */}
       <mesh position={[0, 1.12, 0]} material={shirtMat} scale={[1, 1, chestDepth / 0.18]}>
         <capsuleGeometry args={[shoulderW * 0.38, 0.06, 16, S]} />
       </mesh>
-      {/* Lower torso / waist - skin if cropped */}
       <mesh position={[0, 1.02, 0]} material={lowerTorsoMat}>
         <capsuleGeometry args={[waistW * 0.5, 0.06, 12, S]} />
       </mesh>
@@ -780,17 +938,14 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
       {/* Hoodie hood */}
       {shirtType === "hoodie" && (
         <group>
-          {/* Hood draped behind head/neck */}
           <mesh position={[0, 1.52, -0.14]} material={shirtMat}>
             <sphereGeometry args={[0.12, S, S, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.5]} />
           </mesh>
-          {/* Hood fabric sides */}
           {[-1, 1].map((s) => (
             <mesh key={`hood${s}`} position={[s * 0.08, 1.46, -0.12]} material={shirtMat}>
               <sphereGeometry args={[0.06, 12, 12]} />
             </mesh>
           ))}
-          {/* Hood collar around neck */}
           <mesh position={[0, 1.38, -0.04]} material={shirtMat} rotation={[0.3, 0, 0]}>
             <torusGeometry args={[0.08, 0.025, 8, S]} />
           </mesh>
@@ -822,9 +977,7 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
       )}
 
       {/* ══════ ARMS ══════ */}
-      {/* Left arm */}
       <group ref={leftArmRef} position={[-(shoulderW * 0.5 + armR * 1.2), 1.28, 0]}>
-        {/* Bicep - skin if sleeveless */}
         <mesh position={[0, -0.08, 0]} material={upperArmMat}>
           <capsuleGeometry args={[armR * 1.1, 0.1, 8, S]} />
         </mesh>
@@ -840,7 +993,6 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
         <Hand position={[0, -0.39, 0]} material={skinMat} side={-1} />
       </group>
 
-      {/* Right arm (waves) */}
       <group ref={rightArmRef} position={[shoulderW * 0.5 + armR * 1.2, 1.28, 0]}>
         <mesh position={[0, -0.08, 0]} material={upperArmMat}>
           <capsuleGeometry args={[armR * 1.1, 0.1, 8, S]} />
@@ -868,19 +1020,15 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
       {/* Legs */}
       {[-1, 1].map((side) => (
         <group key={`leg${side}`} position={[side * legSpacing, 0, 0]}>
-          {/* Upper thigh - always pants */}
           <mesh position={[0, 0.76, 0]} material={pantsMat}>
             <capsuleGeometry args={[thighR, 0.12, 8, S]} />
           </mesh>
-          {/* Knee - skin if shorts, pants if not */}
           <mesh position={[0, 0.61, 0.01]} material={isShorts ? skinMat : pantsMat}>
             <sphereGeometry args={[thighR * 0.85, 16, 16]} />
           </mesh>
-          {/* Calf - skin if shorts */}
           <mesh position={[0, 0.5, 0]} material={isShorts ? skinMat : pantsMat}>
             <capsuleGeometry args={[calfR, 0.1, 8, S]} />
           </mesh>
-          {/* Shin taper - skin if shorts */}
           <mesh position={[0, 0.4, 0.01]} material={isShorts ? skinMat : pantsMat}>
             <capsuleGeometry args={[calfR * 0.75, 0.04, 8, S]} />
           </mesh>
@@ -906,7 +1054,6 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
 
 const Avatar3D = ({ config, equipped = {}, size = 200 }: Avatar3DProps) => {
   const h = HEIGHTS[config.body_height] || 1;
-  // Zoom out camera for taller avatars so they stay in frame
   const camZ = 2.6 + (h - 1) * 1.2;
   const camY = 1.15 + (h - 1) * 0.15;
 

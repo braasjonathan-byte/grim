@@ -1,0 +1,1 @@
+ALTER TABLE public.avatar_config ADD COLUMN mouth_expression TEXT NOT NULL DEFAULT 'smile';
