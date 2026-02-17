@@ -23,6 +23,8 @@ interface PlanRow {
 const MONTH_NAMES = ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"];
 const DAY_HEADERS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const DAY_NAME_TO_OFFSET: Record<string, number> = {
+  "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3,
+  "Fre": 4, "Lör": 5, "Sön": 6,
   "Måndag": 0, "Tisdag": 1, "Onsdag": 2, "Torsdag": 3,
   "Fredag": 4, "Lördag": 5, "Söndag": 6,
 };
