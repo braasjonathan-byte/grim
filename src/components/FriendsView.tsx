@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import FriendProfileView from "@/components/FriendProfileView";
 
 interface FriendActivity {
   nickname: string;
@@ -88,6 +89,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
   // Viewing a friend's workouts
   const [viewingFriend, setViewingFriend] = useState<(Friendship & { profile: FriendProfile }) | null>(null);
+  const [showFriendProfile, setShowFriendProfile] = useState(false);
   const [friendPlans, setFriendPlans] = useState<FriendPlanDay[]>([]);
   const [friendCompletions, setFriendCompletions] = useState<Record<string, FriendCompletion>>({});
   const [friendWeeks, setFriendWeeks] = useState<number[]>([]);
@@ -485,8 +487,21 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             )}
           </div>
           <h2 className="text-xl font-black">{viewingFriend.profile.nickname}</h2>
-          <p className="text-sm text-muted-foreground">Träningsschema</p>
+          <button
+            onClick={() => setShowFriendProfile(true)}
+            className="text-xs text-primary font-semibold flex items-center gap-1 mx-auto hover:opacity-80"
+          >
+            <User className="w-3 h-3" /> Visa profil
+          </button>
         </div>
+
+        {showFriendProfile && (
+          <FriendProfileView
+            friendUserId={viewingFriend.profile.user_id}
+            nickname={viewingFriend.profile.nickname}
+            onClose={() => setShowFriendProfile(false)}
+          />
+        )}
 
         {friendPlans.length === 0 ? (
           <div className="text-center py-8">
