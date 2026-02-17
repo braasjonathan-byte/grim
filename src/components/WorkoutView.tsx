@@ -1852,13 +1852,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                       if (isDone) {
                         toggleDone(plan.week, plan.day);
                       } else {
-                        const sLower = (plan.session_name + " " + plan.details).toLowerCase();
-                        const isRunning = sLower.includes("löpning") || sLower.includes("jogg") || sLower.includes("långpass") || sLower.includes("tröskel");
-                        if (isRunning) {
-                          setRunLogTarget({ week: plan.week, day: plan.day, sessionName: plan.session_name, details: plan.details });
-                        } else {
-                          toggleDone(plan.week, plan.day);
-                        }
+                        toggleDone(plan.week, plan.day);
+                      
                       }
                     }}
                     className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
