@@ -26,15 +26,31 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
 
+  const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
+
   useEffect(() => {
-    supabase
-      .from("workout_completions")
-      .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo")
-      .eq("user_id", userId)
-      .then(({ data }) => {
-        if (data) setCompletions(data as CompletionRecord[]);
-      });
+    Promise.all([
+      supabase
+        .from("workout_completions")
+        .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo")
+        .eq("user_id", userId),
+      supabase
+        .from("workout_plans")
+        .select("week, day, details")
+        .eq("user_id", userId),
+    ]).then(([{ data: compData }, { data: planData }]) => {
+      if (compData) setCompletions(compData as CompletionRecord[]);
+      if (planData) {
+        setPlansWithExercises(new Set(
+          planData
+            .filter((p) => p.details && p.details.trim() !== "")
+            .map((p) => `${p.week}-${p.day}`)
+        ));
+      }
+    });
   }, [userId]);
+
+  const hasExercise = (c: CompletionRecord) => plansWithExercises.has(`${c.week}-${c.day}`);
 
   const stats = useMemo(() => {
     const getWeekNumber = (d: Date) => {
@@ -82,9 +98,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return Array.from(buckets.values()).reverse();
   }, [completions, view]);
 
-  const totalDone = completions.filter((c) => c.done).length;
+  const totalDone = completions.filter((c) => c.done && hasExercise(c)).length;
   const totalSkipped = completions.filter((c) => c.skipped).length;
-  const totalAll = completions.length;
+  const totalAll = completions.filter((c) => hasExercise(c) || c.skipped).length;
   const totalDistanceKm = completions
     .filter((c) => c.done && c.logged_distance_km)
     .reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
