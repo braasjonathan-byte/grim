@@ -244,14 +244,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       {/* Leaderboard */}
       <Leaderboard userId={userId} />
 
-      {/* Weight progression chart */}
-      <WeightProgressionChart userId={userId} />
-
       {/* Personal records */}
       <PersonalRecords userId={userId} />
 
       {/* Training calendar */}
       <TrainingCalendar userId={userId} />
+
+      {/* Weight progression chart */}
+      <WeightProgressionChart userId={userId} />
     </div>
   );
 };
