@@ -241,6 +241,11 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         friend_id: friendId,
         status: "pending",
       });
+
+      // Send push notification to the recipient
+      supabase.functions.invoke("notify-friend-request", {
+        body: { friendId },
+      }).catch((err) => console.error("Failed to notify friend request:", err));
     }
 
     setSearchResults([]);

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.workout-ai]
 verify_jwt = false
+
+[functions.notify-friend-request]
+verify_jwt = false
