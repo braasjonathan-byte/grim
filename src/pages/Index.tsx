@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings } from "lucide-react";
+import { Dumbbell, Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -19,11 +19,12 @@ import ReferralLink from "@/components/ReferralLink";
 import SuggestionBox from "@/components/SuggestionBox";
 import AnnouncementInbox from "@/components/AnnouncementInbox";
 import AdminUserList from "@/components/AdminUserList";
+import ProfileTab from "@/components/ProfileTab";
 import NotificationSettings from "@/components/NotificationSettings";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
-type Tab = "workout" | "friends" | "calc" | "stats" | "settings";
+type Tab = "workout" | "friends" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
@@ -37,7 +38,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTabState] = useState<Tab>(() => {
     const saved = localStorage.getItem("grim_active_tab");
-    return (saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats" || saved === "settings") ? saved : "workout";
+    return (saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats" || saved === "profile" || saved === "settings") ? saved : "workout";
   });
 
   // Wrap setTab to push browser history for Android back button support
@@ -308,6 +309,7 @@ const Index = () => {
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg" },
+  { key: "profile", icon: UserIcon, label: "Profil" },
   { key: "settings", icon: Settings, label: "Inställningar", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
@@ -442,6 +444,7 @@ const Index = () => {
             <CalorieCalculator />
           </div>
         }
+        {tab === "profile" && <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />}
         {tab === "settings" &&
         <div className="py-2 space-y-4">
             {/* Role badge */}

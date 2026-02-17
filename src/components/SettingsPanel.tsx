@@ -1,9 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, User, Smartphone, Sparkles, ShoppingBag } from "lucide-react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import ProfileSection from "@/components/ProfileSection";
-import AvatarEditor from "@/components/AvatarEditor";
-import AvatarShop from "@/components/AvatarShop";
 
 const THEME_KEY = "gymberget_theme";
 
@@ -36,12 +33,7 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
   });
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [avatarOpen, setAvatarOpen] = useState(false);
-  const [shopOpen, setShopOpen] = useState(false);
   const [securityOpen, setSecurityOpen] = useState(false);
-
-  // Security questions state
   const [secQuestions, setSecQuestions] = useState<(number | null)[]>([null, null, null, null]);
   const [secAnswers, setSecAnswers] = useState<string[]>(["", "", "", ""]);
   const [secSaving, setSecSaving] = useState(false);
@@ -57,14 +49,12 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
       document.documentElement.classList.add("light");
     }
     localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
-    // Update meta theme-color for mobile browsers
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
       meta.setAttribute("content", dark ? "#000000" : "#ffffff");
     }
   }, [dark]);
 
-  // Wake lock effect
   useEffect(() => {
     const requestWakeLock = async () => {
       if (wakeLock && "wakeLock" in navigator) {
@@ -74,7 +64,7 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
             wakeLockRef.current = null;
           });
         } catch {
-          // Wake lock request failed (e.g. low battery)
+          // Wake lock request failed
         }
       } else if (!wakeLock && wakeLockRef.current) {
         await wakeLockRef.current.release();
@@ -85,14 +75,12 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
     localStorage.setItem("gymberget_wakelock", wakeLock ? "true" : "false");
     requestWakeLock();
 
-    // Re-acquire on visibility change
     const handleVisibility = () => {
       if (document.visibilityState === "visible" && wakeLock && !wakeLockRef.current) {
         requestWakeLock();
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
@@ -100,8 +88,6 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
 
   useEffect(() => {
     if (!userId) return;
-
-    // Load existing security questions
     supabase
       .rpc("get_my_security_question_indices")
       .then(({ data }) => {
@@ -109,9 +95,7 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
           setSecHasExisting(true);
           const qs: (number | null)[] = [null, null, null, null];
           (data as { question_index: number }[]).forEach((row, i) => {
-            if (i < 4) {
-              qs[i] = row.question_index;
-            }
+            if (i < 4) qs[i] = row.question_index;
           });
           setSecQuestions(qs);
         }
@@ -120,17 +104,13 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
 
   const handleSaveSecurityQuestions = async () => {
     if (!userId) return;
-
     for (let i = 0; i < 4; i++) {
       if (secQuestions[i] === null || !secAnswers[i].trim()) return;
     }
-
     const qSet = new Set(secQuestions);
     if (qSet.size < 4) return;
 
     setSecSaving(true);
-
-    // Hash answers server-side via edge function
     const { data, error } = await supabase.functions.invoke("reset-password", {
       body: {
         nickname: "_save_",
@@ -176,11 +156,7 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
           onClick={() => setDark(!dark)}
           className={`relative w-11 h-6 rounded-full transition-colors ${dark ? "bg-primary" : "bg-secondary border border-border"}`}
         >
-          <span
-            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${
-              dark ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"
-            }`}
-          />
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${dark ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
         </button>
       </div>
 
@@ -195,84 +171,12 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
             onClick={() => setWakeLock(!wakeLock)}
             className={`relative w-11 h-6 rounded-full transition-colors ${wakeLock ? "bg-primary" : "bg-secondary border border-border"}`}
           >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${
-                wakeLock ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"
-              }`}
-            />
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${wakeLock ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
           </button>
         </div>
       )}
 
-      {/* Profile dropdown */}
-      {userId && (
-        <div className="border-t border-border pt-2">
-          <button
-            onClick={() => setProfileOpen(!profileOpen)}
-            className="w-full flex items-center justify-between py-2"
-          >
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Profil</span>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-muted-foreground transition-transform ${profileOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-          {profileOpen && (
-            <div className="pb-2">
-              <ProfileSection userId={userId} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Avatar editor dropdown */}
-      {userId && (
-        <div className="border-t border-border pt-2">
-          <button
-            onClick={() => setAvatarOpen(!avatarOpen)}
-            className="w-full flex items-center justify-between py-2"
-          >
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Avatar</span>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-muted-foreground transition-transform ${avatarOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-          {avatarOpen && (
-            <div className="pb-2">
-              <AvatarEditor userId={userId} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Shop dropdown */}
-      {userId && (
-        <div className="border-t border-border pt-2">
-          <button
-            onClick={() => setShopOpen(!shopOpen)}
-            className="w-full flex items-center justify-between py-2"
-          >
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold">Butik</span>
-            </div>
-            <ChevronDown
-              className={`w-4 h-4 text-muted-foreground transition-transform ${shopOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-          {shopOpen && (
-            <div className="pb-2">
-              <AvatarShop userId={userId} isAdmin={isAdmin} />
-            </div>
-          )}
-        </div>
-      )}
-
+      {/* Security questions */}
       {userId && (
         <div className="border-t border-border pt-2">
           <button
@@ -286,9 +190,7 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Sparade</span>
               )}
             </div>
-            <ChevronDown
-              className={`w-4 h-4 text-muted-foreground transition-transform ${securityOpen ? "rotate-180" : ""}`}
-            />
+            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${securityOpen ? "rotate-180" : ""}`} />
           </button>
           {securityOpen && (
             <div className="space-y-3 pt-1">
@@ -339,9 +241,7 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
                 {secSaving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : secSaved ? (
-                  <>
-                    <Check className="w-4 h-4" /> Sparade!
-                  </>
+                  <><Check className="w-4 h-4" /> Sparade!</>
                 ) : (
                   secHasExisting ? "Uppdatera säkerhetsfrågor" : "Spara säkerhetsfrågor"
                 )}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingBag, Loader2, Check, Shirt, Crown } from "lucide-react";
+import { ShoppingBag, Loader2, Check, Crown } from "lucide-react";
 
 interface AvatarShopProps {
   userId: string;
@@ -34,6 +34,7 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
   const [buying, setBuying] = useState<string | null>(null);
   const [equipping, setEquipping] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("shirt");
+  const [isJonne, setIsJonne] = useState(false);
 
   // Admin state
   const [editingItem, setEditingItem] = useState<string | null>(null);
@@ -42,11 +43,12 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
   const [newItem, setNewItem] = useState({ name: "", category: "shirt", price: 1, color: "#3B82F6" });
 
   const load = async () => {
-    const [{ data: shopItems }, { data: owned }, { data: equipped }, { data: profile }] = await Promise.all([
+    const [{ data: shopItems }, { data: owned }, { data: equipped }, { data: profile }, { data: jonneCheck }] = await Promise.all([
       supabase.from("avatar_shop_items").select("*").order("category").order("name"),
       supabase.from("avatar_owned_items").select("item_id").eq("user_id", userId),
       supabase.from("avatar_equipped_items").select("slot, item_id").eq("user_id", userId),
       supabase.from("profiles").select("protein_bars").eq("user_id", userId).single(),
+      supabase.rpc("is_jonne"),
     ]);
 
     if (shopItems) setItems(shopItems as any);
@@ -57,6 +59,7 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
       setEquippedMap(map);
     }
     if (profile) setProteinBars((profile as any).protein_bars || 0);
+    if (jonneCheck === true) setIsJonne(true);
     setLoading(false);
   };
 
@@ -64,10 +67,16 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
 
   const handleBuy = async (item: ShopItem) => {
     setBuying(item.id);
-    const { data } = await supabase.rpc("purchase_avatar_item", { p_item_id: item.id });
-    if (data) {
+    if (isJonne) {
+      // Free for Jonne - just insert owned item directly
+      await supabase.from("avatar_owned_items").insert({ user_id: userId, item_id: item.id });
       setOwnedIds((prev) => new Set([...prev, item.id]));
-      setProteinBars((prev) => prev - item.price);
+    } else {
+      const { data } = await supabase.rpc("purchase_avatar_item", { p_item_id: item.id });
+      if (data) {
+        setOwnedIds((prev) => new Set([...prev, item.id]));
+        setProteinBars((prev) => prev - item.price);
+      }
     }
     setBuying(null);
   };
@@ -78,11 +87,9 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
     const currentEquipped = equippedMap[slot];
 
     if (currentEquipped === item.id) {
-      // Unequip
       await supabase.from("avatar_equipped_items").delete().eq("user_id", userId).eq("slot", slot);
       setEquippedMap((prev) => { const n = { ...prev }; delete n[slot]; return n; });
     } else {
-      // Equip (upsert)
       if (currentEquipped) {
         await supabase.from("avatar_equipped_items").update({ item_id: item.id }).eq("user_id", userId).eq("slot", slot);
       } else {
@@ -134,7 +141,7 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
           <span className="text-sm font-semibold">Butik</span>
         </div>
         <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-          🍫 {proteinBars}
+          {isJonne ? "⭐ Gratis!" : `🍫 ${proteinBars}`}
         </span>
       </div>
 
@@ -168,7 +175,7 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">🍫 {item.price}</span>
+                  <span className="text-xs text-muted-foreground">{isJonne ? "⭐ Gratis" : `🍫 ${item.price}`}</span>
                   {isAdmin && (
                     <div className="flex gap-1">
                       <button onClick={() => { setEditingItem(item.id); setEditPrice(item.price.toString()); }}
@@ -186,9 +193,9 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
                   {equipping === item.id ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : isEquipped ? "✓ Utrustad" : "Utrusta"}
                 </button>
               ) : (
-                <button onClick={() => handleBuy(item)} disabled={buying === item.id || proteinBars < item.price}
+                <button onClick={() => handleBuy(item)} disabled={buying === item.id || (!isJonne && proteinBars < item.price)}
                   className="w-full text-xs py-1.5 rounded-lg font-semibold bg-primary text-primary-foreground disabled:opacity-40 hover:opacity-90 transition-opacity">
-                  {buying === item.id ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : `Köp (🍫 ${item.price})`}
+                  {buying === item.id ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : isJonne ? "Hämta gratis" : `Köp (🍫 ${item.price})`}
                 </button>
               )}
             </div>

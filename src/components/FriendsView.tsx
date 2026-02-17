@@ -89,7 +89,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
   // Viewing a friend's workouts
   const [viewingFriend, setViewingFriend] = useState<(Friendship & { profile: FriendProfile }) | null>(null);
-  const [showFriendProfile, setShowFriendProfile] = useState(false);
+  const [showFriendProfile, setShowFriendProfile] = useState(true);
   const [friendPlans, setFriendPlans] = useState<FriendPlanDay[]>([]);
   const [friendCompletions, setFriendCompletions] = useState<Record<string, FriendCompletion>>({});
   const [friendWeeks, setFriendWeeks] = useState<number[]>([]);

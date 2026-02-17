@@ -23,14 +23,16 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [equipped, setEquipped] = useState<EquippedItems>({});
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalWorkouts: 0, bestPR: "", prWeight: 0 });
+  const [gender, setGender] = useState("");
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: cfg }, { data: eqItems }, { data: completions }, { data: prData }] = await Promise.all([
+      const [{ data: cfg }, { data: eqItems }, { data: completions }, { data: prData }, { data: profile }] = await Promise.all([
         supabase.from("avatar_config").select("*").eq("user_id", friendUserId).maybeSingle(),
         supabase.from("avatar_equipped_items").select("slot, item_id, avatar_shop_items(*)").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("id").eq("user_id", friendUserId).eq("done", true),
         supabase.from("workout_completions").select("logged_weights").eq("user_id", friendUserId).eq("done", true).not("logged_weights", "is", null),
+        supabase.from("profiles").select("gender").eq("user_id", friendUserId).single(),
       ]);
 
       if (cfg) {
@@ -44,6 +46,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         });
       }
 
+      if (profile) setGender((profile as any).gender || "");
+
       if (eqItems) {
         const eq: EquippedItems = {};
         (eqItems as any[]).forEach((e) => {
@@ -53,10 +57,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         setEquipped(eq);
       }
 
-      // Stats
       const totalWorkouts = completions?.length || 0;
-
-      // Find best PR
       let bestExercise = "";
       let bestWeight = 0;
       if (prData) {
@@ -88,6 +89,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     );
   }
 
+  const avatarConfig = { ...config, gender };
+
   return (
     <>
       <div className="fixed inset-0 z-[60] bg-black/60" onClick={onClose} />
@@ -100,9 +103,9 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Avatar */}
+          {/* Avatar - shown first and prominently */}
           <div className="flex justify-center bg-secondary/50 rounded-xl">
-            <Avatar3D config={config} equipped={equipped} size={200} />
+            <Avatar3D config={avatarConfig} equipped={equipped} size={240} />
           </div>
 
           {/* Stats */}

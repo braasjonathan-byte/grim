@@ -7,14 +7,17 @@ interface AvatarEditorProps {
   userId: string;
 }
 
-const SKIN_COLORS = ["#FDDBB4", "#E8B98D", "#C68642", "#8D5524", "#5C3317", "#3B1F0B"];
-const HAIR_COLORS = ["#090806", "#3B2F2F", "#6B4423", "#B7410E", "#D4A76A", "#E8E8E8", "#C41E3A", "#1E90FF", "#32CD32"];
+const SKIN_COLORS = ["#FDDBB4", "#F5CBA7", "#E8B98D", "#C68642", "#8D5524", "#5C3317", "#3B1F0B"];
+const HAIR_COLORS = ["#090806", "#3B2F2F", "#6B4423", "#B7410E", "#D4A76A", "#E8E8E8", "#C41E3A", "#1E90FF", "#32CD32", "#FF69B4", "#9B59B6"];
 const HAIR_STYLES = [
   { value: "none", label: "Inget" },
   { value: "short", label: "Kort" },
   { value: "medium", label: "Medium" },
   { value: "long", label: "Långt" },
   { value: "mohawk", label: "Mohawk" },
+  { value: "ponytail", label: "Hästsvans" },
+  { value: "bun", label: "Knut" },
+  { value: "curly", label: "Lockigt" },
 ];
 const BODY_OPTIONS = [
   { value: "short", label: "Kort" },
@@ -48,12 +51,13 @@ const AvatarEditor = ({ userId }: AvatarEditorProps) => {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [proteinBars, setProteinBars] = useState(0);
+  const [gender, setGender] = useState<string>("");
 
   useEffect(() => {
     const load = async () => {
       const [{ data: cfg }, { data: profile }, { data: eqItems }] = await Promise.all([
         supabase.from("avatar_config").select("*").eq("user_id", userId).maybeSingle(),
-        supabase.from("profiles").select("protein_bars").eq("user_id", userId).single(),
+        supabase.from("profiles").select("protein_bars, gender").eq("user_id", userId).single(),
         supabase.from("avatar_equipped_items").select("slot, item_id, avatar_shop_items(*)").eq("user_id", userId),
       ]);
 
@@ -67,7 +71,10 @@ const AvatarEditor = ({ userId }: AvatarEditorProps) => {
           hair_color: cfg.hair_color,
         });
       }
-      if (profile) setProteinBars((profile as any).protein_bars || 0);
+      if (profile) {
+        setProteinBars((profile as any).protein_bars || 0);
+        setGender((profile as any).gender || "");
+      }
       if (eqItems) {
         const eq: EquippedItems = {};
         (eqItems as any[]).forEach((e) => {
@@ -102,6 +109,8 @@ const AvatarEditor = ({ userId }: AvatarEditorProps) => {
     return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>;
   }
 
+  const avatarConfig = { ...config, gender };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -116,7 +125,7 @@ const AvatarEditor = ({ userId }: AvatarEditorProps) => {
 
       {/* Preview */}
       <div className="flex justify-center bg-secondary/50 rounded-xl p-2">
-        <Avatar3D config={config} equipped={equipped} size={220} />
+        <Avatar3D config={avatarConfig} equipped={equipped} size={220} />
       </div>
 
       {/* Body settings */}
