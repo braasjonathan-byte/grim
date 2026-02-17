@@ -27,13 +27,31 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [view, setView] = useState<View>("week");
 
   useEffect(() => {
-    supabase
-      .from("workout_completions")
-      .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo")
-      .eq("user_id", userId)
-      .then(({ data }) => {
-        if (data) setCompletions(data as CompletionRecord[]);
-      });
+    Promise.all([
+      supabase
+        .from("workout_completions")
+        .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo")
+        .eq("user_id", userId),
+      supabase
+        .from("workout_plans")
+        .select("week, day, details")
+        .eq("user_id", userId),
+    ]).then(([{ data: compData }, { data: planData }]) => {
+      if (compData && planData) {
+        // Build a set of week-day keys that have actual exercises
+        const plansWithExercises = new Set(
+          planData
+            .filter((p) => p.details && p.details.trim() !== "")
+            .map((p) => `${p.week}-${p.day}`)
+        );
+        // Only include completions that have a matching plan with exercises
+        setCompletions(
+          (compData as CompletionRecord[]).filter(
+            (c) => plansWithExercises.has(`${c.week}-${c.day}`)
+          )
+        );
+      }
+    });
   }, [userId]);
 
   const stats = useMemo(() => {

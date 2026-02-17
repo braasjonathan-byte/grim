@@ -1761,7 +1761,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
 
   const weekIdx = weeks.indexOf(currentWeek);
-  const scheduledDays = weekDays.filter(d => d.session_name.trim() !== "");
+  const scheduledDays = weekDays.filter(d => d.session_name.trim() !== "" && d.details.trim() !== "");
   const doneCount = scheduledDays.filter((d) => completions[`${d.week}-${d.day}`]?.done).length;
   const progress = scheduledDays.length > 0 ? Math.round(doneCount / scheduledDays.length * 100) : 0;
 
