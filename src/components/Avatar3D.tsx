@@ -468,7 +468,7 @@ function HairStyle({ style, headR, hairMat }: { style: string; headR: number; ha
 }
 
 /* ─── Mouth Expressions ─── */
-const MOUTH_POS: [number, number, number] = [0, 1.49, 0.22];
+const MOUTH_POS: [number, number, number] = [0, 1.48, 0.24];
 
 function MouthExpression({ expression, lipMat }: { expression: string; lipMat: THREE.MeshStandardMaterial }) {
   const teethMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#f5f0e8", roughness: 0.3 }), []);
@@ -479,17 +479,20 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     case "smile":
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[0.15, 0, 0]}>
-            <torusGeometry args={[0.035, 0.008, 8, 20, Math.PI]} />
+          {/* Upper lip - curved smile */}
+          <mesh rotation={[0.2, 0, 0]}>
+            <torusGeometry args={[0.045, 0.01, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, -0.008, 0.003]} rotation={[-0.1, Math.PI, 0]}>
-            <torusGeometry args={[0.03, 0.01, 8, 20, Math.PI]} />
+          {/* Lower lip */}
+          <mesh position={[0, -0.012, 0.004]} rotation={[-0.15, Math.PI, 0]}>
+            <torusGeometry args={[0.038, 0.013, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.35} />
           </mesh>
+          {/* Smile corners */}
           {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.035, 0.005, 0.005]}>
-              <sphereGeometry args={[0.006, 6, 6]} />
+            <mesh key={s} position={[s * 0.044, 0.008, 0.005]}>
+              <sphereGeometry args={[0.008, 6, 6]} />
               <meshStandardMaterial color={lipMat.color} roughness={0.4} />
             </mesh>
           ))}
@@ -499,20 +502,24 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     case "big_smile":
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[0.2, 0, 0]}>
-            <torusGeometry args={[0.04, 0.008, 8, 20, Math.PI]} />
+          {/* Wide upper lip */}
+          <mesh rotation={[0.25, 0, 0]}>
+            <torusGeometry args={[0.05, 0.01, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, -0.012, 0.003]} rotation={[-0.15, Math.PI, 0]}>
-            <torusGeometry args={[0.035, 0.01, 8, 20, Math.PI]} />
+          {/* Lower lip */}
+          <mesh position={[0, -0.016, 0.004]} rotation={[-0.2, Math.PI, 0]}>
+            <torusGeometry args={[0.045, 0.013, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.35} />
           </mesh>
-          <mesh position={[0, -0.003, 0.008]} material={teethMat}>
-            <boxGeometry args={[0.045, 0.012, 0.005]} />
+          {/* Teeth showing */}
+          <mesh position={[0, -0.004, 0.01]} material={teethMat}>
+            <boxGeometry args={[0.06, 0.016, 0.006]} />
           </mesh>
+          {/* Raised cheek corners */}
           {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.04, 0.008, 0.005]}>
-              <sphereGeometry args={[0.007, 6, 6]} />
+            <mesh key={s} position={[s * 0.05, 0.012, 0.005]}>
+              <sphereGeometry args={[0.009, 6, 6]} />
               <meshStandardMaterial color={lipMat.color} roughness={0.4} />
             </mesh>
           ))}
@@ -522,12 +529,14 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     case "neutral":
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[0, 0, 0]}>
-            <capsuleGeometry args={[0.007, 0.05, 6, 12]} />
+          {/* Flat straight line */}
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <capsuleGeometry args={[0.009, 0.06, 6, 12]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, -0.012, 0.002]}>
-            <capsuleGeometry args={[0.008, 0.04, 6, 12]} />
+          {/* Lower lip hint */}
+          <mesh position={[0, -0.015, 0.003]}>
+            <capsuleGeometry args={[0.01, 0.05, 6, 12]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.35} />
           </mesh>
         </group>
@@ -536,12 +545,14 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     case "surprised":
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[0, 0, 0]}>
-            <torusGeometry args={[0.022, 0.008, 10, 20]} />
+          {/* Round O-shape */}
+          <mesh>
+            <torusGeometry args={[0.028, 0.01, 12, 24]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, 0, 0.003]} material={mouthDarkMat}>
-            <circleGeometry args={[0.018, 16]} />
+          {/* Dark mouth interior */}
+          <mesh position={[0, 0, 0.004]} material={mouthDarkMat}>
+            <circleGeometry args={[0.022, 20]} />
           </mesh>
         </group>
       );
@@ -549,17 +560,20 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     case "sad":
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[Math.PI + 0.15, 0, 0]}>
-            <torusGeometry args={[0.03, 0.007, 8, 20, Math.PI]} />
+          {/* Downturned upper lip */}
+          <mesh rotation={[Math.PI + 0.2, 0, 0]}>
+            <torusGeometry args={[0.04, 0.009, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, -0.015, 0.003]} rotation={[Math.PI - 0.1, Math.PI, 0]}>
-            <torusGeometry args={[0.025, 0.009, 8, 20, Math.PI]} />
+          {/* Lower lip */}
+          <mesh position={[0, -0.018, 0.004]} rotation={[Math.PI - 0.15, Math.PI, 0]}>
+            <torusGeometry args={[0.035, 0.012, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.35} />
           </mesh>
+          {/* Drooping corners */}
           {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.03, -0.01, 0.005]}>
-              <sphereGeometry args={[0.005, 6, 6]} />
+            <mesh key={s} position={[s * 0.04, -0.014, 0.005]}>
+              <sphereGeometry args={[0.007, 6, 6]} />
               <meshStandardMaterial color={lipMat.color} roughness={0.4} />
             </mesh>
           ))}
@@ -569,16 +583,19 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     case "smirk":
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[0.1, 0, 0.15]}>
-            <torusGeometry args={[0.032, 0.007, 8, 20, Math.PI]} />
+          {/* Asymmetric smile - tilted */}
+          <mesh rotation={[0.12, 0, 0.2]}>
+            <torusGeometry args={[0.04, 0.009, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, -0.008, 0.003]} rotation={[-0.05, Math.PI, -0.1]}>
-            <torusGeometry args={[0.028, 0.009, 8, 20, Math.PI]} />
+          {/* Lower lip slightly off-center */}
+          <mesh position={[0.005, -0.01, 0.004]} rotation={[-0.08, Math.PI, -0.15]}>
+            <torusGeometry args={[0.035, 0.012, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.35} />
           </mesh>
-          <mesh position={[0.035, 0.01, 0.005]}>
-            <sphereGeometry args={[0.006, 6, 6]} />
+          {/* Raised corner on one side */}
+          <mesh position={[0.045, 0.016, 0.006]}>
+            <sphereGeometry args={[0.008, 6, 6]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
         </group>
@@ -587,16 +604,19 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     case "tongue_out":
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[0.15, 0, 0]}>
-            <torusGeometry args={[0.035, 0.007, 8, 20, Math.PI]} />
+          {/* Open smile */}
+          <mesh rotation={[0.2, 0, 0]}>
+            <torusGeometry args={[0.045, 0.009, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, -0.008, 0.003]} rotation={[-0.1, Math.PI, 0]}>
-            <torusGeometry args={[0.03, 0.009, 8, 20, Math.PI]} />
+          {/* Lower lip */}
+          <mesh position={[0, -0.012, 0.004]} rotation={[-0.15, Math.PI, 0]}>
+            <torusGeometry args={[0.038, 0.012, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.35} />
           </mesh>
-          <mesh position={[0, -0.02, 0.015]} material={tongueMat} rotation={[0.4, 0, 0]}>
-            <capsuleGeometry args={[0.012, 0.02, 6, 12]} />
+          {/* Tongue sticking out */}
+          <mesh position={[0, -0.028, 0.02]} material={tongueMat} rotation={[0.5, 0, 0]}>
+            <capsuleGeometry args={[0.016, 0.025, 8, 12]} />
           </mesh>
         </group>
       );
@@ -604,12 +624,12 @@ function MouthExpression({ expression, lipMat }: { expression: string; lipMat: T
     default:
       return (
         <group position={MOUTH_POS}>
-          <mesh rotation={[0.15, 0, 0]}>
-            <torusGeometry args={[0.035, 0.008, 8, 20, Math.PI]} />
+          <mesh rotation={[0.2, 0, 0]}>
+            <torusGeometry args={[0.045, 0.01, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.4} />
           </mesh>
-          <mesh position={[0, -0.008, 0.003]} rotation={[-0.1, Math.PI, 0]}>
-            <torusGeometry args={[0.03, 0.01, 8, 20, Math.PI]} />
+          <mesh position={[0, -0.012, 0.004]} rotation={[-0.15, Math.PI, 0]}>
+            <torusGeometry args={[0.038, 0.013, 8, 24, Math.PI]} />
             <meshStandardMaterial color={lipMat.color} roughness={0.35} />
           </mesh>
         </group>
