@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, User } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, User, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileSection from "@/components/ProfileSection";
 
@@ -28,6 +28,11 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
     return false;
   });
 
+  const [wakeLock, setWakeLock] = useState(() => {
+    return localStorage.getItem("gymberget_wakelock") === "true";
+  });
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+
   const [profileOpen, setProfileOpen] = useState(false);
   const [securityOpen, setSecurityOpen] = useState(false);
 
@@ -53,6 +58,40 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
       meta.setAttribute("content", dark ? "#000000" : "#ffffff");
     }
   }, [dark]);
+
+  // Wake lock effect
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if (wakeLock && "wakeLock" in navigator) {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request("screen");
+          wakeLockRef.current.addEventListener("release", () => {
+            wakeLockRef.current = null;
+          });
+        } catch {
+          // Wake lock request failed (e.g. low battery)
+        }
+      } else if (!wakeLock && wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+    };
+
+    localStorage.setItem("gymberget_wakelock", wakeLock ? "true" : "false");
+    requestWakeLock();
+
+    // Re-acquire on visibility change
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && wakeLock && !wakeLockRef.current) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [wakeLock]);
 
   useEffect(() => {
     if (!userId) return;
@@ -139,6 +178,26 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
           />
         </button>
       </div>
+
+      {/* Wake lock toggle */}
+      {"wakeLock" in navigator && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-4 h-4 text-primary" />
+            <span className="text-sm">Håll skärmen vaken</span>
+          </div>
+          <button
+            onClick={() => setWakeLock(!wakeLock)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${wakeLock ? "bg-primary" : "bg-secondary border border-border"}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${
+                wakeLock ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"
+              }`}
+            />
+          </button>
+        </div>
+      )}
 
       {/* Profile dropdown */}
       {userId && (
