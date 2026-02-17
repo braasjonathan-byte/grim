@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
         // Don't let workbox cache sw.js (our push notification service worker)
         globIgnores: ["**/sw.js"],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
       manifest: {
         name: "Grim – Träningsapp",
