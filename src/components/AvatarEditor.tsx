@@ -29,13 +29,7 @@ const HAIR_STYLES = [
   { value: "afro", label: "Afro" },
 ];
 const MOUTH_EXPRESSIONS = [
-  { value: "smile", label: "😊 Leende" },
-  { value: "big_smile", label: "😁 Stort leende" },
-  { value: "neutral", label: "😐 Neutral" },
   { value: "surprised", label: "😮 Förvånad" },
-  { value: "sad", label: "😢 Ledsen" },
-  { value: "smirk", label: "😏 Flin" },
-  { value: "tongue_out", label: "😛 Tunga" },
 ];
 const BODY_OPTIONS = [
   { value: "short", label: "Kort" },
