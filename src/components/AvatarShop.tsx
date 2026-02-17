@@ -5,6 +5,7 @@ import { ShoppingBag, Loader2, Check, Crown } from "lucide-react";
 interface AvatarShopProps {
   userId: string;
   isAdmin?: boolean;
+  onEquipChange?: () => void;
 }
 
 interface ShopItem {
@@ -25,7 +26,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const CATEGORIES = ["shirt", "pants", "shoes", "hat"];
 
-const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
+const AvatarShop = ({ userId, isAdmin, onEquipChange }: AvatarShopProps) => {
   const [items, setItems] = useState<ShopItem[]>([]);
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   const [equippedMap, setEquippedMap] = useState<Record<string, string>>({});
@@ -99,6 +100,7 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
       setEquippedMap((prev) => ({ ...prev, [slot]: item.id }));
     }
     setEquipping(null);
+    onEquipChange?.();
   };
 
   const handleUpdatePrice = async (itemId: string) => {

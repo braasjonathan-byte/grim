@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Check, Palette, Ruler, User } from "lucide-react";
 import Avatar3D, { type AvatarConfig, type EquippedItems } from "./Avatar3D";
 
 interface AvatarEditorProps {
   userId: string;
+}
+
+export interface AvatarEditorRef {
+  reloadEquipped: () => void;
 }
 
 const SKIN_COLORS = ["#FDDBB4", "#F5CBA7", "#E8B98D", "#C68642", "#8D5524", "#5C3317", "#3B1F0B"];
@@ -50,7 +54,7 @@ const DEFAULT_CONFIG: AvatarConfig = {
   hair_color: "#3B2F2F",
 };
 
-const AvatarEditor = ({ userId }: AvatarEditorProps) => {
+const AvatarEditor = forwardRef<AvatarEditorRef, AvatarEditorProps>(({ userId }, ref) => {
   const [config, setConfig] = useState<AvatarConfig>(DEFAULT_CONFIG);
   const [equipped, setEquipped] = useState<EquippedItems>({});
   const [saving, setSaving] = useState(false);
@@ -93,6 +97,23 @@ const AvatarEditor = ({ userId }: AvatarEditorProps) => {
     };
     load();
   }, [userId]);
+
+  const reloadEquipped = async () => {
+    const { data: eqItems } = await supabase
+      .from("avatar_equipped_items")
+      .select("slot, item_id, avatar_shop_items(*)")
+      .eq("user_id", userId);
+    if (eqItems) {
+      const eq: EquippedItems = {};
+      (eqItems as any[]).forEach((e) => {
+        const item = e.avatar_shop_items;
+        if (item) (eq as any)[e.slot] = { style_data: item.style_data };
+      });
+      setEquipped(eq);
+    }
+  };
+
+  useImperativeHandle(ref, () => ({ reloadEquipped }));
 
   const handleSave = async () => {
     setSaving(true);
@@ -224,6 +245,6 @@ const AvatarEditor = ({ userId }: AvatarEditorProps) => {
       </button>
     </div>
   );
-};
+});
 
 export default AvatarEditor;

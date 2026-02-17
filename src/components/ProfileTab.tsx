@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ChevronDown, User, Sparkles, ShoppingBag } from "lucide-react";
 import ProfileSection from "@/components/ProfileSection";
-import AvatarEditor from "@/components/AvatarEditor";
+import AvatarEditor, { type AvatarEditorRef } from "@/components/AvatarEditor";
 import AvatarShop from "@/components/AvatarShop";
 
 interface ProfileTabProps {
@@ -13,6 +13,7 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
   const [avatarOpen, setAvatarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
+  const editorRef = useRef<AvatarEditorRef>(null);
 
   return (
     <div className="py-2 space-y-4">
@@ -30,7 +31,7 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
         </button>
         {avatarOpen && (
           <div className="pt-2">
-            <AvatarEditor userId={userId} />
+            <AvatarEditor ref={editorRef} userId={userId} />
           </div>
         )}
       </div>
@@ -49,7 +50,7 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
         </button>
         {shopOpen && (
           <div className="pt-2">
-            <AvatarShop userId={userId} isAdmin={isAdmin} />
+            <AvatarShop userId={userId} isAdmin={isAdmin} onEquipChange={() => editorRef.current?.reloadEquipped()} />
           </div>
         )}
       </div>
