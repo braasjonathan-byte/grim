@@ -46,6 +46,7 @@ export type Database = {
           hair_color: string
           hair_style: string
           id: string
+          mouth_expression: string
           muscle_mass: string
           skin_color: string
           updated_at: string
@@ -58,6 +59,7 @@ export type Database = {
           hair_color?: string
           hair_style?: string
           id?: string
+          mouth_expression?: string
           muscle_mass?: string
           skin_color?: string
           updated_at?: string
@@ -70,6 +72,7 @@ export type Database = {
           hair_color?: string
           hair_style?: string
           id?: string
+          mouth_expression?: string
           muscle_mass?: string
           skin_color?: string
           updated_at?: string

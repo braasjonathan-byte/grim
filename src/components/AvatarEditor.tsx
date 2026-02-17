@@ -1,6 +1,6 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Check, Palette, Ruler, User } from "lucide-react";
+import { Loader2, Check, Palette, Ruler, User, Smile } from "lucide-react";
 import Avatar3D, { type AvatarConfig, type EquippedItems } from "./Avatar3D";
 
 interface AvatarEditorProps {
@@ -29,6 +29,15 @@ const HAIR_STYLES = [
   { value: "afro", label: "Afro" },
   { value: "undercut", label: "Undercut" },
 ];
+const MOUTH_EXPRESSIONS = [
+  { value: "smile", label: "😊 Leende" },
+  { value: "big_smile", label: "😁 Stort leende" },
+  { value: "neutral", label: "😐 Neutral" },
+  { value: "surprised", label: "😮 Förvånad" },
+  { value: "sad", label: "😢 Ledsen" },
+  { value: "smirk", label: "😏 Flin" },
+  { value: "tongue_out", label: "😛 Tunga" },
+];
 const BODY_OPTIONS = [
   { value: "short", label: "Kort" },
   { value: "medium", label: "Medium" },
@@ -52,6 +61,7 @@ const DEFAULT_CONFIG: AvatarConfig = {
   skin_color: "#C68642",
   hair_style: "short",
   hair_color: "#3B2F2F",
+  mouth_expression: "smile",
 };
 
 const AvatarEditor = forwardRef<AvatarEditorRef, AvatarEditorProps>(({ userId }, ref) => {
@@ -79,6 +89,7 @@ const AvatarEditor = forwardRef<AvatarEditorRef, AvatarEditorProps>(({ userId },
           skin_color: cfg.skin_color,
           hair_style: cfg.hair_style,
           hair_color: cfg.hair_color,
+          mouth_expression: (cfg as any).mouth_expression || "smile",
         });
       }
       if (profile) {
@@ -118,10 +129,19 @@ const AvatarEditor = forwardRef<AvatarEditorRef, AvatarEditorProps>(({ userId },
   const handleSave = async () => {
     setSaving(true);
     const { data: existing } = await supabase.from("avatar_config").select("id").eq("user_id", userId).maybeSingle();
+    const saveData = {
+      body_height: config.body_height,
+      body_fat: config.body_fat,
+      muscle_mass: config.muscle_mass,
+      skin_color: config.skin_color,
+      hair_style: config.hair_style,
+      hair_color: config.hair_color,
+      mouth_expression: config.mouth_expression || "smile",
+    };
     if (existing) {
-      await supabase.from("avatar_config").update({ ...config }).eq("user_id", userId);
+      await supabase.from("avatar_config").update(saveData).eq("user_id", userId);
     } else {
-      await supabase.from("avatar_config").insert({ user_id: userId, ...config });
+      await supabase.from("avatar_config").insert({ user_id: userId, ...saveData });
     }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -236,6 +256,21 @@ const AvatarEditor = forwardRef<AvatarEditorRef, AvatarEditorProps>(({ userId },
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Mouth expression */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <Smile className="w-3.5 h-3.5" /> Ansiktsuttryck
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {MOUTH_EXPRESSIONS.map((e) => (
+            <button key={e.value} onClick={() => update("mouth_expression", e.value)}
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${config.mouth_expression === e.value ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
+              {e.label}
+            </button>
+          ))}
         </div>
       </div>
 
