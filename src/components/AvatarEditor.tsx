@@ -11,13 +11,19 @@ const SKIN_COLORS = ["#FDDBB4", "#F5CBA7", "#E8B98D", "#C68642", "#8D5524", "#5C
 const HAIR_COLORS = ["#090806", "#3B2F2F", "#6B4423", "#B7410E", "#D4A76A", "#E8E8E8", "#C41E3A", "#1E90FF", "#32CD32", "#FF69B4", "#9B59B6"];
 const HAIR_STYLES = [
   { value: "none", label: "Inget" },
+  { value: "buzz", label: "Buzz cut" },
   { value: "short", label: "Kort" },
   { value: "medium", label: "Medium" },
   { value: "long", label: "Långt" },
+  { value: "curly", label: "Lockigt" },
+  { value: "wavy", label: "Vågigt" },
   { value: "mohawk", label: "Mohawk" },
   { value: "ponytail", label: "Hästsvans" },
   { value: "bun", label: "Knut" },
-  { value: "curly", label: "Lockigt" },
+  { value: "braids", label: "Flätor" },
+  { value: "slickback", label: "Slickback" },
+  { value: "afro", label: "Afro" },
+  { value: "undercut", label: "Undercut" },
 ];
 const BODY_OPTIONS = [
   { value: "short", label: "Kort" },

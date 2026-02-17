@@ -450,120 +450,371 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
   );
 }
 
+/* ─── Shared: sculpted hair cap that covers the top/back of the head ─── */
+function HairCap({ headR, hairMat, coverage = 0.52 }: { headR: number; hairMat: THREE.MeshStandardMaterial; coverage?: number }) {
+  return (
+    <group>
+      {/* Main cap */}
+      <mesh position={[0, 1.72, -0.02]} material={hairMat}>
+        <sphereGeometry args={[headR + 0.025, S, S, 0, Math.PI * 2, 0, Math.PI * coverage]} />
+      </mesh>
+      {/* Layered volume on top */}
+      <mesh position={[0, 1.74, -0.01]} material={hairMat}>
+        <sphereGeometry args={[headR + 0.032, S, S, 0, Math.PI * 2, 0, Math.PI * 0.38]} />
+      </mesh>
+      {/* Side volume */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[s * (headR * 0.75), 1.64, -0.03]} material={hairMat}>
+          <capsuleGeometry args={[0.04, 0.06, 8, S]} />
+        </mesh>
+      ))}
+      {/* Back volume */}
+      <mesh position={[0, 1.62, -(headR * 0.7)]} material={hairMat}>
+        <sphereGeometry args={[0.1, S, S]} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ─── Hair strand helper for flowing hair ─── */
+function HairStrand({ position, length, radius, rotation, material }: any) {
+  return (
+    <mesh position={position} rotation={rotation || [0, 0, 0]} material={material}>
+      <capsuleGeometry args={[radius, length, 6, 16]} />
+    </mesh>
+  );
+}
+
 /* ─── Hair Styles Component ─── */
 function HairStyle({ style, headR, hairMat }: { style: string; headR: number; hairMat: THREE.MeshStandardMaterial }) {
   switch (style) {
+    case "buzz":
+      return (
+        <group>
+          <mesh position={[0, 1.72, -0.01]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.012, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+          </mesh>
+          {/* Subtle texture bumps */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.12, 1.65, -0.02]} material={hairMat}>
+              <sphereGeometry args={[0.04, 12, 12]} />
+            </mesh>
+          ))}
+        </group>
+      );
+
     case "short":
       return (
         <group>
-          <mesh position={[0, 1.72, -0.02]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
+          <HairCap headR={headR} hairMat={hairMat} coverage={0.5} />
+          {/* Textured top volume */}
+          <mesh position={[0, 1.76, 0.02]} material={hairMat}>
+            <sphereGeometry args={[headR * 0.6, S, S]} />
           </mesh>
-          {/* Side texture */}
-          {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.18, 1.62, -0.04]} material={hairMat}>
-              <sphereGeometry args={[0.06, 16, 16]} />
-            </mesh>
-          ))}
+          {/* Parting hint */}
+          <mesh position={[0.05, 1.75, 0.06]} material={hairMat} rotation={[0, 0, -0.2]}>
+            <capsuleGeometry args={[0.025, 0.04, 6, 12]} />
+          </mesh>
         </group>
       );
+
     case "medium":
       return (
         <group>
-          <mesh position={[0, 1.72, -0.02]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.04, S, S, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
+          <HairCap headR={headR} hairMat={hairMat} coverage={0.56} />
+          {/* Back hair draping down to neck */}
+          <mesh position={[0, 1.48, -0.13]} material={hairMat}>
+            <capsuleGeometry args={[0.12, 0.14, 12, S]} />
           </mesh>
-          <mesh position={[0, 1.48, -0.14]} material={hairMat}>
-            <capsuleGeometry args={[0.14, 0.12, 16, S]} />
-          </mesh>
+          {/* Side strands draping over ears */}
           {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.2, 1.5, -0.06]} material={hairMat}>
-              <capsuleGeometry args={[0.055, 0.12, 8, 16]} />
-            </mesh>
+            <group key={s}>
+              <HairStrand position={[s * 0.17, 1.55, 0.02]} length={0.1} radius={0.035} rotation={[0, 0, s * 0.15]} material={hairMat} />
+              <HairStrand position={[s * 0.19, 1.48, -0.04]} length={0.08} radius={0.03} rotation={[0, 0, s * 0.1]} material={hairMat} />
+            </group>
+          ))}
+          {/* Layered back strands */}
+          {[-1, 0, 1].map((s) => (
+            <HairStrand key={s} position={[s * 0.08, 1.42, -0.16]} length={0.1} radius={0.04} rotation={[0.15, 0, 0]} material={hairMat} />
           ))}
         </group>
       );
+
     case "long":
       return (
         <group>
-          <mesh position={[0, 1.72, -0.02]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.04, S, S, 0, Math.PI * 2, 0, Math.PI * 0.58]} />
-          </mesh>
-          <mesh position={[0, 1.38, -0.14]} material={hairMat}>
-            <capsuleGeometry args={[0.15, 0.35, 16, S]} />
-          </mesh>
+          <HairCap headR={headR} hairMat={hairMat} coverage={0.56} />
+          {/* Flowing back hair - multiple layered strands */}
+          {[0, 1, 2].map((layer) => (
+            <group key={layer}>
+              {[-1, -0.5, 0, 0.5, 1].map((s) => (
+                <HairStrand
+                  key={s}
+                  position={[s * 0.1, 1.4 - layer * 0.1, -0.12 - layer * 0.02]}
+                  length={0.14 + layer * 0.04}
+                  radius={0.035 - layer * 0.005}
+                  rotation={[0.1 + layer * 0.05, s * 0.05, 0]}
+                  material={hairMat}
+                />
+              ))}
+            </group>
+          ))}
+          {/* Side hair flowing down */}
           {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * 0.2, 1.42, -0.04]} material={hairMat}>
-              <capsuleGeometry args={[0.06, 0.3, 8, 16]} />
-            </mesh>
+            <group key={`side${s}`}>
+              <HairStrand position={[s * 0.2, 1.52, 0.04]} length={0.14} radius={0.032} rotation={[0, 0, s * 0.12]} material={hairMat} />
+              <HairStrand position={[s * 0.21, 1.4, -0.02]} length={0.16} radius={0.028} rotation={[0.05, 0, s * 0.1]} material={hairMat} />
+              <HairStrand position={[s * 0.19, 1.28, -0.04]} length={0.12} radius={0.025} rotation={[0.08, 0, s * 0.08]} material={hairMat} />
+            </group>
           ))}
-          {/* Flowing front strands */}
+          {/* Front face-framing strands */}
           {[-1, 1].map((s) => (
-            <mesh key={`front${s}`} position={[s * 0.15, 1.5, 0.12]} material={hairMat}>
-              <capsuleGeometry args={[0.025, 0.15, 6, 12]} />
-            </mesh>
+            <HairStrand key={`front${s}`} position={[s * 0.14, 1.52, 0.12]} length={0.12} radius={0.022} rotation={[0.15, 0, s * 0.15]} material={hairMat} />
           ))}
         </group>
       );
-    case "mohawk":
-      return (
-        <group>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <mesh key={i} position={[0, 1.78 + i * 0.03, -0.04 + i * 0.01]} material={hairMat} rotation={[0.2, 0, 0]}>
-              <capsuleGeometry args={[0.035 - i * 0.004, 0.04, 8, 16]} />
-            </mesh>
-          ))}
-        </group>
-      );
-    case "ponytail":
-      return (
-        <group>
-          <mesh position={[0, 1.72, -0.02]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
-          </mesh>
-          <mesh position={[0, 1.64, -0.24]} material={hairMat}>
-            <sphereGeometry args={[0.06, S, S]} />
-          </mesh>
-          <mesh position={[0, 1.45, -0.26]} material={hairMat} rotation={[0.15, 0, 0]}>
-            <capsuleGeometry args={[0.04, 0.22, 8, 16]} />
-          </mesh>
-          <mesh position={[0, 1.32, -0.24]} material={hairMat}>
-            <sphereGeometry args={[0.035, 12, 12]} />
-          </mesh>
-        </group>
-      );
-    case "bun":
-      return (
-        <group>
-          <mesh position={[0, 1.72, -0.02]} material={hairMat}>
-            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
-          </mesh>
-          <mesh position={[0, 1.84, -0.04]} material={hairMat}>
-            <sphereGeometry args={[0.09, S, S]} />
-          </mesh>
-          {/* Bun wrap detail */}
-          <mesh position={[0, 1.84, -0.04]} rotation={[0.5, 0, 0]}>
-            <torusGeometry args={[0.06, 0.015, 8, 16]} />
-            <meshStandardMaterial color={hairMat.color} roughness={0.7} />
-          </mesh>
-        </group>
-      );
+
     case "curly":
       return (
         <group>
-          {[...Array(20)].map((_, i) => {
-            const angle = (i / 20) * Math.PI * 2;
-            const layer = i < 10 ? 0 : 1;
-            const r = headR + 0.04 + layer * 0.03;
-            const y = 1.7 + Math.cos(angle * 0.5) * 0.05 - layer * 0.08;
+          {/* Base cap */}
+          <mesh position={[0, 1.72, -0.02]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.02, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          </mesh>
+          {/* Curls in organized layers */}
+          {[0, 1, 2].map((layer) => {
+            const count = layer === 0 ? 8 : layer === 1 ? 10 : 6;
+            const r = headR + 0.04 + layer * 0.025;
+            const baseY = 1.72 - layer * 0.08;
+            return [...Array(count)].map((_, i) => {
+              const angle = (i / count) * Math.PI * 2 + layer * 0.3;
+              const curlSize = 0.032 + layer * 0.005;
+              return (
+                <group key={`${layer}-${i}`} position={[
+                  Math.sin(angle) * r * 0.85,
+                  baseY + Math.sin(i * 1.5) * 0.015,
+                  Math.cos(angle) * r * 0.65 - 0.02
+                ]}>
+                  <mesh material={hairMat}>
+                    <sphereGeometry args={[curlSize, 12, 12]} />
+                  </mesh>
+                  {/* Inner curl highlight */}
+                  <mesh position={[0.005, 0.005, 0.01]}>
+                    <sphereGeometry args={[curlSize * 0.5, 8, 8]} />
+                    <meshStandardMaterial color={hairMat.color} roughness={0.5} metalness={0.15} />
+                  </mesh>
+                </group>
+              );
+            });
+          })}
+        </group>
+      );
+
+    case "wavy":
+      return (
+        <group>
+          <HairCap headR={headR} hairMat={hairMat} coverage={0.55} />
+          {/* Wavy strands flowing back and sides */}
+          {[-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((s) => {
+            const xOffset = s * 0.07;
             return (
-              <mesh key={i} position={[Math.sin(angle) * r * 0.85, y, Math.cos(angle) * r * 0.65 - 0.02]} material={hairMat}>
-                <sphereGeometry args={[0.04 + Math.random() * 0.015, 12, 12]} />
+              <group key={s}>
+                <HairStrand position={[xOffset, 1.52, -0.1]} length={0.12} radius={0.028} rotation={[0.1, s * 0.08, Math.sin(s) * 0.1]} material={hairMat} />
+                <HairStrand position={[xOffset * 1.1, 1.4, -0.13]} length={0.1} radius={0.025} rotation={[0.15, s * 0.05, Math.sin(s + 1) * 0.12]} material={hairMat} />
+                <HairStrand position={[xOffset * 1.05, 1.3, -0.14]} length={0.08} radius={0.022} rotation={[0.18, s * 0.03, Math.sin(s + 2) * 0.1]} material={hairMat} />
+              </group>
+            );
+          })}
+          {/* Side waves */}
+          {[-1, 1].map((s) => (
+            <group key={`sw${s}`}>
+              <HairStrand position={[s * 0.2, 1.5, 0.03]} length={0.12} radius={0.03} rotation={[0, 0, s * 0.2]} material={hairMat} />
+              <HairStrand position={[s * 0.22, 1.38, -0.01]} length={0.1} radius={0.025} rotation={[0.1, 0, s * 0.15]} material={hairMat} />
+            </group>
+          ))}
+        </group>
+      );
+
+    case "mohawk":
+      return (
+        <group>
+          {/* Shaved sides - subtle stubble */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.15, 1.64, -0.02]} material={hairMat}>
+              <sphereGeometry args={[0.06, 12, 12]} />
+            </mesh>
+          ))}
+          {/* Mohawk ridge - tapered spikes */}
+          {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+            const t = i / 6;
+            const height = 0.06 + Math.sin(t * Math.PI) * 0.04;
+            const width = 0.03 + Math.sin(t * Math.PI) * 0.015;
+            return (
+              <mesh key={i} position={[0, 1.76 + i * 0.02, -0.06 + i * 0.015]} material={hairMat} rotation={[0.3 - t * 0.15, 0, 0]}>
+                <capsuleGeometry args={[width, height, 8, 16]} />
               </mesh>
             );
           })}
         </group>
       );
+
+    case "ponytail":
+      return (
+        <group>
+          <HairCap headR={headR} hairMat={hairMat} coverage={0.5} />
+          {/* Hair band */}
+          <mesh position={[0, 1.64, -0.2]}>
+            <torusGeometry args={[0.04, 0.008, 8, 16]} />
+            <meshStandardMaterial color="#333333" roughness={0.3} />
+          </mesh>
+          {/* Ponytail sections */}
+          <HairStrand position={[0, 1.55, -0.24]} length={0.12} radius={0.045} rotation={[0.2, 0, 0]} material={hairMat} />
+          <HairStrand position={[0, 1.42, -0.27]} length={0.1} radius={0.04} rotation={[0.25, 0, 0]} material={hairMat} />
+          <HairStrand position={[0, 1.32, -0.28]} length={0.08} radius={0.035} rotation={[0.3, 0, 0]} material={hairMat} />
+          {/* Tip */}
+          <mesh position={[0, 1.24, -0.28]} material={hairMat}>
+            <sphereGeometry args={[0.03, 12, 12]} />
+          </mesh>
+          {/* Loose side strands */}
+          {[-1, 1].map((s) => (
+            <HairStrand key={s} position={[s * 0.13, 1.56, 0.1]} length={0.06} radius={0.015} rotation={[0.2, 0, s * 0.2]} material={hairMat} />
+          ))}
+        </group>
+      );
+
+    case "bun":
+      return (
+        <group>
+          <HairCap headR={headR} hairMat={hairMat} coverage={0.5} />
+          {/* Bun base */}
+          <mesh position={[0, 1.82, -0.06]} material={hairMat}>
+            <sphereGeometry args={[0.08, S, S]} />
+          </mesh>
+          {/* Bun wrapping detail */}
+          <mesh position={[0, 1.82, -0.06]} rotation={[0.5, 0, 0]}>
+            <torusGeometry args={[0.055, 0.018, 8, 20]} />
+            <meshStandardMaterial color={hairMat.color} roughness={0.6} metalness={0.1} />
+          </mesh>
+          <mesh position={[0, 1.82, -0.06]} rotation={[0, 0, 0.8]}>
+            <torusGeometry args={[0.055, 0.015, 8, 20]} />
+            <meshStandardMaterial color={hairMat.color} roughness={0.65} />
+          </mesh>
+          {/* Hair band */}
+          <mesh position={[0, 1.78, -0.06]}>
+            <torusGeometry args={[0.05, 0.008, 8, 16]} />
+            <meshStandardMaterial color="#333333" roughness={0.3} />
+          </mesh>
+          {/* Wispy side strands */}
+          {[-1, 1].map((s) => (
+            <HairStrand key={s} position={[s * 0.14, 1.56, 0.1]} length={0.05} radius={0.012} rotation={[0.15, 0, s * 0.25]} material={hairMat} />
+          ))}
+        </group>
+      );
+
+    case "braids":
+      return (
+        <group>
+          <HairCap headR={headR} hairMat={hairMat} coverage={0.52} />
+          {/* Two braids */}
+          {[-1, 1].map((s) => (
+            <group key={s}>
+              {/* Braid segments - alternating slight offsets for woven look */}
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                <mesh key={i} position={[
+                  s * 0.16 + Math.sin(i * Math.PI) * 0.01,
+                  1.52 - i * 0.045,
+                  -0.08 + Math.cos(i * Math.PI) * 0.005
+                ]} material={hairMat} rotation={[0.05, 0, s * 0.08]}>
+                  <sphereGeometry args={[0.025, 10, 10]} />
+                </mesh>
+              ))}
+              {/* Braid ties */}
+              <mesh position={[s * 0.16, 1.2, -0.08]}>
+                <sphereGeometry args={[0.015, 8, 8]} />
+                <meshStandardMaterial color="#ff6b6b" roughness={0.3} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      );
+
+    case "slickback":
+      return (
+        <group>
+          {/* Tight, sleek hair pulled back */}
+          <mesh position={[0, 1.72, -0.02]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.018, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          </mesh>
+          {/* Slicked top - flat, shiny */}
+          <mesh position={[0, 1.74, 0.02]}>
+            <sphereGeometry args={[headR * 0.65, S, S, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+            <meshStandardMaterial color={hairMat.color} roughness={0.2} metalness={0.2} />
+          </mesh>
+          {/* Back volume where hair collects */}
+          <mesh position={[0, 1.56, -0.18]} material={hairMat}>
+            <capsuleGeometry args={[0.08, 0.06, 8, S]} />
+          </mesh>
+          <mesh position={[0, 1.48, -0.16]} material={hairMat}>
+            <capsuleGeometry args={[0.07, 0.04, 8, 16]} />
+          </mesh>
+        </group>
+      );
+
+    case "afro":
+      return (
+        <group>
+          {/* Large spherical volume */}
+          <mesh position={[0, 1.72, 0]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.1, S, S]} />
+          </mesh>
+          {/* Extra volume on top */}
+          <mesh position={[0, 1.82, 0]} material={hairMat}>
+            <sphereGeometry args={[headR * 0.7, S, S]} />
+          </mesh>
+          {/* Texture bumps for realistic afro texture */}
+          {[...Array(24)].map((_, i) => {
+            const phi = Math.acos(1 - 2 * (i + 0.5) / 24);
+            const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+            const r = headR + 0.1;
+            return (
+              <mesh key={i} position={[
+                r * Math.sin(phi) * Math.cos(theta) * 0.85,
+                1.72 + r * Math.cos(phi) * 0.7,
+                r * Math.sin(phi) * Math.sin(theta) * 0.85
+              ]} material={hairMat}>
+                <sphereGeometry args={[0.03, 8, 8]} />
+              </mesh>
+            );
+          })}
+        </group>
+      );
+
+    case "undercut":
+      return (
+        <group>
+          {/* Shaved sides */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.16, 1.62, -0.03]} material={hairMat}>
+              <sphereGeometry args={[0.05, 12, 12]} />
+            </mesh>
+          ))}
+          {/* Long top swept to one side */}
+          <mesh position={[0, 1.74, 0]} material={hairMat}>
+            <sphereGeometry args={[headR + 0.03, S, S, 0, Math.PI * 2, 0, Math.PI * 0.4]} />
+          </mesh>
+          <mesh position={[-0.08, 1.74, 0.04]} material={hairMat} rotation={[0, 0, 0.3]}>
+            <capsuleGeometry args={[0.04, 0.08, 8, 16]} />
+          </mesh>
+          <mesh position={[-0.14, 1.7, 0.06]} material={hairMat} rotation={[0.1, 0, 0.5]}>
+            <capsuleGeometry args={[0.03, 0.06, 6, 12]} />
+          </mesh>
+          {/* Volume on top */}
+          <mesh position={[0.02, 1.78, 0.02]} material={hairMat}>
+            <sphereGeometry args={[0.06, S, S]} />
+          </mesh>
+        </group>
+      );
+
     default:
       return null;
   }
