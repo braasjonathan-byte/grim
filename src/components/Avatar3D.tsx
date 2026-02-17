@@ -117,7 +117,7 @@ function HatStyle({ type, headR, hatMat }: { type: string; headR: number; hatMat
 
     case "headband":
       return (
-        <mesh position={[0, HEAD_Y + 0.1, 0]} material={hatMat}>
+        <mesh position={[0, HEAD_Y + 0.1, 0]} rotation={[Math.PI / 2, 0, 0]} material={hatMat}>
           <torusGeometry args={[headR + 0.025, 0.018, 12, S]} />
         </mesh>
       );
