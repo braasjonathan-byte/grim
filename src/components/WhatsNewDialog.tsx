@@ -1,9 +1,8 @@
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect, useCallback, forwardRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sparkles } from "lucide-react";
 
-const APP_VERSION = "1.3.0";
-const WHATS_NEW_KEY = "gymberget_last_seen_version";
+const WHATS_NEW_KEY = "gymberget_last_seen_changelog";
 
 const changelog = [
   {
@@ -31,19 +30,51 @@ const changelog = [
   },
 ];
 
+// Unique fingerprint of all changelog content
+const CURRENT_CHANGELOG_ID = changelog.map((e) => e.version).join(",");
+
 const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
   const [open, setOpen] = useState(false);
+  const [unseenEntries, setUnseenEntries] = useState(changelog);
 
-  useEffect(() => {
+  const checkAndShow = useCallback(() => {
     const lastSeen = localStorage.getItem(WHATS_NEW_KEY);
-    if (lastSeen !== APP_VERSION) {
-      const timer = setTimeout(() => setOpen(true), 800);
-      return () => clearTimeout(timer);
+    if (lastSeen === CURRENT_CHANGELOG_ID) return; // nothing new
+
+    // Determine which entries are new
+    const lastSeenVersions = (lastSeen || "").split(",").filter(Boolean);
+    const unseen = changelog.filter((e) => !lastSeenVersions.includes(e.version));
+
+    if (unseen.length === 0) {
+      // Edge case: versions match but ID differs — mark as seen
+      localStorage.setItem(WHATS_NEW_KEY, CURRENT_CHANGELOG_ID);
+      return;
     }
+
+    setUnseenEntries(unseen);
+    setOpen(true);
   }, []);
 
+  useEffect(() => {
+    // Show on initial mount (app open / login)
+    const timer = setTimeout(checkAndShow, 800);
+
+    // Also show when app comes back to foreground
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        checkAndShow();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [checkAndShow]);
+
   const handleClose = () => {
-    localStorage.setItem(WHATS_NEW_KEY, APP_VERSION);
+    localStorage.setItem(WHATS_NEW_KEY, CURRENT_CHANGELOG_ID);
     setOpen(false);
   };
 
@@ -58,7 +89,7 @@ const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
           <DialogDescription>Se vad som är nytt i appen</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-          {changelog.map((entry) => (
+          {unseenEntries.map((entry) => (
             <div key={entry.version}>
               <div className="flex items-baseline justify-between mb-2">
                 <span className="text-sm font-bold">v{entry.version}</span>
