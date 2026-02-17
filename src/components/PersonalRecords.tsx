@@ -33,27 +33,27 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   const [stars, setStars] = useState<Set<string>>(new Set());
   const [goals, setGoals] = useState<Map<string, PRGoal>>(new Map());
   const [expanded, setExpanded] = useState(false);
-  const [goalDialog, setGoalDialog] = useState<{ exercise: string; currentWeight: number } | null>(null);
+  const [goalDialog, setGoalDialog] = useState<{exercise: string;currentWeight: number;} | null>(null);
   const [goalWeight, setGoalWeight] = useState("");
   const [goalDate, setGoalDate] = useState("");
 
   useEffect(() => {
     // Fetch completions, stars, and goals in parallel
     Promise.all([
-      supabase
-        .from("workout_completions")
-        .select("week, day, done, updated_at, logged_weights")
-        .eq("user_id", userId)
-        .eq("done", true)
-        .order("updated_at", { ascending: true }),
-      supabase.from("pr_stars").select("exercise").eq("user_id", userId),
-      supabase.from("pr_goals").select("exercise, target_weight, target_date").eq("user_id", userId),
-    ]).then(([compRes, starsRes, goalsRes]) => {
+    supabase.
+    from("workout_completions").
+    select("week, day, done, updated_at, logged_weights").
+    eq("user_id", userId).
+    eq("done", true).
+    order("updated_at", { ascending: true }),
+    supabase.from("pr_stars").select("exercise").eq("user_id", userId),
+    supabase.from("pr_goals").select("exercise, target_weight, target_date").eq("user_id", userId)]
+    ).then(([compRes, starsRes, goalsRes]) => {
       if (compRes.data) {
         setCompletions(
           compRes.data.map((c) => ({
             ...c,
-            logged_weights: c.logged_weights as Record<string, number> | null,
+            logged_weights: c.logged_weights as Record<string, number> | null
           }))
         );
       }
@@ -71,7 +71,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   }, [userId]);
 
   const records = useMemo(() => {
-    const prMap = new Map<string, { weight: number; date: string; week: number; previousBest: number | null }>();
+    const prMap = new Map<string, {weight: number;date: string;week: number;previousBest: number | null;}>();
 
     for (const c of completions) {
       if (!c.logged_weights) continue;
@@ -84,7 +84,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
             weight: w,
             date: c.updated_at,
             week: c.week,
-            previousBest: existing?.weight ?? null,
+            previousBest: existing?.weight ?? null
           });
         }
       }
@@ -94,9 +94,9 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
     for (const [exercise, data] of prMap) {
       let trend: PRRecord["trend"] = "first";
       if (data.previousBest !== null) {
-        if (data.weight > data.previousBest) trend = "up";
-        else if (data.weight === data.previousBest) trend = "same";
-        else trend = "down";
+        if (data.weight > data.previousBest) trend = "up";else
+        if (data.weight === data.previousBest) trend = "same";else
+        trend = "down";
       }
       result.push({ exercise, weight: data.weight, date: data.date, week: data.week, trend });
     }
@@ -134,7 +134,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         user_id: userId,
         exercise: goalDialog.exercise,
         target_weight: tw,
-        target_date: targetDate,
+        target_date: targetDate
       },
       { onConflict: "user_id,exercise" }
     );
@@ -162,7 +162,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
 
   const displayRecords = expanded ? records : records.slice(0, 4);
 
-  const TrendIcon = ({ trend }: { trend: PRRecord["trend"] }) => {
+  const TrendIcon = ({ trend }: {trend: PRRecord["trend"];}) => {
     if (trend === "up") return <TrendingUp className="w-3.5 h-3.5 text-success" />;
     if (trend === "same") return <Equal className="w-3.5 h-3.5 text-muted-foreground" />;
     if (trend === "down") return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
@@ -174,40 +174,40 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
       {/* Clickable header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 group w-full text-left"
-      >
+        className="flex items-center gap-2 group w-full text-left">
+
         <Trophy className="w-5 h-5 text-warning" />
         <h3 className="text-lg font-bold tracking-tight group-hover:text-primary transition-colors">
           Personliga rekord
         </h3>
         <span className="text-xs text-muted-foreground ml-1">({records.length})</span>
         <ChevronDown
-          className={`w-4 h-4 text-muted-foreground ml-auto transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
+          className={`w-4 h-4 text-muted-foreground ml-auto transition-transform ${expanded ? "rotate-180" : ""}`} />
+
       </button>
 
       <div className="grid grid-cols-2 gap-2">
         {displayRecords.map((pr) => {
           const goal = goals.get(pr.exercise);
-          const goalProgress = goal ? Math.min(100, Math.round((pr.weight / goal.target_weight) * 100)) : null;
+          const goalProgress = goal ? Math.min(100, Math.round(pr.weight / goal.target_weight * 100)) : null;
 
           return (
             <div
               key={pr.exercise}
-              className="bg-card border border-border rounded-lg p-3 space-y-1 relative"
-            >
+              className="bg-card border border-border rounded-lg p-3 space-y-1 relative">
+
               {/* Star button */}
               <button
-                onClick={(e) => { e.stopPropagation(); toggleStar(pr.exercise); }}
-                className="absolute top-2 right-2"
-              >
+                onClick={(e) => {e.stopPropagation();toggleStar(pr.exercise);}}
+                className="absolute top-2 right-2">
+
                 <Star
                   className={`w-3.5 h-3.5 transition-colors ${
-                    stars.has(pr.exercise)
-                      ? "text-warning fill-warning"
-                      : "text-muted-foreground/30 hover:text-muted-foreground"
-                  }`}
-                />
+                  stars.has(pr.exercise) ?
+                  "text-warning fill-warning" :
+                  "text-muted-foreground/30 hover:text-muted-foreground"}`
+                  } />
+
               </button>
 
               <div className="flex items-center gap-1 pr-5">
@@ -222,28 +222,28 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               </p>
 
               {/* Goal progress */}
-              {goal && (
-                <div className="space-y-0.5">
+              {goal &&
+              <div className="space-y-0.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted-foreground">
                       Mål: {goal.target_weight} kg
                     </span>
-                    {goal.target_date && (
-                      <span className="text-[9px] text-muted-foreground">
+                    {goal.target_date &&
+                  <span className="text-[9px] text-muted-foreground">
                         {new Date(goal.target_date).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
                       </span>
-                    )}
+                  }
                   </div>
                   <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        goalProgress! >= 100 ? "bg-success" : "bg-primary"
-                      }`}
-                      style={{ width: `${goalProgress}%` }}
-                    />
+                    className={`h-full rounded-full transition-all duration-300 ${
+                    goalProgress! >= 100 ? "bg-success" : "bg-primary"}`
+                    }
+                    style={{ width: `${goalProgress}%` }} />
+
                   </div>
                 </div>
-              )}
+              }
 
               <div className="flex items-center justify-between">
                 <p className="text-[10px] text-muted-foreground">
@@ -256,28 +256,28 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                     setGoalWeight(goal?.target_weight?.toString() || "");
                     setGoalDate(goal?.target_date || "");
                   }}
-                  className="text-muted-foreground/50 hover:text-primary transition-colors"
-                >
-                  <Target className="w-3 h-3" />
+                  className="text-muted-foreground/50 hover:text-primary transition-colors">
+
+                  <Target className="w-[15px] h-[15px] text-red-600" />
                 </button>
               </div>
-            </div>
-          );
+            </div>);
+
         })}
       </div>
 
-      {!expanded && records.length > 4 && (
-        <button
-          onClick={() => setExpanded(true)}
-          className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors py-1"
-        >
+      {!expanded && records.length > 4 &&
+      <button
+        onClick={() => setExpanded(true)}
+        className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors py-1">
+
           Visa alla {records.length} rekord ↓
         </button>
-      )}
+      }
 
       {/* Goal dialog */}
-      {goalDialog && (
-        <>
+      {goalDialog &&
+      <>
           <div className="fixed inset-0 bg-black/60 z-[70]" onClick={() => setGoalDialog(null)} />
           <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[80] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-border">
@@ -300,14 +300,14 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Målvikt (kg)</label>
                 <input
-                  type="number"
-                  inputMode="decimal"
-                  value={goalWeight}
-                  onChange={(e) => setGoalWeight(e.target.value)}
-                  placeholder="t.ex. 100"
-                  className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-                  autoFocus
-                />
+                type="number"
+                inputMode="decimal"
+                value={goalWeight}
+                onChange={(e) => setGoalWeight(e.target.value)}
+                placeholder="t.ex. 100"
+                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                autoFocus />
+
               </div>
 
               <div className="space-y-1">
@@ -315,39 +315,39 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                   <Calendar className="w-3 h-3" /> Måldatum (valfritt)
                 </label>
                 <input
-                  type="date"
-                  value={goalDate}
-                  onChange={(e) => setGoalDate(e.target.value)}
-                  className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
-                />
+                type="date"
+                value={goalDate}
+                onChange={(e) => setGoalDate(e.target.value)}
+                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary" />
+
               </div>
 
               <div className="flex gap-2">
                 <button
-                  onClick={saveGoal}
-                  disabled={!goalWeight.trim()}
-                  className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
-                >
+                onClick={saveGoal}
+                disabled={!goalWeight.trim()}
+                className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity">
+
                   Spara mål
                 </button>
-                {goals.has(goalDialog.exercise) && (
-                  <button
-                    onClick={() => {
-                      removeGoal(goalDialog.exercise);
-                      setGoalDialog(null);
-                    }}
-                    className="px-3 py-2.5 bg-destructive/10 text-destructive text-sm font-semibold rounded-lg hover:bg-destructive/20 transition-colors"
-                  >
+                {goals.has(goalDialog.exercise) &&
+              <button
+                onClick={() => {
+                  removeGoal(goalDialog.exercise);
+                  setGoalDialog(null);
+                }}
+                className="px-3 py-2.5 bg-destructive/10 text-destructive text-sm font-semibold rounded-lg hover:bg-destructive/20 transition-colors">
+
                     Ta bort
                   </button>
-                )}
+              }
               </div>
             </div>
           </div>
         </>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 };
 
 export default PersonalRecords;
