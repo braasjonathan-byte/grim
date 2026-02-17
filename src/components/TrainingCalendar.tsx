@@ -146,7 +146,8 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
     else setMonth(month + 1);
   };
 
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   return (
     <div className="space-y-3">
@@ -179,7 +180,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
         <div className="grid grid-cols-7 gap-1">
           {calendarDays.map((date, i) => {
             if (!date) return <div key={`empty-${i}`} />;
-            const dateStr = date.toISOString().split("T")[0];
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
             const status = dayStatusMap.get(dateStr);
             const isToday = dateStr === today;
 
