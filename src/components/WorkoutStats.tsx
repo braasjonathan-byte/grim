@@ -145,7 +145,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return Array.from(buckets.values()).reverse();
   }, [completions, view]);
 
-  const totalDone = completions.filter((c) => c.done).length;
+  const totalDone = completions.filter((c) => c.done && hasExercise(c)).length;
   const totalSkipped = completions.filter((c) => c.skipped).length;
   const totalDistanceKm = completions
     .filter((c) => c.done && c.logged_distance_km)
