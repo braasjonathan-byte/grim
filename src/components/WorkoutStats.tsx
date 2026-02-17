@@ -105,7 +105,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       return Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
     };
 
-    type Bucket = { label: string; done: number; skipped: number; total: number; distanceKm: number };
+    type Bucket = { label: string; done: number; doneWithExercise: number; skipped: number; total: number; distanceKm: number };
     const buckets = new Map<string, Bucket>();
 
     for (const c of completions) {
@@ -131,18 +131,25 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       if (!buckets.has(key)) {
-        buckets.set(key, { label, done: 0, skipped: 0, total: 0, distanceKm: 0 });
+        buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, distanceKm: 0 });
       }
       const b = buckets.get(key)!;
       b.total++;
-      if (c.done) b.done++;
+      if (c.done) {
+        b.done++;
+        if (hasExercise(c)) b.doneWithExercise++;
+      }
       if (c.skipped) b.skipped++;
       if (c.logged_distance_km && c.done) {
         b.distanceKm += Number(c.logged_distance_km);
       }
     }
 
-    return Array.from(buckets.values()).reverse();
+    let result = Array.from(buckets.values()).reverse();
+    if (view === "week") {
+      result = result.slice(0, 3);
+    }
+    return result;
   }, [completions, view]);
 
   const totalDone = completions.filter((c) => c.done && hasExercise(c)).length;
@@ -213,7 +220,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
                       </span>
                     )}
                     <span className="text-xs text-muted-foreground">
-                      {b.done} ✓ · {b.skipped} ✗
+                      {b.doneWithExercise} ✓ · {b.skipped} ✗
                     </span>
                   </div>
                 </div>
