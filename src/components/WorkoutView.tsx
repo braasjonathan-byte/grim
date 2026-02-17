@@ -1204,9 +1204,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                  onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) })}
-                                  className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
-                                      <X className="w-3 h-3" />
+                                  onClick={(e) => {e.stopPropagation();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                  className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors">
+                                      <X className="w-4 h-4" />
                                     </button>
                                   </div>
                                 </div>
@@ -1303,9 +1303,9 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     <Dumbbell className="w-3 h-3" />
                                   </button>
                                   <button
-                                onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) })}
-                                className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
-                                    <X className="w-3 h-3" />
+                                onClick={(e) => {e.stopPropagation();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors">
+                                    <X className="w-4 h-4" />
                                   </button>
                                 </div>
                               </div>
@@ -1941,8 +1941,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                         e.stopPropagation();
                                         setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });
                                       }}
-                                      className="p-0.5 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
-                                      <X className="w-3 h-3" />
+                                      className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
+                                      <X className="w-4 h-4" />
                                     </button>
                                   </li>
                                 );
@@ -2076,8 +2076,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   <button onClick={(e) => { e.stopPropagation(); setExerciseInfoName(condName || part); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
-                                  <button onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) })} className="p-0.5 text-muted-foreground hover:text-destructive transition-colors">
-                                    <X className="w-3 h-3" />
+                                  <button onClick={(e) => {e.stopPropagation();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors">
+                                    <X className="w-4 h-4" />
                                   </button>
                                 </div>
                               </div>
@@ -2192,10 +2192,10 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <button
-                                    onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) })}
-                                    className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                                    onClick={(e) => {e.stopPropagation();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
+                                    className="flex-shrink-0 p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors"
                                     title="Ta bort övning">
-                                    <X className="w-3 h-3" />
+                                    <X className="w-4 h-4" />
                                   </button>
                                 </div>
                               </div>
