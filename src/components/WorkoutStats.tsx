@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, XCircle, CalendarDays, Footprints } from "lucide-react";
+import { BarChart3, CheckCircle, XCircle, Flame, Footprints } from "lucide-react";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
@@ -21,6 +21,53 @@ interface CompletionRecord {
 }
 
 type View = "week" | "month" | "year";
+
+const motivationalQuotes = [
+  "Framgång kommer till den som aldrig ger upp 💪",
+  "En dag i taget – du blir starkare varje pass 🔥",
+  "Det enda dåliga passet är det som inte blev av 🏋️",
+  "Du tävlar bara mot dig själv – och du vinner 🥇",
+  "Disciplin slår motivation varje dag 💯",
+  "Svett idag, stolthet imorgon 🌟",
+  "Små steg varje dag leder till stora resultat 📈",
+  "Din kropp klarar mer än du tror 🚀",
+  "Ge inte upp – du är närmare än du tror ⭐",
+  "Varje rep räknas – fortsätt kämpa 🏆",
+  "Styrka byggs inte på komfort utan på motstånd 💎",
+  "Du skapar den bästa versionen av dig själv 🌱",
+  "Det handlar inte om perfektion – det handlar om framsteg ✨",
+  "Idag är en bra dag att bli bättre 🎯",
+  "Konsistens är nyckeln till allt 🔑",
+  "Res dig upp, visa upp, ge allt 🙌",
+  "Smärtan du känner idag är styrkan du får imorgon 🦾",
+  "Tro på processen – resultaten kommer 🌊",
+  "Du ångrar aldrig ett genomfört pass 😤",
+  "Champions tränar även när de inte känner för det 👑",
+  "En timme träning är 4% av din dag – inga ursäkter 🕐",
+  "Ditt framtida jag kommer tacka dig 🙏",
+  "Starkare än igår, svagare än imorgon 📊",
+  "Hårt arbete lönar sig alltid i längden 🏅",
+  "Fokusera på framsteg, inte perfektion 🎖️",
+  "Du har kommit för långt för att ge upp nu 🛤️",
+  "Varje dag är en ny chans att bli bättre 🌅",
+  "Gör det svåra tills det svåra blir lätt 💫",
+  "Du är starkare än dina ursäkter 🧠",
+  "Sista repet är det som räknas mest 🔥",
+  "Träna som ett djur, återhämta som en proffs 🐺",
+];
+
+const DailyQuoteCard = () => {
+  const dayOfYear = Math.floor(
+    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  const quote = motivationalQuotes[dayOfYear % motivationalQuotes.length];
+  return (
+    <div className="bg-card border border-border rounded-lg p-3 text-center flex flex-col items-center justify-center">
+      <Flame className="w-5 h-5 text-primary mx-auto mb-1" />
+      <p className="text-[11px] font-medium leading-tight">{quote}</p>
+    </div>
+  );
+};
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
@@ -98,9 +145,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return Array.from(buckets.values()).reverse();
   }, [completions, view]);
 
-  const totalDone = completions.filter((c) => c.done && hasExercise(c)).length;
+  const totalDone = completions.filter((c) => c.done).length;
   const totalSkipped = completions.filter((c) => c.skipped).length;
-  const totalAll = completions.filter((c) => hasExercise(c) || c.skipped).length;
   const totalDistanceKm = completions
     .filter((c) => c.done && c.logged_distance_km)
     .reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
@@ -124,11 +170,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-2xl font-black">{totalSkipped}</p>
           <p className="text-[10px] text-muted-foreground">Missade</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <CalendarDays className="w-5 h-5 text-primary mx-auto mb-1" />
-          <p className="text-2xl font-black">{totalAll}</p>
-          <p className="text-[10px] text-muted-foreground">Totalt</p>
-        </div>
+        <DailyQuoteCard />
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <Footprints className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-black">{Math.round(totalDistanceKm * 10) / 10}</p>
