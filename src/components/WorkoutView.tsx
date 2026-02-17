@@ -1757,6 +1757,25 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
           onClose={() => setExerciseInfoName(null)}
         />
       )}
+      {deleteExerciseConfirm && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setDeleteExerciseConfirm(null)} />
+          <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+            <h3 className="font-bold text-sm">Ta bort övning?</h3>
+            <p className="text-sm text-muted-foreground">
+              Är du säker på att du vill ta bort <span className="font-semibold text-foreground">{deleteExerciseConfirm.name}</span>?
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setDeleteExerciseConfirm(null)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+                Avbryt
+              </button>
+              <button onClick={executeDeleteExercise} className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
+                Ta bort
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </>);
 
   }
