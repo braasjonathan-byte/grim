@@ -72,8 +72,19 @@ const DailyQuoteCard = () => {
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
+  const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{ week: number; year: number } | null>(null);
 
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
+
+  const getISOWeek = (d: Date) => {
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+    return {
+      week: Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7),
+      year: date.getUTCFullYear(),
+    };
+  };
 
   useEffect(() => {
     Promise.all([
@@ -83,7 +94,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .eq("user_id", userId),
       supabase
         .from("workout_plans")
-        .select("week, day, details")
+        .select("week, day, details, created_at")
         .eq("user_id", userId),
     ]).then(([{ data: compData }, { data: planData }]) => {
       if (compData) setCompletions(compData as CompletionRecord[]);
@@ -93,6 +104,20 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
             .filter((p) => p.details && p.details.trim() !== "")
             .map((p) => `${p.week}-${p.day}`)
         ));
+        // Determine the calendar week for plan week 1 from the earliest plan created_at
+        if (planData.length > 0) {
+          const earliest = planData.reduce((min, p) =>
+            p.created_at < min.created_at ? p : min
+          );
+          const startDate = new Date(earliest.created_at);
+          const isoStart = getISOWeek(startDate);
+          // Adjust: the earliest plan entry might be for plan week > 1
+          const planWeekOfEarliest = earliest.week as number;
+          setPlanStartCalendarWeek({
+            week: isoStart.week - (planWeekOfEarliest - 1),
+            year: isoStart.year,
+          });
+        }
       }
     });
   }, [userId]);
@@ -100,40 +125,42 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const hasExercise = (c: CompletionRecord) => plansWithExercises.has(`${c.week}-${c.day}`);
 
   const stats = useMemo(() => {
-    const getWeekNumber = (d: Date) => {
-      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-      return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    };
-
-    type Bucket = { label: string; done: number; doneWithExercise: number; skipped: number; total: number; distanceKm: number };
+    type Bucket = { label: string; done: number; doneWithExercise: number; skipped: number; total: number; distanceKm: number; sortKey: string };
     const buckets = new Map<string, Bucket>();
 
     for (const c of completions) {
       const date = new Date(c.updated_at);
       let key: string;
       let label: string;
+      let sortKey: string;
 
       if (view === "week") {
-        const wn = getWeekNumber(date);
-        const yr = date.getFullYear();
-        key = `${yr}-W${wn}`;
-        label = `V${wn} ${yr}`;
+        // Group by plan week, label with calendar week
+        const planWeek = c.week;
+        key = `plan-W${planWeek}`;
+        if (planStartCalendarWeek) {
+          const calendarWeek = planStartCalendarWeek.week + (planWeek - 1);
+          label = `V${calendarWeek} ${planStartCalendarWeek.year}`;
+        } else {
+          label = `Vecka ${planWeek}`;
+        }
+        sortKey = String(planWeek).padStart(4, "0");
       } else if (view === "month") {
         const m = date.getMonth();
         const yr = date.getFullYear();
         key = `${yr}-${String(m + 1).padStart(2, "0")}`;
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
         label = `${monthNames[m]} ${yr}`;
+        sortKey = key;
       } else {
         const yr = date.getFullYear();
         key = `${yr}`;
         label = `${yr}`;
+        sortKey = key;
       }
 
       if (!buckets.has(key)) {
-        buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, distanceKm: 0 });
+        buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, distanceKm: 0, sortKey });
       }
       const b = buckets.get(key)!;
       b.total++;
@@ -147,12 +174,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
     }
 
-    let result = Array.from(buckets.values()).reverse();
+    let result = Array.from(buckets.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     if (view === "week") {
       result = result.slice(0, 3);
     }
     return result;
-  }, [completions, view]);
+  }, [completions, view, planStartCalendarWeek]);
 
   const totalDone = completions.filter((c) => c.done && hasExercise(c)).length;
   const totalSkipped = completions.filter((c) => c.skipped).length;
