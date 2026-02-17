@@ -101,8 +101,10 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
   const stats = useMemo(() => {
     const getWeekNumber = (d: Date) => {
-      const onejan = new Date(d.getFullYear(), 0, 1);
-      return Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+      return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
     };
 
     type Bucket = { label: string; done: number; doneWithExercise: number; skipped: number; total: number; distanceKm: number };
