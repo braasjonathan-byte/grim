@@ -27,7 +27,6 @@ const HAIR_STYLES = [
   { value: "braids", label: "Flätor" },
   { value: "slickback", label: "Slickback" },
   { value: "afro", label: "Afro" },
-  { value: "undercut", label: "Undercut" },
 ];
 const MOUTH_EXPRESSIONS = [
   { value: "smile", label: "😊 Leende" },
