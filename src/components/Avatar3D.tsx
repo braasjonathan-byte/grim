@@ -890,74 +890,48 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
 
       {/* ══════ NECK ══════ */}
       <mesh position={[0, 1.4, 0]} material={skinMat}>
-        <capsuleGeometry args={[0.055, 0.08, 12, S]} />
+        <cylinderGeometry args={[0.05, 0.06, 0.1, S]} />
       </mesh>
-      {!isFemale && m > 1 && (
-        <>
-          <mesh position={[-0.06, 1.38, -0.01]} material={skinMat} rotation={[0, 0, 0.3]}>
-            <capsuleGeometry args={[0.03, 0.06, 8, 16]} />
-          </mesh>
-          <mesh position={[0.06, 1.38, -0.01]} material={skinMat} rotation={[0, 0, -0.3]}>
-            <capsuleGeometry args={[0.03, 0.06, 8, 16]} />
-          </mesh>
-        </>
-      )}
 
       {/* ══════ TORSO ══════ */}
-      {/* Collarbones */}
+      {/* Smooth Simpsons-style torso: single tapered cylinder shape */}
+      {/* Shoulder line */}
       {[-1, 1].map((side) => (
-        <mesh key={`clavicle${side}`} position={[side * shoulderW * 0.28, 1.32, 0.06]} material={isSleeveless ? skinMat : shirtMat} rotation={[0, 0, side * 0.25]}>
-          <capsuleGeometry args={[0.015, shoulderW * 0.25, 6, 12]} />
+        <mesh key={`shoulder${side}`} position={[side * shoulderW * 0.5, 1.3, 0]} material={isSleeveless ? skinMat : shirtMat}>
+          <sphereGeometry args={[armR * 1.4, S, S]} />
         </mesh>
       ))}
-      {/* Shoulder joints */}
-      {[-1, 1].map((side) => (
-        <mesh key={`shoulder${side}`} position={[side * shoulderW * 0.5, 1.28, 0]} material={isSleeveless ? skinMat : shirtMat}>
-          <sphereGeometry args={[armR * 1.6, S, S]} />
+      {/* Main torso - one smooth cylinder from shoulders to waist */}
+      <mesh position={[0, 1.15, 0]} material={shirtMat}>
+        <cylinderGeometry args={[shoulderW * 0.44, waistW * 0.48, 0.34, S]} />
+      </mesh>
+      {/* Slight chest rounding at front */}
+      <mesh position={[0, 1.22, 0.06]} material={shirtMat}>
+        <sphereGeometry args={[shoulderW * 0.32, S, S, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+      </mesh>
+      {/* Lower belly area - smooth transition to hips */}
+      <mesh position={[0, 0.96, 0]} material={lowerTorsoMat}>
+        <cylinderGeometry args={[waistW * 0.48, hipW * 0.46, 0.08, S]} />
+      </mesh>
+      {/* Belly roundness for higher fat */}
+      {f > 1 && (
+        <mesh position={[0, 1.06, 0.06]} material={lowerTorsoMat}>
+          <sphereGeometry args={[waistW * 0.35 * f, S, S]} />
         </mesh>
-      ))}
-      {/* Upper chest */}
-      <mesh position={[0, 1.26, 0.02]} material={shirtMat}>
-        <capsuleGeometry args={[shoulderW * 0.42, 0.06, 16, S]} />
-      </mesh>
-      {/* Mid torso - ribcage area */}
-      <mesh position={[0, 1.17, 0.01]} material={shirtMat} scale={[1, 1, chestDepth / 0.18]}>
-        <capsuleGeometry args={[shoulderW * 0.40, 0.06, 16, S]} />
-      </mesh>
-      {/* Lower torso - tapers to waist */}
-      <mesh position={[0, 1.08, 0]} material={shirtMat} scale={[1, 1, chestDepth / 0.19]}>
-        <capsuleGeometry args={[shoulderW * 0.36, 0.06, 16, S]} />
-      </mesh>
-      {/* Waist/belly */}
-      <mesh position={[0, 1.0, 0]} material={lowerTorsoMat}>
-        <capsuleGeometry args={[waistW * 0.5, 0.06, 12, S]} />
-      </mesh>
-      {/* Back muscle definition */}
-      <mesh position={[0, 1.2, -0.08]} material={shirtMat}>
-        <capsuleGeometry args={[shoulderW * 0.35, 0.12, 12, S]} />
-      </mesh>
-      {/* Spine groove hint */}
-      {[-1, 1].map((side) => (
-        <mesh key={`back${side}`} position={[side * 0.05, 1.15, -0.09]} material={shirtMat}>
-          <capsuleGeometry args={[shoulderW * 0.18, 0.14, 8, S]} />
-        </mesh>
-      ))}
+      )}
 
       {/* Hoodie hood - hanging down on back */}
       {shirtType === "hoodie" && (
         <group>
-          {/* Hood fabric draped on upper back */}
           <mesh position={[0, 1.28, -0.12]} material={shirtMat} rotation={[0.6, 0, 0]}>
             <capsuleGeometry args={[0.08, 0.06, 12, S]} />
           </mesh>
           <mesh position={[0, 1.22, -0.14]} material={shirtMat} rotation={[0.4, 0, 0]}>
             <capsuleGeometry args={[0.07, 0.04, 12, S]} />
           </mesh>
-          {/* Hood opening at neck */}
           <mesh position={[0, 1.34, -0.08]} material={shirtMat} rotation={[0.5, 0, 0]}>
             <torusGeometry args={[0.065, 0.02, 8, S, Math.PI]} />
           </mesh>
-          {/* Hood fold/drape detail */}
           {[-1, 1].map((s) => (
             <mesh key={`hoodfold${s}`} position={[s * 0.06, 1.25, -0.13]} material={shirtMat}>
               <sphereGeometry args={[0.04, 10, 10]} />
@@ -970,121 +944,75 @@ function AvatarCharacter({ config, equipped }: { config: AvatarConfig; equipped:
       {isFemale && (
         <>
           <mesh position={[-0.07, 1.2, 0.1]} material={shirtMat}>
-            <sphereGeometry args={[0.065 * f, S, S]} />
+            <sphereGeometry args={[0.06 * f, S, S]} />
           </mesh>
           <mesh position={[0.07, 1.2, 0.1]} material={shirtMat}>
-            <sphereGeometry args={[0.065 * f, S, S]} />
+            <sphereGeometry args={[0.06 * f, S, S]} />
           </mesh>
         </>
       )}
 
-      {/* Pectoral for male */}
-      {!isFemale && m >= 1 && (
+      {/* Pectoral hint for muscular male */}
+      {!isFemale && m > 1 && (
         <>
-          <mesh position={[-0.07, 1.22, 0.08]} material={shirtMat}>
-            <sphereGeometry args={[0.05 * m, S, S]} />
-          </mesh>
-          <mesh position={[0.07, 1.22, 0.08]} material={shirtMat}>
-            <sphereGeometry args={[0.05 * m, S, S]} />
-          </mesh>
+          {[-1, 1].map((s) => (
+            <mesh key={`pec${s}`} position={[s * 0.065, 1.22, 0.1]} material={shirtMat}>
+              <sphereGeometry args={[0.04 * m, S, S]} />
+            </mesh>
+          ))}
         </>
       )}
 
       {/* ══════ ARMS ══════ */}
+      {/* Simpsons arms: smooth tubes, no extra elbow/wrist spheres */}
       <group ref={leftArmRef} position={[-(shoulderW * 0.5 + armR * 1.2), 1.28, 0]}>
+        {/* Upper arm */}
         <mesh position={[0, -0.08, 0]} material={upperArmMat}>
-          <capsuleGeometry args={[armR * 1.1, 0.1, 8, S]} />
+          <cylinderGeometry args={[armR * 1.05, armR, 0.18, S]} />
         </mesh>
-        <mesh position={[0, -0.17, -0.01]} material={skinMat}>
-          <sphereGeometry args={[armR * 1.05, 16, 16]} />
-        </mesh>
+        {/* Forearm */}
         <mesh position={[0, -0.26, 0]} material={skinMat}>
-          <capsuleGeometry args={[forearmR, 0.1, 8, S]} />
+          <cylinderGeometry args={[forearmR, forearmR * 0.85, 0.18, S]} />
         </mesh>
-        <mesh position={[0, -0.34, 0]} material={skinMat}>
-          <sphereGeometry args={[forearmR * 0.9, 12, 12]} />
-        </mesh>
-        <Hand position={[0, -0.39, 0]} material={skinMat} side={-1} />
+        <Hand position={[0, -0.37, 0]} material={skinMat} side={-1} />
       </group>
 
       <group ref={rightArmRef} position={[shoulderW * 0.5 + armR * 1.2, 1.28, 0]}>
+        {/* Upper arm */}
         <mesh position={[0, -0.08, 0]} material={upperArmMat}>
-          <capsuleGeometry args={[armR * 1.1, 0.1, 8, S]} />
+          <cylinderGeometry args={[armR * 1.05, armR, 0.18, S]} />
         </mesh>
-        <mesh position={[0, -0.17, -0.01]} material={skinMat}>
-          <sphereGeometry args={[armR * 1.05, 16, 16]} />
-        </mesh>
+        {/* Forearm */}
         <mesh position={[0, -0.26, 0]} material={skinMat}>
-          <capsuleGeometry args={[forearmR, 0.1, 8, S]} />
+          <cylinderGeometry args={[forearmR, forearmR * 0.85, 0.18, S]} />
         </mesh>
-        <mesh position={[0, -0.34, 0]} material={skinMat}>
-          <sphereGeometry args={[forearmR * 0.9, 12, 12]} />
-        </mesh>
-        <Hand position={[0, -0.39, 0]} material={skinMat} side={1} />
+        <Hand position={[0, -0.37, 0]} material={skinMat} side={1} />
       </group>
 
       {/* ══════ LOWER BODY ══════ */}
-      {/* Hip area - wider, more anatomical */}
-      <mesh position={[0, 0.92, 0]} material={pantsMat}>
-        <capsuleGeometry args={[hipW * 0.48, 0.04, 12, S]} />
+      {/* Hip area - smooth cylinder */}
+      <mesh position={[0, 0.90, 0]} material={pantsMat}>
+        <cylinderGeometry args={[hipW * 0.46, hipW * 0.42, 0.1, S]} />
       </mesh>
-      <mesh position={[0, 0.88, 0.01]} material={pantsMat} scale={[1.05, 0.8, 0.9]}>
-        <capsuleGeometry args={[hipW * 0.46, 0.04, 12, S]} />
-      </mesh>
-      {/* Glutes */}
-      <mesh position={[0, 0.87, -0.05]} material={pantsMat}>
-        <sphereGeometry args={[hipW * 0.38, S, S]} />
-      </mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={`glute${s}`} position={[s * hipW * 0.22, 0.86, -0.04]} material={pantsMat}>
-          <sphereGeometry args={[hipW * 0.26, S, S]} />
-        </mesh>
-      ))}
 
-      {/* Legs */}
+      {/* Legs - Simpsons style: smooth tapered tubes */}
       {[-1, 1].map((side) => (
         <group key={`leg${side}`} position={[side * legSpacing, 0, 0]}>
-          {/* Upper thigh */}
-          <mesh position={[0, 0.78, 0]} material={pantsMat}>
-            <capsuleGeometry args={[thighR * 1.05, 0.08, 8, S]} />
+          {/* Thigh - single smooth cylinder */}
+          <mesh position={[0, 0.72, 0]} material={pantsMat}>
+            <cylinderGeometry args={[thighR, thighR * 0.85, 0.26, S]} />
           </mesh>
-          {/* Mid thigh */}
-          <mesh position={[0, 0.68, 0]} material={pantsMat}>
-            <capsuleGeometry args={[thighR, 0.08, 8, S]} />
-          </mesh>
-          {/* Knee joint */}
-          <mesh position={[0, 0.60, 0.01]} material={isShorts ? skinMat : pantsMat}>
-            <sphereGeometry args={[thighR * 0.82, 16, 16]} />
-          </mesh>
-          {/* Kneecap */}
-          <mesh position={[0, 0.60, 0.03]} material={isShorts ? skinMat : pantsMat}>
-            <sphereGeometry args={[thighR * 0.45, 12, 12]} />
-          </mesh>
-          {/* Upper calf */}
+          {/* Calf - smooth taper */}
           <mesh position={[0, 0.50, 0]} material={isShorts ? skinMat : pantsMat}>
-            <capsuleGeometry args={[calfR * 1.05, 0.06, 8, S]} />
-          </mesh>
-          {/* Lower calf - tapers */}
-          <mesh position={[0, 0.42, 0]} material={isShorts ? skinMat : pantsMat}>
-            <capsuleGeometry args={[calfR * 0.8, 0.05, 8, S]} />
-          </mesh>
-          {/* Ankle */}
-          <mesh position={[0, 0.36, 0]} material={isShorts ? skinMat : pantsMat}>
-            <capsuleGeometry args={[calfR * 0.55, 0.02, 8, S]} />
+            <cylinderGeometry args={[calfR, calfR * 0.65, 0.22, S]} />
           </mesh>
 
-          {/* Shoes */}
-          <mesh position={[0, 0.34, 0]} material={shoesMat}>
-            <sphereGeometry args={[0.045, S, S]} />
-          </mesh>
-          <mesh position={[0, 0.31, 0.02]} material={shoesMat}>
-            <capsuleGeometry args={[0.045, 0.06, 8, S]} />
-          </mesh>
-          <mesh position={[0, 0.3, 0.08]} material={shoesMat}>
+          {/* Shoes - simple rounded shape */}
+          <mesh position={[0, 0.37, 0]} material={shoesMat}>
             <sphereGeometry args={[0.04, S, S]} />
           </mesh>
-          <mesh position={[0, 0.275, 0.04]} material={shoesMat} scale={[1, 0.4, 1.3]}>
-            <capsuleGeometry args={[0.045, 0.04, 8, 16]} />
+          <mesh position={[0, 0.35, 0.03]} material={shoesMat} rotation={[Math.PI / 2, 0, 0]}>
+            <capsuleGeometry args={[0.04, 0.08, 8, S]} />
           </mesh>
         </group>
       ))}
