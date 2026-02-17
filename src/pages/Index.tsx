@@ -452,7 +452,7 @@ const Index = () => {
             </div>
             <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
             {userRole === "admin" && <AdminUserList userId={user.id} />}
-            <SettingsPanel userId={user.id} />
+            <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
             <NotificationSettings userId={user.id} />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
           </div>

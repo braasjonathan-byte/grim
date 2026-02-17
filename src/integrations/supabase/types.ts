@@ -38,6 +38,136 @@ export type Database = {
         }
         Relationships: []
       }
+      avatar_config: {
+        Row: {
+          body_fat: string
+          body_height: string
+          created_at: string
+          hair_color: string
+          hair_style: string
+          id: string
+          muscle_mass: string
+          skin_color: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body_fat?: string
+          body_height?: string
+          created_at?: string
+          hair_color?: string
+          hair_style?: string
+          id?: string
+          muscle_mass?: string
+          skin_color?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body_fat?: string
+          body_height?: string
+          created_at?: string
+          hair_color?: string
+          hair_style?: string
+          id?: string
+          muscle_mass?: string
+          skin_color?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      avatar_equipped_items: {
+        Row: {
+          id: string
+          item_id: string
+          slot: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          slot: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          slot?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_equipped_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_shop_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avatar_owned_items: {
+        Row: {
+          id: string
+          item_id: string
+          purchased_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          purchased_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          purchased_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatar_owned_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "avatar_shop_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avatar_shop_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          style_data: Json
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          style_data?: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          style_data?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       custom_exercises: {
         Row: {
           category: string
@@ -176,6 +306,7 @@ export type Database = {
           max_distance_km: number | null
           must_change_password: boolean
           nickname: string
+          protein_bars: number
           referral_code: string | null
           referred_by: string | null
           time_10km_min: number | null
@@ -193,6 +324,7 @@ export type Database = {
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname: string
+          protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null
           time_10km_min?: number | null
@@ -210,6 +342,7 @@ export type Database = {
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname?: string
+          protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null
           time_10km_min?: number | null
@@ -512,6 +645,7 @@ export type Database = {
         Args: { referral_code_input: string }
         Returns: boolean
       }
+      purchase_avatar_item: { Args: { p_item_id: string }; Returns: boolean }
       search_users_by_nickname: {
         Args: { requesting_user_id: string; search_term: string }
         Returns: {

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, User, Smartphone } from "lucide-react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, User, Smartphone, Sparkles, ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import ProfileSection from "@/components/ProfileSection";
+import AvatarEditor from "@/components/AvatarEditor";
+import AvatarShop from "@/components/AvatarShop";
 
 const THEME_KEY = "gymberget_theme";
 
@@ -18,9 +20,10 @@ export const SECURITY_QUESTIONS = [
 
 interface SettingsPanelProps {
   userId?: string;
+  isAdmin?: boolean;
 }
 
-const SettingsPanel = ({ userId }: SettingsPanelProps) => {
+const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark");
@@ -34,6 +37,8 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
   const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
   const [securityOpen, setSecurityOpen] = useState(false);
 
   // Security questions state
@@ -222,7 +227,52 @@ const SettingsPanel = ({ userId }: SettingsPanelProps) => {
         </div>
       )}
 
-      {/* Security questions dropdown */}
+      {/* Avatar editor dropdown */}
+      {userId && (
+        <div className="border-t border-border pt-2">
+          <button
+            onClick={() => setAvatarOpen(!avatarOpen)}
+            className="w-full flex items-center justify-between py-2"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">Avatar</span>
+            </div>
+            <ChevronDown
+              className={`w-4 h-4 text-muted-foreground transition-transform ${avatarOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {avatarOpen && (
+            <div className="pb-2">
+              <AvatarEditor userId={userId} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Shop dropdown */}
+      {userId && (
+        <div className="border-t border-border pt-2">
+          <button
+            onClick={() => setShopOpen(!shopOpen)}
+            className="w-full flex items-center justify-between py-2"
+          >
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">Butik</span>
+            </div>
+            <ChevronDown
+              className={`w-4 h-4 text-muted-foreground transition-transform ${shopOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {shopOpen && (
+            <div className="pb-2">
+              <AvatarShop userId={userId} isAdmin={isAdmin} />
+            </div>
+          )}
+        </div>
+      )}
+
       {userId && (
         <div className="border-t border-border pt-2">
           <button
