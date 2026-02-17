@@ -100,6 +100,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [nicknameMap, setNicknameMap] = useState<Record<string, string>>({});
   
   // Admin editing
+  const [togglingDone, setTogglingDone] = useState<string | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editDetails, setEditDetails] = useState("");
   const [editSessionName, setEditSessionName] = useState("");
@@ -394,6 +395,33 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setSavingEdit(false);
   };
 
+  const adminToggleDone = async (plan: FriendPlanDay) => {
+    if (!viewingFriend) return;
+    const fid = viewingFriend.profile.user_id;
+    const key = `${plan.week}-${plan.day}`;
+    const current = friendCompletions[key];
+    const newDone = !current?.done;
+    setTogglingDone(key);
+
+    setFriendCompletions((prev) => ({
+      ...prev,
+      [key]: { week: plan.week, day: plan.day, done: newDone, user_comment: current?.user_comment || null },
+    }));
+
+    await supabase.from("workout_completions").upsert(
+      {
+        user_id: fid,
+        week: plan.week,
+        day: plan.day,
+        done: newDone,
+        skipped: false,
+      } as any,
+      { onConflict: "user_id,week,day" }
+    );
+
+    setTogglingDone(null);
+  };
+
   const postComment = async (week: number, day: string) => {
     const key = `${week}-${day}`;
     const text = newComment[key]?.trim();
@@ -556,14 +584,25 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
                     {expanded && (
                       <div className="px-4 pb-4 space-y-3 border-t border-border pt-3 animate-fade-in">
-                        {/* Admin edit button */}
+                        {/* Admin actions */}
                         {isAdmin && editingPlanId !== plan.id && (
-                          <button
-                            onClick={() => startEditing(plan)}
-                            className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline"
-                          >
-                            <Pencil className="w-3.5 h-3.5" /> Redigera pass
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => adminToggleDone(plan)}
+                              disabled={togglingDone === key}
+                              className={`flex items-center gap-1.5 text-xs font-semibold hover:underline ${
+                                isDone ? "text-muted-foreground" : "text-success"
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5" /> {isDone ? "Ångra klarmarkering" : "Klarmarkera"}
+                            </button>
+                            <button
+                              onClick={() => startEditing(plan)}
+                              className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline"
+                            >
+                              <Pencil className="w-3.5 h-3.5" /> Redigera pass
+                            </button>
+                          </div>
                         )}
 
                         {/* Admin editing mode */}
