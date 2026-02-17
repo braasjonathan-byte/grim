@@ -1210,8 +1210,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                   onPointerDown={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
-                                  className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
+                                   onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                  className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                       <X className="w-4 h-4" />
                                     </button>
                                   </div>
@@ -1309,8 +1309,8 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     <Dumbbell className="w-3 h-3" />
                                   </button>
                                   <button
-                                onPointerDown={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
-                                className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
+                                onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                     <X className="w-4 h-4" />
                                   </button>
                                 </div>
@@ -1962,12 +1962,12 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                     </button>
                                     <span className="flex-1">{line}</span>
                                     <button
-                                      onPointerDown={(e) => {
+                                      onClick={(e) => {
                                         e.stopPropagation();
                                         e.preventDefault();
                                         setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });
                                       }}
-                                      className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 touch-manipulation">
+                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 touch-manipulation">
                                       <X className="w-4 h-4" />
                                     </button>
                                   </li>
@@ -2102,7 +2102,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   <button onClick={(e) => { e.stopPropagation(); setExerciseInfoName(condName || part); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
-                                  <button onPointerDown={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="p-1.5 -m-1 text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
+                                  <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                     <X className="w-4 h-4" />
                                   </button>
                                 </div>
