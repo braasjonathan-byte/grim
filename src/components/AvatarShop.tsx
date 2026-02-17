@@ -65,10 +65,11 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
 
   useEffect(() => { load(); }, [userId]);
 
+  const isFreeUser = isJonne || !!isAdmin;
+
   const handleBuy = async (item: ShopItem) => {
     setBuying(item.id);
-    if (isJonne) {
-      // Free for Jonne - just insert owned item directly
+    if (isFreeUser) {
       await supabase.from("avatar_owned_items").insert({ user_id: userId, item_id: item.id });
       setOwnedIds((prev) => new Set([...prev, item.id]));
     } else {
@@ -141,7 +142,7 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
           <span className="text-sm font-semibold">Butik</span>
         </div>
         <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-          {isJonne ? "⭐ Gratis!" : `🍫 ${proteinBars}`}
+          {isJonne || isAdmin ? "⭐ Gratis!" : `🍫 ${proteinBars}`}
         </span>
       </div>
 
@@ -175,7 +176,7 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{isJonne ? "⭐ Gratis" : `🍫 ${item.price}`}</span>
+                  <span className="text-xs text-muted-foreground">{isFreeUser ? "⭐ Gratis" : `🍫 ${item.price}`}</span>
                   {isAdmin && (
                     <div className="flex gap-1">
                       <button onClick={() => { setEditingItem(item.id); setEditPrice(item.price.toString()); }}
@@ -193,9 +194,9 @@ const AvatarShop = ({ userId, isAdmin }: AvatarShopProps) => {
                   {equipping === item.id ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : isEquipped ? "✓ Utrustad" : "Utrusta"}
                 </button>
               ) : (
-                <button onClick={() => handleBuy(item)} disabled={buying === item.id || (!isJonne && proteinBars < item.price)}
+                <button onClick={() => handleBuy(item)} disabled={buying === item.id || (!isFreeUser && proteinBars < item.price)}
                   className="w-full text-xs py-1.5 rounded-lg font-semibold bg-primary text-primary-foreground disabled:opacity-40 hover:opacity-90 transition-opacity">
-                  {buying === item.id ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : isJonne ? "Hämta gratis" : `Köp (🍫 ${item.price})`}
+                  {buying === item.id ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : isFreeUser ? "Hämta gratis" : `Köp (🍫 ${item.price})`}
                 </button>
               )}
             </div>
