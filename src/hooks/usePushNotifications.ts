@@ -84,9 +84,16 @@ export async function notifyFriendsOfCompletion(day: string, week: number, sessi
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    // Deduplicate: only notify once per user+week+day
+    const uid = session.user.id;
+    const storageKey = `notified_${uid}_${week}_${day}`;
+    if (localStorage.getItem(storageKey)) return;
+
     await supabase.functions.invoke("notify-friends", {
       body: { day, week, sessionName },
     });
+
+    localStorage.setItem(storageKey, "1");
   } catch (err) {
     console.error("Failed to notify friends:", err);
   }
