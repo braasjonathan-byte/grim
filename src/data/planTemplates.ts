@@ -44,7 +44,7 @@ const pct = (rm: number, p: number) => round(rm * p);
 
 const ALL_DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
-/** Ensure every week has exactly 7 days. Missing days get an empty "Vila" entry. */
+/** Ensure every week has exactly 7 days. Missing days get an empty "Vila" entry. Vila sessions get details cleared. */
 export const padWeeksTo7Days = (days: TemplatePlanDay[]): TemplatePlanDay[] => {
   const weeks = new Map<number, Map<string, TemplatePlanDay>>();
   for (const d of days) {
@@ -56,7 +56,12 @@ export const padWeeksTo7Days = (days: TemplatePlanDay[]): TemplatePlanDay[] => {
   for (const w of sortedWeeks) {
     const weekMap = weeks.get(w)!;
     for (const dayName of ALL_DAYS) {
-      result.push(weekMap.get(dayName) || { week: w, day: dayName, session_name: "", details: "", tempo: "" });
+      const entry = weekMap.get(dayName) || { week: w, day: dayName, session_name: "", details: "", tempo: "" };
+      // Clear details for vila/rest sessions so they don't count as workouts
+      if (entry.session_name.toLowerCase().includes("vila")) {
+        entry.details = "";
+      }
+      result.push(entry);
     }
   }
   return result;
