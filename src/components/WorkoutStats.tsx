@@ -206,8 +206,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       ) : (
         <div className="space-y-2">
           {stats.map((b) => {
-            const pctDone = b.total > 0 ? Math.round((b.done / b.total) * 100) : 0;
-            const pctSkipped = b.total > 0 ? Math.round((b.skipped / b.total) * 100) : 0;
+            const resolved = b.done + b.skipped;
+            const pctDone = resolved > 0 ? Math.round((b.done / resolved) * 100) : 0;
+            const pctSkipped = resolved > 0 ? Math.round((b.skipped / resolved) * 100) : 0;
             return (
               <div key={b.label} className="bg-card border border-border rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
