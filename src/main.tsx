@@ -4,7 +4,7 @@ import "./index.css";
 
 // Initialize theme from localStorage before render
 const storedTheme = localStorage.getItem("gymberget_theme");
-const shouldBeDark = storedTheme === "dark" || (!storedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+const shouldBeDark = storedTheme === "dark";
 if (shouldBeDark) {
   document.documentElement.classList.add("dark");
   document.documentElement.classList.remove("light");
