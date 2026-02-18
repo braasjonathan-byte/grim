@@ -87,6 +87,38 @@ export const exerciseLibrary: ExerciseInfo[] = [
   { name: "Promenad", category: "kondition", muscleGroup: "Helkropp" },
   { name: "Trappmaskin", category: "kondition", muscleGroup: "Helkropp" },
 
+  // Rumpa
+  { name: "Hip Thrust Maskin", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Barbell Hip Thrust", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Single-Leg Hip Thrust", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Glute Bridge", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Single-Leg Glute Bridge", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Frog Pump", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Cable Pull-Through", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Cable Kickback", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Donkey Kick", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Fire Hydrant", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Rumänsk Marklyft Hantel", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Stiff-Leg Marklyft", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Single-Leg Rumänsk Marklyft", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Sumo Squat", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Curtsy Lunge", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Walking Lunge", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Reverse Lunge", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Lateral Lunge", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Bulgarian Split Squat", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Step-Up med Knälyft", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Abduktionsmaskin", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Kabelabduktion", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Band Walk", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Clamshell", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Kickback Maskin", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Good Morning", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Benspark Bakåt", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Smith Machine Hip Thrust", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Glute Ham Raise", category: "styrka", muscleGroup: "Rumpa" },
+  { name: "Pendlay Hip Extension", category: "styrka", muscleGroup: "Rumpa" },
+
   // Rörlighet
   { name: "Stretching", category: "rörlighet", muscleGroup: "Helkropp" },
   { name: "Yoga", category: "rörlighet", muscleGroup: "Helkropp" },
@@ -112,7 +144,7 @@ export const searchExercises = (query: string) => {
 };
 
 export const muscleGroups = [
-  "Bröst", "Rygg", "Ben", "Axlar", "Armar", "Core", "Helkropp"
+  "Bröst", "Rygg", "Ben", "Rumpa", "Axlar", "Armar", "Core", "Helkropp"
 ];
 
 export const categories = ["styrka", "kondition", "rörlighet", "core"] as const;
