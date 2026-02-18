@@ -1,5 +1,7 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
 import { clientsClaim } from "workbox-core";
+import { registerRoute, NavigationRoute } from "workbox-routing";
+import { NetworkFirst } from "workbox-strategies";
 
 // Force new service worker to take over immediately
 self.skipWaiting();
@@ -7,6 +9,27 @@ clientsClaim();
 
 // Clean up old caches from previous versions
 cleanupOutdatedCaches();
+
+// On activate, clear ALL non-workbox caches to force fresh content
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => !name.includes("workbox-precache"))
+          .map((name) => caches.delete(name))
+      );
+    })
+  );
+});
+
+// Serve navigation requests (HTML) with Network First strategy
+// so users always get fresh HTML when online
+const navigationHandler = new NetworkFirst({
+  cacheName: "navigations",
+  networkTimeoutSeconds: 3,
+});
+registerRoute(new NavigationRoute(navigationHandler));
 
 // Workbox precaching (injected by VitePWA)
 precacheAndRoute(self.__WB_MANIFEST);
