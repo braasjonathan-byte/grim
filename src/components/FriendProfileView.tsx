@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Trophy, Dumbbell, X } from "lucide-react";
-import Avatar3D, { type AvatarConfig, type EquippedItems } from "./Avatar3D";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -9,56 +8,18 @@ interface FriendProfileViewProps {
   onClose: () => void;
 }
 
-const DEFAULT_CONFIG: AvatarConfig = {
-  body_height: "medium",
-  body_fat: "medium",
-  muscle_mass: "medium",
-  skin_color: "#C68642",
-  hair_style: "short",
-  hair_color: "#3B2F2F",
-};
-
 const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileViewProps) => {
-  const [config, setConfig] = useState<AvatarConfig>(DEFAULT_CONFIG);
-  const [equipped, setEquipped] = useState<EquippedItems>({});
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalWorkouts: 0, bestPR: "", prWeight: 0 });
-  const [gender, setGender] = useState("");
 
   useEffect(() => {
     const load = async () => {
       const now = new Date();
-      const [{ data: cfg }, { data: eqItems }, { data: leaderboard }, { data: prData }, { data: profile }] = await Promise.all([
-        supabase.from("avatar_config").select("*").eq("user_id", friendUserId).maybeSingle(),
-        supabase.from("avatar_equipped_items").select("slot, item_id, avatar_shop_items(*)").eq("user_id", friendUserId),
+      const [{ data: leaderboard }, { data: prData }] = await Promise.all([
         supabase.rpc("get_leaderboard", { filter_year: now.getFullYear() }),
         supabase.from("workout_completions").select("logged_weights").eq("user_id", friendUserId).eq("done", true).not("logged_weights", "is", null),
-        supabase.from("profiles").select("gender").eq("user_id", friendUserId).single(),
       ]);
 
-      if (cfg) {
-        setConfig({
-          body_height: cfg.body_height,
-          body_fat: cfg.body_fat,
-          muscle_mass: cfg.muscle_mass,
-          skin_color: cfg.skin_color,
-          hair_style: cfg.hair_style,
-          hair_color: cfg.hair_color,
-        });
-      }
-
-      if (profile) setGender((profile as any).gender || "");
-
-      if (eqItems) {
-        const eq: EquippedItems = {};
-        (eqItems as any[]).forEach((e) => {
-          const item = e.avatar_shop_items;
-          if (item) (eq as any)[e.slot] = { style_data: item.style_data };
-        });
-        setEquipped(eq);
-      }
-
-      // Get workout count from leaderboard
       const friendEntry = leaderboard?.find((e: any) => e.user_id === friendUserId);
       const totalWorkouts = friendEntry?.done_count || 0;
 
@@ -93,8 +54,6 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     );
   }
 
-  const avatarConfig = { ...config, gender };
-
   return (
     <>
       <div className="fixed inset-0 z-[60] bg-black/60" onClick={onClose} />
@@ -107,11 +66,6 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Avatar - shown first and prominently */}
-          <div className="flex justify-center bg-secondary/50 rounded-xl">
-            <Avatar3D config={avatarConfig} equipped={equipped} size={240} />
-          </div>
-
           {/* Stats */}
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-secondary rounded-xl p-3 text-center">
