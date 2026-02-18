@@ -198,6 +198,39 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_gif_mappings: {
+        Row: {
+          created_at: string
+          created_by: string
+          exercise_name: string
+          exercise_name_lower: string | null
+          exercisedb_name: string
+          gif_url: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          exercise_name: string
+          exercise_name_lower?: string | null
+          exercisedb_name: string
+          gif_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          exercise_name?: string
+          exercise_name_lower?: string | null
+          exercisedb_name?: string
+          gif_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           created_at: string

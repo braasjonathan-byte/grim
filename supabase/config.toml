@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.test-push]
 verify_jwt = false
+
+[functions.search-exercisedb]
+verify_jwt = false
