@@ -199,7 +199,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
     let result = Array.from(buckets.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     if (view === "week") {
-      result = result.slice(0, 3);
+      // Split into started (has any done/skipped) and fully pending
+      const started = result.filter(b => b.doneWithExercise > 0 || b.skipped > 0);
+      const fullyCompleted = started.filter(b => b.doneWithExercise + b.skipped >= b.totalWithExercise && b.totalWithExercise > 0);
+      const inProgress = started.filter(b => !(b.doneWithExercise + b.skipped >= b.totalWithExercise && b.totalWithExercise > 0));
+      // Show in-progress weeks + up to 3 most recent completed, max 4 total
+      result = [...inProgress, ...fullyCompleted.slice(0, 3)].slice(0, 4);
+      result.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     }
     return result;
   }, [completions, view, planStartCalendarWeek, scheduledPerWeek]);
