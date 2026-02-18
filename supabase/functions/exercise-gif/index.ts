@@ -311,6 +311,34 @@ async function searchExerciseDB(term: string): Promise<any | null> {
   return null;
 }
 
+async function generateAIInstructions(exerciseName: string): Promise<string[]> {
+  if (!LOVABLE_API_KEY) return [];
+  try {
+    const res = await fetch(AI_GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: "Du är en erfaren personlig tränare. Skriv tydliga, steg-för-steg instruktioner på svenska för den givna övningen. Skriv 4-7 steg. Numrera stegen (1. 2. 3. osv). Svara BARA med instruktionerna, inget annat. Inkludera startposition, utförande och vanliga misstag att undvika." },
+          { role: "user", content: `Skriv träningsinstruktioner för övningen: ${exerciseName}` },
+        ],
+        temperature: 0.3,
+      }),
+    });
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    const lines = content.split("\n").filter((l: string) => l.trim());
+    return lines.map((l: string) => l.replace(/^\d+\.\s*/, "").trim()).filter((l: string) => l.length > 0);
+  } catch (e) {
+    console.error("AI instruction generation failed:", e);
+    return [];
+  }
+}
+
 async function translateToSwedish(instructions: string[]): Promise<string[]> {
   if (!instructions || instructions.length === 0 || !LOVABLE_API_KEY) return instructions;
   try {
@@ -374,15 +402,17 @@ serve(async (req) => {
       });
     }
 
-    // Check if this exercise has no GIF available in the database
+    // Check if this exercise has no GIF available in the database — generate AI instructions
     if (searchTerms.length === 1 && searchTerms[0] === "_NO_GIF_") {
+      const aiInstructions = await generateAIInstructions(cleanName);
       return new Response(JSON.stringify({
         gifUrl: null,
         name: cleanName,
-        instructions: [],
+        instructions: aiInstructions,
         targetMuscles: [],
         equipments: [],
-        error: "Denna övning saknar GIF-demonstration.",
+        aiGenerated: true,
+        error: aiInstructions.length > 0 ? null : "Denna övning saknar GIF-demonstration.",
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -408,7 +438,17 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ error: "Exercise not found", gifUrl: null }), {
+    // No ExerciseDB match found — try AI-generated instructions as last resort
+    const aiInstructions = await generateAIInstructions(cleanName);
+    return new Response(JSON.stringify({
+      gifUrl: null,
+      name: cleanName,
+      instructions: aiInstructions,
+      targetMuscles: [],
+      equipments: [],
+      aiGenerated: true,
+      error: aiInstructions.length > 0 ? null : "Exercise not found",
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
