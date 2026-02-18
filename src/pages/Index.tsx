@@ -321,7 +321,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img alt="Grim" className="w-[72px] h-[72px]" src="/lovable-uploads/6e42c42e-f3f7-4f1c-a09e-37ecba864c10.png" />
+            <img alt="Grim" className="w-[72px] h-[72px] shrink-0" src="/lovable-uploads/6e42c42e-f3f7-4f1c-a09e-37ecba864c10.png" />
             <h1 className="text-base font-black tracking-tight">
               <span className="text-primary"></span>
             </h1>
