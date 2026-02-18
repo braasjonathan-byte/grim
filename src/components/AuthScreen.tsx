@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Dumbbell, Eye, EyeOff, ArrowLeft, ShieldQuestion } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldQuestion } from "lucide-react";
+import grimIcon from "@/assets/grim-icon.png";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthScreenProps {
@@ -217,9 +218,9 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-8 animate-fade-in">
           <div className="text-center space-y-2">
-            <Dumbbell className="w-12 h-12 text-primary mx-auto" />
+          <img src={grimIcon} alt="Grim" className="w-20 h-20 mx-auto" />
             <h1 className="text-3xl font-black tracking-tight">
-              TRÄNING<span className="text-primary">.</span>
+              Grim<span className="text-primary">.</span>
             </h1>
             <p className="text-sm text-muted-foreground">Återställ lösenord</p>
           </div>
@@ -383,7 +384,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8 animate-fade-in">
         <div className="text-center space-y-2">
-          <Dumbbell className="w-12 h-12 text-primary mx-auto" />
+          <img src={grimIcon} alt="Grim" className="w-20 h-20 mx-auto" />
           <h1 className="text-3xl font-black tracking-tight">Grim.</h1>
           <p className="text-xs text-muted-foreground italic">
             lift heavier than runners, run faster than lifters
