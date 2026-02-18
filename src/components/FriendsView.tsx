@@ -455,6 +455,14 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           setNicknameMap((prev) => ({ ...prev, [userId]: profile.nickname }));
         }
       }
+      // Send push notification to the friend
+      try {
+        await supabase.functions.invoke("notify-comment", {
+          body: { targetUserId: viewingFriend.profile.user_id, day, week },
+        });
+      } catch (e) {
+        console.error("Failed to send comment push:", e);
+      }
     }
     setNewComment((prev) => ({ ...prev, [key]: "" }));
   };
