@@ -39,7 +39,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTabState] = useState<Tab>(() => {
     const saved = localStorage.getItem("grim_active_tab");
-    return (saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats" || saved === "profile" || saved === "settings") ? saved : "workout";
+    return saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats" || saved === "profile" || saved === "settings" ? saved : "workout";
   });
 
   // Wrap setTab to push browser history for Android back button support
@@ -321,31 +321,31 @@ const Index = () => {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={grimIcon} alt="Grim" className="w-6 h-6" />
-            <h1 className="text-base font-black tracking-tight">Grim
+            <img alt="Grim" className="w-6 h-6" src="/lovable-uploads/6e42c42e-f3f7-4f1c-a09e-37ecba864c10.png" />
+            <h1 className="text-base font-black tracking-tight">
               <span className="text-primary"></span>
             </h1>
           </div>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
-            {!window.matchMedia('(display-mode: standalone)').matches && (
-              <button
-                onClick={async () => {
-                  if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const result = await deferredPrompt.userChoice;
-                    if (result.outcome === 'accepted') {
-                      setDeferredPrompt(null);
-                    }
-                  } else {
-                    setShowInstallGuide(true);
+            {!window.matchMedia('(display-mode: standalone)').matches &&
+            <button
+              onClick={async () => {
+                if (deferredPrompt) {
+                  deferredPrompt.prompt();
+                  const result = await deferredPrompt.userChoice;
+                  if (result.outcome === 'accepted') {
+                    setDeferredPrompt(null);
                   }
-                }}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
-              >
+                } else {
+                  setShowInstallGuide(true);
+                }
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+
                 <Download className="w-3.5 h-3.5" />
                 Installera
               </button>
-            )}
+            }
             <div className="relative">
               <button
                 onClick={() => {
@@ -484,8 +484,8 @@ const Index = () => {
       {!forceChangePassword && <WhatsNewDialog />}
 
       {/* Install guide modal */}
-      {showInstallGuide && (
-        <>
+      {showInstallGuide &&
+      <>
           <div className="fixed inset-0 bg-black/60 z-[70]" onClick={() => setShowInstallGuide(false)} />
           <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[80] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-border">
@@ -530,7 +530,7 @@ const Index = () => {
             </div>
           </div>
         </>
-      )}
+      }
 
       {/* Change password modal */}
       {showChangePassword &&
@@ -551,8 +551,8 @@ const Index = () => {
       {/* AI Chat Button */}
       <AIChatButton
         userId={user.id}
-        onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)}
-      />
+        onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} />
+
 
       {/* Bottom tab bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-50">
