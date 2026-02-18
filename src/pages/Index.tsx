@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon } from "lucide-react";
+import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon, Dumbbell } from "lucide-react";
+import grimIcon from "@/assets/grim-icon.png";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
 import WorkoutView from "@/components/WorkoutView";
@@ -293,7 +294,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Dumbbell className="w-8 h-8 text-primary animate-pulse" />
+        <img src={grimIcon} alt="Grim" className="w-8 h-8 animate-pulse" />
       </div>);
 
   }
@@ -320,7 +321,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Dumbbell className="w-5 h-5 text-primary" />
+            <img src={grimIcon} alt="Grim" className="w-6 h-6" />
             <h1 className="text-base font-black tracking-tight">Grim
               <span className="text-primary"></span>
             </h1>
