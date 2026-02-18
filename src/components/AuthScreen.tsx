@@ -384,7 +384,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8 animate-fade-in">
         <div className="text-center space-y-2">
-          <img src={grimIcon} alt="Grim" className="w-20 h-20 mx-auto" />
+           <img src={grimIcon} alt="Grim" className="w-60 h-60 mx-auto" />
           <h1 className="text-3xl font-black tracking-tight">Grim.</h1>
           <p className="text-xs text-muted-foreground italic">
             lift heavier than runners, run faster than lifters
