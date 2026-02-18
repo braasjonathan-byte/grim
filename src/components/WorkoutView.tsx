@@ -494,6 +494,69 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     }
   };
 
+  // Modify set count for an exercise in a plan
+  const modifySetCount = async (planId: string, exerciseIndex: number, delta: number, week: number, day: string) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    const line = lines[exerciseIndex];
+    if (!line) return;
+
+    // Match "NxM" pattern (sets x reps)
+    const setsMatch = line.match(/(\d+)\s*([×x])\s*(\S+)/i);
+    if (setsMatch) {
+      const oldSets = parseInt(setsMatch[1]);
+      const newSets = Math.max(1, oldSets + delta);
+      if (newSets === oldSets) return;
+      lines[exerciseIndex] = line.replace(/\d+\s*[×x]/i, `${newSets}×`);
+    } else {
+      // No sets pattern found - add one
+      const { name, weight } = parseExerciseWeight(line);
+      if (delta > 0) {
+        const newSets = 1 + delta;
+        lines[exerciseIndex] = weight ? `${name} — ${newSets}×10 @ ${weight}` : `${name} — ${newSets}×10`;
+      } else return;
+    }
+
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", planId);
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+
+    // Adjust set tracking data
+    const k = `${week}-${day}`;
+    const partName = parseExerciseWeight(lines[exerciseIndex]).name;
+    const currentSetsStr = getSetsDone(k, partName);
+    const currentSetData = getSetData(k, partName);
+    
+    if (delta > 0) {
+      // Add a set - extend tracking
+      const newSetsStr = currentSetsStr + "0";
+      const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
+      const updated = { ...existing, [`__sets__${partName}`]: newSetsStr };
+      setCompletions(prev => ({
+        ...prev,
+        [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
+      }));
+    } else if (delta < 0 && currentSetsStr.length > 1) {
+      // Remove last set
+      const newSetsStr = currentSetsStr.slice(0, -1);
+      const newSetData = currentSetData.slice(0, -1);
+      const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
+      const updated = { ...existing, [`__sets__${partName}`]: newSetsStr, [`__setdata__${partName}`]: JSON.stringify(newSetData) };
+      setCompletions(prev => ({
+        ...prev,
+        [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
+      }));
+      await supabase.from("workout_completions").upsert({
+        user_id: userId, week, day,
+        done: completions[k]?.done || false,
+        skipped: completions[k]?.skipped || false,
+        logged_weights: updated
+      } as any, { onConflict: "user_id,week,day" });
+    }
+  };
+
   // Get per-set logged data (kg/reps)
   const getSetData = (weekDayKey: string, exerciseName: string): Array<{kg: string; reps: string}> => {
     const comp = completions[weekDayKey];
@@ -1340,6 +1403,21 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                       );
                                     });
                                   })()}
+                                </div>
+                                <div className="flex items-center gap-2 pt-1">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, -1, 0, plan.day); }}
+                                    disabled={setsCountSingle <= 1}
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-destructive disabled:opacity-30 transition-colors"
+                                    title="Ta bort set">
+                                    − Set
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, 1, 0, plan.day); }}
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                                    title="Lägg till set">
+                                    + Set
+                                  </button>
                                 </div>
                             </div>);
 
@@ -2259,6 +2337,21 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                       );
                                     });
                                   })()}
+                                </div>
+                                <div className="flex items-center gap-2 pl-1 pt-1">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, -1, plan.week, plan.day); }}
+                                    disabled={setsCountPlan <= 1}
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-destructive disabled:opacity-30 transition-colors"
+                                    title="Ta bort set">
+                                    − Set
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); modifySetCount(plan.id, i, 1, plan.week, plan.day); }}
+                                    className="text-[10px] px-2 py-0.5 rounded bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                                    title="Lägg till set">
+                                    + Set
+                                  </button>
                                 </div>
                             </div>);
 
