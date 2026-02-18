@@ -795,11 +795,35 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
   }, [currentWeek, adaptProgression]);
 
   const leavePlan = async () => {
-    if (!confirm("Är du säker? Alla pass och all progress raderas.")) return;
+    if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort.")) return;
+
+    // Archive plan data before deleting
+    try {
+      const [{ data: planData }, { data: compData }] = await Promise.all([
+        supabase.from("workout_plans").select("*").eq("user_id", userId),
+        supabase.from("workout_completions").select("*").eq("user_id", userId),
+      ]);
+
+      if (planData && planData.length > 0) {
+        // Derive plan name from first non-empty session
+        const firstSession = planData.find(p => p.session_name.trim() !== "");
+        const planName = firstSession ? `Schema (${planData.filter(p => p.session_name.trim() !== "").length} pass, ${[...new Set(planData.map(p => p.week))].length} veckor)` : "Schema";
+
+        await supabase.from("archived_plans").insert({
+          user_id: userId,
+          plan_name: planName,
+          plan_data: planData as any,
+          completion_data: (compData || []) as any,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to archive plan:", e);
+    }
+
     await Promise.all([
-    supabase.from("workout_plans").delete().eq("user_id", userId),
-    supabase.from("workout_completions").delete().eq("user_id", userId)]
-    );
+      supabase.from("workout_plans").delete().eq("user_id", userId),
+      supabase.from("workout_completions").delete().eq("user_id", userId),
+    ]);
     setPlans([]);
     setWeeks([]);
     setCompletions({});
