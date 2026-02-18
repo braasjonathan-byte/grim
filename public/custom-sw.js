@@ -1,4 +1,12 @@
-import { precacheAndRoute } from "workbox-precaching";
+import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
+import { clientsClaim } from "workbox-core";
+
+// Force new service worker to take over immediately
+self.skipWaiting();
+clientsClaim();
+
+// Clean up old caches from previous versions
+cleanupOutdatedCaches();
 
 // Workbox precaching (injected by VitePWA)
 precacheAndRoute(self.__WB_MANIFEST);
