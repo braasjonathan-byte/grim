@@ -48,36 +48,36 @@ const exerciseTranslations: Record<string, string> = {
   "glute ham raises": "glute ham raise",
 
   // Rumpa
-  "hip thrust maskin": "hip thrust machine",
-  "barbell hip thrust": "barbell hip thrust",
-  "single-leg hip thrust": "single leg hip thrust",
-  "glute bridge": "glute bridge",
-  "single-leg glute bridge": "single leg glute bridge",
-  "frog pump": "frog pump",
-  "cable pull-through": "cable pull through",
-  "cable kickback": "cable kickback",
-  "donkey kick": "donkey kick",
-  "fire hydrant": "fire hydrant",
+  "hip thrust maskin": "barbell glute bridge",
+  "barbell hip thrust": "barbell glute bridge",
+  "single-leg hip thrust": "single leg bridge with outstretched leg",
+  "glute bridge": "low glute bridge on floor",
+  "single-leg glute bridge": "single leg bridge with outstretched leg",
+  "frog pump": "_NO_GIF_",
+  "cable pull-through": "band pull through",
+  "cable kickback": "_NO_GIF_",
+  "donkey kick": "_NO_GIF_",
+  "fire hydrant": "_NO_GIF_",
   "rumänsk marklyft hantel": "dumbbell romanian deadlift",
   "stiff-leg marklyft": "barbell stiff leg deadlift",
   "single-leg rumänsk marklyft": "dumbbell single leg deadlift",
-  "sumo squat": "sumo squat",
-  "curtsy lunge": "curtsy lunge",
-  "walking lunge": "dumbbell walking lunge",
-  "reverse lunge": "dumbbell rear lunge",
-  "lateral lunge": "dumbbell lateral lunge",
+  "sumo squat": "smith sumo squat",
+  "curtsy lunge": "curtsey squat",
+  "walking lunge": "walking lunge",
+  "reverse lunge": "_NO_GIF_",
+  "lateral lunge": "barbell lateral lunge",
   "bulgarian split squat": "dumbbell single leg split squat",
   "step-up med knälyft": "step up",
-  "abduktionsmaskin": "hip abductor",
-  "kabelabduktion": "cable hip abduction",
-  "band walk": "resistance band walk",
-  "clamshell": "side lying clam",
-  "kickback maskin": "glute kickback machine",
+  "abduktionsmaskin": "lever seated hip abduction",
+  "kabelabduktion": "side hip abduction",
+  "band walk": "_NO_GIF_",
+  "clamshell": "_NO_GIF_",
+  "kickback maskin": "_NO_GIF_",
   "good morning": "barbell good morning",
-  "benspark bakåt": "cable kickback",
-  "smith machine hip thrust": "smith machine hip thrust",
-  "glute ham raise": "glute ham raise",
-  "pendlay hip extension": "back extension",
+  "benspark bakåt": "_NO_GIF_",
+  "smith machine hip thrust": "barbell glute bridge",
+  "glute ham raise": "glute-ham raise",
+  "pendlay hip extension": "lever back extension",
 
   // Bröst
   "bänk": "barbell bench press",
@@ -374,8 +374,22 @@ serve(async (req) => {
       });
     }
 
-    // Filter out any _CARDIO_ markers from search terms
-    const validTerms = searchTerms.filter(t => t !== "_CARDIO_");
+    // Check if this exercise has no GIF available in the database
+    if (searchTerms.length === 1 && searchTerms[0] === "_NO_GIF_") {
+      return new Response(JSON.stringify({
+        gifUrl: null,
+        name: cleanName,
+        instructions: [],
+        targetMuscles: [],
+        equipments: [],
+        error: "Denna övning saknar GIF-demonstration.",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Filter out any _CARDIO_ / _NO_GIF_ markers from search terms
+    const validTerms = searchTerms.filter(t => t !== "_CARDIO_" && t !== "_NO_GIF_");
 
     for (const term of validTerms) {
       const exercise = await searchExerciseDB(term);
