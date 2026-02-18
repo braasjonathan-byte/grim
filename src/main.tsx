@@ -20,25 +20,20 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistration().then((reg) => {
     if (reg) {
       reg.update().catch(() => {});
-      // Listen for new SW waiting and force it to activate
-      reg.addEventListener("updatefound", () => {
-        const newSW = reg.installing;
-        if (newSW) {
-          newSW.addEventListener("statechange", () => {
-            if (newSW.state === "installed" && navigator.serviceWorker.controller) {
-              // New SW ready, reload to activate it
-              window.location.reload();
-            }
-          });
-        }
-      });
     }
   });
-  // Also reload when a new SW takes control
+
+  // Reload once when a new SW takes control (prevents infinite loops via sessionStorage flag)
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!refreshing) {
+    if (refreshing) return;
+    const key = "grim_sw_reload";
+    const last = sessionStorage.getItem(key);
+    const now = Date.now();
+    // Only reload if we haven't reloaded in the last 10 seconds
+    if (!last || now - Number(last) > 10000) {
       refreshing = true;
+      sessionStorage.setItem(key, String(now));
       window.location.reload();
     }
   });
