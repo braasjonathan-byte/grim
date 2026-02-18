@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -385,6 +388,38 @@ serve(async (req) => {
     let cleanName = cleanExerciseName(exerciseName);
     if (!cleanName) cleanName = exerciseName.trim();
 
+    // 1. Check database for admin-managed mapping first
+    try {
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: dbMapping } = await sb
+        .from("exercise_gif_mappings")
+        .select("exercisedb_name, gif_url")
+        .ilike("exercise_name", cleanName)
+        .maybeSingle();
+
+      if (dbMapping) {
+        // Use the admin-linked ExerciseDB name to fetch full data
+        const exercise = await searchExerciseDB(dbMapping.exercisedb_name);
+        if (exercise) {
+          const rawInstructions = exercise.instructions || [];
+          const instructions = await translateToSwedish(rawInstructions);
+          return new Response(JSON.stringify({
+            gifUrl: exercise.gifUrl || dbMapping.gif_url,
+            name: exercise.name,
+            instructions,
+            targetMuscles: exercise.targetMuscles || [],
+            equipments: exercise.equipments || [],
+            adminLinked: true,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    } catch (e) {
+      console.error("DB mapping lookup failed:", e);
+    }
+
+    // 2. Fall back to hardcoded translations
     const searchTerms = getSearchTerms(cleanName);
 
     // Check if this is a cardio/mobility exercise without GIF support

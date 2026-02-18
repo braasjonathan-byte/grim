@@ -22,6 +22,7 @@ import AnnouncementInbox from "@/components/AnnouncementInbox";
 import AdminUserList from "@/components/AdminUserList";
 import ProfileTab from "@/components/ProfileTab";
 import NotificationSettings from "@/components/NotificationSettings";
+import ExerciseGifManager from "@/components/ExerciseGifManager";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
@@ -467,6 +468,7 @@ const Index = () => {
             </div>
             <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
             {userRole === "admin" && <AdminUserList userId={user.id} />}
+            {userRole === "admin" && <ExerciseGifManager />}
             <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
             <NotificationSettings userId={user.id} />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
