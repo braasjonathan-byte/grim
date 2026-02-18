@@ -73,9 +73,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{ week: number; year: number } | null>(null);
-
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
-
+  const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -99,11 +98,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     ]).then(([{ data: compData }, { data: planData }]) => {
       if (compData) setCompletions(compData as CompletionRecord[]);
       if (planData) {
-        setPlansWithExercises(new Set(
-          planData
-            .filter((p) => p.details && p.details.trim() !== "")
-            .map((p) => `${p.week}-${p.day}`)
-        ));
+        const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
+        setPlansWithExercises(new Set(withExercises.map((p) => `${p.week}-${p.day}`)));
+        // Count scheduled sessions per plan week
+        const perWeek = new Map<number, number>();
+        for (const p of withExercises) {
+          perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
+        }
+        setScheduledPerWeek(perWeek);
         // Determine the calendar week for plan week 1 from the earliest plan created_at
         if (planData.length > 0) {
           const earliest = planData.reduce((min, p) =>
@@ -175,12 +177,32 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
     }
 
+    // For week view, ensure all weeks with scheduled exercises have a bucket and set totalWithExercise from plans
+    if (view === "week") {
+      for (const [planWeek, count] of scheduledPerWeek) {
+        const key = `plan-W${planWeek}`;
+        if (!buckets.has(key)) {
+          let label: string;
+          if (planStartCalendarWeek) {
+            const calendarWeek = planStartCalendarWeek.week + (planWeek - 1);
+            label = `V${calendarWeek} ${planStartCalendarWeek.year}`;
+          } else {
+            label = `Vecka ${planWeek}`;
+          }
+          const sortKey = String(planWeek).padStart(4, "0");
+          buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: count, distanceKm: 0, sortKey });
+        } else {
+          buckets.get(key)!.totalWithExercise = count;
+        }
+      }
+    }
+
     let result = Array.from(buckets.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     if (view === "week") {
       result = result.slice(0, 3);
     }
     return result;
-  }, [completions, view, planStartCalendarWeek]);
+  }, [completions, view, planStartCalendarWeek, scheduledPerWeek]);
 
   const totalDone = completions.filter((c) => c.done && hasExercise(c)).length;
   const totalSkipped = completions.filter((c) => c.skipped).length;
