@@ -327,6 +327,17 @@ const Index = () => {
             </h1>
           </div>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
+            <a
+              href="https://www.tiktok.com/@jonathankarlsson98?_r=1&_t=ZN-941NsFcFWVC"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+              aria-label="TikTok"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" className="w-4 h-4 fill-primary">
+                <path d="M448 209.9a210.1 210.1 0 0 1-122.8-39.3v178.8A162.6 162.6 0 1 1 185 188.3v89.9a74.6 74.6 0 1 0 52.2 71.2V0h88a121 121 0 0 0 122.8 121.3z"/>
+              </svg>
+            </a>
             {!window.matchMedia('(display-mode: standalone)').matches &&
             <button
               onClick={async () => {
