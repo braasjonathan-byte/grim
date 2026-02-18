@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ChevronDown, User } from "lucide-react";
+import { ChevronDown, User, Archive } from "lucide-react";
 import ProfileSection from "@/components/ProfileSection";
+import ArchivedPlans from "@/components/ArchivedPlans";
 
 interface ProfileTabProps {
   userId: string;
@@ -9,6 +10,7 @@ interface ProfileTabProps {
 
 const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
   const [profileOpen, setProfileOpen] = useState(true);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
   return (
     <div className="py-2 space-y-4">
@@ -27,6 +29,25 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
         {profileOpen && (
           <div className="pt-2">
             <ProfileSection userId={userId} />
+          </div>
+        )}
+      </div>
+
+      {/* Archived plans */}
+      <div className="bg-card border border-border rounded-lg p-4">
+        <button
+          onClick={() => setArchiveOpen(!archiveOpen)}
+          className="w-full flex items-center justify-between py-1"
+        >
+          <div className="flex items-center gap-2">
+            <Archive className="w-4 h-4 text-primary" />
+            <span className="text-sm font-bold">Arkiv</span>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${archiveOpen ? "rotate-180" : ""}`} />
+        </button>
+        {archiveOpen && (
+          <div className="pt-2">
+            <ArchivedPlans userId={userId} />
           </div>
         )}
       </div>

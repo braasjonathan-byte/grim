@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      archived_plans: {
+        Row: {
+          archived_at: string
+          completion_data: Json
+          id: string
+          plan_data: Json
+          plan_name: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string
+          completion_data?: Json
+          id?: string
+          plan_data?: Json
+          plan_name?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string
+          completion_data?: Json
+          id?: string
+          plan_data?: Json
+          plan_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       avatar_config: {
         Row: {
           body_fat: string
