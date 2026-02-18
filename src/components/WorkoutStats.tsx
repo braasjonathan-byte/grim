@@ -125,7 +125,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const hasExercise = (c: CompletionRecord) => plansWithExercises.has(`${c.week}-${c.day}`);
 
   const stats = useMemo(() => {
-    type Bucket = { label: string; done: number; doneWithExercise: number; skipped: number; total: number; distanceKm: number; sortKey: string };
+    type Bucket = { label: string; done: number; doneWithExercise: number; skipped: number; total: number; totalWithExercise: number; distanceKm: number; sortKey: string };
     const buckets = new Map<string, Bucket>();
 
     for (const c of completions) {
@@ -160,10 +160,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       if (!buckets.has(key)) {
-        buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, distanceKm: 0, sortKey });
+        buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: 0, distanceKm: 0, sortKey });
       }
       const b = buckets.get(key)!;
       b.total++;
+      if (hasExercise(c)) b.totalWithExercise++;
       if (c.done) {
         b.done++;
         if (hasExercise(c)) b.doneWithExercise++;
@@ -235,9 +236,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       ) : (
         <div className="space-y-2">
           {stats.map((b) => {
-            const resolved = b.done + b.skipped;
-            const pctDone = resolved > 0 ? Math.round((b.done / resolved) * 100) : 0;
-            const pctSkipped = resolved > 0 ? Math.round((b.skipped / resolved) * 100) : 0;
+            const scheduled = b.totalWithExercise;
+            const pctDone = scheduled > 0 ? Math.round((b.doneWithExercise / scheduled) * 100) : 0;
+            const pctSkipped = scheduled > 0 ? Math.round((b.skipped / scheduled) * 100) : 0;
             return (
               <div key={b.label} className="bg-card border border-border rounded-lg p-3">
                 <div className="flex items-center justify-between mb-2">
