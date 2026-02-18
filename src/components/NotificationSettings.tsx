@@ -35,7 +35,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
 
   const checkSubscription = async () => {
     try {
-      const registration = await navigator.serviceWorker.getRegistration("/sw.js");
+      const registration = await navigator.serviceWorker.ready;
       if (registration) {
         const sub = await (registration as any).pushManager.getSubscription();
         setHasSubscription(!!sub);
@@ -52,8 +52,8 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
       setPermission(perm);
 
       if (perm === "granted") {
-        const registration = await navigator.serviceWorker.register("/sw.js");
-        await navigator.serviceWorker.ready;
+        // Use PWA service worker (already registered by VitePWA)
+        const registration = await navigator.serviceWorker.ready;
 
         const { data: vapidData } = await supabase.functions.invoke("get-vapid-key");
         if (!vapidData?.publicKey) throw new Error("No VAPID key");

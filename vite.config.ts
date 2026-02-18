@@ -17,13 +17,15 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "public",
+      filename: "custom-sw.js",
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["favicon.ico", "robots.txt"],
-      workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
-        // Don't let workbox cache sw.js (our push notification service worker)
-        globIgnores: ["**/sw.js"],
+      injectManifest: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
       },
       manifest: {
         name: "Grim – Träningsapp",
