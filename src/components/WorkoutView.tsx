@@ -416,6 +416,11 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
     );
   };
 
+  const deleteFriendComment = async (commentId: string) => {
+    await supabase.from("workout_comments").delete().eq("id", commentId);
+    setFriendComments((prev) => prev.filter((c) => c.id !== commentId));
+  };
+
   // Set completion tracking helpers
   const getSetsDone = (weekDayKey: string, exerciseName: string): string => {
     const comp = completions[weekDayKey];
@@ -1587,15 +1592,23 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                           <p className="text-xs font-bold text-primary flex items-center gap-1.5">
                             <MessageCircle className="w-3.5 h-3.5" /> Kommentarer från vänner
                           </p>
-                          {dayComments.map((c) =>
-                      <div key={c.id} className="bg-background/80 rounded-md px-3 py-2">
-                              <p className="text-xs">
-                                <span className="font-semibold text-primary">{commentNicknames[c.author_id] || "..."}</span>{" "}
-                                <span className="text-foreground">{c.comment}</span>
-                              </p>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">
-                                {new Date(c.created_at).toLocaleDateString("sv-SE")}
-                              </p>
+                        {dayComments.map((c) =>
+                    <div key={c.id} className="bg-background/80 rounded-md px-3 py-2 flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <p className="text-xs">
+                                  <span className="font-semibold text-primary">{commentNicknames[c.author_id] || "..."}</span>{" "}
+                                  <span className="text-foreground">{c.comment}</span>
+                                </p>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  {new Date(c.created_at).toLocaleDateString("sv-SE")}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => deleteFriendComment(c.id)}
+                                className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                                title="Ta bort kommentar">
+                                <X className="w-3 h-3" />
+                              </button>
                             </div>
                       )}
                         </div> :
@@ -2429,14 +2442,22 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                           <MessageCircle className="w-3.5 h-3.5" /> Kommentarer från vänner
                         </p>
                         {dayComments.map((c) =>
-                    <div key={c.id} className="bg-background/80 rounded-md px-3 py-2">
-                            <p className="text-xs">
-                              <span className="font-semibold text-primary">{commentNicknames[c.author_id] || "..."}</span>{" "}
-                              <span className="text-foreground">{c.comment}</span>
-                            </p>
-                            <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {new Date(c.created_at).toLocaleDateString("sv-SE")}
-                            </p>
+                    <div key={c.id} className="bg-background/80 rounded-md px-3 py-2 flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-xs">
+                                <span className="font-semibold text-primary">{commentNicknames[c.author_id] || "..."}</span>{" "}
+                                <span className="text-foreground">{c.comment}</span>
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {new Date(c.created_at).toLocaleDateString("sv-SE")}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => deleteFriendComment(c.id)}
+                              className="flex-shrink-0 p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                              title="Ta bort kommentar">
+                              <X className="w-3 h-3" />
+                            </button>
                           </div>
                     )}
                       </div> :
