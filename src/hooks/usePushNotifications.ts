@@ -21,9 +21,8 @@ export function usePushNotifications(userId: string | null) {
     if (Notification.permission === "denied") return;
 
     try {
-      // Register service worker
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
+      // Use the PWA service worker (already registered by VitePWA)
+      const registration = await navigator.serviceWorker.ready;
 
       // Only proceed if permission is already granted (don't prompt here)
       if (Notification.permission !== "granted") return;
