@@ -37,8 +37,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
     try {
       const registration = await navigator.serviceWorker.getRegistration("/sw.js");
       if (registration) {
-        const mgr = (registration as any).pushManager;
-        const sub = mgr ? await mgr.getSubscription() : null;
+        const sub = await (registration as any).pushManager.getSubscription();
         setHasSubscription(!!sub);
       }
     } catch {
@@ -71,15 +70,18 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
         }
 
         const subJson = subscription!.toJSON();
-        await supabase.from("push_subscriptions").upsert(
-          {
-            user_id: userId,
-            endpoint: subJson.endpoint!,
-            p256dh: subJson.keys?.p256dh || "",
-            auth: subJson.keys?.auth || "",
-          } as any,
-          { onConflict: "user_id,endpoint" }
-        );
+        const endpoint = subJson.endpoint!;
+        const p256dh = subJson.keys?.p256dh || "";
+        const auth = subJson.keys?.auth || "";
+
+        // Delete + insert instead of upsert for reliability
+        await supabase.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", endpoint);
+        await supabase.from("push_subscriptions").insert({
+          user_id: userId,
+          endpoint,
+          p256dh,
+          auth,
+        });
 
         setHasSubscription(true);
         setJustEnabled(true);
@@ -96,10 +98,8 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
 
   const openDeviceSettings = () => {
     if (isAndroid) {
-      // Android Chrome: open app notification settings
       window.open("intent:#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;S.android.provider.extra.APP_PACKAGE=com.android.chrome;end", "_blank");
     }
-    // For iOS and others, we show instructions instead
   };
 
   const isEnabled = permission === "granted" && hasSubscription;
@@ -128,7 +128,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
             {justEnabled && <Check className="w-4 h-4 text-primary" />}
           </div>
           <p className="text-xs text-muted-foreground">
-            Du får notiser när admin publicerar meddelanden och när vänner slutför träningspass.
+            Du får notiser när admin publicerar meddelanden, när vänner slutför träningspass och när någon kommenterar ditt pass.
           </p>
         </div>
       ) : isDenied ? (
