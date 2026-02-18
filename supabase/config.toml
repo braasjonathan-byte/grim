@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.notify-comment]
 verify_jwt = false
+
+[functions.test-push]
+verify_jwt = false
