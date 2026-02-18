@@ -2103,6 +2103,69 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                     return null;
                   };
 
+                  // Find last conditioning log for a session with the same name
+                  const findLastConditioningLog = (sessionName: string, currentWeek: number): { tempo: string | null; dist: number | null; time: string | null; week: number } | null => {
+                    const matchingPlans = plans.filter(p => 
+                      p.session_name === sessionName && p.week < currentWeek
+                    ).sort((a, b) => b.week - a.week);
+                    
+                    for (const p of matchingPlans) {
+                      const k = `${p.week}-${p.day}`;
+                      const comp = completions[k];
+                      if (comp?.done) {
+                        const weights = comp.logged_weights as Record<string, any> | null;
+                        if (weights) {
+                          for (const [wk, val] of Object.entries(weights)) {
+                            if (wk.startsWith('__cond__')) {
+                              try {
+                                const data = typeof val === 'string' ? JSON.parse(val) : val;
+                                if (data.tempo || data.dist) {
+                                  return { tempo: data.tempo || null, dist: data.dist ? parseFloat(data.dist) : null, time: data.time || null, week: p.week };
+                                }
+                              } catch {}
+                            }
+                          }
+                        }
+                        if (comp.logged_tempo || comp.logged_distance_km) {
+                          return { 
+                            tempo: comp.logged_tempo || null, 
+                            dist: comp.logged_distance_km ? Number(comp.logged_distance_km) : null,
+                            time: null,
+                            week: p.week
+                          };
+                        }
+                      }
+                    }
+                    return null;
+                  };
+
+                  // Find last logged kg for a strength exercise from completed sessions
+                  const findLastLoggedKg = (exerciseName: string, currentWeek: number): number | null => {
+                    for (let w = currentWeek - 1; w >= 1; w--) {
+                      for (const p of plans.filter(pp => pp.week === w)) {
+                        const k = `${w}-${p.day}`;
+                        const comp = completions[k];
+                        if (!comp?.done) continue;
+                        const weights = comp.logged_weights as Record<string, any> | null;
+                        if (!weights) continue;
+                        const setDataRaw = weights[`__setdata__${exerciseName}`];
+                        if (setDataRaw) {
+                          try {
+                            const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
+                            if (Array.isArray(setData) && setData.length > 0) {
+                              const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
+                              if (withKg) return parseFloat(withKg.kg);
+                            }
+                          } catch {}
+                        }
+                        if (weights[exerciseName] && typeof weights[exerciseName] === 'number') {
+                          return weights[exerciseName];
+                        }
+                      }
+                    }
+                    return null;
+                  };
+
                   // Progressive increase: vary by rep range
                   const getProgression = (weight: number, repsStr: string | null): number => {
                     const reps = repsStr ? parseInt(repsStr) : 10;
@@ -2199,6 +2262,45 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                   </button>
                                 </div>
                               </div>
+                              {/* Conditioning progression suggestion */}
+                              {(() => {
+                                const lastLog = findLastConditioningLog(plan.session_name, plan.week);
+                                if (!lastLog) return null;
+                                const weeksSinceLast = plan.week - lastLog.week;
+                                const isSpeedWeek = weeksSinceLast % 2 === 1;
+                                
+                                if (isSpeedWeek && lastLog.tempo) {
+                                  const lastSecs = tempoToSeconds(lastLog.tempo);
+                                  if (lastSecs) {
+                                    const fasterSecs = Math.round(lastSecs * 0.95);
+                                    const lowSecs = Math.max(fasterSecs - 15, 120);
+                                    const highSecs = fasterSecs + 15;
+                                    return (
+                                      <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 space-y-0.5">
+                                        <p className="text-[10px] text-primary font-semibold uppercase tracking-wider">📈 Föreslagen hastighet</p>
+                                        <p className="text-xs text-foreground">
+                                          <span className="font-mono font-semibold">{secondsToTempo(lowSecs)}–{secondsToTempo(highSecs)}</span>
+                                          <span className="text-muted-foreground ml-1">/km (5% snabbare)</span>
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.tempo}/km</p>
+                                      </div>
+                                    );
+                                  }
+                                } else if (!isSpeedWeek && lastLog.dist) {
+                                  const newDist = Math.round(lastLog.dist * 1.1 * 100) / 100;
+                                  return (
+                                    <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 space-y-0.5">
+                                      <p className="text-[10px] text-primary font-semibold uppercase tracking-wider">📈 Föreslagen distans</p>
+                                      <p className="text-xs text-foreground">
+                                        <span className="font-mono font-semibold">{newDist} km</span>
+                                        <span className="text-muted-foreground ml-1">(+10% ökning)</span>
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.dist} km</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                               <div className="grid grid-cols-3 gap-2">
                                 <div className="space-y-0.5">
                                   <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
@@ -2317,6 +2419,20 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
                                    </button>
                                 </div>
                               </div>
+                              {/* Last logged weight note */}
+                              {(() => {
+                                const lastKg = findLastLoggedKg(partName, plan.week);
+                                if (!lastKg) return null;
+                                // Don't show if user already has saved data for this session
+                                const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) > 0);
+                                if (hasCurrentData) return null;
+                                return (
+                                  <p className="text-[10px] text-muted-foreground pl-1 flex items-center gap-1">
+                                    <Weight className="w-3 h-3" />
+                                    Senast: <span className="font-mono font-semibold text-foreground">{lastKg} kg</span> — öka vikten själv för progression
+                                  </p>
+                                );
+                              })()}
                               <div className="space-y-1 pl-1">
                                   {(() => {
                                     const planSetData = getSetData(key, partName);
