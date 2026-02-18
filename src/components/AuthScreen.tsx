@@ -383,9 +383,10 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8 animate-fade-in">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-2 border-none">
            <img src={grimIcon} alt="Grim" className="w-60 h-60 mx-auto" />
-          <h1 className="text-3xl font-black tracking-tight">Grim.</h1>
+          <h1 className="text-3xl font-black tracking-tight">
+          </h1>
           <p className="text-xs text-muted-foreground italic">
             lift heavier than runners, run faster than lifters
           </p>
@@ -397,8 +398,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Användarnamn</label>
-            <input type="text" value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
+            <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)}
             placeholder="Ditt namn"
             maxLength={20}
             className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
