@@ -12,28 +12,21 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
 export function usePushNotifications(userId: string | null) {
   const subscribedRef = useRef(false);
 
   const subscribe = useCallback(async () => {
     if (!userId || subscribedRef.current) return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (Notification.permission === "denied") return;
 
     try {
       // Register service worker
       const registration = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
 
-      // Check permission
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
+      // Only proceed if permission is already granted (don't prompt here)
+      if (Notification.permission !== "granted") return;
 
       // Get VAPID public key from edge function
       const { data: vapidData, error: vapidError } = await supabase.functions.invoke("get-vapid-key");
@@ -44,15 +37,20 @@ export function usePushNotifications(userId: string | null) {
 
       const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
 
-      // Check for existing subscription
+      // Always try to get or create subscription
       const mgr = (registration as any).pushManager;
       let subscription = await mgr.getSubscription();
 
       if (!subscription) {
-        subscription = await mgr.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey,
-        });
+        try {
+          subscription = await mgr.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey,
+          });
+        } catch (subErr) {
+          console.error("PushManager.subscribe failed:", subErr);
+          return;
+        }
       }
 
       const subJson = subscription.toJSON();
@@ -60,11 +58,20 @@ export function usePushNotifications(userId: string | null) {
       const p256dh = subJson.keys?.p256dh || "";
       const auth = subJson.keys?.auth || "";
 
-      // Store in database (upsert)
-      await supabase.from("push_subscriptions" as any).upsert(
-        { user_id: userId, endpoint, p256dh, auth } as any,
-        { onConflict: "user_id,endpoint" }
-      );
+      if (!p256dh || !auth) {
+        console.error("Push subscription missing keys");
+        return;
+      }
+
+      // Store in database (upsert) - delete old entries for this user+endpoint first, then insert
+      // This avoids issues with upsert requiring unique constraints
+      await supabase.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", endpoint);
+      await supabase.from("push_subscriptions").insert({
+        user_id: userId,
+        endpoint,
+        p256dh,
+        auth,
+      });
 
       subscribedRef.current = true;
     } catch (err) {
