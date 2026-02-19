@@ -127,11 +127,23 @@ const getStartOfYear = (d: Date) => {
   return date;
 };
 
+const DAY_OFFSETS: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
+
+const getWorkoutCalendarDate = (planWeek: number, dayName: string, planStartDate: Date): Date => {
+  const monday = getMonday(planStartDate);
+  const dayOffset = DAY_OFFSETS[dayName] ?? 0;
+  const date = new Date(monday);
+  date.setDate(date.getDate() + (planWeek - 1) * 7 + dayOffset);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("all");
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{week: number;year: number;} | null>(null);
+  const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
   const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
   const [challengeCount, setChallengeCount] = useState(0);
@@ -194,6 +206,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           p.created_at < min.created_at ? p : min
           );
           const startDate = new Date(earliest.created_at);
+          setPlanStartDate(startDate);
           const isoStart = getISOWeek(startDate);
           // Adjust: the earliest plan entry might be for plan week > 1
           const planWeekOfEarliest = earliest.week as number;
@@ -293,14 +306,23 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   }, [completions, view, planStartCalendarWeek, scheduledPerWeek]);
 
   const filteredCompletions = useMemo(() => {
-    if (summaryPeriod === "all") return completions;
+    if (summaryPeriod === "all" || !planStartDate) return completions;
     const now = new Date();
-    let start: Date;
-    if (summaryPeriod === "week") start = getMonday(now);
-    else if (summaryPeriod === "month") start = getStartOfMonth(now);
-    else start = getStartOfYear(now);
-    return completions.filter((c) => new Date(c.updated_at) >= start);
-  }, [completions, summaryPeriod]);
+    const currentMonday = getMonday(now);
+    const startOfMonth = getStartOfMonth(now);
+    const startOfYear = getStartOfYear(now);
+    const endOfWeek = new Date(currentMonday);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
+
+    return completions.filter((c) => {
+      const d = getWorkoutCalendarDate(c.week, c.day, planStartDate);
+      if (summaryPeriod === "year") return d >= startOfYear && d < endOfYear;
+      if (summaryPeriod === "month") return d >= startOfMonth && d < endOfMonth;
+      return d >= currentMonday && d < endOfWeek;
+    });
+  }, [completions, summaryPeriod, planStartDate]);
 
   const totalDone = filteredCompletions.filter((c) => c.done && hasExercise(c)).length;
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;

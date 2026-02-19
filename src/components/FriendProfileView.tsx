@@ -85,13 +85,35 @@ const getMonday = (date: Date) => {
   return d2;
 };
 
-const filterByPeriod = (completions: CompletionRow[], period: TimePeriod): CompletionRow[] => {
+const DAY_OFFSETS: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
+
+const getWorkoutCalendarDate = (planWeek: number, dayName: string, planStartDate: Date): Date => {
+  const monday = getMonday(planStartDate);
+  const dayOffset = DAY_OFFSETS[dayName] ?? 0;
+  const date = new Date(monday);
+  date.setDate(date.getDate() + (planWeek - 1) * 7 + dayOffset);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planStartDate: Date | null): CompletionRow[] => {
+  if (!planStartDate) return completions;
   const now = new Date();
+  const currentMonday = getMonday(now);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  startOfYear.setHours(0, 0, 0, 0);
+  const endOfWeek = new Date(currentMonday);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
+
   return completions.filter((c) => {
-    const d = new Date(c.updated_at);
-    if (period === "year") return d.getFullYear() === now.getFullYear();
-    if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    return getMonday(d).getTime() === getMonday(now).getTime();
+    const d = getWorkoutCalendarDate(c.week, c.day, planStartDate);
+    if (period === "year") return d >= startOfYear && d < endOfYear;
+    if (period === "month") return d >= startOfMonth && d < endOfMonth;
+    return d >= currentMonday && d < endOfWeek;
   });
 };
 
@@ -181,7 +203,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     load();
   }, [friendUserId]);
 
-  const filtered = useMemo(() => filterByPeriod(allCompletions, period), [allCompletions, period]);
+  const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
 
   const stats = useMemo(() => {
     const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
