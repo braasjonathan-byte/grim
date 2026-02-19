@@ -140,8 +140,25 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         setSecurityAnswers(data.questions.map(() => ""));
         setForgotStep("questions");
       } else if (data.hasEmail) {
-        setHasEmail(true);
-        setForgotStep("new-password");
+        // Send temp password via email immediately
+        setLoading(true);
+        try {
+          const { data: resetData, error: resetError } = await supabase.functions.invoke("reset-password", {
+            body: { nickname: trimmed, action: "email-reset" }
+          });
+          if (resetError) {
+            setError("Något gick fel. Försök igen.");
+          } else if (resetData?.success) {
+            setResetMessage(resetData.message);
+            setForgotStep("done");
+          } else {
+            setError(resetData?.error || "Något gick fel.");
+          }
+        } catch {
+          setError("Något gick fel. Försök igen.");
+        }
+        setLoading(false);
+        return;
       } else {
         setError("Inga säkerhetsfrågor eller e-post konfigurerade för detta konto.");
       }
@@ -178,16 +195,12 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     }
 
     try {
-      const action = hasEmail ? "email-reset" : "verify-answers";
       const bodyPayload: Record<string, unknown> = {
         nickname: forgotNickname.trim(),
-        action,
-        newPassword: newPassword.trim()
+        action: "verify-answers",
+        newPassword: newPassword.trim(),
+        answers: securityAnswers.map((a) => a.trim()),
       };
-
-      if (!hasEmail) {
-        bodyPayload.answers = securityAnswers.map((a) => a.trim());
-      }
 
       const { data, error: fnError } = await supabase.functions.invoke("reset-password", {
         body: bodyPayload
