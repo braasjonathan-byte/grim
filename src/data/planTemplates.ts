@@ -695,6 +695,59 @@ function generateStrength5Days(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
+// ─── Seniorträning – Hemma, lätta övningar (6v) ─────────────────────────────
+function generateSeniorHomeWorkout(profile: FitnessProfile): TemplatePlanDay[] {
+  const daysPerWeek = profile.training_days_per_week || 3;
+
+  const allSessions = (w: number) => {
+    const hold = 15 + w * 3; // plank/hold seconds
+    const reps = 6 + w;      // base reps, gentle increase
+    const chairReps = 8 + w;
+    return [
+      {
+        day: "Mån", session_name: "Balans & Styrka – Underkropp",
+        details: `Stol-knäböj ${3}×${chairReps}; Utfallssteg på stället 2×${Math.round(reps * 0.7)}/ben; Vadpress (stående) 3×${chairReps + 4}; Enbensstående balans 2×${hold}s/sida; Sittande bensträck 3×${chairReps}`,
+        tempo: `Vecka ${w}/6`,
+      },
+      {
+        day: "Tis", session_name: "Rörlighet & Core",
+        details: `Sittande vridning 2×8/sida; Knä-till-bröst (liggande) 2×10; Bäckenlyft 3×${reps}; Dead bug 2×8; Katt/ko-stretch 10 upprepningar; ${Math.min(20, 10 + w * 2)} min lugn stretching`,
+        tempo: "",
+      },
+      {
+        day: "Ons", session_name: "Styrka – Överkropp",
+        details: `Väggpress (armhävning mot vägg) 3×${reps + 2}; Stolspress (sittande axelpress, lätt eller utan vikt) 3×${reps}; Sittande rodd med band/handduk 3×${reps + 2}; Bicepscurl (vattenflaskor) 2×${reps + 4}; Planka på knä ${2}×${hold}s`,
+        tempo: `Vecka ${w}/6`,
+      },
+      {
+        day: "Tors", session_name: "Promenad & Balans",
+        details: `${15 + w * 2} min promenad i lugnt tempo; Häl-tå-gång 2×10 steg; Tandemstående 2×${hold}s/sida; Sidosteg 2×10/sida; Stretch 10 min`,
+        tempo: "",
+      },
+      {
+        day: "Fre", session_name: "Helkropp – Lätt",
+        details: `Stol-knäböj 2×${chairReps}; Väggpress 2×${reps + 2}; Bäckenlyft 2×${reps}; Vadpress 2×${chairReps + 4}; Sittande armlyft 2×${reps}/sida; Stretching 10 min`,
+        tempo: `Vecka ${w}/6`,
+      },
+      {
+        day: "Lör", session_name: "Kondition – Lätt",
+        details: `${20 + w * 3} min lugn promenad eller lätt cykling. Fokus på att hålla igång utan att bli andfådd.`,
+        tempo: "",
+      },
+    ];
+  };
+
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 6; w++) {
+    const pool = allSessions(w);
+    const selected = pool.slice(0, Math.min(daysPerWeek, pool.length));
+    for (const s of selected) {
+      days.push({ week: w, ...s });
+    }
+  }
+  return days;
+}
+
 export const planTemplates: TemplatePlan[] = [
   {
     name: "🏋️ Styrka 1 dag/vecka – Helkropp",
@@ -791,6 +844,14 @@ export const planTemplates: TemplatePlan[] = [
     category: "kroppsvikt",
     requiredLifts: [],
     generateFromProfile: generateHomeWorkout,
+  },
+  {
+    name: "🧓 Seniorträning – Hemma",
+    description: "6 veckor, 2–6 pass/vecka. Lätta övningar med fokus på balans, rörlighet och styrka. Ingen utrustning behövs. Perfekt för äldre eller nybörjare.",
+    weeks: 6,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generateSeniorHomeWorkout,
   },
   {
     name: "🏃 Löpfokus – Distansbygge",
