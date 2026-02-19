@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Dumbbell, X, Star, User, CheckCircle, XCircle, Footprints } from "lucide-react";
+import { Loader2, X, Star, User, CheckCircle, XCircle, Footprints, Weight } from "lucide-react";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -13,51 +13,90 @@ interface StarredPR {
   weight: number;
 }
 
-interface FriendStats {
-  totalDone: number;
-  totalSkipped: number;
-  totalDistanceKm: number;
+type TimePeriod = "year" | "month" | "week";
+
+interface CompletionRow {
+  logged_weights: any;
+  done: boolean;
+  skipped: boolean;
+  logged_distance_km: number | null;
+  week: number;
+  day: string;
+  updated_at: string;
 }
+
+const calcTotalLiftedKg = (completions: CompletionRow[]): number => {
+  let total = 0;
+  for (const row of completions) {
+    if (!row.done || !row.logged_weights || typeof row.logged_weights !== "object") continue;
+    const weights = row.logged_weights as Record<string, any>;
+    for (const [key, value] of Object.entries(weights)) {
+      if (key.startsWith("__setdata__")) {
+        let sets: { kg?: string | number; reps?: string | number }[] = [];
+        if (typeof value === "string") {
+          try { sets = JSON.parse(value); } catch { continue; }
+        } else if (Array.isArray(value)) {
+          sets = value;
+        }
+        for (const s of sets) {
+          const kg = Number(s.kg) || 0;
+          const reps = Number(s.reps) || 0;
+          total += kg * reps;
+        }
+      }
+    }
+  }
+  return total;
+};
+
+const filterByPeriod = (completions: CompletionRow[], period: TimePeriod): CompletionRow[] => {
+  const now = new Date();
+  return completions.filter((c) => {
+    const d = new Date(c.updated_at);
+    if (period === "year") return d.getFullYear() === now.getFullYear();
+    if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    // week: current ISO week
+    const getWeekStart = (date: Date) => {
+      const d2 = new Date(date);
+      const day = d2.getDay() || 7;
+      d2.setDate(d2.getDate() - day + 1);
+      d2.setHours(0, 0, 0, 0);
+      return d2;
+    };
+    return getWeekStart(d).getTime() === getWeekStart(now).getTime();
+  });
+};
+
+const periodLabels: Record<TimePeriod, string> = { year: "i år", month: "denna månad", week: "denna vecka" };
 
 const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileViewProps) => {
   const [loading, setLoading] = useState(true);
-  const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [starredPRs, setStarredPRs] = useState<StarredPR[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showFullAvatar, setShowFullAvatar] = useState(false);
-  const [friendStats, setFriendStats] = useState<FriendStats>({ totalDone: 0, totalSkipped: 0, totalDistanceKm: 0 });
+  const [allCompletions, setAllCompletions] = useState<CompletionRow[]>([]);
+  const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
+  const [period, setPeriod] = useState<TimePeriod>("year");
 
   useEffect(() => {
     const load = async () => {
-      const now = new Date();
-      const [{ data: leaderboard }, { data: starsData }, { data: completions }, { data: profileData }, { data: plansData }] = await Promise.all([
-        supabase.rpc("get_leaderboard", { filter_year: now.getFullYear() }),
+      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
-        supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, week, day").eq("user_id", friendUserId),
+        supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details").eq("user_id", friendUserId),
       ]);
 
-      const friendEntry = leaderboard?.find((e: any) => e.user_id === friendUserId);
       setAvatarUrl(profileData?.avatar_url || null);
-      setTotalWorkouts(friendEntry?.done_count || 0);
 
-      // Build set of plan slots with exercises
-      const plansWithExercises = new Set(
+      const exerciseSet = new Set(
         (plansData || []).filter((p) => p.details && p.details.trim() !== "").map((p) => `${p.week}-${p.day}`)
       );
-
-      // Calculate stats
-      const doneWithExercise = (completions || []).filter((c: any) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
-      const skipped = (completions || []).filter((c: any) => c.skipped).length;
-      const distanceKm = (completions || [])
-        .filter((c: any) => c.done && c.logged_distance_km)
-        .reduce((sum: number, c: any) => sum + Number(c.logged_distance_km), 0);
-      setFriendStats({ totalDone: doneWithExercise, totalSkipped: skipped, totalDistanceKm: Math.round(distanceKm * 10) / 10 });
+      setPlansWithExercises(exerciseSet);
+      setAllCompletions((completions || []) as CompletionRow[]);
 
       const starredExercises = new Set(starsData?.map((s) => s.exercise) || []);
 
-      // Build PR map from completions
       const prMap = new Map<string, number>();
       if (completions) {
         for (const row of completions as any[]) {
@@ -87,6 +126,24 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     load();
   }, [friendUserId]);
 
+  const filtered = useMemo(() => filterByPeriod(allCompletions, period), [allCompletions, period]);
+
+  const stats = useMemo(() => {
+    const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
+    const skipped = filtered.filter((c) => c.skipped).length;
+    const distanceKm = filtered
+      .filter((c) => c.done && c.logged_distance_km)
+      .reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
+    const liftedKg = calcTotalLiftedKg(filtered);
+    const liftedTons = Math.round((liftedKg / 1000) * 10) / 10;
+    return { done, skipped, distanceKm: Math.round(distanceKm * 10) / 10, liftedTons };
+  }, [filtered, plansWithExercises]);
+
+  const cyclePeriod = () => {
+    const order: TimePeriod[] = ["year", "month", "week"];
+    setPeriod(order[(order.indexOf(period) + 1) % order.length]);
+  };
+
   if (loading) {
     return (
       <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center">
@@ -94,6 +151,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
       </div>
     );
   }
+
+  const periodLabel = periodLabels[period];
 
   return (
     <>
@@ -120,26 +179,26 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
          <div className="p-4 space-y-4">
            <div className="grid grid-cols-2 gap-2">
-             <div className="bg-secondary rounded-xl p-3 text-center">
+             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                <CheckCircle className="w-4 h-4 text-success mx-auto mb-1" />
-               <p className="text-lg font-bold">{friendStats.totalDone}</p>
-                <p className="text-[10px] text-muted-foreground">Genomförda (totalt)</p>
-              </div>
-              <div className="bg-secondary rounded-xl p-3 text-center">
-                <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
-                <p className="text-lg font-bold">{friendStats.totalSkipped}</p>
-                <p className="text-[10px] text-muted-foreground">Missade (totalt)</p>
-              </div>
-              <div className="bg-secondary rounded-xl p-3 text-center">
-                <Dumbbell className="w-4 h-4 text-primary mx-auto mb-1" />
-                <p className="text-lg font-bold">{totalWorkouts}</p>
-                <p className="text-[10px] text-muted-foreground">Pass i år ({new Date().getFullYear()})</p>
-              </div>
-              <div className="bg-secondary rounded-xl p-3 text-center">
-                <Footprints className="w-4 h-4 text-warning mx-auto mb-1" />
-                <p className="text-lg font-bold">{friendStats.totalDistanceKm}</p>
-                <p className="text-[10px] text-muted-foreground">km sprungit (totalt)</p>
-             </div>
+               <p className="text-lg font-bold">{stats.done}</p>
+               <p className="text-[10px] text-muted-foreground">Genomförda ({periodLabel})</p>
+             </button>
+             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+               <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
+               <p className="text-lg font-bold">{stats.skipped}</p>
+               <p className="text-[10px] text-muted-foreground">Missade ({periodLabel})</p>
+             </button>
+             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+               <Weight className="w-4 h-4 text-primary mx-auto mb-1" />
+               <p className="text-lg font-bold">{stats.liftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
+               <p className="text-[10px] text-muted-foreground">Lyft ({periodLabel})</p>
+             </button>
+             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+               <Footprints className="w-4 h-4 text-warning mx-auto mb-1" />
+               <p className="text-lg font-bold">{stats.distanceKm}</p>
+               <p className="text-[10px] text-muted-foreground">km sprungit ({periodLabel})</p>
+             </button>
            </div>
 
           {starredPRs.length > 0 && (

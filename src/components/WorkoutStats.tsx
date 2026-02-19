@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, XCircle, Flame, Footprints } from "lucide-react";
+import { BarChart3, CheckCircle, XCircle, Flame, Footprints, Weight } from "lucide-react";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
@@ -18,6 +18,7 @@ interface CompletionRecord {
   updated_at: string;
   logged_distance_km: number | null;
   logged_tempo: string | null;
+  logged_weights: any;
 }
 
 type View = "week" | "month" | "year";
@@ -89,7 +90,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     Promise.all([
       supabase
         .from("workout_completions")
-        .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo")
+        .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo, logged_weights")
         .eq("user_id", userId),
       supabase
         .from("workout_plans")
@@ -216,6 +217,30 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     .filter((c) => c.done && c.logged_distance_km)
     .reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
 
+  const totalLiftedTons = useMemo(() => {
+    let total = 0;
+    for (const row of completions) {
+      if (!row.done || !row.logged_weights || typeof row.logged_weights !== "object") continue;
+      const weights = row.logged_weights as Record<string, any>;
+      for (const [key, value] of Object.entries(weights)) {
+        if (key.startsWith("__setdata__")) {
+          let sets: { kg?: string | number; reps?: string | number }[] = [];
+          if (typeof value === "string") {
+            try { sets = JSON.parse(value); } catch { continue; }
+          } else if (Array.isArray(value)) {
+            sets = value;
+          }
+          for (const s of sets) {
+            const kg = Number(s.kg) || 0;
+            const reps = Number(s.reps) || 0;
+            total += kg * reps;
+          }
+        }
+      }
+    }
+    return Math.round((total / 1000) * 10) / 10;
+  }, [completions]);
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-2">
@@ -235,12 +260,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-2xl font-black">{totalSkipped}</p>
           <p className="text-[10px] text-muted-foreground">Missade</p>
         </div>
-        <DailyQuoteCard />
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
+          <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
+          <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
+        </div>
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <Footprints className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-black">{Math.round(totalDistanceKm * 10) / 10}</p>
           <p className="text-[10px] text-muted-foreground">km sprungit</p>
         </div>
+        <DailyQuoteCard />
       </div>
 
       {/* View toggle */}
