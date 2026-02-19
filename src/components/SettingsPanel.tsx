@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone } from "lucide-react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const THEME_KEY = "gymberget_theme";
@@ -39,6 +39,13 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
   const [secSaving, setSecSaving] = useState(false);
   const [secSaved, setSecSaved] = useState(false);
   const [secHasExisting, setSecHasExisting] = useState(false);
+
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailSaved, setEmailSaved] = useState(false);
+  const [emailDirty, setEmailDirty] = useState(false);
+  const [hasEmail, setHasEmail] = useState(false);
 
   useEffect(() => {
     if (dark) {
@@ -100,6 +107,18 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
           setSecQuestions(qs);
         }
       });
+    // Fetch existing email
+    supabase
+      .from("user_emails")
+      .select("email")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.email) {
+          setEmail(data.email);
+          setHasEmail(true);
+        }
+      });
   }, [userId]);
 
   const handleSaveSecurityQuestions = async () => {
@@ -133,6 +152,28 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
     secAnswers.every((a) => a.trim().length > 0) &&
     new Set(secQuestions).size === 4;
 
+  const handleSaveEmail = async () => {
+    if (!userId || !email.trim()) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) return;
+
+    setEmailSaving(true);
+    if (hasEmail) {
+      await supabase
+        .from("user_emails")
+        .update({ email: email.trim() })
+        .eq("user_id", userId);
+    } else {
+      await supabase
+        .from("user_emails")
+        .insert({ user_id: userId, email: email.trim() });
+    }
+    setHasEmail(true);
+    setEmailSaved(true);
+    setEmailDirty(false);
+    setTimeout(() => setEmailSaved(false), 2000);
+    setEmailSaving(false);
+  };
   const getAvailableQuestions = (slotIndex: number) => {
     const selected = secQuestions.filter((q, i) => i !== slotIndex && q !== null);
     return SECURITY_QUESTIONS.map((q, idx) => ({
@@ -246,6 +287,59 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
                   secHasExisting ? "Uppdatera säkerhetsfrågor" : "Spara säkerhetsfrågor"
                 )}
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Email for password recovery */}
+      {userId && (
+        <div className="border-t border-border pt-2">
+          <button
+            onClick={() => setEmailOpen(!emailOpen)}
+            className="w-full flex items-center justify-between py-2"
+          >
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold">E-post för återställning</span>
+              {hasEmail && (
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Kopplad</span>
+              )}
+            </div>
+            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${emailOpen ? "rotate-180" : ""}`} />
+          </button>
+          {emailOpen && (
+            <div className="space-y-3 pt-1">
+              <p className="text-xs text-muted-foreground">
+                Koppla en e-postadress som kan användas vid lösenordsåterställning om du inte har säkerhetsfrågor.
+              </p>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailDirty(true); }}
+                placeholder="din@email.com"
+                className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              />
+              {emailDirty && (
+                <button
+                  onClick={handleSaveEmail}
+                  disabled={emailSaving || !email.trim()}
+                  className="w-full py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-1"
+                >
+                  {emailSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : emailSaved ? (
+                    <><Check className="w-4 h-4" /> Sparad!</>
+                  ) : (
+                    hasEmail ? "Uppdatera e-post" : "Spara e-post"
+                  )}
+                </button>
+              )}
+              {emailSaved && !emailDirty && (
+                <p className="text-xs text-center text-primary flex items-center justify-center gap-1">
+                  <Check className="w-3 h-3" /> Sparad!
+                </p>
+              )}
             </div>
           )}
         </div>
