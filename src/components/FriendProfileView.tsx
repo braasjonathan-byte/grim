@@ -165,6 +165,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [showFullAvatar, setShowFullAvatar] = useState(false);
   const [allCompletions, setAllCompletions] = useState<CompletionRow[]>([]);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
+  const [planDetailsMap, setPlanDetailsMap] = useState<Map<string, string>>(new Map());
   const [period, setPeriod] = useState<TimePeriod>("week");
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
@@ -197,10 +198,14 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         setPlanStartDate(earliest);
       }
 
-      const exerciseSet = new Set(
-        (plansData || []).filter((p) => p.details && p.details.trim() !== "").map((p) => `${p.week}-${p.day}`)
-      );
+      const withExercises = (plansData || []).filter((p) => p.details && p.details.trim() !== "");
+      const exerciseSet = new Set(withExercises.map((p) => `${p.week}-${p.day}`));
       setPlansWithExercises(exerciseSet);
+      const detailsMap = new Map<string, string>();
+      for (const p of withExercises) {
+        detailsMap.set(`${p.week}-${p.day}`, p.details);
+      }
+      setPlanDetailsMap(detailsMap);
       setAllCompletions((completions || []) as CompletionRow[]);
 
       const starredExercises = new Set(starsData?.map((s) => s.exercise) || []);
