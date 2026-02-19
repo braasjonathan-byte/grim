@@ -429,7 +429,7 @@ const Index = () => {
 
       {/* Content */}
       <main className="max-w-lg mx-auto px-4 py-4">
-        {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} />}
+        {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
         {tab === "friends" &&
         <FriendsView
           userId={user.id}

@@ -20,6 +20,7 @@ const toTitleCase = (str: string): string =>
 
 interface WorkoutViewProps {
   userId: string;
+  isAdmin?: boolean;
 }
 
 interface PlanDay {
@@ -95,7 +96,7 @@ const formatDayDisplay = (day: string) => {
   }return day;
 };
 
-const WorkoutView = ({ userId }: WorkoutViewProps) => {
+const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
@@ -1870,6 +1871,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
         <ExerciseInfoDialog
           exerciseName={exerciseInfoName}
           onClose={() => setExerciseInfoName(null)}
+          isAdmin={isAdmin}
         />
       )}
       {deleteExerciseConfirm && (
@@ -2789,6 +2791,7 @@ const WorkoutView = ({ userId }: WorkoutViewProps) => {
       <ExerciseInfoDialog
         exerciseName={exerciseInfoName}
         onClose={() => setExerciseInfoName(null)}
+        isAdmin={isAdmin}
       />
     )}
     {showFireworks && (

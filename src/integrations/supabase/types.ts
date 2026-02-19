@@ -229,6 +229,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          custom_instructions: Json | null
           exercise_name: string
           exercise_name_lower: string | null
           exercisedb_name: string
@@ -239,6 +240,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          custom_instructions?: Json | null
           exercise_name: string
           exercise_name_lower?: string | null
           exercisedb_name: string
@@ -249,6 +251,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          custom_instructions?: Json | null
           exercise_name?: string
           exercise_name_lower?: string | null
           exercisedb_name?: string
