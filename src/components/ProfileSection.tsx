@@ -27,6 +27,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [snapchat, setSnapchat] = useState("");
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [spotifyName, setSpotifyName] = useState("");
+  const [fetchingSpotify, setFetchingSpotify] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -49,6 +50,34 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     };
     fetchProfile();
   }, [userId]);
+
+  // Auto-fetch Spotify track name from oEmbed
+  useEffect(() => {
+    const url = spotifyUrl.trim();
+    if (!url || !url.includes("open.spotify.com/track/")) {
+      return;
+    }
+    const controller = new AbortController();
+    const fetchTrackName = async () => {
+      setFetchingSpotify(true);
+      try {
+        const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`, { signal: controller.signal });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.title) {
+            setSpotifyName(data.title);
+            setDirty(true);
+          }
+        }
+      } catch {
+        // ignore abort / network errors
+      } finally {
+        setFetchingSpotify(false);
+      }
+    };
+    const timeout = setTimeout(fetchTrackName, 500);
+    return () => { clearTimeout(timeout); controller.abort(); };
+  }, [spotifyUrl]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -245,23 +274,23 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">Låtnamn & artist</label>
-          <input
-            type="text"
-            value={spotifyName}
-            onChange={(e) => { setSpotifyName(e.target.value); setDirty(true); }}
-            placeholder="t.ex. Eye of the Tiger – Survivor"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
-        </div>
-
-        <div className="space-y-1">
           <label className="text-xs text-muted-foreground block">Spotify-länk</label>
           <input
             type="url"
             value={spotifyUrl}
             onChange={(e) => { setSpotifyUrl(e.target.value); setDirty(true); }}
             placeholder="https://open.spotify.com/track/..."
+            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground block">Låtnamn & artist {fetchingSpotify && <Loader2 className="w-3 h-3 inline animate-spin ml-1" />}</label>
+          <input
+            type="text"
+            value={spotifyName}
+            onChange={(e) => { setSpotifyName(e.target.value); setDirty(true); }}
+            placeholder="Fylls i automatiskt från länken"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
         </div>
