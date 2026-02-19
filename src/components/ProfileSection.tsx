@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Camera, Loader2, Check } from "lucide-react";
+import { User, Camera, Loader2, Check, Instagram, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileSectionProps {
@@ -22,12 +22,17 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [instagram, setInstagram] = useState("");
+  const [tiktok, setTiktok] = useState("");
+  const [snapchat, setSnapchat] = useState("");
+  const [spotifyUrl, setSpotifyUrl] = useState("");
+  const [spotifyName, setSpotifyName] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("age, gender, avatar_url")
+        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name")
         .eq("user_id", userId)
         .single();
 
@@ -35,6 +40,11 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         setAge(data.age?.toString() || "");
         setGender(data.gender || "");
         setAvatarUrl(data.avatar_url || null);
+        setInstagram((data as any).instagram || "");
+        setTiktok((data as any).tiktok || "");
+        setSnapchat((data as any).snapchat || "");
+        setSpotifyUrl((data as any).spotify_anthem_url || "");
+        setSpotifyName((data as any).spotify_anthem_name || "");
       }
     };
     fetchProfile();
@@ -89,7 +99,12 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .update({
         age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
         gender: gender || null,
-      })
+        instagram: instagram.trim() || null,
+        tiktok: tiktok.trim() || null,
+        snapchat: snapchat.trim() || null,
+        spotify_anthem_url: spotifyUrl.trim() || null,
+        spotify_anthem_name: spotifyName.trim() || null,
+      } as any)
       .eq("user_id", userId);
 
     setSaved(true);
@@ -179,6 +194,77 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Social media */}
+      <div className="pt-2 space-y-1">
+        <div className="flex items-center gap-2 mb-2">
+          <Instagram className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">Sociala medier</span>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground block">Instagram (användarnamn)</label>
+          <input
+            type="text"
+            value={instagram}
+            onChange={(e) => { setInstagram(e.target.value); setDirty(true); }}
+            placeholder="t.ex. mittnamn"
+            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground block">TikTok (användarnamn)</label>
+          <input
+            type="text"
+            value={tiktok}
+            onChange={(e) => { setTiktok(e.target.value); setDirty(true); }}
+            placeholder="t.ex. mittnamn"
+            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground block">Snapchat (användarnamn)</label>
+          <input
+            type="text"
+            value={snapchat}
+            onChange={(e) => { setSnapchat(e.target.value); setDirty(true); }}
+            placeholder="t.ex. mittnamn"
+            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+          />
+        </div>
+      </div>
+
+      {/* Spotify Anthem */}
+      <div className="pt-2 space-y-1">
+        <div className="flex items-center gap-2 mb-2">
+          <Music className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">Anthem</span>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground block">Låtnamn & artist</label>
+          <input
+            type="text"
+            value={spotifyName}
+            onChange={(e) => { setSpotifyName(e.target.value); setDirty(true); }}
+            placeholder="t.ex. Eye of the Tiger – Survivor"
+            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground block">Spotify-länk</label>
+          <input
+            type="url"
+            value={spotifyUrl}
+            onChange={(e) => { setSpotifyUrl(e.target.value); setDirty(true); }}
+            placeholder="https://open.spotify.com/track/..."
+            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+          />
+        </div>
       </div>
 
       {/* Save button */}

@@ -1,0 +1,7 @@
+
+ALTER TABLE public.profiles
+  ADD COLUMN instagram TEXT DEFAULT NULL,
+  ADD COLUMN tiktok TEXT DEFAULT NULL,
+  ADD COLUMN snapchat TEXT DEFAULT NULL,
+  ADD COLUMN spotify_anthem_url TEXT DEFAULT NULL,
+  ADD COLUMN spotify_anthem_name TEXT DEFAULT NULL;
