@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Step 3: Email-based reset
+    // Step 3: Email-based reset - generate temp password and send via email
     if (action === "email-reset") {
       if (!userEmail) {
         return new Response(
@@ -295,16 +295,18 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (!newPassword || typeof newPassword !== "string" || newPassword.trim().length < 8 || newPassword.trim().length > 128) {
-        return new Response(
-          JSON.stringify({ error: "Nytt lösenord måste vara 8-128 tecken" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Generate a random temporary password
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+      let tempPassword = "";
+      const randomBytes = new Uint8Array(12);
+      crypto.getRandomValues(randomBytes);
+      for (const byte of randomBytes) {
+        tempPassword += chars[byte % chars.length];
       }
 
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         profile.user_id,
-        { password: newPassword.trim() }
+        { password: tempPassword }
       );
 
       if (updateError) {
@@ -316,15 +318,18 @@ Deno.serve(async (req) => {
 
       await supabaseAdmin
         .from("profiles")
-        .update({ must_change_password: false })
+        .update({ must_change_password: true })
         .eq("user_id", profile.user_id);
 
       const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
       if (RESEND_API_KEY) {
         const emailHtml = `
           <div style="font-family: -apple-system, sans-serif; max-width: 420px; margin: 0 auto; padding: 32px 24px;">
-            <h2 style="margin: 0 0 16px; font-size: 20px;">Lösenordsåterställning</h2>
-            <p style="color: #444; line-height: 1.5;">Ditt lösenord har ändrats. Om du inte begärt detta, kontakta en administratör omedelbart.</p>
+            <h2 style="margin: 0 0 16px; font-size: 20px;">Tillfälligt lösenord</h2>
+            <p style="color: #444; line-height: 1.5;">Ditt tillfälliga lösenord är:</p>
+            <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #f4f4f4; padding: 16px; border-radius: 8px; text-align: center; font-family: monospace;">${tempPassword}</p>
+            <p style="color: #444; line-height: 1.5;">Logga in med detta lösenord. Du kommer att bli ombedd att välja ett nytt lösenord direkt.</p>
+            <p style="color: #888; font-size: 12px; margin-top: 24px;">Om du inte begärt detta, kontakta en administratör omedelbart.</p>
           </div>
         `;
 
@@ -335,9 +340,9 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "TRÄNING <onboarding@resend.dev>",
+            from: "GRIM <onboarding@resend.dev>",
             to: [userEmail],
-            subject: "Ditt lösenord har ändrats",
+            subject: "Ditt tillfälliga lösenord",
             html: emailHtml,
           }),
         });
@@ -346,7 +351,7 @@ Deno.serve(async (req) => {
       await resetRateLimit(supabaseAdmin, ip, nickname.trim());
 
       return new Response(
-        JSON.stringify({ success: true, message: "Lösenordet har ändrats! Du kan nu logga in med ditt nya lösenord." }),
+        JSON.stringify({ success: true, message: "Ett tillfälligt lösenord har skickats till din e-post. Logga in med det och välj sedan ett nytt lösenord." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
