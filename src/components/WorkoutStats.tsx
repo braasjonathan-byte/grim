@@ -57,6 +57,34 @@ const motivationalQuotes = [
   "Träna som ett djur, återhämta som en proffs 🐺",
 ];
 
+const weightComparisons: { maxTons: number; text: string }[] = [
+  { maxTons: 0.5, text: "en grand piano 🎹" },
+  { maxTons: 1, text: "en liten häst 🐴" },
+  { maxTons: 1.5, text: "en flodhäst 🦛" },
+  { maxTons: 2, text: "en Fiat 500 🚗" },
+  { maxTons: 3, text: "en noshörning 🦏" },
+  { maxTons: 5, text: "en afrikansk elefant 🐘" },
+  { maxTons: 8, text: "en T-Rex 🦖" },
+  { maxTons: 12, text: "en skolbuss 🚌" },
+  { maxTons: 20, text: "en lastbil 🚛" },
+  { maxTons: 30, text: "en stridsvagn 🪖" },
+  { maxTons: 50, text: "en spermaval 🐋" },
+  { maxTons: 80, text: "en blåval 🐳" },
+  { maxTons: 120, text: "ett Boeing 737 ✈️" },
+  { maxTons: 200, text: "Frihetsgudinnan 🗽" },
+  { maxTons: 500, text: "ett lyxkryssningsfartyg ⛴️" },
+  { maxTons: 1000, text: "Eiffeltornet 🗼" },
+  { maxTons: 5000, text: "ett rymdfärjeprogram 🚀" },
+  { maxTons: 50000, text: "Titanic 🚢" },
+  { maxTons: Infinity, text: "en asteroid 🌑" },
+];
+
+const getWeightComparison = (tons: number): string => {
+  if (tons <= 0) return "";
+  const match = weightComparisons.find((w) => tons <= w.maxTons);
+  return match ? match.text : weightComparisons[weightComparisons.length - 1].text;
+};
+
 const DailyQuoteCard = () => {
   const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
@@ -264,6 +292,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
           <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
+          {totalLiftedTons > 0 && (
+            <p className="text-[9px] text-muted-foreground mt-0.5">≈ {getWeightComparison(totalLiftedTons)}</p>
+          )}
         </div>
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <Footprints className="w-5 h-5 text-warning mx-auto mb-1" />
