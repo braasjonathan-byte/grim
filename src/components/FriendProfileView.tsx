@@ -84,7 +84,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [showFullAvatar, setShowFullAvatar] = useState(false);
   const [allCompletions, setAllCompletions] = useState<CompletionRow[]>([]);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
-  const [period, setPeriod] = useState<TimePeriod>("year");
+  const [period, setPeriod] = useState<TimePeriod>("week");
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
 
   useEffect(() => {
