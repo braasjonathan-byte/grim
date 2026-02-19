@@ -98,13 +98,44 @@ const DailyQuoteCard = () => {
 
 };
 
+type SummaryPeriod = "week" | "month" | "year" | "all";
+const summaryPeriodLabels: Record<SummaryPeriod, string> = {
+  week: "Denna vecka",
+  month: "Denna månaden",
+  year: "Detta året",
+  all: "Totalt",
+};
+
+const getMonday = (d: Date) => {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(diff);
+  return date;
+};
+
+const getStartOfMonth = (d: Date) => {
+  const date = new Date(d.getFullYear(), d.getMonth(), 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const getStartOfYear = (d: Date) => {
+  const date = new Date(d.getFullYear(), 0, 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
+  const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("all");
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{week: number;year: number;} | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
   const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
   const [challengeCount, setChallengeCount] = useState(0);
+  const [challengeCounts, setChallengeCounts] = useState<Record<SummaryPeriod, number>>({ week: 0, month: 0, year: 0, all: 0 });
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -127,11 +158,27 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     eq("user_id", userId),
     supabase.
     from("daily_challenge_completions").
-    select("id", { count: "exact", head: true }).
+    select("completed_at").
     eq("user_id", userId)]
-    ).then(([{ data: compData }, { data: planData }, { count: challengeTotal }]) => {
+    ).then(([{ data: compData }, { data: planData }, { data: challengeData }]) => {
       if (compData) setCompletions(compData as CompletionRecord[]);
-      setChallengeCount(challengeTotal || 0);
+      // Compute challenge counts per period
+      const now = new Date();
+      const weekStart = getMonday(now);
+      const monthStart = getStartOfMonth(now);
+      const yearStart = getStartOfYear(now);
+      const cCounts = { week: 0, month: 0, year: 0, all: 0 };
+      if (challengeData) {
+        cCounts.all = challengeData.length;
+        for (const c of challengeData) {
+          const d = new Date(c.completed_at);
+          if (d >= yearStart) cCounts.year++;
+          if (d >= monthStart) cCounts.month++;
+          if (d >= weekStart) cCounts.week++;
+        }
+      }
+      setChallengeCounts(cCounts);
+      setChallengeCount(cCounts.all);
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
         setPlansWithExercises(new Set(withExercises.map((p) => `${p.week}-${p.day}`)));
@@ -245,15 +292,25 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return result;
   }, [completions, view, planStartCalendarWeek, scheduledPerWeek]);
 
-  const totalDone = completions.filter((c) => c.done && hasExercise(c)).length;
-  const totalSkipped = completions.filter((c) => c.skipped).length;
-  const totalDistanceKm = completions.
+  const filteredCompletions = useMemo(() => {
+    if (summaryPeriod === "all") return completions;
+    const now = new Date();
+    let start: Date;
+    if (summaryPeriod === "week") start = getMonday(now);
+    else if (summaryPeriod === "month") start = getStartOfMonth(now);
+    else start = getStartOfYear(now);
+    return completions.filter((c) => new Date(c.updated_at) >= start);
+  }, [completions, summaryPeriod]);
+
+  const totalDone = filteredCompletions.filter((c) => c.done && hasExercise(c)).length;
+  const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
+  const totalDistanceKm = filteredCompletions.
   filter((c) => c.done && c.logged_distance_km).
   reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
-    for (const row of completions) {
+    for (const row of filteredCompletions) {
       if (!row.done || !row.logged_weights || typeof row.logged_weights !== "object") continue;
       const weights = row.logged_weights as Record<string, any>;
       for (const [key, value] of Object.entries(weights)) {
@@ -273,13 +330,33 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
     }
     return Math.round(total / 1000 * 10) / 10;
-  }, [completions]);
+  }, [filteredCompletions]);
+
+  const cyclePeriod = () => {
+    const order: SummaryPeriod[] = ["all", "week", "month", "year"];
+    const idx = order.indexOf(summaryPeriod);
+    setSummaryPeriod(order[(idx + 1) % order.length]);
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-2">
         <BarChart3 className="w-5 h-5 text-primary" />
         <h2 className="text-xl font-black tracking-tight">Sammanfattning</h2>
+      </div>
+
+      {/* Period toggle */}
+      <div className="flex gap-1 bg-secondary rounded-lg p-1">
+        {(["all", "week", "month", "year"] as SummaryPeriod[]).map((p) =>
+        <button
+          key={p}
+          onClick={() => setSummaryPeriod(p)}
+          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+          summaryPeriod === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`
+          }>
+            {summaryPeriodLabels[p]}
+          </button>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -309,7 +386,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
         <div className="bg-card border border-border rounded-lg p-3 text-center">
           <Star className="w-5 h-5 text-warning mx-auto mb-1" />
-          <p className="text-2xl font-black">{challengeCount}</p>
+          <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </div>
         <DailyQuoteCard />
