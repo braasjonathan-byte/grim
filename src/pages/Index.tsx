@@ -329,7 +329,7 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
             <a
-              href="https://www.tiktok.com/@jonathankarlsson98?_r=1&_t=ZN-941NsFcFWVC"
+              href="https://www.tiktok.com/@jonathankarlsson98"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
