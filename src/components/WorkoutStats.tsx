@@ -184,19 +184,38 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     eq("user_id", userId)]
     ).then(([{ data: compData }, { data: planData }, { data: challengeData }]) => {
       if (compData) setCompletions(compData as CompletionRecord[]);
+      // Determine plan start date first (needed for challenge week filter)
+      let userPlanStartDate: Date | null = null;
+      if (planData && planData.length > 0) {
+        const earliest = planData.reduce((min, p) =>
+          p.created_at < min.created_at ? p : min
+        );
+        userPlanStartDate = new Date(earliest.created_at);
+      }
+
       // Compute challenge counts per period
       const now = new Date();
-      const weekStart = getMonday(now);
       const monthStart = getStartOfMonth(now);
       const yearStart = getStartOfYear(now);
       const cCounts = { week: 0, month: 0, year: 0, all: 0 };
       if (challengeData) {
+        // For "week", determine the date range of the current plan week
+        let planWeekStart: Date | null = null;
+        let planWeekEnd: Date | null = null;
+        if (userPlanStartDate) {
+          const currentPW = getCurrentPlanWeek(userPlanStartDate);
+          planWeekStart = new Date(userPlanStartDate);
+          planWeekStart.setHours(0, 0, 0, 0);
+          planWeekStart.setDate(planWeekStart.getDate() + (currentPW - 1) * 7);
+          planWeekEnd = new Date(planWeekStart);
+          planWeekEnd.setDate(planWeekEnd.getDate() + 7);
+        }
         cCounts.all = challengeData.length;
         for (const c of challengeData) {
           const d = new Date(c.completed_at);
           if (d >= yearStart) cCounts.year++;
           if (d >= monthStart) cCounts.month++;
-          if (d >= weekStart) cCounts.week++;
+          if (planWeekStart && planWeekEnd && d >= planWeekStart && d < planWeekEnd) cCounts.week++;
         }
       }
       setChallengeCounts(cCounts);
@@ -204,22 +223,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
         setPlansWithExercises(new Set(withExercises.map((p) => `${p.week}-${p.day}`)));
-        // Count scheduled sessions per plan week
         const perWeek = new Map<number, number>();
         for (const p of withExercises) {
           perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
         }
         setScheduledPerWeek(perWeek);
-        // Determine the calendar week for plan week 1 from the earliest plan created_at
-        if (planData.length > 0) {
-          const earliest = planData.reduce((min, p) =>
-          p.created_at < min.created_at ? p : min
-          );
-          const startDate = new Date(earliest.created_at);
-          setPlanStartDate(startDate);
-          const isoStart = getISOWeek(startDate);
-          // Adjust: the earliest plan entry might be for plan week > 1
-          const planWeekOfEarliest = earliest.week as number;
+        if (userPlanStartDate) {
+          setPlanStartDate(userPlanStartDate);
+          const isoStart = getISOWeek(userPlanStartDate);
+          const planWeekOfEarliest = planData.reduce((min, p) =>
+            p.created_at < min.created_at ? p : min
+          ).week as number;
           setPlanStartCalendarWeek({
             week: isoStart.week - (planWeekOfEarliest - 1),
             year: isoStart.year
