@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Dumbbell, X, Star, User } from "lucide-react";
+import { Loader2, Trophy, Dumbbell, X, Star, User, CheckCircle, XCircle, Footprints } from "lucide-react";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -13,26 +13,47 @@ interface StarredPR {
   weight: number;
 }
 
+interface FriendStats {
+  totalDone: number;
+  totalSkipped: number;
+  totalDistanceKm: number;
+}
+
 const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileViewProps) => {
   const [loading, setLoading] = useState(true);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [starredPRs, setStarredPRs] = useState<StarredPR[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showFullAvatar, setShowFullAvatar] = useState(false);
+  const [friendStats, setFriendStats] = useState<FriendStats>({ totalDone: 0, totalSkipped: 0, totalDistanceKm: 0 });
 
   useEffect(() => {
     const load = async () => {
       const now = new Date();
-      const [{ data: leaderboard }, { data: starsData }, { data: completions }, { data: profileData }] = await Promise.all([
+      const [{ data: leaderboard }, { data: starsData }, { data: completions }, { data: profileData }, { data: plansData }] = await Promise.all([
         supabase.rpc("get_leaderboard", { filter_year: now.getFullYear() }),
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
-        supabase.from("workout_completions").select("logged_weights").eq("user_id", friendUserId).eq("done", true).not("logged_weights", "is", null),
+        supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, week, day").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url").eq("user_id", friendUserId).single(),
+        supabase.from("workout_plans").select("week, day, details").eq("user_id", friendUserId),
       ]);
 
       const friendEntry = leaderboard?.find((e: any) => e.user_id === friendUserId);
       setAvatarUrl(profileData?.avatar_url || null);
       setTotalWorkouts(friendEntry?.done_count || 0);
+
+      // Build set of plan slots with exercises
+      const plansWithExercises = new Set(
+        (plansData || []).filter((p) => p.details && p.details.trim() !== "").map((p) => `${p.week}-${p.day}`)
+      );
+
+      // Calculate stats
+      const doneWithExercise = (completions || []).filter((c: any) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
+      const skipped = (completions || []).filter((c: any) => c.skipped).length;
+      const distanceKm = (completions || [])
+        .filter((c: any) => c.done && c.logged_distance_km)
+        .reduce((sum: number, c: any) => sum + Number(c.logged_distance_km), 0);
+      setFriendStats({ totalDone: doneWithExercise, totalSkipped: skipped, totalDistanceKm: Math.round(distanceKm * 10) / 10 });
 
       const starredExercises = new Set(starsData?.map((s) => s.exercise) || []);
 
@@ -97,12 +118,29 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
            </button>
          </div>
 
-        <div className="p-4 space-y-4">
-          <div className="bg-secondary rounded-xl p-3 text-center">
-            <Dumbbell className="w-4 h-4 text-primary mx-auto mb-1" />
-            <p className="text-lg font-bold">{totalWorkouts}</p>
-            <p className="text-[10px] text-muted-foreground">Träningspass i år</p>
-          </div>
+         <div className="p-4 space-y-4">
+           <div className="grid grid-cols-2 gap-2">
+             <div className="bg-secondary rounded-xl p-3 text-center">
+               <CheckCircle className="w-4 h-4 text-success mx-auto mb-1" />
+               <p className="text-lg font-bold">{friendStats.totalDone}</p>
+               <p className="text-[10px] text-muted-foreground">Genomförda</p>
+             </div>
+             <div className="bg-secondary rounded-xl p-3 text-center">
+               <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
+               <p className="text-lg font-bold">{friendStats.totalSkipped}</p>
+               <p className="text-[10px] text-muted-foreground">Missade</p>
+             </div>
+             <div className="bg-secondary rounded-xl p-3 text-center">
+               <Dumbbell className="w-4 h-4 text-primary mx-auto mb-1" />
+               <p className="text-lg font-bold">{totalWorkouts}</p>
+               <p className="text-[10px] text-muted-foreground">Pass i år</p>
+             </div>
+             <div className="bg-secondary rounded-xl p-3 text-center">
+               <Footprints className="w-4 h-4 text-warning mx-auto mb-1" />
+               <p className="text-lg font-bold">{friendStats.totalDistanceKm}</p>
+               <p className="text-[10px] text-muted-foreground">km sprungit</p>
+             </div>
+           </div>
 
           {starredPRs.length > 0 && (
             <div className="space-y-2">
