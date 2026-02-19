@@ -85,16 +85,8 @@ const getMonday = (date: Date) => {
   return d2;
 };
 
-const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planStartDate: Date | null): CompletionRow[] => {
+const filterByPeriod = (completions: CompletionRow[], period: TimePeriod): CompletionRow[] => {
   const now = new Date();
-  if (period === "week" && planStartDate) {
-    // Map current calendar week to internal plan week number
-    const planStartMonday = getMonday(planStartDate);
-    const currentMonday = getMonday(now);
-    const diffWeeks = Math.floor((currentMonday.getTime() - planStartMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
-    const currentInternalWeek = diffWeeks + 1;
-    return completions.filter((c) => c.week === currentInternalWeek);
-  }
   return completions.filter((c) => {
     const d = new Date(c.updated_at);
     if (period === "year") return d.getFullYear() === now.getFullYear();
@@ -189,7 +181,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     load();
   }, [friendUserId]);
 
-  const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
+  const filtered = useMemo(() => filterByPeriod(allCompletions, period), [allCompletions, period]);
 
   const stats = useMemo(() => {
     const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
