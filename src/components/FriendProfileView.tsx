@@ -95,7 +95,7 @@ const filterByPeriod = (completions: CompletionRow[], period: TimePeriod): Compl
   });
 };
 
-const periodLabels: Record<TimePeriod, string> = { year: "i år", month: "denna månad", week: "senaste veckan" };
+const periodLabels: Record<TimePeriod, string> = { year: "i år", month: "denna månad", week: "Denna Veckan" };
 
 interface SocialData {
   instagram: string | null;
