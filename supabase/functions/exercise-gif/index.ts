@@ -408,7 +408,50 @@ serve(async (req) => {
   }
 
   try {
-    const { exerciseName } = await req.json();
+    const body = await req.json();
+    const { exerciseName, action, instructions: saveInstructions } = body;
+
+    // Admin save instructions action
+    if (action === "save_instructions" && exerciseName && saveInstructions) {
+      const authHeader = req.headers.get("authorization") || "";
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      
+      // Verify the user is admin
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      let cleanName = cleanExerciseName(exerciseName);
+      if (!cleanName) cleanName = exerciseName.trim();
+
+      // Upsert into exercise_gif_mappings
+      const { data: existing } = await sb
+        .from("exercise_gif_mappings")
+        .select("id")
+        .ilike("exercise_name", cleanName)
+        .maybeSingle();
+
+      if (existing) {
+        await sb.from("exercise_gif_mappings").update({ custom_instructions: saveInstructions }).eq("id", existing.id);
+      } else {
+        await sb.from("exercise_gif_mappings").insert({
+          exercise_name: cleanName,
+          exercise_name_lower: cleanName.toLowerCase(),
+          exercisedb_name: cleanName,
+          custom_instructions: saveInstructions,
+          created_by: user.id,
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (!exerciseName) {
       return new Response(JSON.stringify({ error: "Missing exerciseName" }), {
         status: 400,
@@ -424,16 +467,20 @@ serve(async (req) => {
       const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const { data: dbMapping } = await sb
         .from("exercise_gif_mappings")
-        .select("exercisedb_name, gif_url")
+        .select("exercisedb_name, gif_url, custom_instructions")
         .ilike("exercise_name", cleanName)
         .maybeSingle();
 
       if (dbMapping) {
+        // If custom instructions exist, prioritize them
+        const hasCustomInstructions = dbMapping.custom_instructions && Array.isArray(dbMapping.custom_instructions) && dbMapping.custom_instructions.length > 0;
+        
         // Use the admin-linked ExerciseDB name to fetch full data
         const exercise = await searchExerciseDB(dbMapping.exercisedb_name);
         if (exercise) {
-          const rawInstructions = exercise.instructions || [];
-          const instructions = await translateToSwedish(rawInstructions);
+          const instructions = hasCustomInstructions
+            ? dbMapping.custom_instructions as string[]
+            : await translateToSwedish(exercise.instructions || []);
           return new Response(JSON.stringify({
             gifUrl: exercise.gifUrl || dbMapping.gif_url,
             name: exercise.name,
@@ -441,6 +488,22 @@ serve(async (req) => {
             targetMuscles: exercise.targetMuscles || [],
             equipments: exercise.equipments || [],
             adminLinked: true,
+            hasCustomInstructions,
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // No ExerciseDB match but we have custom instructions
+        if (hasCustomInstructions) {
+          return new Response(JSON.stringify({
+            gifUrl: dbMapping.gif_url || null,
+            name: cleanName,
+            instructions: dbMapping.custom_instructions as string[],
+            targetMuscles: [],
+            equipments: [],
+            adminLinked: true,
+            hasCustomInstructions: true,
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });

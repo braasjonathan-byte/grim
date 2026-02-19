@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { X, Info, Loader2 } from "lucide-react";
+import { X, Info, Loader2, Pencil, Save, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ExerciseInfoDialogProps {
   exerciseName: string;
   onClose: () => void;
+  isAdmin?: boolean;
 }
 
 interface ExerciseData {
@@ -14,12 +15,16 @@ interface ExerciseData {
   targetMuscles: string[];
   equipments: string[];
   isCardio?: boolean;
+  hasCustomInstructions?: boolean;
 }
 
-const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) => {
+const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false }: ExerciseInfoDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExerciseData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +49,29 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
     fetchData();
   }, [exerciseName]);
 
+  const startEditing = () => {
+    const lines = data?.instructions || [];
+    setEditText(lines.join("\n"));
+    setEditing(true);
+  };
+
+  const saveInstructions = async () => {
+    setSaving(true);
+    const instructions = editText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    try {
+      const { error: fnError } = await supabase.functions.invoke("exercise-gif", {
+        body: { exerciseName, action: "save_instructions", instructions },
+      });
+      if (fnError) throw fnError;
+      setData(prev => prev ? { ...prev, instructions, hasCustomInstructions: true } : prev);
+      setEditing(false);
+    } catch (e) {
+      console.error("Failed to save instructions:", e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
@@ -65,9 +93,22 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
             </div>
           )}
 
-          {error && (
-            <div className="text-center py-8">
+          {error && !data && (
+            <div className="text-center py-8 space-y-3">
               <p className="text-sm text-muted-foreground">{error}</p>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setData({ gifUrl: null, name: exerciseName, instructions: [], targetMuscles: [], equipments: [] });
+                    setEditText("");
+                    setEditing(true);
+                  }}
+                  className="text-xs text-primary font-semibold flex items-center gap-1 mx-auto"
+                >
+                  <Pencil className="w-3 h-3" /> Skriv instruktioner
+                </button>
+              )}
             </div>
           )}
 
@@ -113,17 +154,73 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
                 </div>
               )}
 
-              {data.instructions && data.instructions.length > 0 && (
-                <div className="space-y-1.5">
-                  <h4 className="text-xs font-bold text-foreground">Instruktioner</h4>
-                  <ol className="space-y-1 list-decimal list-inside">
-                    {data.instructions.map((inst, i) => (
-                      <li key={i} className="text-xs text-muted-foreground">
-                        {inst.replace(/^(Step|Steg)\s*:?\s*\d+\s*:?\s*/i, "")}
-                      </li>
-                    ))}
-                  </ol>
+              {editing ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-foreground">Redigera instruktioner</h4>
+                    {data.hasCustomInstructions && (
+                      <span className="text-[10px] text-primary font-medium">Anpassad</span>
+                    )}
+                  </div>
+                  <textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    placeholder="Skriv en instruktion per rad..."
+                    className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[150px] resize-y"
+                    rows={8}
+                  />
+                  <p className="text-[10px] text-muted-foreground">En instruktion per rad. Numrering läggs till automatiskt.</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEditing(false)}
+                      className="flex-1 py-2.5 bg-secondary text-muted-foreground text-sm font-semibold rounded-lg hover:bg-muted transition-colors"
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      onClick={saveInstructions}
+                      disabled={saving || !editText.trim()}
+                      className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
+                    >
+                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                      Spara
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  {data.instructions && data.instructions.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-foreground">Instruktioner</h4>
+                        {isAdmin && (
+                          <button onClick={startEditing} className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:opacity-80">
+                            <Pencil className="w-3 h-3" /> Redigera
+                          </button>
+                        )}
+                      </div>
+                      {data.hasCustomInstructions && (
+                        <p className="text-[10px] text-primary font-medium">✏️ Anpassade instruktioner</p>
+                      )}
+                      <ol className="space-y-1 list-decimal list-inside">
+                        {data.instructions.map((inst, i) => (
+                          <li key={i} className="text-xs text-muted-foreground">
+                            {inst.replace(/^(Step|Steg)\s*:?\s*\d+\s*:?\s*/i, "")}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {(!data.instructions || data.instructions.length === 0) && isAdmin && !data.isCardio && (
+                    <button
+                      onClick={startEditing}
+                      className="text-xs text-primary font-semibold flex items-center gap-1 mx-auto hover:opacity-80"
+                    >
+                      <Pencil className="w-3 h-3" /> Skriv instruktioner
+                    </button>
+                  )}
+                </>
               )}
             </>
           )}
