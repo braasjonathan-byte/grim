@@ -1045,8 +1045,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                       )}
                     </div>
                     {friend.profile.is_honorary && (
-                      <div className="absolute -top-2 -left-2 z-10 -rotate-[22deg]">
-                        <Crown className="w-5 h-5 text-warning drop-shadow-sm" />
+                      <div className="absolute -top-1 -left-1 z-10 -rotate-[22deg]">
+                        <Crown className="w-4 h-4 text-warning" />
                       </div>
                     )}
                   </div>
