@@ -148,6 +148,15 @@ const getCurrentPlanWeek = (planStartDate: Date): number => {
   return Math.floor(daysSinceStart / 7) + 1;
 };
 
+const isStandaloneSession = (c: { week: number; day: string }) => c.week === 0;
+
+const getStandaloneDate = (day: string): Date | null => {
+  const match = day.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!match) return null;
+  const d = new Date(match[1] + "T00:00:00");
+  return isNaN(d.getTime()) ? null : d;
+};
+
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
@@ -243,7 +252,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     });
   }, [userId]);
 
-  const hasExercise = (c: CompletionRecord) => plansWithExercises.has(`${c.week}-${c.day}`);
+  const hasExercise = (c: CompletionRecord) => isStandaloneSession(c) || plansWithExercises.has(`${c.week}-${c.day}`);
 
   const stats = useMemo(() => {
     type Bucket = {label: string;done: number;doneWithExercise: number;skipped: number;total: number;totalWithExercise: number;distanceKm: number;sortKey: string;};
@@ -333,10 +342,19 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     if (!planStartDate) return summaryPeriod === "all" ? completions : [];
     if (summaryPeriod === "all") return completions;
     const now = new Date();
+    const currentMonday = getMonday(now);
+    const endOfWeek = new Date(currentMonday);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
 
     if (summaryPeriod === "week") {
       const currentPlanWeek = getCurrentPlanWeek(planStartDate);
-      return completions.filter((c) => c.week === currentPlanWeek);
+      return completions.filter((c) => {
+        if (isStandaloneSession(c)) {
+          const d = getStandaloneDate(c.day);
+          return d ? d >= currentMonday && d < endOfWeek : false;
+        }
+        return c.week === currentPlanWeek;
+      });
     }
 
     const startOfMonth = getStartOfMonth(now);
@@ -345,7 +363,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
 
     return completions.filter((c) => {
-      const d = getWorkoutCalendarDate(c.week, c.day, planStartDate);
+      const d = isStandaloneSession(c) ? getStandaloneDate(c.day) : getWorkoutCalendarDate(c.week, c.day, planStartDate);
+      if (!d) return false;
       if (summaryPeriod === "year") return d >= startOfYear && d < endOfYear;
       return d >= startOfMonth && d < endOfMonth;
     });
