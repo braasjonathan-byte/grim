@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, X, Star, User, CheckCircle, XCircle, Footprints, Weight } from "lucide-react";
+import { Loader2, X, Star, User, CheckCircle, XCircle, Footprints, Weight, Instagram, Music, ExternalLink } from "lucide-react";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -69,6 +69,14 @@ const filterByPeriod = (completions: CompletionRow[], period: TimePeriod): Compl
 
 const periodLabels: Record<TimePeriod, string> = { year: "i år", month: "denna månad", week: "denna vecka" };
 
+interface SocialData {
+  instagram: string | null;
+  tiktok: string | null;
+  snapchat: string | null;
+  spotify_anthem_url: string | null;
+  spotify_anthem_name: string | null;
+}
+
 const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileViewProps) => {
   const [loading, setLoading] = useState(true);
   const [starredPRs, setStarredPRs] = useState<StarredPR[]>([]);
@@ -77,17 +85,26 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [allCompletions, setAllCompletions] = useState<CompletionRow[]>([]);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
   const [period, setPeriod] = useState<TimePeriod>("year");
+  const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
 
   useEffect(() => {
     const load = async () => {
       const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, week, day, updated_at").eq("user_id", friendUserId),
-        supabase.from("profiles").select("avatar_url").eq("user_id", friendUserId).single(),
+        supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details").eq("user_id", friendUserId),
       ]);
 
       setAvatarUrl(profileData?.avatar_url || null);
+      const pd = profileData as any;
+      setSocial({
+        instagram: pd?.instagram || null,
+        tiktok: pd?.tiktok || null,
+        snapchat: pd?.snapchat || null,
+        spotify_anthem_url: pd?.spotify_anthem_url || null,
+        spotify_anthem_name: pd?.spotify_anthem_name || null,
+      });
 
       const exerciseSet = new Set(
         (plansData || []).filter((p) => p.details && p.details.trim() !== "").map((p) => `${p.week}-${p.day}`)
@@ -220,6 +237,71 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
           {starredPRs.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-2">Inga stjärnmärkta PB ännu</p>
+          )}
+
+          {/* Social links & anthem */}
+          {(social.instagram || social.tiktok || social.snapchat || social.spotify_anthem_name) && (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                {social.instagram && (
+                  <a
+                    href={`https://instagram.com/${social.instagram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 bg-secondary rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <Instagram className="w-3.5 h-3.5 text-pink-500" />
+                    <span>{social.instagram}</span>
+                  </a>
+                )}
+                {social.tiktok && (
+                  <a
+                    href={`https://tiktok.com/@${social.tiktok}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 bg-secondary rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.88-2.88 2.89 2.89 0 0 1 2.88-2.88c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15.2a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.84a8.27 8.27 0 0 0 4.76 1.5V6.84a4.84 4.84 0 0 1-1-.15z"/></svg>
+                    <span>{social.tiktok}</span>
+                  </a>
+                )}
+                {social.snapchat && (
+                  <a
+                    href={`https://snapchat.com/add/${social.snapchat}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 bg-secondary rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <svg className="w-3.5 h-3.5 text-yellow-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12.2 2c-2.6 0-4.5 1.3-5.3 3.6-.3.8-.3 1.7-.3 3v.7c-.5 0-1.2-.2-1.7.1-.4.2-.7.7-.5 1.2.2.5.6.7 1 .8.3.1.7.1 1 .2-.2.7-.7 1.4-1.2 2-.7.8-1.6 1.3-2.5 1.6-.4.1-.8.5-.7 1 .1.5.4.8.9 1 1.2.4 2.3.5 3 1.1.3.2.4.5.7.8.3.4.9.7 1.5.6.5 0 1-.2 1.6-.3.8-.2 1.7-.3 2.6.1.9.4 1.7 1.1 2.9 1.1 1.1 0 1.9-.7 2.8-1.1.9-.4 1.8-.3 2.6-.1.6.1 1.1.3 1.6.3.6 0 1.2-.2 1.5-.6.3-.3.4-.6.7-.8.7-.6 1.9-.7 3-1.1.5-.2.8-.5.9-1 .1-.5-.3-.9-.7-1-1-.3-1.8-.8-2.5-1.6-.5-.6-1-1.3-1.2-2 .4-.1.7-.1 1-.2.4-.1.8-.3 1-.8.2-.5-.1-1-.5-1.2-.5-.3-1.2-.1-1.7-.1v-.7c0-1.3 0-2.2-.3-3C16.7 3.3 14.8 2 12.2 2z"/></svg>
+                    <span>{social.snapchat}</span>
+                  </a>
+                )}
+              </div>
+
+              {social.spotify_anthem_name && (
+                <div className="bg-secondary rounded-lg p-2.5">
+                  <div className="flex items-center gap-2">
+                    <Music className="w-4 h-4 text-green-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-muted-foreground">Anthem</p>
+                      {social.spotify_anthem_url ? (
+                        <a
+                          href={social.spotify_anthem_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-semibold truncate block hover:underline flex items-center gap-1"
+                        >
+                          {social.spotify_anthem_name}
+                          <ExternalLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                        </a>
+                      ) : (
+                        <p className="text-xs font-semibold truncate">{social.spotify_anthem_name}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

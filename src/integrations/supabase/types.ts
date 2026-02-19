@@ -368,6 +368,7 @@ export type Database = {
           experience_level: string | null
           gender: string | null
           id: string
+          instagram: string | null
           is_honorary: boolean
           max_distance_km: number | null
           must_change_password: boolean
@@ -375,6 +376,10 @@ export type Database = {
           protein_bars: number
           referral_code: string | null
           referred_by: string | null
+          snapchat: string | null
+          spotify_anthem_name: string | null
+          spotify_anthem_url: string | null
+          tiktok: string | null
           time_10km_min: number | null
           training_days_per_week: number | null
           user_id: string
@@ -386,6 +391,7 @@ export type Database = {
           experience_level?: string | null
           gender?: string | null
           id?: string
+          instagram?: string | null
           is_honorary?: boolean
           max_distance_km?: number | null
           must_change_password?: boolean
@@ -393,6 +399,10 @@ export type Database = {
           protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null
+          snapchat?: string | null
+          spotify_anthem_name?: string | null
+          spotify_anthem_url?: string | null
+          tiktok?: string | null
           time_10km_min?: number | null
           training_days_per_week?: number | null
           user_id: string
@@ -404,6 +414,7 @@ export type Database = {
           experience_level?: string | null
           gender?: string | null
           id?: string
+          instagram?: string | null
           is_honorary?: boolean
           max_distance_km?: number | null
           must_change_password?: boolean
@@ -411,6 +422,10 @@ export type Database = {
           protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null
+          snapchat?: string | null
+          spotify_anthem_name?: string | null
+          spotify_anthem_url?: string | null
+          tiktok?: string | null
           time_10km_min?: number | null
           training_days_per_week?: number | null
           user_id?: string
