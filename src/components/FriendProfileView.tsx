@@ -239,9 +239,26 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const stats = useMemo(() => {
     const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
     const skipped = filtered.filter((c) => c.skipped).length;
-    const distanceKm = filtered
-      .filter((c) => c.done && c.logged_distance_km)
-      .reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
+    let distanceKm = 0;
+    for (const c of filtered) {
+      if (!c.done) continue;
+      if (c.logged_distance_km) {
+        distanceKm += Number(c.logged_distance_km);
+      }
+      const weights = (c as any).logged_weights as Record<string, any> | null;
+      if (weights && typeof weights === "object") {
+        for (const [key, value] of Object.entries(weights)) {
+          if (key.startsWith("__cond__")) {
+            try {
+              const data = typeof value === "string" ? JSON.parse(value) : value;
+              if (data?.dist && !c.logged_distance_km) {
+                distanceKm += parseFloat(String(data.dist).replace(",", ".")) || 0;
+              }
+            } catch {}
+          }
+        }
+      }
+    }
     const liftedKg = calcTotalLiftedKg(filtered);
     const liftedTons = Math.round((liftedKg / 1000) * 10) / 10;
     return { done, skipped, distanceKm: Math.round(distanceKm * 10) / 10, liftedTons };

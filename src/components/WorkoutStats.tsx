@@ -372,9 +372,31 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
   const totalDone = filteredCompletions.filter((c) => c.done && hasExercise(c)).length;
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
-  const totalDistanceKm = filteredCompletions.
-  filter((c) => c.done && c.logged_distance_km).
-  reduce((sum, c) => sum + Number(c.logged_distance_km), 0);
+  const totalDistanceKm = useMemo(() => {
+    let total = 0;
+    for (const c of filteredCompletions) {
+      if (!c.done) continue;
+      // Include logged_distance_km (from WorkoutLogDialog)
+      if (c.logged_distance_km) {
+        total += Number(c.logged_distance_km);
+      }
+      // Also include distance from inline conditioning data (__cond__ in logged_weights)
+      if (c.logged_weights && typeof c.logged_weights === "object") {
+        const weights = c.logged_weights as Record<string, any>;
+        for (const [key, value] of Object.entries(weights)) {
+          if (key.startsWith("__cond__")) {
+            try {
+              const data = typeof value === "string" ? JSON.parse(value) : value;
+              if (data?.dist && !c.logged_distance_km) {
+                total += parseFloat(String(data.dist).replace(",", ".")) || 0;
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+    return Math.round(total * 100) / 100;
+  }, [filteredCompletions]);
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
