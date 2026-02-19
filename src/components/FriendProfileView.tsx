@@ -257,7 +257,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                 <p className="text-lg font-bold">{stats.liftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
                 <p className="text-[10px] text-muted-foreground">Lyft ({periodLabel})</p>
                 {stats.liftedTons > 0 && (
-                  <p className="text-[9px] text-muted-foreground mt-0.5">≈ {getWeightComparison(stats.liftedTons)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">≈ {getWeightComparison(stats.liftedTons)}</p>
                 )}
               </button>
              <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
