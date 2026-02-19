@@ -298,11 +298,12 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           if (c.done) compMap[`${c.week}-${c.day}`] = true;
         }
       }
-      const activeWeek = wks.find((w) => {
+      // Find the latest week that has at least one completed session
+      const latestDoneWeek = [...wks].reverse().find((w) => {
         const weekPlans = plans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
-        return weekPlans.length > 0 && weekPlans.some((p) => !compMap[`${p.week}-${p.day}`]);
+        return weekPlans.some((p) => compMap[`${p.week}-${p.day}`]);
       });
-      setFriendCurrentWeek(activeWeek ?? wks[wks.length - 1] ?? 1);
+      setFriendCurrentWeek(latestDoneWeek ?? wks[wks.length - 1] ?? 1);
     }
 
     if (completions) {
