@@ -238,10 +238,14 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                   ✅ {resetMessage}
                 </p>
               </div>
+              <a
+              href="mailto:GrimTraning@gmail.com?subject=Återställ lösenord&body=Hej! Jag vill återställa mitt lösenord. Mitt användarnamn är: "
+              className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity block text-center">
+                📧 Skicka mail
+              </a>
               <button
               onClick={resetForgotState}
-              className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity">
-
+              className="w-full py-3 bg-secondary text-foreground font-bold rounded-lg hover:opacity-90 transition-opacity">
                 Tillbaka till inloggning
               </button>
             </div>
