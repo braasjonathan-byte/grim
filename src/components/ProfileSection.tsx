@@ -13,6 +13,21 @@ const GENDER_OPTIONS = [
   { value: "annat", label: "Annat" },
 ];
 
+// Extract username from a full URL or plain handle
+const extractUsername = (input: string, domain: string): string => {
+  const trimmed = input.trim().replace(/^@/, "");
+  if (!trimmed) return "";
+  try {
+    if (trimmed.includes(domain)) {
+      const url = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+      // pathname like /username or /@username
+      const path = url.pathname.replace(/^\/+/, "").replace(/\/+$/, "").replace(/^@/, "");
+      return path || "";
+    }
+  } catch { /* not a URL, treat as username */ }
+  return trimmed;
+};
+
 const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState<string>("");
@@ -128,9 +143,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .update({
         age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
         gender: gender || null,
-        instagram: instagram.trim().replace(/^@/, "") || null,
-        tiktok: tiktok.trim().replace(/^@/, "") || null,
-        snapchat: snapchat.trim().replace(/^@/, "") || null,
+        instagram: extractUsername(instagram, "instagram.com") || null,
+        tiktok: extractUsername(tiktok, "tiktok.com") || null,
+        snapchat: extractUsername(snapchat, "snapchat.com") || null,
         spotify_anthem_url: spotifyUrl.trim() || null,
         spotify_anthem_name: spotifyName.trim() || null,
       } as any)
