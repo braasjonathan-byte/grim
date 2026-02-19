@@ -49,21 +49,29 @@ const calcTotalLiftedKg = (completions: CompletionRow[]): number => {
   return total;
 };
 
-const filterByPeriod = (completions: CompletionRow[], period: TimePeriod): CompletionRow[] => {
+const getMonday = (date: Date) => {
+  const d2 = new Date(date);
+  const day = d2.getDay() || 7;
+  d2.setDate(d2.getDate() - day + 1);
+  d2.setHours(0, 0, 0, 0);
+  return d2;
+};
+
+const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planStartDate: Date | null): CompletionRow[] => {
   const now = new Date();
+  if (period === "week" && planStartDate) {
+    // Map current calendar week to internal plan week number
+    const planStartMonday = getMonday(planStartDate);
+    const currentMonday = getMonday(now);
+    const diffWeeks = Math.floor((currentMonday.getTime() - planStartMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    const currentInternalWeek = diffWeeks + 1;
+    return completions.filter((c) => c.week === currentInternalWeek);
+  }
   return completions.filter((c) => {
     const d = new Date(c.updated_at);
     if (period === "year") return d.getFullYear() === now.getFullYear();
     if (period === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    // week: current ISO week
-    const getWeekStart = (date: Date) => {
-      const d2 = new Date(date);
-      const day = d2.getDay() || 7;
-      d2.setDate(d2.getDate() - day + 1);
-      d2.setHours(0, 0, 0, 0);
-      return d2;
-    };
-    return getWeekStart(d).getTime() === getWeekStart(now).getTime();
+    return getMonday(d).getTime() === getMonday(now).getTime();
   });
 };
 
@@ -85,6 +93,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [allCompletions, setAllCompletions] = useState<CompletionRow[]>([]);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
   const [period, setPeriod] = useState<TimePeriod>("week");
+  const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
 
   useEffect(() => {
@@ -93,7 +102,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name").eq("user_id", friendUserId).single(),
-        supabase.from("workout_plans").select("week, day, details").eq("user_id", friendUserId),
+        supabase.from("workout_plans").select("week, day, details, created_at").eq("user_id", friendUserId),
       ]);
 
       setAvatarUrl(profileData?.avatar_url || null);
@@ -105,6 +114,15 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         spotify_anthem_url: pd?.spotify_anthem_url || null,
         spotify_anthem_name: pd?.spotify_anthem_name || null,
       });
+
+      // Determine plan start date from earliest created_at
+      if (plansData && plansData.length > 0) {
+        const earliest = plansData.reduce((min, p) => {
+          const d = new Date((p as any).created_at);
+          return d < min ? d : min;
+        }, new Date((plansData[0] as any).created_at));
+        setPlanStartDate(earliest);
+      }
 
       const exerciseSet = new Set(
         (plansData || []).filter((p) => p.details && p.details.trim() !== "").map((p) => `${p.week}-${p.day}`)
@@ -143,7 +161,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     load();
   }, [friendUserId]);
 
-  const filtered = useMemo(() => filterByPeriod(allCompletions, period), [allCompletions, period]);
+  const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
 
   const stats = useMemo(() => {
     const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
