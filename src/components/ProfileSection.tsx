@@ -128,9 +128,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .update({
         age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
         gender: gender || null,
-        instagram: instagram.trim() || null,
-        tiktok: tiktok.trim() || null,
-        snapchat: snapchat.trim() || null,
+        instagram: instagram.trim().replace(/^@/, "") || null,
+        tiktok: tiktok.trim().replace(/^@/, "") || null,
+        snapchat: snapchat.trim().replace(/^@/, "") || null,
         spotify_anthem_url: spotifyUrl.trim() || null,
         spotify_anthem_name: spotifyName.trim() || null,
       } as any)
