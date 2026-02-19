@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Dumbbell, X, Star } from "lucide-react";
+import { Loader2, Trophy, Dumbbell, X, Star, User } from "lucide-react";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -17,17 +17,21 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [loading, setLoading] = useState(true);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [starredPRs, setStarredPRs] = useState<StarredPR[]>([]);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [showFullAvatar, setShowFullAvatar] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       const now = new Date();
-      const [{ data: leaderboard }, { data: starsData }, { data: completions }] = await Promise.all([
+      const [{ data: leaderboard }, { data: starsData }, { data: completions }, { data: profileData }] = await Promise.all([
         supabase.rpc("get_leaderboard", { filter_year: now.getFullYear() }),
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights").eq("user_id", friendUserId).eq("done", true).not("logged_weights", "is", null),
+        supabase.from("profiles").select("avatar_url").eq("user_id", friendUserId).single(),
       ]);
 
       const friendEntry = leaderboard?.find((e: any) => e.user_id === friendUserId);
+      setAvatarUrl(profileData?.avatar_url || null);
       setTotalWorkouts(friendEntry?.done_count || 0);
 
       const starredExercises = new Set(starsData?.map((s) => s.exercise) || []);
@@ -74,12 +78,24 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     <>
       <div className="fixed inset-0 z-[60] bg-black/60" onClick={onClose} />
       <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="text-sm font-bold">{nickname}</h3>
-          <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+         <div className="flex items-center justify-between p-4 border-b border-border">
+           <div className="flex items-center gap-3">
+             <button
+               onClick={() => avatarUrl && setShowFullAvatar(true)}
+               className={`w-10 h-10 rounded-full bg-secondary border-2 border-border overflow-hidden flex items-center justify-center shrink-0 ${avatarUrl ? "cursor-pointer active:scale-95 transition-transform" : ""}`}
+             >
+               {avatarUrl ? (
+                 <img src={avatarUrl} alt={nickname} className="w-full h-full object-cover" />
+               ) : (
+                 <User className="w-5 h-5 text-muted-foreground" />
+               )}
+             </button>
+             <h3 className="text-sm font-bold">{nickname}</h3>
+           </div>
+           <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+             <X className="w-4 h-4" />
+           </button>
+         </div>
 
         <div className="p-4 space-y-4">
           <div className="bg-secondary rounded-xl p-3 text-center">
@@ -110,6 +126,27 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
           )}
         </div>
       </div>
+
+      {/* Fullscreen avatar overlay */}
+      {showFullAvatar && avatarUrl && (
+        <div
+          className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-6"
+          onClick={() => setShowFullAvatar(false)}
+        >
+          <button
+            onClick={() => setShowFullAvatar(false)}
+            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={avatarUrl}
+            alt={nickname}
+            className="max-w-full max-h-full rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   );
 };
