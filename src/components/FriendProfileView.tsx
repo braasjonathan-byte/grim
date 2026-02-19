@@ -237,7 +237,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
 
   const stats = useMemo(() => {
-    const done = filtered.filter((c) => c.done && (isStandaloneSession(c) || plansWithExercises.has(`${c.week}-${c.day}`))).length;
+    const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
     const skipped = filtered.filter((c) => c.skipped).length;
     const distanceKm = filtered
       .filter((c) => c.done && c.logged_distance_km)
