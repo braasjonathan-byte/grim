@@ -93,7 +93,7 @@ const DailyQuoteCard = () => {
   return (
     <div className="bg-card border border-border rounded-lg p-3 text-center flex flex-col items-center justify-center">
       <Flame className="w-5 h-5 text-primary mx-auto mb-1" />
-      <p className="text-[11px] font-medium leading-tight">{quote}</p>
+      <p className="text-sm font-medium leading-tight">{quote}</p>
     </div>);
 
 };
