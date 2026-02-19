@@ -123,22 +123,22 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
              <div className="bg-secondary rounded-xl p-3 text-center">
                <CheckCircle className="w-4 h-4 text-success mx-auto mb-1" />
                <p className="text-lg font-bold">{friendStats.totalDone}</p>
-               <p className="text-[10px] text-muted-foreground">Genomförda</p>
-             </div>
-             <div className="bg-secondary rounded-xl p-3 text-center">
-               <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
-               <p className="text-lg font-bold">{friendStats.totalSkipped}</p>
-               <p className="text-[10px] text-muted-foreground">Missade</p>
-             </div>
-             <div className="bg-secondary rounded-xl p-3 text-center">
-               <Dumbbell className="w-4 h-4 text-primary mx-auto mb-1" />
-               <p className="text-lg font-bold">{totalWorkouts}</p>
-               <p className="text-[10px] text-muted-foreground">Pass i år</p>
-             </div>
-             <div className="bg-secondary rounded-xl p-3 text-center">
-               <Footprints className="w-4 h-4 text-warning mx-auto mb-1" />
-               <p className="text-lg font-bold">{friendStats.totalDistanceKm}</p>
-               <p className="text-[10px] text-muted-foreground">km sprungit</p>
+                <p className="text-[10px] text-muted-foreground">Genomförda (totalt)</p>
+              </div>
+              <div className="bg-secondary rounded-xl p-3 text-center">
+                <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
+                <p className="text-lg font-bold">{friendStats.totalSkipped}</p>
+                <p className="text-[10px] text-muted-foreground">Missade (totalt)</p>
+              </div>
+              <div className="bg-secondary rounded-xl p-3 text-center">
+                <Dumbbell className="w-4 h-4 text-primary mx-auto mb-1" />
+                <p className="text-lg font-bold">{totalWorkouts}</p>
+                <p className="text-[10px] text-muted-foreground">Pass i år ({new Date().getFullYear()})</p>
+              </div>
+              <div className="bg-secondary rounded-xl p-3 text-center">
+                <Footprints className="w-4 h-4 text-warning mx-auto mb-1" />
+                <p className="text-lg font-bold">{friendStats.totalDistanceKm}</p>
+                <p className="text-[10px] text-muted-foreground">km sprungit (totalt)</p>
              </div>
            </div>
 
