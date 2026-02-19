@@ -139,28 +139,9 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         setSecurityQuestions(data.questions);
         setSecurityAnswers(data.questions.map(() => ""));
         setForgotStep("questions");
-      } else if (data.hasEmail) {
-        // Send temp password via email immediately
-        setLoading(true);
-        try {
-          const { data: resetData, error: resetError } = await supabase.functions.invoke("reset-password", {
-            body: { nickname: trimmed, action: "email-reset" }
-          });
-          if (resetError) {
-            setError("Något gick fel. Försök igen.");
-          } else if (resetData?.success) {
-            setResetMessage(resetData.message);
-            setForgotStep("done");
-          } else {
-            setError(resetData?.error || "Något gick fel.");
-          }
-        } catch {
-          setError("Något gick fel. Försök igen.");
-        }
-        setLoading(false);
-        return;
       } else {
-        setError("Inga säkerhetsfrågor eller e-post konfigurerade för detta konto.");
+        setResetMessage("Inga säkerhetsfrågor hittades för detta konto. Skicka ett mail till GrimTraning@gmail.com med ditt användarnamn för att begära ett nytt lösenord. Det kan ta upp till ett dygn innan du får svar.");
+        setForgotStep("done");
       }
     } catch {
       setError("Något gick fel. Försök igen.");
