@@ -245,7 +245,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
               <div className="flex items-center gap-2 flex-wrap">
                 {social.instagram && (
                   <a
-                    href={`https://instagram.com/${social.instagram}`}
+                    href={`https://www.instagram.com/${social.instagram.replace(/^@/, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 bg-secondary rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
@@ -256,7 +256,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                 )}
                 {social.tiktok && (
                   <a
-                    href={`https://tiktok.com/@${social.tiktok}`}
+                    href={`https://www.tiktok.com/@${social.tiktok.replace(/^@/, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 bg-secondary rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
@@ -267,7 +267,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                 )}
                 {social.snapchat && (
                   <a
-                    href={`https://snapchat.com/add/${social.snapchat}`}
+                    href={`https://www.snapchat.com/add/${social.snapchat.replace(/^@/, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 bg-secondary rounded-lg px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition-opacity"
