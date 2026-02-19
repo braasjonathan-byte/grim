@@ -5,6 +5,7 @@ import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
+import DailyChallengeStats from "@/components/DailyChallengeStats";
 
 interface WorkoutStatsProps {
   userId: string;
@@ -303,6 +304,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
         <DailyQuoteCard />
       </div>
+
+      {/* Daily challenge stats */}
+      <DailyChallengeStats userId={userId} />
 
       {/* View toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">

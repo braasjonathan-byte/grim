@@ -14,6 +14,7 @@ import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
+import DailyChallenge from "@/components/DailyChallenge";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -1968,6 +1969,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
         })}
       </div>
+
+      {/* Daily challenge */}
+      <DailyChallenge userId={userId} />
 
       {/* Workout cards */}
       <div className="space-y-2">
