@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, XCircle, Flame, Footprints, Weight } from "lucide-react";
+import { BarChart3, CheckCircle, XCircle, Flame, Footprints, Weight, Swords } from "lucide-react";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
-import DailyChallengeStats from "@/components/DailyChallengeStats";
 
 interface WorkoutStatsProps {
   userId: string;
@@ -105,6 +104,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{ week: number; year: number } | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
   const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
+  const [challengeCount, setChallengeCount] = useState(0);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -125,8 +125,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .from("workout_plans")
         .select("week, day, details, created_at")
         .eq("user_id", userId),
-    ]).then(([{ data: compData }, { data: planData }]) => {
+      supabase
+        .from("daily_challenge_completions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId),
+    ]).then(([{ data: compData }, { data: planData }, { count: challengeTotal }]) => {
       if (compData) setCompletions(compData as CompletionRecord[]);
+      setChallengeCount(challengeTotal || 0);
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
         setPlansWithExercises(new Set(withExercises.map((p) => `${p.week}-${p.day}`)));
@@ -302,11 +307,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-2xl font-black">{Math.round(totalDistanceKm * 10) / 10}</p>
           <p className="text-[10px] text-muted-foreground">km sprungit</p>
         </div>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
+          <p className="text-2xl font-black">{challengeCount}</p>
+          <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
+        </div>
         <DailyQuoteCard />
       </div>
-
-      {/* Daily challenge stats */}
-      <DailyChallengeStats userId={userId} />
 
       {/* View toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">
