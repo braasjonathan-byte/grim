@@ -220,7 +220,7 @@ const exerciseTranslations: Record<string, string> = {
   "sittande armlyft": "dumbbell front raise",
   "sittande vridning": "_NO_GIF_",
   "knä-till-bröst": "_NO_GIF_",
-  "katt/ko-stretch": "_CARDIO_",
+  "katt/ko-stretch": "cat cow stretch",
   "bicepscurl (vattenflaskor)": "dumbbell alternate biceps curl",
   "planka på knä": "_NO_GIF_",
   "häl-tå-gång": "_CARDIO_",
