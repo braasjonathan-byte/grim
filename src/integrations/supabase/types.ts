@@ -225,6 +225,30 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_challenge_completions: {
+        Row: {
+          challenge_date: string
+          challenge_text: string
+          completed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          challenge_date: string
+          challenge_text: string
+          completed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          challenge_date?: string
+          challenge_text?: string
+          completed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exercise_gif_mappings: {
         Row: {
           created_at: string
