@@ -835,9 +835,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const name = copyFrom ? copyFrom.session_name : singleName.trim();
     if (!name) return;
 
-    // Use date + timestamp for unique day key
+    // Use date + short random suffix for unique day key
     const dateStr = format(singleDate, "yyyy-MM-dd");
-    const uniqueKey = `${dateStr}_${Date.now()}`;
+    const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
 
     // Copy details as-is (no progression for single sessions)
     let details = "";
