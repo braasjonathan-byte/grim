@@ -18,6 +18,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("grim_remember_me") === "true");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -38,9 +39,19 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     const ref = params.get("ref");
     if (ref) {
       setReferralCode(ref);
-      // Clean URL without losing state
       window.history.replaceState({}, "", window.location.pathname);
     }
+  }, []);
+
+  // Sign out on tab/browser close if "remember me" is off
+  useEffect(() => {
+    const handleUnload = () => {
+      if (localStorage.getItem("grim_remember_me") !== "true") {
+        navigator.sendBeacon && supabase.auth.signOut();
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
   }, []);
 
   const fakeEmail = (nick: string) => `${nick.toLowerCase().trim()}@trainapp.local`;
@@ -426,6 +437,21 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
               </button>
             </div>
           </div>
+
+          {isLogin && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => {
+                  setRememberMe(e.target.checked);
+                  localStorage.setItem("grim_remember_me", String(e.target.checked));
+                }}
+                className="w-4 h-4 rounded border-border accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">Håll mig inloggad</span>
+            </label>
+          )}
 
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
