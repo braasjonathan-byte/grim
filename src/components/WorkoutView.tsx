@@ -84,16 +84,16 @@ const getSessionColor = (session: string) => {
 // Format a day key for display - if it looks like an ISO date, format it nicely
 const formatDayDisplay = (day: string) => {
   try {
-    // Check if it starts with a date pattern (YYYY-MM-DD)
     const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
     if (dateMatch) {
       const date = parseISO(dateMatch[1]);
       return format(date, "d MMM yyyy", { locale: sv });
     }
   } catch {
-
     // not a date
-  }return day;
+  }
+  // Strip any suffix like _abc1 or _1771393847859
+  return day.replace(/_[a-z0-9]+$/i, "");
 };
 
 const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
