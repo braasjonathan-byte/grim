@@ -123,6 +123,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [adminCondTimeInput, setAdminCondTimeInput] = useState("");
   const [adminCondTempoInput, setAdminCondTempoInput] = useState("");
   const [adminCondDistanceInput, setAdminCondDistanceInput] = useState("");
+  const [showFullFriendAvatar, setShowFullFriendAvatar] = useState(false);
 
   useEffect(() => {
     fetchFriends();
@@ -289,7 +290,19 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       setFriendPlans(plans);
       const wks = [...new Set(plans.map((p) => p.week))].sort((a, b) => a - b);
       setFriendWeeks(wks);
-      if (wks.length > 0) setFriendCurrentWeek(wks[0]);
+
+      // Find the first week with incomplete scheduled sessions
+      const compMap: Record<string, boolean> = {};
+      if (completions) {
+        for (const c of completions) {
+          if (c.done) compMap[`${c.week}-${c.day}`] = true;
+        }
+      }
+      const activeWeek = wks.find((w) => {
+        const weekPlans = plans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
+        return weekPlans.length > 0 && weekPlans.some((p) => !compMap[`${p.week}-${p.day}`]);
+      });
+      setFriendCurrentWeek(activeWeek ?? wks[wks.length - 1] ?? 1);
     }
 
     if (completions) {
@@ -487,13 +500,16 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         </button>
 
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden mx-auto">
+          <button
+            onClick={() => viewingFriend.profile.avatar_url && setShowFullFriendAvatar(true)}
+            className={`w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden mx-auto ${viewingFriend.profile.avatar_url ? "cursor-pointer active:scale-95 transition-transform" : ""}`}
+          >
             {viewingFriend.profile.avatar_url ? (
               <img src={viewingFriend.profile.avatar_url} alt={viewingFriend.profile.nickname} className="w-full h-full object-cover" />
             ) : (
               <span className="text-xl font-bold text-primary">{viewingFriend.profile.nickname[0]?.toUpperCase()}</span>
             )}
-          </div>
+          </button>
           <h2 className="text-xl font-black">{viewingFriend.profile.nickname}</h2>
           <button
             onClick={() => setShowFriendProfile(true)}
@@ -509,6 +525,27 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             nickname={viewingFriend.profile.nickname}
             onClose={() => setShowFriendProfile(false)}
           />
+        )}
+
+        {/* Fullscreen avatar overlay */}
+        {showFullFriendAvatar && viewingFriend.profile.avatar_url && (
+          <div
+            className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-6"
+            onClick={() => setShowFullFriendAvatar(false)}
+          >
+            <button
+              onClick={() => setShowFullFriendAvatar(false)}
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={viewingFriend.profile.avatar_url}
+              alt={viewingFriend.profile.nickname}
+              className="max-w-full max-h-full rounded-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         )}
 
         {friendPlans.length === 0 ? (
