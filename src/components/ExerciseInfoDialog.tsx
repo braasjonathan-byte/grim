@@ -30,7 +30,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose }: ExerciseInfoDialogProps) 
         if (fnError) throw fnError;
         if (result?.isCardio) {
           setData(result);
-        } else if (result?.gifUrl) {
+        } else if (result?.gifUrl || (result?.instructions && result.instructions.length > 0)) {
           setData(result);
         } else {
           setError("Ingen demonstration hittades för denna övning.");
