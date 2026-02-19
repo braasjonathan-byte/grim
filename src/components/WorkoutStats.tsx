@@ -164,6 +164,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{week: number;year: number;} | null>(null);
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
+  const [planDetailsMap, setPlanDetailsMap] = useState<Map<string, string>>(new Map());
   const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
   const [challengeCount, setChallengeCount] = useState(0);
   const [challengeCounts, setChallengeCounts] = useState<Record<SummaryPeriod, number>>({ week: 0, month: 0, year: 0, all: 0 });
@@ -232,6 +233,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
         setPlansWithExercises(new Set(withExercises.map((p) => `${p.week}-${p.day}`)));
+        const detailsMap = new Map<string, string>();
+        for (const p of withExercises) {
+          detailsMap.set(`${p.week}-${p.day}`, p.details);
+        }
+        setPlanDetailsMap(detailsMap);
         const perWeek = new Map<number, number>();
         for (const p of withExercises) {
           perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
@@ -376,27 +382,40 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     let total = 0;
     for (const c of filteredCompletions) {
       if (!c.done) continue;
-      // Include logged_distance_km (from WorkoutLogDialog)
+      let distFound = false;
+      // 1. Include logged_distance_km (from WorkoutLogDialog)
       if (c.logged_distance_km) {
         total += Number(c.logged_distance_km);
+        distFound = true;
       }
-      // Also include distance from inline conditioning data (__cond__ in logged_weights)
-      if (c.logged_weights && typeof c.logged_weights === "object") {
+      // 2. Include distance from inline conditioning data (__cond__ in logged_weights)
+      if (!distFound && c.logged_weights && typeof c.logged_weights === "object") {
         const weights = c.logged_weights as Record<string, any>;
         for (const [key, value] of Object.entries(weights)) {
           if (key.startsWith("__cond__")) {
             try {
               const data = typeof value === "string" ? JSON.parse(value) : value;
-              if (data?.dist && !c.logged_distance_km) {
+              if (data?.dist) {
                 total += parseFloat(String(data.dist).replace(",", ".")) || 0;
+                distFound = true;
               }
             } catch {}
           }
         }
       }
+      // 3. Fallback: extract distance from plan details text (e.g. "6.5 km")
+      if (!distFound) {
+        const details = planDetailsMap.get(`${c.week}-${c.day}`);
+        if (details) {
+          const kmMatch = details.match(/([\d.,]+)\s*km(?!\/)(?!\s*\/)/);
+          if (kmMatch) {
+            total += parseFloat(kmMatch[1].replace(",", ".")) || 0;
+          }
+        }
+      }
     }
     return Math.round(total * 100) / 100;
-  }, [filteredCompletions]);
+  }, [filteredCompletions, planDetailsMap]);
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
