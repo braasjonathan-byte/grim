@@ -106,13 +106,31 @@ const getCurrentPlanWeek = (planStartDate: Date): number => {
   return Math.floor(daysSinceStart / 7) + 1;
 };
 
+const isStandaloneSession = (c: { week: number; day: string }) => c.week === 0;
+
+const getStandaloneDate = (day: string): Date | null => {
+  const match = day.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!match) return null;
+  const d = new Date(match[1] + "T00:00:00");
+  return isNaN(d.getTime()) ? null : d;
+};
+
 const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planStartDate: Date | null): CompletionRow[] => {
   if (!planStartDate) return completions;
   const now = new Date();
+  const currentMonday = getMonday(now);
+  const endOfWeek = new Date(currentMonday);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
 
   if (period === "week") {
     const currentPlanWeek = getCurrentPlanWeek(planStartDate);
-    return completions.filter((c) => c.week === currentPlanWeek);
+    return completions.filter((c) => {
+      if (isStandaloneSession(c)) {
+        const d = getStandaloneDate(c.day);
+        return d ? d >= currentMonday && d < endOfWeek : false;
+      }
+      return c.week === currentPlanWeek;
+    });
   }
 
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -123,7 +141,8 @@ const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planSt
   const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
 
   return completions.filter((c) => {
-    const d = getWorkoutCalendarDate(c.week, c.day, planStartDate);
+    const d = isStandaloneSession(c) ? getStandaloneDate(c.day) : getWorkoutCalendarDate(c.week, c.day, planStartDate);
+    if (!d) return false;
     if (period === "year") return d >= startOfYear && d < endOfYear;
     return d >= startOfMonth && d < endOfMonth;
   });
@@ -218,7 +237,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
 
   const stats = useMemo(() => {
-    const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
+    const done = filtered.filter((c) => c.done && (isStandaloneSession(c) || plansWithExercises.has(`${c.week}-${c.day}`))).length;
     const skipped = filtered.filter((c) => c.skipped).length;
     const distanceKm = filtered
       .filter((c) => c.done && c.logged_distance_km)
