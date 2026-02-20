@@ -97,10 +97,19 @@ const formatDayDisplay = (day: string) => {
   return day.replace(/_[a-z0-9]+$/i, "");
 };
 
+const getMonday = (d: Date) => {
+  const date = new Date(d);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
 const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
+  const [activePlanWeek, setActivePlanWeek] = useState<number | null>(null);
   const [initialWeekSet, setInitialWeekSet] = useState(false);
   const [weeks, setWeeks] = useState<number[]>([]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
@@ -184,6 +193,22 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       setPlans(planData);
       const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
+
+      // Calculate active plan week based on plan creation date
+      const nonSinglePlans = planData.filter(p => p.week > 0);
+      if (nonSinglePlans.length > 0) {
+        const earliest = nonSinglePlans.reduce((min, p) =>
+          (p as any).created_at < (min as any).created_at ? p : min
+        );
+        const planStart = getMonday(new Date((earliest as any).created_at));
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const daysSinceStart = Math.floor((now.getTime() - planStart.getTime()) / 86400000);
+        const calcWeek = Math.floor(daysSinceStart / 7) + 1;
+        // Clamp to valid plan weeks
+        const maxWeek = Math.max(...wks.filter(w => w > 0));
+        setActivePlanWeek(Math.min(Math.max(calcWeek, 1), maxWeek));
+      }
 
       // Auto-navigate to the first incomplete week only on initial load
       if (wks.length > 0 && !initialWeekSet) {
@@ -2023,7 +2048,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           </button>
           <div className="text-center">
             <h2 className="text-2xl font-black tracking-tight">Vecka {currentWeek}</h2>
-            <p className="text-sm text-muted-foreground">av {weeks.length} veckor</p>
+            <p className="text-sm text-muted-foreground">
+              av {weeks.length} veckor
+              {activePlanWeek && activePlanWeek !== currentWeek && (
+                <span className="ml-1 text-warning">(aktiv: V{activePlanWeek})</span>
+              )}
+            </p>
           </div>
           <div className="absolute right-14 top-1 flex gap-3">
             <div className="flex flex-col items-center gap-0.5">
@@ -2054,21 +2084,36 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       <div className="grid grid-cols-6 gap-1.5">
         {weeks.map((w) => {
           const isCurrent = w === currentWeek;
+          const isActive = w === activePlanWeek;
           return (
             <button
               key={w}
               onClick={() => setCurrentWeek(w)}
-              className={`flex flex-col items-center p-2 rounded-md text-xs transition-all ${
+              className={`flex flex-col items-center p-2 rounded-md text-xs transition-all relative ${
               isCurrent ?
               "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background" :
+              isActive ?
+              "bg-warning/20 text-warning border border-warning/50 hover:bg-warning/30" :
               "bg-secondary text-muted-foreground hover:bg-muted"}`
               }>
-
               <span className="font-bold">V{w}</span>
+              {isActive && !isCurrent && (
+                <span className="text-[8px] leading-none mt-0.5">Aktiv</span>
+              )}
             </button>);
-
         })}
       </div>
+
+      {/* Warning when viewing non-active week */}
+      {activePlanWeek && currentWeek !== activePlanWeek && (
+        <div className="flex items-center gap-2 bg-warning/15 border border-warning/30 rounded-lg px-3 py-2">
+          <CalendarIcon className="w-4 h-4 text-warning shrink-0" />
+          <p className="text-xs text-warning">
+            Du tittar på vecka {currentWeek} — din aktiva vecka är <button onClick={() => setCurrentWeek(activePlanWeek)} className="font-bold underline">vecka {activePlanWeek}</button>.
+            Pass du registrerar här tillhör inte den aktuella veckan.
+          </p>
+        </div>
+      )}
 
       {/* Daily challenge */}
       <DailyChallenge userId={userId} />
