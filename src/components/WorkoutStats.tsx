@@ -5,6 +5,7 @@ import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
+import UntrainedMuscles from "@/components/UntrainedMuscles";
 
 
 interface WorkoutStatsProps {
@@ -550,7 +551,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         })}
         </div>
       }
-
+      {/* Untrained muscles with exercise suggestions */}
+      <UntrainedMuscles userId={userId} />
 
       {/* Leaderboard */}
       <Leaderboard userId={userId} />
