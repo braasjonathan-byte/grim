@@ -351,8 +351,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           const d = getStandaloneDate(c.day);
           return d ? d >= currentMonday && d < endOfWeek : false;
         }
-        const updatedAt = new Date(c.updated_at);
-        return updatedAt >= currentMonday && updatedAt < endOfWeek;
+        const d = getWorkoutCalendarDate(c.week, c.day, planStartDate);
+        return d >= currentMonday && d < endOfWeek;
       });
     }
 
