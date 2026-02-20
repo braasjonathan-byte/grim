@@ -281,13 +281,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
     let unchecked = 0;
     for (const part of parts) {
-      const { name: pName, weight: pWeight } = parseExerciseWeight(part);
-      const isCondFormat = pWeight && (pWeight.includes("min") || pWeight.includes("/km"));
-      if (isCondFormat) continue;
-      const { clean: cp } = extractRpe(pWeight || '');
-      const sm = cp?.match(/^(\d+)[×x](\d+)/i);
-      const fbm = !sm && cp ? cp.match(/(\d+)\s*[×x]\s*\S+/) : null;
-      const sc = sm ? parseInt(sm[1]) : fbm ? parseInt(fbm[1]) : 1;
+      // Check if conditioning exercise — skip set tracking for those
+      const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång/i.test(part);
+      if (isCondExercise) continue;
+
+      // Use the same name extraction logic as the rendering code
+      const { clean: cleanPart } = extractRpe(part);
+      const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+      const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
+      const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
+      const exerciseName = nameMatch ? nameMatch[1].trim() : null;
+      const pName = partStructMatch ? partStructMatch[1].trim() : exerciseName || cleanPart;
+
+      const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
       const setsVal = getSetsDone(k, pName);
       for (let i = 0; i < sc; i++) {
         if (setsVal[i] !== "1") unchecked++;
