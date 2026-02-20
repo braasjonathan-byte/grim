@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary } from "@/data/exerciseLibrary";
-import { Activity } from "lucide-react";
+import { Activity, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface MuscleMapProps {
   userId: string;
@@ -325,73 +326,81 @@ const MuscleMap = ({ userId }: MuscleMapProps) => {
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Activity className="w-5 h-5 text-primary" />
-        <h3 className="text-sm font-bold">Tränade muskler (senaste 7 dagarna)</h3>
-      </div>
-
-      <div className="flex gap-1 items-start justify-center">
-        <div className="flex-1 flex flex-col items-center">
-          <p className="text-[10px] text-muted-foreground mb-0.5 font-semibold uppercase tracking-wider">Framsida</p>
-          <svg viewBox="0 0 200 400" className="w-full max-w-[155px]">
-            {svgDefs}
-            {head}
-            {renderPaths(frontPaths, "f")}
-            {body}
-            <line x1="100" y1="110" x2="100" y2="170" stroke={ol("abs")} strokeWidth={0.3} opacity={0.3} />
-          </svg>
-        </div>
-        <div className="flex-1 flex flex-col items-center">
-          <p className="text-[10px] text-muted-foreground mb-0.5 font-semibold uppercase tracking-wider">Baksida</p>
-          <svg viewBox="0 0 200 400" className="w-full max-w-[155px]">
-            {svgDefs}
-            {head}
-            {renderPaths(backPaths, "b")}
-            {bodyBack}
-            <line x1="100" y1="64" x2="100" y2="168" stroke={SKIN_DARK} strokeWidth={0.4} opacity={0.3} />
-          </svg>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4 justify-center text-[10px] text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded-sm" style={{ background: TRAINED }} />
-          <span className="font-medium">Tränad</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-3.5 h-3.5 rounded-sm border border-border" style={{ background: BASE }} />
-          <span className="font-medium">Ej tränad</span>
-        </div>
-      </div>
-
-      {trainedList.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5 justify-center">
-          {trainedList.map(label => (
-            <span key={label} className="bg-destructive/15 text-destructive text-[10px] font-semibold px-2 py-0.5 rounded-full">
-              {label}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground text-center">Inga muskler tränade senaste 7 dagarna</p>
-      )}
-
-      {/* Untrained muscles with exercise suggestions */}
-      {untrainedRegions.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-border">
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Ej tränade – förslag på övningar</p>
-          <div className="space-y-1.5">
-            {untrainedRegions.map(region => (
-              <div key={region} className="bg-secondary/50 rounded-md px-3 py-2">
-                <p className="text-xs font-bold text-foreground">{REGION_LABELS[region]}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {(REGION_EXERCISES[region] || []).join(" · ")}
-                </p>
-              </div>
-            ))}
+      <Collapsible>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
+              <h3 className="text-sm font-bold">Tränade muskler (senaste 7 dagarna)</h3>
+            </div>
+            <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
           </div>
-        </div>
-      )}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-3 pt-3">
+          <div className="flex gap-1 items-start justify-center">
+            <div className="flex-1 flex flex-col items-center">
+              <p className="text-[10px] text-muted-foreground mb-0.5 font-semibold uppercase tracking-wider">Framsida</p>
+              <svg viewBox="0 0 200 400" className="w-full max-w-[155px]">
+                {svgDefs}
+                {head}
+                {renderPaths(frontPaths, "f")}
+                {body}
+                <line x1="100" y1="110" x2="100" y2="170" stroke={ol("abs")} strokeWidth={0.3} opacity={0.3} />
+              </svg>
+            </div>
+            <div className="flex-1 flex flex-col items-center">
+              <p className="text-[10px] text-muted-foreground mb-0.5 font-semibold uppercase tracking-wider">Baksida</p>
+              <svg viewBox="0 0 200 400" className="w-full max-w-[155px]">
+                {svgDefs}
+                {head}
+                {renderPaths(backPaths, "b")}
+                {bodyBack}
+                <line x1="100" y1="64" x2="100" y2="168" stroke={SKIN_DARK} strokeWidth={0.4} opacity={0.3} />
+              </svg>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 justify-center text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded-sm" style={{ background: TRAINED }} />
+              <span className="font-medium">Tränad</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 rounded-sm border border-border" style={{ background: BASE }} />
+              <span className="font-medium">Ej tränad</span>
+            </div>
+          </div>
+
+          {trainedList.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5 justify-center">
+              {trainedList.map(label => (
+                <span key={label} className="bg-destructive/15 text-destructive text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                  {label}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center">Inga muskler tränade senaste 7 dagarna</p>
+          )}
+
+          {/* Untrained muscles with exercise suggestions */}
+          {untrainedRegions.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-border">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Ej tränade – förslag på övningar</p>
+              <div className="space-y-1.5">
+                {untrainedRegions.map(region => (
+                  <div key={region} className="bg-secondary/50 rounded-md px-3 py-2">
+                    <p className="text-xs font-bold text-foreground">{REGION_LABELS[region]}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {(REGION_EXERCISES[region] || []).join(" · ")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };
