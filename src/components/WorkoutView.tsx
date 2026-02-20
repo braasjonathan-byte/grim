@@ -140,6 +140,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [condTempoInput, setCondTempoInput] = useState("");
   const [condTimeInput, setCondTimeInput] = useState("");
   const [condDistanceInput, setCondDistanceInput] = useState("");
+  const [condIntervalsInput, setCondIntervalsInput] = useState("");
+  const [condRestInput, setCondRestInput] = useState("");
 
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
@@ -282,7 +284,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     let unchecked = 0;
     for (const part of parts) {
       // Check if conditioning exercise — skip set tracking for those
-      const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång/i.test(part);
+      const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part);
       if (isCondExercise) continue;
 
       // Use the same name extraction logic as the rendering code
@@ -902,15 +904,81 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return null;
   };
 
+  // Find last logged tempo for a conditioning exercise across all workouts
+  const findLastCondTempo = (exerciseName: string): string | null => {
+    // Check single workouts (week 0)
+    const singlePlans = plans.filter((p) => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
+    for (const plan of singlePlans) {
+      if (!plan.details) continue;
+      const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      for (const line of lines) {
+        const { name } = parseExerciseWeight(line);
+        if (name.toLowerCase() === exerciseName.toLowerCase()) {
+          const tempoM = line.match(/([\d:.]+)\s*\/km/);
+          if (tempoM) return tempoM[1];
+        }
+      }
+      // Also check logged conditioning data
+      const k = `0-${plan.day}`;
+      const comp = completions[k];
+      if (comp?.done) {
+        const weights = comp.logged_weights as Record<string, any> | null;
+        if (weights) {
+          for (const [wk, val] of Object.entries(weights)) {
+            if (wk.startsWith('__cond__') && wk.toLowerCase().includes(exerciseName.toLowerCase())) {
+              try {
+                const data = typeof val === 'string' ? JSON.parse(val) : val;
+                if (data.tempo) return data.tempo;
+              } catch {}
+            }
+          }
+        }
+      }
+    }
+    // Check plan workouts
+    const planWorkouts = plans.filter(p => p.week > 0).sort((a, b) => b.week - a.week);
+    for (const plan of planWorkouts) {
+      const k = `${plan.week}-${plan.day}`;
+      const comp = completions[k];
+      if (!comp?.done) continue;
+      const weights = comp.logged_weights as Record<string, any> | null;
+      if (weights) {
+        for (const [wk, val] of Object.entries(weights)) {
+          if (wk.startsWith('__cond__') && wk.toLowerCase().includes(exerciseName.toLowerCase())) {
+            try {
+              const data = typeof val === 'string' ? JSON.parse(val) : val;
+              if (data.tempo) return data.tempo;
+            } catch {}
+          }
+        }
+      }
+      if (comp.logged_tempo) {
+        // Check if this plan's details contain the exercise
+        const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+        for (const line of lines) {
+          const { name } = parseExerciseWeight(line);
+          if (name.toLowerCase() === exerciseName.toLowerCase()) {
+            return comp.logged_tempo;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
   // Open weight dialog when selecting an exercise
   const handleExerciseSelect = (planId: string, exerciseName: string) => {
     // Check if exercise is conditioning type
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
       setConditioningDialog({ planId, exerciseName });
-      setCondTempoInput("");
+      // Try to find last logged tempo for this exercise
+      const lastCondTempo = findLastCondTempo(exerciseName);
+      setCondTempoInput(lastCondTempo || "");
       setCondTimeInput("");
       setCondDistanceInput("");
+      setCondIntervalsInput("");
+      setCondRestInput("");
       return;
     }
     const lastWeight = findLastWeight(exerciseName);
@@ -948,15 +1016,22 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setIsWarmupMode(false);
   };
 
-  // Add conditioning exercise with tempo, time, distance
+  // Add conditioning exercise with tempo, time, distance (+ intervals for Intervallträning)
   const addConditioningExercise = async () => {
     if (!conditioningDialog) return;
     const plan = plans.find((p) => p.id === conditioningDialog.planId);
     if (!plan) return;
 
-    const parts: string[] = [conditioningDialog.exerciseName];
     const infoParts: string[] = [];
-    if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+    const isInterval = conditioningDialog.exerciseName.toLowerCase().includes("intervall");
+    
+    if (isInterval && condIntervalsInput.trim()) {
+      const intervalPart = `${condIntervalsInput.trim()}×${condTimeInput.trim() || "?"} min`;
+      infoParts.push(intervalPart);
+      if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+    } else {
+      if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+    }
     if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
     if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
     
@@ -973,6 +1048,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setCondTempoInput("");
     setCondTimeInput("");
     setCondDistanceInput("");
+    setCondIntervalsInput("");
+    setCondRestInput("");
     setIsWarmupMode(false);
   };
 
@@ -1526,16 +1603,34 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           <Footprints className="w-4 h-4 text-warning" />
                           {conditioningDialog.exerciseName}
                         </h4>
+                        {condTempoInput && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{condTempoInput}/km</span>
+                          </p>
+                        )}
+                        {conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Antal intervaller</label>
+                              <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vila (min)</label>
+                              <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            </div>
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                              {conditioningDialog.exerciseName.toLowerCase().includes("intervall") ? "Tid per intervall (min)" : "Tid (min)"}
+                            </label>
                             <input
                           type="number"
                           inputMode="numeric"
                           value={condTimeInput}
                           onChange={(e) => {
                             setCondTimeInput(e.target.value);
-                            // Auto-calculate distance
                             if (condTempoInput.trim()) {
                               const tempoMatch = condTempoInput.trim().match(/^(\d+)[:\.](\d+)$/);
                               if (tempoMatch) {
@@ -1558,7 +1653,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           value={condTempoInput}
                           onChange={(e) => {
                             setCondTempoInput(e.target.value);
-                            // Auto-calculate distance
                             const tempoMatch = e.target.value.trim().match(/^(\d+)[:\.](\d+)$/);
                             if (tempoMatch && condTimeInput.trim()) {
                               const secsPerKm = parseInt(tempoMatch[1]) * 60 + parseInt(tempoMatch[2]);
@@ -1595,7 +1689,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");}}
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                             Avbryt
                           </button>
@@ -2216,7 +2310,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     <div className="space-y-2">
                         {parts.map((part, i) => {
                         // Check if this is a conditioning exercise
-                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång/i.test(part);
+                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part);
                         
                         if (isCondExercise) {
                           // Parse conditioning data from the part
@@ -2298,7 +2392,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   </button>
                                 </div>
                               </div>
-                              {/* Conditioning progression suggestion */}
+                              {/* Last tempo / conditioning progression suggestion */}
                               {(() => {
                                 const lastLog = findLastConditioningLog(plan.session_name, plan.week);
                                 if (!lastLog) return null;
@@ -2334,6 +2428,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.dist} km</p>
                                     </div>
                                   );
+                                }
+                                // Fallback: just show last tempo if available
+                                if (lastLog.tempo) {
+                                  // Don't show if user already has saved conditioning data for this exercise
+                                  const hasCurrentData = condSaved?.tempo;
+                                  if (!hasCurrentData) {
+                                    return (
+                                      <p className="text-[10px] text-muted-foreground pl-1 flex items-center gap-1">
+                                        <Timer className="w-3 h-3" />
+                                        Senast: <span className="font-mono font-semibold text-foreground">{lastLog.tempo}/km</span> (v{lastLog.week})
+                                      </p>
+                                    );
+                                  }
                                 }
                                 return null;
                               })()}
@@ -2560,45 +2667,44 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         <Footprints className="w-4 h-4 text-warning" />
                         {conditioningDialog.exerciseName}
                       </h4>
+                      {condTempoInput && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{condTempoInput}/km</span>
+                        </p>
+                      )}
+                      {conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Antal intervaller</label>
+                            <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vila (min)</label>
+                            <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          </div>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
-                          <input
-                        type="number"
-                        inputMode="numeric"
-                        value={condTimeInput}
-                        onChange={(e) => setCondTimeInput(e.target.value)}
-                        placeholder="t.ex. 30"
-                        className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
+                            {conditioningDialog.exerciseName.toLowerCase().includes("intervall") ? "Tid per intervall (min)" : "Tid (min)"}
+                          </label>
+                          <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                         <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                          <input
-                        type="text"
-                        value={condTempoInput}
-                        onChange={(e) => setCondTempoInput(e.target.value)}
-                        placeholder="t.ex. 5:30"
-                        className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <input type="text" value={condTempoInput} onChange={(e) => setCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                       </div>
                       <div>
                         <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                        <input
-                      type="text"
-                      value={condDistanceInput}
-                      onChange={(e) => setCondDistanceInput(e.target.value)}
-                      placeholder="t.ex. 5"
-                      className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        <input type="text" value={condDistanceInput} onChange={(e) => setCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                       </div>
                       <div className="flex gap-2">
-                        <button
-                      onClick={addConditioningExercise}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
+                        <button onClick={addConditioningExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
                           <Plus className="w-3.5 h-3.5" /> Lägg till
                         </button>
-                        <button
-                      onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");}}
-                      className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                           Avbryt
                         </button>
                       </div>
