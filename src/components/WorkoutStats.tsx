@@ -209,23 +209,16 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const yearStart = getStartOfYear(now);
       const cCounts = { week: 0, month: 0, year: 0, all: 0 };
       if (challengeData) {
-        // For "week", determine the date range of the current plan week
-        let planWeekStart: Date | null = null;
-        let planWeekEnd: Date | null = null;
-        if (userPlanStartDate) {
-          const currentPW = getCurrentPlanWeek(userPlanStartDate);
-          planWeekStart = new Date(userPlanStartDate);
-          planWeekStart.setHours(0, 0, 0, 0);
-          planWeekStart.setDate(planWeekStart.getDate() + (currentPW - 1) * 7);
-          planWeekEnd = new Date(planWeekStart);
-          planWeekEnd.setDate(planWeekEnd.getDate() + 7);
-        }
+        // For "week", use current calendar week (Mon-Sun)
+        const currentMonday = getMonday(now);
+        const endOfWeek = new Date(currentMonday);
+        endOfWeek.setDate(endOfWeek.getDate() + 7);
         cCounts.all = challengeData.length;
         for (const c of challengeData) {
           const d = new Date(c.completed_at);
           if (d >= yearStart) cCounts.year++;
           if (d >= monthStart) cCounts.month++;
-          if (planWeekStart && planWeekEnd && d >= planWeekStart && d < planWeekEnd) cCounts.week++;
+          if (d >= currentMonday && d < endOfWeek) cCounts.week++;
         }
       }
       setChallengeCounts(cCounts);
