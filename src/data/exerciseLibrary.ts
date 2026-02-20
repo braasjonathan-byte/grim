@@ -86,6 +86,7 @@ export const exerciseLibrary: ExerciseInfo[] = [
   { name: "Simning", category: "kondition", muscleGroup: "Helkropp" },
   { name: "Promenad", category: "kondition", muscleGroup: "Helkropp" },
   { name: "Trappmaskin", category: "kondition", muscleGroup: "Helkropp" },
+  { name: "Intervallträning", category: "kondition", muscleGroup: "Helkropp" },
 
   // Rumpa
   { name: "Hip Thrust Maskin", category: "styrka", muscleGroup: "Rumpa" },
