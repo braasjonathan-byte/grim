@@ -218,6 +218,35 @@ const MuscleMap = ({ userId }: MuscleMapProps) => {
     return Array.from(unique);
   }, [trainedRegions]);
 
+  const REGION_TO_MUSCLE_GROUP: Record<string, string[]> = {
+    chest: ["Bröst"], traps: ["Rygg"], lats: ["Rygg"], lowerBack: ["Rygg"],
+    delts: ["Axlar"], biceps: ["Armar"], triceps: ["Armar"], forearms: ["Armar"],
+    abs: ["Core"], obliques: ["Core"], quads: ["Ben"], hamstrings: ["Ben"],
+    glutes: ["Rumpa"], calves: ["Ben"],
+  };
+
+  const REGION_EXERCISES: Record<string, string[]> = {
+    chest: ["Bänkpress", "Hantlar Flyes", "Armhävningar"],
+    traps: ["Shrugs", "Face Pulls"],
+    lats: ["Latsdrag", "Chins", "Kabelrodd"],
+    lowerBack: ["Hyperextension", "Marklyft"],
+    delts: ["Axelpress", "Sidolyft", "Reverse Fly"],
+    biceps: ["Bicepscurl", "Hammarcurl"],
+    triceps: ["Triceps Pushdown", "Skallkross"],
+    forearms: ["Hammarcurl", "Handledscurl"],
+    abs: ["Planka", "Hängande Benlyft", "Ab Wheel"],
+    obliques: ["Russian Twist", "Sidoplanka", "Bålrotation"],
+    quads: ["Knäböj", "Benpress", "Benextension"],
+    hamstrings: ["Bencurl", "Rumänsk Marklyft"],
+    glutes: ["Hip Thrust Maskin", "Glute Bridge", "Cable Kickback"],
+    calves: ["Vadpress"],
+  };
+
+  const untrainedRegions = useMemo(() => {
+    const allRegions = Object.keys(REGION_LABELS);
+    return allRegions.filter(r => !trainedRegions.has(r));
+  }, [trainedRegions]);
+
   if (loading) return null;
 
   const mf = (r: string) => trainedRegions.has(r) ? TRAINED : BASE;
@@ -345,6 +374,23 @@ const MuscleMap = ({ userId }: MuscleMapProps) => {
         </div>
       ) : (
         <p className="text-xs text-muted-foreground text-center">Inga muskler tränade senaste 7 dagarna</p>
+      )}
+
+      {/* Untrained muscles with exercise suggestions */}
+      {untrainedRegions.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-border">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Ej tränade – förslag på övningar</p>
+          <div className="space-y-1.5">
+            {untrainedRegions.map(region => (
+              <div key={region} className="bg-secondary/50 rounded-md px-3 py-2">
+                <p className="text-xs font-bold text-foreground">{REGION_LABELS[region]}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {(REGION_EXERCISES[region] || []).join(" · ")}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
