@@ -195,7 +195,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
           const d = new Date((p as any).created_at);
           return d < min ? d : min;
         }, new Date((plansData[0] as any).created_at));
-        setPlanStartDate(earliest);
+        setPlanStartDate(getMonday(earliest));
       }
 
       const withExercises = (plansData || []).filter((p) => p.details && p.details.trim() !== "");
