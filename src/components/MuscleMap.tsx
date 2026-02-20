@@ -55,85 +55,86 @@ const REGION_LABELS: Record<string, string> = {
   hamstrings: "Baksida lår", glutes: "Rumpa", calves: "Vader",
 };
 
-// SVG overlay regions mapped to positions on the anatomy image
-// Image is 1400x900 approx, front figure ~left half, back figure ~right half
-// Coordinates are in percentage of image dimensions
-
-// Front view muscle overlay paths (percentages mapped to ~700x900 left half)
-// Using SVG viewBox 0 0 500 1000 for front, 0 0 500 1000 for back
-const FRONT_OVERLAYS: { region: string; d: string }[] = [
+// Single SVG overlay covering entire image (viewBox matches image aspect ~1400x860)
+// Front figure centered around x=285, back figure around x=1115
+const ALL_OVERLAYS: { region: string; d: string }[] = [
+  // ===== FRONT VIEW (left figure, center ~285) =====
   // Delts left
-  { region: "delts", d: "M95,175 Q65,165 50,195 Q45,225 60,245 L100,230 Q108,200 95,175Z" },
+  { region: "delts", d: "M195,195 Q170,185 155,210 Q150,235 165,255 L200,240 Q208,215 195,195Z" },
   // Delts right
-  { region: "delts", d: "M305,175 Q335,165 350,195 Q355,225 340,245 L300,230 Q292,200 305,175Z" },
+  { region: "delts", d: "M375,195 Q400,185 415,210 Q420,235 405,255 L370,240 Q362,215 375,195Z" },
   // Chest left
-  { region: "chest", d: "M105,190 Q150,175 200,185 L200,250 Q170,270 130,260 Q100,248 95,225 Q95,205 105,190Z" },
+  { region: "chest", d: "M205,205 Q240,192 285,200 L285,260 Q260,278 225,268 Q200,258 195,238 Q195,218 205,205Z" },
   // Chest right
-  { region: "chest", d: "M295,190 Q250,175 200,185 L200,250 Q230,270 270,260 Q300,248 305,225 Q305,205 295,190Z" },
-  // Abs
-  { region: "abs", d: "M170,260 L200,255 L200,400 L175,405 Q168,340 170,260Z" },
-  { region: "abs", d: "M230,260 L200,255 L200,400 L225,405 Q232,340 230,260Z" },
-  // Obliques
-  { region: "obliques", d: "M130,255 L168,262 Q166,340 172,405 L140,400 Q125,330 130,255Z" },
-  { region: "obliques", d: "M270,255 L232,262 Q234,340 228,405 L260,400 Q275,330 270,255Z" },
+  { region: "chest", d: "M365,205 Q330,192 285,200 L285,260 Q310,278 345,268 Q370,258 375,238 Q375,218 365,205Z" },
+  // Abs left
+  { region: "abs", d: "M255,270 L285,265 L285,400 L258,405 Q250,340 255,270Z" },
+  // Abs right
+  { region: "abs", d: "M315,270 L285,265 L285,400 L312,405 Q320,340 315,270Z" },
+  // Obliques left
+  { region: "obliques", d: "M225,265 L252,272 Q250,340 256,405 L232,400 Q218,335 225,265Z" },
+  // Obliques right
+  { region: "obliques", d: "M345,265 L318,272 Q320,340 314,405 L338,400 Q352,335 345,265Z" },
   // Biceps left
-  { region: "biceps", d: "M75,250 Q55,260 45,295 Q40,340 50,370 Q62,385 75,375 Q88,350 88,315 Q88,270 75,250Z" },
+  { region: "biceps", d: "M168,258 Q148,268 140,300 Q136,340 145,370 Q155,385 168,375 Q180,355 180,320 Q180,280 168,258Z" },
   // Biceps right
-  { region: "biceps", d: "M325,250 Q345,260 355,295 Q360,340 350,370 Q338,385 325,375 Q312,350 312,315 Q312,270 325,250Z" },
+  { region: "biceps", d: "M402,258 Q422,268 430,300 Q434,340 425,370 Q415,385 402,375 Q390,355 390,320 Q390,280 402,258Z" },
   // Forearms left
-  { region: "forearms", d: "M48,380 Q30,395 22,435 Q18,480 25,520 Q35,540 50,530 Q62,505 58,465 Q55,420 48,380Z" },
+  { region: "forearms", d: "M142,380 Q125,395 118,430 Q114,470 120,510 Q130,528 145,520 Q158,500 154,460 Q150,415 142,380Z" },
   // Forearms right
-  { region: "forearms", d: "M352,380 Q370,395 378,435 Q382,480 375,520 Q365,540 350,530 Q338,505 342,465 Q345,420 352,380Z" },
-  // Quads left outer
-  { region: "quads", d: "M140,415 Q120,425 110,470 Q105,530 110,590 Q120,620 140,615 L150,415Z" },
-  // Quads left inner
-  { region: "quads", d: "M155,415 L195,410 Q198,500 196,580 Q192,615 180,620 L150,620 Q152,520 155,415Z" },
-  // Quads right outer
-  { region: "quads", d: "M260,415 Q280,425 290,470 Q295,530 290,590 Q280,620 260,615 L250,415Z" },
-  // Quads right inner
-  { region: "quads", d: "M245,415 L205,410 Q202,500 204,580 Q208,615 220,620 L250,620 Q248,520 245,415Z" },
+  { region: "forearms", d: "M428,380 Q445,395 452,430 Q456,470 450,510 Q440,528 425,520 Q412,500 416,460 Q420,415 428,380Z" },
+  // Quads left
+  { region: "quads", d: "M230,420 Q210,430 200,475 Q195,535 202,595 Q215,625 240,620 Q265,610 270,570 Q275,510 265,460 Q258,425 240,420Z" },
+  // Quads right
+  { region: "quads", d: "M340,420 Q360,430 370,475 Q375,535 368,595 Q355,625 330,620 Q305,610 300,570 Q295,510 305,460 Q312,425 330,420Z" },
   // Calves left
-  { region: "calves", d: "M115,650 Q100,665 95,710 Q92,760 98,810 Q108,830 125,825 Q140,800 138,750 Q135,695 115,650Z" },
+  { region: "calves", d: "M215,660 Q198,678 194,720 Q190,768 198,815 Q210,838 228,832 Q245,812 242,762 Q238,708 215,660Z" },
   // Calves right
-  { region: "calves", d: "M285,650 Q300,665 305,710 Q308,760 302,810 Q292,830 275,825 Q260,800 262,750 Q265,695 285,650Z" },
-];
+  { region: "calves", d: "M355,660 Q372,678 376,720 Q380,768 372,815 Q360,838 342,832 Q325,812 328,762 Q332,708 355,660Z" },
 
-const BACK_OVERLAYS: { region: string; d: string }[] = [
-  // Traps upper
-  { region: "traps", d: "M150,145 Q120,130 95,155 L105,190 Q130,175 150,170Z" },
-  { region: "traps", d: "M250,145 Q280,130 305,155 L295,190 Q270,175 250,170Z" },
+  // ===== BACK VIEW (right figure, center ~1115) =====
+  // Traps upper left
+  { region: "traps", d: "M1040,170 Q1010,155 985,175 L998,210 Q1020,195 1040,190Z" },
+  // Traps upper right
+  { region: "traps", d: "M1190,170 Q1220,155 1245,175 L1232,210 Q1210,195 1190,190Z" },
   // Traps mid
-  { region: "traps", d: "M150,170 Q200,160 250,170 L245,210 Q200,200 155,210Z" },
-  // Rear delts
-  { region: "delts", d: "M90,155 Q60,165 48,200 Q45,230 58,250 L100,235 Q108,200 90,155Z" },
-  { region: "delts", d: "M310,155 Q340,165 352,200 Q355,230 342,250 L300,235 Q292,200 310,155Z" },
+  { region: "traps", d: "M1040,188 Q1115,178 1190,188 L1185,225 Q1115,215 1045,225Z" },
+  // Rear delts left
+  { region: "delts", d: "M982,178 Q952,188 940,218 Q936,245 952,265 L990,248 Q998,218 982,178Z" },
+  // Rear delts right
+  { region: "delts", d: "M1248,178 Q1278,188 1290,218 Q1294,245 1278,265 L1240,248 Q1232,218 1248,178Z" },
   // Lats left
-  { region: "lats", d: "M100,225 L125,235 Q135,290 140,350 L120,370 Q100,310 100,225Z" },
+  { region: "lats", d: "M990,240 L1020,250 Q1030,310 1035,370 L1012,385 Q992,325 990,240Z" },
   // Lats right
-  { region: "lats", d: "M300,225 L275,235 Q265,290 260,350 L280,370 Q300,310 300,225Z" },
-  // Lower back
-  { region: "lowerBack", d: "M155,215 L175,210 Q180,280 180,360 L175,385 L155,380 Q150,300 155,215Z" },
-  { region: "lowerBack", d: "M245,215 L225,210 Q220,280 220,360 L225,385 L245,380 Q250,300 245,215Z" },
+  { region: "lats", d: "M1240,240 L1210,250 Q1200,310 1195,370 L1218,385 Q1238,325 1240,240Z" },
+  // Lower back left
+  { region: "lowerBack", d: "M1048,228 L1070,222 Q1075,300 1075,375 L1068,398 L1048,392 Q1045,310 1048,228Z" },
+  // Lower back right
+  { region: "lowerBack", d: "M1182,228 L1160,222 Q1155,300 1155,375 L1162,398 L1182,392 Q1185,310 1182,228Z" },
   // Triceps left
-  { region: "triceps", d: "M60,248 Q40,260 35,300 Q32,345 40,375 Q52,390 68,380 Q82,360 82,325 Q82,275 60,248Z" },
+  { region: "triceps", d: "M955,262 Q932,275 928,315 Q925,355 935,385 Q948,400 965,390 Q980,370 980,335 Q980,290 955,262Z" },
   // Triceps right
-  { region: "triceps", d: "M340,248 Q360,260 365,300 Q368,345 360,375 Q348,390 332,380 Q318,360 318,325 Q318,275 340,248Z" },
-  // Forearms
-  { region: "forearms", d: "M38,385 Q20,400 15,445 Q12,490 18,535 Q28,555 45,545 Q58,520 55,475 Q52,430 38,385Z" },
-  { region: "forearms", d: "M362,385 Q380,400 385,445 Q388,490 382,535 Q372,555 355,545 Q342,520 345,475 Q348,430 362,385Z" },
-  // Glutes
-  { region: "glutes", d: "M130,380 Q110,395 105,430 Q108,470 130,485 Q160,498 200,480 L200,385 Q165,375 130,380Z" },
-  { region: "glutes", d: "M270,380 Q290,395 295,430 Q292,470 270,485 Q240,498 200,480 L200,385 Q235,375 270,380Z" },
-  // Hamstrings left
-  { region: "hamstrings", d: "M105,490 Q90,505 85,550 Q82,600 88,650 Q100,670 120,665 Q138,645 140,600 Q140,540 125,490Z" },
-  { region: "hamstrings", d: "M155,485 L130,492 Q135,560 140,620 Q145,660 155,668 Q170,672 200,658 L200,485Z" },
-  // Hamstrings right
-  { region: "hamstrings", d: "M295,490 Q310,505 315,550 Q318,600 312,650 Q300,670 280,665 Q262,645 260,600 Q260,540 275,490Z" },
-  { region: "hamstrings", d: "M245,485 L270,492 Q265,560 260,620 Q255,660 245,668 Q230,672 200,658 L200,485Z" },
+  { region: "triceps", d: "M1275,262 Q1298,275 1302,315 Q1305,355 1295,385 Q1282,400 1265,390 Q1250,370 1250,335 Q1250,290 1275,262Z" },
+  // Forearms left
+  { region: "forearms", d: "M932,395 Q912,410 905,450 Q900,495 908,540 Q920,558 938,548 Q952,525 948,480 Q945,430 932,395Z" },
+  // Forearms right
+  { region: "forearms", d: "M1298,395 Q1318,410 1325,450 Q1330,495 1322,540 Q1310,558 1292,548 Q1278,525 1282,480 Q1285,430 1298,395Z" },
+  // Glutes left
+  { region: "glutes", d: "M1025,395 Q1002,412 998,448 Q1000,488 1025,505 Q1055,518 1115,498 L1115,400 Q1065,388 1025,395Z" },
+  // Glutes right
+  { region: "glutes", d: "M1205,395 Q1228,412 1232,448 Q1230,488 1205,505 Q1175,518 1115,498 L1115,400 Q1165,388 1205,395Z" },
+  // Hamstrings left outer
+  { region: "hamstrings", d: "M1000,510 Q982,528 978,572 Q975,625 982,670 Q995,692 1018,685 Q1038,668 1040,620 Q1040,560 1020,510Z" },
+  // Hamstrings left inner
+  { region: "hamstrings", d: "M1050,505 L1025,512 Q1035,580 1040,640 Q1045,678 1058,685 Q1075,690 1115,675 L1115,505Z" },
+  // Hamstrings right outer
+  { region: "hamstrings", d: "M1230,510 Q1248,528 1252,572 Q1255,625 1248,670 Q1235,692 1212,685 Q1192,668 1190,620 Q1190,560 1210,510Z" },
+  // Hamstrings right inner
+  { region: "hamstrings", d: "M1180,505 L1205,512 Q1195,580 1190,640 Q1185,678 1172,685 Q1155,690 1115,675 L1115,505Z" },
   // Calves left
-  { region: "calves", d: "M95,690 Q78,705 74,750 Q72,800 80,850 Q92,870 110,865 Q128,845 126,795 Q124,740 95,690Z" },
+  { region: "calves", d: "M992,710 Q972,728 968,772 Q965,822 975,868 Q988,890 1008,882 Q1028,862 1025,810 Q1022,755 992,710Z" },
   // Calves right
-  { region: "calves", d: "M305,690 Q322,705 326,750 Q328,800 320,850 Q308,870 290,865 Q272,845 274,795 Q276,740 305,690Z" },
+  { region: "calves", d: "M1238,710 Q1258,728 1262,772 Q1265,822 1255,868 Q1242,890 1222,882 Q1202,862 1205,810 Q1208,755 1238,710Z" },
 ];
 
 const MuscleMap = ({ userId }: MuscleMapProps) => {
@@ -222,23 +223,12 @@ const MuscleMap = ({ userId }: MuscleMapProps) => {
           className="w-full h-auto"
           draggable={false}
         />
-        {/* Front overlay */}
         <svg
-          viewBox="0 0 400 1000"
-          className="absolute inset-0 w-1/2 h-full"
-          preserveAspectRatio="none"
-          style={{ left: 0 }}
+          viewBox="0 0 1430 920"
+          className="absolute inset-0 w-full h-full"
+          preserveAspectRatio="xMidYMid meet"
         >
-          {renderOverlays(FRONT_OVERLAYS, "f")}
-        </svg>
-        {/* Back overlay */}
-        <svg
-          viewBox="0 0 400 1000"
-          className="absolute inset-0 w-1/2 h-full"
-          preserveAspectRatio="none"
-          style={{ left: "50%" }}
-        >
-          {renderOverlays(BACK_OVERLAYS, "b")}
+          {renderOverlays(ALL_OVERLAYS, "all")}
         </svg>
       </div>
 
