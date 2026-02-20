@@ -123,13 +123,13 @@ const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planSt
   endOfWeek.setDate(endOfWeek.getDate() + 7);
 
   if (period === "week") {
-    const currentPlanWeek = getCurrentPlanWeek(planStartDate);
     return completions.filter((c) => {
       if (isStandaloneSession(c)) {
         const d = getStandaloneDate(c.day);
         return d ? d >= currentMonday && d < endOfWeek : false;
       }
-      return c.week === currentPlanWeek;
+      const updatedAt = new Date(c.updated_at);
+      return updatedAt >= currentMonday && updatedAt < endOfWeek;
     });
   }
 
