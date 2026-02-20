@@ -5,7 +5,7 @@ import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
-import MuscleMap from "@/components/MuscleMap";
+
 
 interface WorkoutStatsProps {
   userId: string;
@@ -551,8 +551,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
       }
 
-      {/* Muscle map */}
-      <MuscleMap userId={userId} />
 
       {/* Leaderboard */}
       <Leaderboard userId={userId} />
