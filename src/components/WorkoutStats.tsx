@@ -200,7 +200,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         const earliest = planData.reduce((min, p) =>
           p.created_at < min.created_at ? p : min
         );
-        userPlanStartDate = new Date(earliest.created_at);
+        userPlanStartDate = getMonday(new Date(earliest.created_at));
       }
 
       // Compute challenge counts per period
