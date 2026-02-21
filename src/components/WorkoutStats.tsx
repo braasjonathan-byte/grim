@@ -296,12 +296,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const b = buckets.get(key)!;
       b.total++;
       if (hasExercise(c)) b.totalWithExercise++;
-      if (c.done) {
+      if (c.done && hasExercise(c)) {
         b.done++;
-        if (hasExercise(c)) b.doneWithExercise++;
+        b.doneWithExercise++;
       }
       if (c.skipped) b.skipped++;
-      if (c.logged_distance_km && c.done) {
+      if (c.logged_distance_km && c.done && hasExercise(c)) {
         b.distanceKm += Number(c.logged_distance_km);
       }
     }
@@ -376,7 +376,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const totalDistanceKm = useMemo(() => {
     let total = 0;
     for (const c of filteredCompletions) {
-      if (!c.done) continue;
+      if (!c.done || !hasExercise(c)) continue;
       let distFound = false;
       // 1. Include logged_distance_km (from WorkoutLogDialog)
       if (c.logged_distance_km) {
@@ -415,7 +415,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const totalLiftedTons = useMemo(() => {
     let total = 0;
     for (const row of filteredCompletions) {
-      if (!row.done || !row.logged_weights || typeof row.logged_weights !== "object") continue;
+      if (!row.done || !hasExercise(row) || !row.logged_weights || typeof row.logged_weights !== "object") continue;
       const weights = row.logged_weights as Record<string, any>;
       for (const [key, value] of Object.entries(weights)) {
         if (key.startsWith("__setdata__")) {
