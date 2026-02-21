@@ -12,7 +12,7 @@ function mapGroupToRegions(group: string): string[] {
   switch (group) {
     case "Bröst": return ["chest"];
     case "Rygg": return ["traps", "lats", "lowerBack"];
-    case "Ben": return ["quads", "calves", "hamstrings", "glutes"];
+    case "Ben": return ["quads", "calves", "hamstrings"];
     case "Rumpa": return ["glutes"];
     case "Axlar": return ["delts"];
     case "Armar": return ["biceps", "triceps", "forearms"];
@@ -26,6 +26,9 @@ const MUSCLE_GROUP_MAP: Record<string, string[]> = {};
 for (const ex of exerciseLibrary) {
   MUSCLE_GROUP_MAP[ex.name.toLowerCase()] = mapGroupToRegions(ex.muscleGroup);
 }
+// Knäböj tränar även rumpa
+MUSCLE_GROUP_MAP["knäböj"] = ["quads", "calves", "hamstrings", "glutes"];
+MUSCLE_GROUP_MAP["böj"] = ["quads", "calves", "hamstrings", "glutes"];
 
 function extractExerciseNames(details: string): string[] {
   const names: string[] = [];
