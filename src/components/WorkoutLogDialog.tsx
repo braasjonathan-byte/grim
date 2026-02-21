@@ -95,7 +95,20 @@ const WorkoutLogDialog = ({
     setTempoAutoCalculated(true);
   }, [duration, distance]);
 
-  // Auto-calculate distance when tempo changes (original logic)
+  // Auto-calculate distance from duration and tempo
+  const calculateDistanceFromDurationAndTempo = useCallback(() => {
+    if (!duration.trim() || !tempo.trim()) return;
+    const durMin = parseFloat(duration.replace(",", "."));
+    const secsPerKm = tempoToSeconds(tempo.trim());
+    if (!durMin || durMin <= 0 || !secsPerKm || secsPerKm <= 0) return;
+
+    const distanceKm = durMin / (secsPerKm / 60);
+    const rounded = Math.round(distanceKm * 100) / 100;
+    setDistance(rounded.toString());
+    setAutoCalculated(true);
+  }, [duration, tempo]);
+
+  // Auto-calculate distance when tempo changes (original logic from details parsing)
   const calculateDistance = useCallback(() => {
     if (!tempo.trim()) return;
 
@@ -122,17 +135,22 @@ const WorkoutLogDialog = ({
   }, [tempo, details, distance]);
 
   useEffect(() => {
-    // Only auto-calculate if user hasn't manually entered distance
     if (!existingLog?.logged_distance_km && tempo.trim() && !tempoAutoCalculated) {
-      calculateDistance();
+      // If duration is entered, use duration+tempo to calculate distance
+      if (duration.trim()) {
+        calculateDistanceFromDurationAndTempo();
+      } else {
+        calculateDistance();
+      }
     }
-  }, [tempo, calculateDistance, existingLog, tempoAutoCalculated]);
+  }, [tempo, duration, calculateDistance, calculateDistanceFromDurationAndTempo, existingLog, tempoAutoCalculated]);
 
   useEffect(() => {
-    if (duration.trim() && distance.trim()) {
+    // Only calculate tempo from duration+distance if tempo wasn't manually entered
+    if (duration.trim() && distance.trim() && !tempo.trim()) {
       calculateTempoFromDurationAndDistance();
     }
-  }, [duration, distance, calculateTempoFromDurationAndDistance]);
+  }, [duration, distance, tempo, calculateTempoFromDurationAndDistance]);
 
   const handleSave = async () => {
     setSaving(true);
