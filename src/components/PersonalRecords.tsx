@@ -76,16 +76,40 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
     for (const c of completions) {
       if (!c.logged_weights) continue;
       for (const [ex, w] of Object.entries(c.logged_weights)) {
-        if (ex.startsWith("__")) continue;
-        if (typeof w !== "number" || w <= 0) continue;
-        const existing = prMap.get(ex);
-        if (!existing || w > existing.weight) {
-          prMap.set(ex, {
-            weight: w,
-            date: c.updated_at,
-            week: c.week,
-            previousBest: existing?.weight ?? null
-          });
+        // Handle legacy format: exerciseName: weight (number)
+        if (!ex.startsWith("__")) {
+          if (typeof w !== "number" || w <= 0) continue;
+          const existing = prMap.get(ex);
+          if (!existing || w > existing.weight) {
+            prMap.set(ex, {
+              weight: w,
+              date: c.updated_at,
+              week: c.week,
+              previousBest: existing?.weight ?? null
+            });
+          }
+          continue;
+        }
+        // Handle modern format: __setdata__exerciseName: [{kg, reps}, ...]
+        if (ex.startsWith("__setdata__")) {
+          const exerciseName = ex.replace("__setdata__", "").replace(/ —$/, "");
+          let sets: { kg?: string | number; reps?: string | number }[] = [];
+          if (typeof w === "string") {
+            try { sets = JSON.parse(w); } catch { continue; }
+          } else if (Array.isArray(w)) {
+            sets = w;
+          } else { continue; }
+          const maxKg = Math.max(0, ...sets.map(s => Number(s.kg) || 0));
+          if (maxKg <= 0) continue;
+          const existing = prMap.get(exerciseName);
+          if (!existing || maxKg > existing.weight) {
+            prMap.set(exerciseName, {
+              weight: maxKg,
+              date: c.updated_at,
+              week: c.week,
+              previousBest: existing?.weight ?? null
+            });
+          }
         }
       }
     }
