@@ -20,6 +20,7 @@ interface CompletionRecord {
   updated_at: string;
   logged_distance_km: number | null;
   logged_tempo: string | null;
+  logged_pulse: number | null;
   logged_weights: any;
 }
 
@@ -184,7 +185,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     Promise.all([
     supabase.
     from("workout_completions").
-    select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo, logged_weights").
+    select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo, logged_pulse, logged_weights").
     eq("user_id", userId),
     supabase.
     from("workout_plans").
@@ -253,7 +254,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     });
   }, [userId]);
 
-  const hasExercise = (c: CompletionRecord) => plansWithExercises.has(`${c.week}-${c.day}`);
+  const hasLoggedData = (c: CompletionRecord) => {
+    // Check for logged conditioning data
+    if (c.logged_distance_km || c.logged_tempo || c.logged_pulse) return true;
+    // Check for logged weights/sets
+    if (c.logged_weights && typeof c.logged_weights === "object") {
+      const keys = Object.keys(c.logged_weights as Record<string, any>);
+      return keys.some(k => k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__"));
+    }
+    return false;
+  };
+  const hasExercise = (c: CompletionRecord) => hasLoggedData(c);
 
   const stats = useMemo(() => {
     type Bucket = {label: string;done: number;doneWithExercise: number;skipped: number;total: number;totalWithExercise: number;distanceKm: number;sortKey: string;};

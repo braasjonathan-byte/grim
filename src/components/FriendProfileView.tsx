@@ -20,6 +20,8 @@ interface CompletionRow {
   done: boolean;
   skipped: boolean;
   logged_distance_km: number | null;
+  logged_tempo: string | null;
+  logged_pulse: number | null;
   week: number;
   day: string;
   updated_at: string;
@@ -174,7 +176,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     const load = async () => {
       const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
-        supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, week, day, updated_at").eq("user_id", friendUserId),
+        supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details, created_at").eq("user_id", friendUserId),
       ]);
@@ -241,8 +243,17 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
 
+  const hasLoggedData = (c: CompletionRow) => {
+    if (c.logged_distance_km || c.logged_tempo || c.logged_pulse) return true;
+    const weights = (c as any).logged_weights as Record<string, any> | null;
+    if (weights && typeof weights === "object") {
+      return Object.keys(weights).some(k => k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__"));
+    }
+    return false;
+  };
+
   const stats = useMemo(() => {
-    const done = filtered.filter((c) => c.done && plansWithExercises.has(`${c.week}-${c.day}`)).length;
+    const done = filtered.filter((c) => c.done && hasLoggedData(c)).length;
     const skipped = filtered.filter((c) => c.skipped).length;
     let distanceKm = 0;
     for (const c of filtered) {
