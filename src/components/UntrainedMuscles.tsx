@@ -82,42 +82,47 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
 
   useEffect(() => {
     const load = async () => {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const [{ data: completions }, { data: plans }, { data: customExercises }] = await Promise.all([
-        supabase.from("workout_completions").select("week, day, done, logged_weights")
-          .eq("user_id", userId).eq("done", true).gte("updated_at", sevenDaysAgo.toISOString()),
-        supabase.from("workout_plans").select("week, day, details").eq("user_id", userId),
-        supabase.from("custom_exercises").select("name, muscle_group"),
-      ]);
-      const customMap: Record<string, string[]> = {};
-      if (customExercises) for (const ce of customExercises) customMap[ce.name.toLowerCase()] = mapGroupToRegions(ce.muscle_group);
-      const planMap = new Map<string, string>();
-      if (plans) for (const p of plans) planMap.set(`${p.week}-${p.day}`, p.details);
-      const regions = new Set<string>();
-      if (completions) {
-        for (const c of completions) {
-          if (!c.done) continue;
-          const details = planMap.get(`${c.week}-${c.day}`);
-          if (details) {
-            for (const name of extractExerciseNames(details)) {
-              const lower = name.toLowerCase();
-              const mapped = MUSCLE_GROUP_MAP[lower] || customMap[lower] || findPartialMatch(lower, MUSCLE_GROUP_MAP) || findPartialMatch(lower, customMap);
-              if (mapped) mapped.forEach(r => regions.add(r));
+      try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const [{ data: completions }, { data: plans }, { data: customExercises }] = await Promise.all([
+          supabase.from("workout_completions").select("week, day, done, logged_weights")
+            .eq("user_id", userId).eq("done", true).gte("updated_at", sevenDaysAgo.toISOString()),
+          supabase.from("workout_plans").select("week, day, details").eq("user_id", userId),
+          supabase.from("custom_exercises").select("name, muscle_group"),
+        ]);
+        const customMap: Record<string, string[]> = {};
+        if (customExercises) for (const ce of customExercises) customMap[ce.name.toLowerCase()] = mapGroupToRegions(ce.muscle_group);
+        const planMap = new Map<string, string>();
+        if (plans) for (const p of plans) planMap.set(`${p.week}-${p.day}`, p.details);
+        const regions = new Set<string>();
+        if (completions) {
+          for (const c of completions) {
+            if (!c.done) continue;
+            const details = planMap.get(`${c.week}-${c.day}`);
+            if (details) {
+              for (const name of extractExerciseNames(details)) {
+                const lower = name.toLowerCase();
+                const mapped = MUSCLE_GROUP_MAP[lower] || customMap[lower] || findPartialMatch(lower, MUSCLE_GROUP_MAP) || findPartialMatch(lower, customMap);
+                if (mapped) mapped.forEach(r => regions.add(r));
+              }
             }
-          }
-          if (c.logged_weights && typeof c.logged_weights === "object") {
-            for (const key of Object.keys(c.logged_weights as Record<string, any>)) {
-              if (key.startsWith("__")) continue;
-              const lower = key.toLowerCase();
-              const mapped = MUSCLE_GROUP_MAP[lower] || customMap[lower] || findPartialMatch(lower, MUSCLE_GROUP_MAP) || findPartialMatch(lower, customMap);
-              if (mapped) mapped.forEach(r => regions.add(r));
+            if (c.logged_weights && typeof c.logged_weights === "object") {
+              for (const key of Object.keys(c.logged_weights as Record<string, any>)) {
+                if (key.startsWith("__")) continue;
+                const lower = key.toLowerCase();
+                const mapped = MUSCLE_GROUP_MAP[lower] || customMap[lower] || findPartialMatch(lower, MUSCLE_GROUP_MAP) || findPartialMatch(lower, customMap);
+                if (mapped) mapped.forEach(r => regions.add(r));
+              }
             }
           }
         }
+        setTrainedRegions(regions);
+      } catch (err) {
+        console.error("UntrainedMuscles load error:", err);
+      } finally {
+        setLoading(false);
       }
-      setTrainedRegions(regions);
-      setLoading(false);
     };
     load();
   }, [userId]);
