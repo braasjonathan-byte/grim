@@ -144,7 +144,7 @@ export const searchExercises = (query: string) => {
 };
 
 export const muscleGroups = [
-  "Bröst", "Rygg", "Ben", "Rumpa", "Axlar", "Armar", "Core", "Helkropp"
+  "Bröst", "Rygg", "Ben", "Rumpa", "Axlar", "Armar", "Underarmar", "Core", "Helkropp"
 ];
 
 export const categories = ["styrka", "kondition", "rörlighet", "core"] as const;
