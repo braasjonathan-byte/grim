@@ -29,6 +29,7 @@ for (const ex of exerciseLibrary) {
 // Knäböj tränar även rumpa
 MUSCLE_GROUP_MAP["knäböj"] = ["quads", "calves", "hamstrings", "glutes"];
 MUSCLE_GROUP_MAP["böj"] = ["quads", "calves", "hamstrings", "glutes"];
+MUSCLE_GROUP_MAP["mark"] = MUSCLE_GROUP_MAP["marklyft"] || ["traps", "lats", "lowerBack"];
 
 function extractExerciseNames(details: string): string[] {
   const names: string[] = [];
