@@ -12,7 +12,7 @@ function mapGroupToRegions(group: string): string[] {
   switch (group) {
     case "Bröst": return ["chest"];
     case "Rygg": return ["traps", "lats", "lowerBack"];
-    case "Ben": return ["quads", "calves", "hamstrings"];
+    case "Ben": return ["quads", "calves", "hamstrings", "glutes"];
     case "Rumpa": return ["glutes"];
     case "Axlar": return ["delts"];
     case "Armar": return ["biceps", "triceps", "forearms"];
