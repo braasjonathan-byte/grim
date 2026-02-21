@@ -1,11 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, XCircle, Flame, Footprints, Weight, Star } from "lucide-react";
+import { BarChart3, CheckCircle, XCircle, Flame, Footprints, Weight, Star, Swords } from "lucide-react";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 
 interface WorkoutStatsProps {
@@ -171,6 +178,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
   const [challengeCount, setChallengeCount] = useState(0);
   const [challengeCounts, setChallengeCounts] = useState<Record<SummaryPeriod, number>>({ week: 0, month: 0, year: 0, all: 0 });
+  const [allChallenges, setAllChallenges] = useState<{ challenge_text: string; completed_at: string; challenge_date: string }[]>([]);
+  const [showChallengeList, setShowChallengeList] = useState(false);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -193,8 +202,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     eq("user_id", userId),
     supabase.
     from("daily_challenge_completions").
-    select("completed_at").
-    eq("user_id", userId)]
+    select("completed_at, challenge_text, challenge_date").
+    eq("user_id", userId).order("completed_at", { ascending: false })]
     ).then(([{ data: compData }, { data: planData }, { data: challengeData }]) => {
       if (compData) setCompletions(compData as CompletionRecord[]);
       // Determine plan start date first (needed for challenge week filter)
@@ -226,6 +235,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
       setChallengeCounts(cCounts);
       setChallengeCount(cCounts.all);
+      if (challengeData) setAllChallenges(challengeData as any);
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
         setPlansWithExercises(new Set(withExercises.map((p) => `${p.week}-${p.day}`)));
@@ -499,11 +509,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-2xl font-black">{Math.round(totalDistanceKm * 10) / 10}</p>
           <p className="text-[10px] text-muted-foreground">km sprungit</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <Star className="w-5 h-5 text-warning mx-auto mb-1" />
+        <button
+          onClick={() => setShowChallengeList(true)}
+          className="bg-card border border-border rounded-lg p-3 text-center hover:bg-accent transition-colors cursor-pointer"
+        >
+          <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
-        </div>
+        </button>
         <DailyQuoteCard />
       </div>
 
@@ -576,6 +589,37 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Weight progression chart */}
       <WeightProgressionChart userId={userId} />
+
+      {/* Challenge list dialog */}
+      <Dialog open={showChallengeList} onOpenChange={setShowChallengeList}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Swords className="w-5 h-5 text-warning" />
+              Klarade utmaningar
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            {allChallenges.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Inga utmaningar avklarade ännu</p>
+            ) : (
+              <div className="space-y-2 pr-3">
+                {allChallenges.map((c, i) => (
+                  <div key={i} className="bg-secondary/50 rounded-lg p-3 flex items-start gap-3">
+                    <CheckCircle className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{c.challenge_text}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(c.completed_at).toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>);
 
 };
