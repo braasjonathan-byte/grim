@@ -253,7 +253,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   };
 
   const stats = useMemo(() => {
-    const done = filtered.filter((c) => c.done && hasLoggedData(c)).length;
+    const done = filtered.filter((c) => c.done && (hasLoggedData(c) || plansWithExercises.has(`${c.week}-${c.day}`))).length;
     const skipped = filtered.filter((c) => c.skipped).length;
     let distanceKm = 0;
     for (const c of filtered) {

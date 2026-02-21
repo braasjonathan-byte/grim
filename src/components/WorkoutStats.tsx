@@ -264,7 +264,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     }
     return false;
   };
-  const hasExercise = (c: CompletionRecord) => hasLoggedData(c);
+  const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || plansWithExercises.has(`${c.week}-${c.day}`);
 
   const stats = useMemo(() => {
     type Bucket = {label: string;done: number;doneWithExercise: number;skipped: number;total: number;totalWithExercise: number;distanceKm: number;sortKey: string;};
