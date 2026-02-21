@@ -463,7 +463,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return (weights?.[`__sets__${exerciseName}`] as string) || "";
   };
 
-  const toggleSetDone = async (week: number, day: string, exerciseName: string, setIndex: number, totalSets: number) => {
+  const toggleSetDone = async (week: number, day: string, exerciseName: string, setIndex: number, totalSets: number, defaultKg?: string, defaultReps?: string) => {
     const k = `${week}-${day}`;
     const current = getSetsDone(k, exerciseName);
     const arr = Array.from({ length: totalSets }, (_, i) => current[i] === "1");
@@ -472,6 +472,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
     const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
+
+    // Ensure __setdata__ exists so kg/reps are always persisted for stats
+    const setDataKey = `__setdata__${exerciseName}`;
+    if (!updated[setDataKey]) {
+      const dkg = defaultKg || "";
+      const dreps = defaultReps || "10";
+      const initData = Array.from({ length: totalSets }, () => ({ kg: dkg, reps: dreps }));
+      updated[setDataKey] = JSON.stringify(initData);
+    }
 
     // Check if all sets across all exercises in this workout are now done
     const plan = plans.find(p => p.week === week && p.day === day);
@@ -1527,7 +1536,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       const saved = setData[si];
                                       return (
                                         <div key={si} className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
-                                          <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle)} className="h-5 w-5" />
+                                          <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, defaultKg, defaultReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
                                           <input type="number" inputMode="numeric" defaultValue={saved?.reps || defaultReps} onBlur={(e) => saveSetFieldData(0, plan.day, name, si, 'reps', e.target.value, setsCountSingle, defaultKg, defaultReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
                                           <span className="text-[10px] text-muted-foreground">reps</span>
@@ -2631,7 +2640,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       const saved = planSetData[si];
                                       return (
                                         <div key={si} className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
-                                          <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan)} className="h-5 w-5" />
+                                          <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, defKg, defReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
                                           <input type="number" inputMode="numeric" defaultValue={saved?.reps || defReps} onBlur={(e) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', e.target.value, setsCountPlan, defKg, defReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
                                           <span className="text-[10px] text-muted-foreground">reps</span>
