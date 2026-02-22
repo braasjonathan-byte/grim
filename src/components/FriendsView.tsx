@@ -422,6 +422,43 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setAdminWeightDialog(null);
   };
 
+  const parseTempo = (t: string): number | null => {
+    const parts = t.split(":");
+    if (parts.length === 2) {
+      const mins = parseFloat(parts[0]);
+      const secs = parseFloat(parts[1]);
+      if (!isNaN(mins) && !isNaN(secs)) return mins + secs / 60;
+    }
+    const v = parseFloat(t.replace(",", "."));
+    return isNaN(v) ? null : v;
+  };
+
+  const formatTempo = (minPerKm: number): string => {
+    const mins = Math.floor(minPerKm);
+    const secs = Math.round((minPerKm - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const autoCalcCond = (time: string, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
+    const t = parseFloat(time.replace(",", "."));
+    const p = parseTempo(tempo);
+    const d = parseFloat(dist.replace(",", "."));
+
+    if (changed === "time" && !isNaN(t) && t > 0 && p && p > 0) {
+      setAdminCondDistanceInput(String(Math.round((t / p) * 10) / 10));
+    } else if (changed === "time" && !isNaN(t) && t > 0 && !isNaN(d) && d > 0) {
+      setAdminCondTempoInput(formatTempo(t / d));
+    } else if (changed === "tempo" && p && p > 0 && !isNaN(t) && t > 0) {
+      setAdminCondDistanceInput(String(Math.round((t / p) * 10) / 10));
+    } else if (changed === "tempo" && p && p > 0 && !isNaN(d) && d > 0) {
+      setAdminCondTimeInput(String(Math.round(p * d * 10) / 10));
+    } else if (changed === "distance" && !isNaN(d) && d > 0 && !isNaN(t) && t > 0) {
+      setAdminCondTempoInput(formatTempo(t / d));
+    } else if (changed === "distance" && !isNaN(d) && d > 0 && p && p > 0) {
+      setAdminCondTimeInput(String(Math.round(p * d * 10) / 10));
+    }
+  };
+
   const addAdminCondExercise = () => {
     if (!adminCondDialog) return;
     const infoParts: string[] = [];
@@ -830,16 +867,28 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
-                                    <input type="number" inputMode="numeric" value={adminCondTimeInput} onChange={(e) => setAdminCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                    <input type="number" inputMode="numeric" value={adminCondTimeInput} onChange={(e) => {
+                                      const newTime = e.target.value;
+                                      setAdminCondTimeInput(newTime);
+                                      autoCalcCond(newTime, adminCondTempoInput, adminCondDistanceInput, "time");
+                                    }} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                   </div>
                                   <div>
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                                    <input type="text" value={adminCondTempoInput} onChange={(e) => setAdminCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                    <input type="text" value={adminCondTempoInput} onChange={(e) => {
+                                      const newTempo = e.target.value;
+                                      setAdminCondTempoInput(newTempo);
+                                      autoCalcCond(adminCondTimeInput, newTempo, adminCondDistanceInput, "tempo");
+                                    }} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                   </div>
                                 </div>
                                 <div>
                                   <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                                  <input type="number" inputMode="decimal" value={adminCondDistanceInput} onChange={(e) => setAdminCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                  <input type="number" inputMode="decimal" value={adminCondDistanceInput} onChange={(e) => {
+                                    const newDist = e.target.value;
+                                    setAdminCondDistanceInput(newDist);
+                                    autoCalcCond(adminCondTimeInput, adminCondTempoInput, newDist, "distance");
+                                  }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                 </div>
                                 <div className="flex gap-2">
                                   <button onClick={addAdminCondExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
