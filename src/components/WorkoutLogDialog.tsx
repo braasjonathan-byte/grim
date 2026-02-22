@@ -81,76 +81,62 @@ const WorkoutLogDialog = ({
   const [autoCalculated, setAutoCalculated] = useState(false);
   const [tempoAutoCalculated, setTempoAutoCalculated] = useState(false);
 
-  // Auto-calculate tempo from duration and distance
-  const calculateTempoFromDurationAndDistance = useCallback(() => {
-    if (!duration.trim() || !distance.trim()) return;
-    const distKm = parseFloat(distance.replace(",", "."));
-    const durMin = parseFloat(duration.replace(",", "."));
-    if (!distKm || distKm <= 0 || !durMin || durMin <= 0) return;
+  const parseTempo = (t: string): number | null => {
+    const secsPerKm = tempoToSeconds(t.trim());
+    if (!secsPerKm || secsPerKm <= 0) return null;
+    return secsPerKm / 60;
+  };
 
-    const minPerKm = durMin / distKm;
+  const formatTempo = (minPerKm: number): string => {
     const mins = Math.floor(minPerKm);
     const secs = Math.round((minPerKm - mins) * 60);
-    setTempo(`${mins}:${secs.toString().padStart(2, "0")}`);
-    setTempoAutoCalculated(true);
-  }, [duration, distance]);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
 
-  // Auto-calculate distance from duration and tempo
-  const calculateDistanceFromDurationAndTempo = useCallback(() => {
-    if (!duration.trim() || !tempo.trim()) return;
-    const durMin = parseFloat(duration.replace(",", "."));
-    const secsPerKm = tempoToSeconds(tempo.trim());
-    if (!durMin || durMin <= 0 || !secsPerKm || secsPerKm <= 0) return;
+  const autoCalc = (newTime: string, newTempo: string, newDist: string, changed: "time" | "tempo" | "distance") => {
+    const t = parseFloat(newTime.replace(",", "."));
+    const p = parseTempo(newTempo);
+    const d = parseFloat(newDist.replace(",", "."));
 
-    const distanceKm = durMin / (secsPerKm / 60);
-    const rounded = Math.round(distanceKm * 100) / 100;
-    setDistance(rounded.toString());
-    setAutoCalculated(true);
-  }, [duration, tempo]);
+    if (changed === "time" && t > 0 && p && p > 0) {
+      setDistance(String(Math.round((t / p) * 100) / 100));
+      setAutoCalculated(true);
+    } else if (changed === "time" && t > 0 && d > 0) {
+      setTempo(formatTempo(t / d));
+      setTempoAutoCalculated(true);
+    } else if (changed === "tempo" && p && p > 0 && t > 0) {
+      setDistance(String(Math.round((t / p) * 100) / 100));
+      setAutoCalculated(true);
+    } else if (changed === "tempo" && p && p > 0 && d > 0) {
+      setDuration(String(Math.round(p * d * 10) / 10));
+    } else if (changed === "distance" && d > 0 && t > 0) {
+      setTempo(formatTempo(t / d));
+      setTempoAutoCalculated(true);
+    } else if (changed === "distance" && d > 0 && p && p > 0) {
+      setDuration(String(Math.round(p * d * 10) / 10));
+    }
+  };
 
-  // Auto-calculate distance when tempo changes (original logic from details parsing)
-  const calculateDistance = useCallback(() => {
-    if (!tempo.trim()) return;
-
-    const secsPerKm = tempoToSeconds(tempo.trim());
-    if (!secsPerKm || secsPerKm <= 0) return;
-
-    const existingDist = parseExistingDistance(details);
-    if (existingDist) {
-      if (!distance) {
+  // On initial mount, pre-fill distance from plan details if tempo exists
+  useEffect(() => {
+    if (!existingLog?.logged_distance_km && tempo.trim() && !distance) {
+      const existingDist = parseExistingDistance(details);
+      if (existingDist) {
         setDistance(existingDist.toString());
         setAutoCalculated(true);
-      }
-      return;
-    }
-
-    const runMinutes = parseRunningMinutes(details);
-    if (!runMinutes) return;
-
-    const distanceKm = runMinutes / (secsPerKm / 60);
-    const rounded = Math.round(distanceKm * 100) / 100;
-
-    setDistance(rounded.toString());
-    setAutoCalculated(true);
-  }, [tempo, details, distance]);
-
-  useEffect(() => {
-    if (!existingLog?.logged_distance_km && tempo.trim() && !tempoAutoCalculated) {
-      // If duration is entered, use duration+tempo to calculate distance
-      if (duration.trim()) {
-        calculateDistanceFromDurationAndTempo();
       } else {
-        calculateDistance();
+        const secsPerKm = tempoToSeconds(tempo.trim());
+        if (secsPerKm && secsPerKm > 0) {
+          const runMinutes = parseRunningMinutes(details);
+          if (runMinutes) {
+            setDistance((Math.round(runMinutes / (secsPerKm / 60) * 100) / 100).toString());
+            setAutoCalculated(true);
+          }
+        }
       }
     }
-  }, [tempo, duration, calculateDistance, calculateDistanceFromDurationAndTempo, existingLog, tempoAutoCalculated]);
-
-  useEffect(() => {
-    // Only calculate tempo from duration+distance if tempo wasn't manually entered
-    if (duration.trim() && distance.trim() && !tempo.trim()) {
-      calculateTempoFromDurationAndDistance();
-    }
-  }, [duration, distance, tempo, calculateTempoFromDurationAndDistance]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -205,8 +191,10 @@ const WorkoutLogDialog = ({
                 inputMode="decimal"
                 value={duration}
                 onChange={(e) => {
-                  setDuration(e.target.value);
+                  const v = e.target.value;
+                  setDuration(v);
                   setTempoAutoCalculated(false);
+                  autoCalc(v, tempo, distance, "time");
                 }}
                 placeholder="t.ex. 30"
                 className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
@@ -228,8 +216,10 @@ const WorkoutLogDialog = ({
                 inputMode="decimal"
                 value={distance}
                 onChange={(e) => {
-                  setDistance(e.target.value);
+                  const v = e.target.value;
+                  setDistance(v);
                   setAutoCalculated(false);
+                  autoCalc(duration, tempo, v, "distance");
                 }}
                 placeholder="t.ex. 10"
                 className={`w-full text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground ${
@@ -252,9 +242,11 @@ const WorkoutLogDialog = ({
               type="text"
               value={tempo}
               onChange={(e) => {
-                setTempo(e.target.value);
+                const v = e.target.value;
+                setTempo(v);
                 setAutoCalculated(false);
                 setTempoAutoCalculated(false);
+                autoCalc(duration, v, distance, "tempo");
               }}
               placeholder="t.ex. 5:30"
               className={`w-full text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground ${
