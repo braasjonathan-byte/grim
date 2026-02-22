@@ -2242,7 +2242,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     const detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
                     // Helper: check if a line is a pure distance suggestion like "Löpning 8.5 km"
                     const isSuggestedDistance = (line: string): { name: string; distance: number } | null => {
-                      const match = line.match(/^(\S+(?:\s+\S+)?)\s+(\d+(?:[.,]\d+)?)\s*km$/i);
+                      const trimmed = line.trim();
+                      // Match: "ExerciseName X km" or "ExerciseName X,Y km" — only name + distance, nothing else
+                      const match = trimmed.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*km\s*$/i);
                       if (!match) return null;
                       const exName = match[1].trim();
                       const dist = parseFloat(match[2].replace(",", "."));
@@ -2448,7 +2450,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
-                          const suggestMatch = part.match(/^(\S+(?:\s+\S+)?)\s+(\d+(?:[.,]\d+)?)\s*km$/i);
+                          const suggestMatch = part.trim().match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*km\s*$/i);
                           const isSuggestion = suggestMatch && allExercises.some(e => e.name.toLowerCase() === suggestMatch[1].trim().toLowerCase() && e.category === "kondition");
                           if (isSuggestion && suggestMatch) {
                             return (
