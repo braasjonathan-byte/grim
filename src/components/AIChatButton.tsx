@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { getSnapshotSummaries, getSnapshotById } from "@/hooks/useDataSnapshots";
 
 const GRIM_AVATAR = "https://gnhbkevtoajzdpsengki.supabase.co/storage/v1/object/public/avatars/25c48738-eb8e-4180-8755-034d01dc5ccc/avatar.jpg";
 
@@ -130,6 +131,9 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
+      // Include snapshot summaries for AI context
+      const snapshots = getSnapshotSummaries();
+
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/workout-ai`,
         {
@@ -142,6 +146,7 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
           body: JSON.stringify({
             messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
             currentWeek,
+            snapshots,
           }),
         }
       );
@@ -152,6 +157,49 @@ const AIChatButton = ({ userId, currentWeek = 1, onActionsExecuted }: AIChatButt
       }
 
       const data = await resp.json();
+
+      // Check if AI requested a snapshot restore
+      if (data.restore_snapshot_id) {
+        const snapshot = getSnapshotById(data.restore_snapshot_id);
+        if (snapshot) {
+          // Restore workout plans
+          const { data: existingPlans } = await supabase
+            .from("workout_plans")
+            .select("id")
+            .eq("user_id", userId);
+          if (existingPlans?.length) {
+            await supabase.from("workout_plans").delete().eq("user_id", userId);
+          }
+          for (const plan of snapshot.data.workout_plans) {
+            const { id, created_at, updated_at, ...rest } = plan;
+            await supabase.from("workout_plans").insert(rest);
+          }
+
+          // Restore workout completions
+          await supabase.from("workout_completions").delete().eq("user_id", userId);
+          for (const comp of snapshot.data.workout_completions) {
+            const { id, ...rest } = comp;
+            await supabase.from("workout_completions").insert(rest);
+          }
+
+          // Restore PR stars
+          await supabase.from("pr_stars").delete().eq("user_id", userId);
+          for (const star of snapshot.data.pr_stars) {
+            const { id, ...rest } = star;
+            await supabase.from("pr_stars").insert(rest);
+          }
+
+          // Restore PR goals
+          await supabase.from("pr_goals").delete().eq("user_id", userId);
+          for (const goal of snapshot.data.pr_goals) {
+            const { id, ...rest } = goal;
+            await supabase.from("pr_goals").insert(rest);
+          }
+
+          if (onActionsExecuted) onActionsExecuted();
+        }
+      }
+
       setMessages((prev) => [...prev, { role: "assistant", content: data.response }]);
 
       if (data.actions_executed && onActionsExecuted) {
