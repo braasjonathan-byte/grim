@@ -2240,12 +2240,37 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     const isRunning = s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel");
                     const comp = completions[key];
                     const detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+                    // Helper: check if a line is a known exercise or has exercise format
+                    const isExerciseLine = (line: string): boolean => {
+                      const cleanName = line.replace(/\s*[—\-]\s*.*$/, "").trim().toLowerCase();
+                      // Check against exercise library and custom exercises
+                      if (allExercises.some(e => e.name.toLowerCase() === cleanName)) return true;
+                      // Check for structured formats (sets×reps, kg, min/km patterns)
+                      if (/\d+\s*[×x]\s*\d+/i.test(line)) return true;
+                      if (/\d+\s*kg/i.test(line)) return true;
+                      if (/\d+\s*min/i.test(line) && /\/km/i.test(line)) return true;
+                      // Check if line starts with a known exercise name (partial match)
+                      if (allExercises.some(e => cleanName.startsWith(e.name.toLowerCase()))) return true;
+                      return false;
+                    };
+
                     return (
                       <div className="space-y-2">
                           {detailParts.length > 1 ? (
                             <ul className="space-y-1.5">
                               {detailParts.map((line, i) => {
                                 const cleanName = line.replace(/\s*[—\-]\s*\d+[×x].*$/i, "").replace(/\s*@\s*\d+.*$/i, "").trim();
+                                const isExercise = isExerciseLine(line);
+
+                                if (!isExercise) {
+                                  // Descriptive text - render as muted italic text
+                                  return (
+                                    <li key={i} className="text-xs text-muted-foreground italic leading-relaxed px-1 py-0.5">
+                                      {line}
+                                    </li>
+                                  );
+                                }
+
                                 return (
                                   <li key={i} className="flex items-center gap-2 text-sm text-foreground">
                                     <span className="text-muted-foreground">•</span>
@@ -2270,9 +2295,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 );
                               })}
                             </ul>
-                          ) : (
-                            <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
-                          )}
+                          ) : (() => {
+                            // Single line - check if it's descriptive or exercise
+                            const isExercise = isExerciseLine(plan.details);
+                            return isExercise ? (
+                              <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic leading-relaxed">{plan.details}</p>
+                            );
+                          })()}
                           {isRunning && comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km) &&
                         <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-1">
                               <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
@@ -2384,7 +2415,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     <div className="space-y-2">
                         {parts.map((part, i) => {
                         // Check if this is a conditioning exercise
-                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part);
+                        const { name: partCondCheckName } = parseExerciseWeight(part);
+                        const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
+                        const isCondExercise = matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part);
                         
                         if (isCondExercise) {
                           // Parse conditioning data from the part
