@@ -38,7 +38,7 @@ serve(async (req) => {
       });
     }
 
-    const { messages, currentWeek } = await req.json();
+    const { messages, currentWeek, snapshots } = await req.json();
 
     // Fetch user's current workout plan
     const { data: plans } = await supabase
@@ -65,6 +65,10 @@ serve(async (req) => {
       ? `${todayPlan.session_name || '(Vila)'}${todayPlan.details ? '\n  Övningar: ' + todayPlan.details : ''}`
       : "(Inget pass schemalagt)";
 
+    const snapshotContext = snapshots?.length
+      ? `\n\nTILLGÄNGLIGA BACKUPER (snapshots sparade lokalt):\n${snapshots.map((s: any) => `- ID: ${s.id} | ${s.label} (${s.timestamp})`).join("\n")}\n\nOm användaren ber att återställa data till ett visst datum, använd "restore_snapshot" tool-funktionen med rätt snapshot-ID.`
+      : "\n\nInga lokala backuper finns sparade ännu.";
+
     const systemPrompt = `Du är en AI-träningsassistent för appen Grim. Du hjälper användaren att redigera sitt träningsschema.
 
 DAGENS DATUM: ${todayDate} (${todayName})
@@ -75,11 +79,13 @@ ${planContext || "(Inget schema hittades)"}
 
 Tillgängliga veckor: ${allWeeks.join(", ")}
 Veckodagar: Mån, Tis, Ons, Tors, Fre, Lör, Sön
+${snapshotContext}
 
 REGLER:
 - Svara ALLTID på svenska
 - Du kan lägga till övningar, ta bort övningar, ändra sets/reps/vikt, eller föreslå förbättringar
 - När användaren ber dig göra en ändring, använd "workout_action" tool-funktionen
+- Om användaren ber att återställa till en backup, använd "restore_snapshot" tool-funktionen
 - Om användaren frågar om råd/tips, svara normalt utan tool call
 - Övningar i details-fältet separeras med radbrytning (\\n)
 - Format för styrkeövning: "Övningsnamn 3×10 80kg" eller bara "Övningsnamn 3×10"
@@ -131,6 +137,20 @@ FÖRESLÅ ALTERNATIVA ÖVNINGAR:
             required: ["actions"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "restore_snapshot",
+          description: "Återställ användarens data till en tidigare sparad backup/snapshot. Använd detta när användaren ber att återställa sitt schema till ett visst datum.",
+          parameters: {
+            type: "object",
+            properties: {
+              snapshot_id: { type: "string", description: "ID:t på den snapshot som ska återställas (datumet, t.ex. '2026-02-20')" },
+            },
+            required: ["snapshot_id"]
+          }
+        }
       }
     ];
 
@@ -177,6 +197,24 @@ FÖRESLÅ ALTERNATIVA ÖVNINGAR:
     if (message?.tool_calls?.length > 0) {
       const toolCall = message.tool_calls[0];
       const args = JSON.parse(toolCall.function.arguments);
+      // Handle restore_snapshot tool
+      if (toolCall.function.name === "restore_snapshot") {
+        const snapshotId = args.snapshot_id;
+        const textContent = message.content || "";
+        const finalResponse = textContent
+          ? `${textContent}\n\n🔄 Återställer data till backup från ${snapshotId}...`
+          : `🔄 Återställer all data till backup från ${snapshotId}. Vänta medan appen uppdateras.`;
+
+        return new Response(JSON.stringify({
+          response: finalResponse,
+          actions_executed: true,
+          restore_snapshot_id: snapshotId,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Handle workout_action tool
       const results: string[] = [];
 
       for (const action of args.actions) {

@@ -25,6 +25,7 @@ import NotificationSettings from "@/components/NotificationSettings";
 import ExerciseGifManager from "@/components/ExerciseGifManager";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 
 type Tab = "workout" | "friends" | "calc" | "stats" | "profile" | "settings";
 
@@ -86,6 +87,7 @@ const Index = () => {
 
   usePushNotifications(user?.id ?? null);
   useOfflineSync();
+  useDataSnapshots(user?.id ?? null);
 
   // Capture beforeinstallprompt for native Android install
   useEffect(() => {
