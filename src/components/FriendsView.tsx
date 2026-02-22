@@ -282,13 +282,49 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
     const [{ data: plans }, { data: completions }, { data: commentsData }] = await Promise.all([
       supabase.from("workout_plans").select("id, week, day, session_name, details, tempo, created_at").eq("user_id", fid).order("week").order("day"),
-      supabase.from("workout_completions").select("week, day, done, user_comment").eq("user_id", fid),
+      supabase.from("workout_completions").select("week, day, done, user_comment, logged_weights, logged_distance_km").eq("user_id", fid),
       supabase.from("workout_comments").select("*").eq("target_user_id", fid),
     ]);
 
-    if (plans) {
-      setFriendPlans(plans);
-      const wks = [...new Set(plans.map((p) => p.week))].sort((a, b) => a - b);
+    // Build virtual plan entries for standalone completions without matching plans
+    const allPlans = [...(plans || [])];
+    const planKeys = new Set((plans || []).map((p) => `${p.week}-${p.day}`));
+    if (completions) {
+      for (const c of completions) {
+        if (!c.done) continue;
+        const key = `${c.week}-${c.day}`;
+        if (planKeys.has(key)) continue;
+        // This completion has no matching plan — create a virtual entry
+        const weights = c.logged_weights as Record<string, any> | null;
+        let detailLines: string[] = [];
+        let sessionName = "Pass";
+        if (weights && typeof weights === "object") {
+          for (const [k] of Object.entries(weights)) {
+            if (k.startsWith("__setdata__")) {
+              detailLines.push(k.replace("__setdata__", ""));
+            }
+          }
+        }
+        if (c.logged_distance_km) {
+          detailLines.push(`Löpning — ${c.logged_distance_km} km`);
+          sessionName = "Löpning";
+        }
+        allPlans.push({
+          id: `virtual-${key}`,
+          week: c.week,
+          day: c.day,
+          session_name: sessionName,
+          details: detailLines.join("\n"),
+          tempo: null,
+          created_at: "",
+        });
+        planKeys.add(key);
+      }
+    }
+
+    if (allPlans.length > 0) {
+      setFriendPlans(allPlans);
+      const wks = [...new Set(allPlans.map((p) => p.week))].sort((a, b) => a - b);
       setFriendWeeks(wks);
 
       // Find the first week with incomplete scheduled sessions
@@ -300,7 +336,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       }
       // Find the latest week that has at least one completed session
       const latestDoneWeek = [...wks].reverse().find((w) => {
-        const weekPlans = plans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
+        const weekPlans = allPlans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
         return weekPlans.some((p) => compMap[`${p.week}-${p.day}`]);
       });
       setFriendCurrentWeek(latestDoneWeek ?? wks[wks.length - 1] ?? 1);
