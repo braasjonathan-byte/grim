@@ -2325,7 +2325,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                               })}
                             </ul>
                           ) : (() => {
-                            // Single line - check if it's descriptive or exercise
+                            // Single line - check if it's a suggested distance first
+                            const suggestion = isSuggestedDistance(plan.details);
+                            if (suggestion) {
+                              return (
+                                <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 flex items-center gap-2">
+                                  <Route className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Föreslagen distans</p>
+                                    <p className="text-sm font-semibold text-foreground">{suggestion.name} {suggestion.distance} km</p>
+                                  </div>
+                                </div>
+                              );
+                            }
                             const isExercise = isExerciseLine(plan.details);
                             return isExercise ? (
                               <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
