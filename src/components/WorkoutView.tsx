@@ -2447,6 +2447,21 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         const isCondExercise = matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part);
                         
                         if (isCondExercise) {
+                          // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
+                          const suggestMatch = part.match(/^(\S+(?:\s+\S+)?)\s+(\d+(?:[.,]\d+)?)\s*km$/i);
+                          const isSuggestion = suggestMatch && allExercises.some(e => e.name.toLowerCase() === suggestMatch[1].trim().toLowerCase() && e.category === "kondition");
+                          if (isSuggestion && suggestMatch) {
+                            return (
+                              <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 flex items-center gap-2">
+                                <Route className="w-4 h-4 text-primary flex-shrink-0" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Föreslagen distans</p>
+                                  <p className="text-sm font-semibold text-foreground">{suggestMatch[1]} {parseFloat(suggestMatch[2].replace(",", "."))} km</p>
+                                </div>
+                              </div>
+                            );
+                          }
+
                           // Parse conditioning data from the part
                           const { name: condName } = parseExerciseWeight(part);
                           const condTimeM = part.match(/(\d+)\s*min/);
