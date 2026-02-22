@@ -1000,6 +1000,40 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return null;
   };
 
+  // Auto-calc for conditioning: fill in the 3rd field when 2 are provided
+  const parseCondTempo = (t: string): number | null => {
+    const m = t.trim().match(/^(\d+)[:\.](\d+)$/);
+    if (m) return parseInt(m[1]) + parseInt(m[2]) / 60;
+    const v = parseFloat(t.replace(",", "."));
+    return isNaN(v) ? null : v;
+  };
+
+  const formatCondTempo = (minPerKm: number): string => {
+    const mins = Math.floor(minPerKm);
+    const secs = Math.round((minPerKm - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const autoCalcCond = (time: string, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
+    const t = parseFloat(time.replace(",", "."));
+    const p = parseCondTempo(tempo);
+    const d = parseFloat(dist.replace(",", "."));
+
+    if (changed === "time" && t > 0 && p && p > 0) {
+      setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
+    } else if (changed === "time" && t > 0 && d > 0) {
+      setCondTempoInput(formatCondTempo(t / d));
+    } else if (changed === "tempo" && p && p > 0 && t > 0) {
+      setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
+    } else if (changed === "tempo" && p && p > 0 && d > 0) {
+      setCondTimeInput(String(Math.round(p * d * 10) / 10));
+    } else if (changed === "distance" && d > 0 && t > 0) {
+      setCondTempoInput(formatCondTempo(t / d));
+    } else if (changed === "distance" && d > 0 && p && p > 0) {
+      setCondTimeInput(String(Math.round(p * d * 10) / 10));
+    }
+  };
+
   // Open weight dialog when selecting an exercise
   const handleExerciseSelect = (planId: string, exerciseName: string) => {
     // Check if exercise is conditioning type
@@ -1664,18 +1698,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           inputMode="numeric"
                           value={condTimeInput}
                           onChange={(e) => {
-                            setCondTimeInput(e.target.value);
-                            if (condTempoInput.trim()) {
-                              const tempoMatch = condTempoInput.trim().match(/^(\d+)[:\.](\d+)$/);
-                              if (tempoMatch) {
-                                const secsPerKm = parseInt(tempoMatch[1]) * 60 + parseInt(tempoMatch[2]);
-                                const mins = parseFloat(e.target.value);
-                                if (secsPerKm > 0 && mins > 0) {
-                                  const dist = mins / (secsPerKm / 60);
-                                  setCondDistanceInput((Math.round(dist * 100) / 100).toString());
-                                }
-                              }
-                            }
+                            const v = e.target.value;
+                            setCondTimeInput(v);
+                            autoCalcCond(v, condTempoInput, condDistanceInput, "time");
                           }}
                           placeholder="t.ex. 30"
                           className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
@@ -1686,16 +1711,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           type="text"
                           value={condTempoInput}
                           onChange={(e) => {
-                            setCondTempoInput(e.target.value);
-                            const tempoMatch = e.target.value.trim().match(/^(\d+)[:\.](\d+)$/);
-                            if (tempoMatch && condTimeInput.trim()) {
-                              const secsPerKm = parseInt(tempoMatch[1]) * 60 + parseInt(tempoMatch[2]);
-                              const mins = parseFloat(condTimeInput);
-                              if (secsPerKm > 0 && mins > 0) {
-                                const dist = mins / (secsPerKm / 60);
-                                setCondDistanceInput((Math.round(dist * 100) / 100).toString());
-                              }
-                            }
+                            const v = e.target.value;
+                            setCondTempoInput(v);
+                            autoCalcCond(condTimeInput, v, condDistanceInput, "tempo");
                           }}
                           placeholder="t.ex. 5:30"
                           className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
@@ -1704,17 +1722,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
                             <Route className="w-3 h-3" /> Distans (km)
-                            {condTempoInput && condTimeInput && <span className="text-primary text-[9px] ml-1">Beräknad</span>}
                           </label>
                           <input
                         type="number"
                         inputMode="decimal"
                         value={condDistanceInput}
-                        onChange={(e) => setCondDistanceInput(e.target.value)}
-                        placeholder="Beräknas automatiskt"
-                        className={`w-full text-foreground text-sm px-3 py-2 rounded-md border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal ${
-                          condTempoInput && condTimeInput ? "bg-warning/10 border-warning/30" : "bg-background border-border"
-                        }`} />
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCondDistanceInput(v);
+                          autoCalcCond(condTimeInput, condTempoInput, v, "distance");
+                        }}
+                        placeholder="t.ex. 5"
+                        className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -2743,16 +2763,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
                             {conditioningDialog.exerciseName.toLowerCase().includes("intervall") ? "Tid per intervall (min)" : "Tid (min)"}
                           </label>
-                          <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => { const v = e.target.value; setCondTimeInput(v); autoCalcCond(v, condTempoInput, condDistanceInput, "time"); }} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                         <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                          <input type="text" value={condTempoInput} onChange={(e) => setCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <input type="text" value={condTempoInput} onChange={(e) => { const v = e.target.value; setCondTempoInput(v); autoCalcCond(condTimeInput, v, condDistanceInput, "tempo"); }} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                       </div>
                       <div>
                         <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                        <input type="text" value={condDistanceInput} onChange={(e) => setCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeInput, condTempoInput, v, "distance"); }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                       </div>
                       <div className="flex gap-2">
                         <button onClick={addConditioningExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
