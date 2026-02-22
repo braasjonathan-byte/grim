@@ -2240,8 +2240,22 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     const isRunning = s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel");
                     const comp = completions[key];
                     const detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+                    // Helper: check if a line is a pure distance suggestion like "Löpning 8.5 km"
+                    const isSuggestedDistance = (line: string): { name: string; distance: number } | null => {
+                      const match = line.match(/^(\S+(?:\s+\S+)?)\s+(\d+(?:[.,]\d+)?)\s*km$/i);
+                      if (!match) return null;
+                      const exName = match[1].trim();
+                      const dist = parseFloat(match[2].replace(",", "."));
+                      // Only treat as suggestion if the name is a known conditioning exercise
+                      const isCondEx = allExercises.some(e => e.name.toLowerCase() === exName.toLowerCase() && e.category === "kondition");
+                      if (isCondEx && dist > 0) return { name: exName, distance: dist };
+                      return null;
+                    };
+
                     // Helper: check if a line is a known exercise or has exercise format
                     const isExerciseLine = (line: string): boolean => {
+                      // If it's a suggested distance, it's NOT an exercise line
+                      if (isSuggestedDistance(line)) return false;
                       const cleanName = line.replace(/\s*[—\-]\s*.*$/, "").trim().toLowerCase();
                       // Check against exercise library and custom exercises
                       if (allExercises.some(e => e.name.toLowerCase() === cleanName)) return true;
@@ -2260,6 +2274,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             <ul className="space-y-1.5">
                               {detailParts.map((line, i) => {
                                 const cleanName = line.replace(/\s*[—\-]\s*\d+[×x].*$/i, "").replace(/\s*@\s*\d+.*$/i, "").trim();
+                                const suggestion = isSuggestedDistance(line);
+                                if (suggestion) {
+                                  return (
+                                    <li key={i} className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 flex items-center gap-2">
+                                      <Route className="w-4 h-4 text-primary flex-shrink-0" />
+                                      <div>
+                                        <p className="text-xs text-muted-foreground">Föreslagen distans</p>
+                                        <p className="text-sm font-semibold text-foreground">{suggestion.name} {suggestion.distance} km</p>
+                                      </div>
+                                    </li>
+                                  );
+                                }
+
                                 const isExercise = isExerciseLine(line);
 
                                 if (!isExercise) {
