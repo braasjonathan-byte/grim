@@ -415,7 +415,7 @@ const ExerciseGifManager = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="Sök ExerciseDB (engelska)..."
+                  placeholder="Sök övningar (engelska)..."
                   className="flex-1 bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
                   autoFocus
                 />
@@ -448,6 +448,11 @@ const ExerciseGifManager = () => {
                       <p className="text-xs font-semibold truncate">{result.name}</p>
                       <p className="text-[10px] text-muted-foreground">
                         {result.targetMuscles.join(", ")} • {result.equipments.join(", ")}
+                        {(result as any).source && (
+                          <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded-full bg-secondary font-medium">
+                            {(result as any).source === "free-exercise-db" ? "FreeDB" : "ExerciseDB"}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <button
