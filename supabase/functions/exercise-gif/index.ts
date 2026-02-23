@@ -536,49 +536,59 @@ serve(async (req) => {
     // 1. Check database for admin-managed mapping first
     try {
       const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const { data: dbMapping } = await sb
+      // Try exact match first, then lowercase match
+      let { data: dbMapping } = await sb
         .from("exercise_gif_mappings")
         .select("exercisedb_name, gif_url, custom_instructions")
         .ilike("exercise_name", cleanName)
         .maybeSingle();
 
+      if (!dbMapping) {
+        const res = await sb
+          .from("exercise_gif_mappings")
+          .select("exercisedb_name, gif_url, custom_instructions")
+          .eq("exercise_name_lower", cleanName.toLowerCase())
+          .maybeSingle();
+        dbMapping = res.data;
+      }
+
       if (dbMapping) {
-        // If custom instructions exist, prioritize them
         const hasCustomInstructions = dbMapping.custom_instructions && Array.isArray(dbMapping.custom_instructions) && dbMapping.custom_instructions.length > 0;
         
-        // Use the admin-linked ExerciseDB name to fetch full data
-        const exercise = await searchExerciseDB(dbMapping.exercisedb_name);
-        if (exercise) {
-          const instructions = hasCustomInstructions
-            ? dbMapping.custom_instructions as string[]
-            : await translateToSwedish(exercise.instructions || []);
-          return new Response(JSON.stringify({
-            gifUrl: exercise.gifUrl || dbMapping.gif_url,
-            name: exercise.name,
-            instructions,
-            targetMuscles: exercise.targetMuscles || [],
-            equipments: exercise.equipments || [],
-            adminLinked: true,
-            hasCustomInstructions,
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+        // Try to enrich with ExerciseDB data (muscles, equipment, fresh gif)
+        let exercise: any = null;
+        try {
+          exercise = await searchExerciseDB(dbMapping.exercisedb_name);
+        } catch (e) {
+          console.error("ExerciseDB enrichment failed:", e);
         }
 
-        // No ExerciseDB match but we have custom instructions
+        // Build instructions: custom > translated API > AI-generated
+        let instructions: string[] = [];
         if (hasCustomInstructions) {
-          return new Response(JSON.stringify({
-            gifUrl: dbMapping.gif_url || null,
-            name: cleanName,
-            instructions: dbMapping.custom_instructions as string[],
-            targetMuscles: [],
-            equipments: [],
-            adminLinked: true,
-            hasCustomInstructions: true,
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          instructions = dbMapping.custom_instructions as string[];
+        } else if (exercise?.instructions?.length > 0) {
+          instructions = await translateToSwedish(exercise.instructions);
+        } else {
+          // Try free-exercise-db for instructions
+          const freeResult = await searchFreeExerciseDB(dbMapping.exercisedb_name);
+          if (freeResult?.instructions?.length > 0) {
+            instructions = await translateToSwedish(freeResult.instructions);
+          }
         }
+
+        // Always return the mapping — never fall through
+        return new Response(JSON.stringify({
+          gifUrl: exercise?.gifUrl || dbMapping.gif_url || null,
+          name: exercise?.name || dbMapping.exercisedb_name || cleanName,
+          instructions,
+          targetMuscles: exercise?.targetMuscles || [],
+          equipments: exercise?.equipments || [],
+          adminLinked: true,
+          hasCustomInstructions: !!hasCustomInstructions,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     } catch (e) {
       console.error("DB mapping lookup failed:", e);

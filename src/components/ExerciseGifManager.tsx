@@ -92,6 +92,7 @@ const ExerciseGifManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("exercise_gif_mappings").insert({
         exercise_name: linkingExercise,
+        exercise_name_lower: linkingExercise.toLowerCase(),
         exercisedb_name: result.name,
         gif_url: result.gifUrl,
         created_by: user!.id,
