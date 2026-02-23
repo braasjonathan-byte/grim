@@ -167,6 +167,23 @@ const getStandaloneDate = (day: string): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+/** Extract distance from plan details text, preferring logged (registered) entries over suggested distances.
+ *  Logged entries have tempo data like "7:19/km, 5.06 km". Suggested distances are plain "8.5 km". */
+const extractDistanceFromDetails = (details: string): number => {
+  let loggedTotal = 0;
+  const lines = details.split("\n");
+  const loggedRegex = /\d+:\d+\/km[,\s]+([\d.,]+)\s*km/;
+  for (const line of lines) {
+    const m = line.match(loggedRegex);
+    if (m) {
+      loggedTotal += parseFloat(m[1].replace(",", ".")) || 0;
+    }
+  }
+  if (loggedTotal > 0) return loggedTotal;
+  const simpleMatch = details.match(/([\d.,]+)\s*km(?!\/)(?!\s*\/)/);
+  return simpleMatch ? parseFloat(simpleMatch[1].replace(",", ".")) || 0 : 0;
+};
+
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
@@ -345,10 +362,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         if (!distFound) {
           const details = planDetailsMap.get(`${c.week}-${c.day}`);
           if (details) {
-            const kmMatch = details.match(/([\d.,]+)\s*km(?!\/)(?!\s*\/)/);
-            if (kmMatch) {
-              b.distanceKm += parseFloat(kmMatch[1].replace(",", ".")) || 0;
-            }
+            b.distanceKm += extractDistanceFromDetails(details);
           }
         }
       }
@@ -450,10 +464,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       if (!distFound) {
         const details = planDetailsMap.get(`${c.week}-${c.day}`);
         if (details) {
-          const kmMatch = details.match(/([\d.,]+)\s*km(?!\/)(?!\s*\/)/);
-          if (kmMatch) {
-            total += parseFloat(kmMatch[1].replace(",", ".")) || 0;
-          }
+          total += extractDistanceFromDetails(details);
         }
       }
     }
