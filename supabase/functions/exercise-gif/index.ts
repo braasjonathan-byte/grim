@@ -578,8 +578,9 @@ serve(async (req) => {
         }
 
         // Always return the mapping — never fall through
+        // Prefer the admin-saved gif_url over live ExerciseDB results
         return new Response(JSON.stringify({
-          gifUrl: exercise?.gifUrl || dbMapping.gif_url || null,
+          gifUrl: dbMapping.gif_url || exercise?.gifUrl || null,
           name: exercise?.name || dbMapping.exercisedb_name || cleanName,
           instructions,
           targetMuscles: exercise?.targetMuscles || [],
