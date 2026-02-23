@@ -2527,9 +2527,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                               startEditCondLine(plan.id, e.lineIndex, e.name, e.rawInfo || "");
                                             }
                                           }}
-                                          className="p-1.5 text-muted-foreground hover:text-primary transition-colors touch-manipulation"
+                                          className="p-2 text-muted-foreground hover:text-primary transition-colors touch-manipulation"
                                           title="Redigera">
-                                          <Pencil className="w-3.5 h-3.5" />
+                                          <Pencil className="w-5 h-5" />
                                         </button>
                                         <button
                                           onClick={(ev) => {
@@ -2540,9 +2540,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                               deleteDirectCondLog(plan.week, plan.day);
                                             }
                                           }}
-                                          className="p-1.5 text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
+                                          className="p-2 text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
                                           title="Ta bort">
-                                          <X className="w-3.5 h-3.5" />
+                                          <X className="w-5 h-5" />
                                         </button>
                                       </div>
                                     </div>
