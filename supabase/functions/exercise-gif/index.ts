@@ -345,6 +345,77 @@ async function searchExerciseDB(term: string): Promise<any | null> {
   return null;
 }
 
+// Fallback: search the free-exercise-db (800+ exercises with images & instructions)
+const FREE_EXERCISE_DB_URL = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
+let freeExerciseCache: any[] | null = null;
+
+async function loadFreeExerciseDB(): Promise<any[]> {
+  if (freeExerciseCache) return freeExerciseCache;
+  try {
+    const res = await fetch(FREE_EXERCISE_DB_URL);
+    const data = await res.json();
+    freeExerciseCache = data;
+    return data;
+  } catch (e) {
+    console.error("Failed to load free-exercise-db:", e);
+    return [];
+  }
+}
+
+async function searchFreeExerciseDB(term: string): Promise<any | null> {
+  const exercises = await loadFreeExerciseDB();
+  const lower = term.toLowerCase();
+  
+  // Exact match
+  const exact = exercises.find((e: any) => e.name?.toLowerCase() === lower);
+  if (exact) return formatFreeExercise(exact);
+  
+  // Contains match
+  const contains = exercises.filter((e: any) => e.name?.toLowerCase().includes(lower));
+  if (contains.length > 0) {
+    // Prefer shortest name (most specific match)
+    contains.sort((a: any, b: any) => (a.name || "").length - (b.name || "").length);
+    return formatFreeExercise(contains[0]);
+  }
+  
+  // Reverse contains: search term contains exercise name
+  const reverseMatch = exercises.filter((e: any) => lower.includes(e.name?.toLowerCase()));
+  if (reverseMatch.length > 0) {
+    reverseMatch.sort((a: any, b: any) => (b.name || "").length - (a.name || "").length);
+    return formatFreeExercise(reverseMatch[0]);
+  }
+  
+  // Word overlap match
+  const termWords = lower.split(/\s+/);
+  let bestMatch: any = null;
+  let bestScore = 0;
+  for (const ex of exercises) {
+    const nameWords = (ex.name || "").toLowerCase().split(/\s+/);
+    const overlap = termWords.filter((w: string) => nameWords.some((nw: string) => nw.includes(w) || w.includes(nw))).length;
+    if (overlap > bestScore && overlap >= 2) {
+      bestScore = overlap;
+      bestMatch = ex;
+    }
+  }
+  if (bestMatch) return formatFreeExercise(bestMatch);
+  
+  return null;
+}
+
+function formatFreeExercise(exercise: any): any {
+  const imageBase = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+  const images = (exercise.images || []).map((img: string) => `${imageBase}/${img}`);
+  return {
+    name: exercise.name,
+    gifUrl: images.length > 0 ? images[0] : null,
+    instructions: exercise.instructions || [],
+    targetMuscles: exercise.primaryMuscles || [],
+    equipments: exercise.equipment ? [exercise.equipment] : [],
+    secondaryMuscles: exercise.secondaryMuscles || [],
+    source: "free-exercise-db",
+  };
+}
+
 async function generateAIInstructions(exerciseName: string): Promise<string[]> {
   if (!LOVABLE_API_KEY) return [];
   try {
@@ -531,8 +602,24 @@ serve(async (req) => {
       });
     }
 
-    // Check if this exercise has no GIF available in the database — generate AI instructions
+    // Check if this exercise has no GIF in ExerciseDB — try free-exercise-db first, then AI
     if (searchTerms.length === 1 && searchTerms[0] === "_NO_GIF_") {
+      // Try free-exercise-db as fallback
+      const freeResult = await searchFreeExerciseDB(cleanName);
+      if (freeResult) {
+        const instructions = await translateToSwedish(freeResult.instructions || []);
+        return new Response(JSON.stringify({
+          gifUrl: freeResult.gifUrl,
+          name: freeResult.name,
+          instructions,
+          targetMuscles: freeResult.targetMuscles || [],
+          equipments: freeResult.equipments || [],
+          source: "free-exercise-db",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
       const aiInstructions = await generateAIInstructions(cleanName);
       return new Response(JSON.stringify({
         gifUrl: null,
@@ -567,7 +654,25 @@ serve(async (req) => {
       }
     }
 
-    // No ExerciseDB match found — try AI-generated instructions as last resort
+    // Fallback: search free-exercise-db (800+ exercises with images & instructions)
+    for (const term of validTerms) {
+      const freeResult = await searchFreeExerciseDB(term);
+      if (freeResult) {
+        const instructions = await translateToSwedish(freeResult.instructions || []);
+        return new Response(JSON.stringify({
+          gifUrl: freeResult.gifUrl,
+          name: freeResult.name,
+          instructions,
+          targetMuscles: freeResult.targetMuscles || [],
+          equipments: freeResult.equipments || [],
+          source: "free-exercise-db",
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // No match in either DB — try AI-generated instructions as last resort
     const aiInstructions = await generateAIInstructions(cleanName);
     return new Response(JSON.stringify({
       gifUrl: null,
