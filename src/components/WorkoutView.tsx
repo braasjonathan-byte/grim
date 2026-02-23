@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -1123,6 +1123,72 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setCondRestInput("");
     setCondPulseInput("");
     setIsWarmupMode(false);
+  };
+
+  // Delete a logged conditioning line from plan details
+  const deleteConditioningLine = async (planId: string, lineIndex: number) => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    lines.splice(lineIndex, 1);
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", planId);
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+  };
+
+  // Delete direct logged conditioning fields from completion
+  const deleteDirectCondLog = async (week: number, day: string) => {
+    const key = `${week}-${day}`;
+    setCompletions(prev => ({
+      ...prev,
+      [key]: { ...prev[key], logged_tempo: null, logged_pulse: null, logged_distance_km: null }
+    }));
+    await supabase.from("workout_completions").update({
+      logged_tempo: null, logged_pulse: null, logged_distance_km: null
+    }).eq("user_id", userId).eq("week", week).eq("day", day);
+  };
+
+  // Start editing a logged conditioning line
+  const startEditCondLine = (planId: string, lineIndex: number, name: string, info: string) => {
+    const timeM = info.match(/(\d+(?:[.,]\d+)?)\s*min/);
+    const tempoM = info.match(/(\d+:\d+)\/km/);
+    const distM = info.match(/([\d.,]+)\s*km(?!\/)/);
+    const pulseM = info.match(/(\d+)\s*bpm/);
+    setCondTimeInput(timeM ? timeM[1] : "");
+    setCondTempoInput(tempoM ? tempoM[1] : "");
+    setCondDistanceInput(distM ? distM[1].replace(",", ".") : "");
+    setCondPulseInput(pulseM ? pulseM[1] : "");
+    setCondIntervalsInput("");
+    setCondRestInput("");
+    setEditingCondLine({ planId, lineIndex, name });
+  };
+
+  // State for editing a conditioning line
+  const [editingCondLine, setEditingCondLine] = useState<{ planId: string; lineIndex: number; name: string } | null>(null);
+
+  // Save edited conditioning line
+  const saveEditedCondLine = async () => {
+    if (!editingCondLine) return;
+    const plan = plans.find(p => p.id === editingCondLine.planId);
+    if (!plan) return;
+    const infoParts: string[] = [];
+    if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+    if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
+    if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+    if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
+    const entry = infoParts.length > 0 ? `${editingCondLine.name} — ${infoParts.join(", ")}` : editingCondLine.name;
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    lines[editingCondLine.lineIndex] = entry;
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+    setEditingCondLine(null);
+    setCondTimeInput("");
+    setCondTempoInput("");
+    setCondDistanceInput("");
+    setCondPulseInput("");
   };
 
   const addExerciseToPlan = async (plan: PlanDay, exerciseName: string) => {
@@ -2362,20 +2428,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           })()}
                           {(() => {
                             // Parse logged conditioning data from plan details AND direct logged fields
-                            const loggedEntries: { name: string; time?: string; tempo?: string; distance?: string; pulse?: string }[] = [];
+                            const loggedEntries: { name: string; time?: string; tempo?: string; distance?: string; pulse?: string; lineIndex: number; source: "details" | "direct"; rawInfo?: string }[] = [];
                             // 1. Check plan details for logged lines (format: "Name — time, tempo, distance, pulse")
                             const detailLines = plan.details.split(/[;\n]/).map(l => l.trim()).filter(Boolean);
-                            for (const line of detailLines) {
+                            for (let li = 0; li < detailLines.length; li++) {
+                              const line = detailLines[li];
                               const dashMatch = line.match(/^(.+?)\s*—\s*(.+)$/);
                               if (!dashMatch) continue;
                               const eName = dashMatch[1].trim();
                               const info = dashMatch[2];
-                              const entry: any = { name: eName };
+                              const entry: any = { name: eName, lineIndex: li, source: "details", rawInfo: info };
                               const timeM = info.match(/(\d+(?:[.,]\d+)?)\s*min/);
                               if (timeM) entry.time = timeM[1];
                               const tempoM = info.match(/(\d+:\d+)\/km/);
                               if (tempoM) entry.tempo = tempoM[1];
-                              // Get distance after tempo (not the /km part)
                               const distM = info.match(/([\d.,]+)\s*km(?!\/)/);
                               if (distM) entry.distance = distM[1].replace(",", ".");
                               const pulseM = info.match(/(\d+)\s*bpm/);
@@ -2394,21 +2460,91 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   tempo: comp.logged_tempo || undefined,
                                   pulse: comp.logged_pulse ? String(comp.logged_pulse) : undefined,
                                   distance: comp.logged_distance_km ? String(comp.logged_distance_km) : undefined,
+                                  lineIndex: -1,
+                                  source: "direct",
                                 });
                               }
                             }
                             if (loggedEntries.length === 0) return null;
+
+                            // Check if we're editing one of these lines
+                            if (editingCondLine && editingCondLine.planId === plan.id) {
+                              return (
+                                <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
+                                  <p className="text-xs font-bold text-success">✏️ Redigera: {editingCondLine.name}</p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                                      <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
+                                      <input type="text" value={condTempoInput} onChange={(e) => setCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
+                                      <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => setCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
+                                      <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button onClick={saveEditedCondLine} className="flex-1 py-2 bg-success text-success-foreground rounded-md text-xs font-semibold">
+                                      Spara
+                                    </button>
+                                    <button onClick={() => { setEditingCondLine(null); setCondTimeInput(""); setCondTempoInput(""); setCondDistanceInput(""); setCondPulseInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                      Avbryt
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
                                 <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
                                 {loggedEntries.map((e, i) => (
-                                  <div key={i} className={loggedEntries.length > 1 ? "border-l-2 border-success/30 pl-2" : ""}>
-                                    {loggedEntries.length > 1 && <p className="text-[10px] font-semibold text-success/80">{e.name}</p>}
-                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                                      {e.time && <p className="text-xs">⏱ <span className="font-mono font-semibold">{e.time} min</span></p>}
-                                      {e.tempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{e.tempo}/km</span></p>}
-                                      {e.distance && <p className="text-xs">📏 <span className="font-mono font-semibold">{e.distance} km</span></p>}
-                                      {e.pulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{e.pulse} bpm</span></p>}
+                                  <div key={i} className={`${loggedEntries.length > 1 ? "border-l-2 border-success/30 pl-2" : ""} group`}>
+                                    <div className="flex items-start justify-between gap-1">
+                                      <div className="flex-1">
+                                        {loggedEntries.length > 1 && <p className="text-[10px] font-semibold text-success/80">{e.name}</p>}
+                                        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                                          {e.time && <p className="text-xs">⏱ <span className="font-mono font-semibold">{e.time} min</span></p>}
+                                          {e.tempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{e.tempo}/km</span></p>}
+                                          {e.distance && <p className="text-xs">📏 <span className="font-mono font-semibold">{e.distance} km</span></p>}
+                                          {e.pulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{e.pulse} bpm</span></p>}
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-0.5 flex-shrink-0">
+                                        <button
+                                          onClick={(ev) => {
+                                            ev.stopPropagation();
+                                            if (e.source === "details") {
+                                              startEditCondLine(plan.id, e.lineIndex, e.name, e.rawInfo || "");
+                                            }
+                                          }}
+                                          className="p-1.5 text-muted-foreground hover:text-primary transition-colors touch-manipulation"
+                                          title="Redigera">
+                                          <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={(ev) => {
+                                            ev.stopPropagation();
+                                            if (e.source === "details") {
+                                              deleteConditioningLine(plan.id, e.lineIndex);
+                                            } else {
+                                              deleteDirectCondLog(plan.week, plan.day);
+                                            }
+                                          }}
+                                          className="p-1.5 text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
+                                          title="Ta bort">
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
