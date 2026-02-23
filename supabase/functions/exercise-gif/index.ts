@@ -563,17 +563,21 @@ serve(async (req) => {
           console.error("ExerciseDB enrichment failed:", e);
         }
 
-        // Build instructions: custom > translated API > AI-generated
+        // Build instructions: custom > from linked exercise (API) > AI for linked exercise
         let instructions: string[] = [];
         if (hasCustomInstructions) {
           instructions = dbMapping.custom_instructions as string[];
         } else if (exercise?.instructions?.length > 0) {
+          // Instructions from the same ExerciseDB entry the GIF was taken from
           instructions = await translateToSwedish(exercise.instructions);
         } else {
-          // Try free-exercise-db for instructions
+          // Try free-exercise-db using the linked exercisedb_name (not the Swedish name)
           const freeResult = await searchFreeExerciseDB(dbMapping.exercisedb_name);
           if (freeResult?.instructions?.length > 0) {
             instructions = await translateToSwedish(freeResult.instructions);
+          } else {
+            // Generate AI instructions specifically for the linked exercise
+            instructions = await generateAIInstructions(dbMapping.exercisedb_name + " (" + cleanName + ")");
           }
         }
 
