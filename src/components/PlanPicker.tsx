@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
+import SchemaBuilder from "@/components/SchemaBuilder";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 
 interface PlanPickerProps {
@@ -9,7 +10,7 @@ interface PlanPickerProps {
   onDone: () => void;
 }
 
-type Step = "select" | "profile" | "1rm" | "loading";
+type Step = "select" | "profile" | "1rm" | "loading" | "builder";
 
 const defaultProfile: FitnessProfile = {
   max_distance_km: null,
@@ -58,7 +59,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
 
   const handleSelect = (index: number) => {
     if (index === -1) {
-      onDone();
+      setStep("builder");
       return;
     }
     const template = planTemplates[index];
@@ -148,6 +149,10 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     }
     applyTemplate(selectedTemplate!, rmValues);
   };
+
+  if (step === "builder") {
+    return <SchemaBuilder userId={userId} onDone={onDone} onBack={() => setStep("select")} />;
+  }
 
   if (step === "profile") {
     return (
