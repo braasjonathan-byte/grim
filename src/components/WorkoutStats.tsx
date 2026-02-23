@@ -322,8 +322,35 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         b.doneWithExercise++;
       }
       if (c.skipped) b.skipped++;
-      if (c.logged_distance_km && c.done && hasExercise(c)) {
-        b.distanceKm += Number(c.logged_distance_km);
+      if (c.done && hasExercise(c)) {
+        let distFound = false;
+        if (c.logged_distance_km) {
+          b.distanceKm += Number(c.logged_distance_km);
+          distFound = true;
+        }
+        if (!distFound && c.logged_weights && typeof c.logged_weights === "object") {
+          const weights = c.logged_weights as Record<string, any>;
+          for (const [wKey, value] of Object.entries(weights)) {
+            if (wKey.startsWith("__cond__")) {
+              try {
+                const data = typeof value === "string" ? JSON.parse(value) : value;
+                if (data?.dist) {
+                  b.distanceKm += parseFloat(String(data.dist).replace(",", ".")) || 0;
+                  distFound = true;
+                }
+              } catch {}
+            }
+          }
+        }
+        if (!distFound) {
+          const details = planDetailsMap.get(`${c.week}-${c.day}`);
+          if (details) {
+            const kmMatch = details.match(/([\d.,]+)\s*km(?!\/)(?!\s*\/)/);
+            if (kmMatch) {
+              b.distanceKm += parseFloat(kmMatch[1].replace(",", ".")) || 0;
+            }
+          }
+        }
       }
     }
 
@@ -358,7 +385,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       result.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     }
     return result;
-  }, [completions, view, planStartCalendarWeek, scheduledPerWeek]);
+  }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap]);
 
   const filteredCompletions = useMemo(() => {
     if (!planStartDate) return summaryPeriod === "all" ? completions : [];
