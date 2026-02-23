@@ -44,6 +44,12 @@ const ExerciseGifManager = () => {
   const [editText, setEditText] = useState("");
   const [savingInstructions, setSavingInstructions] = useState(false);
 
+  // Name editing
+  const [editingNameFor, setEditingNameFor] = useState<string | null>(null);
+  const [editSwedishName, setEditSwedishName] = useState("");
+  const [editEnglishName, setEditEnglishName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
   const fetchMappings = async () => {
     const { data } = await supabase
       .from("exercise_gif_mappings")
@@ -125,6 +131,26 @@ const ExerciseGifManager = () => {
       console.error("Failed to save instructions:", e);
     }
     setSavingInstructions(false);
+  };
+
+  const saveNames = async (mappingId: string) => {
+    if (!editSwedishName.trim() || !editEnglishName.trim()) return;
+    setSavingName(true);
+    try {
+      await supabase
+        .from("exercise_gif_mappings")
+        .update({
+          exercise_name: editSwedishName.trim(),
+          exercise_name_lower: editSwedishName.trim().toLowerCase(),
+          exercisedb_name: editEnglishName.trim(),
+        })
+        .eq("id", mappingId);
+      await fetchMappings();
+      setEditingNameFor(null);
+    } catch (e) {
+      console.error("Failed to save names:", e);
+    }
+    setSavingName(false);
   };
 
   // All exercises from library (non-cardio)
@@ -283,6 +309,66 @@ const ExerciseGifManager = () => {
                         {m?.gif_url && (
                           <div className="flex justify-center">
                             <img src={m.gif_url} alt={m.exercisedb_name} className="w-48 h-48 object-contain rounded-lg bg-white border border-border" />
+                          </div>
+                        )}
+
+                        {/* Name editing */}
+                        {m && editingNameFor === item.name ? (
+                          <div className="space-y-2">
+                            <span className="text-[11px] font-bold text-foreground">Redigera namn</span>
+                            <div className="space-y-1.5">
+                              <div>
+                                <label className="text-[10px] text-muted-foreground">Svenskt namn</label>
+                                <input
+                                  type="text"
+                                  value={editSwedishName}
+                                  onChange={(e) => setEditSwedishName(e.target.value)}
+                                  className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-muted-foreground">Engelskt namn (ExerciseDB)</label>
+                                <input
+                                  type="text"
+                                  value={editEnglishName}
+                                  onChange={(e) => setEditEnglishName(e.target.value)}
+                                  className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingNameFor(null)}
+                                className="flex-1 py-2 bg-secondary text-muted-foreground text-xs font-semibold rounded-lg"
+                              >
+                                Avbryt
+                              </button>
+                              <button
+                                onClick={() => saveNames(m.id)}
+                                disabled={savingName || !editSwedishName.trim() || !editEnglishName.trim()}
+                                className="flex-1 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg disabled:opacity-40 flex items-center justify-center gap-1"
+                              >
+                                {savingName ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                Spara
+                              </button>
+                            </div>
+                          </div>
+                        ) : m && (
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] text-muted-foreground">
+                              <span className="font-semibold text-foreground">{m.exercise_name}</span> → {m.exercisedb_name}
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingNameFor(item.name);
+                                setEditSwedishName(m.exercise_name);
+                                setEditEnglishName(m.exercisedb_name);
+                              }}
+                              className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:opacity-80"
+                            >
+                              <Pencil className="w-3 h-3" /> Redigera namn
+                            </button>
                           </div>
                         )}
 
