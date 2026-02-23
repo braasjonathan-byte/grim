@@ -167,21 +167,28 @@ const getStandaloneDate = (day: string): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
-/** Extract distance from plan details text, preferring logged (registered) entries over suggested distances.
- *  Logged entries have tempo data like "7:19/km, 5.06 km". Suggested distances are plain "8.5 km". */
+/** Extract distance from plan details text, using only LOGGED conditioning entries (with "—" separator and tempo/time data).
+ *  Excludes cycling (cykel/motioncykel) — only counts running/walking exercises.
+ *  Logged entries look like "Löpning — 37 min, 7:19/km, 5.06 km". Suggested distances like "Löpning 8.5 km" are NOT counted. */
+const CYCLING_KEYWORDS = /cykel|motioncykel|spinning|crosstrainer/i;
 const extractDistanceFromDetails = (details: string): number => {
   let loggedTotal = 0;
-  const lines = details.split("\n");
-  const loggedRegex = /\d+:\d+\/km[,\s]+([\d.,]+)\s*km/;
+  const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
   for (const line of lines) {
-    const m = line.match(loggedRegex);
-    if (m) {
-      loggedTotal += parseFloat(m[1].replace(",", ".")) || 0;
+    // Only process logged conditioning lines (with "—" separator)
+    const dashMatch = line.match(/^(.+?)\s*—\s*(.+)$/);
+    if (!dashMatch) continue;
+    const name = dashMatch[1].trim();
+    const info = dashMatch[2];
+    // Skip cycling exercises
+    if (CYCLING_KEYWORDS.test(name)) continue;
+    // Extract distance: look for X km (not /km)
+    const distMatch = info.match(/([\d.,]+)\s*km(?!\/)/);
+    if (distMatch) {
+      loggedTotal += parseFloat(distMatch[1].replace(",", ".")) || 0;
     }
   }
-  if (loggedTotal > 0) return loggedTotal;
-  const simpleMatch = details.match(/([\d.,]+)\s*km(?!\/)(?!\s*\/)/);
-  return simpleMatch ? parseFloat(simpleMatch[1].replace(",", ".")) || 0 : 0;
+  return loggedTotal;
 };
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {

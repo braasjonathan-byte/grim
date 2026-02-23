@@ -151,6 +151,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [condDistanceInput, setCondDistanceInput] = useState("");
   const [condIntervalsInput, setCondIntervalsInput] = useState("");
   const [condRestInput, setCondRestInput] = useState("");
+  const [condPulseInput, setCondPulseInput] = useState("");
 
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
@@ -1047,6 +1048,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       setCondDistanceInput("");
       setCondIntervalsInput("");
       setCondRestInput("");
+      setCondPulseInput("");
       return;
     }
     const lastWeight = findLastWeight(exerciseName);
@@ -1102,6 +1104,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     }
     if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
     if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+    if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
     
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
 
@@ -1118,6 +1121,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setCondDistanceInput("");
     setCondIntervalsInput("");
     setCondRestInput("");
+    setCondPulseInput("");
     setIsWarmupMode(false);
   };
 
@@ -1719,22 +1723,33 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                         </div>
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                            <Route className="w-3 h-3" /> Distans (km)
-                          </label>
-                          <input
-                        type="number"
-                        inputMode="decimal"
-                        value={condDistanceInput}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setCondDistanceInput(v);
-                          autoCalcCond(condTimeInput, condTempoInput, v, "distance");
-                        }}
-                        placeholder="t.ex. 5"
-                        className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                              <Route className="w-3 h-3" /> Distans (km)
+                            </label>
+                            <input
+                          type="number"
+                          inputMode="decimal"
+                          value={condDistanceInput}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setCondDistanceInput(v);
+                            autoCalcCond(condTimeInput, condTempoInput, v, "distance");
+                          }}
+                          placeholder="t.ex. 5"
+                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
+                            <input
+                          type="number"
+                          inputMode="numeric"
+                          value={condPulseInput}
+                          onChange={(e) => setCondPulseInput(e.target.value)}
+                          placeholder="t.ex. 155"
+                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          </div>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -1743,7 +1758,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");}}
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                             Avbryt
                           </button>
@@ -2345,14 +2360,61 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                               <p className="text-xs text-muted-foreground italic leading-relaxed">{plan.details}</p>
                             );
                           })()}
-                          {isRunning && comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km) &&
-                        <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-1">
-                              <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
-                              {comp.logged_tempo && <p className="text-xs">⏱ Tempo: <span className="font-mono font-semibold">{comp.logged_tempo}</span></p>}
-                              {comp.logged_pulse && <p className="text-xs">❤️ Puls: <span className="font-mono font-semibold">{comp.logged_pulse} bpm</span></p>}
-                              {comp.logged_distance_km && <p className="text-xs">📏 Distans: <span className="font-mono font-semibold">{comp.logged_distance_km} km</span></p>}
-                            </div>
-                        }
+                          {(() => {
+                            // Parse logged conditioning data from plan details AND direct logged fields
+                            const loggedEntries: { name: string; time?: string; tempo?: string; distance?: string; pulse?: string }[] = [];
+                            // 1. Check plan details for logged lines (format: "Name — time, tempo, distance, pulse")
+                            const detailLines = plan.details.split(/[;\n]/).map(l => l.trim()).filter(Boolean);
+                            for (const line of detailLines) {
+                              const dashMatch = line.match(/^(.+?)\s*—\s*(.+)$/);
+                              if (!dashMatch) continue;
+                              const eName = dashMatch[1].trim();
+                              const info = dashMatch[2];
+                              const entry: any = { name: eName };
+                              const timeM = info.match(/(\d+(?:[.,]\d+)?)\s*min/);
+                              if (timeM) entry.time = timeM[1];
+                              const tempoM = info.match(/(\d+:\d+)\/km/);
+                              if (tempoM) entry.tempo = tempoM[1];
+                              // Get distance after tempo (not the /km part)
+                              const distM = info.match(/([\d.,]+)\s*km(?!\/)/);
+                              if (distM) entry.distance = distM[1].replace(",", ".");
+                              const pulseM = info.match(/(\d+)\s*bpm/);
+                              if (pulseM) entry.pulse = pulseM[1];
+                              if (entry.time || entry.tempo || entry.distance || entry.pulse) {
+                                loggedEntries.push(entry);
+                              }
+                            }
+                            // 2. Also include direct logged fields if present
+                            if (comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km)) {
+                              const hasDirectData = !loggedEntries.length || 
+                                (comp.logged_distance_km && !loggedEntries.some(e => e.distance));
+                              if (hasDirectData) {
+                                loggedEntries.unshift({
+                                  name: plan.session_name || "Kondition",
+                                  tempo: comp.logged_tempo || undefined,
+                                  pulse: comp.logged_pulse ? String(comp.logged_pulse) : undefined,
+                                  distance: comp.logged_distance_km ? String(comp.logged_distance_km) : undefined,
+                                });
+                              }
+                            }
+                            if (loggedEntries.length === 0) return null;
+                            return (
+                              <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
+                                <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
+                                {loggedEntries.map((e, i) => (
+                                  <div key={i} className={loggedEntries.length > 1 ? "border-l-2 border-success/30 pl-2" : ""}>
+                                    {loggedEntries.length > 1 && <p className="text-[10px] font-semibold text-success/80">{e.name}</p>}
+                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                                      {e.time && <p className="text-xs">⏱ <span className="font-mono font-semibold">{e.time} min</span></p>}
+                                      {e.tempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{e.tempo}/km</span></p>}
+                                      {e.distance && <p className="text-xs">📏 <span className="font-mono font-semibold">{e.distance} km</span></p>}
+                                      {e.pulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{e.pulse} bpm</span></p>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>);
 
                   }
@@ -2859,15 +2921,21 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           <input type="text" value={condTempoInput} onChange={(e) => { const v = e.target.value; setCondTempoInput(v); autoCalcCond(condTimeInput, v, condDistanceInput, "tempo"); }} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                       </div>
-                      <div>
-                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                        <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeInput, condTempoInput, v, "distance"); }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
+                          <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeInput, condTempoInput, v, "distance"); }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
+                          <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button onClick={addConditioningExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
                           <Plus className="w-3.5 h-3.5" /> Lägg till
                         </button>
-                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                           Avbryt
                         </button>
                       </div>
