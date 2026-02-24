@@ -1003,27 +1003,14 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                           </div>
                         )}
 
-                        {/* Like button + comment input */}
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day); }}
-                            disabled={likingKey === key}
-                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                              hasLiked
-                                ? "bg-orange-500/20 text-orange-500"
-                                : "bg-secondary text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10"
-                            }`}
-                          >
-                            🔥 {likeCount > 0 ? likeCount : ""}
-                          </button>
-                          {dayLikes.length > 0 && (
-                            <p className="text-[10px] text-muted-foreground">
-                              {dayLikes.map((l) => nicknameMap[l.user_id] || "...").join(", ")}
-                            </p>
-                          )}
-                        </div>
+                        {/* Like names */}
+                        {dayLikes.length > 0 && (
+                          <p className="text-[10px] text-muted-foreground px-1">
+                            🔥 {dayLikes.map((l) => nicknameMap[l.user_id] || "...").join(", ")}
+                          </p>
+                        )}
 
-                        {/* Add comment */}
+                        {/* Add comment + like */}
                         <div className="flex gap-2">
                           <div className="relative flex-1">
                             <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -1036,6 +1023,17 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                               className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                             />
                           </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day); }}
+                            disabled={likingKey === key}
+                            className={`px-3 py-2 rounded-md text-sm font-semibold transition-all ${
+                              hasLiked
+                                ? "bg-orange-500/20 text-orange-500"
+                                : "bg-secondary text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10"
+                            }`}
+                          >
+                            🔥{likeCount > 0 ? ` ${likeCount}` : ""}
+                          </button>
                           <button
                             onClick={() => postComment(plan.week, plan.day)}
                             disabled={!newComment[key]?.trim()}
