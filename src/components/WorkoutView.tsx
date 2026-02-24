@@ -157,6 +157,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
   const [commentNicknames, setCommentNicknames] = useState<Record<string, string>>({});
 
+  // Likes on own workouts
+  const [workoutLikes, setWorkoutLikes] = useState<{ id: string; user_id: string; week: number; day: string }[]>([]);
+
   // Replacement workout dialog state
   const [replacementTarget, setReplacementTarget] = useState<{planId: string;sessionName: string;week: number;day: string;} | null>(null);
   const [runLogTarget, setRunLogTarget] = useState<{week: number;day: string;sessionName: string;details: string;} | null>(null);
@@ -184,10 +187,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   } | null>(null);
 
   const fetchData = useCallback(async () => {
-    const [{ data: planData }, { data: compData }, { data: friendCommentsData }] = await Promise.all([
+    const [{ data: planData }, { data: compData }, { data: friendCommentsData }, { data: likesData }] = await Promise.all([
     supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
     supabase.from("workout_completions").select("*").eq("user_id", userId),
-    supabase.from("workout_comments").select("*").eq("target_user_id", userId).order("created_at", { ascending: true })]
+    supabase.from("workout_comments").select("*").eq("target_user_id", userId).order("created_at", { ascending: true }),
+    supabase.from("workout_likes").select("*").eq("target_user_id", userId)]
     );
 
     if (planData) {
@@ -256,20 +260,30 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       setComments((prev) => ({ ...commentMap, ...prev }));
     }
 
+    // Set likes
+    setWorkoutLikes((likesData || []) as any);
+
+    // Collect all author IDs from comments and likes
+    const allAuthorIds = new Set<string>();
+    if (friendCommentsData) friendCommentsData.forEach((c) => allAuthorIds.add(c.author_id));
+    if (likesData) (likesData as any[]).forEach((l) => allAuthorIds.add(l.user_id));
+
     if (friendCommentsData && friendCommentsData.length > 0) {
       setFriendComments(friendCommentsData);
-      const authorIds = [...new Set(friendCommentsData.map((c) => c.author_id))];
-      const { data: authorProfiles } = await supabase.
-      from("profiles").
-      select("user_id, nickname").
-      in("user_id", authorIds);
+    } else {
+      setFriendComments([]);
+    }
+
+    if (allAuthorIds.size > 0) {
+      const { data: authorProfiles } = await supabase
+        .from("profiles")
+        .select("user_id, nickname")
+        .in("user_id", [...allAuthorIds]);
       if (authorProfiles) {
         const map: Record<string, string> = {};
         for (const p of authorProfiles) map[p.user_id] = p.nickname;
         setCommentNicknames(map);
       }
-    } else {
-      setFriendComments([]);
     }
   }, [userId, initialWeekSet]);
 
@@ -3150,6 +3164,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     </button>
                 </div> :
                 null}
+
+                  {/* Likes from friends */}
+                  {(() => {
+                    const dayLikes = workoutLikes.filter((l) => l.week === plan.week && l.day === plan.day);
+                    return dayLikes.length > 0 ? (
+                      <div className="flex items-center gap-2 px-1">
+                        <span className="text-sm">🔥</span>
+                        <p className="text-[11px] text-muted-foreground">
+                          {dayLikes.map((l) => commentNicknames[l.user_id] || "...").join(", ")} gillade detta pass
+                        </p>
+                      </div>
+                    ) : null;
+                  })()}
 
                   {/* Friend comments */}
                   {(() => {
