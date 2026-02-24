@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.batch-link-exercises]
 verify_jwt = false
+
+[functions.notify-reminder]
+verify_jwt = false
