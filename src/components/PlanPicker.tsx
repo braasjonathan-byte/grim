@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft } from "lucide-react";
+import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { sv } from "date-fns/locale";
 
 interface PlanPickerProps {
   userId: string;
   onDone: () => void;
 }
 
-type Step = "select" | "profile" | "1rm" | "loading" | "builder";
+type Step = "select" | "profile" | "1rm" | "start-date" | "loading" | "builder";
 
 const defaultProfile: FitnessProfile = {
   max_distance_km: null,
@@ -26,6 +29,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
   const [loading, setLoading] = useState(false);
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile>(defaultProfile);
   const [activeFilter, setActiveFilter] = useState<PlanCategory | null>(null);
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [pendingRmValues, setPendingRmValues] = useState<Record<string, number> | undefined>(undefined);
+  const [pendingProfile, setPendingProfile] = useState<FitnessProfile | undefined>(undefined);
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
   const filteredTemplates = activeFilter
@@ -79,7 +85,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       setRms(initial);
       setStep("1rm");
     } else {
-      applyTemplate(template);
+      setPendingRmValues(undefined);
+      setPendingProfile(undefined);
+      setStep("start-date");
     }
   };
 
@@ -91,9 +99,12 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         initial[lift] = rms[lift] || "";
       }
       setRms(initial);
+      setPendingProfile(profile);
       setStep("1rm");
     } else {
-      applyTemplate(selectedTemplate!, undefined, profile);
+      setPendingRmValues(undefined);
+      setPendingProfile(profile);
+      setStep("start-date");
     }
   };
 
@@ -132,6 +143,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       session_name: d.session_name,
       details: d.details,
       tempo: d.tempo,
+      created_at: startDate.toISOString(),
     }));
 
     for (let i = 0; i < rows.length; i += 50) {
@@ -147,7 +159,12 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     for (const lift of selectedTemplate!.requiredLifts) {
       rmValues[lift] = parseFloat(rms[lift] || "0");
     }
-    applyTemplate(selectedTemplate!, rmValues);
+    setPendingRmValues(rmValues);
+    setStep("start-date");
+  };
+
+  const handleStartDateConfirm = () => {
+    applyTemplate(selectedTemplate!, pendingRmValues, pendingProfile);
   };
 
   if (step === "builder") {
@@ -163,6 +180,56 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         strengthOnly={!!isStrengthOnly}
         bodyweightOnly={!!isBodyweightOnly}
       />
+    );
+  }
+
+  if (step === "start-date") {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <button
+          onClick={() => setStep("select")}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Tillbaka
+        </button>
+
+        <div className="text-center space-y-2">
+          <CalendarIcon className="w-10 h-10 text-primary mx-auto" />
+          <h2 className="text-xl font-black tracking-tight">Välj startdatum</h2>
+          <p className="text-sm text-muted-foreground">
+            Välj vilket datum schemat ska börja från. Du kan starta mitt i en vecka.
+          </p>
+        </div>
+
+        <div className="bg-card border border-border rounded-lg p-4 space-y-1">
+          <p className="font-semibold text-sm">{selectedTemplate?.name}</p>
+          <p className="text-xs text-muted-foreground">{selectedTemplate?.weeks} veckor</p>
+        </div>
+
+        <div className="flex justify-center">
+          <Calendar
+            mode="single"
+            selected={startDate}
+            onSelect={(d) => d && setStartDate(d)}
+            locale={sv}
+            className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
+          />
+        </div>
+
+        <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
+          <p className="text-sm font-medium">
+            Startdatum: <span className="text-primary">{format(startDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+          </p>
+        </div>
+
+        <button
+          onClick={handleStartDateConfirm}
+          disabled={loading}
+          className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
+        >
+          Starta schemat
+        </button>
+      </div>
     );
   }
 
