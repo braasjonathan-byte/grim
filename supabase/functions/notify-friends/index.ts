@@ -141,6 +141,19 @@ serve(async (req) => {
 
     const { day, week, sessionName } = await req.json();
 
+    // Server-side dedup: only one completion notification per user+week+day
+    const { error: dedupError } = await supabaseAdmin.from("notification_log").insert({
+      user_id: user.id,
+      week,
+      day,
+      type: "completion",
+    });
+
+    if (dedupError) {
+      // Unique constraint violation = already notified
+      return new Response(JSON.stringify({ sent: 0, dedup: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();
     const nickname = profile?.nickname || "En vän";
 
