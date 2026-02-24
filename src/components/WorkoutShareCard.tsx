@@ -395,7 +395,7 @@ const WorkoutShareCard = ({
               </span>
             </div>
             <span className="text-base font-medium" style={{ color: t.muted }}>
-              grim.lovable.app
+              Ladda ner → grim.lovable.app
             </span>
           </div>
         </div>
