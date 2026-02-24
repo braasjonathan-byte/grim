@@ -309,6 +309,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_log: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          type: string
+          user_id: string
+          week: number
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          type?: string
+          user_id: string
+          week: number
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          type?: string
+          user_id?: string
+          week?: number
+        }
+        Relationships: []
+      }
       password_reset_attempts: {
         Row: {
           attempt_count: number
