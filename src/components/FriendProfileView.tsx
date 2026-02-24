@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, X, Star, User, CheckCircle, XCircle, Footprints, Weight, Instagram, Music, ExternalLink, Crown } from "lucide-react";
+import { Loader2, X, Star, User, CheckCircle, XCircle, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -172,18 +172,21 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
   const [isHonorary, setIsHonorary] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }] = await Promise.all([
+      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details, created_at").eq("user_id", friendUserId),
+        supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
       ]);
 
       setAvatarUrl(profileData?.avatar_url || null);
       setIsHonorary(profileData?.is_honorary ?? false);
+      setIsAdmin(!!roleData);
       const pd = profileData as any;
       setSocial({
         instagram: pd?.instagram || null,
@@ -315,9 +318,9 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
              </button>
               <div>
                 <h3 className="text-sm font-bold">{nickname}</h3>
-                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 ${isHonorary ? "bg-warning/20 text-warning" : "bg-secondary text-muted-foreground"}`}>
-                  {isHonorary ? <Crown className="w-3 h-3" /> : null}
-                  {isHonorary ? "Hedersmedlem" : "Medlem"}
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 ${isAdmin ? "bg-primary/20 text-primary" : isHonorary ? "bg-warning/20 text-warning" : "bg-secondary text-muted-foreground"}`}>
+                  {isAdmin ? <Shield className="w-3 h-3" /> : isHonorary ? <Crown className="w-3 h-3" /> : null}
+                  {isAdmin ? "Admin" : isHonorary ? "Hedersmedlem" : "Medlem"}
                 </span>
               </div>
             </div>

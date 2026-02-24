@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Camera, Loader2, Check, Instagram, Music, Crown } from "lucide-react";
+import { User, Camera, Loader2, Check, Instagram, Music, Crown, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileSectionProps {
@@ -44,14 +44,18 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [spotifyName, setSpotifyName] = useState("");
   const [fetchingSpotify, setFetchingSpotify] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary")
-        .eq("user_id", userId)
-        .single();
+      const [{ data }, { data: roleData }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary")
+          .eq("user_id", userId)
+          .single(),
+        supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle(),
+      ]);
 
       if (data) {
         setAge(data.age?.toString() || "");
@@ -64,6 +68,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         setSpotifyName((data as any).spotify_anthem_name || "");
         setIsHonorary(data.is_honorary ?? false);
       }
+      setIsAdmin(!!roleData);
     };
     fetchProfile();
   }, [userId]);
@@ -167,9 +172,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       </div>
 
       {/* Membership status */}
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${isHonorary ? "bg-warning/15 text-warning" : "bg-secondary text-muted-foreground"}`}>
-        {isHonorary ? <Crown className="w-4 h-4" /> : <User className="w-4 h-4" />}
-        {isHonorary ? "Hedersmedlem" : "Medlem"}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${isAdmin ? "bg-primary/15 text-primary" : isHonorary ? "bg-warning/15 text-warning" : "bg-secondary text-muted-foreground"}`}>
+        {isAdmin ? <Shield className="w-4 h-4" /> : isHonorary ? <Crown className="w-4 h-4" /> : <User className="w-4 h-4" />}
+        {isAdmin ? "Admin" : isHonorary ? "Hedersmedlem" : "Medlem"}
       </div>
 
       {/* Avatar */}
