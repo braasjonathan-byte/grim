@@ -199,8 +199,12 @@ const WorkoutShareCard = ({
     try {
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: null,
-        scale: 2,
+        scale: 3,
         useCORS: true,
+        allowTaint: true,
+        logging: false,
+        windowWidth: cardRef.current.scrollWidth,
+        windowHeight: cardRef.current.scrollHeight,
       });
       return new Promise((resolve) => {
         canvas.toBlob((blob) => {
@@ -289,37 +293,46 @@ const WorkoutShareCard = ({
             background: t.bg,
             padding: "24px",
             fontFamily: "'Space Grotesk', sans-serif",
+            width: "100%",
+            boxSizing: "border-box",
           }}
         >
           {/* Header with logo */}
-          <div className="flex items-center gap-3 mb-4">
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
             <img
               src={grimIcon}
               alt="Grim"
-              style={{ width: 64, height: 64, borderRadius: 14 }}
+              style={{ width: 64, height: 64, borderRadius: 14, flexShrink: 0 }}
               crossOrigin="anonymous"
             />
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <h3
-                className="font-bold text-base leading-tight"
-                style={{ color: t.text }}
+                style={{ color: t.text, fontWeight: 700, fontSize: "16px", lineHeight: "1.25", margin: 0 }}
               >
                 {sessionName}
               </h3>
-              <p className="text-xs" style={{ color: t.subtext }}>
+              <p style={{ color: t.subtext, fontSize: "12px", margin: "2px 0 0 0" }}>
                 {week > 0 ? `Vecka ${week} · ` : ""}{formatDay(day)} · {nickname}
               </p>
             </div>
             <span
-              className="text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
-              style={{ background: t.badgeBg, color: "#fff" }}
+              style={{
+                background: t.badgeBg,
+                color: "#fff",
+                fontSize: "12px",
+                fontWeight: 700,
+                padding: "4px 10px",
+                borderRadius: "9999px",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
             >
               ✅ Avklarat
             </span>
           </div>
 
           {/* Stats row */}
-          <div className="flex gap-2 mb-4">
+          <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             {isRunning && loggedDistanceKm && (
               <StatBox label="km" value={String(loggedDistanceKm)} bg={t.statBg} text={t.text} muted={t.muted} />
             )}
@@ -347,34 +360,38 @@ const WorkoutShareCard = ({
           {/* Exercise details */}
           {exerciseSummaries.length > 0 && (
             <div
-              className="rounded-xl p-3 space-y-2.5 mb-4"
-              style={{ background: t.exerciseBg, border: `1px solid ${t.border}` }}
+              style={{
+                background: t.exerciseBg,
+                border: `1px solid ${t.border}`,
+                borderRadius: "12px",
+                padding: "12px",
+                marginBottom: "16px",
+              }}
             >
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: t.muted }}>
+              <p style={{ color: t.muted, fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>
                 {isRunning ? "Kondition" : "Övningar"}
               </p>
               {exerciseSummaries.map((ex, i) => (
-                <div key={i}>
-                  <div className="flex items-center justify-between">
+                <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "10px" : 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span
-                      className="text-xs font-semibold truncate mr-2"
-                      style={{ color: t.text, maxWidth: "65%" }}
+                      style={{ color: t.text, fontSize: "12px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "65%", display: "block" }}
                     >
                       {ex!.name}
                     </span>
                     {ex!.type === "cardio" && (
-                      <span className="text-[10px] font-mono" style={{ color: t.subtext }}>
+                      <span style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace" }}>
                         {ex!.info}
                       </span>
                     )}
                   </div>
                   {ex!.type === "strength" && ex!.sets.length > 0 && (
-                    <p className="text-[10px] font-mono mt-0.5" style={{ color: t.subtext }}>
+                    <p style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
                       {formatSets(ex!.sets)}
                     </p>
                   )}
                   {ex!.type === "strength" && ex!.sets.length === 0 && (
-                    <p className="text-[10px] font-mono mt-0.5" style={{ color: t.muted }}>
+                    <p style={{ color: t.muted, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
                       {ex!.info}
                     </p>
                   )}
@@ -384,17 +401,16 @@ const WorkoutShareCard = ({
           )}
 
           {/* Footer / branding */}
-          <div className="flex items-center justify-between pt-1">
-            <div className="flex items-center gap-2">
-              <Flame className="w-3.5 h-3.5" style={{ color: "#f97316" }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "4px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Flame style={{ width: "14px", height: "14px", color: "#f97316" }} />
               <span
-                className="text-[11px] font-bold tracking-widest"
-                style={{ color: t.muted }}
+                style={{ color: t.muted, fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em" }}
               >
                 GRIM
               </span>
             </div>
-            <span className="text-xs font-medium" style={{ color: t.muted }}>
+            <span style={{ color: t.muted, fontSize: "12px", fontWeight: 500 }}>
               Ladda ner → grim.lovable.app
             </span>
           </div>
@@ -429,9 +445,9 @@ const WorkoutShareCard = ({
 };
 
 const StatBox = ({ label, value, bg, text, muted }: { label: string; value: string; bg: string; text: string; muted: string }) => (
-  <div className="flex-1 rounded-xl p-3 text-center" style={{ background: bg }}>
-    <p className="text-2xl font-bold" style={{ color: text }}>{value}</p>
-    <p className="text-[10px] uppercase tracking-wider" style={{ color: muted }}>{label}</p>
+  <div style={{ flex: 1, borderRadius: "12px", padding: "12px", textAlign: "center", background: bg }}>
+    <p style={{ fontSize: "24px", fontWeight: 700, color: text, margin: 0, lineHeight: 1.2 }}>{value}</p>
+    <p style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: muted, margin: "4px 0 0 0" }}>{label}</p>
   </div>
 );
 
