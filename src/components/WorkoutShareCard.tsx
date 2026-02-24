@@ -295,8 +295,13 @@ const WorkoutShareCard = ({
             fontFamily: "'Space Grotesk', sans-serif",
             width: "100%",
             boxSizing: "border-box",
+            aspectRatio: "9 / 16",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
           }}
         >
+          <div style={{ flex: 1 }}>
           {/* Header with logo */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
             <img
@@ -373,9 +378,9 @@ const WorkoutShareCard = ({
               </p>
               {exerciseSummaries.map((ex, i) => (
                 <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "10px" : 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
                     <span
-                      style={{ color: t.text, fontSize: "12px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "65%", display: "block" }}
+                      style={{ color: t.text, fontSize: "12px", fontWeight: 600 }}
                     >
                       {ex!.name}
                     </span>
@@ -399,6 +404,8 @@ const WorkoutShareCard = ({
               ))}
             </div>
           )}
+
+          </div>
 
           {/* Footer / branding */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "4px" }}>
