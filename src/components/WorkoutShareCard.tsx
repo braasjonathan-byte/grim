@@ -417,7 +417,7 @@ const WorkoutShareCard = ({
                       <div style={{ display: "table-cell", color: t.text, fontSize: "12px", fontWeight: 600 }}>
                         {ex!.name}
                       </div>
-                      <div style={{ display: "table-cell", color: t.subtext, fontSize: "10px", fontFamily: "monospace", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <div style={{ display: "table-cell", color: t.subtext, fontSize: "10px", fontFamily: "'Lora', Georgia, serif", letterSpacing: "0.02em", textAlign: "right", whiteSpace: "nowrap" }}>
                         {ex!.info}
                       </div>
                     </div>
@@ -427,11 +427,11 @@ const WorkoutShareCard = ({
                         {ex!.name}
                       </div>
                       {ex!.sets.length > 0 ? (
-                        <div style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                      <div style={{ color: t.subtext, fontSize: "10px", fontFamily: "'Lora', Georgia, serif", letterSpacing: "0.02em", marginTop: "2px" }}>
                           {formatSets(ex!.sets)}
                         </div>
                       ) : (
-                        <div style={{ color: t.muted, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                        <div style={{ color: t.muted, fontSize: "10px", fontFamily: "'Lora', Georgia, serif", letterSpacing: "0.02em", marginTop: "2px" }}>
                           {ex!.info}
                         </div>
                       )}
