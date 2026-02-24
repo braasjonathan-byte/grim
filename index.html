@@ -35,7 +35,14 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#000">
+        <div style="text-align:center">
+          <div style="width:60px;height:60px;border:3px solid #333;border-top-color:#fff;border-radius:50%;margin:0 auto;animation:s .8s linear infinite"></div>
+          <style>@keyframes s{to{transform:rotate(360deg)}}</style>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
