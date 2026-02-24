@@ -300,7 +300,7 @@ const WorkoutShareCard = ({
           }}
         >
           {/* Header with logo */}
-          <div style={{ marginBottom: "16px", overflow: "hidden" }}>
+          <div style={{ marginBottom: "16px" }}>
             <img
               src={grimIcon}
               alt="Grim"
@@ -380,20 +380,21 @@ const WorkoutShareCard = ({
           )}
 
           {/* Avklarat badge */}
-          <div style={{ textAlign: "center", marginBottom: "16px" }}>
-            <span
+          <div style={{ width: "100%", textAlign: "center", marginBottom: "16px" }}>
+            <div
               style={{
+                display: "inline-block",
                 background: t.badgeBg,
                 color: "#fff",
                 fontSize: "13px",
                 fontWeight: 700,
-                padding: "6px 16px",
+                padding: "8px 20px",
                 borderRadius: "9999px",
-                whiteSpace: "nowrap",
+                textAlign: "center",
               }}
             >
               ✅ Avklarat
-            </span>
+            </div>
           </div>
 
           {/* Footer / branding */}
