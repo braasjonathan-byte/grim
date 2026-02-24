@@ -448,14 +448,14 @@ const WorkoutShareCard = ({
               <div
                 style={{
                   display: "inline-block",
-                  background: t.badgeBg,
-                  color: "#fff",
+                  background: "transparent",
+                  color: t.text,
                   fontSize: "13px",
                   fontWeight: 700,
                   padding: "8px 20px",
                   borderRadius: "9999px",
                   lineHeight: "1.4"
-                }} className="bg-transparent">
+                }}>
 
                 #BeGrim
               </div>
