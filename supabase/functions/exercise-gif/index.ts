@@ -407,7 +407,8 @@ function formatFreeExercise(exercise: any): any {
   const images = (exercise.images || []).map((img: string) => `${imageBase}/${img}`);
   return {
     name: exercise.name,
-    gifUrl: images.length > 0 ? images[0] : null,
+    gifUrl: null, // free-exercise-db only has static images, not animated GIFs
+    imageUrls: images, // static illustration images
     instructions: exercise.instructions || [],
     targetMuscles: exercise.primaryMuscles || [],
     equipments: exercise.equipment ? [exercise.equipment] : [],
@@ -624,7 +625,8 @@ serve(async (req) => {
       if (freeResult) {
         const instructions = await translateToSwedish(freeResult.instructions || []);
         return new Response(JSON.stringify({
-          gifUrl: freeResult.gifUrl,
+          gifUrl: null,
+          imageUrls: freeResult.imageUrls || [],
           name: freeResult.name,
           instructions,
           targetMuscles: freeResult.targetMuscles || [],
@@ -675,7 +677,8 @@ serve(async (req) => {
       if (freeResult) {
         const instructions = await translateToSwedish(freeResult.instructions || []);
         return new Response(JSON.stringify({
-          gifUrl: freeResult.gifUrl,
+          gifUrl: null,
+          imageUrls: freeResult.imageUrls || [],
           name: freeResult.name,
           instructions,
           targetMuscles: freeResult.targetMuscles || [],
