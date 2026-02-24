@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { X, Download, Share2, Palette } from "lucide-react";
-import grimIcon from "@/assets/grim-icon.png";
+import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
 
 type Theme = "colorful" | "light" | "dark";
