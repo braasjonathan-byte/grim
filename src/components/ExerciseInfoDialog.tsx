@@ -10,6 +10,7 @@ interface ExerciseInfoDialogProps {
 
 interface ExerciseData {
   gifUrl: string | null;
+  imageUrls?: string[];
   name: string;
   instructions: string[];
   targetMuscles: string[];
@@ -130,6 +131,26 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false }: Exercise
                     className="w-full h-auto"
                     loading="lazy"
                   />
+                </div>
+              )}
+
+              {!data.gifUrl && data.imageUrls && data.imageUrls.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className={`grid ${data.imageUrls.length >= 2 ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
+                    {data.imageUrls.slice(0, 2).map((url, i) => (
+                      <div key={i} className="rounded-lg overflow-hidden bg-white border border-border">
+                        <img
+                          src={url}
+                          alt={`${exerciseName} position ${i + 1}`}
+                          className="w-full h-auto"
+                          loading="lazy"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    {data.imageUrls.length >= 2 ? "Start- och slutposition" : "Illustration"}
+                  </p>
                 </div>
               )}
 
