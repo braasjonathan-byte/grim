@@ -1,31 +1,32 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon, Dumbbell } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
-import WorkoutView from "@/components/WorkoutView";
-import AIChatButton from "@/components/AIChatButton";
-// PlanEditor removed - Schema tab no longer used
-import FriendsView from "@/components/FriendsView";
-import OneRMCalculator from "@/components/OneRMCalculator";
-import PulseZoneCalculator from "@/components/PulseZoneCalculator";
-import CalorieCalculator from "@/components/CalorieCalculator";
-import WorkoutTimer from "@/components/WorkoutTimer";
-import ChangePassword from "@/components/ChangePassword";
-import WorkoutStats from "@/components/WorkoutStats";
-import WhatsNewDialog from "@/components/WhatsNewDialog";
-import SettingsPanel from "@/components/SettingsPanel";
-import ReferralLink from "@/components/ReferralLink";
-import SuggestionBox from "@/components/SuggestionBox";
-import AnnouncementInbox from "@/components/AnnouncementInbox";
-import AdminUserList from "@/components/AdminUserList";
-import ProfileTab from "@/components/ProfileTab";
-import NotificationSettings from "@/components/NotificationSettings";
-import ExerciseGifManager from "@/components/ExerciseGifManager";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
+
+// Lazy-loaded tab components for code splitting
+const WorkoutView = lazy(() => import("@/components/WorkoutView"));
+const AIChatButton = lazy(() => import("@/components/AIChatButton"));
+const FriendsView = lazy(() => import("@/components/FriendsView"));
+const OneRMCalculator = lazy(() => import("@/components/OneRMCalculator"));
+const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"));
+const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
+const WorkoutTimer = lazy(() => import("@/components/WorkoutTimer"));
+const ChangePassword = lazy(() => import("@/components/ChangePassword"));
+const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
+const WhatsNewDialog = lazy(() => import("@/components/WhatsNewDialog"));
+const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
+const ReferralLink = lazy(() => import("@/components/ReferralLink"));
+const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
+const AnnouncementInbox = lazy(() => import("@/components/AnnouncementInbox"));
+const AdminUserList = lazy(() => import("@/components/AdminUserList"));
+const ProfileTab = lazy(() => import("@/components/ProfileTab"));
+const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
+const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
 
 type Tab = "workout" | "friends" | "calc" | "stats" | "profile" | "settings";
 
@@ -430,6 +431,7 @@ const Index = () => {
       </header>
 
       {/* Content */}
+      <Suspense fallback={<div className="max-w-lg mx-auto px-4 py-8 text-center text-muted-foreground text-sm">Laddar…</div>}>
       <main className="max-w-lg mx-auto px-4 py-4">
         {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
         {tab === "friends" &&
@@ -477,6 +479,7 @@ const Index = () => {
           </div>
         }
       </main>
+      </Suspense>
 
       {/* Notification toast at bottom */}
       {notification &&
