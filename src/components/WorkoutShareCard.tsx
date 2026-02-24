@@ -455,9 +455,9 @@ const WorkoutShareCard = ({
                   padding: "8px 20px",
                   borderRadius: "9999px",
                   lineHeight: "1.4"
-                }}>
+                }} className="bg-transparent">
 
-                ✅ Avklarat
+                #BeGrim
               </div>
             </div>
           </div>
