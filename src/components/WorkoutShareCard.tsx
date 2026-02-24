@@ -300,27 +300,29 @@ const WorkoutShareCard = ({
           }}
         >
           {/* Header with logo */}
-          <div style={{ marginBottom: "16px" }}>
-            <img
-              src={grimIcon}
-              alt="Grim"
-              style={{ width: 64, height: 64, borderRadius: 14, float: "left", marginRight: "12px" }}
-              crossOrigin="anonymous"
-            />
-            <div style={{ overflow: "hidden" }}>
-              <h3
+          <div style={{ marginBottom: "16px", display: "table", width: "100%" }}>
+            <div style={{ display: "table-cell", width: "64px", verticalAlign: "top" }}>
+              <img
+                src={grimIcon}
+                alt="Grim"
+                style={{ width: 64, height: 64, borderRadius: 14 }}
+                crossOrigin="anonymous"
+              />
+            </div>
+            <div style={{ display: "table-cell", verticalAlign: "middle", paddingLeft: "12px" }}>
+              <div
                 style={{ color: t.text, fontWeight: 700, fontSize: "16px", lineHeight: "1.25", margin: 0 }}
               >
                 {sessionName}
-              </h3>
-              <p style={{ color: t.subtext, fontSize: "12px", margin: "2px 0 0 0" }}>
+              </div>
+              <div style={{ color: t.subtext, fontSize: "12px", marginTop: "2px" }}>
                 {week > 0 ? `Vecka ${week} · ` : ""}{formatDay(day)} · {nickname}
-              </p>
+              </div>
             </div>
           </div>
 
-          {/* Stats row - use table layout for reliable centering */}
-          <div style={{ marginBottom: "16px", display: "table", width: "100%", tableLayout: "fixed", borderSpacing: "8px 0" }}>
+          {/* Stats row */}
+          <div style={{ marginTop: "8px", marginBottom: "16px", display: "table", width: "100%", tableLayout: "fixed", borderSpacing: "8px 0" }}>
             {(() => {
               const stats: { label: string; value: string }[] = [];
               if (isRunning && loggedDistanceKm) stats.push({ label: "km", value: String(loggedDistanceKm) });
@@ -330,9 +332,9 @@ const WorkoutShareCard = ({
               if (!isRunning && totalVolume > 0) stats.push({ label: "kg volym", value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(totalVolume) });
               if (!isRunning && exercises.length > 0) stats.push({ label: "övningar", value: String(exercises.length) });
               return stats.map((s, i) => (
-                <div key={i} style={{ display: "table-cell", borderRadius: "12px", padding: "14px 8px", textAlign: "center", background: t.statBg, verticalAlign: "middle" }}>
-                  <div style={{ fontSize: "24px", fontWeight: 700, color: t.text, lineHeight: "1", textAlign: "center" }}>{s.value}</div>
-                  <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: t.muted, marginTop: "6px", textAlign: "center" }}>{s.label}</div>
+                <div key={i} style={{ display: "table-cell", borderRadius: "12px", padding: "14px 4px", textAlign: "center", background: t.statBg, verticalAlign: "middle" }}>
+                  <div style={{ fontSize: "24px", fontWeight: 700, color: t.text, lineHeight: "1.2", textAlign: "center" }}>{s.value}</div>
+                  <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: t.muted, marginTop: "4px", textAlign: "center" }}>{s.label}</div>
                 </div>
               ));
             })()}
@@ -379,21 +381,23 @@ const WorkoutShareCard = ({
             </div>
           )}
 
-          {/* Avklarat badge */}
-          <div style={{ width: "100%", textAlign: "center", marginBottom: "16px" }}>
-            <div
-              style={{
-                display: "inline-block",
-                background: t.badgeBg,
-                color: "#fff",
-                fontSize: "13px",
-                fontWeight: 700,
-                padding: "8px 20px",
-                borderRadius: "9999px",
-                textAlign: "center",
-              }}
-            >
-              ✅ Avklarat
+          {/* Avklarat badge - using table for reliable centering in html2canvas */}
+          <div style={{ display: "table", width: "100%", marginBottom: "16px" }}>
+            <div style={{ display: "table-cell", textAlign: "center" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  background: t.badgeBg,
+                  color: "#fff",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  padding: "8px 20px",
+                  borderRadius: "9999px",
+                  lineHeight: "1.4",
+                }}
+              >
+                ✅ Avklarat
+              </div>
             </div>
           </div>
 
