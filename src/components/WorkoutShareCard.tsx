@@ -122,9 +122,8 @@ const WorkoutShareCard = ({
   const exerciseSummaries = exercises
     .map((line) => {
       const match = line.match(/^(.+?)\s*—\s*(.+)$/);
-      if (!match) return null;
-      const name = match[1].trim();
-      const info = match[2].trim();
+      const name = match ? match[1].trim() : line;
+      const info = match ? match[2].trim() : "";
 
       if (info.includes("min") || info.includes("/km")) {
         return { name, info, type: "cardio" as const, sets: [] as { kg: string; reps: string }[] };
