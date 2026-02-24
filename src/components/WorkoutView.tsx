@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2 } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -2262,7 +2262,21 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       )}
 
       {/* Daily challenge */}
-      <DailyChallenge userId={userId} />
+      <DailyChallenge userId={userId} onComplete={async (challengeText) => {
+        // Find today's workout plan in the current week
+        const dayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+        const todayName = dayNames[new Date().getDay()];
+        const todayPlan = plans.find(p => p.week === currentWeek && p.day === todayName);
+        if (todayPlan) {
+          // Strip emoji from challenge text for cleaner exercise name
+          const cleanChallenge = challengeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
+          const challengeEntry = `⚔️ Utmaning: ${cleanChallenge}`;
+          const joinSep = todayPlan.details.includes("\n") ? "\n" : todayPlan.details.includes(";") ? "; " : "\n";
+          const newDetails = todayPlan.details ? `${todayPlan.details}${joinSep}${challengeEntry}` : challengeEntry;
+          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", todayPlan.id);
+          setPlans(prev => prev.map(p => p.id === todayPlan.id ? { ...p, details: newDetails } : p));
+        }
+      }} />
 
       {/* Workout cards */}
       <div className="space-y-2">
@@ -2932,6 +2946,24 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
                         const setsCountPlan = partSets ? parseInt(partSets) : 1;
                         const setsStrPlan = getSetsDone(key, partName);
+
+                        // Daily challenge exercise - render with distinct style
+                        const isDailyChallenge = part.startsWith("⚔️ Utmaning:");
+                        if (isDailyChallenge) {
+                          const challengeName = part.replace("⚔️ Utmaning:", "").trim();
+                          return (
+                            <div key={i} className="bg-warning/10 rounded-lg p-2.5 border border-warning/30 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Swords className="w-4 h-4 text-warning flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Dagens utmaning</span>
+                                  <p className="text-sm font-semibold text-foreground">{challengeName}</p>
+                                </div>
+                                <Check className="w-4 h-4 text-success" />
+                              </div>
+                            </div>
+                          );
+                        }
 
                         return (
                           <div key={i} className="bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1">

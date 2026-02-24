@@ -58,9 +58,10 @@ const getTodayStr = () => new Date().toISOString().slice(0, 10);
 
 interface DailyChallengeProps {
   userId: string;
+  onComplete?: (challengeText: string) => void;
 }
 
-const DailyChallenge = ({ userId }: DailyChallengeProps) => {
+const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
   const [status, setStatus] = useState<"loading" | "show" | "completed" | "declined">("loading");
   const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
   const challenge = useMemo(() => getDailyChallenge(), []);
@@ -100,6 +101,7 @@ const DailyChallenge = ({ userId }: DailyChallengeProps) => {
       challenge_text: challenge,
     });
     setStatus("completed");
+    onComplete?.(challenge);
   };
 
   const handleDecline = () => {
