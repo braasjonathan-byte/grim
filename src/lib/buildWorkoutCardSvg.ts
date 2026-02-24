@@ -198,15 +198,6 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
     y += contentH + 12;
   }
 
-  // ── Badge ──
-  const bw = 130;
-  const bh = 32;
-  els.push(
-    `<rect x="${(W - bw) / 2}" y="${y}" width="${bw}" height="${bh}" rx="16" fill="url(#badge-grad)"/>`
-  );
-  els.push(
-    `<text x="${W / 2}" y="${y + bh / 2}" fill="#fff" font-size="13" font-weight="700" text-anchor="middle" dy="0.35em">✅ Avklarat</text>`
-  );
 
   // ── Footer ──
   els.push(
