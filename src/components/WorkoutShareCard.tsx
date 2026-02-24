@@ -442,25 +442,6 @@ const WorkoutShareCard = ({
             </div>
           )}
 
-          {/* Avklarat badge - using table for reliable centering in html2canvas */}
-          <div style={{ display: "table", width: "100%", marginBottom: "16px" }}>
-            <div style={{ display: "table-cell", textAlign: "center" }}>
-              <div
-                style={{
-                  display: "inline-block",
-                  background: t.badgeBg,
-                  color: "#fff",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  padding: "8px 20px",
-                  borderRadius: "9999px",
-                  lineHeight: "1.4",
-                }}
-              >
-                ✅ Avklarat
-              </div>
-            </div>
-          </div>
 
           {/* Footer / branding */}
           <div style={{ position: "absolute", bottom: "24px", left: "24px", right: "24px", display: "table", width: "calc(100% - 48px)" }}>
