@@ -585,7 +585,13 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         week,
         day,
       } as any).select().single();
-      if (data) setLikes((prev) => [...prev, data as any]);
+      if (data) {
+        setLikes((prev) => [...prev, data as any]);
+        // Send push notification for the like
+        supabase.functions.invoke("notify-like", {
+          body: { targetUserId: fid, day, week },
+        }).catch(() => {});
+      }
     }
     setLikingKey(null);
   };
