@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, ArrowLeft, ShieldQuestion } from "lucide-react";
-import grimIcon from "@/assets/grim-icon.png";
+import grimIcon from "@/assets/grim-icon.webp";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AuthScreenProps {
@@ -223,7 +223,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-8 animate-fade-in">
           <div className="text-center space-y-2">
-          <img src={grimIcon} alt="Grim" className="w-20 h-20 mx-auto" />
+          <img src={grimIcon} alt="Grim" className="w-20 h-20 mx-auto" width={80} height={80} />
             <h1 className="text-3xl font-black tracking-tight">
               Grim<span className="text-primary">.</span>
             </h1>
@@ -393,7 +393,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8 animate-fade-in">
         <div className="text-center space-y-2 border-none">
-           <img src={grimIcon} alt="Grim" className="w-60 h-60 mx-auto" />
+           <img src={grimIcon} alt="Grim" className="w-60 h-60 mx-auto" fetchPriority="high" width={240} height={240} />
           <h1 className="text-3xl font-black tracking-tight">
           </h1>
           <p className="text-xs text-muted-foreground italic">
