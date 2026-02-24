@@ -317,22 +317,6 @@ const WorkoutShareCard = ({
                 {week > 0 ? `Vecka ${week} · ` : ""}{formatDay(day)} · {nickname}
               </p>
             </div>
-            <span
-              style={{
-                background: t.badgeBg,
-                color: "#fff",
-                fontSize: "12px",
-                fontWeight: 700,
-                padding: "4px 10px",
-                borderRadius: "9999px",
-                whiteSpace: "nowrap",
-                position: "absolute",
-                top: "24px",
-                right: "24px",
-              }}
-            >
-              ✅ Avklarat
-            </span>
           </div>
 
           {/* Stats row - use table layout for reliable centering */}
@@ -394,6 +378,23 @@ const WorkoutShareCard = ({
               ))}
             </div>
           )}
+
+          {/* Avklarat badge */}
+          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+            <span
+              style={{
+                background: t.badgeBg,
+                color: "#fff",
+                fontSize: "13px",
+                fontWeight: 700,
+                padding: "6px 16px",
+                borderRadius: "9999px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ✅ Avklarat
+            </span>
+          </div>
 
           {/* Footer / branding */}
           <div style={{ position: "absolute", bottom: "24px", left: "24px", right: "24px", overflow: "hidden" }}>
