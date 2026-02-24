@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -15,6 +15,7 @@ import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
+import WorkoutShareCard from "@/components/WorkoutShareCard";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -185,6 +186,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     day: string;
     uncheckedCount: number;
   } | null>(null);
+
+  // Share card
+  const [shareTarget, setShareTarget] = useState<{
+    plan: PlanDay;
+    completion: Completion;
+  } | null>(null);
+  const [userNickname, setUserNickname] = useState("");
+
+  // Fetch user nickname
+  useEffect(() => {
+    supabase.from("profiles").select("nickname").eq("user_id", userId).single().then(({ data }) => {
+      if (data) setUserNickname(data.nickname);
+    });
+  }, [userId]);
 
   const fetchData = useCallback(async () => {
     const [{ data: planData }, { data: compData }, { data: friendCommentsData }, { data: likesData }] = await Promise.all([
@@ -1496,10 +1511,17 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         </span> :
                       null;
                     })()}
+                    {isDone && (
+                      <button
+                        onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] });}}
+                        className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                        title="Dela pass">
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
                       className="p-1 text-muted-foreground hover:text-destructive transition-colors">
-
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                     {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -2322,6 +2344,14 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         </span> :
                     null;
                   })()}
+                    {isDone && (
+                      <button
+                        onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] });}}
+                        className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                        title="Dela pass">
+                        <Share2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
               </div>
@@ -3373,6 +3403,21 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           </div>
         </div>
       </div>
+    )}
+    {shareTarget && (
+      <WorkoutShareCard
+        sessionName={shareTarget.plan.session_name}
+        day={shareTarget.plan.day}
+        week={shareTarget.plan.week}
+        details={shareTarget.plan.details}
+        tempo={shareTarget.plan.tempo}
+        loggedTempo={shareTarget.completion.logged_tempo}
+        loggedPulse={shareTarget.completion.logged_pulse}
+        loggedDistanceKm={shareTarget.completion.logged_distance_km}
+        loggedWeights={shareTarget.completion.logged_weights}
+        nickname={userNickname}
+        onClose={() => setShareTarget(null)}
+      />
     )}
     </>);
 
