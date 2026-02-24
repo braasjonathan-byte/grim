@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { X, Download, Share2, Dumbbell, Footprints, Flame, Palette } from "lucide-react";
+import { X, Download, Share2, Palette } from "lucide-react";
 import html2canvas from "html2canvas";
 import grimIcon from "@/assets/grim-icon.png";
 
@@ -296,21 +296,18 @@ const WorkoutShareCard = ({
             width: "100%",
             boxSizing: "border-box",
             aspectRatio: "9 / 16",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
+            position: "relative",
           }}
         >
-          <div style={{ flex: 1 }}>
           {/* Header with logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+          <div style={{ marginBottom: "16px", overflow: "hidden" }}>
             <img
               src={grimIcon}
               alt="Grim"
-              style={{ width: 64, height: 64, borderRadius: 14, flexShrink: 0 }}
+              style={{ width: 64, height: 64, borderRadius: 14, float: "left", marginRight: "12px" }}
               crossOrigin="anonymous"
             />
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ overflow: "hidden" }}>
               <h3
                 style={{ color: t.text, fontWeight: 700, fontSize: "16px", lineHeight: "1.25", margin: 0 }}
               >
@@ -329,41 +326,32 @@ const WorkoutShareCard = ({
                 padding: "4px 10px",
                 borderRadius: "9999px",
                 whiteSpace: "nowrap",
-                flexShrink: 0,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                lineHeight: "1",
+                position: "absolute",
+                top: "24px",
+                right: "24px",
               }}
             >
               ✅ Avklarat
             </span>
           </div>
 
-          {/* Stats row */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-            {isRunning && loggedDistanceKm && (
-              <StatBox label="km" value={String(loggedDistanceKm)} bg={t.statBg} text={t.text} muted={t.muted} />
-            )}
-            {isRunning && loggedTempo && (
-              <StatBox label="min/km" value={loggedTempo} bg={t.statBg} text={t.text} muted={t.muted} />
-            )}
-            {isRunning && loggedPulse && (
-              <StatBox label="bpm" value={String(loggedPulse)} bg={t.statBg} text={t.text} muted={t.muted} />
-            )}
-            {!isRunning && completedSets > 0 && (
-              <StatBox label="set" value={String(completedSets)} bg={t.statBg} text={t.text} muted={t.muted} />
-            )}
-            {!isRunning && totalVolume > 0 && (
-              <StatBox
-                label="kg volym"
-                value={totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(totalVolume)}
-                bg={t.statBg} text={t.text} muted={t.muted}
-              />
-            )}
-            {!isRunning && exercises.length > 0 && (
-              <StatBox label="övningar" value={String(exercises.length)} bg={t.statBg} text={t.text} muted={t.muted} />
-            )}
+          {/* Stats row - use table layout for reliable centering */}
+          <div style={{ marginBottom: "16px", display: "table", width: "100%", tableLayout: "fixed", borderSpacing: "8px 0" }}>
+            {(() => {
+              const stats: { label: string; value: string }[] = [];
+              if (isRunning && loggedDistanceKm) stats.push({ label: "km", value: String(loggedDistanceKm) });
+              if (isRunning && loggedTempo) stats.push({ label: "min/km", value: loggedTempo });
+              if (isRunning && loggedPulse) stats.push({ label: "bpm", value: String(loggedPulse) });
+              if (!isRunning && completedSets > 0) stats.push({ label: "set", value: String(completedSets) });
+              if (!isRunning && totalVolume > 0) stats.push({ label: "kg volym", value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(totalVolume) });
+              if (!isRunning && exercises.length > 0) stats.push({ label: "övningar", value: String(exercises.length) });
+              return stats.map((s, i) => (
+                <div key={i} style={{ display: "table-cell", borderRadius: "12px", padding: "14px 8px", textAlign: "center", background: t.statBg, verticalAlign: "middle" }}>
+                  <div style={{ fontSize: "24px", fontWeight: 700, color: t.text, lineHeight: "1", textAlign: "center" }}>{s.value}</div>
+                  <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: t.muted, marginTop: "6px", textAlign: "center" }}>{s.label}</div>
+                </div>
+              ));
+            })()}
           </div>
 
           {/* Exercise details */}
@@ -377,51 +365,42 @@ const WorkoutShareCard = ({
                 marginBottom: "16px",
               }}
             >
-              <p style={{ color: t.muted, fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>
+              <div style={{ color: t.muted, fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>
                 {isRunning ? "Kondition" : "Övningar"}
-              </p>
+              </div>
               {exerciseSummaries.map((ex, i) => (
-                <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "10px" : 0 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
-                    <span
-                      style={{ color: t.text, fontSize: "12px", fontWeight: 600 }}
-                    >
+                <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "10px" : "0" }}>
+                  <div style={{ overflow: "hidden" }}>
+                    <span style={{ color: t.text, fontSize: "12px", fontWeight: 600 }}>
                       {ex!.name}
                     </span>
                     {ex!.type === "cardio" && (
-                      <span style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace" }}>
+                      <span style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", float: "right" }}>
                         {ex!.info}
                       </span>
                     )}
                   </div>
                   {ex!.type === "strength" && ex!.sets.length > 0 && (
-                    <p style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                    <div style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
                       {formatSets(ex!.sets)}
-                    </p>
+                    </div>
                   )}
                   {ex!.type === "strength" && ex!.sets.length === 0 && (
-                    <p style={{ color: t.muted, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                    <div style={{ color: t.muted, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
                       {ex!.info}
-                    </p>
+                    </div>
                   )}
                 </div>
               ))}
             </div>
           )}
 
-          </div>
-
           {/* Footer / branding */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "4px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Flame style={{ width: "14px", height: "14px", color: "#f97316" }} />
-              <span
-                style={{ color: t.muted, fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em" }}
-              >
-                GRIM
-              </span>
-            </div>
-            <span style={{ color: t.muted, fontSize: "12px", fontWeight: 500 }}>
+          <div style={{ position: "absolute", bottom: "24px", left: "24px", right: "24px", overflow: "hidden" }}>
+            <span style={{ color: t.muted, fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em" }}>
+              🔥 GRIM
+            </span>
+            <span style={{ color: t.muted, fontSize: "12px", fontWeight: 500, float: "right" }}>
               Ladda ner → grim.lovable.app
             </span>
           </div>
@@ -455,11 +434,5 @@ const WorkoutShareCard = ({
   );
 };
 
-const StatBox = ({ label, value, bg, text, muted }: { label: string; value: string; bg: string; text: string; muted: string }) => (
-  <div style={{ flex: 1, borderRadius: "12px", padding: "14px 8px", textAlign: "center", background: bg }}>
-    <div style={{ fontSize: "24px", fontWeight: 700, color: text, lineHeight: "1", textAlign: "center", width: "100%" }}>{value}</div>
-    <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: muted, marginTop: "6px", textAlign: "center", width: "100%" }}>{label}</div>
-  </div>
-);
 
 export default WorkoutShareCard;
