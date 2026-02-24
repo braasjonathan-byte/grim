@@ -666,6 +666,33 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_likes: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          target_user_id: string
+          user_id: string
+          week: number
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          target_user_id: string
+          user_id: string
+          week: number
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          target_user_id?: string
+          user_id?: string
+          week?: number
+        }
+        Relationships: []
+      }
       workout_plans: {
         Row: {
           created_at: string

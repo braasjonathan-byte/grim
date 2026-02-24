@@ -100,6 +100,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [comments, setComments] = useState<WorkoutComment[]>([]);
   const [newComment, setNewComment] = useState<Record<string, string>>({});
   const [nicknameMap, setNicknameMap] = useState<Record<string, string>>({});
+
+  // Likes
+  const [likes, setLikes] = useState<{ id: string; user_id: string; target_user_id: string; week: number; day: string }[]>([]);
+  const [likingKey, setLikingKey] = useState<string | null>(null);
   
   // Admin editing
   const [togglingDone, setTogglingDone] = useState<string | null>(null);
@@ -280,10 +284,11 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     onClearActivitiesForFriend?.(friend.profile.nickname);
     const fid = friend.profile.user_id;
 
-    const [{ data: plans }, { data: completions }, { data: commentsData }] = await Promise.all([
+    const [{ data: plans }, { data: completions }, { data: commentsData }, { data: likesData }] = await Promise.all([
       supabase.from("workout_plans").select("id, week, day, session_name, details, tempo, created_at").eq("user_id", fid).order("week").order("day"),
       supabase.from("workout_completions").select("week, day, done, user_comment, logged_weights, logged_distance_km").eq("user_id", fid),
       supabase.from("workout_comments").select("*").eq("target_user_id", fid),
+      supabase.from("workout_likes").select("*").eq("target_user_id", fid),
     ]);
 
     // Build virtual plan entries for standalone completions without matching plans
@@ -350,21 +355,30 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       setFriendCompletions(map);
     }
 
-    // Fetch nicknames for comment authors
+    // Set likes
+    setLikes((likesData || []) as any);
+
+    // Fetch nicknames for comment authors and like authors
+    const allAuthorIds = new Set<string>();
+    if (commentsData) commentsData.forEach((c) => allAuthorIds.add(c.author_id));
+    if (likesData) (likesData as any[]).forEach((l) => allAuthorIds.add(l.user_id));
+
     if (commentsData && commentsData.length > 0) {
       setComments(commentsData);
-      const authorIds = [...new Set(commentsData.map((c) => c.author_id))];
+    } else {
+      setComments([]);
+    }
+
+    if (allAuthorIds.size > 0) {
       const { data: authorProfiles } = await supabase
         .from("profiles")
         .select("user_id, nickname")
-        .in("user_id", authorIds);
+        .in("user_id", [...allAuthorIds]);
       if (authorProfiles) {
         const map: Record<string, string> = {};
         for (const p of authorProfiles) map[p.user_id] = p.nickname;
         setNicknameMap(map);
       }
-    } else {
-      setComments([]);
     }
   };
 
@@ -554,6 +568,28 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setNewComment((prev) => ({ ...prev, [key]: "" }));
   };
 
+  const toggleLike = async (week: number, day: string) => {
+    if (!viewingFriend) return;
+    const key = `${week}-${day}`;
+    const fid = viewingFriend.profile.user_id;
+    const existingLike = likes.find((l) => l.user_id === userId && l.week === week && l.day === day && l.target_user_id === fid);
+    
+    setLikingKey(key);
+    if (existingLike) {
+      await supabase.from("workout_likes").delete().eq("id", existingLike.id);
+      setLikes((prev) => prev.filter((l) => l.id !== existingLike.id));
+    } else {
+      const { data } = await supabase.from("workout_likes").insert({
+        user_id: userId,
+        target_user_id: fid,
+        week,
+        day,
+      } as any).select().single();
+      if (data) setLikes((prev) => [...prev, data as any]);
+    }
+    setLikingKey(null);
+  };
+
   // Friend workout detail view
   if (viewingFriend) {
     const weekDays = friendPlans
@@ -687,6 +723,9 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                 const colorClass = getSessionColor(plan.session_name);
                 const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
                 const dayComments = comments.filter((c) => c.week === plan.week && c.day === plan.day);
+                const dayLikes = likes.filter((l) => l.week === plan.week && l.day === plan.day);
+                const hasLiked = dayLikes.some((l) => l.user_id === userId);
+                const likeCount = dayLikes.length;
 
                 return (
                   <div
@@ -714,6 +753,9 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                         )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {likeCount > 0 && (
+                          <span className="text-xs font-semibold">{likeCount} 🔥</span>
+                        )}
                         {dayComments.length > 0 && (
                           <span className="text-xs text-primary font-semibold">{dayComments.length} 💬</span>
                         )}
@@ -960,6 +1002,26 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                             ))}
                           </div>
                         )}
+
+                        {/* Like button + comment input */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day); }}
+                            disabled={likingKey === key}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                              hasLiked
+                                ? "bg-orange-500/20 text-orange-500"
+                                : "bg-secondary text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10"
+                            }`}
+                          >
+                            🔥 {likeCount > 0 ? likeCount : ""}
+                          </button>
+                          {dayLikes.length > 0 && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {dayLikes.map((l) => nicknameMap[l.user_id] || "...").join(", ")}
+                            </p>
+                          )}
+                        </div>
 
                         {/* Add comment */}
                         <div className="flex gap-2">
