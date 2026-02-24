@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { X, Download, Share2, Palette } from "lucide-react";
-import html2canvas from "html2canvas";
 import grimIcon from "@/assets/grim-icon.png";
+import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
 
 type Theme = "colorful" | "light" | "dark";
 
@@ -193,26 +193,82 @@ const WorkoutShareCard = ({
     return Math.round(vol);
   })();
 
+  const loadImageAsBase64 = (src: string): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext("2d")!.drawImage(img, 0, 0);
+        resolve(c.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      img.src = src;
+    });
+
   const generateImage = async (): Promise<Blob | null> => {
-    if (!cardRef.current) return null;
     setGenerating(true);
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        backgroundColor: null,
-        scale: 4,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        windowWidth: cardRef.current.scrollWidth,
-        windowHeight: cardRef.current.scrollHeight,
+      const logoBase64 = await loadImageAsBase64(grimIcon);
+      const subtitle = `${week > 0 ? `Vecka ${week} · ` : ""}${formatDay(day)} · ${nickname}`;
+
+      const svgStats: SvgStats[] = [];
+      if (isRunning && loggedDistanceKm) svgStats.push({ label: "km", value: String(loggedDistanceKm) });
+      if (isRunning && loggedTempo) svgStats.push({ label: "min/km", value: loggedTempo });
+      if (isRunning && loggedPulse) svgStats.push({ label: "bpm", value: String(loggedPulse) });
+      if (!isRunning && completedSets > 0) svgStats.push({ label: "set", value: String(completedSets) });
+      if (!isRunning && totalVolume > 0) svgStats.push({ label: "kg volym", value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(totalVolume) });
+      if (!isRunning && exercises.length > 0) svgStats.push({ label: "övningar", value: String(exercises.length) });
+
+      const svgExercises: SvgExercise[] = exerciseSummaries.map((ex) => ({
+        name: ex!.name,
+        detail:
+          ex!.type === "cardio"
+            ? ex!.info
+            : ex!.sets.length > 0
+              ? formatSets(ex!.sets) || ""
+              : ex!.info,
+      }));
+
+      const svgStr = buildWorkoutCardSvg({
+        sessionName,
+        subtitle,
+        stats: svgStats,
+        exercises: svgExercises,
+        isRunning,
+        logoBase64,
+        theme: t,
       });
+
+      // SVG → Canvas → PNG
+      const scale = 3;
+      const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = url;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 360 * scale;
+      canvas.height = 640 * scale;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+
       return new Promise((resolve) => {
         canvas.toBlob((blob) => {
-          resolve(blob);
           setGenerating(false);
+          resolve(blob);
         }, "image/png");
       });
-    } catch {
+    } catch (e) {
+      console.error("SVG render error:", e);
       setGenerating(false);
       return null;
     }
