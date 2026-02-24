@@ -300,7 +300,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   return (
     <>
       <div className="fixed inset-0 z-[60] bg-black/60" onClick={onClose} />
-      <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+      <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
          <div className="flex items-center justify-between p-4 border-b border-border">
            <div className="flex items-center gap-3">
              <button
@@ -326,7 +326,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
            </button>
          </div>
 
-         <div className="p-4 space-y-4">
+         <div className="p-4 space-y-4 overflow-y-auto flex-1">
            <div className="grid grid-cols-2 gap-2">
              <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                <CheckCircle className="w-4 h-4 text-success mx-auto mb-1" />
