@@ -297,7 +297,7 @@ const WorkoutShareCard = ({
             <img
               src={grimIcon}
               alt="Grim"
-              style={{ width: 40, height: 40, borderRadius: 10 }}
+              style={{ width: 64, height: 64, borderRadius: 14 }}
               crossOrigin="anonymous"
             />
             <div style={{ flex: 1 }}>
@@ -354,7 +354,7 @@ const WorkoutShareCard = ({
               <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: t.muted }}>
                 {isRunning ? "Kondition" : "Övningar"}
               </p>
-              {exerciseSummaries.slice(0, 8).map((ex, i) => (
+              {exerciseSummaries.map((ex, i) => (
                 <div key={i}>
                   <div className="flex items-center justify-between">
                     <span
@@ -381,11 +381,6 @@ const WorkoutShareCard = ({
                   )}
                 </div>
               ))}
-              {exerciseSummaries.length > 8 && (
-                <p className="text-[10px] text-center pt-1" style={{ color: t.muted }}>
-                  +{exerciseSummaries.length - 8} fler övningar
-                </p>
-              )}
             </div>
           )}
 
@@ -400,7 +395,7 @@ const WorkoutShareCard = ({
                 GRIM
               </span>
             </div>
-            <span className="text-[10px] font-medium" style={{ color: t.muted }}>
+            <span className="text-base font-medium" style={{ color: t.muted }}>
               grim.lovable.app
             </span>
           </div>
