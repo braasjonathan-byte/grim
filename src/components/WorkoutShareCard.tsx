@@ -456,9 +456,9 @@ const WorkoutShareCard = ({
 };
 
 const StatBox = ({ label, value, bg, text, muted }: { label: string; value: string; bg: string; text: string; muted: string }) => (
-  <div style={{ flex: 1, borderRadius: "12px", padding: "12px", textAlign: "center", background: bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-    <p style={{ fontSize: "24px", fontWeight: 700, color: text, margin: 0, lineHeight: "1.2", textAlign: "center" }}>{value}</p>
-    <p style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: muted, margin: "4px 0 0 0", textAlign: "center" }}>{label}</p>
+  <div style={{ flex: 1, borderRadius: "12px", padding: "14px 8px", textAlign: "center", background: bg }}>
+    <div style={{ fontSize: "24px", fontWeight: 700, color: text, lineHeight: "1", textAlign: "center", width: "100%" }}>{value}</div>
+    <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: muted, marginTop: "6px", textAlign: "center", width: "100%" }}>{label}</div>
   </div>
 );
 
