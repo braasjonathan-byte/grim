@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, UserPlus, Check, Loader2, ChevronDown } from "lucide-react";
+import { Users, UserPlus, Check, Loader2, ChevronDown, Crown } from "lucide-react";
 
 interface AdminUserListProps {
   userId: string;
@@ -10,6 +10,7 @@ interface UserEntry {
   user_id: string;
   nickname: string;
   avatar_url: string | null;
+  is_honorary: boolean;
 }
 
 interface FriendshipStatus {
@@ -22,6 +23,7 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
   const [friendshipStatuses, setFriendshipStatuses] = useState<FriendshipStatus>({});
   const [loading, setLoading] = useState(false);
   const [addingFriend, setAddingFriend] = useState<string | null>(null);
+  const [togglingHonorary, setTogglingHonorary] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -32,7 +34,7 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
     setLoading(true);
 
     const [{ data: profiles }, { data: friendships }] = await Promise.all([
-      supabase.from("profiles").select("user_id, nickname, avatar_url").order("nickname"),
+      supabase.from("profiles").select("user_id, nickname, avatar_url, is_honorary").order("nickname"),
       supabase.from("friendships").select("user_id, friend_id, status").or(`user_id.eq.${userId},friend_id.eq.${userId}`),
     ]);
 
@@ -81,6 +83,13 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
 
     await fetchData();
     setAddingFriend(null);
+  };
+
+  const toggleHonorary = async (targetUserId: string, currentStatus: boolean) => {
+    setTogglingHonorary(targetUserId);
+    await supabase.from("profiles").update({ is_honorary: !currentStatus }).eq("user_id", targetUserId);
+    setUsers((prev) => prev.map((u) => u.user_id === targetUserId ? { ...u, is_honorary: !currentStatus } : u));
+    setTogglingHonorary(null);
   };
 
   const getStatusLabel = (status: FriendshipStatus[string]) => {
@@ -136,8 +145,25 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
                           )}
                         </div>
                         <span className="text-sm font-medium truncate">{u.nickname}</span>
+                        {u.is_honorary && <Crown className="w-3 h-3 text-warning flex-shrink-0" />}
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => toggleHonorary(u.user_id, u.is_honorary)}
+                          disabled={togglingHonorary === u.user_id}
+                          title={u.is_honorary ? "Ta bort hedersmedlemskap" : "Gör till hedersmedlem"}
+                          className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all disabled:opacity-50 ${
+                            u.is_honorary
+                              ? "bg-warning/20 text-warning hover:bg-warning/30"
+                              : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                          }`}
+                        >
+                          {togglingHonorary === u.user_id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>{u.is_honorary ? "👑 Hedersmedlem" : "Medlem"}</>
+                          )}
+                        </button>
                         {isFriend ? (
                           <span className="text-xs text-primary font-semibold flex items-center gap-1">
                             <Check className="w-3 h-3" /> Vän
