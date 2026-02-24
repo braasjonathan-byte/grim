@@ -442,6 +442,24 @@ const WorkoutShareCard = ({
             </div>
           )}
 
+          {/* #BeGrim hashtag */}
+          <div style={{ textAlign: "center", margin: "12px 0 16px" }}>
+            <div
+              style={{
+                display: "inline-block",
+                background: t.badgeBg,
+                color: "#fff",
+                fontSize: "14px",
+                fontWeight: 700,
+                padding: "8px 24px",
+                borderRadius: "9999px",
+                letterSpacing: "0.05em",
+                fontFamily: "'Lora', Georgia, serif",
+              }}
+            >
+              #BeGrim
+            </div>
+          </div>
 
           {/* Footer / branding */}
           <div style={{ position: "absolute", bottom: "24px", left: "24px", right: "24px", display: "table", width: "calc(100% - 48px)" }}>
