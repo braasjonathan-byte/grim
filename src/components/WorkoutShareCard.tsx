@@ -356,24 +356,29 @@ const WorkoutShareCard = ({
               </div>
               {exerciseSummaries.map((ex, i) => (
                 <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "10px" : "0" }}>
-                  <div style={{ overflow: "hidden" }}>
-                    <span style={{ color: t.text, fontSize: "12px", fontWeight: 600 }}>
-                      {ex!.name}
-                    </span>
-                    {ex!.type === "cardio" && (
-                      <span style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", float: "right" }}>
+                  {ex!.type === "cardio" ? (
+                    <div style={{ display: "table", width: "100%" }}>
+                      <div style={{ display: "table-cell", color: t.text, fontSize: "12px", fontWeight: 600 }}>
+                        {ex!.name}
+                      </div>
+                      <div style={{ display: "table-cell", color: t.subtext, fontSize: "10px", fontFamily: "monospace", textAlign: "right", whiteSpace: "nowrap" }}>
                         {ex!.info}
-                      </span>
-                    )}
-                  </div>
-                  {ex!.type === "strength" && ex!.sets.length > 0 && (
-                    <div style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
-                      {formatSets(ex!.sets)}
+                      </div>
                     </div>
-                  )}
-                  {ex!.type === "strength" && ex!.sets.length === 0 && (
-                    <div style={{ color: t.muted, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
-                      {ex!.info}
+                  ) : (
+                    <div>
+                      <div style={{ color: t.text, fontSize: "12px", fontWeight: 600 }}>
+                        {ex!.name}
+                      </div>
+                      {ex!.sets.length > 0 ? (
+                        <div style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                          {formatSets(ex!.sets)}
+                        </div>
+                      ) : (
+                        <div style={{ color: t.muted, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                          {ex!.info}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -402,13 +407,13 @@ const WorkoutShareCard = ({
           </div>
 
           {/* Footer / branding */}
-          <div style={{ position: "absolute", bottom: "24px", left: "24px", right: "24px", overflow: "hidden" }}>
-            <span style={{ color: t.muted, fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em" }}>
+          <div style={{ position: "absolute", bottom: "24px", left: "24px", right: "24px", display: "table", width: "calc(100% - 48px)" }}>
+            <div style={{ display: "table-cell", color: t.muted, fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textAlign: "left" }}>
               🔥 GRIM
-            </span>
-            <span style={{ color: t.muted, fontSize: "12px", fontWeight: 500, float: "right" }}>
+            </div>
+            <div style={{ display: "table-cell", color: t.muted, fontSize: "12px", fontWeight: 500, textAlign: "right" }}>
               Ladda ner → grim.lovable.app
-            </span>
+            </div>
           </div>
         </div>
 
