@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { User, Camera, Loader2, Check, Instagram, Music } from "lucide-react";
+import { User, Camera, Loader2, Check, Instagram, Music, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileSectionProps {
@@ -43,12 +43,13 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [spotifyName, setSpotifyName] = useState("");
   const [fetchingSpotify, setFetchingSpotify] = useState(false);
+  const [isHonorary, setIsHonorary] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name")
+        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary")
         .eq("user_id", userId)
         .single();
 
@@ -61,6 +62,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         setSnapchat((data as any).snapchat || "");
         setSpotifyUrl((data as any).spotify_anthem_url || "");
         setSpotifyName((data as any).spotify_anthem_name || "");
+        setIsHonorary(data.is_honorary ?? false);
       }
     };
     fetchProfile();
@@ -162,6 +164,12 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       <div className="flex items-center gap-2">
         <User className="w-4 h-4 text-primary" />
         <span className="text-sm font-semibold">Profil</span>
+      </div>
+
+      {/* Membership status */}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${isHonorary ? "bg-warning/15 text-warning" : "bg-secondary text-muted-foreground"}`}>
+        {isHonorary ? <Crown className="w-4 h-4" /> : <User className="w-4 h-4" />}
+        {isHonorary ? "Hedersmedlem" : "Medlem"}
       </div>
 
       {/* Avatar */}
