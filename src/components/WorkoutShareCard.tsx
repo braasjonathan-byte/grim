@@ -199,7 +199,7 @@ const WorkoutShareCard = ({
     try {
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: null,
-        scale: 3,
+        scale: 4,
         useCORS: true,
         allowTaint: true,
         logging: false,
@@ -330,6 +330,10 @@ const WorkoutShareCard = ({
                 borderRadius: "9999px",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: "1",
               }}
             >
               ✅ Avklarat
@@ -452,9 +456,9 @@ const WorkoutShareCard = ({
 };
 
 const StatBox = ({ label, value, bg, text, muted }: { label: string; value: string; bg: string; text: string; muted: string }) => (
-  <div style={{ flex: 1, borderRadius: "12px", padding: "12px", textAlign: "center", background: bg }}>
-    <p style={{ fontSize: "24px", fontWeight: 700, color: text, margin: 0, lineHeight: 1.2 }}>{value}</p>
-    <p style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: muted, margin: "4px 0 0 0" }}>{label}</p>
+  <div style={{ flex: 1, borderRadius: "12px", padding: "12px", textAlign: "center", background: bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+    <p style={{ fontSize: "24px", fontWeight: 700, color: text, margin: 0, lineHeight: "1.2", textAlign: "center" }}>{value}</p>
+    <p style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: muted, margin: "4px 0 0 0", textAlign: "center" }}>{label}</p>
   </div>
 );
 
