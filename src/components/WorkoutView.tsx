@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -16,6 +16,7 @@ import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
+import AutoSaveInput from "@/components/AutoSaveInput";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -1723,9 +1724,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                         <div key={si} className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, defaultKg, defaultReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                          <input type="number" inputMode="numeric" defaultValue={saved?.reps || defaultReps} onBlur={(e) => saveSetFieldData(0, plan.day, name, si, 'reps', e.target.value, setsCountSingle, defaultKg, defaultReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
+                                          <AutoSaveInput type="number" inputMode="numeric" initialValue={saved?.reps || defaultReps} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, defaultKg, defaultReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
                                           <span className="text-[10px] text-muted-foreground">reps</span>
-                                          <input type="number" inputMode="decimal" defaultValue={saved?.kg || defaultKg} onBlur={(e) => saveSetFieldData(0, plan.day, name, si, 'kg', e.target.value, setsCountSingle, defaultKg, defaultReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                          <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defaultKg} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, defaultKg, defaultReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                         </div>
                                       );
@@ -3243,28 +3244,28 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                             </button>
                                           );
                                         })()}
-                                        <input
+                                        <AutoSaveInput
                                           type="number" inputMode="numeric"
-                                          defaultValue={row.time || String(intervalDuration)}
-                                          onBlur={(e) => {
+                                          initialValue={row.time || String(intervalDuration)}
+                                          onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
-                                            arr[ii] = { ...arr[ii], time: e.target.value };
+                                            arr[ii] = { ...arr[ii], time: v };
                                             saveCondField('intervals', arr as any);
                                           }}
                                           className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none"
                                         />
-                                        <input
+                                        <AutoSaveInput
                                           type="text"
-                                          defaultValue={rowTempo}
-                                          onBlur={(e) => {
+                                          initialValue={rowTempo}
+                                          onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
-                                            arr[ii] = { ...arr[ii], tempo: e.target.value };
+                                            arr[ii] = { ...arr[ii], tempo: v };
                                             // If first row and others empty, apply to all
-                                            if (ii === 0 && e.target.value.trim()) {
+                                            if (ii === 0 && v.trim()) {
                                               const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
                                               if (allEmpty) {
                                                 for (let j = 1; j < arr.length; j++) {
-                                                  arr[j] = { ...arr[j], tempo: e.target.value };
+                                                  arr[j] = { ...arr[j], tempo: v };
                                                 }
                                               }
                                             }
@@ -3359,11 +3360,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-0.5">
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
-                                      <input type="number" inputMode="numeric" defaultValue={displayTime} onBlur={(e) => saveCondField('time', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                      <AutoSaveInput type="number" inputMode="numeric" initialValue={displayTime} onSave={(v) => saveCondField('time', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
                                     </div>
                                     <div className="space-y-0.5">
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">🦶 SPM (steg/min)</label>
-                                      <input type="number" inputMode="numeric" defaultValue={condSaved?.spm || ""} onBlur={(e) => saveCondField('spm', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                      <AutoSaveInput type="number" inputMode="numeric" initialValue={condSaved?.spm || ""} onSave={(v) => saveCondField('spm', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
                                     </div>
                                   </div>
                                   {(() => {
@@ -3384,15 +3385,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
-                                    <input type="number" inputMode="numeric" defaultValue={displayTime} onBlur={(e) => saveCondField('time', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                    <AutoSaveInput type="number" inputMode="numeric" initialValue={displayTime} onSave={(v) => saveCondField('time', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
                                   </div>
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
-                                    <input type="text" inputMode="decimal" defaultValue={displayDist} onBlur={(e) => saveCondField('dist', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                    <AutoSaveInput type="text" inputMode="decimal" initialValue={displayDist} onSave={(v) => saveCondField('dist', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
                                   </div>
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
-                                    <input type="text" defaultValue={displayTempo} onBlur={(e) => saveCondField('tempo', e.target.value)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                    <AutoSaveInput type="text" initialValue={displayTempo} onSave={(v) => saveCondField('tempo', v)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
                                   </div>
                                 </div>
                               )}
@@ -3544,9 +3545,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                         <div key={si} className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, defKg, defReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                          <input type="number" inputMode="numeric" defaultValue={saved?.reps || defReps} onBlur={(e) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', e.target.value, setsCountPlan, defKg, defReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
+                                          <AutoSaveInput type="number" inputMode="numeric" initialValue={saved?.reps || defReps} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, defKg, defReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
                                           <span className="text-[10px] text-muted-foreground">reps</span>
-                                          <input type="number" inputMode="decimal" defaultValue={saved?.kg || defKg} onBlur={(e) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', e.target.value, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                          <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defKg} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                         </div>
                                       );
