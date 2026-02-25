@@ -2492,7 +2492,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                   if (!isStrength) {
                     const isRunning = s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel");
                     const comp = completions[key];
-                    const detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+                    let detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+                    
+                    // Auto-generate conditioning entry for tröskelpass/running with empty details
+                    if (detailParts.length === 0 && isRunning && plan.session_name.trim()) {
+                      const sessionLower = plan.session_name.toLowerCase();
+                      if (sessionLower.includes("tröskel")) {
+                        detailParts = ["Tröskellöpning"];
+                      } else if (sessionLower.includes("långpass")) {
+                        detailParts = ["Löpning"];
+                      } else {
+                        detailParts = ["Löpning"];
+                      }
+                    }
                     // Helper: check if a line is a pure distance suggestion like "Löpning 8.5 km"
                     const isSuggestedDistance = (line: string): { name: string; distance: number } | null => {
                       const trimmed = line.trim();
@@ -2785,6 +2797,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     return null;
                   };
 
+                  // Count completed conditioning sessions for a given session name (for threshold every-5th logic)
+                  const countCompletedCondSessions = (sessionName: string, currentWeek: number): number => {
+                    return plans.filter(p => 
+                      p.session_name === sessionName && p.week < currentWeek
+                    ).filter(p => {
+                      const k = `${p.week}-${p.day}`;
+                      return completions[k]?.done;
+                    }).length;
+                  };
+
                   // Find last logged kg for a strength exercise from completed sessions
                   const findLastLoggedKg = (exerciseName: string, currentWeek: number): number | null => {
                     for (let w = currentWeek - 1; w >= 1; w--) {
@@ -2848,7 +2870,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
                           // Parse conditioning data from the part
                           const { name: condName } = parseExerciseWeight(part);
-                          const condTimeM = part.match(/(\d+)\s*min/);
+                          // Parse interval pattern like "3×10 min (2 min joggvila)" or "3×10 min, 2 min vila"
+                          const intervalMatch = part.match(/(\d+)\s*[×x]\s*(\d+)\s*min(?:\s*[,(]\s*(\d+)\s*(?:min\s*)?(?:jogg)?vila)?/i);
+                          const intervalCount = intervalMatch ? parseInt(intervalMatch[1]) : 0;
+                          const intervalDuration = intervalMatch ? parseInt(intervalMatch[2]) : 0;
+                          const intervalRest = intervalMatch && intervalMatch[3] ? intervalMatch[3] : "";
+                          
+                          const condTimeM = !intervalMatch ? part.match(/(\d+)\s*min/) : null;
                           const condTempoM = part.match(/([\d:.]+)\s*\/km/);
                           const condDistM = part.match(/([\d.,]+)\s*km(?!\/)/);
                           const planTime = condTimeM ? condTimeM[1] : "";
@@ -2925,12 +2953,61 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   </button>
                                 </div>
                               </div>
+                              {/* Interval sets - render each interval like a strength set */}
+                              {intervalCount > 0 && (
+                                <div className="space-y-1">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                    {intervalCount}×{intervalDuration} min{intervalRest ? ` (${intervalRest} min vila)` : ''}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {Array.from({ length: intervalCount }, (_, si) => {
+                                      const intervalSetsKey = `__sets__interval_${condName || part}`;
+                                      const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
+                                      const isDone = setsStr[si] === "1";
+                                      return (
+                                        <button
+                                          key={si}
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const arr = Array.from({ length: intervalCount }, (_, j) => setsStr[j] === "1");
+                                            arr[si] = !arr[si];
+                                            const newStr = arr.map(b => b ? "1" : "0").join("");
+                                            const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                            const updated = { ...existing, [intervalSetsKey]: newStr };
+                                            setCompletions(prev => ({
+                                              ...prev,
+                                              [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                            }));
+                                            await supabase.from("workout_completions").upsert({
+                                              user_id: userId, week: plan.week, day: plan.day,
+                                              done: completions[key]?.done || false,
+                                              skipped: completions[key]?.skipped || false,
+                                              logged_weights: updated
+                                            } as any, { onConflict: "user_id,week,day" });
+                                          }}
+                                          className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                                            isDone
+                                              ? "bg-success border-success text-success-foreground"
+                                              : "border-warning/30 text-muted-foreground hover:border-warning"
+                                          }`}
+                                        >
+                                          {isDone ? <Check className="w-4 h-4" /> : si + 1}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                               {/* Last tempo / conditioning progression suggestion */}
                               {(() => {
                                 const lastLog = findLastConditioningLog(plan.session_name, plan.week);
                                 if (!lastLog) return null;
-                                const weeksSinceLast = plan.week - lastLog.week;
-                                const isSpeedWeek = weeksSinceLast % 2 === 1;
+                                
+                                // For tröskelpass: only suggest distance every 5th completed pass, otherwise suggest tempo
+                                const isThreshold = plan.session_name.toLowerCase().includes("tröskel");
+                                const completedCount = countCompletedCondSessions(plan.session_name, plan.week);
+                                const isDistancePass = isThreshold ? (completedCount > 0 && completedCount % 5 === 0) : (plan.week - lastLog.week) % 2 === 0;
+                                const isSpeedWeek = !isDistancePass;
                                 
                                 if (isSpeedWeek && lastLog.tempo) {
                                   const lastSecs = tempoToSeconds(lastLog.tempo);
@@ -2945,11 +3022,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                           <span className="font-mono font-semibold">{secondsToTempo(lowSecs)}–{secondsToTempo(highSecs)}</span>
                                           <span className="text-muted-foreground ml-1">/km (5% snabbare)</span>
                                         </p>
-                                        <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.tempo}/km</p>
+                                        <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.tempo}/km{isThreshold ? ` (pass ${completedCount + 1})` : ''}</p>
                                       </div>
                                     );
                                   }
-                                } else if (!isSpeedWeek && lastLog.dist) {
+                                } else if (isDistancePass && lastLog.dist) {
                                   const newDist = Math.round(lastLog.dist * 1.1 * 100) / 100;
                                   return (
                                     <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 space-y-0.5">
@@ -2958,7 +3035,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                         <span className="font-mono font-semibold">{newDist} km</span>
                                         <span className="text-muted-foreground ml-1">(+10% ökning)</span>
                                       </p>
-                                      <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.dist} km</p>
+                                      <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.dist} km{isThreshold ? ` (var 5:e pass)` : ''}</p>
                                     </div>
                                   );
                                 }
