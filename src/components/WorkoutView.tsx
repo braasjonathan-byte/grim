@@ -1982,6 +1982,36 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                       </div>
                   }
 
+                    {/* Suggest adding interval training for tröskelpass */}
+                    {(() => {
+                      const isThresholdSession = plan.session_name.toLowerCase().includes("tröskel");
+                      const detailParts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                      const hasInterval = detailParts.some(p => /\d+\s*[×x]\s*\d+\s*min/i.test(p) || p.toLowerCase().includes("intervall"));
+                      if (isThresholdSession && !hasInterval && !conditioningDialog && !showExercisePicker) {
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConditioningDialog({ planId: plan.id, exerciseName: "Intervallträning" });
+                              const lastCondTempo = findLastCondTempo("Intervallträning");
+                              setCondTempoInput(lastCondTempo || "");
+                              setCondTimeInput("");
+                              setCondDistanceInput("");
+                              setCondIntervalsInput("");
+                              setCondRestInput("");
+                              setCondPulseInput("");
+                            }}
+                            className="w-full bg-warning/10 border border-warning/30 rounded-lg p-3 text-left hover:bg-warning/20 transition-colors animate-fade-in"
+                          >
+                            <p className="text-xs font-semibold text-warning flex items-center gap-1.5">
+                              <TrendingUp className="w-3.5 h-3.5" /> Förslag: Lägg till intervallträning
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Tröskelpass inkluderar vanligtvis intervaller. Tryck här för att lägga till.</p>
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
                     {/* Add warmup & exercise buttons */}
                     {!isExercisePickerOpen && !weightDialog && !conditioningDialog ?
                   <div className="space-y-1.5">
