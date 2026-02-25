@@ -3131,6 +3131,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                               {/* Interval checkmarks integrated into per-interval rows below */}
                               {/* Last tempo / conditioning progression suggestion */}
                               {(() => {
+                                if (isStairMachine(condName || part)) return null;
                                 const lastLog = findLastConditioningLog(plan.session_name, plan.week);
                                 if (!lastLog) return null;
                                 
@@ -3427,6 +3428,32 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                         </div>
                                       </div>
                                     );
+                                  })()}
+                                </div>
+                              ) : isStairMachine(condName || part) ? (
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-0.5">
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
+                                      <input type="number" inputMode="numeric" defaultValue={displayTime} onBlur={(e) => saveCondField('time', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">🦶 SPM (steg/min)</label>
+                                      <input type="number" inputMode="numeric" defaultValue={condSaved?.spm || ""} onBlur={(e) => saveCondField('spm', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                    </div>
+                                  </div>
+                                  {(() => {
+                                    const t = parseFloat(condSaved?.time || displayTime || "0");
+                                    const s = parseFloat(condSaved?.spm || "0");
+                                    if (t > 0 && s > 0) {
+                                      return (
+                                        <div className="bg-primary/10 rounded-md px-3 py-2 text-xs flex items-center gap-2">
+                                          <span className="text-muted-foreground">Totalt:</span>
+                                          <span className="font-mono font-bold text-foreground">{Math.round(t * s)} steg</span>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
                                   })()}
                                 </div>
                               ) : (
