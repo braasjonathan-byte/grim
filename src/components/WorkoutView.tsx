@@ -556,6 +556,58 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return (weights?.[`__sets__${exerciseName}`] as string) || "";
   };
 
+  const updateCompletionWeights = async (
+    week: number,
+    day: string,
+    updater: (current: Record<string, any>) => Record<string, any>
+  ) => {
+    const entryKey = `${week}-${day}`;
+    let payload:
+      | { done: boolean; skipped: boolean; user_comment: string; logged_weights: Record<string, any> }
+      | null = null;
+
+    setCompletions((prev) => {
+      const prevComp = prev[entryKey];
+      const currentWeights = (prevComp?.logged_weights || {}) as Record<string, any>;
+      const nextWeights = updater(currentWeights);
+
+      payload = {
+        done: prevComp?.done || false,
+        skipped: prevComp?.skipped || false,
+        user_comment: prevComp?.user_comment || "",
+        logged_weights: nextWeights,
+      };
+
+      return {
+        ...prev,
+        [entryKey]: {
+          ...prevComp,
+          week,
+          day,
+          done: payload.done,
+          skipped: payload.skipped,
+          user_comment: payload.user_comment,
+          logged_weights: nextWeights,
+        },
+      };
+    });
+
+    if (!payload) return;
+
+    await supabase.from("workout_completions").upsert(
+      {
+        user_id: userId,
+        week,
+        day,
+        done: payload.done,
+        skipped: payload.skipped,
+        user_comment: payload.user_comment,
+        logged_weights: payload.logged_weights,
+      } as any,
+      { onConflict: "user_id,week,day" }
+    );
+  };
+
   const toggleSetDone = async (week: number, day: string, exerciseName: string, setIndex: number, totalSets: number, defaultKg?: string, defaultReps?: string) => {
     const k = `${week}-${day}`;
     const current = getSetsDone(k, exerciseName);
@@ -713,21 +765,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const currentData = getSetData(k, exerciseName);
     const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: defaultKg, reps: defaultReps });
     data[setIndex] = { ...data[setIndex], [field]: value };
-    
-    const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
-    const updated = { ...existing, [`__setdata__${exerciseName}`]: JSON.stringify(data) };
-    
-    setCompletions(prev => ({
-      ...prev,
-      [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
+
+    await updateCompletionWeights(week, day, (existing) => ({
+      ...existing,
+      [`__setdata__${exerciseName}`]: JSON.stringify(data),
     }));
-    
-    await supabase.from("workout_completions").upsert({
-      user_id: userId, week, day,
-      done: completions[k]?.done || false,
-      skipped: completions[k]?.skipped || false,
-      logged_weights: updated
-    } as any, { onConflict: "user_id,week,day" });
   };
 
   // Extract RPE from exercise text
@@ -928,7 +970,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   }, [userId, mode, weeks, fetchData]);
 
   useEffect(() => {
-    adaptProgression();
+    // Disabled intentionally: automatic progression mutated users' plan data without explicit action.
   }, [currentWeek, adaptProgression]);
 
   const leavePlan = async () => {
@@ -3178,35 +3220,38 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           }
                           
                           const saveCondField = async (field: string, value: any) => {
-                            const currentData = condSaved || { time: planTime, dist: planDist, tempo: planTempo };
-                            const updated = { ...currentData, [field]: value };
-                            
-                            // Auto-calculate tempo (only for non-interval fields)
-                            if (field !== 'intervals' && (field === 'time' || field === 'dist') && !updated.tempo) {
-                              const t = parseFloat(field === 'time' ? value : updated.time || '0');
-                              const d = parseFloat(String(field === 'dist' ? value : updated.dist || '0').replace(',', '.'));
-                              if (t > 0 && d > 0) {
-                                const tempoMin = t / d;
-                                const mins = Math.floor(tempoMin);
-                                const secs = Math.round((tempoMin - mins) * 60);
-                                updated.tempo = `${mins}:${secs.toString().padStart(2, '0')}`;
+                            const condKey = `__cond__${condName || part}`;
+
+                            await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                              let currentData: Record<string, any> = { time: planTime, dist: planDist, tempo: planTempo };
+                              const rawCurrent = existing[condKey];
+                              if (rawCurrent) {
+                                try {
+                                  const parsed = typeof rawCurrent === "string" ? JSON.parse(rawCurrent) : rawCurrent;
+                                  if (parsed && typeof parsed === "object") {
+                                    currentData = { ...currentData, ...parsed };
+                                  }
+                                } catch {
+                                  // Ignore malformed legacy data
+                                }
                               }
-                            }
-                            
-                            const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                            const newWeights = { ...existing, [`__cond__${condName || part}`]: JSON.stringify(updated) };
-                            
-                            setCompletions(prev => ({
-                              ...prev,
-                              [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: newWeights }
-                            }));
-                            
-                            await supabase.from("workout_completions").upsert({
-                              user_id: userId, week: plan.week, day: plan.day,
-                              done: completions[key]?.done || false,
-                              skipped: completions[key]?.skipped || false,
-                              logged_weights: newWeights
-                            } as any, { onConflict: "user_id,week,day" });
+
+                              const updated = { ...currentData, [field]: value };
+
+                              // Auto-calculate tempo (only for non-interval fields)
+                              if (field !== "intervals" && (field === "time" || field === "dist") && !updated.tempo) {
+                                const t = parseFloat(field === "time" ? value : updated.time || "0");
+                                const d = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
+                                if (t > 0 && d > 0) {
+                                  const tempoMin = t / d;
+                                  const mins = Math.floor(tempoMin);
+                                  const secs = Math.round((tempoMin - mins) * 60);
+                                  updated.tempo = `${mins}:${secs.toString().padStart(2, "0")}`;
+                                }
+                              }
+
+                              return { ...existing, [condKey]: JSON.stringify(updated) };
+                            });
                           };
                           
                           return (
