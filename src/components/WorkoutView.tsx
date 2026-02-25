@@ -252,7 +252,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         setActivePlanWeek(Math.min(Math.max(calcWeek, 1), maxWeek));
       }
 
-      // Auto-navigate to the first incomplete week only on initial load
+      // Auto-navigate to the active (date-based) week on initial load
       if (wks.length > 0 && !initialWeekSet) {
         const compMap: Record<string, boolean> = {};
         if (compData) {
@@ -260,10 +260,44 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
             if (c.done) compMap[`${c.week}-${c.day}`] = true;
           }
         }
-        const targetWeek = wks.find(w => {
-          const weekPlans = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
-          return weekPlans.length > 0 && !weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
-        });
+
+        // Prefer the date-based active week (calculated above)
+        const planWeeks = wks.filter(w => w > 0);
+        const dateBasedWeek = (() => {
+          if (nonSinglePlans.length === 0) return null;
+          const earliest = nonSinglePlans.reduce((min, p) =>
+            (p as any).created_at < (min as any).created_at ? p : min
+          );
+          const planStart = getMonday(new Date((earliest as any).created_at));
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const daysSinceStart = Math.floor((now.getTime() - planStart.getTime()) / 86400000);
+          const calcWeek = Math.floor(daysSinceStart / 7) + 1;
+          const maxWeek = Math.max(...planWeeks);
+          return Math.min(Math.max(calcWeek, 1), maxWeek);
+        })();
+
+        let targetWeek: number | undefined;
+
+        if (dateBasedWeek && planWeeks.includes(dateBasedWeek)) {
+          // Use the date-based active week if it has incomplete workouts
+          const weekPlans = planData.filter(p => p.week === dateBasedWeek && p.session_name.trim() !== "" && p.details.trim() !== "");
+          const allDone = weekPlans.length > 0 && weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
+          targetWeek = allDone
+            // If active week is fully done, try next incomplete week
+            ? wks.find(w => {
+                const wp = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
+                return wp.length > 0 && !wp.every(p => compMap[`${p.week}-${p.day}`]);
+              }) ?? dateBasedWeek
+            : dateBasedWeek;
+        } else {
+          // Fallback: first incomplete week
+          targetWeek = wks.find(w => {
+            const weekPlans = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
+            return weekPlans.length > 0 && !weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
+          });
+        }
+
         setCurrentWeek(targetWeek ?? wks[wks.length - 1]);
         setInitialWeekSet(true);
       }
