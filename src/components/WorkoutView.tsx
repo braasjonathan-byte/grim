@@ -1984,7 +1984,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
                     {/* Suggest adding interval training for tröskelpass */}
                     {(() => {
-                      const isThresholdSession = plan.session_name.toLowerCase().includes("tröskel");
+                      const isThresholdSession = plan.session_name.toLowerCase().includes("tröskel") || plan.details.toLowerCase().includes("tröskellöpning");
                       const detailParts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
                       const hasInterval = detailParts.some(p => /\d+\s*[×x]\s*\d+\s*min/i.test(p) || p.toLowerCase().includes("intervall"));
                       if (isThresholdSession && !hasInterval && !conditioningDialog && !showExercisePicker) {
