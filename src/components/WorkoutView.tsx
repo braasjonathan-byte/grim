@@ -2953,51 +2953,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   </button>
                                 </div>
                               </div>
-                              {/* Interval sets - render each interval like a strength set */}
-                              {intervalCount > 0 && (
-                                <div className="space-y-1">
-                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                                    {intervalCount}×{intervalDuration} min{intervalRest ? ` (${intervalRest} min vila)` : ''}
-                                  </p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {Array.from({ length: intervalCount }, (_, si) => {
-                                      const intervalSetsKey = `__sets__interval_${condName || part}`;
-                                      const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
-                                      const isDone = setsStr[si] === "1";
-                                      return (
-                                        <button
-                                          key={si}
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            const arr = Array.from({ length: intervalCount }, (_, j) => setsStr[j] === "1");
-                                            arr[si] = !arr[si];
-                                            const newStr = arr.map(b => b ? "1" : "0").join("");
-                                            const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                                            const updated = { ...existing, [intervalSetsKey]: newStr };
-                                            setCompletions(prev => ({
-                                              ...prev,
-                                              [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
-                                            }));
-                                            await supabase.from("workout_completions").upsert({
-                                              user_id: userId, week: plan.week, day: plan.day,
-                                              done: completions[key]?.done || false,
-                                              skipped: completions[key]?.skipped || false,
-                                              logged_weights: updated
-                                            } as any, { onConflict: "user_id,week,day" });
-                                          }}
-                                          className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                                            isDone
-                                              ? "bg-success border-success text-success-foreground"
-                                              : "border-warning/30 text-muted-foreground hover:border-warning"
-                                          }`}
-                                        >
-                                          {isDone ? <Check className="w-4 h-4" /> : si + 1}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
+                              {/* Interval checkmarks integrated into per-interval rows below */}
                               {/* Last tempo / conditioning progression suggestion */}
                               {(() => {
                                 const lastLog = findLastConditioningLog(plan.session_name, plan.week);
@@ -3075,8 +3031,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                               {intervalCount > 0 ? (
                                 <div className="space-y-2">
                                   {/* Per-interval header */}
-                                  <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1.5 items-end">
-                                    <span className="w-5" />
+                                  <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                                    <span className="w-7" />
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-warning" />Tid</span>
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-warning" />Distans</span>
@@ -3099,8 +3055,41 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     }
                                     if (row.dist && !rowDist) rowDist = row.dist;
                                     return (
-                                      <div key={ii} className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1.5 items-center">
-                                        <span className="text-[10px] text-muted-foreground font-bold w-5 text-center">{ii + 1}</span>
+                                      <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                        {(() => {
+                                          const intervalSetsKey = `__sets__interval_${condName || part}`;
+                                          const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
+                                          const isDone = setsStr[ii] === "1";
+                                          return (
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const arr = Array.from({ length: intervalCount }, (_, j) => setsStr[j] === "1");
+                                                arr[ii] = !arr[ii];
+                                                const newStr = arr.map(b => b ? "1" : "0").join("");
+                                                const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                                const updated = { ...existing, [intervalSetsKey]: newStr };
+                                                setCompletions(prev => ({
+                                                  ...prev,
+                                                  [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                                }));
+                                                await supabase.from("workout_completions").upsert({
+                                                  user_id: userId, week: plan.week, day: plan.day,
+                                                  done: completions[key]?.done || false,
+                                                  skipped: completions[key]?.skipped || false,
+                                                  logged_weights: updated
+                                                } as any, { onConflict: "user_id,week,day" });
+                                              }}
+                                              className={`w-7 h-7 rounded-md border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
+                                                isDone
+                                                  ? "bg-success border-success text-success-foreground"
+                                                  : "border-warning/30 text-muted-foreground hover:border-warning"
+                                              }`}
+                                            >
+                                              {isDone ? <Check className="w-3.5 h-3.5" /> : ii + 1}
+                                            </button>
+                                          );
+                                        })()}
                                         <input
                                           type="number" inputMode="numeric"
                                           defaultValue={row.time || String(intervalDuration)}
