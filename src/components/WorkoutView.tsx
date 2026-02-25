@@ -3088,7 +3088,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     const activeCount = savedIntervals.length > 0 ? savedIntervals.length : intervalCount;
                                     
                                     return Array.from({ length: activeCount }, (_, ii) => {
-                                    const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: '', dist: '' };
+                                    const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: planTempo || '', dist: '' };
                                     const rowTempo = row.tempo;
                                     const rowTime = parseFloat(row.time) || 0;
                                     // Auto-calc distance
@@ -3142,7 +3142,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                           type="number" inputMode="numeric"
                                           defaultValue={row.time || String(intervalDuration)}
                                           onBlur={(e) => {
-                                            const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
+                                            const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], time: e.target.value };
                                             saveCondField('intervals', arr as any);
                                           }}
@@ -3152,7 +3152,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                           type="text"
                                           defaultValue={rowTempo}
                                           onBlur={(e) => {
-                                            const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
+                                            const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], tempo: e.target.value };
                                             // If first row and others empty, apply to all
                                             if (ii === 0 && e.target.value.trim()) {
@@ -3180,7 +3180,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const currentIntervals = condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' }));
+                                        const currentIntervals = condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' }));
                                         if (currentIntervals.length > 1) {
                                           const newArr = currentIntervals.slice(0, -1);
                                           saveCondField('intervals', newArr as any);
@@ -3211,7 +3211,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const currentIntervals = condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' }));
+                                        const currentIntervals = condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' }));
                                         const lastRow = currentIntervals[currentIntervals.length - 1] || { time: String(intervalDuration), tempo: '', dist: '' };
                                         const newArr = [...currentIntervals, { time: lastRow.time || String(intervalDuration), tempo: '', dist: '' }];
                                         saveCondField('intervals', newArr as any);
