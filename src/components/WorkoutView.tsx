@@ -98,6 +98,26 @@ const formatDayDisplay = (day: string) => {
   return day.replace(/_[a-z0-9]+$/i, "");
 };
 
+const WEEKDAY_NAMES_SV = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag"];
+
+// Extract date from a single workout day key and return weekday name
+const getWeekdayFromDayKey = (day: string): string | null => {
+  const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!dateMatch) return null;
+  const date = parseISO(dateMatch[1]);
+  return WEEKDAY_NAMES_SV[date.getDay()];
+};
+
+// Compute virtual week number for a single workout based on the earliest workout's Monday
+const computeSingleWeek = (dayKey: string, firstMonday: Date): number => {
+  const dateMatch = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!dateMatch) return 1;
+  const date = parseISO(dateMatch[1]);
+  const monday = getMonday(date);
+  const diffDays = Math.floor((monday.getTime() - firstMonday.getTime()) / 86400000);
+  return Math.floor(diffDays / 7) + 1;
+};
+
 const getMonday = (d: Date) => {
   const date = new Date(d);
   const day = date.getDay() || 7;
@@ -123,6 +143,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [singleName, setSingleName] = useState("");
   const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [showCopyPicker, setShowCopyPicker] = useState(false);
+  const [singleCurrentWeek, setSingleCurrentWeek] = useState(1);
 
   // Exercise browser for single workouts
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
@@ -927,6 +948,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       tempo: null
     });
 
+    // Navigate to the week of the new workout
+    const allSinglePlans = plans.filter(p => p.week === 0);
+    const allDates = [...allSinglePlans.map(p => p.day), uniqueKey];
+    const sortedDates = allDates.map(d => d.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]).filter(Boolean).sort();
+    if (sortedDates.length > 0) {
+      const fm = getMonday(parseISO(sortedDates[0]!));
+      const newWeek = computeSingleWeek(uniqueKey, fm);
+      setSingleCurrentWeek(newWeek);
+    }
+
     setSingleName("");
     setSingleDate(new Date());
     setShowAddSingle(false);
@@ -1403,12 +1434,40 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   // Single workouts mode
   if (mode === "single") {
     const singlePlans = plans.filter((p) => p.week === 0).sort((a, b) => {
-      // Sort by date descending (newest first)
+      // Sort by date ascending within week view
       const dateA = a.day.match(/^(\d{4}-\d{2}-\d{2})/) ? a.day : "0000";
       const dateB = b.day.match(/^(\d{4}-\d{2}-\d{2})/) ? b.day : "0000";
-      return dateB.localeCompare(dateA);
+      return dateA.localeCompare(dateB);
     });
-    const doneCount = singlePlans.filter((p) => completions[`0-${p.day}`]?.done).length;
+
+    // Compute virtual weeks from dates
+    const firstMonday = singlePlans.length > 0 ? (() => {
+      const earliest = singlePlans.reduce((min, p) => {
+        const d = p.day.match(/^(\d{4}-\d{2}-\d{2})/);
+        const md = min.day.match(/^(\d{4}-\d{2}-\d{2})/);
+        return d && md && d[1] < md[1] ? p : min;
+      });
+      const dateMatch = earliest.day.match(/^(\d{4}-\d{2}-\d{2})/);
+      return dateMatch ? getMonday(parseISO(dateMatch[1])) : getMonday(new Date());
+    })() : getMonday(new Date());
+
+    // Group plans by virtual week
+    const weekGroups = new Map<number, PlanDay[]>();
+    for (const p of singlePlans) {
+      const wk = computeSingleWeek(p.day, firstMonday);
+      if (!weekGroups.has(wk)) weekGroups.set(wk, []);
+      weekGroups.get(wk)!.push(p);
+    }
+    const singleWeeks = [...weekGroups.keys()].sort((a, b) => a - b);
+
+    // Auto-set to latest week with incomplete workouts on first render
+    const effectiveWeek = singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
+      (singleWeeks.length > 0 ? singleWeeks[singleWeeks.length - 1] : 1);
+
+    const weekPlans = weekGroups.get(effectiveWeek) || [];
+    const weekDoneCount = weekPlans.filter((p) => completions[`0-${p.day}`]?.done).length;
+    const totalDoneCount = singlePlans.filter((p) => completions[`0-${p.day}`]?.done).length;
+    const singleWeekIdx = singleWeeks.indexOf(effectiveWeek);
 
     return (
       <>
@@ -1417,7 +1476,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           <div>
             <h2 className="text-xl font-black tracking-tight">Mina pass</h2>
             <p className="text-xs text-muted-foreground">
-              {doneCount} av {singlePlans.length} avklarade
+              {totalDoneCount} av {singlePlans.length} avklarade totalt
             </p>
           </div>
           {singlePlans.length > 0 &&
@@ -1434,22 +1493,74 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           }
         </div>
 
-        {singlePlans.length > 0 &&
-        <div>
-            <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
-              <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${Math.round(doneCount / singlePlans.length * 100)}%` }} />
-
+        {/* Week navigation */}
+        {singleWeeks.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => singleWeekIdx > 0 && setSingleCurrentWeek(singleWeeks[singleWeekIdx - 1])}
+                disabled={singleWeekIdx <= 0}
+                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <div className="text-center">
+                <h2 className="text-2xl font-black tracking-tight">Vecka {effectiveWeek}</h2>
+                <p className="text-sm text-muted-foreground">
+                  av {singleWeeks.length} {singleWeeks.length === 1 ? "vecka" : "veckor"}
+                </p>
+              </div>
+              <button
+                onClick={() => singleWeekIdx < singleWeeks.length - 1 && setSingleCurrentWeek(singleWeeks[singleWeekIdx + 1])}
+                disabled={singleWeekIdx >= singleWeeks.length - 1}
+                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
-            <p className="text-xs text-muted-foreground text-center mt-1">
-              {Math.round(doneCount / singlePlans.length * 100)}% avklarat
-            </p>
+
+            {/* Week pills */}
+            {singleWeeks.length > 1 && (
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {singleWeeks.map((wk) => {
+                  const wPlans = weekGroups.get(wk) || [];
+                  const wDone = wPlans.filter(p => completions[`0-${p.day}`]?.done).length;
+                  const allDone = wPlans.length > 0 && wDone === wPlans.length;
+                  return (
+                    <button
+                      key={wk}
+                      onClick={() => setSingleCurrentWeek(wk)}
+                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        effectiveWeek === wk
+                          ? "bg-primary text-primary-foreground"
+                          : allDone
+                          ? "bg-success/20 text-success"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}>
+                      V{wk}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Week progress */}
+            {weekPlans.length > 0 && (
+              <div>
+                <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${weekPlans.length > 0 ? Math.round(weekDoneCount / weekPlans.length * 100) : 0}%` }} />
+                </div>
+                <p className="text-xs text-muted-foreground text-center mt-1">
+                  {weekDoneCount} av {weekPlans.length} pass denna vecka
+                </p>
+              </div>
+            )}
           </div>
-        }
+        )}
 
         <div className="space-y-2">
-          {singlePlans.map((plan) => {
+          {weekPlans.map((plan) => {
+            const weekdayName = getWeekdayFromDayKey(plan.day);
             const key = `0-${plan.day}`;
             const completion = completions[key];
             const isDone = completion?.done || false;
@@ -1489,6 +1600,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     <Icon className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
+                    {weekdayName && (
+                      <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">{weekdayName}</span>
+                    )}
                     <span className={`font-semibold text-sm truncate block ${isDone ? "line-through text-muted-foreground" : ""}`}>
                       {plan.session_name}
                     </span>
