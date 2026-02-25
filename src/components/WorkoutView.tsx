@@ -1268,6 +1268,33 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     }).eq("user_id", userId).eq("week", week).eq("day", day);
   };
 
+  // Delete a logged conditioning payload stored in logged_weights (__cond__...)
+  const deleteCondWeightLog = async (week: number, day: string, condWeightKey: string) => {
+    const key = `${week}-${day}`;
+    const currentWeights = (completions[key]?.logged_weights || {}) as Record<string, any>;
+    if (!Object.prototype.hasOwnProperty.call(currentWeights, condWeightKey)) return;
+
+    const { [condWeightKey]: _removed, ...restWeights } = currentWeights;
+    const payload = Object.keys(restWeights).length > 0 ? restWeights : null;
+
+    setCompletions(prev => ({
+      ...prev,
+      [key]: { ...prev[key], logged_weights: payload as any }
+    }));
+
+    await supabase.from("workout_completions").upsert(
+      {
+        user_id: userId,
+        week,
+        day,
+        done: completions[key]?.done || false,
+        skipped: completions[key]?.skipped || false,
+        logged_weights: payload,
+      } as any,
+      { onConflict: "user_id,week,day" }
+    );
+  };
+
   // Start editing a logged conditioning line
   const startEditCondLine = (planId: string, lineIndex: number, name: string, info: string) => {
     const timeM = info.match(/(\d+(?:[.,]\d+)?)\s*min/);
@@ -2745,17 +2772,32 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             );
                           })()}
                           {(() => {
-                            // Parse logged conditioning data from plan details AND direct logged fields
-                            const loggedEntries: { name: string; time?: string; tempo?: string; distance?: string; pulse?: string; spm?: string; steps?: string; lineIndex: number; source: "details" | "direct"; rawInfo?: string }[] = [];
-                            // 1. Check plan details for logged lines (format: "Name — time, tempo, distance, pulse")
+                            // Parse logged conditioning data from plan details + saved conditioning payloads + direct fields
+                            const loggedEntries: {
+                              name: string;
+                              time?: string;
+                              tempo?: string;
+                              distance?: string;
+                              pulse?: string;
+                              spm?: string;
+                              steps?: string;
+                              lineIndex: number;
+                              source: "details" | "direct" | "weights";
+                              rawInfo?: string;
+                              weightKey?: string;
+                            }[] = [];
+
+                            // 1) Parse plan details for logged lines (format: "Name — time, tempo, distance, pulse")
                             const detailLines = plan.details.split(/[;\n]/).map(l => l.trim()).filter(Boolean);
                             for (let li = 0; li < detailLines.length; li++) {
                               const line = detailLines[li];
                               const dashMatch = line.match(/^(.+?)\s*—\s*(.+)$/);
                               if (!dashMatch) continue;
+
                               const eName = dashMatch[1].trim();
                               const info = dashMatch[2];
                               const entry: any = { name: eName, lineIndex: li, source: "details", rawInfo: info };
+
                               const timeM = info.match(/(\d+(?:[.,]\d+)?)\s*min/);
                               if (timeM) entry.time = timeM[1];
                               const tempoM = info.match(/(\d+:\d+)\/km/);
@@ -2768,15 +2810,67 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                               if (spmM) entry.spm = spmM[1];
                               const stepsM = info.match(/(\d+)\s*steg/);
                               if (stepsM) entry.steps = stepsM[1];
+
                               if (entry.time || entry.tempo || entry.distance || entry.pulse || entry.spm || entry.steps) {
                                 loggedEntries.push(entry);
                               }
                             }
-                            // 2. Also include direct logged fields if present (skip for stair machine entries)
-                            const hasStairData = loggedEntries.some(e => e.spm || e.steps);
+
+                            // 2) Merge in saved conditioning payloads from logged_weights (__cond__...)
+                            const condWeights = (comp?.logged_weights || {}) as Record<string, any>;
+                            for (const [weightKey, rawValue] of Object.entries(condWeights)) {
+                              if (!weightKey.startsWith("__cond__")) continue;
+                              try {
+                                const data = typeof rawValue === "string" ? JSON.parse(rawValue) : rawValue;
+                                if (!data || typeof data !== "object") continue;
+
+                                const name = weightKey.replace(/^__cond__/, "").trim() || "Kondition";
+                                const time = data.time ? String(data.time) : undefined;
+                                const tempo = data.tempo ? String(data.tempo).replace(/\s*\/km\s*$/i, "") : undefined;
+                                const distance = data.dist ? String(data.dist).replace(",", ".") : undefined;
+                                const pulse = data.pulse ? String(data.pulse) : undefined;
+                                const spm = data.spm ? String(data.spm) : undefined;
+                                const steps = data.steps
+                                  ? String(data.steps)
+                                  : (() => {
+                                      const t = parseFloat(String(data.time ?? "").replace(",", "."));
+                                      const s = parseFloat(String(data.spm ?? "").replace(",", "."));
+                                      return t > 0 && s > 0 ? String(Math.round(t * s)) : undefined;
+                                    })();
+
+                                if (!(time || tempo || distance || pulse || spm || steps)) continue;
+
+                                const existing = loggedEntries.find((entry) => entry.name.toLowerCase() === name.toLowerCase());
+                                if (existing) {
+                                  if (!existing.time && time) existing.time = time;
+                                  if (!existing.tempo && tempo) existing.tempo = tempo;
+                                  if (!existing.distance && distance) existing.distance = distance;
+                                  if (!existing.pulse && pulse) existing.pulse = pulse;
+                                  if (!existing.spm && spm) existing.spm = spm;
+                                  if (!existing.steps && steps) existing.steps = steps;
+                                  continue;
+                                }
+
+                                loggedEntries.push({
+                                  name,
+                                  time,
+                                  tempo,
+                                  distance,
+                                  pulse,
+                                  spm,
+                                  steps,
+                                  lineIndex: -1,
+                                  source: "weights",
+                                  weightKey,
+                                });
+                              } catch {}
+                            }
+
+                            // 3) Include legacy direct fields if present (but never for stair machine data)
+                            const hasStairData = loggedEntries.some((e) => e.spm || e.steps);
                             if (!hasStairData && comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km)) {
-                              const hasDirectData = !loggedEntries.length || 
-                                (comp.logged_distance_km && !loggedEntries.some(e => e.distance));
+                              const hasDirectData = !loggedEntries.length ||
+                                (comp.logged_distance_km && !loggedEntries.some((e) => e.distance));
                               if (hasDirectData) {
                                 loggedEntries.unshift({
                                   name: plan.session_name || "Kondition",
@@ -2788,6 +2882,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 });
                               }
                             }
+
                             if (loggedEntries.length === 0) return null;
 
                             // Check if we're editing one of these lines
@@ -2895,6 +2990,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                             ev.stopPropagation();
                                             if (e.source === "details") {
                                               deleteConditioningLine(plan.id, e.lineIndex);
+                                            } else if (e.source === "weights" && e.weightKey) {
+                                              deleteCondWeightLog(plan.week, plan.day, e.weightKey);
                                             } else {
                                               deleteDirectCondLog(plan.week, plan.day);
                                             }
