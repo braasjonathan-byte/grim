@@ -3003,9 +3003,27 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 const lastLog = findLastConditioningLog(plan.session_name, plan.week);
                                 if (!lastLog) return null;
                                 
-                                // For tröskelpass: only suggest distance every 5th completed pass, otherwise suggest tempo
+                                // For interval sessions: never suggest distance, only suggest increasing interval time
+                                const isInterval = intervalCount > 0;
                                 const isThreshold = plan.session_name.toLowerCase().includes("tröskel");
                                 const completedCount = countCompletedCondSessions(plan.session_name, plan.week);
+                                
+                                if (isInterval) {
+                                  // For intervals: suggest increasing interval duration (time), never distance
+                                  const suggestedDuration = intervalDuration + 1;
+                                  return (
+                                    <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 space-y-0.5">
+                                      <p className="text-[10px] text-primary font-semibold uppercase tracking-wider">📈 Föreslagen tid</p>
+                                      <p className="text-xs text-foreground">
+                                        <span className="font-mono font-semibold">{intervalCount}×{suggestedDuration} min</span>
+                                        <span className="text-muted-foreground ml-1">(+1 min/intervall)</span>
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground">Nuvarande: {intervalCount}×{intervalDuration} min{isThreshold ? ` (pass ${completedCount + 1})` : ''}</p>
+                                    </div>
+                                  );
+                                }
+                                
+                                // For non-interval conditioning: threshold = distance every 5th, others alternate
                                 const isDistancePass = isThreshold ? (completedCount > 0 && completedCount % 5 === 0) : (plan.week - lastLog.week) % 2 === 0;
                                 const isSpeedWeek = !isDistancePass;
                                 
