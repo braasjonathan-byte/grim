@@ -332,6 +332,47 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return () => clearTimeout(retryTimer);
   }, [fetchData]);
 
+  // Backfill empty Tröskellöpning sessions with interval details for existing plans
+  useEffect(() => {
+    if (mode !== "plan" || plans.length === 0) return;
+    const backfill = async () => {
+      const updates: { id: string; details: string }[] = [];
+      for (const plan of plans) {
+        const sn = plan.session_name.toLowerCase();
+        if (!sn.includes("tröskel")) continue;
+        // Skip if already has interval details or meaningful content
+        const d = plan.details.trim().toLowerCase();
+        if (/\d+\s*[×x]\s*\d+\s*min/i.test(plan.details)) continue;
+        if (d && d !== "tröskellöpning" && d.length > 20) continue;
+        // Skip completed workouts
+        const k = `${plan.week}-${plan.day}`;
+        if (completions[k]?.done) continue;
+
+        const w = plan.week;
+        const isDeload = w === 5 || w >= 10;
+        const thresholdSets = isDeload ? 2 : Math.min(6, 3 + Math.floor((w - 1) / 2));
+        const thresholdMin = isDeload ? 10 : w <= 3 ? 10 : w <= 6 ? 8 : w <= 9 ? 6 : 5;
+        const thresholdRest = thresholdMin >= 8 ? "2 min joggvila" : "90 s joggvila";
+        const newDetails = isDeload
+          ? `2×12 min (2 min joggvila) – deload`
+          : `${thresholdSets}×${thresholdMin} min (${thresholdRest})`;
+
+        updates.push({ id: plan.id, details: newDetails });
+      }
+      if (updates.length > 0) {
+        for (const u of updates) {
+          await supabase.from("workout_plans").update({ details: u.details }).eq("id", u.id);
+        }
+        setPlans(prev => prev.map(p => {
+          const upd = updates.find(u => u.id === p.id);
+          return upd ? { ...p, details: upd.details } : p;
+        }));
+      }
+    };
+    backfill();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, plans.length]);
+
   useEffect(() => {
     if (mode === "single" || mode === "plan") {
       supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
