@@ -174,6 +174,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [condIntervalsInput, setCondIntervalsInput] = useState("");
   const [condRestInput, setCondRestInput] = useState("");
   const [condPulseInput, setCondPulseInput] = useState("");
+  const [condSpmInput, setCondSpmInput] = useState("");
 
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
@@ -1116,6 +1117,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // Helper: check if exercise is a stair machine (Trappmaskin)
+  const isStairMachine = (name: string) => name.toLowerCase().includes("trappmaskin");
+
   const autoCalcCond = (time: string, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
     const t = parseFloat(time.replace(",", "."));
     const p = parseCondTempo(tempo);
@@ -1142,9 +1146,14 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
       setConditioningDialog({ planId, exerciseName });
-      // Try to find last logged tempo for this exercise
-      const lastCondTempo = findLastCondTempo(exerciseName);
-      setCondTempoInput(lastCondTempo || "");
+      if (isStairMachine(exerciseName)) {
+        setCondTempoInput("");
+        setCondSpmInput("");
+      } else {
+        const lastCondTempo = findLastCondTempo(exerciseName);
+        setCondTempoInput(lastCondTempo || "");
+        setCondSpmInput("");
+      }
       setCondTimeInput("");
       setCondDistanceInput("");
       setCondIntervalsInput("");
@@ -1195,6 +1204,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
     const infoParts: string[] = [];
     const isInterval = conditioningDialog.exerciseName.toLowerCase().includes("intervall");
+    const isStair = isStairMachine(conditioningDialog.exerciseName);
     
     if (isInterval && condIntervalsInput.trim()) {
       const intervalPart = `${condIntervalsInput.trim()}×${condTimeInput.trim() || "?"} min`;
@@ -1203,8 +1213,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     } else {
       if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
     }
-    if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
-    if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+    if (isStair) {
+      if (condSpmInput.trim()) infoParts.push(`${condSpmInput.trim()} spm`);
+      const time = parseFloat(condTimeInput.replace(",", "."));
+      const spm = parseFloat(condSpmInput.replace(",", "."));
+      if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
+    } else {
+      if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
+      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+    }
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
     
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
@@ -1223,6 +1240,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setCondIntervalsInput("");
     setCondRestInput("");
     setCondPulseInput("");
+    setCondSpmInput("");
     setIsWarmupMode(false);
   };
 
@@ -1256,10 +1274,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const tempoM = info.match(/(\d+:\d+)\/km/);
     const distM = info.match(/([\d.,]+)\s*km(?!\/)/);
     const pulseM = info.match(/(\d+)\s*bpm/);
+    const spmM = info.match(/(\d+)\s*spm/);
     setCondTimeInput(timeM ? timeM[1] : "");
     setCondTempoInput(tempoM ? tempoM[1] : "");
     setCondDistanceInput(distM ? distM[1].replace(",", ".") : "");
     setCondPulseInput(pulseM ? pulseM[1] : "");
+    setCondSpmInput(spmM ? spmM[1] : "");
     setCondIntervalsInput("");
     setCondRestInput("");
     setEditingCondLine({ planId, lineIndex, name });
@@ -1274,9 +1294,17 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const plan = plans.find(p => p.id === editingCondLine.planId);
     if (!plan) return;
     const infoParts: string[] = [];
+    const isStair = isStairMachine(editingCondLine.name);
     if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
-    if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
-    if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+    if (isStair) {
+      if (condSpmInput.trim()) infoParts.push(`${condSpmInput.trim()} spm`);
+      const time = parseFloat(condTimeInput.replace(",", "."));
+      const spm = parseFloat(condSpmInput.replace(",", "."));
+      if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
+    } else {
+      if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
+      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+    }
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
     const entry = infoParts.length > 0 ? `${editingCondLine.name} — ${infoParts.join(", ")}` : editingCondLine.name;
     const separator = plan.details.includes("\n") ? "\n" : "; ";
@@ -1290,6 +1318,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setCondTempoInput("");
     setCondDistanceInput("");
     setCondPulseInput("");
+    setCondSpmInput("");
   };
 
   const addExerciseToPlan = async (plan: PlanDay, exerciseName: string) => {
@@ -1932,7 +1961,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           <Footprints className="w-4 h-4 text-warning" />
                           {conditioningDialog.exerciseName}
                         </h4>
-                        {condTempoInput && (
+                        {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{condTempoInput}/km</span>
                           </p>
@@ -1949,6 +1978,38 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             </div>
                           </div>
                         )}
+                        {isStairMachine(conditioningDialog.exerciseName) ? (
+                          <>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                                <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => { setCondTimeInput(e.target.value); }} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
+                                <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              </div>
+                            </div>
+                            {(() => {
+                              const time = parseFloat(condTimeInput.replace(",", "."));
+                              const spm = parseFloat(condSpmInput.replace(",", "."));
+                              if (time > 0 && spm > 0) {
+                                return (
+                                  <div className="bg-primary/10 rounded-md px-3 py-2 text-xs flex items-center gap-2">
+                                    <span className="text-muted-foreground">Totalt:</span>
+                                    <span className="font-mono font-bold text-foreground">{Math.round(time * spm)} steg</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
+                              <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
@@ -2008,6 +2069,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                         </div>
+                          </>
+                        )}
                         <div className="flex gap-2">
                           <button
                         onClick={addConditioningExercise}
@@ -2015,7 +2078,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");}}
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                             Avbryt
                           </button>
@@ -2683,7 +2746,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           })()}
                           {(() => {
                             // Parse logged conditioning data from plan details AND direct logged fields
-                            const loggedEntries: { name: string; time?: string; tempo?: string; distance?: string; pulse?: string; lineIndex: number; source: "details" | "direct"; rawInfo?: string }[] = [];
+                            const loggedEntries: { name: string; time?: string; tempo?: string; distance?: string; pulse?: string; spm?: string; steps?: string; lineIndex: number; source: "details" | "direct"; rawInfo?: string }[] = [];
                             // 1. Check plan details for logged lines (format: "Name — time, tempo, distance, pulse")
                             const detailLines = plan.details.split(/[;\n]/).map(l => l.trim()).filter(Boolean);
                             for (let li = 0; li < detailLines.length; li++) {
@@ -2701,7 +2764,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                               if (distM) entry.distance = distM[1].replace(",", ".");
                               const pulseM = info.match(/(\d+)\s*bpm/);
                               if (pulseM) entry.pulse = pulseM[1];
-                              if (entry.time || entry.tempo || entry.distance || entry.pulse) {
+                              const spmM = info.match(/(\d+)\s*spm/);
+                              if (spmM) entry.spm = spmM[1];
+                              const stepsM = info.match(/(\d+)\s*steg/);
+                              if (stepsM) entry.steps = stepsM[1];
+                              if (entry.time || entry.tempo || entry.distance || entry.pulse || entry.spm || entry.steps) {
                                 loggedEntries.push(entry);
                               }
                             }
@@ -2727,6 +2794,38 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                               return (
                                 <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
                                   <p className="text-xs font-bold text-success">✏️ Redigera: {editingCondLine.name}</p>
+                                  {isStairMachine(editingCondLine.name) ? (
+                                    <>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                                          <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                        </div>
+                                        <div>
+                                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
+                                          <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                        </div>
+                                      </div>
+                                      {(() => {
+                                        const time = parseFloat(condTimeInput.replace(",", "."));
+                                        const spm = parseFloat(condSpmInput.replace(",", "."));
+                                        if (time > 0 && spm > 0) {
+                                          return (
+                                            <div className="bg-primary/10 rounded-md px-3 py-2 text-xs flex items-center gap-2">
+                                              <span className="text-muted-foreground">Totalt:</span>
+                                              <span className="font-mono font-bold text-foreground">{Math.round(time * spm)} steg</span>
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
+                                      <div>
+                                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
+                                        <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
@@ -2747,11 +2846,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                     </div>
                                   </div>
+                                    </>
+                                  )}
                                   <div className="flex gap-2">
                                     <button onClick={saveEditedCondLine} className="flex-1 py-2 bg-success text-success-foreground rounded-md text-xs font-semibold">
                                       Spara
                                     </button>
-                                    <button onClick={() => { setEditingCondLine(null); setCondTimeInput(""); setCondTempoInput(""); setCondDistanceInput(""); setCondPulseInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                    <button onClick={() => { setEditingCondLine(null); setCondTimeInput(""); setCondTempoInput(""); setCondDistanceInput(""); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                                       Avbryt
                                     </button>
                                   </div>
@@ -2769,6 +2870,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                         {loggedEntries.length > 1 && <p className="text-[10px] font-semibold text-success/80">{e.name}</p>}
                                         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                                           {e.time && <p className="text-xs">⏱ <span className="font-mono font-semibold">{e.time} min</span></p>}
+                                          {e.spm && <p className="text-xs">🦶 <span className="font-mono font-semibold">{e.spm} spm</span></p>}
+                                          {e.steps && <p className="text-xs">👣 <span className="font-mono font-semibold">{e.steps} steg</span></p>}
                                           {e.tempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{e.tempo}/km</span></p>}
                                           {e.distance && <p className="text-xs">📏 <span className="font-mono font-semibold">{e.distance} km</span></p>}
                                           {e.pulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{e.pulse} bpm</span></p>}
@@ -3568,7 +3671,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         <Footprints className="w-4 h-4 text-warning" />
                         {conditioningDialog.exerciseName}
                       </h4>
-                      {condTempoInput && (
+                      {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{condTempoInput}/km</span>
                         </p>
@@ -3585,6 +3688,38 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           </div>
                         </div>
                       )}
+                      {isStairMachine(conditioningDialog.exerciseName) ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
+                              <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
+                              <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            </div>
+                          </div>
+                          {(() => {
+                            const time = parseFloat(condTimeInput.replace(",", "."));
+                            const spm = parseFloat(condSpmInput.replace(",", "."));
+                            if (time > 0 && spm > 0) {
+                              return (
+                                <div className="bg-primary/10 rounded-md px-3 py-2 text-xs flex items-center gap-2">
+                                  <span className="text-muted-foreground">Totalt:</span>
+                                  <span className="font-mono font-bold text-foreground">{Math.round(time * spm)} steg</span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                          <div>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
+                            <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          </div>
+                        </>
+                      ) : (
+                        <>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
@@ -3607,11 +3742,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                       </div>
+                        </>
+                      )}
                       <div className="flex gap-2">
                         <button onClick={addConditioningExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
                           <Plus className="w-3.5 h-3.5" /> Lägg till
                         </button>
-                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                           Avbryt
                         </button>
                       </div>
