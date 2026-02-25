@@ -362,6 +362,20 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
                   b.distanceKm += parseFloat(String(data.dist).replace(",", ".")) || 0;
                   distFound = true;
                 }
+                // Sum distances from per-interval data
+                if (data?.intervals && Array.isArray(data.intervals)) {
+                  for (const iv of data.intervals) {
+                    if (iv.tempo && iv.time) {
+                      const tm = iv.tempo.match(/^(\d+)[:\.](\d+)$/);
+                      const ts = iv.tempo.match(/^(\d+)$/);
+                      let mpk = 0;
+                      if (tm) mpk = (parseInt(tm[1]) * 60 + parseInt(tm[2])) / 60;
+                      else if (ts) mpk = parseInt(ts[1]);
+                      const t = parseFloat(iv.time) || 0;
+                      if (mpk > 0 && t > 0) { b.distanceKm += t / mpk; distFound = true; }
+                    }
+                  }
+                }
               } catch {}
             }
           }
@@ -462,6 +476,20 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
               if (data?.dist) {
                 total += parseFloat(String(data.dist).replace(",", ".")) || 0;
                 distFound = true;
+              }
+              // Sum distances from per-interval data
+              if (data?.intervals && Array.isArray(data.intervals)) {
+                for (const iv of data.intervals) {
+                  if (iv.tempo && iv.time) {
+                    const tm = iv.tempo.match(/^(\d+)[:\.](\d+)$/);
+                    const ts = iv.tempo.match(/^(\d+)$/);
+                    let mpk = 0;
+                    if (tm) mpk = (parseInt(tm[1]) * 60 + parseInt(tm[2])) / 60;
+                    else if (ts) mpk = parseInt(ts[1]);
+                    const t = parseFloat(iv.time) || 0;
+                    if (mpk > 0 && t > 0) { total += t / mpk; distFound = true; }
+                  }
+                }
               }
             } catch {}
           }
