@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { format, parseISO } from "date-fns";
+import { sv } from "date-fns/locale";
 import FriendProfileView from "@/components/FriendProfileView";
 
 interface FriendActivity {
@@ -61,6 +63,45 @@ interface WorkoutComment {
 }
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+
+const WEEKDAY_NAMES_SV = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag"];
+
+const getMondayDate = (d: Date) => {
+  const date = new Date(d);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const computeSingleWeek = (dayKey: string, firstMonday: Date): number => {
+  const dateMatch = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!dateMatch) return 1;
+  const date = parseISO(dateMatch[1]);
+  const monday = getMondayDate(date);
+  const diffDays = Math.floor((monday.getTime() - firstMonday.getTime()) / 86400000);
+  return Math.floor(diffDays / 7) + 1;
+};
+
+const getWeekdayFromDayKey = (day: string): string | null => {
+  const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!dateMatch) return null;
+  const date = parseISO(dateMatch[1]);
+  return WEEKDAY_NAMES_SV[date.getDay()];
+};
+
+const formatDayDisplay = (day: string) => {
+  try {
+    const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      const date = parseISO(dateMatch[1]);
+      return format(date, "d MMM yyyy", { locale: sv });
+    }
+  } catch {}
+  return day.replace(/_[a-z0-9]+$/i, "");
+};
+
+const isStandaloneDayKey = (day: string) => /^\d{4}-\d{2}-\d{2}/.test(day);
 
 const getSessionIcon = (session: string) => {
   const s = session.toLowerCase();
@@ -328,23 +369,63 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     }
 
     if (allPlans.length > 0) {
-      setFriendPlans(allPlans);
-      const wks = [...new Set(allPlans.map((p) => p.week))].sort((a, b) => a - b);
-      setFriendWeeks(wks);
-
-      // Find the first week with incomplete scheduled sessions
-      const compMap: Record<string, boolean> = {};
-      if (completions) {
-        for (const c of completions) {
-          if (c.done) compMap[`${c.week}-${c.day}`] = true;
+      // Check if this friend only has standalone sessions (week=0)
+      const hasOnlyStandalone = allPlans.every((p) => p.week === 0);
+      
+      if (hasOnlyStandalone) {
+        // Compute virtual weeks for standalone sessions
+        const standalonePlans = [...allPlans].sort((a, b) => {
+          const dA = a.day.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || "";
+          const dB = b.day.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || "";
+          return dA.localeCompare(dB);
+        });
+        
+        const earliest = standalonePlans[0];
+        const dateMatch = earliest.day.match(/^(\d{4}-\d{2}-\d{2})/);
+        const firstMonday = dateMatch ? getMondayDate(parseISO(dateMatch[1])) : getMondayDate(new Date());
+        
+        // Group by virtual week
+        const weekGroups = new Map<number, typeof allPlans>();
+        for (const p of standalonePlans) {
+          const wk = computeSingleWeek(p.day, firstMonday);
+          if (!weekGroups.has(wk)) weekGroups.set(wk, []);
+          weekGroups.get(wk)!.push(p);
         }
+        const virtualWeeks = [...weekGroups.keys()].sort((a, b) => a - b);
+        
+        setFriendPlans(allPlans);
+        setFriendWeeks(virtualWeeks);
+        
+        // Find the latest week with a completed session
+        const compMap: Record<string, boolean> = {};
+        if (completions) {
+          for (const c of completions) {
+            if (c.done) compMap[`${c.week}-${c.day}`] = true;
+          }
+        }
+        const latestDoneWeek = [...virtualWeeks].reverse().find((w) => {
+          const wPlans = weekGroups.get(w) || [];
+          return wPlans.some((p) => compMap[`${p.week}-${p.day}`]);
+        });
+        setFriendCurrentWeek(latestDoneWeek ?? virtualWeeks[virtualWeeks.length - 1] ?? 1);
+      } else {
+        // Normal plan-based weeks (filter out week=0 from week list if mixed)
+        setFriendPlans(allPlans);
+        const wks = [...new Set(allPlans.map((p) => p.week))].filter(w => w > 0).sort((a, b) => a - b);
+        setFriendWeeks(wks);
+
+        const compMap: Record<string, boolean> = {};
+        if (completions) {
+          for (const c of completions) {
+            if (c.done) compMap[`${c.week}-${c.day}`] = true;
+          }
+        }
+        const latestDoneWeek = [...wks].reverse().find((w) => {
+          const weekPlans = allPlans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
+          return weekPlans.some((p) => compMap[`${p.week}-${p.day}`]);
+        });
+        setFriendCurrentWeek(latestDoneWeek ?? wks[wks.length - 1] ?? 1);
       }
-      // Find the latest week that has at least one completed session
-      const latestDoneWeek = [...wks].reverse().find((w) => {
-        const weekPlans = allPlans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
-        return weekPlans.some((p) => compMap[`${p.week}-${p.day}`]);
-      });
-      setFriendCurrentWeek(latestDoneWeek ?? wks[wks.length - 1] ?? 1);
     }
 
     if (completions) {
@@ -598,9 +679,25 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
   // Friend workout detail view
   if (viewingFriend) {
-    const weekDays = friendPlans
-      .filter((p) => p.week === friendCurrentWeek)
-      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+    const hasOnlyStandalone = friendPlans.every((p) => p.week === 0);
+    
+    // For standalone sessions, compute virtual week groups
+    let weekDays: FriendPlanDay[];
+    if (hasOnlyStandalone) {
+      const standaloneSorted = [...friendPlans].sort((a, b) => {
+        const dA = a.day.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || "";
+        const dB = b.day.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || "";
+        return dA.localeCompare(dB);
+      });
+      const earliest = standaloneSorted[0];
+      const dateMatch = earliest?.day.match(/^(\d{4}-\d{2}-\d{2})/);
+      const firstMonday = dateMatch ? getMondayDate(parseISO(dateMatch[1])) : getMondayDate(new Date());
+      weekDays = standaloneSorted.filter((p) => computeSingleWeek(p.day, firstMonday) === friendCurrentWeek);
+    } else {
+      weekDays = friendPlans
+        .filter((p) => p.week === friendCurrentWeek)
+        .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+    }
 
     const weekIdx = friendWeeks.indexOf(friendCurrentWeek);
     const doneCount = weekDays.filter((d) => friendCompletions[`${d.week}-${d.day}`]?.done).length;
@@ -732,6 +829,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                 const dayLikes = likes.filter((l) => l.week === plan.week && l.day === plan.day);
                 const hasLiked = dayLikes.some((l) => l.user_id === userId);
                 const likeCount = dayLikes.length;
+                const isStandalone = isStandaloneDayKey(plan.day);
+                const weekdayName = isStandalone ? getWeekdayFromDayKey(plan.day) : null;
 
                 return (
                   <div
@@ -748,14 +847,23 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xs font-mono text-muted-foreground uppercase">{plan.day}</span>
-                          <span className={`font-semibold text-sm truncate ${isDone ? "line-through text-muted-foreground" : ""}`}>
-                            {plan.session_name}
+                        {weekdayName && (
+                          <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">{weekdayName}</span>
+                        )}
+                        {!isStandalone && (
+                          <span className="text-xs font-mono text-muted-foreground uppercase block">{plan.day}</span>
+                        )}
+                        <span className={`font-semibold text-sm truncate block ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                          {plan.session_name}
+                        </span>
+                        {isStandalone && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            {formatDayDisplay(plan.day)}
                           </span>
-                        </div>
+                        )}
                         {plan.tempo && plan.tempo !== "—" && (
-                          <span className="text-xs text-muted-foreground font-mono">{plan.tempo}</span>
+                          <span className="text-xs text-muted-foreground font-mono block">{plan.tempo}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
