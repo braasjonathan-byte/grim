@@ -446,20 +446,14 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
     setCompletions((prev) => ({
       ...prev,
-      [key]: { week, day, done: newDone, skipped: false, user_comment: comments[key] || "" }
+      [key]: { ...prev[key], week, day, done: newDone, skipped: false, user_comment: comments[key] || "" }
     }));
 
-    await supabase.from("workout_completions").upsert(
-      {
-        user_id: userId,
-        week,
-        day,
-        done: newDone,
-        skipped: false,
-        user_comment: comments[key] || ""
-      } as any,
-      { onConflict: "user_id,week,day" }
-    );
+    await safeUpsertCompletion(week, day, {
+      done: newDone,
+      skipped: false,
+      user_comment: comments[key] || "",
+    });
 
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
@@ -487,20 +481,14 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
     setCompletions((prev) => ({
       ...prev,
-      [key]: { week, day, done: false, skipped: newSkipped, user_comment: comments[key] || "" }
+      [key]: { ...prev[key], week, day, done: false, skipped: newSkipped, user_comment: comments[key] || "" }
     }));
 
-    await supabase.from("workout_completions").upsert(
-      {
-        user_id: userId,
-        week,
-        day,
-        done: false,
-        skipped: newSkipped,
-        user_comment: comments[key] || ""
-      } as any,
-      { onConflict: "user_id,week,day" }
-    );
+    await safeUpsertCompletion(week, day, {
+      done: false,
+      skipped: newSkipped,
+      user_comment: comments[key] || "",
+    });
   };
 
   const saveComment = async (week: number, day: string) => {
@@ -514,16 +502,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setComments((prev) => ({ ...prev, [key]: updated }));
     setCommentInput((prev) => ({ ...prev, [key]: "" }));
 
-    await supabase.from("workout_completions").upsert(
-      {
-        user_id: userId,
-        week,
-        day,
-        done: completions[key]?.done || false,
-        user_comment: updated
-      },
-      { onConflict: "user_id,week,day" }
-    );
+    await safeUpsertCompletion(week, day, { user_comment: updated });
   };
 
   const deleteCommentLine = async (week: number, day: string, lineIndex: number) => {
@@ -532,16 +511,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     lines.splice(lineIndex, 1);
     const updated = lines.join("\n");
     setComments((prev) => ({ ...prev, [key]: updated }));
-    await supabase.from("workout_completions").upsert(
-      {
-        user_id: userId,
-        week,
-        day,
-        done: completions[key]?.done || false,
-        user_comment: updated
-      },
-      { onConflict: "user_id,week,day" }
-    );
+    await safeUpsertCompletion(week, day, { user_comment: updated });
   };
 
   const deleteFriendComment = async (commentId: string) => {
@@ -556,43 +526,37 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return (weights?.[`__sets__${exerciseName}`] as string) || "";
   };
 
-  const updateCompletionWeights = async (
+  // Safe upsert that always preserves ALL existing fields to prevent data loss
+  const safeUpsertCompletion = async (
     week: number,
     day: string,
-    updater: (current: Record<string, any>) => Record<string, any>
+    updates: Partial<Completion & { logged_weights: Record<string, any> | null }>
   ) => {
     const entryKey = `${week}-${day}`;
-    let payload:
-      | { done: boolean; skipped: boolean; user_comment: string; logged_weights: Record<string, any> }
-      | null = null;
+    let payload: Record<string, any> = {};
 
-    setCompletions((prev) => {
-      const prevComp = prev[entryKey];
-      const currentWeights = (prevComp?.logged_weights || {}) as Record<string, any>;
-      const nextWeights = updater(currentWeights);
-
-      payload = {
-        done: prevComp?.done || false,
-        skipped: prevComp?.skipped || false,
-        user_comment: prevComp?.user_comment || "",
-        logged_weights: nextWeights,
+    setCompletions((prev: Record<string, any>) => {
+      const prevComp = prev[entryKey] || {};
+      const merged = {
+        week,
+        day,
+        done: prevComp.done || false,
+        skipped: prevComp.skipped || false,
+        user_comment: prevComp.user_comment || "",
+        logged_tempo: prevComp.logged_tempo ?? null,
+        logged_pulse: prevComp.logged_pulse ?? null,
+        logged_distance_km: prevComp.logged_distance_km ?? null,
+        logged_weights: prevComp.logged_weights ?? null,
+        ...updates,
       };
+
+      payload = merged;
 
       return {
         ...prev,
-        [entryKey]: {
-          ...prevComp,
-          week,
-          day,
-          done: payload.done,
-          skipped: payload.skipped,
-          user_comment: payload.user_comment,
-          logged_weights: nextWeights,
-        },
+        [entryKey]: merged as any,
       };
     });
-
-    if (!payload) return;
 
     await supabase.from("workout_completions").upsert(
       {
@@ -602,10 +566,32 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         done: payload.done,
         skipped: payload.skipped,
         user_comment: payload.user_comment,
+        logged_tempo: payload.logged_tempo,
+        logged_pulse: payload.logged_pulse,
+        logged_distance_km: payload.logged_distance_km,
         logged_weights: payload.logged_weights,
       } as any,
       { onConflict: "user_id,week,day" }
     );
+  };
+
+  const updateCompletionWeights = async (
+    week: number,
+    day: string,
+    updater: (current: Record<string, any>) => Record<string, any>
+  ) => {
+    const entryKey = `${week}-${day}`;
+    let nextWeights: Record<string, any> = {};
+
+    // Compute the new weights first using current state
+    setCompletions((prev: Record<string, any>) => {
+      const prevComp = prev[entryKey] || {};
+      const currentWeights = (prevComp.logged_weights || {}) as Record<string, any>;
+      nextWeights = updater(currentWeights);
+      return prev; // Don't update yet - safeUpsertCompletion will do it
+    });
+
+    await safeUpsertCompletion(week, day, { logged_weights: nextWeights });
   };
 
   const toggleSetDone = async (week: number, day: string, exerciseName: string, setIndex: number, totalSets: number, defaultKg?: string, defaultReps?: string) => {
@@ -656,12 +642,10 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       [k]: { ...prev[k], week, day, done: newDone, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
     }));
 
-    await supabase.from("workout_completions").upsert({
-      user_id: userId, week, day,
+    await safeUpsertCompletion(week, day, {
       done: newDone,
-      skipped: completions[k]?.skipped || false,
-      logged_weights: updated
-    } as any, { onConflict: "user_id,week,day" });
+      logged_weights: updated,
+    });
 
     // Notify friends and check fireworks if workout was just completed
     if (allExercisesDone && !completions[k]?.done && plan) {
@@ -737,12 +721,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         ...prev,
         [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
       }));
-      await supabase.from("workout_completions").upsert({
-        user_id: userId, week, day,
-        done: completions[k]?.done || false,
-        skipped: completions[k]?.skipped || false,
-        logged_weights: updated
-      } as any, { onConflict: "user_id,week,day" });
+      await safeUpsertCompletion(week, day, { logged_weights: updated });
     }
   };
 
@@ -1324,17 +1303,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       [key]: { ...prev[key], logged_weights: payload as any }
     }));
 
-    await supabase.from("workout_completions").upsert(
-      {
-        user_id: userId,
-        week,
-        day,
-        done: completions[key]?.done || false,
-        skipped: completions[key]?.skipped || false,
-        logged_weights: payload,
-      } as any,
-      { onConflict: "user_id,week,day" }
-    );
+    await safeUpsertCompletion(week, day, { logged_weights: payload });
   };
 
   // Start editing a logged conditioning line
@@ -3439,12 +3408,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                                   ...prev,
                                                   [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
                                                 }));
-                                                await supabase.from("workout_completions").upsert({
-                                                  user_id: userId, week: plan.week, day: plan.day,
-                                                  done: completions[key]?.done || false,
-                                                  skipped: completions[key]?.skipped || false,
-                                                  logged_weights: updated
-                                                } as any, { onConflict: "user_id,week,day" });
+                                                await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
                                               }}
                                               className={`w-7 h-7 rounded-md border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
                                                 isDone
@@ -3496,7 +3460,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   {/* Add/remove interval buttons */}
                                   <div className="flex items-center gap-2 pt-1">
                                     <button
-                                      onClick={(e) => {
+                                      onClick={async (e) => {
                                         e.stopPropagation();
                                         const currentIntervals = condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' }));
                                         if (currentIntervals.length > 1) {
@@ -3513,12 +3477,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                               ...prev,
                                               [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
                                             }));
-                                            supabase.from("workout_completions").upsert({
-                                              user_id: userId, week: plan.week, day: plan.day,
-                                              done: completions[key]?.done || false,
-                                              skipped: completions[key]?.skipped || false,
-                                              logged_weights: updated
-                                            } as any, { onConflict: "user_id,week,day" });
+                                            await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
                                           }
                                         }
                                       }}
