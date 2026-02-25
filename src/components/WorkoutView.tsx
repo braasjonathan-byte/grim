@@ -2967,6 +2967,45 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 if (isInterval) {
                                   // For intervals: suggest increasing interval duration (time), never distance
                                   const suggestedDuration = intervalDuration + 1;
+                                  // Extract last logged tempo from interval data
+                                  let lastIntervalTempo: string | null = null;
+                                  if (lastLog) {
+                                    // Check if last log has interval-level data with tempo
+                                    const matchingPlansForTempo = plans.filter(p => 
+                                      p.session_name === plan.session_name && p.week < plan.week
+                                    ).sort((a, b) => b.week - a.week);
+                                    for (const mp of matchingPlansForTempo) {
+                                      const mk = `${mp.week}-${mp.day}`;
+                                      const mc = completions[mk];
+                                      if (mc?.done) {
+                                        const mw = mc.logged_weights as Record<string, any> | null;
+                                        if (mw) {
+                                          for (const [wk, val] of Object.entries(mw)) {
+                                            if (wk.startsWith('__cond__')) {
+                                              try {
+                                                const data = typeof val === 'string' ? JSON.parse(val) : val;
+                                                if (data.intervals && Array.isArray(data.intervals)) {
+                                                  const tempos = data.intervals.filter((r: any) => r.tempo?.trim()).map((r: any) => r.tempo);
+                                                  if (tempos.length > 0) {
+                                                    // Calculate average tempo from intervals
+                                                    let totalSecs = 0; let count = 0;
+                                                    for (const t of tempos) {
+                                                      const s = tempoToSeconds(t);
+                                                      if (s) { totalSecs += s; count++; }
+                                                    }
+                                                    if (count > 0) lastIntervalTempo = secondsToTempo(Math.round(totalSecs / count));
+                                                  }
+                                                }
+                                                if (!lastIntervalTempo && data.tempo) lastIntervalTempo = data.tempo;
+                                              } catch {}
+                                            }
+                                          }
+                                        }
+                                        if (!lastIntervalTempo && mc.logged_tempo) lastIntervalTempo = mc.logged_tempo;
+                                        if (lastIntervalTempo) break;
+                                      }
+                                    }
+                                  }
                                   return (
                                     <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 space-y-0.5">
                                       <p className="text-[10px] text-primary font-semibold uppercase tracking-wider">📈 Föreslagen tid</p>
@@ -2975,6 +3014,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                         <span className="text-muted-foreground ml-1">(+1 min/intervall)</span>
                                       </p>
                                       <p className="text-[10px] text-muted-foreground">Nuvarande: {intervalCount}×{intervalDuration} min{isThreshold ? ` (pass ${completedCount + 1})` : ''}</p>
+                                      {lastIntervalTempo && (
+                                        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                          <Timer className="w-3 h-3" />
+                                          Senast loggat tempo: <span className="font-mono font-semibold text-foreground">{lastIntervalTempo}/km</span>
+                                        </p>
+                                      )}
                                     </div>
                                   );
                                 }
@@ -3037,10 +3082,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-warning" />Distans</span>
                                   </div>
-                                  {/* Per-interval rows */}
-                                  {Array.from({ length: intervalCount }, (_, ii) => {
-                                    const intervalsData: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
-                                    const row = intervalsData[ii] || { time: String(intervalDuration), tempo: '', dist: '' };
+                                  {/* Per-interval rows - use saved intervals length or plan count */}
+                                  {(() => {
+                                    const savedIntervals: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
+                                    const activeCount = savedIntervals.length > 0 ? savedIntervals.length : intervalCount;
+                                    
+                                    return Array.from({ length: activeCount }, (_, ii) => {
+                                    const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: '', dist: '' };
                                     const rowTempo = row.tempo;
                                     const rowTime = parseFloat(row.time) || 0;
                                     // Auto-calc distance
@@ -3064,7 +3112,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                             <button
                                               onClick={async (e) => {
                                                 e.stopPropagation();
-                                                const arr = Array.from({ length: intervalCount }, (_, j) => setsStr[j] === "1");
+                                                const arr = Array.from({ length: activeCount }, (_, j) => setsStr[j] === "1");
                                                 arr[ii] = !arr[ii];
                                                 const newStr = arr.map(b => b ? "1" : "0").join("");
                                                 const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
@@ -3094,7 +3142,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                           type="number" inputMode="numeric"
                                           defaultValue={row.time || String(intervalDuration)}
                                           onBlur={(e) => {
-                                            const arr = [...(condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
+                                            const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], time: e.target.value };
                                             saveCondField('intervals', arr as any);
                                           }}
@@ -3104,7 +3152,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                           type="text"
                                           defaultValue={rowTempo}
                                           onBlur={(e) => {
-                                            const arr = [...(condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
+                                            const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], tempo: e.target.value };
                                             // If first row and others empty, apply to all
                                             if (ii === 0 && e.target.value.trim()) {
@@ -3125,13 +3173,60 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                         </span>
                                       </div>
                                     );
-                                  })}
+                                  });
+                                  })()}
+                                  {/* Add/remove interval buttons */}
+                                  <div className="flex items-center gap-2 pt-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentIntervals = condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' }));
+                                        if (currentIntervals.length > 1) {
+                                          const newArr = currentIntervals.slice(0, -1);
+                                          saveCondField('intervals', newArr as any);
+                                          // Also trim the sets tracking
+                                          const intervalSetsKey = `__sets__interval_${condName || part}`;
+                                          const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
+                                          if (setsStr.length > newArr.length) {
+                                            const trimmedStr = setsStr.slice(0, newArr.length);
+                                            const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                            const updated = { ...existing, [intervalSetsKey]: trimmedStr };
+                                            setCompletions(prev => ({
+                                              ...prev,
+                                              [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                            }));
+                                            supabase.from("workout_completions").upsert({
+                                              user_id: userId, week: plan.week, day: plan.day,
+                                              done: completions[key]?.done || false,
+                                              skipped: completions[key]?.skipped || false,
+                                              logged_weights: updated
+                                            } as any, { onConflict: "user_id,week,day" });
+                                          }
+                                        }
+                                      }}
+                                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary"
+                                    >
+                                      <Trash2 className="w-3 h-3" /> Ta bort intervall
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentIntervals = condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' }));
+                                        const lastRow = currentIntervals[currentIntervals.length - 1] || { time: String(intervalDuration), tempo: '', dist: '' };
+                                        const newArr = [...currentIntervals, { time: lastRow.time || String(intervalDuration), tempo: '', dist: '' }];
+                                        saveCondField('intervals', newArr as any);
+                                      }}
+                                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-md bg-secondary/50 hover:bg-secondary"
+                                    >
+                                      <Plus className="w-3 h-3" /> Lägg till intervall
+                                    </button>
+                                  </div>
                                   {/* Summary row */}
                                   {(() => {
                                     const intervalsData: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
                                     let totDist = 0;
                                     let totTime = 0;
-                                    intervalsData.forEach((r, ii) => {
+                                    intervalsData.forEach((r) => {
                                       const t = parseFloat(r.time) || 0;
                                       totTime += t;
                                       if (r.tempo && t > 0) {
