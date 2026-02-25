@@ -10,14 +10,12 @@ clientsClaim();
 // Clean up old caches from previous versions
 cleanupOutdatedCaches();
 
-// On activate, clear ALL non-workbox caches to force fresh content
+// On activate, clear ALL caches (including old precache) to force fresh content
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames
-          .filter((name) => !name.includes("workbox-precache"))
-          .map((name) => caches.delete(name))
+        cacheNames.map((name) => caches.delete(name))
       );
     })
   );
