@@ -195,6 +195,15 @@ const WorkoutLogDialog = ({
     const saveTempo = isInterval ? avgTempo : tempo.trim();
     const saveDist = isInterval ? totalDistance : parseFloat(distance) || null;
 
+    // First read existing record to preserve logged_weights
+    const { data: existing } = await supabase
+      .from("workout_completions")
+      .select("logged_weights")
+      .eq("user_id", userId)
+      .eq("week", week)
+      .eq("day", day)
+      .maybeSingle();
+
     await supabase.from("workout_completions").upsert(
       {
         user_id: userId,
@@ -205,6 +214,7 @@ const WorkoutLogDialog = ({
         logged_tempo: saveTempo || null,
         logged_pulse: pulse ? parseInt(pulse) || null : null,
         logged_distance_km: saveDist || null,
+        logged_weights: existing?.logged_weights ?? existingLog?.logged_weights ?? null,
       } as any,
       { onConflict: "user_id,week,day" }
     );
@@ -377,8 +387,23 @@ const WorkoutLogDialog = ({
         <div className="flex gap-2 pt-2">
           <button
             onClick={async () => {
+              // Preserve existing logged_weights when skipping logging
+              const { data: existing } = await supabase
+                .from("workout_completions")
+                .select("logged_weights, logged_tempo, logged_pulse, logged_distance_km")
+                .eq("user_id", userId)
+                .eq("week", week)
+                .eq("day", day)
+                .maybeSingle();
+
               await supabase.from("workout_completions").upsert(
-                { user_id: userId, week, day, done: true, skipped: false } as any,
+                {
+                  user_id: userId, week, day, done: true, skipped: false,
+                  logged_weights: existing?.logged_weights ?? null,
+                  logged_tempo: existing?.logged_tempo ?? null,
+                  logged_pulse: existing?.logged_pulse ?? null,
+                  logged_distance_km: existing?.logged_distance_km ?? null,
+                } as any,
                 { onConflict: "user_id,week,day" }
               );
               notifyFriendsOfCompletion(day, week, sessionName);

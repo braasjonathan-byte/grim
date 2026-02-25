@@ -597,6 +597,15 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       [key]: { week: plan.week, day: plan.day, done: newDone, user_comment: current?.user_comment || null },
     }));
 
+    // Preserve existing fields to prevent data loss
+    const { data: existing } = await supabase
+      .from("workout_completions")
+      .select("logged_weights, logged_tempo, logged_pulse, logged_distance_km, user_comment")
+      .eq("user_id", fid)
+      .eq("week", plan.week)
+      .eq("day", plan.day)
+      .maybeSingle();
+
     await supabase.from("workout_completions").upsert(
       {
         user_id: fid,
@@ -604,6 +613,11 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         day: plan.day,
         done: newDone,
         skipped: false,
+        logged_weights: existing?.logged_weights ?? null,
+        logged_tempo: existing?.logged_tempo ?? null,
+        logged_pulse: existing?.logged_pulse ?? null,
+        logged_distance_km: existing?.logged_distance_km ?? null,
+        user_comment: existing?.user_comment ?? "",
       } as any,
       { onConflict: "user_id,week,day" }
     );

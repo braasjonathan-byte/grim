@@ -62,7 +62,15 @@ const ReplacementWorkoutDialog = ({
       })
       .eq("id", planId);
 
-    // Mark as done (not skipped, since they did a replacement)
+    // Preserve existing logged data to prevent data loss
+    const { data: existing } = await supabase
+      .from("workout_completions")
+      .select("logged_weights, logged_tempo, logged_pulse, logged_distance_km")
+      .eq("user_id", userId)
+      .eq("week", week)
+      .eq("day", day)
+      .maybeSingle();
+
     await supabase.from("workout_completions").upsert(
       {
         user_id: userId,
@@ -71,6 +79,10 @@ const ReplacementWorkoutDialog = ({
         done: true,
         skipped: false,
         user_comment: `Ersatte: ${sessionName}`,
+        logged_weights: existing?.logged_weights ?? null,
+        logged_tempo: existing?.logged_tempo ?? null,
+        logged_pulse: existing?.logged_pulse ?? null,
+        logged_distance_km: existing?.logged_distance_km ?? null,
       } as any,
       { onConflict: "user_id,week,day" }
     );
