@@ -247,6 +247,17 @@ const Index = () => {
           return !lastSeen || new Date(a.timestamp) > new Date(lastSeen);
         });
         setFriendActivities(unseen);
+
+        // Immediately mark these activities as seen so they don't reappear on next login
+        if (unseen.length > 0) {
+          for (const a of unseen) {
+            const prev = seenMap[a.nickname];
+            if (!prev || new Date(a.timestamp) > new Date(prev)) {
+              seenMap[a.nickname] = a.timestamp;
+            }
+          }
+          localStorage.setItem("seenFriendActivities", JSON.stringify(seenMap));
+        }
       }
 
       // Real-time subscription for new completions
