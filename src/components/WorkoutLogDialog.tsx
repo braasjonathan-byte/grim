@@ -94,9 +94,18 @@ const WorkoutLogDialog = ({
   };
 
   const autoCalc = (newTime: string, newTempo: string, newDist: string, changed: "time" | "tempo" | "distance") => {
-    const t = parseFloat(newTime.replace(",", "."));
+    let t = parseFloat(newTime.replace(",", "."));
     const p = parseTempo(newTempo);
     const d = parseFloat(newDist.replace(",", "."));
+
+    // For interval workouts: auto-fill duration from details if not manually set
+    if (changed === "tempo" && p && p > 0 && !(t > 0)) {
+      const runMinutes = parseRunningMinutes(details);
+      if (runMinutes) {
+        t = runMinutes;
+        setDuration(String(runMinutes));
+      }
+    }
 
     if (changed === "time" && t > 0 && p && p > 0) {
       setDistance(String(Math.round((t / p) * 100) / 100));
