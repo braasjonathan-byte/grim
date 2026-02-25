@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Save, Search, X, Info } from "lucide-react";
+import { Plus, Trash2, Search, X, Info } from "lucide-react";
+import AutoSaveInput from "@/components/AutoSaveInput";
+import AutoSaveTextarea from "@/components/AutoSaveTextarea";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 
@@ -109,6 +111,26 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
     .filter((p) => p.week === selectedWeek)
     .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
 
+  const autoSavePlanField = useCallback(async (plan: PlanDay, field: keyof PlanDay, value: string) => {
+    const upsertData: any = {
+      id: plan.id || undefined,
+      user_id: userId,
+      week: plan.week,
+      day: plan.day,
+      session_name: plan.session_name,
+      details: plan.details,
+      tempo: plan.tempo,
+      [field]: value,
+    };
+    await supabase.from("workout_plans").upsert(upsertData, { onConflict: "user_id,week,day" });
+    // Update local state
+    setPlans((prev) =>
+      prev.map((p) =>
+        p.week === plan.week && p.day === plan.day ? { ...p, [field]: value } : p
+      )
+    );
+  }, [userId]);
+
   const savePlan = async (plan: PlanDay) => {
     setSaving(true);
     await supabase.from("workout_plans").upsert(
@@ -148,18 +170,6 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
     setSelectedWeek(nextWeek);
   };
 
-  const updateField = (idx: number, field: keyof PlanDay, value: string | number) => {
-    setPlans((prev) => {
-      const updated = [...prev];
-      const planIdx = prev.findIndex(
-        (p) => p.week === selectedWeek && p.day === weekDays[idx].day
-      );
-      if (planIdx >= 0) {
-        updated[planIdx] = { ...updated[planIdx], [field]: value };
-      }
-      return updated;
-    });
-  };
 
   return (
     <div className="space-y-4">
@@ -320,11 +330,10 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
                 <div className="flex gap-2">
                   {isEditing ? (
                     <button
-                      onClick={() => savePlan(plan)}
-                      disabled={saving}
-                      className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground"
+                      onClick={() => setEditing(null)}
+                      className="text-xs px-2 py-1 rounded bg-secondary text-muted-foreground"
                     >
-                      <Save className="w-3 h-3" />
+                      Klar
                     </button>
                   ) : (
                     <button
@@ -342,24 +351,22 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
 
               {isEditing ? (
                 <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={plan.session_name}
-                    onChange={(e) => updateField(idx, "session_name", e.target.value)}
+                  <AutoSaveInput
+                    initialValue={plan.session_name}
+                    onSave={(v) => autoSavePlanField(plan, "session_name", v)}
                     placeholder="Passnamn (t.ex. Styrka överkropp)"
                     className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                   />
-                  <textarea
-                    value={plan.details}
-                    onChange={(e) => updateField(idx, "details", e.target.value)}
+                  <AutoSaveTextarea
+                    initialValue={plan.details}
+                    onSave={(v) => autoSavePlanField(plan, "details", v)}
                     placeholder="Detaljer (t.ex. Bänk 5×3 @ RPE 7; Rodd 3×8)"
                     rows={3}
                     className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground resize-none"
                   />
-                  <input
-                    type="text"
-                    value={plan.tempo}
-                    onChange={(e) => updateField(idx, "tempo", e.target.value)}
+                  <AutoSaveInput
+                    initialValue={plan.tempo}
+                    onSave={(v) => autoSavePlanField(plan, "tempo", v)}
                     placeholder="Tempo/RPE (t.ex. 5:40–5:35)"
                     className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                   />
