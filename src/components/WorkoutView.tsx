@@ -2905,12 +2905,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             }
                           }
                           
-                          const saveCondField = async (field: string, value: string) => {
+                          const saveCondField = async (field: string, value: any) => {
                             const currentData = condSaved || { time: planTime, dist: planDist, tempo: planTempo };
                             const updated = { ...currentData, [field]: value };
                             
-                            // Auto-calculate tempo
-                            if ((field === 'time' || field === 'dist') && !updated.tempo) {
+                            // Auto-calculate tempo (only for non-interval fields)
+                            if (field !== 'intervals' && (field === 'time' || field === 'dist') && !updated.tempo) {
                               const t = parseFloat(field === 'time' ? value : updated.time || '0');
                               const d = parseFloat(String(field === 'dist' ? value : updated.dist || '0').replace(',', '.'));
                               if (t > 0 && d > 0) {
@@ -3072,20 +3072,120 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 }
                                 return null;
                               })()}
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="space-y-0.5">
-                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
-                                  <input type="number" inputMode="numeric" defaultValue={displayTime} onBlur={(e) => saveCondField('time', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                              {intervalCount > 0 ? (
+                                <div className="space-y-2">
+                                  {/* Per-interval header */}
+                                  <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1.5 items-end">
+                                    <span className="w-5" />
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-warning" />Tid</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-warning" />Distans</span>
+                                  </div>
+                                  {/* Per-interval rows */}
+                                  {Array.from({ length: intervalCount }, (_, ii) => {
+                                    const intervalsData: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
+                                    const row = intervalsData[ii] || { time: String(intervalDuration), tempo: '', dist: '' };
+                                    const rowTempo = row.tempo;
+                                    const rowTime = parseFloat(row.time) || 0;
+                                    // Auto-calc distance
+                                    let rowDist = '';
+                                    if (rowTempo && rowTime > 0) {
+                                      const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
+                                      const tSingle = rowTempo.match(/^(\d+)$/);
+                                      let minPerKm = 0;
+                                      if (tMatch) minPerKm = (parseInt(tMatch[1]) * 60 + parseInt(tMatch[2])) / 60;
+                                      else if (tSingle) minPerKm = parseInt(tSingle[1]);
+                                      if (minPerKm > 0) rowDist = String(Math.round((rowTime / minPerKm) * 100) / 100);
+                                    }
+                                    if (row.dist && !rowDist) rowDist = row.dist;
+                                    return (
+                                      <div key={ii} className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1.5 items-center">
+                                        <span className="text-[10px] text-muted-foreground font-bold w-5 text-center">{ii + 1}</span>
+                                        <input
+                                          type="number" inputMode="numeric"
+                                          defaultValue={row.time || String(intervalDuration)}
+                                          onBlur={(e) => {
+                                            const arr = [...(condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
+                                            arr[ii] = { ...arr[ii], time: e.target.value };
+                                            saveCondField('intervals', arr as any);
+                                          }}
+                                          className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none"
+                                        />
+                                        <input
+                                          type="text"
+                                          defaultValue={rowTempo}
+                                          onBlur={(e) => {
+                                            const arr = [...(condSaved?.intervals || Array.from({ length: intervalCount }, () => ({ time: String(intervalDuration), tempo: '', dist: '' })))];
+                                            arr[ii] = { ...arr[ii], tempo: e.target.value };
+                                            // If first row and others empty, apply to all
+                                            if (ii === 0 && e.target.value.trim()) {
+                                              const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
+                                              if (allEmpty) {
+                                                for (let j = 1; j < arr.length; j++) {
+                                                  arr[j] = { ...arr[j], tempo: e.target.value };
+                                                }
+                                              }
+                                            }
+                                            saveCondField('intervals', arr as any);
+                                          }}
+                                          placeholder="5:30"
+                                          className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground"
+                                        />
+                                        <span className={`text-xs font-mono text-center px-2 py-1.5 rounded-md ${rowDist ? 'bg-primary/10 text-foreground ring-1 ring-primary/30' : 'text-muted-foreground'}`}>
+                                          {rowDist || '—'}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                  {/* Summary row */}
+                                  {(() => {
+                                    const intervalsData: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
+                                    let totDist = 0;
+                                    let totTime = 0;
+                                    intervalsData.forEach((r, ii) => {
+                                      const t = parseFloat(r.time) || 0;
+                                      totTime += t;
+                                      if (r.tempo && t > 0) {
+                                        const tMatch = r.tempo.match(/^(\d+)[:\.](\d+)$/);
+                                        const tSingle = r.tempo.match(/^(\d+)$/);
+                                        let minPerKm = 0;
+                                        if (tMatch) minPerKm = (parseInt(tMatch[1]) * 60 + parseInt(tMatch[2])) / 60;
+                                        else if (tSingle) minPerKm = parseInt(tSingle[1]);
+                                        if (minPerKm > 0) totDist += t / minPerKm;
+                                      }
+                                    });
+                                    if (totDist <= 0) return null;
+                                    const avgTempo = totTime / totDist;
+                                    const avgMins = Math.floor(avgTempo);
+                                    const avgSecs = Math.round((avgTempo - avgMins) * 60);
+                                    return (
+                                      <div className="flex items-center justify-between bg-primary/5 rounded-md px-3 py-1.5 text-[11px]">
+                                        <span className="text-muted-foreground">Totalt</span>
+                                        <div className="flex gap-3 font-semibold font-mono text-foreground">
+                                          <span>{totTime} min</span>
+                                          <span>{avgMins}:{String(avgSecs).padStart(2, '0')} /km</span>
+                                          <span>{Math.round(totDist * 100) / 100} km</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
-                                <div className="space-y-0.5">
-                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
-                                  <input type="text" inputMode="decimal" defaultValue={displayDist} onBlur={(e) => saveCondField('dist', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                              ) : (
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
+                                    <input type="number" inputMode="numeric" defaultValue={displayTime} onBlur={(e) => saveCondField('time', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
+                                    <input type="text" inputMode="decimal" defaultValue={displayDist} onBlur={(e) => saveCondField('dist', e.target.value)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
+                                    <input type="text" defaultValue={displayTempo} onBlur={(e) => saveCondField('tempo', e.target.value)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                  </div>
                                 </div>
-                                <div className="space-y-0.5">
-                                  <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
-                                  <input type="text" defaultValue={displayTempo} onBlur={(e) => saveCondField('tempo', e.target.value)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                </div>
-                              </div>
+                              )}
                             </div>
                           );
                         }
