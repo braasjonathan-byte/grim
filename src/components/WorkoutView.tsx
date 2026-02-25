@@ -2772,8 +2772,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 loggedEntries.push(entry);
                               }
                             }
-                            // 2. Also include direct logged fields if present
-                            if (comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km)) {
+                            // 2. Also include direct logged fields if present (skip for stair machine entries)
+                            const hasStairData = loggedEntries.some(e => e.spm || e.steps);
+                            if (!hasStairData && comp && (comp.logged_tempo || comp.logged_pulse || comp.logged_distance_km)) {
                               const hasDirectData = !loggedEntries.length || 
                                 (comp.logged_distance_km && !loggedEntries.some(e => e.distance));
                               if (hasDirectData) {
