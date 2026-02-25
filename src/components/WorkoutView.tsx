@@ -3030,15 +3030,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 if (isSpeedWeek && lastLog.tempo) {
                                   const lastSecs = tempoToSeconds(lastLog.tempo);
                                   if (lastSecs) {
-                                    const fasterSecs = Math.round(lastSecs * 0.95);
-                                    const lowSecs = Math.max(fasterSecs - 15, 120);
-                                    const highSecs = fasterSecs + 15;
+                                    const fasterSecs = Math.round(lastSecs * 0.995);
+                                    const lowSecs = Math.max(fasterSecs - 5, 120);
+                                    const highSecs = fasterSecs + 5;
                                     return (
                                       <div className="bg-primary/5 border border-primary/20 rounded-md px-3 py-2 space-y-0.5">
                                         <p className="text-[10px] text-primary font-semibold uppercase tracking-wider">📈 Föreslagen hastighet</p>
                                         <p className="text-xs text-foreground">
                                           <span className="font-mono font-semibold">{secondsToTempo(lowSecs)}–{secondsToTempo(highSecs)}</span>
-                                          <span className="text-muted-foreground ml-1">/km (5% snabbare)</span>
+                                          <span className="text-muted-foreground ml-1">/km (0,5% snabbare)</span>
                                         </p>
                                         <p className="text-[10px] text-muted-foreground">Baserat på senast loggade: {lastLog.tempo}/km{isThreshold ? ` (pass ${completedCount + 1})` : ''}</p>
                                       </div>
