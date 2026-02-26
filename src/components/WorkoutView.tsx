@@ -530,29 +530,31 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     updates: Partial<Completion & { logged_weights: Record<string, any> | null }>
   ) => {
     const entryKey = `${week}-${day}`;
-    let payload: Record<string, any> = {};
 
-    setCompletions((prev: Record<string, any>) => {
-      const prevComp = prev[entryKey] || {};
-      const merged = {
-        week,
-        day,
-        done: prevComp.done || false,
-        skipped: prevComp.skipped || false,
-        user_comment: prevComp.user_comment || "",
-        logged_tempo: prevComp.logged_tempo ?? null,
-        logged_pulse: prevComp.logged_pulse ?? null,
-        logged_distance_km: prevComp.logged_distance_km ?? null,
-        logged_weights: prevComp.logged_weights ?? null,
-        ...updates,
-      };
+    // Build payload from current state synchronously using a promise that resolves inside setState
+    const payload = await new Promise<Record<string, any>>((resolve) => {
+      setCompletions((prev: Record<string, any>) => {
+        const prevComp = prev[entryKey] || {};
+        const merged = {
+          week,
+          day,
+          done: prevComp.done || false,
+          skipped: prevComp.skipped || false,
+          user_comment: prevComp.user_comment || "",
+          logged_tempo: prevComp.logged_tempo ?? null,
+          logged_pulse: prevComp.logged_pulse ?? null,
+          logged_distance_km: prevComp.logged_distance_km ?? null,
+          logged_weights: prevComp.logged_weights ?? null,
+          ...updates,
+        };
 
-      payload = merged;
+        resolve(merged);
 
-      return {
-        ...prev,
-        [entryKey]: merged as any,
-      };
+        return {
+          ...prev,
+          [entryKey]: merged as any,
+        };
+      });
     });
 
     await supabase.from("workout_completions").upsert(
@@ -578,14 +580,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     updater: (current: Record<string, any>) => Record<string, any>
   ) => {
     const entryKey = `${week}-${day}`;
-    let nextWeights: Record<string, any> = {};
 
-    // Compute the new weights first using current state
-    setCompletions((prev: Record<string, any>) => {
-      const prevComp = prev[entryKey] || {};
-      const currentWeights = (prevComp.logged_weights || {}) as Record<string, any>;
-      nextWeights = updater(currentWeights);
-      return prev; // Don't update yet - safeUpsertCompletion will do it
+    // Compute the new weights using current state via promise
+    const nextWeights = await new Promise<Record<string, any>>((resolve) => {
+      setCompletions((prev: Record<string, any>) => {
+        const prevComp = prev[entryKey] || {};
+        const currentWeights = (prevComp.logged_weights || {}) as Record<string, any>;
+        resolve(updater(currentWeights));
+        return prev; // Don't update yet - safeUpsertCompletion will do it
+      });
     });
 
     await safeUpsertCompletion(week, day, { logged_weights: nextWeights });
