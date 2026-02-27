@@ -4167,15 +4167,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                 <button
                   key={d}
                   onClick={() => {
-                    if (!isCurrentDay && !isOccupied) {
-                      // If there's a plan on the target day, swap them
-                      const targetPlan = plans.find(p => p.week === changeDayDialog.week && p.day === d);
-                      if (targetPlan) {
+                    if (!isCurrentDay) {
+                      if (isOccupied) {
                         // Swap: move target to current day
-                        Promise.all([
-                          supabase.from("workout_plans").update({ day: d }).eq("id", changeDayDialog.planId),
-                          supabase.from("workout_plans").update({ day: changeDayDialog.currentDay }).eq("id", targetPlan.id),
-                        ]).then(() => { setChangeDayDialog(null); fetchData(); });
+                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && p.day === d);
+                        if (targetPlan) {
+                          Promise.all([
+                            supabase.from("workout_plans").update({ day: d }).eq("id", changeDayDialog.planId),
+                            supabase.from("workout_plans").update({ day: changeDayDialog.currentDay }).eq("id", targetPlan.id),
+                          ]).then(() => { setChangeDayDialog(null); fetchData(); });
+                        }
                       } else {
                         changeWorkoutDay(changeDayDialog.planId, d, changeDayDialog.week);
                       }
