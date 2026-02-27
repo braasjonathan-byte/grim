@@ -123,12 +123,13 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
     if (!selectedDate || !importingWorkout) return;
     const dateKey = format(selectedDate, "yyyy-MM-dd");
 
-    // Check if there are existing plans for this date
+    // Check if there are existing plans for this date (standalone workouts use date_suffix format)
     const { data: existing } = await supabase
       .from("workout_plans")
-      .select("id, details")
+      .select("id, details, day")
       .eq("user_id", userId)
-      .eq("day", dateKey);
+      .eq("week", 0)
+      .like("day", `${dateKey}%`);
 
     const hasExisting = existing && existing.some(p => p.details && p.details.trim() !== "");
 
@@ -145,26 +146,31 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
 
     // Delete existing plans for this date if overwriting
     if (existingPlans && existingPlans.length > 0) {
-      await supabase
-        .from("workout_plans")
-        .delete()
-        .eq("user_id", userId)
-        .eq("day", dateKey);
+      for (const plan of existingPlans) {
+        await supabase
+          .from("workout_plans")
+          .delete()
+          .eq("id", plan.id);
 
-      // Also clear completions
-      await supabase
-        .from("workout_completions")
-        .delete()
-        .eq("user_id", userId)
-        .eq("day", dateKey);
+        await supabase
+          .from("workout_completions")
+          .delete()
+          .eq("user_id", userId)
+          .eq("week", 0)
+          .eq("day", plan.day);
+      }
     }
 
-    // Insert the shared workout
+    // Generate unique day key for standalone workout: "2026-03-05_abc1"
+    const suffix = Math.random().toString(36).slice(2, 6);
+    const dayKey = `${dateKey}_${suffix}`;
+
+    // Insert the shared workout as a standalone workout (week 0)
     const workout = importingWorkout;
     await supabase.from("workout_plans").insert({
       user_id: userId,
-      week: workout.week || 1,
-      day: dateKey,
+      week: 0,
+      day: dayKey,
       session_name: workout.session_name || "Delat pass",
       details: workout.details || "",
       tempo: workout.tempo || null,
