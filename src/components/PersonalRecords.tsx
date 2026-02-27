@@ -67,19 +67,21 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         );
       }
       if (starsRes.data) {
-        setStars(new Set(starsRes.data.map((s) => s.exercise)));
+        setStars(new Set(starsRes.data.map((s) => normalizeExerciseName(s.exercise))));
       }
       if (goalsRes.data) {
         const m = new Map<string, PRGoal>();
         for (const g of goalsRes.data) {
-          m.set(g.exercise, g);
+          m.set(normalizeExerciseName(g.exercise), g);
         }
         setGoals(m);
       }
       if (overRes.data) {
         const m = new Map<string, number>();
         for (const o of overRes.data) {
-          m.set(o.exercise, Number(o.weight));
+          const key = normalizeExerciseName(o.exercise);
+          const existing = m.get(key);
+          m.set(key, existing !== undefined ? Math.max(existing, Number(o.weight)) : Number(o.weight));
         }
         setOverrides(m);
       }
