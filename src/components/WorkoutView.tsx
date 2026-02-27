@@ -1357,6 +1357,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setDeleteExerciseConfirm(null);
   };
 
+  const moveExercise = async (planId: string, lineIndex: number, direction: "up" | "down") => {
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    const targetIndex = direction === "up" ? lineIndex - 1 : lineIndex + 1;
+    if (targetIndex < 0 || targetIndex >= lines.length) return;
+    [lines[lineIndex], lines[targetIndex]] = [lines[targetIndex], lines[lineIndex]];
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+    triggerSave();
+  };
+
   if (mode === "loading") {
     return (
       <div className="flex items-center justify-center py-16">
@@ -1631,8 +1645,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                     {/* Exercises / details */}
                     {plan.details &&
-                  <div className="space-y-2">
-                        {plan.details.split("\n").filter(Boolean).map((line, i) => {
+                  (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
+                        {exerciseLines.map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
                       
                       // Check if this is a conditioning exercise (format includes "min", "/km")
@@ -1653,7 +1667,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <Footprints className="w-3.5 h-3.5 text-warning" />
                                     {toTitleCase(name)}
                                    </span>
-                                   <div className="flex items-center gap-1">
+                                   <div className="flex items-center gap-0.5">
+                                     <div className="flex flex-col">
+                                       <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
+                                       <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === exerciseLines.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
+                                     </div>
                                      <button
                                    onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
                                   className="p-0.5 text-muted-foreground hover:text-warning transition-colors"
@@ -1661,7 +1679,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                   onClick={(e) => {e.stopPropagation();e.preventDefault();console.log("[DELETE-BTN] clicked name:", toTitleCase(name));setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                   onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
                                   className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                       <X className="w-4 h-4" />
                                     </button>
@@ -1738,7 +1756,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   {toTitleCase(name)}
                                   {singleRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{singleRpe}</span>}
                                 </span>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-0.5">
+                                  <div className="flex flex-col">
+                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
+                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === exerciseLines.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
+                                  </div>
                                   <button
                                 onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
                                 className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
@@ -1760,7 +1782,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <Dumbbell className="w-3 h-3" />
                                   </button>
                                   <button
-                                onClick={(e) => {e.stopPropagation();e.preventDefault();console.log("[DELETE-BTN] clicked name:", toTitleCase(name));setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
                                 className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                     <X className="w-4 h-4" />
                                   </button>
@@ -1805,7 +1827,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                             </div>);
 
                     })}
-                      </div>
+                      </div>; })()
                   }
 
                     {/* Reps/sets/weight dialog */}
@@ -2633,11 +2655,14 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <span className="flex-1">{line}</span>
+                                    <div className="flex flex-col flex-shrink-0">
+                                      <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3 h-3" /></button>
+                                      <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === detailParts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3 h-3" /></button>
+                                    </div>
                                     <button
                                        onClick={(e) => {
                                          e.stopPropagation();
                                          e.preventDefault();
-                                         console.log("[DELETE-BTN] clicked line:", line);
                                          setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });
                                        }}
                                       className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 touch-manipulation">
@@ -3116,11 +3141,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   <Footprints className="w-3.5 h-3.5 text-warning" />
                                   {toTitleCase(condName || part)}
                                 </span>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-0.5">
+                                  <div className="flex flex-col">
+                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
+                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
+                                  </div>
                                   <button onClick={(e) => { e.stopPropagation(); setExerciseInfoName(condName || part); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
-                                  <button onClick={(e) => {e.stopPropagation();e.preventDefault();console.log("[DELETE-BTN] clicked cond:", toTitleCase(condName || part));setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
+                                  <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                     <X className="w-4 h-4" />
                                   </button>
                                 </div>
@@ -3572,9 +3601,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     {partRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{partRpe}</span>}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-0.5">
+                                  <div className="flex flex-col">
+                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
+                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
+                                  </div>
                                    <button
-                                     onClick={(e) => {e.stopPropagation();e.preventDefault();console.log("[DELETE-BTN] clicked partName:", toTitleCase(partName));setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
+                                     onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
                                      title="Ta bort övning">
                                      <X className="w-4 h-4" />
