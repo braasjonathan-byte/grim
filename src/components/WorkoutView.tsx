@@ -1578,7 +1578,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     {weekdayName && (
                       <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">{weekdayName}</span>
                     )}
-                    <span className={`font-semibold text-sm truncate block ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                    <span className={`font-semibold text-sm block break-words ${isDone ? "line-through text-muted-foreground" : ""}`}>
                       {plan.session_name}
                     </span>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -2499,7 +2499,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     </button>
                     <button
                       onClick={(e) => {e.stopPropagation(); setRenameDialog({ planId: plan.id, currentName: plan.session_name }); setRenameInput(plan.session_name);}}
-                      className={`font-semibold text-sm truncate text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
+                      className={`font-semibold text-sm break-words text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
                       title="Byt namn">
                       {plan.session_name}
                     </button>
