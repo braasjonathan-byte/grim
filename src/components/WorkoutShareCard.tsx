@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { X, Download, Share2, Palette } from "lucide-react";
+import { X, Download, Share2, Palette, Send } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
 
@@ -71,6 +71,7 @@ interface WorkoutShareCardProps {
   loggedWeights?: Record<string, any> | null;
   nickname: string;
   onClose: () => void;
+  onChatShare?: () => void;
 }
 
 const WorkoutShareCard = ({
@@ -84,7 +85,8 @@ const WorkoutShareCard = ({
   loggedDistanceKm,
   loggedWeights,
   nickname,
-  onClose
+  onClose,
+  onChatShare
 }: WorkoutShareCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
@@ -478,24 +480,28 @@ const WorkoutShareCard = ({
           <button
             onClick={onClose}
             className="flex-1 py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
-
             <X className="w-4 h-4" /> Stäng
           </button>
           <button
             onClick={handleDownload}
             disabled={generating}
             className="flex-1 py-3 bg-card text-card-foreground border border-border font-semibold rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
-
             <Download className="w-4 h-4" /> Ladda ner
           </button>
           <button
             onClick={handleShare}
             disabled={generating}
             className="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
-
             <Share2 className="w-4 h-4" /> Dela
           </button>
         </div>
+        {onChatShare && (
+          <button
+            onClick={onChatShare}
+            className="w-full py-3 bg-accent text-accent-foreground font-semibold rounded-lg hover:bg-accent/80 transition-colors text-sm flex items-center justify-center gap-1.5">
+            <Send className="w-4 h-4" /> Dela via chatt
+          </button>
+        )}
       </div>
     </div>);
 
