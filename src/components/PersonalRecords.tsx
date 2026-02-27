@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar, Pencil } from "lucide-react";
+import { normalizeExerciseName } from "@/lib/exerciseNormalization";
 
 interface PersonalRecordsProps {
   userId: string;
@@ -90,9 +91,10 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         // Handle legacy format: exerciseName: weight (number)
         if (!ex.startsWith("__")) {
           if (typeof w !== "number" || w <= 0) continue;
-          const existing = prMap.get(ex);
+          const normName = normalizeExerciseName(ex);
+          const existing = prMap.get(normName);
           if (!existing || w > existing.weight) {
-            prMap.set(ex, {
+            prMap.set(normName, {
               weight: w,
               date: c.updated_at,
               week: c.week,
@@ -103,7 +105,8 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         }
         // Handle modern format: __setdata__exerciseName: [{kg, reps}, ...]
         if (ex.startsWith("__setdata__")) {
-          const exerciseName = ex.replace("__setdata__", "").replace(/ —$/, "");
+          const rawName = ex.replace("__setdata__", "").replace(/ —$/, "");
+          const exerciseName = normalizeExerciseName(rawName);
           let sets: { kg?: string | number; reps?: string | number }[] = [];
           if (typeof w === "string") {
             try { sets = JSON.parse(w); } catch { continue; }

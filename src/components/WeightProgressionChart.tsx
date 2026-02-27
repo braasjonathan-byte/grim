@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { normalizeExerciseName } from "@/lib/exerciseNormalization";
 
 interface WeightProgressionChartProps {
   userId: string;
@@ -55,7 +56,7 @@ const WeightProgressionChart = ({ userId }: WeightProgressionChartProps) => {
       if (c.logged_weights) {
         for (const name of Object.keys(c.logged_weights)) {
           if (name.startsWith("__")) continue;
-          exerciseSet.add(name);
+          exerciseSet.add(normalizeExerciseName(name));
         }
       }
     }
@@ -77,9 +78,14 @@ const WeightProgressionChart = ({ userId }: WeightProgressionChartProps) => {
 
       for (const [ex, w] of Object.entries(c.logged_weights)) {
         if (ex.startsWith("__")) continue;
+        const normEx = normalizeExerciseName(ex);
         if (typeof w === "number" && w > 0) {
-          point[ex] = w;
-          lastKnown[ex] = w;
+          // If multiple aliases map to same name, keep the highest
+          const existing = point[normEx];
+          if (typeof existing !== "number" || w > existing) {
+            point[normEx] = w;
+          }
+          lastKnown[normEx] = w;
           hasRelevant = true;
         }
       }
