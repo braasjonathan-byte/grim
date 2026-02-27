@@ -852,6 +852,22 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       tempo: null
     });
 
+    // Copy logged weights/reps from the source workout's completion
+    if (copyFrom) {
+      const sourceKey = `${copyFrom.week}-${copyFrom.day}`;
+      const sourceCompletion = completions[sourceKey];
+      if (sourceCompletion?.logged_weights && Object.keys(sourceCompletion.logged_weights).length > 0) {
+        await supabase.from("workout_completions").upsert({
+          user_id: userId,
+          week: 0,
+          day: uniqueKey,
+          done: false,
+          skipped: false,
+          logged_weights: sourceCompletion.logged_weights,
+        }, { onConflict: "user_id,week,day" });
+      }
+    }
+
     // Navigate to the week of the new workout
     const allSinglePlans = plans.filter(p => p.week === 0);
     const allDates = [...allSinglePlans.map(p => p.day), uniqueKey];
