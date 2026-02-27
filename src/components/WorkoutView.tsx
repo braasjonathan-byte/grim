@@ -1630,14 +1630,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         </span> :
                       null;
                     })()}
-                    {isDone && (
-                      <button
-                        onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] });}}
-                        className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                        title="Dela pass">
-                        <Share2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });}}
+                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                      title="Dela pass">
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
                       className="p-1 text-muted-foreground hover:text-destructive transition-colors">
@@ -2557,14 +2555,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         </span> :
                     null;
                   })()}
-                    {isDone && (
-                      <button
-                        onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] });}}
-                        className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                        title="Dela pass">
-                        <Share2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });}}
+                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                      title="Dela pass">
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
                     {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
               </div>
