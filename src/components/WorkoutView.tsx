@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
 import AutoSaveInput from "@/components/AutoSaveInput";
+import { useSaveIndicator } from "@/components/SaveIndicator";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -128,6 +129,7 @@ const getMonday = (d: Date) => {
 };
 
 const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
+  const { triggerSave } = useSaveIndicator();
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
@@ -577,6 +579,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       } as any,
       { onConflict: "user_id,week,day" }
     );
+    triggerSave();
   };
 
   const updateCompletionWeights = async (
@@ -700,6 +703,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const newDetails = lines.join(separator);
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", planId);
     setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+    triggerSave();
 
     // Adjust set tracking data
     const k = `${week}-${day}`;
@@ -896,6 +900,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     }
 
     setChangeDayDialog(null);
+    triggerSave();
     fetchData();
   };
 
@@ -906,6 +911,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setPlans(prev => prev.map(p => p.id === planId ? { ...p, session_name: newName.trim() } : p));
     setRenameDialog(null);
     setRenameInput("");
+    triggerSave();
   };
 
   const parseExerciseWeight = (line: string): {name: string;weight: string | null;} => {
@@ -1077,6 +1083,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+    triggerSave();
     setWeightDialog(null);
     setWeightInput("");
     setRepsInput("10");
@@ -1121,6 +1128,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+    triggerSave();
     setConditioningDialog(null);
     setCondTempoInput("");
     setCondTimeInput("");
@@ -1142,6 +1150,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const newDetails = lines.join(separator);
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", planId);
     setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+    triggerSave();
   };
 
   // Delete direct logged conditioning fields from completion
@@ -1218,6 +1227,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const newDetails = lines.join(separator);
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+    triggerSave();
     setEditingCondLine(null);
     setCondTimeInput("");
     setCondTempoInput("");
@@ -1235,6 +1245,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
 
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+    triggerSave();
   };
 
   // Save edited exercise line (sets/reps/weight)
@@ -1267,7 +1278,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
-
+    triggerSave();
     // In plan mode, ask about propagation to future weeks
     if (mode === "plan" && plan.week > 0 && !propagate) {
       setPropagateDialog({ entry, originalName: editingExercise.originalName, newName: editingExercise.name, plan, lineIndex: editingExercise.lineIndex });

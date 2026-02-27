@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon, Dumbbell } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import type { User } from "@supabase/supabase-js";
 import AuthScreen from "@/components/AuthScreen";
@@ -508,6 +509,7 @@ const Index = () => {
             <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
             <NotificationSettings userId={user.id} />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
+            <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
           </div>
         }
       </main>
