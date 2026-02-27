@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -216,6 +216,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     completion: Completion;
   } | null>(null);
   const [userNickname, setUserNickname] = useState("");
+
+  // Change day / rename session dialogs
+  const [changeDayDialog, setChangeDayDialog] = useState<{planId: string; currentDay: string; week: number; sessionName: string} | null>(null);
+  const [renameDialog, setRenameDialog] = useState<{planId: string; currentName: string} | null>(null);
+  const [renameInput, setRenameInput] = useState("");
 
   // Fetch user nickname
   useEffect(() => {
@@ -867,7 +872,42 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     }
   };
 
-  // Parse weight from a detail line like "Bänkpress — 80 kg"
+  // Change weekday for a workout in a plan week
+  const changeWorkoutDay = async (planId: string, newDay: string, week: number) => {
+    // Update the plan row's day
+    await supabase.from("workout_plans").update({ day: newDay }).eq("id", planId);
+
+    // Also move any completion data to the new day
+    const oldPlan = plans.find(p => p.id === planId);
+    if (oldPlan) {
+      const oldKey = `${week}-${oldPlan.day}`;
+      const comp = completions[oldKey];
+      if (comp) {
+        // Delete old completion, insert new one with new day
+        await supabase.from("workout_completions").delete()
+          .eq("user_id", userId).eq("week", week).eq("day", oldPlan.day);
+        await supabase.from("workout_completions").upsert({
+          user_id: userId, week, day: newDay, done: comp.done, skipped: comp.skipped,
+          user_comment: comp.user_comment || "",
+          logged_tempo: comp.logged_tempo, logged_pulse: comp.logged_pulse,
+          logged_distance_km: comp.logged_distance_km, logged_weights: comp.logged_weights as any,
+        }, { onConflict: "user_id,week,day" });
+      }
+    }
+
+    setChangeDayDialog(null);
+    fetchData();
+  };
+
+  // Rename a session
+  const renameSession = async (planId: string, newName: string) => {
+    if (!newName.trim()) return;
+    await supabase.from("workout_plans").update({ session_name: newName.trim() }).eq("id", planId);
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, session_name: newName.trim() } : p));
+    setRenameDialog(null);
+    setRenameInput("");
+  };
+
   const parseExerciseWeight = (line: string): {name: string;weight: string | null;} => {
     const match = line.match(/^(.+?)\s*—\s*(.+)$/);
     if (match) return { name: match[1].trim(), weight: match[2].trim() };
@@ -2451,10 +2491,18 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-mono text-muted-foreground uppercase">{plan.day}</span>
-                    <span className={`font-semibold text-sm truncate ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                    <button
+                      onClick={(e) => {e.stopPropagation(); setChangeDayDialog({ planId: plan.id, currentDay: plan.day, week: plan.week, sessionName: plan.session_name });}}
+                      className="text-xs font-mono text-muted-foreground uppercase hover:text-primary transition-colors"
+                      title="Byt veckodag">
+                      {plan.day}
+                    </button>
+                    <button
+                      onClick={(e) => {e.stopPropagation(); setRenameDialog({ planId: plan.id, currentName: plan.session_name }); setRenameInput(plan.session_name);}}
+                      className={`font-semibold text-sm truncate text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
+                      title="Byt namn">
                       {plan.session_name}
-                    </span>
+                    </button>
                   </div>
                   {plan.tempo && plan.tempo !== "—" &&
                   <span className="text-xs text-muted-foreground font-mono">{plan.tempo}</span>
@@ -4037,6 +4085,108 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         nickname={userNickname}
         onClose={() => setShareTarget(null)}
       />
+    )}
+
+    {/* Change day dialog */}
+    {changeDayDialog && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setChangeDayDialog(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <ArrowLeftRight className="w-4 h-4 text-primary" />
+              Byt veckodag
+            </h3>
+            <button onClick={() => setChangeDayDialog(null)} className="p-1 text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">{changeDayDialog.sessionName}</span> — nuvarande dag: <span className="font-mono font-semibold text-foreground">{changeDayDialog.currentDay}</span>
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {DAYS.map((d) => {
+              const isCurrentDay = d === changeDayDialog.currentDay;
+              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && p.day === d);
+              return (
+                <button
+                  key={d}
+                  onClick={() => {
+                    if (!isCurrentDay && !isOccupied) {
+                      // If there's a plan on the target day, swap them
+                      const targetPlan = plans.find(p => p.week === changeDayDialog.week && p.day === d);
+                      if (targetPlan) {
+                        // Swap: move target to current day
+                        Promise.all([
+                          supabase.from("workout_plans").update({ day: d }).eq("id", changeDayDialog.planId),
+                          supabase.from("workout_plans").update({ day: changeDayDialog.currentDay }).eq("id", targetPlan.id),
+                        ]).then(() => { setChangeDayDialog(null); fetchData(); });
+                      } else {
+                        changeWorkoutDay(changeDayDialog.planId, d, changeDayDialog.week);
+                      }
+                    }
+                  }}
+                  disabled={isCurrentDay}
+                  className={`py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                    isCurrentDay 
+                      ? "bg-primary text-primary-foreground" 
+                      : isOccupied 
+                        ? "bg-secondary text-muted-foreground cursor-pointer border border-border hover:border-primary"
+                        : "bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground"
+                  }`}
+                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && p.day === d)?.session_name}` : undefined}
+                >
+                  {d}
+                  {isOccupied && <span className="block text-[8px] text-muted-foreground/70 mt-0.5">upptagen</span>}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground">Tryck på en upptagen dag för att byta plats mellan passen.</p>
+        </div>
+      </div>
+    )}
+
+    {/* Rename session dialog */}
+    {renameDialog && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setRenameDialog(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-primary" />
+              Byt namn på pass
+            </h3>
+            <button onClick={() => setRenameDialog(null)} className="p-1 text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <input
+            type="text"
+            value={renameInput}
+            onChange={(e) => setRenameInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && renameSession(renameDialog.planId, renameInput)}
+            placeholder="Nytt namn..."
+            className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => renameSession(renameDialog.planId, renameInput)}
+              disabled={!renameInput.trim() || renameInput.trim() === renameDialog.currentName}
+              className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
+            >
+              Spara
+            </button>
+            <button
+              onClick={() => setRenameDialog(null)}
+              className="px-4 py-2.5 bg-secondary text-muted-foreground text-sm rounded-lg hover:text-foreground transition-colors"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>);
 
