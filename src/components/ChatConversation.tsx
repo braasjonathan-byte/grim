@@ -1,11 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Dumbbell, Calendar as CalendarIcon, X, Check } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { sv } from "date-fns/locale";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, Send, Dumbbell, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 interface Friend {
   user_id: string;
@@ -30,18 +26,30 @@ interface ChatConversationProps {
   onBack: () => void;
 }
 
+interface PlanSlot {
+  id: string;
+  week: number;
+  day: string;
+  session_name: string;
+  details: string;
+}
+
+const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+
 const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [importingWorkout, setImportingWorkout] = useState<any>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [conflictCheck, setConflictCheck] = useState(false);
-  const [hasConflict, setHasConflict] = useState(false);
   const [importing, setImporting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Plan picker state for import
+  const [planSlots, setPlanSlots] = useState<PlanSlot[]>([]);
+  const [planWeeks, setPlanWeeks] = useState<number[]>([]);
+  const [selectedImportWeek, setSelectedImportWeek] = useState(1);
+  const [confirmTarget, setConfirmTarget] = useState<{ week: number; day: string; hasExisting: boolean } | null>(null);
 
   useEffect(() => {
     fetchMessages();
@@ -111,75 +119,75 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
     }
   };
 
-  // Import shared workout
-  const startImport = (workout: any) => {
+  // Fetch user's plan when import dialog opens
+  const startImport = async (workout: any) => {
     setImportingWorkout(workout);
-    setSelectedDate(undefined);
-    setHasConflict(false);
-    setConflictCheck(false);
-  };
+    setConfirmTarget(null);
 
-  const checkConflictAndImport = async () => {
-    if (!selectedDate || !importingWorkout) return;
-    const dateKey = format(selectedDate, "yyyy-MM-dd");
-
-    // Check if there are existing plans for this date (standalone workouts use date_suffix format)
-    const { data: existing } = await supabase
+    const { data } = await supabase
       .from("workout_plans")
-      .select("id, details, day")
+      .select("id, week, day, session_name, details")
       .eq("user_id", userId)
-      .eq("week", 0)
-      .like("day", `${dateKey}%`);
+      .gt("week", 0)
+      .order("week")
+      .order("day");
 
-    const hasExisting = existing && existing.some(p => p.details && p.details.trim() !== "");
-
-    if (hasExisting && !conflictCheck) {
-      setHasConflict(true);
-      return;
+    if (data) {
+      setPlanSlots(data);
+      const wks = [...new Set(data.map(p => p.week))].sort((a, b) => a - b);
+      setPlanWeeks(wks);
+      if (wks.length > 0) setSelectedImportWeek(wks[0]);
     }
-
-    await doImport(dateKey, hasExisting ? existing : null);
   };
 
-  const doImport = async (dateKey: string, existingPlans: any[] | null) => {
+  const handleDayClick = (week: number, day: string) => {
+    const existing = planSlots.filter(p => p.week === week && p.day === day);
+    const hasExisting = existing.some(p => p.details && p.details.trim() !== "");
+    setConfirmTarget({ week, day, hasExisting });
+  };
+
+  const doImport = async () => {
+    if (!confirmTarget || !importingWorkout) return;
     setImporting(true);
 
-    // Delete existing plans for this date if overwriting
-    if (existingPlans && existingPlans.length > 0) {
-      for (const plan of existingPlans) {
-        await supabase
-          .from("workout_plans")
-          .delete()
-          .eq("id", plan.id);
+    const { week, day, hasExisting } = confirmTarget;
 
-        await supabase
-          .from("workout_completions")
-          .delete()
-          .eq("user_id", userId)
-          .eq("week", 0)
-          .eq("day", plan.day);
+    // If overwriting, delete existing plan for this day
+    if (hasExisting) {
+      const existing = planSlots.filter(p => p.week === week && p.day === day);
+      for (const plan of existing) {
+        await supabase.from("workout_plans").delete().eq("id", plan.id);
       }
+      await supabase.from("workout_completions").delete()
+        .eq("user_id", userId).eq("week", week).eq("day", day);
     }
 
-    // Generate unique day key for standalone workout: "2026-03-05_abc1"
-    const suffix = Math.random().toString(36).slice(2, 6);
-    const dayKey = `${dateKey}_${suffix}`;
+    // Check if there's already a row for this day (could be empty)
+    const existingEmpty = planSlots.find(p => p.week === week && p.day === day && (!p.details || p.details.trim() === ""));
 
-    // Insert the shared workout as a standalone workout (week 0)
-    const workout = importingWorkout;
-    await supabase.from("workout_plans").insert({
-      user_id: userId,
-      week: 0,
-      day: dayKey,
-      session_name: workout.session_name || "Delat pass",
-      details: workout.details || "",
-      tempo: workout.tempo || null,
-    });
+    if (existingEmpty) {
+      // Update existing empty slot
+      await supabase.from("workout_plans").update({
+        session_name: importingWorkout.session_name || "Importerat pass",
+        details: importingWorkout.details || "",
+        tempo: importingWorkout.tempo || null,
+      }).eq("id", existingEmpty.id);
+    } else {
+      // Insert new
+      await supabase.from("workout_plans").insert({
+        user_id: userId,
+        week,
+        day,
+        session_name: importingWorkout.session_name || "Importerat pass",
+        details: importingWorkout.details || "",
+        tempo: importingWorkout.tempo || null,
+      });
+    }
 
+    toast.success("Passet har lagts till i din plan!");
     setImporting(false);
     setImportingWorkout(null);
-    setHasConflict(false);
-    setConflictCheck(false);
+    setConfirmTarget(null);
   };
 
   // Group messages by date
@@ -194,6 +202,15 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       groupedMessages[groupedMessages.length - 1].msgs.push(msg);
     }
   }
+
+  // Get days for current week in import view
+  const weekDays = planSlots.filter(p => p.week === selectedImportWeek);
+  const daysInWeek = DAYS.map((dayLabel, i) => {
+    const dayKey = DAYS[i];
+    // Find matching plans - day field stores the Swedish abbreviation in plan mode
+    const dayPlans = weekDays.filter(p => p.day === dayLabel || p.day === dayKey);
+    return { dayLabel, plans: dayPlans };
+  });
 
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)]">
@@ -256,87 +273,157 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         )}
       </div>
 
-      {/* Import workout dialog */}
-      {importingWorkout && (
+      {/* Import workout dialog - plan-based picker */}
+      {importingWorkout && !confirmTarget && (
         <>
           <div className="fixed inset-0 bg-black/50 z-[60]" onClick={() => setImportingWorkout(null)} />
+          <div className="fixed inset-x-3 top-[10%] bottom-[10%] z-[70] max-w-md mx-auto bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Dumbbell className="w-4 h-4 text-primary" />
+                Välj dag i din plan
+              </h3>
+              <button onClick={() => setImportingWorkout(null)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Workout preview */}
+            <div className="px-4 pt-3">
+              <div className="bg-muted rounded-lg p-3">
+                <p className="text-xs font-semibold">{importingWorkout.session_name || "Pass"}</p>
+                <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-3">
+                  {importingWorkout.details}
+                </p>
+              </div>
+            </div>
+
+            {/* Week navigation */}
+            {planWeeks.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between px-4 py-3">
+                  <button
+                    onClick={() => {
+                      const idx = planWeeks.indexOf(selectedImportWeek);
+                      if (idx > 0) setSelectedImportWeek(planWeeks[idx - 1]);
+                    }}
+                    disabled={planWeeks.indexOf(selectedImportWeek) === 0}
+                    className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm font-bold">Vecka {selectedImportWeek}</span>
+                  <button
+                    onClick={() => {
+                      const idx = planWeeks.indexOf(selectedImportWeek);
+                      if (idx < planWeeks.length - 1) setSelectedImportWeek(planWeeks[idx + 1]);
+                    }}
+                    disabled={planWeeks.indexOf(selectedImportWeek) === planWeeks.length - 1}
+                    className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Days grid */}
+                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+                  {daysInWeek.map(({ dayLabel, plans }) => {
+                    const hasContent = plans.some(p => p.details && p.details.trim() !== "");
+                    const sessionName = plans.length > 0 ? plans[0].session_name : "";
+                    const exercises = plans.length > 0 && plans[0].details
+                      ? plans[0].details.split(/[;\n]/).map(s => s.trim()).filter(Boolean)
+                      : [];
+
+                    return (
+                      <button
+                        key={dayLabel}
+                        onClick={() => handleDayClick(selectedImportWeek, dayLabel)}
+                        className="w-full text-left p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-muted-foreground w-8">{dayLabel}</span>
+                            <span className="text-sm font-semibold truncate">
+                              {sessionName || "—"}
+                            </span>
+                          </div>
+                          {hasContent && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {exercises.length} övningar
+                            </span>
+                          )}
+                        </div>
+                        {hasContent && exercises.length > 0 && (
+                          <div className="mt-1 ml-10">
+                            {exercises.slice(0, 2).map((ex, i) => (
+                              <p key={i} className="text-[11px] text-muted-foreground truncate">{ex}</p>
+                            ))}
+                            {exercises.length > 2 && (
+                              <p className="text-[11px] text-muted-foreground/60">+{exercises.length - 2} fler</p>
+                            )}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center p-8">
+                <p className="text-sm text-muted-foreground text-center">
+                  Du har ingen aktiv plan. Skapa en plan först för att kunna importera pass.
+                </p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Confirm overwrite dialog */}
+      {confirmTarget && importingWorkout && (
+        <>
+          <div className="fixed inset-0 bg-black/50 z-[60]" onClick={() => setConfirmTarget(null)} />
           <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[70] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold flex items-center gap-2">
                 <Dumbbell className="w-4 h-4 text-primary" />
-                Lägg till pass
+                Bekräfta import
               </h3>
-              <button onClick={() => { setImportingWorkout(null); setHasConflict(false); }} className="p-1 text-muted-foreground hover:text-foreground">
+              <button onClick={() => setConfirmTarget(null)} className="p-1 text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="bg-muted rounded-lg p-3 mb-3">
               <p className="text-xs font-semibold">{importingWorkout.session_name || "Pass"}</p>
-              <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-4">
-                {importingWorkout.details}
+              <p className="text-xs text-muted-foreground mt-1">
+                → Vecka {confirmTarget.week}, {confirmTarget.day}
               </p>
             </div>
 
-            {!hasConflict ? (
-              <>
-                <label className="text-xs font-medium mb-1 block">Välj datum:</label>
-                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                  <PopoverTrigger asChild>
-                    <button className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 text-sm border rounded-lg text-left",
-                      selectedDate ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      <CalendarIcon className="w-4 h-4" />
-                      {selectedDate ? format(selectedDate, "d MMMM yyyy", { locale: sv }) : "Välj datum"}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[80]" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(d) => { setSelectedDate(d); setDatePickerOpen(false); }}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-                <button
-                  disabled={!selectedDate || importing}
-                  onClick={checkConflictAndImport}
-                  className="w-full mt-3 px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  {importing ? "Sparar..." : "Lägg till i min plan"}
-                </button>
-              </>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-destructive font-medium">
-                  ⚠️ Du har redan övningar inlagda denna dag. Vill du skriva över dem?
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setHasConflict(false); setConflictCheck(false); }}
-                    className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
-                  >
-                    Avbryt
-                  </button>
-                  <button
-                    onClick={() => {
-                      setConflictCheck(true);
-                      setHasConflict(false);
-                      if (selectedDate) {
-                        doImport(format(selectedDate, "yyyy-MM-dd"), [{ id: "overwrite" }]);
-                      }
-                    }}
-                    disabled={importing}
-                    className="flex-1 px-3 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg font-semibold disabled:opacity-50"
-                  >
-                    {importing ? "Sparar..." : "Skriv över"}
-                  </button>
-                </div>
-              </div>
+            {confirmTarget.hasExisting && (
+              <p className="text-sm text-destructive font-medium mb-3">
+                ⚠️ Det finns redan övningar denna dag. De kommer att ersättas.
+              </p>
             )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmTarget(null)}
+                className="flex-1 px-3 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={doImport}
+                disabled={importing}
+                className="flex-1 px-3 py-2 text-sm bg-primary text-primary-foreground rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                {importing ? "Sparar..." : confirmTarget.hasExisting ? "Ersätt & lägg till" : "Lägg till"}
+              </button>
+            </div>
           </div>
         </>
       )}
