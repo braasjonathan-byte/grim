@@ -98,7 +98,8 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         // Handle legacy format: exerciseName: weight (number)
         if (!ex.startsWith("__")) {
           if (typeof w !== "number" || w <= 0) continue;
-          const normName = normalizeExerciseName(ex);
+          const cleanEx = ex.replace(/( —)+$/, "");
+          const normName = normalizeExerciseName(cleanEx);
           const existing = prMap.get(normName);
           if (!existing || w > existing.weight) {
             prMap.set(normName, {
