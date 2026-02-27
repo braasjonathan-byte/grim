@@ -112,7 +112,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         }
         // Handle modern format: __setdata__exerciseName: [{kg, reps}, ...]
         if (ex.startsWith("__setdata__")) {
-          const rawName = ex.replace("__setdata__", "").replace(/ —$/, "");
+          const rawName = ex.replace("__setdata__", "").replace(/( —)+$/, "");
           const exerciseName = normalizeExerciseName(rawName);
           let sets: { kg?: string | number; reps?: string | number }[] = [];
           if (typeof w === "string") {
