@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar, Pencil } from "lucide-react";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";
+import { getStrengthPercentile, type StrengthPercentile } from "@/lib/strengthPercentile";
 
 interface PersonalRecordsProps {
   userId: string;
@@ -40,6 +41,8 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   const [goalDate, setGoalDate] = useState("");
   const [editDialog, setEditDialog] = useState<{exercise: string; currentWeight: number;} | null>(null);
   const [editWeight, setEditWeight] = useState("");
+  const [gender, setGender] = useState<string | null>(null);
+  const [percentilePopup, setPercentilePopup] = useState<{exercise: string; weight: number; data: StrengthPercentile} | null>(null);
 
   useEffect(() => {
     // Fetch completions, stars, and goals in parallel
@@ -52,8 +55,9 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
     order("updated_at", { ascending: true }),
     supabase.from("pr_stars").select("exercise").eq("user_id", userId),
     supabase.from("pr_goals").select("exercise, target_weight, target_date").eq("user_id", userId),
-    supabase.from("pr_overrides").select("exercise, weight").eq("user_id", userId)]
-    ).then(([compRes, starsRes, goalsRes, overRes]) => {
+    supabase.from("pr_overrides").select("exercise, weight").eq("user_id", userId),
+    supabase.from("profiles").select("gender").eq("user_id", userId).single()]
+    ).then(([compRes, starsRes, goalsRes, overRes, profileRes]) => {
       if (compRes.data) {
         setCompletions(
           compRes.data.map((c) => ({
@@ -78,6 +82,9 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           m.set(o.exercise, Number(o.weight));
         }
         setOverrides(m);
+      }
+      if (profileRes.data?.gender) {
+        setGender(profileRes.data.gender);
       }
     });
   }, [userId]);
@@ -294,9 +301,20 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 <TrendIcon trend={pr.trend} />
               </div>
 
-              <p className="text-xl font-black">
-                {pr.weight} <span className="text-xs font-normal text-muted-foreground">kg</span>
-              </p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const data = getStrengthPercentile(pr.exercise, pr.weight, gender);
+                  if (data) {
+                    setPercentilePopup({ exercise: pr.exercise, weight: pr.weight, data });
+                  }
+                }}
+                className="text-left group/weight"
+              >
+                <p className="text-xl font-black group-hover/weight:text-primary transition-colors">
+                  {pr.weight} <span className="text-xs font-normal text-muted-foreground">kg</span>
+                </p>
+              </button>
 
               {/* Goal progress */}
               {goal &&
@@ -491,6 +509,53 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           </div>
         </>
       }
+
+      {/* Strength percentile popup */}
+      {percentilePopup && (
+        <>
+          <div className="fixed inset-0 bg-black/60 z-[70]" onClick={() => setPercentilePopup(null)} />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[80] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{percentilePopup.data.emoji}</span>
+                <h3 className="text-sm font-bold">Styrkenivå</h3>
+              </div>
+              <button onClick={() => setPercentilePopup(null)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="text-center space-y-1">
+                <p className="text-xs text-muted-foreground">{percentilePopup.exercise}</p>
+                <p className="text-3xl font-black">{percentilePopup.weight} <span className="text-base font-normal text-muted-foreground">kg</span></p>
+              </div>
+
+              {/* Percentile bar */}
+              <div className="space-y-2">
+                <div className="w-full bg-secondary rounded-full h-3 overflow-hidden relative">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-500"
+                    style={{ width: `${percentilePopup.data.percentile}%` }}
+                  />
+                </div>
+                <p className="text-center text-sm font-semibold text-foreground">
+                  {percentilePopup.data.description}
+                </p>
+                <p className="text-center text-[10px] text-muted-foreground">
+                  Baserat på {gender === "kvinna" || gender === "female" || gender === "f" ? "kvinnor" : "män"} i världens befolkning (uppskattning)
+                </p>
+              </div>
+
+              <button
+                onClick={() => setPercentilePopup(null)}
+                className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Stäng
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>);
 
 };
