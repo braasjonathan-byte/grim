@@ -1,18 +1,19 @@
 /** Canonical name aliases – maps common short/alternate names to the official name */
 const EXERCISE_ALIASES: Record<string, string> = {
   "mark": "Marklyft",
-  "Mark": "Marklyft",
   "böj": "Knäböj",
-  "Böj": "Knäböj",
+  "knäböj": "Knäböj",
   "lätta böj": "Knäböj",
-  "Lätta böj": "Knäböj",
-  "Lätta Böj": "Knäböj",
   "bänk": "Bänkpress",
-  "Bänk": "Bänkpress",
+  "frontböj": "Frontböj",
+  "frontböj/goblet squat": "Frontböj",
 };
 
 /** Normalize an exercise name to its canonical form */
 export function normalizeExerciseName(name: string): string {
   const trimmed = name.trim();
-  return EXERCISE_ALIASES[trimmed] || trimmed;
+  const lower = trimmed.toLowerCase();
+  if (EXERCISE_ALIASES[lower]) return EXERCISE_ALIASES[lower];
+  // Title case the trimmed name as fallback
+  return trimmed;
 }
