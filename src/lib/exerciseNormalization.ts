@@ -7,6 +7,8 @@ const EXERCISE_ALIASES: Record<string, string> = {
   "lätta böj": "Knäböj",
   "Lätta böj": "Knäböj",
   "Lätta Böj": "Knäböj",
+  "bänk": "Bänkpress",
+  "Bänk": "Bänkpress",
 };
 
 /** Normalize an exercise name to its canonical form */
