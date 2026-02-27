@@ -285,7 +285,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                       {selectedDate ? format(selectedDate, "d MMMM yyyy", { locale: sv }) : "Välj datum"}
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[80]" align="start">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
