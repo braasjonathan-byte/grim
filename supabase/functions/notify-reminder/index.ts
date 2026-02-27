@@ -213,7 +213,7 @@ serve(async (req) => {
         title: "🏋️ Dags att träna!",
         body: `Du har "${sessionName}" planerat idag. Kör hårt! 💪`,
         icon: "/favicon.ico",
-        data: { url: "/" },
+        data: { url: "/?tab=workout" },
       });
 
       for (const sub of subscriptions) {

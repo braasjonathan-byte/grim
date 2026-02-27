@@ -179,7 +179,7 @@ serve(async (req) => {
       title: "💪 Grim",
       body: `${nickname} klarade ${sessionName || day}${week ? `, vecka ${week}` : ""}!`,
       icon: "/favicon.ico",
-      data: { url: "/" },
+      data: { url: `/?tab=friends&friendId=${user.id}` },
     });
 
     let sent = 0;

@@ -165,7 +165,7 @@ serve(async (req) => {
       title: "💡 Grim",
       body: `Nytt förslag från ${sanitizedNickname}`,
       icon: "/favicon.ico",
-      data: { url: "/" },
+      data: { url: "/?tab=settings" },
     });
 
     let sent = 0;
