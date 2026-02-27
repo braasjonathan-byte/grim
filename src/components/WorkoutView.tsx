@@ -2482,20 +2482,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           return (
             <div
               key={key}
-              className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
+              className={`relative rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRenameDialog({ planId: plan.id, currentName: plan.session_name });
+                  setRenameInput(plan.session_name);
+                }}
+                className="absolute top-1 left-1 p-1 text-muted-foreground/30 hover:text-primary transition-colors z-10"
+                title="Inställningar">
+                <Settings className="w-3 h-3" />
+              </button>
 
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; setExpandedDay(expanded ? null : key); }}>
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRenameDialog({ planId: plan.id, currentName: plan.session_name });
-                        setRenameInput(plan.session_name);
-                      }}
-                      className="p-0.5 text-muted-foreground/40 hover:text-primary transition-colors"
-                      title="Inställningar">
-                      <Settings className="w-3.5 h-3.5" />
-                    </button>
                     <button
                     onClick={(e) => {
                       e.stopPropagation();
