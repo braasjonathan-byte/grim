@@ -47,12 +47,17 @@ const Index = () => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
-    if (urlTab === "workout" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "profile" || urlTab === "settings") {
+    if (urlTab === "workout" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
       localStorage.setItem("grim_active_tab", urlTab);
       return urlTab;
     }
+    if (urlTab === "profile") {
+      localStorage.setItem("grim_active_tab", "settings");
+      return "settings";
+    }
     const saved = localStorage.getItem("grim_active_tab");
-    return saved === "workout" || saved === "friends" || saved === "chat" || saved === "calc" || saved === "stats" || saved === "profile" || saved === "settings" ? saved : "workout";
+    if (saved === "profile") return "settings";
+    return saved === "workout" || saved === "friends" || saved === "chat" || saved === "calc" || saved === "stats" || saved === "settings" ? saved : "workout";
   });
 
   // Handle deep link params from push notifications
@@ -373,7 +378,6 @@ const Index = () => {
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
   { key: "chat", icon: MessageCircle, label: "Chatt", badge: unreadChats > 0 ? unreadChats : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg" },
-  { key: "profile", icon: UserIcon, label: "Profil" },
   { key: "settings", icon: Settings, label: "Inställningar", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
@@ -523,9 +527,10 @@ const Index = () => {
             <CalorieCalculator />
           </div>
         }
-        {tab === "profile" && <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />}
         {tab === "settings" &&
         <div className="py-2 space-y-4">
+            {/* Profile section */}
+            <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />
             {/* Role badge */}
             <div className="flex items-center gap-2">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${userRole === "admin" ? "bg-primary/20 text-primary" : isHonorary ? "bg-warning/20 text-warning" : "bg-secondary text-muted-foreground"}`}>
