@@ -4166,16 +4166,53 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
               return (
                 <button
                   key={d}
-                  onClick={() => {
+                  onClick={async () => {
                     if (!isCurrentDay) {
                       if (isOccupied) {
-                        // Swap: move target to current day
+                        // Swap: move target to current day and current to target day
                         const targetPlan = plans.find(p => p.week === changeDayDialog.week && p.day === d);
                         if (targetPlan) {
-                          Promise.all([
-                            supabase.from("workout_plans").update({ day: d }).eq("id", changeDayDialog.planId),
-                            supabase.from("workout_plans").update({ day: changeDayDialog.currentDay }).eq("id", targetPlan.id),
-                          ]).then(() => { setChangeDayDialog(null); fetchData(); });
+                          const week = changeDayDialog.week;
+                          const oldDay = changeDayDialog.currentDay;
+                          const newDay = d;
+
+                          // Get completions for both days
+                          const compOld = completions[`${week}-${oldDay}`];
+                          const compNew = completions[`${week}-${newDay}`];
+
+                          // Swap plan days
+                          await Promise.all([
+                            supabase.from("workout_plans").update({ day: newDay }).eq("id", changeDayDialog.planId),
+                            supabase.from("workout_plans").update({ day: oldDay }).eq("id", targetPlan.id),
+                          ]);
+
+                          // Delete both completions first, then re-insert swapped
+                          await supabase.from("workout_completions").delete()
+                            .eq("user_id", userId).eq("week", week).in("day", [oldDay, newDay]);
+
+                          const upserts: any[] = [];
+                          if (compOld) {
+                            upserts.push({
+                              user_id: userId, week, day: newDay, done: compOld.done, skipped: compOld.skipped,
+                              user_comment: compOld.user_comment || "",
+                              logged_tempo: compOld.logged_tempo, logged_pulse: compOld.logged_pulse,
+                              logged_distance_km: compOld.logged_distance_km, logged_weights: compOld.logged_weights as any,
+                            });
+                          }
+                          if (compNew) {
+                            upserts.push({
+                              user_id: userId, week, day: oldDay, done: compNew.done, skipped: compNew.skipped,
+                              user_comment: compNew.user_comment || "",
+                              logged_tempo: compNew.logged_tempo, logged_pulse: compNew.logged_pulse,
+                              logged_distance_km: compNew.logged_distance_km, logged_weights: compNew.logged_weights as any,
+                            });
+                          }
+                          if (upserts.length > 0) {
+                            await supabase.from("workout_completions").upsert(upserts, { onConflict: "user_id,week,day" });
+                          }
+
+                          setChangeDayDialog(null);
+                          fetchData();
                         }
                       } else {
                         changeWorkoutDay(changeDayDialog.planId, d, changeDayDialog.week);
