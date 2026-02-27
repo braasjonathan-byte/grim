@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageSquarePlus, Loader2, Check, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Loader2, Check, Trash2, Send, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SuggestionBoxProps {
@@ -14,26 +14,42 @@ interface Suggestion {
   user_id: string;
 }
 
+interface Reply {
+  id: string;
+  suggestion_id: string;
+  author_id: string;
+  message: string;
+  created_at: string;
+}
+
 const SuggestionBox = ({ userId, isAdmin = false }: SuggestionBoxProps) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
+  const [replies, setReplies] = useState<Reply[]>([]);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [sendingReply, setSendingReply] = useState(false);
 
   const fetchSuggestions = async () => {
-    const { data } = await supabase
-      .from("suggestions")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data }, { data: replyData }] = await Promise.all([
+      supabase.from("suggestions").select("*").order("created_at", { ascending: false }),
+      supabase.from("suggestion_replies").select("*").order("created_at", { ascending: true }),
+    ]);
 
     if (data) {
       setSuggestions(data as Suggestion[]);
-      // Fetch nicknames via secure RPC function
-      const userIds = [...new Set(data.map((s: Suggestion) => s.user_id))];
-      if (userIds.length > 0) {
+      // Collect user IDs from suggestions and replies
+      const userIds = new Set(data.map((s: Suggestion) => s.user_id));
+      if (replyData) {
+        setReplies(replyData as Reply[]);
+        (replyData as Reply[]).forEach((r) => userIds.add(r.author_id));
+      }
+      if (userIds.size > 0) {
         const { data: nicknameData } = await supabase.rpc("get_suggestion_nicknames", {
-          user_ids: userIds,
+          user_ids: [...userIds],
         });
         if (nicknameData) {
           const map: Record<string, string> = {};
@@ -65,7 +81,6 @@ const SuggestionBox = ({ userId, isAdmin = false }: SuggestionBoxProps) => {
       fetchSuggestions();
       setTimeout(() => setSent(false), 3000);
 
-      // Notify admins via push notification
       try {
         const { data: profile } = await supabase
           .from("profiles")
@@ -85,6 +100,26 @@ const SuggestionBox = ({ userId, isAdmin = false }: SuggestionBoxProps) => {
 
   const handleDelete = async (id: string) => {
     await supabase.from("suggestions").delete().eq("id", id);
+    fetchSuggestions();
+  };
+
+  const handleReply = async (suggestionId: string) => {
+    const text = (replyInputs[suggestionId] || "").trim();
+    if (!text) return;
+    setSendingReply(true);
+    await supabase.from("suggestion_replies").insert({
+      suggestion_id: suggestionId,
+      author_id: userId,
+      message: text,
+    });
+    setReplyInputs((prev) => ({ ...prev, [suggestionId]: "" }));
+    setReplyingTo(null);
+    setSendingReply(false);
+    fetchSuggestions();
+  };
+
+  const handleDeleteReply = async (id: string) => {
+    await supabase.from("suggestion_replies").delete().eq("id", id);
     fetchSuggestions();
   };
 
@@ -138,28 +173,90 @@ const SuggestionBox = ({ userId, isAdmin = false }: SuggestionBoxProps) => {
       {suggestions.length > 0 && (
         <div className="border-t border-border pt-3 space-y-2">
           <h4 className="text-xs font-semibold text-muted-foreground">Inskickade förslag</h4>
-          {suggestions.map((s) => (
-            <div key={s.id} className="bg-secondary rounded-lg p-3 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-primary">
-                  {nicknames[s.user_id] || "Okänd"}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">{formatDate(s.created_at)}</span>
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDelete(s.id)}
-                      className="p-1 text-destructive hover:opacity-70 transition-opacity"
-                      title="Ta bort"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+          {suggestions.map((s) => {
+            const suggestionReplies = replies.filter((r) => r.suggestion_id === s.id);
+            return (
+              <div key={s.id} className="bg-secondary rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-primary">
+                    {nicknames[s.user_id] || "Okänd"}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground">{formatDate(s.created_at)}</span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        className="p-1 text-destructive hover:opacity-70 transition-opacity"
+                        title="Ta bort"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
+                <p className="text-sm text-foreground">{s.message}</p>
+
+                {/* Replies */}
+                {suggestionReplies.length > 0 && (
+                  <div className="space-y-1.5 pl-3 border-l-2 border-primary/30 mt-2">
+                    {suggestionReplies.map((r) => (
+                      <div key={r.id} className="bg-primary/5 rounded-md px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-semibold text-primary flex items-center gap-1">
+                            <Shield className="w-3 h-3" />
+                            {nicknames[r.author_id] || "Admin"}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-muted-foreground">{formatDate(r.created_at)}</span>
+                            {isAdmin && (
+                              <button onClick={() => handleDeleteReply(r.id)} className="p-0.5 text-destructive hover:opacity-70">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-foreground mt-0.5">{r.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Admin reply input */}
+                {isAdmin && (
+                  replyingTo === s.id ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input
+                        type="text"
+                        value={replyInputs[s.id] || ""}
+                        onChange={(e) => setReplyInputs((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && handleReply(s.id)}
+                        placeholder="Skriv svar..."
+                        className="flex-1 bg-background text-foreground text-xs p-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => handleReply(s.id)}
+                        disabled={!(replyInputs[s.id] || "").trim() || sendingReply}
+                        className="p-2 bg-primary text-primary-foreground rounded-md disabled:opacity-40"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setReplyingTo(null)} className="text-xs text-muted-foreground">
+                        Avbryt
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setReplyingTo(s.id)}
+                      className="text-[11px] text-primary hover:underline mt-1"
+                    >
+                      Svara
+                    </button>
+                  )
+                )}
               </div>
-              <p className="text-sm text-foreground">{s.message}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
