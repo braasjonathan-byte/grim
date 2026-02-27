@@ -1639,20 +1639,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                       </button>
                     )}
                     <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const { data: friendships } = await supabase.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-                        if (!friendships || friendships.length === 0) return;
-                        const fIds = friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id);
-                        const { data: profiles } = await supabase.from("profiles").select("user_id, nickname").in("user_id", fIds);
-                        setChatFriends(profiles || []);
-                        setChatShareTarget(plan);
-                      }}
-                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                      title="Dela via chatt">
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                    <button
                       onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
                       className="p-1 text-muted-foreground hover:text-destructive transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
@@ -2579,20 +2565,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
                     )}
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const { data: friendships } = await supabase.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-                        if (!friendships || friendships.length === 0) return;
-                        const fIds = friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id);
-                        const { data: profiles } = await supabase.from("profiles").select("user_id, nickname").in("user_id", fIds);
-                        setChatFriends(profiles || []);
-                        setChatShareTarget(plan);
-                      }}
-                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                      title="Dela via chatt">
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
                     {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
               </div>
@@ -4161,6 +4133,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         loggedWeights={shareTarget.completion.logged_weights}
         nickname={userNickname}
         onClose={() => setShareTarget(null)}
+        onChatShare={async () => {
+          const plan = shareTarget.plan;
+          setShareTarget(null);
+          const { data: friendships } = await supabase.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+          if (!friendships || friendships.length === 0) return;
+          const fIds = friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id);
+          const { data: profiles } = await supabase.from("profiles").select("user_id, nickname").in("user_id", fIds);
+          setChatFriends(profiles || []);
+          setChatShareTarget(plan);
+        }}
       />
     )}
 
