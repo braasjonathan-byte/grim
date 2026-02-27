@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -882,6 +883,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setSingleDate(new Date());
     setShowAddSingle(false);
     setShowCopyPicker(false);
+    if (copyFrom) {
+      toast.success("Pass kopierat med vikter & reps från förra gången. Öka själv för progression! 💪");
+    }
     fetchData();
   };
 
@@ -2264,6 +2268,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
                       <TrendingUp className="w-3 h-3" /> Kopiera tidigare pass
                     </button>
+                    <p className="text-[10px] text-muted-foreground text-center">Övningar, vikter och reps kopieras — justera själv för progression</p>
                     {showCopyPicker &&
                   <div className="space-y-1 max-h-40 overflow-y-auto animate-fade-in">
                         {previousSessions.map((p) =>
