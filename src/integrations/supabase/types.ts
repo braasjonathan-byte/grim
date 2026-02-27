@@ -390,6 +390,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pr_overrides: {
+        Row: {
+          created_at: string
+          exercise: string
+          id: string
+          updated_at: string
+          user_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          exercise: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          weight: number
+        }
+        Update: {
+          created_at?: string
+          exercise?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       pr_stars: {
         Row: {
           created_at: string

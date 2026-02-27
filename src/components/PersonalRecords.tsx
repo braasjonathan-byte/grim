@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar } from "lucide-react";
+import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar, Pencil } from "lucide-react";
 
 interface PersonalRecordsProps {
   userId: string;
@@ -32,10 +32,13 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   const [completions, setCompletions] = useState<CompletionRow[]>([]);
   const [stars, setStars] = useState<Set<string>>(new Set());
   const [goals, setGoals] = useState<Map<string, PRGoal>>(new Map());
+  const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
   const [expanded, setExpanded] = useState(false);
   const [goalDialog, setGoalDialog] = useState<{exercise: string;currentWeight: number;} | null>(null);
   const [goalWeight, setGoalWeight] = useState("");
   const [goalDate, setGoalDate] = useState("");
+  const [editDialog, setEditDialog] = useState<{exercise: string; currentWeight: number;} | null>(null);
+  const [editWeight, setEditWeight] = useState("");
 
   useEffect(() => {
     // Fetch completions, stars, and goals in parallel
@@ -47,8 +50,9 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
     eq("done", true).
     order("updated_at", { ascending: true }),
     supabase.from("pr_stars").select("exercise").eq("user_id", userId),
-    supabase.from("pr_goals").select("exercise, target_weight, target_date").eq("user_id", userId)]
-    ).then(([compRes, starsRes, goalsRes]) => {
+    supabase.from("pr_goals").select("exercise, target_weight, target_date").eq("user_id", userId),
+    supabase.from("pr_overrides").select("exercise, weight").eq("user_id", userId)]
+    ).then(([compRes, starsRes, goalsRes, overRes]) => {
       if (compRes.data) {
         setCompletions(
           compRes.data.map((c) => ({
@@ -66,6 +70,13 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           m.set(g.exercise, g);
         }
         setGoals(m);
+      }
+      if (overRes.data) {
+        const m = new Map<string, number>();
+        for (const o of overRes.data) {
+          m.set(o.exercise, Number(o.weight));
+        }
+        setOverrides(m);
       }
     });
   }, [userId]);
@@ -116,13 +127,24 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
 
     const result: PRRecord[] = [];
     for (const [exercise, data] of prMap) {
+      // Apply manual override if it exists and is higher
+      const override = overrides.get(exercise);
+      const finalWeight = override !== undefined && override > data.weight ? override : data.weight;
+      
       let trend: PRRecord["trend"] = "first";
       if (data.previousBest !== null) {
-        if (data.weight > data.previousBest) trend = "up";else
-        if (data.weight === data.previousBest) trend = "same";else
+        if (finalWeight > data.previousBest) trend = "up";else
+        if (finalWeight === data.previousBest) trend = "same";else
         trend = "down";
       }
-      result.push({ exercise, weight: data.weight, date: data.date, week: data.week, trend });
+      result.push({ exercise, weight: finalWeight, date: data.date, week: data.week, trend });
+    }
+
+    // Also add overrides for exercises not in completions
+    for (const [exercise, weight] of overrides) {
+      if (!prMap.has(exercise)) {
+        result.push({ exercise, weight, date: new Date().toISOString(), week: 0, trend: "first" });
+      }
     }
 
     // Sort: starred first, then by weight
@@ -132,7 +154,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
       if (aStarred !== bStarred) return bStarred - aStarred;
       return b.weight - a.weight;
     });
-  }, [completions, stars]);
+  }, [completions, stars, overrides]);
 
   const toggleStar = async (exercise: string) => {
     const newStars = new Set(stars);
@@ -144,6 +166,34 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
       await supabase.from("pr_stars").insert({ user_id: userId, exercise });
     }
     setStars(newStars);
+  };
+
+  const saveOverride = async () => {
+    if (!editDialog || !editWeight.trim()) return;
+    const w = parseFloat(editWeight);
+    if (isNaN(w) || w <= 0) return;
+
+    await supabase.from("pr_overrides").upsert(
+      { user_id: userId, exercise: editDialog.exercise, weight: w },
+      { onConflict: "user_id,exercise" }
+    );
+
+    setOverrides((prev) => {
+      const m = new Map(prev);
+      m.set(editDialog.exercise, w);
+      return m;
+    });
+    setEditDialog(null);
+    setEditWeight("");
+  };
+
+  const removeOverride = async (exercise: string) => {
+    await supabase.from("pr_overrides").delete().eq("user_id", userId).eq("exercise", exercise);
+    setOverrides((prev) => {
+      const m = new Map(prev);
+      m.delete(exercise);
+      return m;
+    });
   };
 
   const saveGoal = async () => {
@@ -271,19 +321,29 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
 
               <div className="flex items-center justify-between">
                 <p className="text-[10px] text-muted-foreground">
-                  V{pr.week} · {new Date(pr.date).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
+                  {pr.week > 0 ? `V${pr.week} · ` : ""}{new Date(pr.date).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
                 </p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setGoalDialog({ exercise: pr.exercise, currentWeight: pr.weight });
-                    setGoalWeight(goal?.target_weight?.toString() || "");
-                    setGoalDate(goal?.target_date || "");
-                  }}
-                  className="text-muted-foreground/50 hover:text-primary transition-colors">
-
-                  <Target className="w-[15px] h-[15px] text-red-600" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditDialog({ exercise: pr.exercise, currentWeight: pr.weight });
+                      setEditWeight(pr.weight.toString());
+                    }}
+                    className="text-muted-foreground/50 hover:text-primary transition-colors">
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGoalDialog({ exercise: pr.exercise, currentWeight: pr.weight });
+                      setGoalWeight(goal?.target_weight?.toString() || "");
+                      setGoalDate(goal?.target_date || "");
+                    }}
+                    className="text-muted-foreground/50 hover:text-primary transition-colors">
+                    <Target className="w-3 h-3 text-destructive" />
+                  </button>
+                </div>
               </div>
             </div>);
 
@@ -363,6 +423,64 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 className="px-3 py-2.5 bg-destructive/10 text-destructive text-sm font-semibold rounded-lg hover:bg-destructive/20 transition-colors">
 
                     Ta bort
+                  </button>
+              }
+              </div>
+            </div>
+          </div>
+        </>
+      }
+
+      {/* Edit PR dialog */}
+      {editDialog &&
+      <>
+          <div className="fixed inset-0 bg-black/60 z-[70]" onClick={() => setEditDialog(null)} />
+          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[80] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-bold">Justera PB</h3>
+              </div>
+              <button onClick={() => setEditDialog(null)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">{editDialog.exercise}</p>
+                <p className="text-sm text-muted-foreground">
+                  Nuvarande PB: <span className="font-bold text-foreground">{editDialog.currentWeight} kg</span>
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Ny vikt (kg)</label>
+                <input
+                type="number"
+                inputMode="decimal"
+                value={editWeight}
+                onChange={(e) => setEditWeight(e.target.value)}
+                placeholder="t.ex. 120"
+                className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                autoFocus />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                onClick={saveOverride}
+                disabled={!editWeight.trim()}
+                className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity">
+                  Spara
+                </button>
+                {overrides.has(editDialog.exercise) &&
+              <button
+                onClick={() => {
+                  removeOverride(editDialog.exercise);
+                  setEditDialog(null);
+                  setEditWeight("");
+                }}
+                className="px-3 py-2.5 bg-destructive/10 text-destructive text-sm font-semibold rounded-lg hover:bg-destructive/20 transition-colors">
+                    Återställ
                   </button>
               }
               </div>
