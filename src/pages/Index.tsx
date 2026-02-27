@@ -28,6 +28,7 @@ const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
+const HelpSection = lazy(() => import("@/components/HelpSection"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
 type Tab = "workout" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
@@ -525,6 +526,7 @@ const Index = () => {
             <OneRMCalculator />
             <PulseZoneCalculator />
             <CalorieCalculator />
+            <HelpSection />
           </div>
         }
         {tab === "settings" &&
