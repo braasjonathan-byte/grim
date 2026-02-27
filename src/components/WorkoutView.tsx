@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -223,6 +223,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [changeDayDialog, setChangeDayDialog] = useState<{planId: string; currentDay: string; week: number; sessionName: string} | null>(null);
   const [renameDialog, setRenameDialog] = useState<{planId: string; currentName: string} | null>(null);
   const [renameInput, setRenameInput] = useState("");
+
+  // Share to chat
+  const [chatShareTarget, setChatShareTarget] = useState<PlanDay | null>(null);
+  const [chatFriends, setChatFriends] = useState<{user_id: string; nickname: string}[]>([]);
+  const [chatShareSending, setChatShareSending] = useState(false);
 
   // Fetch user nickname
   useEffect(() => {
@@ -1634,6 +1639,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                       </button>
                     )}
                     <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const { data: friendships } = await supabase.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+                        if (!friendships || friendships.length === 0) return;
+                        const fIds = friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id);
+                        const { data: profiles } = await supabase.from("profiles").select("user_id, nickname").in("user_id", fIds);
+                        setChatFriends(profiles || []);
+                        setChatShareTarget(plan);
+                      }}
+                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                      title="Dela via chatt">
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                    <button
                       onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
                       className="p-1 text-muted-foreground hover:text-destructive transition-colors">
                       <Trash2 className="w-3.5 h-3.5" />
@@ -2560,6 +2579,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
                     )}
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const { data: friendships } = await supabase.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+                        if (!friendships || friendships.length === 0) return;
+                        const fIds = friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id);
+                        const { data: profiles } = await supabase.from("profiles").select("user_id, nickname").in("user_id", fIds);
+                        setChatFriends(profiles || []);
+                        setChatShareTarget(plan);
+                      }}
+                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                      title="Dela via chatt">
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
                     {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
               </div>
@@ -4231,6 +4264,61 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           </div>
         </div>
       </div>
+    )}
+
+    {/* Share to chat dialog */}
+    {chatShareTarget && chatFriends.length > 0 && (
+      <>
+        <div className="fixed inset-0 bg-black/60 z-[80]" onClick={() => setChatShareTarget(null)} />
+        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[90] max-w-sm mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Send className="w-4 h-4 text-primary" />
+                Dela pass via chatt
+              </h3>
+              <button onClick={() => setChatShareTarget(null)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {chatShareTarget.session_name} – {chatShareTarget.details.split(/[;\n]/).filter(Boolean).length} övningar
+            </p>
+          </div>
+          <div className="max-h-64 overflow-y-auto p-2">
+            {chatFriends.map(friend => (
+              <button
+                key={friend.user_id}
+                disabled={chatShareSending}
+                onClick={async () => {
+                  setChatShareSending(true);
+                  await supabase.from("chat_messages").insert({
+                    sender_id: userId,
+                    receiver_id: friend.user_id,
+                    message: `Delade passet "${chatShareTarget.session_name}"`,
+                    message_type: "workout",
+                    shared_workout: {
+                      session_name: chatShareTarget.session_name,
+                      details: chatShareTarget.details,
+                      tempo: chatShareTarget.tempo,
+                      week: chatShareTarget.week,
+                    },
+                  });
+                  setChatShareSending(false);
+                  setChatShareTarget(null);
+                  triggerSave();
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-xs font-bold text-primary">{friend.nickname.charAt(0).toUpperCase()}</span>
+                </div>
+                <span className="text-sm font-medium">{friend.nickname}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </>
     )}
     </>);
 

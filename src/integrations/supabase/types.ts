@@ -198,6 +198,39 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          message_type: string
+          read: boolean
+          receiver_id: string
+          sender_id: string
+          shared_workout: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          message_type?: string
+          read?: boolean
+          receiver_id: string
+          sender_id: string
+          shared_workout?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          message_type?: string
+          read?: boolean
+          receiver_id?: string
+          sender_id?: string
+          shared_workout?: Json | null
+        }
+        Relationships: []
+      }
       custom_exercises: {
         Row: {
           category: string
