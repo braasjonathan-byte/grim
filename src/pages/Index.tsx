@@ -598,10 +598,10 @@ const Index = () => {
 
       }
 
-      {/* AI Chat Button */}
-      <AIChatButton
+      {/* AI Chat Button - temporarily disabled */}
+      {/* <AIChatButton
         userId={user.id}
-        onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} />
+        onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
 
 
       {/* Bottom tab bar */}
