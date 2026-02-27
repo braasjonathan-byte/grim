@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_custom_exercises_name_lower ON custom_exercises (LOWER(name));
