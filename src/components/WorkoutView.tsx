@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -2485,28 +2485,31 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
               className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
 
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; setExpandedDay(expanded ? null : key); }}>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenameDialog({ planId: plan.id, currentName: plan.session_name });
+                        setRenameInput(plan.session_name);
+                      }}
+                      className="p-0.5 text-muted-foreground/40 hover:text-primary transition-colors"
+                      title="Inställningar">
+                      <Settings className="w-3.5 h-3.5" />
+                    </button>
                     <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (isDone) {
-                        toggleDone(plan.week, plan.day);
-                      } else {
-                        toggleDone(plan.week, plan.day);
-                      
-                      }
+                      toggleDone(plan.week, plan.day);
                     }}
                     className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                     isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"}`
                     }
                     title="Genomfört">
-
                       {isDone && <Check className="w-4 h-4 text-success-foreground" />}
                     </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Open replacement dialog instead of directly skipping
                       setReplacementTarget({
                         planId: plan.id,
                         sessionName: plan.session_name,
@@ -2518,7 +2521,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                     isSkipped ? "bg-destructive text-destructive-foreground" : "text-muted-foreground/40 hover:text-destructive"}`
                     }
                     title="Markera som missat">
-
                     <XCircle className="w-4 h-4" />
                   </button>
                 </div>
@@ -2533,12 +2535,10 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                       title="Byt veckodag">
                       {plan.day}
                     </button>
-                    <button
-                      onClick={(e) => {e.stopPropagation(); setRenameDialog({ planId: plan.id, currentName: plan.session_name }); setRenameInput(plan.session_name);}}
-                      className={`font-semibold text-sm break-words text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
-                      title="Byt namn">
+                    <span
+                      className={`font-semibold text-sm break-words text-left ${isDone ? "line-through text-muted-foreground" : ""}`}>
                       {plan.session_name}
-                    </button>
+                    </span>
                   </div>
                   {plan.tempo && plan.tempo !== "—" &&
                   <span className="text-xs text-muted-foreground font-mono">{plan.tempo}</span>
