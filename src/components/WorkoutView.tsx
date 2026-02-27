@@ -2639,6 +2639,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
                     return (
                       <div className="space-y-2">
+                          {/* Hint: copied weights from previous session */}
+                          {!isDone && completion?.logged_weights && Object.keys(completion.logged_weights).length > 0 && (
+                            <div className="flex items-start gap-2 bg-primary/5 border border-primary/20 rounded-md px-3 py-2">
+                              <TrendingUp className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                              <p className="text-[11px] text-muted-foreground leading-snug">
+                                Vikter & reps hämtade från förra passet — <span className="text-foreground font-medium">justera själv för progression</span>
+                              </p>
+                            </div>
+                          )}
                           {detailParts.length > 1 ? (
                             <ul className="space-y-1.5">
                               {detailParts.map((line, i) => {
