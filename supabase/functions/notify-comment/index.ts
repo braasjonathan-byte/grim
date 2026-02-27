@@ -162,7 +162,7 @@ serve(async (req) => {
       title: "💬 Grim",
       body: `${nickname} kommenterade ditt pass (${day}, v${week})`,
       icon: "/favicon.ico",
-      data: { url: "/" },
+      data: { url: "/?tab=workout" },
     });
 
     let sent = 0;

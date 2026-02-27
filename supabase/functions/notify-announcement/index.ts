@@ -285,7 +285,7 @@ serve(async (req) => {
       title: "📢 Grim",
       body: `Nytt meddelande: ${title}`,
       icon: "/favicon.ico",
-      data: { url: "/" },
+      data: { url: "/?tab=settings&showInbox=1" },
     });
 
     let sent = 0;

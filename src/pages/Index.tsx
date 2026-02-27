@@ -40,10 +40,29 @@ interface FriendActivity {
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notificationFriendId, setNotificationFriendId] = useState<string | null>(null);
   const [tab, setTabState] = useState<Tab>(() => {
+    // Check URL params first (from push notification deep links)
+    const params = new URLSearchParams(window.location.search);
+    const urlTab = params.get("tab");
+    if (urlTab === "workout" || urlTab === "friends" || urlTab === "calc" || urlTab === "stats" || urlTab === "profile" || urlTab === "settings") {
+      localStorage.setItem("grim_active_tab", urlTab);
+      return urlTab;
+    }
     const saved = localStorage.getItem("grim_active_tab");
     return saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats" || saved === "profile" || saved === "settings" ? saved : "workout";
   });
+
+  // Handle deep link params from push notifications
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const friendId = params.get("friendId");
+    if (friendId) setNotificationFriendId(friendId);
+    // Clean URL params after reading
+    if (params.toString()) {
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
 
   // Wrap setTab to push browser history for Android back button support
   const setTab = useCallback((newTab: Tab) => {
@@ -459,7 +478,9 @@ const Index = () => {
               localStorage.setItem("seenFriendActivities", JSON.stringify(seenMap));
               return remaining;
             });
-          }} />
+          }}
+          initialFriendId={notificationFriendId}
+        />
 
         }
         {tab === "stats" && <WorkoutStats userId={user.id} />}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
@@ -18,6 +18,7 @@ interface FriendsViewProps {
   isAdmin?: boolean;
   friendActivities?: FriendActivity[];
   onClearActivitiesForFriend?: (nickname: string) => void;
+  initialFriendId?: string | null;
 }
 
 interface FriendProfile {
@@ -120,7 +121,7 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
-const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearActivitiesForFriend }: FriendsViewProps) => {
+const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearActivitiesForFriend, initialFriendId }: FriendsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<(Friendship & { profile: FriendProfile })[]>([]);
@@ -169,6 +170,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [adminCondTempoInput, setAdminCondTempoInput] = useState("");
   const [adminCondDistanceInput, setAdminCondDistanceInput] = useState("");
   const [showFullFriendAvatar, setShowFullFriendAvatar] = useState(false);
+
+  const initialFriendHandledRef = useRef(false);
 
   useEffect(() => {
     fetchFriends();
@@ -252,6 +255,17 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     });
     setSuggestedFriends((data || []).map((d: any) => ({ ...d, mutual_count: Number(d.mutual_count) })));
   };
+
+  // Auto-open a friend's profile when navigated from a notification
+  useEffect(() => {
+    if (initialFriendId && friends.length > 0 && !initialFriendHandledRef.current) {
+      const friend = friends.find(f => f.profile.user_id === initialFriendId);
+      if (friend) {
+        initialFriendHandledRef.current = true;
+        viewFriendWorkouts(friend);
+      }
+    }
+  }, [initialFriendId, friends]);
 
 
   const searchUsers = async () => {

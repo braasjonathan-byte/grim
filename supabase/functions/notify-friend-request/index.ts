@@ -160,7 +160,7 @@ serve(async (req) => {
       title: "👋 Vänförfrågan",
       body: `${nickname} vill bli din vän!`,
       icon: "/favicon.ico",
-      data: { url: "/" },
+      data: { url: "/?tab=friends" },
     });
 
     let sent = 0;
