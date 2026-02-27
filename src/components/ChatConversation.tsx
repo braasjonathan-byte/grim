@@ -100,16 +100,22 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
+    const msgText = newMessage.trim();
     setSending(true);
     await supabase.from("chat_messages").insert({
       sender_id: userId,
       receiver_id: friend.user_id,
-      message: newMessage.trim(),
+      message: msgText,
       message_type: "text",
     });
     setNewMessage("");
     setSending(false);
     inputRef.current?.focus();
+
+    // Send push notification (fire and forget)
+    supabase.functions.invoke("notify-chat", {
+      body: { receiverId: friend.user_id, messagePreview: msgText },
+    }).catch(() => {});
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

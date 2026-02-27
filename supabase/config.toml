@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.notify-reminder]
 verify_jwt = false
+
+[functions.notify-chat]
+verify_jwt = false
