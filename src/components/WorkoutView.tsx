@@ -4180,11 +4180,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           const compOld = completions[`${week}-${oldDay}`];
                           const compNew = completions[`${week}-${newDay}`];
 
-                          // Swap plan days
-                          await Promise.all([
-                            supabase.from("workout_plans").update({ day: newDay }).eq("id", changeDayDialog.planId),
-                            supabase.from("workout_plans").update({ day: oldDay }).eq("id", targetPlan.id),
-                          ]);
+                          // Swap plan days using a temp value to avoid unique constraint conflict
+                          const tempDay = `__swap_${Date.now()}`;
+                          await supabase.from("workout_plans").update({ day: tempDay }).eq("id", changeDayDialog.planId);
+                          await supabase.from("workout_plans").update({ day: oldDay }).eq("id", targetPlan.id);
+                          await supabase.from("workout_plans").update({ day: newDay }).eq("id", changeDayDialog.planId);
 
                           // Delete both completions first, then re-insert swapped
                           await supabase.from("workout_completions").delete()
