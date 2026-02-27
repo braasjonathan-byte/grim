@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon, Dumbbell } from "lucide-react";
+import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon, Dumbbell, MessageCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import type { User } from "@supabase/supabase-js";
@@ -28,8 +28,9 @@ const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
+const ChatView = lazy(() => import("@/components/ChatView"));
 
-type Tab = "workout" | "friends" | "calc" | "stats" | "profile" | "settings";
+type Tab = "workout" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
@@ -46,12 +47,12 @@ const Index = () => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
-    if (urlTab === "workout" || urlTab === "friends" || urlTab === "calc" || urlTab === "stats" || urlTab === "profile" || urlTab === "settings") {
+    if (urlTab === "workout" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "profile" || urlTab === "settings") {
       localStorage.setItem("grim_active_tab", urlTab);
       return urlTab;
     }
     const saved = localStorage.getItem("grim_active_tab");
-    return saved === "workout" || saved === "friends" || saved === "calc" || saved === "stats" || saved === "profile" || saved === "settings" ? saved : "workout";
+    return saved === "workout" || saved === "friends" || saved === "chat" || saved === "calc" || saved === "stats" || saved === "profile" || saved === "settings" ? saved : "workout";
   });
 
   // Handle deep link params from push notifications
@@ -105,6 +106,7 @@ const Index = () => {
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [unreadChats, setUnreadChats] = useState(0);
 
   usePushNotifications(user?.id ?? null);
   useOfflineSync();
@@ -214,6 +216,31 @@ const Index = () => {
     };
     checkUnread();
   }, [user, userRole]);
+
+  // Fetch unread chat count
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnreadChats = async () => {
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("receiver_id", user.id)
+        .eq("read", false);
+      setUnreadChats(count || 0);
+    };
+    fetchUnreadChats();
+
+    const channel = supabase
+      .channel("unread-chat-count")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
+        fetchUnreadChats();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
+        fetchUnreadChats();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   // Subscribe to friend workout completions in real-time
   useEffect(() => {
@@ -344,6 +371,7 @@ const Index = () => {
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
+  { key: "chat", icon: MessageCircle, label: "Chatt", badge: unreadChats > 0 ? unreadChats : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg" },
   { key: "profile", icon: UserIcon, label: "Profil" },
   { key: "settings", icon: Settings, label: "Inställningar", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
@@ -484,6 +512,7 @@ const Index = () => {
         />
 
         }
+        {tab === "chat" && <ChatView userId={user.id} />}
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
         <div className="py-2 space-y-4">
