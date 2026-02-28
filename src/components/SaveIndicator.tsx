@@ -28,7 +28,7 @@ export const SaveIndicatorProvider = ({ children }: { children: React.ReactNode 
     <SaveIndicatorContext.Provider value={{ triggerSave }}>
       {children}
       {state !== "idle" && (
-        <div className="fixed top-3 right-3 z-[100] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur border border-border shadow-lg text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-3 right-3 z-[100] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/90 backdrop-blur border border-border text-xs font-medium animate-in fade-in slide-in-from-top-2 duration-200">
           {state === "saving" ? (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
