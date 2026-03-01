@@ -305,7 +305,16 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     const buckets = new Map<string, Bucket>();
 
     for (const c of completions) {
-      const date = new Date(c.updated_at);
+      // Use the workout's actual calendar date for month/year grouping
+      const calendarDate = (() => {
+        if (isStandaloneSession(c)) {
+          return getStandaloneDate(c.day) ?? new Date(c.updated_at);
+        }
+        if (planStartDate) {
+          return getWorkoutCalendarDate(c.week, c.day, planStartDate);
+        }
+        return new Date(c.updated_at);
+      })();
       let key: string;
       let label: string;
       let sortKey: string;
@@ -322,14 +331,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         }
         sortKey = String(planWeek).padStart(4, "0");
       } else if (view === "month") {
-        const m = date.getMonth();
-        const yr = date.getFullYear();
+        const m = calendarDate.getMonth();
+        const yr = calendarDate.getFullYear();
         key = `${yr}-${String(m + 1).padStart(2, "0")}`;
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
         label = `${monthNames[m]} ${yr}`;
         sortKey = key;
       } else {
-        const yr = date.getFullYear();
+        const yr = calendarDate.getFullYear();
         key = `${yr}`;
         label = `${yr}`;
         sortKey = key;

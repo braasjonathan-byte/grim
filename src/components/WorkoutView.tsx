@@ -298,15 +298,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           const weekPlans = planData.filter(p => p.week === dateBasedWeek && p.session_name.trim() !== "" && p.details.trim() !== "");
           const allDone = weekPlans.length > 0 && weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
           targetWeek = allDone
-            // If active week is fully done, try next incomplete week
-            ? wks.find(w => {
+            // If active week is fully done, try next incomplete week FORWARD from dateBasedWeek
+            ? wks.filter(w => w > dateBasedWeek).find(w => {
                 const wp = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
                 return wp.length > 0 && !wp.every(p => compMap[`${p.week}-${p.day}`]);
               }) ?? dateBasedWeek
             : dateBasedWeek;
         } else {
-          // Fallback: first incomplete week
-          targetWeek = wks.find(w => {
+          // Fallback: first incomplete week forward from dateBasedWeek (or from start if no dateBasedWeek)
+          const startFrom = dateBasedWeek ?? 0;
+          targetWeek = wks.filter(w => w >= startFrom).find(w => {
             const weekPlans = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
             return weekPlans.length > 0 && !weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
           });
