@@ -68,31 +68,41 @@ const motivationalQuotes = [
 
 
 const weightComparisons: {maxTons: number;text: string;}[] = [
-{ maxTons: 0.5, text: "en grand piano 🎹" },
-{ maxTons: 1, text: "en liten häst 🐴" },
+{ maxTons: 0.3, text: "en grand piano 🎹" },
+{ maxTons: 0.5, text: "en liten häst 🐴" },
 { maxTons: 1.5, text: "en flodhäst 🦛" },
-{ maxTons: 2, text: "en Fiat 500 🚗" },
-{ maxTons: 3, text: "en noshörning 🦏" },
-{ maxTons: 5, text: "en afrikansk elefant 🐘" },
+{ maxTons: 1.0, text: "en Fiat 500 🚗" },
+{ maxTons: 2.3, text: "en noshörning 🦏" },
+{ maxTons: 6, text: "en afrikansk elefant 🐘" },
 { maxTons: 8, text: "en T-Rex 🦖" },
-{ maxTons: 12, text: "en skolbuss 🚌" },
+{ maxTons: 11, text: "en skolbuss 🚌" },
 { maxTons: 20, text: "en lastbil 🚛" },
 { maxTons: 30, text: "en stridsvagn 🪖" },
-{ maxTons: 50, text: "en spermaval 🐋" },
+{ maxTons: 45, text: "en spermaval 🐋" },
 { maxTons: 80, text: "en blåval 🐳" },
-{ maxTons: 120, text: "ett Boeing 737 ✈️" },
+{ maxTons: 80, text: "ett Boeing 737 ✈️" },
 { maxTons: 200, text: "Frihetsgudinnan 🗽" },
-{ maxTons: 500, text: "ett lyxkryssningsfartyg ⛴️" },
-{ maxTons: 1000, text: "Eiffeltornet 🗼" },
-{ maxTons: 5000, text: "ett rymdfärjeprogram 🚀" },
-{ maxTons: 50000, text: "Titanic 🚢" },
+{ maxTons: 500, text: "ett kryssningsfartyg ⛴️" },
+{ maxTons: 7300, text: "Eiffeltornet 🗼" },
+{ maxTons: 2000, text: "ett rymdfärjeprogram 🚀" },
+{ maxTons: 46000, text: "Titanic 🚢" },
 { maxTons: Infinity, text: "en asteroid 🌑" }];
 
 
 const getWeightComparison = (tons: number): string => {
   if (tons <= 0) return "";
-  const match = weightComparisons.find((w) => tons <= w.maxTons);
-  return match ? match.text : weightComparisons[weightComparisons.length - 1].text;
+  // Find the closest comparison by weight
+  let closest = weightComparisons[0];
+  let closestDiff = Infinity;
+  for (const w of weightComparisons) {
+    const refWeight = w.maxTons === Infinity ? 100000 : w.maxTons;
+    const diff = Math.abs(tons - refWeight);
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      closest = w;
+    }
+  }
+  return closest.text;
 };
 
 const DailyQuoteCard = () => {
