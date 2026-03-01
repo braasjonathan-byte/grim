@@ -484,6 +484,7 @@ export type Database = {
           max_distance_km: number | null
           must_change_password: boolean
           nickname: string
+          plan_start_calibrated: boolean
           protein_bars: number
           referral_code: string | null
           referred_by: string | null
@@ -507,6 +508,7 @@ export type Database = {
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname: string
+          plan_start_calibrated?: boolean
           protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null
@@ -530,6 +532,7 @@ export type Database = {
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname?: string
+          plan_start_calibrated?: boolean
           protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null

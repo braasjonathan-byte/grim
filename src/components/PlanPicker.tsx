@@ -150,6 +150,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       await supabase.from("workout_plans").insert(rows.slice(i, i + 50));
     }
 
+    // Mark user as calibrated since they chose a start date
+    await supabase.from("profiles").update({ plan_start_calibrated: true }).eq("user_id", userId);
+
     setLoading(false);
     onDone();
   };
