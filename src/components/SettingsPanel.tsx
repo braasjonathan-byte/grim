@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail } from "lucide-react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+
+const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 
 const THEME_KEY = "gymberget_theme";
 
@@ -39,6 +41,8 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
   const [secSaving, setSecSaving] = useState(false);
   const [secSaved, setSecSaved] = useState(false);
   const [secHasExisting, setSecHasExisting] = useState(false);
+
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -343,6 +347,27 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
             </div>
           )}
         </div>
+      )}
+      {/* Change password */}
+      {userId && (
+        <div className="border-t border-border pt-2">
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="w-full flex items-center gap-2 py-2 text-sm font-semibold hover:text-primary transition-colors"
+          >
+            <KeyRound className="w-4 h-4 text-primary" />
+            Byt lösenord
+          </button>
+        </div>
+      )}
+
+      {showChangePassword && (
+        <Suspense fallback={null}>
+          <ChangePassword
+            onClose={() => setShowChangePassword(false)}
+            onChanged={() => setShowChangePassword(false)}
+          />
+        </Suspense>
       )}
     </div>
   );
