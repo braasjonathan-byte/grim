@@ -227,25 +227,25 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     const fetchUnreadChats = async () => {
-      const { count } = await supabase
-        .from("chat_messages")
-        .select("*", { count: "exact", head: true })
-        .eq("receiver_id", user.id)
-        .eq("read", false);
+      const { count } = await supabase.
+      from("chat_messages").
+      select("*", { count: "exact", head: true }).
+      eq("receiver_id", user.id).
+      eq("read", false);
       setUnreadChats(count || 0);
     };
     fetchUnreadChats();
 
-    const channel = supabase
-      .channel("unread-chat-count")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
-        fetchUnreadChats();
-      })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
-        fetchUnreadChats();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const channel = supabase.
+    channel("unread-chat-count").
+    on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
+      fetchUnreadChats();
+    }).
+    on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
+      fetchUnreadChats();
+    }).
+    subscribe();
+    return () => {supabase.removeChannel(channel);};
   }, [user]);
 
   // Subscribe to friend workout completions in real-time
@@ -389,7 +389,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img alt="Grim" className="w-[48px] h-[48px] shrink-0" src="/lovable-uploads/6e42c42e-f3f7-4f1c-a09e-37ecba864c10.png" />
+            <img alt="Grim" className="w-[48px] h-[48px] shrink-0" src="/lovable-uploads/c1220791-bb57-493f-b09f-0fb458028ded.png" />
             <h1 className="text-base font-black tracking-tight">
               <span className="text-primary"></span>
             </h1>
@@ -400,10 +400,10 @@ const Index = () => {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
-              aria-label="TikTok"
-            >
+              aria-label="TikTok">
+
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" className="w-4 h-4 fill-primary">
-                <path d="M448 209.9a210.1 210.1 0 0 1-122.8-39.3v178.8A162.6 162.6 0 1 1 185 188.3v89.9a74.6 74.6 0 1 0 52.2 71.2V0h88a121 121 0 0 0 122.8 121.3z"/>
+                <path d="M448 209.9a210.1 210.1 0 0 1-122.8-39.3v178.8A162.6 162.6 0 1 1 185 188.3v89.9a74.6 74.6 0 1 0 52.2 71.2V0h88a121 121 0 0 0 122.8 121.3z" />
               </svg>
             </a>
             {!window.matchMedia('(display-mode: standalone)').matches &&
@@ -499,28 +499,28 @@ const Index = () => {
       <main className="max-w-lg mx-auto px-4 py-4">
         {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
         {tab === "friends" &&
-        <FriendsView
-          userId={user.id}
-          isAdmin={userRole === "admin"}
-          friendActivities={friendActivities}
-          onClearActivitiesForFriend={(nickname) => {
-            setFriendActivities((prev) => {
-              const remaining = prev.filter((a) => a.nickname !== nickname);
-              const seenRaw = localStorage.getItem("seenFriendActivities");
-              const seenMap: Record<string, string> = seenRaw ? JSON.parse(seenRaw) : {};
-              seenMap[nickname] = new Date().toISOString();
-              localStorage.setItem("seenFriendActivities", JSON.stringify(seenMap));
-              return remaining;
-            });
-          }}
-          initialFriendId={notificationFriendId}
-        />
+          <FriendsView
+            userId={user.id}
+            isAdmin={userRole === "admin"}
+            friendActivities={friendActivities}
+            onClearActivitiesForFriend={(nickname) => {
+              setFriendActivities((prev) => {
+                const remaining = prev.filter((a) => a.nickname !== nickname);
+                const seenRaw = localStorage.getItem("seenFriendActivities");
+                const seenMap: Record<string, string> = seenRaw ? JSON.parse(seenRaw) : {};
+                seenMap[nickname] = new Date().toISOString();
+                localStorage.setItem("seenFriendActivities", JSON.stringify(seenMap));
+                return remaining;
+              });
+            }}
+            initialFriendId={notificationFriendId} />
 
-        }
+
+          }
         {tab === "chat" && <ChatView userId={user.id} />}
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
-        <div className="py-2 space-y-4">
+          <div className="py-2 space-y-4">
             <ReferralLink userId={user.id} />
             <WorkoutTimer />
             <OneRMCalculator />
@@ -528,9 +528,9 @@ const Index = () => {
             <CalorieCalculator />
             <HelpSection />
           </div>
-        }
+          }
         {tab === "settings" &&
-        <div className="py-2 space-y-4">
+          <div className="py-2 space-y-4">
             {/* Profile section */}
             <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />
             {/* Role badge */}
@@ -547,7 +547,7 @@ const Index = () => {
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
             <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
           </div>
-        }
+          }
       </main>
       </Suspense>
 
@@ -638,8 +638,8 @@ const Index = () => {
 
       {/* AI Chat Button - temporarily disabled */}
       {/* <AIChatButton
-        userId={user.id}
-        onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
+          userId={user.id}
+          onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
 
 
       {/* Bottom tab bar */}
