@@ -1,0 +1,55 @@
+
+CREATE OR REPLACE FUNCTION public.get_leaderboard(filter_year integer, filter_month integer DEFAULT NULL::integer)
+ RETURNS TABLE(user_id uuid, nickname text, avatar_url text, done_count bigint, is_honorary boolean)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN; END IF;
+  
+  RETURN QUERY
+  SELECT 
+    p.user_id,
+    p.nickname,
+    p.avatar_url,
+    COUNT(wc.id) AS done_count,
+    p.is_honorary
+  FROM profiles p
+  LEFT JOIN workout_completions wc ON wc.user_id = p.user_id
+    AND wc.done = true
+    AND (
+      -- For standalone sessions (week=0), extract the date from the day field
+      -- For plan-based sessions, fall back to updated_at
+      CASE 
+        WHEN wc.week = 0 AND wc.day ~ '^\d{4}-\d{2}-\d{2}' THEN
+          EXTRACT(YEAR FROM substring(wc.day from '^\d{4}-\d{2}-\d{2}')::date)
+        ELSE
+          EXTRACT(YEAR FROM wc.updated_at)
+      END = filter_year
+    )
+    AND (
+      filter_month IS NULL OR
+      CASE 
+        WHEN wc.week = 0 AND wc.day ~ '^\d{4}-\d{2}-\d{2}' THEN
+          EXTRACT(MONTH FROM substring(wc.day from '^\d{4}-\d{2}-\d{2}')::date)
+        ELSE
+          EXTRACT(MONTH FROM wc.updated_at)
+      END = filter_month
+    )
+    AND (
+      wc.logged_distance_km IS NOT NULL
+      OR wc.logged_tempo IS NOT NULL
+      OR wc.logged_pulse IS NOT NULL
+      OR (wc.logged_weights IS NOT NULL AND wc.logged_weights::text != '{}')
+      OR EXISTS (
+        SELECT 1 FROM workout_plans wp
+        WHERE wp.user_id = wc.user_id AND wp.week = wc.week AND wp.day = wc.day
+        AND wp.details IS NOT NULL AND TRIM(wp.details) != ''
+      )
+    )
+  GROUP BY p.user_id, p.nickname, p.avatar_url, p.is_honorary
+  HAVING COUNT(wc.id) > 0
+  ORDER BY done_count DESC;
+END;
+$function$;
