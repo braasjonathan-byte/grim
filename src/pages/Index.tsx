@@ -477,13 +477,6 @@ const Index = () => {
             </div>
             <span className="text-sm font-semibold text-primary text-center font-sans">{nickname}</span>
             <button
-              onClick={() => setShowChangePassword(true)}
-              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              title="Byt lösenord">
-
-              <KeyRound className="w-4 h-4" />
-            </button>
-            <button
               onClick={handleLogout}
               className="p-1.5 transition-colors text-destructive"
               title="Logga ut">
