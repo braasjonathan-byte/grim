@@ -108,7 +108,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
         <CalendarDays className="w-10 h-10 text-primary mx-auto" />
         <h2 className="text-xl font-black tracking-tight">Kalibrera din träningsplan</h2>
         <p className="text-sm text-muted-foreground">
-          Välj ett pass du har gjort och ange datumet du körde det. Startdatumet beräknas automatiskt.
+          För att du ska hamna direkt in i rätt träningsvecka behöver vi veta när du startade din plan. Välj ett pass du redan har gjort och ange datumet — så räknar vi ut resten automatiskt.
         </p>
       </div>
 
