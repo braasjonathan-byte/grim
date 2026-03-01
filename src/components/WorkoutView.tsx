@@ -5,6 +5,7 @@ import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moo
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
+import PlanCalibrationDialog from "@/components/PlanCalibrationDialog";
 import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
 import WorkoutLogDialog from "@/components/WorkoutLogDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
@@ -230,10 +231,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [chatFriends, setChatFriends] = useState<{user_id: string; nickname: string}[]>([]);
   const [chatShareSending, setChatShareSending] = useState(false);
 
-  // Fetch user nickname
+  // Calibration state
+  const [needsCalibration, setNeedsCalibration] = useState(false);
+
+  // Fetch user nickname + calibration status
   useEffect(() => {
-    supabase.from("profiles").select("nickname").eq("user_id", userId).single().then(({ data }) => {
-      if (data) setUserNickname(data.nickname);
+    supabase.from("profiles").select("nickname, plan_start_calibrated").eq("user_id", userId).single().then(({ data }) => {
+      if (data) {
+        setUserNickname(data.nickname);
+        // Will be checked after plans load
+        if (!(data as any).plan_start_calibrated) {
+          setNeedsCalibration(true);
+        }
+      }
     });
   }, [userId]);
 
@@ -1403,6 +1413,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         <Dumbbell className="w-8 h-8 text-primary animate-pulse" />
       </div>);
 
+  }
+
+  // Calibration screen — shown once for users with active plan who haven't calibrated
+  if (mode === "plan" && needsCalibration) {
+    return (
+      <PlanCalibrationDialog
+        userId={userId}
+        onDone={() => {
+          setNeedsCalibration(false);
+          setInitialWeekSet(false);
+          fetchData();
+        }}
+      />
+    );
   }
 
   // Choice screen

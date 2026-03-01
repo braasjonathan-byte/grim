@@ -228,6 +228,9 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
       await supabase.from("workout_plans").insert(allRows.slice(i, i + 50));
     }
 
+    // Mark user as calibrated since they set a start date in the builder
+    await supabase.from("profiles").update({ plan_start_calibrated: true }).eq("user_id", userId);
+
     setSaving(false);
     onDone();
   };
