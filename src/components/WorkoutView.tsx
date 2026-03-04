@@ -208,6 +208,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     lineIndex: number;
   } | null>(null);
 
+  // Replace exercise propagation dialog
+  const [replacePropagateDialog, setReplacePropagateDialog] = useState<{
+    oldExerciseName: string;
+    newEntry: string;
+    sourcePlanId: string;
+  } | null>(null);
+
   // Confirm unchecked sets dialog
   const [uncheckedSetsDialog, setUncheckedSetsDialog] = useState<{
     week: number;
@@ -1114,12 +1121,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     `${weightDialog.exerciseName} — ${sets}×${reps}`;
 
     let newDetails: string;
+    let wasReplace = false;
+    let oldName = "";
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
       // Replace mode: substitute the line at the target index
       const separator = plan.details.includes("\n") ? "\n" : "; ";
       const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
       lines[replaceExerciseTarget.lineIndex] = entry;
       newDetails = lines.join(separator);
+      wasReplace = true;
+      oldName = replaceExerciseTarget.name;
       setReplaceExerciseTarget(null);
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
@@ -1136,6 +1147,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setRepsInput("10");
     setSetsInput("3");
     setIsWarmupMode(false);
+
+    // Show propagation dialog if this was a replacement in plan mode
+    if (wasReplace && mode === "plan" && plan.week > 0) {
+      setReplacePropagateDialog({ oldExerciseName: oldName, newEntry: entry, sourcePlanId: plan.id });
+    }
   };
 
   // Add conditioning exercise with tempo, time, distance (+ intervals for Intervallträning)
@@ -1169,11 +1185,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
 
     let newDetails: string;
+    let wasReplace = false;
+    let oldName = "";
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
       const separator = plan.details.includes("\n") ? "\n" : "; ";
       const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
       lines[replaceExerciseTarget.lineIndex] = entry;
       newDetails = lines.join(separator);
+      wasReplace = true;
+      oldName = replaceExerciseTarget.name;
       setReplaceExerciseTarget(null);
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
@@ -1194,6 +1214,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     setCondPulseInput("");
     setCondSpmInput("");
     setIsWarmupMode(false);
+
+    // Show propagation dialog if this was a replacement in plan mode
+    if (wasReplace && mode === "plan" && plan.week > 0) {
+      setReplacePropagateDialog({ oldExerciseName: oldName, newEntry: entry, sourcePlanId: plan.id });
+    }
   };
 
   // Delete a logged conditioning line from plan details
@@ -1392,6 +1417,47 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       return;
     }
     setPropagateDialog(null);
+  };
+
+  // Handle replace exercise propagation across all weeks
+  const handleReplacePropagate = async (doPropagate: boolean) => {
+    if (doPropagate && replacePropagateDialog) {
+      const { oldExerciseName, newEntry, sourcePlanId } = replacePropagateDialog;
+      const sourcePlan = plans.find(p => p.id === sourcePlanId);
+      if (!sourcePlan) { setReplacePropagateDialog(null); return; }
+
+      // Find all other plans (different weeks, same day) that contain the old exercise
+      const otherPlans = plans.filter(p =>
+        p.id !== sourcePlanId &&
+        p.week > 0 &&
+        p.day === sourcePlan.day
+      );
+
+      const updatedPlans = [...plans];
+
+      for (const p of otherPlans) {
+        const separator = p.details.includes("\n") ? "\n" : "; ";
+        const lines = p.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+        let changed = false;
+        for (let i = 0; i < lines.length; i++) {
+          const lineName = lines[i].split(/\s*—\s*/)[0].trim();
+          if (lineName.toLowerCase() === oldExerciseName.toLowerCase()) {
+            lines[i] = newEntry;
+            changed = true;
+          }
+        }
+        if (changed) {
+          const newDetails = lines.join(separator);
+          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", p.id);
+          const idx = updatedPlans.findIndex(up => up.id === p.id);
+          if (idx >= 0) updatedPlans[idx] = { ...updatedPlans[idx], details: newDetails };
+        }
+      }
+
+      setPlans(updatedPlans);
+      triggerSave();
+    }
+    setReplacePropagateDialog(null);
   };
 
   const executeDeleteExercise = async () => {
@@ -4222,6 +4288,25 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
             </button>
             <button onClick={() => handlePropagate(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
               Alla framtida
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {replacePropagateDialog && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setReplacePropagateDialog(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-sm">Byt ut i hela schemat?</h3>
+          <p className="text-sm text-muted-foreground">
+            Vill du byta ut <span className="font-semibold text-foreground">{replacePropagateDialog.oldExerciseName}</span> i alla veckor?
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => handleReplacePropagate(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+              Bara denna vecka
+            </button>
+            <button onClick={() => handleReplacePropagate(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
+              Alla veckor
             </button>
           </div>
         </div>
