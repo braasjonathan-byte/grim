@@ -3893,7 +3893,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                         const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
                         // Fallback: try to extract just sets from "NxM" or "Nx..." pattern
                         const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-                        const partName = partStructMatch ? partStructMatch[1].trim() : exerciseName || cleanPart;
+                        const partName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
                         const partSets = partStructMatch ? partStructMatch[2] : fallbackSetsMatch ? fallbackSetsMatch[1] : null;
                         const partReps = partStructMatch ? partStructMatch[3] : null;
                         const partKg = partStructMatch && partStructMatch[4] ? partStructMatch[4].trim() : null;
