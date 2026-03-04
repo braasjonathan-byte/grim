@@ -441,13 +441,22 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     const todayIdx = currentWeekDays.findIndex(p => p.day === todayName);
     const newIdx = todayIdx >= 0 ? todayIdx : 0;
     setActiveDayIndex(newIdx);
-    // Auto-expand if only one workout day
-    if (currentWeekDays.length === 1) {
-      setExpandedDay(`${currentWeekDays[0].week}-${currentWeekDays[0].day}`);
-    } else {
-      setExpandedDay(null);
-    }
+    setExpandedDay(null);
   }, [currentWeek, plans]);
+
+  // Auto-expand if the currently shown day has only one session
+  useEffect(() => {
+    if (!isMobile) return;
+    const currentWeekDays = plans
+      .filter((p) => p.week === currentWeek)
+      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+    const activePlan = currentWeekDays[activeDayIndex];
+    if (!activePlan) return;
+    const sameDayPlans = currentWeekDays.filter(p => p.day === activePlan.day);
+    if (sameDayPlans.length === 1) {
+      setExpandedDay(`${activePlan.week}-${activePlan.day}`);
+    }
+  }, [activeDayIndex, currentWeek, plans, isMobile]);
 
   const allExercises = [
   ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false })),
