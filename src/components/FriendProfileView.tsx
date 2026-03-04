@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, X, Star, User, CheckCircle, XCircle, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
+import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -162,6 +162,7 @@ interface SocialData {
 
 const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileViewProps) => {
   const [loading, setLoading] = useState(true);
+  const [challengeCount, setChallengeCount] = useState(0);
   const [starredPRs, setStarredPRs] = useState<StarredPR[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showFullAvatar, setShowFullAvatar] = useState(false);
@@ -176,15 +177,17 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }] = await Promise.all([
+      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }, { count: challengeTotal }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details, created_at").eq("user_id", friendUserId),
         supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
+        supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", friendUserId),
       ]);
 
       setAvatarUrl(profileData?.avatar_url || null);
+      setChallengeCount(challengeTotal || 0);
       setIsHonorary(profileData?.is_honorary ?? false);
       setIsAdmin(!!roleData);
       const pd = profileData as any;
@@ -336,11 +339,11 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                <p className="text-lg font-bold">{stats.done}</p>
                <p className="text-[10px] text-muted-foreground">Genomförda ({periodLabel})</p>
              </button>
-             <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
-               <XCircle className="w-4 h-4 text-destructive mx-auto mb-1" />
-               <p className="text-lg font-bold">{stats.skipped}</p>
-               <p className="text-[10px] text-muted-foreground">Missade ({periodLabel})</p>
-             </button>
+              <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
+                <Swords className="w-4 h-4 text-warning mx-auto mb-1" />
+                <p className="text-lg font-bold">{challengeCount}</p>
+                <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
+              </button>
              <button onClick={cyclePeriod} className="bg-secondary rounded-xl p-3 text-center active:scale-95 transition-transform">
                 <Weight className="w-4 h-4 text-primary mx-auto mb-1" />
                 <p className="text-lg font-bold">{stats.liftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
