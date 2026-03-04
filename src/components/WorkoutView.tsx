@@ -497,27 +497,35 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
   // Helper: count unchecked sets for a workout
   const countUncheckedSets = (week: number, day: string): number => {
     const k = `${week}-${day}`;
-    const plan = plans.find(p => p.week === week && p.day === day);
-    if (!plan || !plan.details) return 0;
-    const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    // Check ALL plans for this week+day, not just the first one
+    const dayPlans = plans.filter(p => p.week === week && p.day === day);
+    if (dayPlans.length === 0) return 0;
     let unchecked = 0;
-    for (const part of parts) {
-      // Check if conditioning exercise — skip set tracking for those
-      const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part);
-      if (isCondExercise) continue;
+    for (const plan of dayPlans) {
+      if (!plan.details) continue;
+      const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        // Skip daily challenge exercises
+        if (part.startsWith("⚔️")) continue;
+        // Check if conditioning exercise — skip set tracking for those
+        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+        if (isCondExercise) continue;
+        // Skip rest/rest day markers
+        if (/^(vila|vilodag)/i.test(part)) continue;
 
-      // Use the same name extraction logic as the rendering code
-      const { clean: cleanPart } = extractRpe(part);
-      const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
-      const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-      const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
-      const exerciseName = nameMatch ? nameMatch[1].trim() : null;
-      const pName = partStructMatch ? partStructMatch[1].trim() : exerciseName || cleanPart;
+        // Use the same name extraction logic as the rendering code
+        const { clean: cleanPart } = extractRpe(part);
+        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+        const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
+        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
+        const exerciseName = nameMatch ? nameMatch[1].trim() : null;
+        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
 
-      const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
-      const setsVal = getSetsDone(k, pName);
-      for (let i = 0; i < sc; i++) {
-        if (setsVal[i] !== "1") unchecked++;
+        const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
+        const setsVal = getSetsDone(k, pName);
+        for (let i = 0; i < sc; i++) {
+          if (setsVal[i] !== "1") unchecked++;
+        }
       }
     }
     return unchecked;
