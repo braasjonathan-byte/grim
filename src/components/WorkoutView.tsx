@@ -3878,10 +3878,27 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                   </div>
-                                   <DropdownMenu>
+                                   <DropdownMenu modal={false}>
                                       <DropdownMenuTrigger asChild>
                                         <button
-                                          onClick={(e) => {e.stopPropagation();}}
+                                          onPointerDown={(e) => {
+                                            // Prevent opening on scroll-through touches
+                                            const target = e.currentTarget;
+                                            target.dataset.pointerStart = `${e.clientX},${e.clientY}`;
+                                          }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const target = e.currentTarget;
+                                            const start = target.dataset.pointerStart;
+                                            if (start) {
+                                              const [sx, sy] = start.split(",").map(Number);
+                                              const dist = Math.sqrt((e.clientX - sx) ** 2 + (e.clientY - sy) ** 2);
+                                              if (dist > 10) {
+                                                e.preventDefault();
+                                                return;
+                                              }
+                                            }
+                                          }}
                                           className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
                                           title="Övningsalternativ">
                                           <Settings className="w-4 h-4" />
