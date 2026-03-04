@@ -4686,8 +4686,15 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
         }}
         onCopyToDate={() => {
           const plan = shareTarget.plan;
+          // Gather ALL plans for the same week/day so custom exercises are included
+          const allDayPlans = plans.filter(p => p.week === plan.week && p.day === plan.day);
+          const combinedDetails = allDayPlans.map(p => p.details.trim()).filter(Boolean).join("\n");
+          const combinedSource: PlanDay = {
+            ...plan,
+            details: combinedDetails || plan.details,
+          };
           setShareTarget(null);
-          setCopyToDateSource(plan);
+          setCopyToDateSource(combinedSource);
           setCopyToDateSelected(new Date());
           setCopyToDateConflict(null);
         }}
