@@ -154,6 +154,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
   const [isWarmupMode, setIsWarmupMode] = useState(false);
   const [deleteExerciseConfirm, setDeleteExerciseConfirm] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
+  const [replaceExerciseTarget, setReplaceExerciseTarget] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
@@ -1112,10 +1113,20 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     `${weightDialog.exerciseName} — ${sets}×${reps} @ ${weightStr} kg` :
     `${weightDialog.exerciseName} — ${sets}×${reps}`;
 
-    const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
-    const newDetails = isWarmupMode
-      ? (plan.details ? `${entry}${joinSep}${plan.details}` : entry)
-      : (plan.details ? `${plan.details}${joinSep}${entry}` : entry);
+    let newDetails: string;
+    if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
+      // Replace mode: substitute the line at the target index
+      const separator = plan.details.includes("\n") ? "\n" : "; ";
+      const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      lines[replaceExerciseTarget.lineIndex] = entry;
+      newDetails = lines.join(separator);
+      setReplaceExerciseTarget(null);
+    } else {
+      const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+      newDetails = isWarmupMode
+        ? (plan.details ? `${entry}${joinSep}${plan.details}` : entry)
+        : (plan.details ? `${plan.details}${joinSep}${entry}` : entry);
+    }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
@@ -1157,10 +1168,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
 
-    const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
-    const newDetails = isWarmupMode
-      ? (plan.details ? `${entry}${joinSep}${plan.details}` : entry)
-      : (plan.details ? `${plan.details}${joinSep}${entry}` : entry);
+    let newDetails: string;
+    if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
+      const separator = plan.details.includes("\n") ? "\n" : "; ";
+      const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      lines[replaceExerciseTarget.lineIndex] = entry;
+      newDetails = lines.join(separator);
+      setReplaceExerciseTarget(null);
+    } else {
+      const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+      newDetails = isWarmupMode
+        ? (plan.details ? `${entry}${joinSep}${plan.details}` : entry)
+        : (plan.details ? `${plan.details}${joinSep}${entry}` : entry);
+    }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
@@ -1391,6 +1411,17 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     else console.log("[DELETE] Success");
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
     setDeleteExerciseConfirm(null);
+  };
+
+  // Start replace exercise flow: open exercise picker filtered to the exercise's muscle group
+  const startReplaceExercise = (planId: string, lineIndex: number, exerciseName: string) => {
+    const exercise = allExercises.find((e) => e.name.toLowerCase() === exerciseName.toLowerCase());
+    const muscleGroup = exercise?.muscleGroup || null;
+    setReplaceExerciseTarget({ planId, lineIndex, name: exerciseName });
+    setShowExercisePicker(planId);
+    setExerciseSearch("");
+    setSelectedMuscle(muscleGroup);
+    setIsWarmupMode(false);
   };
 
   const moveExercise = async (planId: string, lineIndex: number, direction: "up" | "down") => {
@@ -1727,6 +1758,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <button
+                                   onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, name);}}
+                                  className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                  title="Byt ut övning">
+                                      <ArrowLeftRight className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
                                    onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
                                   className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                       <X className="w-4 h-4" />
@@ -1828,6 +1865,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                 className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
                                 title="Redigera">
                                     <Dumbbell className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, name);}}
+                                className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                title="Byt ut övning">
+                                    <ArrowLeftRight className="w-3.5 h-3.5" />
                                   </button>
                                   <button
                                 onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
@@ -2129,8 +2172,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                   isExercisePickerOpen && !weightDialog && !conditioningDialog ?
                   <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                          <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold">{isWarmupMode ? "Välj uppvärmning" : "Välj övning"}</h4>
-                          <button onClick={() => { setShowExercisePicker(null); setIsWarmupMode(false); }} className="text-muted-foreground hover:text-foreground">
+                          <h4 className="text-xs font-semibold">{replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Välj övning"}</h4>
+                          <button onClick={() => { setShowExercisePicker(null); setIsWarmupMode(false); setReplaceExerciseTarget(null); }} className="text-muted-foreground hover:text-foreground">
                             <X className="w-4 h-4" />
                           </button>
                         </div>
@@ -2719,6 +2762,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                        onClick={(e) => {
                                          e.stopPropagation();
                                          e.preventDefault();
+                                         startReplaceExercise(plan.id, i, cleanName);
+                                       }}
+                                      className="p-1 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                                      title="Byt ut övning">
+                                      <ArrowLeftRight className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         e.preventDefault();
                                          setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });
                                        }}
                                       className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 touch-manipulation">
@@ -3204,6 +3257,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   </div>
                                   <button onClick={(e) => { e.stopPropagation(); setExerciseInfoName(condName || part); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
                                     <Info className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, condName || part);}} className="p-0.5 text-muted-foreground hover:text-primary transition-colors" title="Byt ut övning">
+                                    <ArrowLeftRight className="w-3.5 h-3.5" />
                                   </button>
                                   <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                     <X className="w-4 h-4" />
@@ -3863,8 +3919,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                   {showExercisePicker === plan.id && !weightDialog && !conditioningDialog ?
                 <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold">{isWarmupMode ? "Välj uppvärmning" : "Lägg till övning"}</h4>
-                        <button onClick={() => {setShowExercisePicker(null);setShowAddCustomExercise(false);setIsWarmupMode(false);}} className="text-muted-foreground hover:text-foreground">
+                        <h4 className="text-xs font-semibold">{replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Lägg till övning"}</h4>
+                        <button onClick={() => {setShowExercisePicker(null);setShowAddCustomExercise(false);setIsWarmupMode(false);setReplaceExerciseTarget(null);}} className="text-muted-foreground hover:text-foreground">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
