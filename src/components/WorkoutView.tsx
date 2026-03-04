@@ -10,6 +10,7 @@ import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
 import WorkoutLogDialog from "@/components/WorkoutLogDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
@@ -3759,18 +3760,26 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                   </div>
-                                   <button
-                                      onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, partName);}}
-                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
-                                      title="Byt ut övning">
-                                      <ArrowLeftRight className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
-                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-destructive hover:text-destructive/80 transition-colors touch-manipulation"
-                                      title="Ta bort övning">
-                                      <X className="w-4 h-4" />
-                                    </button>
+                                   <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <button
+                                          onClick={(e) => {e.stopPropagation();}}
+                                          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
+                                          title="Övningsalternativ">
+                                          <Settings className="w-4 h-4" />
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                        <DropdownMenuItem onClick={() => startReplaceExercise(plan.id, i, partName)}>
+                                          <ArrowLeftRight className="w-4 h-4 mr-2" />
+                                          Byt ut övning
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) })}>
+                                          <X className="w-4 h-4 mr-2" />
+                                          Ta bort övning
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                               </div>
                               {/* Last logged weight note */}
