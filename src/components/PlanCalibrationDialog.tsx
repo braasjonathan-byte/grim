@@ -53,6 +53,9 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
     fetchSessions();
   }, [userId]);
 
+  // If no sessions found, allow manual start date selection
+  const [manualMode, setManualMode] = useState(false);
+
   const calculateStartDate = (selectedWeek: number, selectedDay: string, date: Date): Date => {
     // Calculate how many days from plan start this session is
     const dayIndex = DAY_ORDER.indexOf(selectedDay);
@@ -61,12 +64,16 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
   };
 
   const handleConfirm = async () => {
-    if (!selectedSession) return;
     setSaving(true);
     try {
-      const startDate = calculateStartDate(selectedSession.week, selectedSession.day, sessionDate);
+      let startDate: Date;
+      if (manualMode || sessions.length === 0) {
+        startDate = sessionDate;
+      } else {
+        if (!selectedSession) return;
+        startDate = calculateStartDate(selectedSession.week, selectedSession.day, sessionDate);
+      }
 
-      // Format as YYYY-MM-DD for timezone-safe storage
       const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
 
       const { error } = await supabase
@@ -95,9 +102,11 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
     }
   };
 
-  const computedStartDate = selectedSession
-    ? calculateStartDate(selectedSession.week, selectedSession.day, sessionDate)
-    : null;
+  const computedStartDate = manualMode || sessions.length === 0
+    ? sessionDate
+    : selectedSession
+      ? calculateStartDate(selectedSession.week, selectedSession.day, sessionDate)
+      : null;
 
   if (loading) {
     return (
@@ -114,41 +123,86 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
         <CalendarDays className="w-10 h-10 text-primary mx-auto" />
         <h2 className="text-xl font-black tracking-tight">Kalibrera din träningsplan</h2>
         <p className="text-sm text-muted-foreground">
-          För att du ska hamna direkt in i rätt träningsvecka behöver vi veta när du startade din plan. Välj ett pass du redan har gjort och ange datumet — så räknar vi ut resten automatiskt.
+          {sessions.length === 0 || manualMode
+            ? "Välj vilket datum din plan startade (eller ska starta)."
+            : "Välj ett pass du redan har gjort och ange datumet — så räknar vi ut resten automatiskt."
+          }
         </p>
       </div>
 
-      {/* Session picker */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">Välj ett pass:</p>
-        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-          {sessions.map((s) => {
-            const isSelected = selectedSession?.week === s.week && selectedSession?.day === s.day;
-            return (
-              <button
-                key={`${s.week}-${s.day}`}
-                onClick={() => setSelectedSession({ week: s.week, day: s.day })}
-                className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-all flex items-center gap-2 ${
-                  isSelected
-                    ? "border-primary bg-primary/10 ring-1 ring-primary"
-                    : "border-border bg-card hover:border-primary/50"
-                }`}
-              >
-                {isSelected && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
-                <span className="font-medium">V{s.week} {s.day}</span>
-                <span className="text-muted-foreground truncate">— {s.session_name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {selectedSession && (
+      {sessions.length > 0 && !manualMode ? (
         <>
+          {/* Session picker */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              När körde du <span className="text-foreground">V{selectedSession.week} {selectedSession.day}</span>?
-            </p>
+            <p className="text-xs font-medium text-muted-foreground">Välj ett pass:</p>
+            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+              {sessions.map((s) => {
+                const isSelected = selectedSession?.week === s.week && selectedSession?.day === s.day;
+                return (
+                  <button
+                    key={`${s.week}-${s.day}`}
+                    onClick={() => setSelectedSession({ week: s.week, day: s.day })}
+                    className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition-all flex items-center gap-2 ${
+                      isSelected
+                        ? "border-primary bg-primary/10 ring-1 ring-primary"
+                        : "border-border bg-card hover:border-primary/50"
+                    }`}
+                  >
+                    {isSelected && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                    <span className="font-medium">V{s.week} {s.day}</span>
+                    <span className="text-muted-foreground truncate">— {s.session_name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setManualMode(true)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+            >
+              Ange startdatum manuellt istället
+            </button>
+          </div>
+
+          {selectedSession && (
+            <>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  När körde du <span className="text-foreground">V{selectedSession.week} {selectedSession.day}</span>?
+                </p>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={sessionDate}
+                    onSelect={(d) => d && setSessionDate(d)}
+                    locale={sv}
+                    className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
+                  />
+                </div>
+              </div>
+
+              {computedStartDate && (
+                <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
+                  <p className="text-sm font-medium">
+                    Beräknat startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={handleConfirm}
+                disabled={saving}
+                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
+              >
+                {saving ? "Sparar..." : "Bekräfta"}
+              </button>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Manual date picker / no sessions fallback */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Välj startdatum för din plan:</p>
             <div className="flex justify-center">
               <Calendar
                 mode="single"
@@ -163,9 +217,18 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
           {computedStartDate && (
             <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
               <p className="text-sm font-medium">
-                Beräknat startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                Startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
               </p>
             </div>
+          )}
+
+          {sessions.length > 0 && (
+            <button
+              onClick={() => setManualMode(false)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline mx-auto block"
+            >
+              Välj via ett genomfört pass istället
+            </button>
           )}
 
           <button
