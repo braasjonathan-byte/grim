@@ -2656,7 +2656,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                   setRenameDialog({ planId: plan.id, currentName: plan.session_name });
                   setRenameInput(plan.session_name);
                 }}
-                className="absolute top-1 left-1 p-1 text-muted-foreground/30 hover:text-primary transition-colors z-10"
+                className="absolute top-1 right-1 p-1 text-muted-foreground/30 hover:text-primary transition-colors z-10"
                 title="Inställningar">
                 <Settings className="w-3 h-3" />
               </button>
