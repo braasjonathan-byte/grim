@@ -1824,16 +1824,10 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <button
-                                   onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, name);}}
-                                  className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
-                                  title="Byt ut övning">
-                                      <ArrowLeftRight className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                   onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
-                                  className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
-                                      <X className="w-4 h-4" />
-                                    </button>
+                                    onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                   className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
+                                       <X className="w-4 h-4" />
+                                     </button>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -1933,16 +1927,10 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <Dumbbell className="w-3 h-3" />
                                   </button>
                                   <button
-                                onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, name);}}
-                                className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
-                                title="Byt ut övning">
-                                    <ArrowLeftRight className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
-                                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
-                                    <X className="w-4 h-4" />
-                                  </button>
+                                 onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
+                                 className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
+                                     <X className="w-4 h-4" />
+                                   </button>
                                 </div>
                               </div>
                               <div className="space-y-1">
@@ -2828,16 +2816,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                        onClick={(e) => {
                                          e.stopPropagation();
                                          e.preventDefault();
-                                         startReplaceExercise(plan.id, i, cleanName);
-                                       }}
-                                      className="p-1 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
-                                      title="Byt ut övning">
-                                      <ArrowLeftRight className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         e.preventDefault();
                                          setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });
                                        }}
                                       className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 touch-manipulation">
@@ -3324,9 +3302,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                   <button onClick={(e) => { e.stopPropagation(); setExerciseInfoName(condName || part); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
-                                  <button onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, condName || part);}} className="p-0.5 text-muted-foreground hover:text-primary transition-colors" title="Byt ut övning">
-                                    <ArrowLeftRight className="w-3.5 h-3.5" />
-                                  </button>
                                   <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                     <X className="w-4 h-4" />
                                   </button>
@@ -3785,11 +3760,17 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                   </div>
                                    <button
-                                     onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
-                                     className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
-                                     title="Ta bort övning">
-                                     <X className="w-4 h-4" />
-                                   </button>
+                                      onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
+                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
+                                      title="Ta bort övning">
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, partName);}}
+                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
+                                      title="Byt ut övning">
+                                      <ArrowLeftRight className="w-4 h-4" />
+                                    </button>
                                 </div>
                               </div>
                               {/* Last logged weight note */}
