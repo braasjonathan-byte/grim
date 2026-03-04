@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings } from "lucide-react";
@@ -133,6 +134,10 @@ const getMonday = (d: Date) => {
 
 const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
+  const isMobile = useIsMobile();
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
   const [currentWeek, setCurrentWeek] = useState(1);
@@ -425,6 +430,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       });
     }
   }, [mode]);
+
+  // Reset active day index when week changes
+  useEffect(() => {
+    setActiveDayIndex(0);
+    setExpandedDay(null);
+  }, [currentWeek]);
 
   const allExercises = [
   ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false })),
@@ -2635,8 +2646,62 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       }} />
 
       {/* Workout cards */}
-      <div className="space-y-2">
-        {weekDays.map((plan) => {
+      {isMobile && weekDays.length > 1 && (
+        <div className="flex flex-col gap-2">
+          {/* Day tabs */}
+          <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
+            {weekDays.map((plan, idx) => {
+              const k = `${plan.week}-${plan.day}`;
+              const comp = completions[k];
+              const done = comp?.done || false;
+              const skipped = comp?.skipped || false;
+              return (
+                <button
+                  key={k}
+                  onClick={() => { setActiveDayIndex(idx); setExpandedDay(null); }}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    idx === activeDayIndex
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : done
+                      ? "bg-success/20 text-success"
+                      : skipped
+                      ? "bg-destructive/20 text-destructive"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {plan.day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      <div
+        className={isMobile && weekDays.length > 1 ? "" : "space-y-2"}
+        onTouchStart={(e) => {
+          if (!isMobile || weekDays.length <= 1) return;
+          touchStartX.current = e.touches[0].clientX;
+          touchStartY.current = e.touches[0].clientY;
+        }}
+        onTouchEnd={(e) => {
+          if (!isMobile || weekDays.length <= 1 || touchStartX.current === null || touchStartY.current === null) return;
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          const dy = e.changedTouches[0].clientY - touchStartY.current;
+          touchStartX.current = null;
+          touchStartY.current = null;
+          // Only swipe if horizontal movement > vertical and > threshold
+          if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+            if (dx < 0 && activeDayIndex < weekDays.length - 1) {
+              setActiveDayIndex(activeDayIndex + 1);
+              setExpandedDay(null);
+            } else if (dx > 0 && activeDayIndex > 0) {
+              setActiveDayIndex(activeDayIndex - 1);
+              setExpandedDay(null);
+            }
+          }
+        }}
+      >
+        {(isMobile && weekDays.length > 1 ? [weekDays[activeDayIndex]] : weekDays).filter(Boolean).map((plan) => {
           const key = `${plan.week}-${plan.day}`;
           const completion = completions[key];
           const isDone = completion?.done || false;
