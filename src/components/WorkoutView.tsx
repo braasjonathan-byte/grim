@@ -431,11 +431,23 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     }
   }, [mode]);
 
-  // Reset active day index when week changes
+  // Reset active day index when week changes — navigate to today's day
   useEffect(() => {
-    setActiveDayIndex(0);
-    setExpandedDay(null);
-  }, [currentWeek]);
+    const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+    const todayName = todayDayNames[new Date().getDay()];
+    const currentWeekDays = plans
+      .filter((p) => p.week === currentWeek)
+      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+    const todayIdx = currentWeekDays.findIndex(p => p.day === todayName);
+    const newIdx = todayIdx >= 0 ? todayIdx : 0;
+    setActiveDayIndex(newIdx);
+    // Auto-expand if only one workout day
+    if (currentWeekDays.length === 1) {
+      setExpandedDay(`${currentWeekDays[0].week}-${currentWeekDays[0].day}`);
+    } else {
+      setExpandedDay(null);
+    }
+  }, [currentWeek, plans]);
 
   const allExercises = [
   ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false })),
@@ -2628,25 +2640,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         </div>
       )}
 
-      {/* Daily challenge */}
-      <DailyChallenge userId={userId} onComplete={async (challengeText) => {
-        // Find today's workout plan in the current week
-        const dayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-        const todayName = dayNames[new Date().getDay()];
-        const todayPlan = plans.find(p => p.week === currentWeek && p.day === todayName);
-        if (todayPlan) {
-          // Strip emoji from challenge text for cleaner exercise name
-          const cleanChallenge = challengeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
-          const challengeEntry = `⚔️ Utmaning: ${cleanChallenge}`;
-          const joinSep = todayPlan.details.includes("\n") ? "\n" : todayPlan.details.includes(";") ? "; " : "\n";
-          const newDetails = todayPlan.details ? `${todayPlan.details}${joinSep}${challengeEntry}` : challengeEntry;
-          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", todayPlan.id);
-          setPlans(prev => prev.map(p => p.id === todayPlan.id ? { ...p, details: newDetails } : p));
-        }
-      }} />
 
       {/* Workout cards */}
-      {isMobile && weekDays.length > 1 && (
+      {isMobile && weekDays.length > 1 && (() => {
+        const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+        const todayName = todayDayNames[new Date().getDay()];
+        return (
         <div className="flex flex-col gap-2">
           {/* Day tabs */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
@@ -2655,17 +2654,25 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
               const comp = completions[k];
               const done = comp?.done || false;
               const skipped = comp?.skipped || false;
+              const isToday = plan.day === todayName && currentWeek === activePlanWeek;
+              const isActive = idx === activeDayIndex;
               return (
                 <button
                   key={k}
                   onClick={() => { setActiveDayIndex(idx); setExpandedDay(null); }}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    idx === activeDayIndex
-                      ? "bg-primary text-primary-foreground shadow-sm"
+                    isActive
+                      ? done
+                        ? "bg-success text-success-foreground shadow-sm"
+                        : isToday
+                        ? "bg-warning text-warning-foreground shadow-sm"
+                        : "bg-primary text-primary-foreground shadow-sm"
                       : done
                       ? "bg-success/20 text-success"
                       : skipped
                       ? "bg-destructive/20 text-destructive"
+                      : isToday
+                      ? "bg-warning/20 text-warning"
                       : "bg-secondary text-muted-foreground"
                   }`}
                 >
@@ -2675,7 +2682,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
             })}
           </div>
         </div>
-      )}
+        );
+      })()}
       <div
         className={isMobile && weekDays.length > 1 ? "" : "space-y-2"}
         onTouchStart={(e) => {
@@ -2689,7 +2697,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           const dy = e.changedTouches[0].clientY - touchStartY.current;
           touchStartX.current = null;
           touchStartY.current = null;
-          // Only swipe if horizontal movement > vertical and > threshold
           if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
             if (dx < 0 && activeDayIndex < weekDays.length - 1) {
               setActiveDayIndex(activeDayIndex + 1);
@@ -4247,7 +4254,21 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         })}
       </div>
 
-      {/* Replacement workout dialog */}
+      {/* Daily challenge — below workout cards */}
+      <DailyChallenge userId={userId} onComplete={async (challengeText) => {
+        const dayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+        const todayName = dayNames[new Date().getDay()];
+        const todayPlan = plans.find(p => p.week === currentWeek && p.day === todayName);
+        if (todayPlan) {
+          const cleanChallenge = challengeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
+          const challengeEntry = `⚔️ Utmaning: ${cleanChallenge}`;
+          const joinSep = todayPlan.details.includes("\n") ? "\n" : todayPlan.details.includes(";") ? "; " : "\n";
+          const newDetails = todayPlan.details ? `${todayPlan.details}${joinSep}${challengeEntry}` : challengeEntry;
+          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", todayPlan.id);
+          setPlans(prev => prev.map(p => p.id === todayPlan.id ? { ...p, details: newDetails } : p));
+        }
+      }} />
+
       {replacementTarget &&
       <ReplacementWorkoutDialog
         userId={userId}
