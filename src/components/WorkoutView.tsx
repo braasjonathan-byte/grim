@@ -472,7 +472,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
 // Compute date for a plan week/day given a plan start date
 const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string): string | null => {
-  if (!planStart || week <= 0) return null;
+  if (week <= 0) return null;
+  if (!planStart) {
+    // Fallback: show week + day abbreviation when no start date is set
+    return `v${week} ${dayAbbr}`;
+  }
   const [y, m, d] = planStart.split("-").map(Number);
   const startDate = new Date(y, m - 1, d);
   const startMonday = getMonday(startDate);
