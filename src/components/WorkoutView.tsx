@@ -2964,7 +2964,7 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                 <Settings className="w-3 h-3" />
               </button>
 
-              <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; setExpandedDay(expanded ? null : key); }}>
+              <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
                     <button
                     onClick={(e) => {
