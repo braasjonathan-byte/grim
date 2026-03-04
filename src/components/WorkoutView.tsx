@@ -2764,10 +2764,10 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                       toggleDone(plan.week, plan.day);
                     }}
                     className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                    isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"}`
+                    isDone ? "bg-success border-success" : "bg-background border-muted-foreground/30 hover:border-primary"}`
                     }
                     title="Genomfört">
-                      {isDone && <Check className="w-4 h-4 text-success-foreground" />}
+                      <Check className={`w-4 h-4 transition-all ${isDone ? "text-success-foreground opacity-100" : "text-muted-foreground/30 opacity-100"}`} />
                     </button>
                   <button
                     onClick={(e) => {
