@@ -243,11 +243,17 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
+  // Plan start date from profile (timezone-safe)
+  const [planStartDate, setPlanStartDate] = useState<string | null>(null);
+
   // Fetch user nickname + calibration status
   useEffect(() => {
-    supabase.from("profiles").select("nickname, plan_start_calibrated").eq("user_id", userId).single().then(({ data }) => {
+    supabase.from("profiles").select("nickname, plan_start_calibrated, plan_start_date").eq("user_id", userId).single().then(({ data }) => {
       if (data) {
         setUserNickname(data.nickname);
+        if ((data as any).plan_start_date) {
+          setPlanStartDate((data as any).plan_start_date);
+        }
         // Will be checked after plans load
         if (!(data as any).plan_start_calibrated) {
           setNeedsCalibration(true);
@@ -269,20 +275,40 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
 
-      // Calculate active plan week based on plan creation date
+      // Calculate active plan week based on plan start date (timezone-safe)
       const nonSinglePlans = planData.filter(p => p.week > 0);
-      if (nonSinglePlans.length > 0) {
-        const earliest = nonSinglePlans.reduce((min, p) =>
-          (p as any).created_at < (min as any).created_at ? p : min
-        );
-        const planStart = getMonday(new Date((earliest as any).created_at));
+
+      // Helper: compute week number from a plan start date string (YYYY-MM-DD) or fallback to created_at
+      const computeWeekFromStart = (planWeeks: number[]) => {
+        let planStartMonday: Date | null = null;
+
+        // Prefer the explicit plan_start_date (timezone-safe, no UTC conversion issues)
+        if (planStartDate) {
+          const [y, m, d] = planStartDate.split("-").map(Number);
+          const startLocal = new Date(y, m - 1, d);
+          planStartMonday = getMonday(startLocal);
+        } else if (nonSinglePlans.length > 0) {
+          // Fallback to created_at (may have timezone issues)
+          const earliest = nonSinglePlans.reduce((min, p) =>
+            (p as any).created_at < (min as any).created_at ? p : min
+          );
+          planStartMonday = getMonday(new Date((earliest as any).created_at));
+        }
+
+        if (!planStartMonday) return null;
+
         const now = new Date();
         now.setHours(0, 0, 0, 0);
-        const daysSinceStart = Math.floor((now.getTime() - planStart.getTime()) / 86400000);
+        const daysSinceStart = Math.floor((now.getTime() - planStartMonday.getTime()) / 86400000);
         const calcWeek = Math.floor(daysSinceStart / 7) + 1;
-        // Clamp to valid plan weeks
-        const maxWeek = Math.max(...wks.filter(w => w > 0));
-        setActivePlanWeek(Math.min(Math.max(calcWeek, 1), maxWeek));
+        const maxWeek = Math.max(...planWeeks);
+        return Math.min(Math.max(calcWeek, 1), maxWeek);
+      };
+
+      if (nonSinglePlans.length > 0) {
+        const planWeeks = wks.filter(w => w > 0);
+        const activeWeek = computeWeekFromStart(planWeeks);
+        if (activeWeek) setActivePlanWeek(activeWeek);
       }
 
       // Auto-navigate to the active (date-based) week on initial load
@@ -294,21 +320,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           }
         }
 
-        // Prefer the date-based active week (calculated above)
+        // Prefer the date-based active week
         const planWeeks = wks.filter(w => w > 0);
-        const dateBasedWeek = (() => {
-          if (nonSinglePlans.length === 0) return null;
-          const earliest = nonSinglePlans.reduce((min, p) =>
-            (p as any).created_at < (min as any).created_at ? p : min
-          );
-          const planStart = getMonday(new Date((earliest as any).created_at));
-          const now = new Date();
-          now.setHours(0, 0, 0, 0);
-          const daysSinceStart = Math.floor((now.getTime() - planStart.getTime()) / 86400000);
-          const calcWeek = Math.floor(daysSinceStart / 7) + 1;
-          const maxWeek = Math.max(...planWeeks);
-          return Math.min(Math.max(calcWeek, 1), maxWeek);
-        })();
+        const dateBasedWeek = computeWeekFromStart(planWeeks);
 
         let targetWeek: number | undefined;
 
@@ -390,7 +404,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         setCommentNicknames(map);
       }
     }
-  }, [userId, initialWeekSet]);
+  }, [userId, initialWeekSet, planStartDate]);
 
   useEffect(() => {
     fetchData();
@@ -1518,7 +1532,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return (
       <PlanCalibrationDialog
         userId={userId}
-        onDone={() => {
+        onDone={async () => {
+          // Re-fetch the plan_start_date from profile
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("plan_start_date")
+            .eq("user_id", userId)
+            .single();
+          if (profileData && (profileData as any).plan_start_date) {
+            setPlanStartDate((profileData as any).plan_start_date);
+          }
           setNeedsCalibration(false);
           setInitialWeekSet(false);
           fetchData();
