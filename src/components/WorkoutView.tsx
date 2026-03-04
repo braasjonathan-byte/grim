@@ -3767,7 +3767,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     </button>
                                     <button
                                       onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
-                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
+                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-destructive hover:text-destructive/80 transition-colors touch-manipulation"
                                       title="Ta bort övning">
                                       <X className="w-4 h-4" />
                                     </button>
