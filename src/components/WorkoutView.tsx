@@ -1640,7 +1640,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
   // Plan picker
   if (mode === "plan" && weeks.length === 0) {
-    return <PlanPicker userId={userId} onDone={fetchData} />;
+    return <PlanPicker userId={userId} onDone={() => { setNeedsCalibration(false); fetchData(); }} />;
   }
 
   // Single workouts mode
