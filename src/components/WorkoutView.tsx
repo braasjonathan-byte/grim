@@ -3760,16 +3760,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                   </div>
                                    <button
-                                      onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
-                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
-                                      title="Ta bort övning">
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                    <button
                                       onClick={(e) => {e.stopPropagation();e.preventDefault();startReplaceExercise(plan.id, i, partName);}}
                                       className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
                                       title="Byt ut övning">
                                       <ArrowLeftRight className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) });}}
+                                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"
+                                      title="Ta bort övning">
+                                      <X className="w-4 h-4" />
                                     </button>
                                 </div>
                               </div>
