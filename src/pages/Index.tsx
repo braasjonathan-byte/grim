@@ -427,12 +427,26 @@ const Index = () => {
             }
             <div className="relative">
               <button
-                onClick={() => {
+              onClick={async () => {
                   setShowInboxDropdown((prev) => !prev);
                   if (unreadAnnouncements > 0) {
-                    localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
+                    // Use the latest announcement's server timestamp to avoid clock skew issues
+                    const { data: latestAnn } = await supabase
+                      .from("announcements")
+                      .select("created_at")
+                      .order("created_at", { ascending: false })
+                      .limit(1)
+                      .maybeSingle();
+                    const ts = latestAnn?.created_at || new Date().toISOString();
+                    localStorage.setItem("gymberget_last_read_announcements", ts);
                     if (userRole === "admin") {
-                      localStorage.setItem("grim_last_read_suggestions", new Date().toISOString());
+                      const { data: latestSug } = await supabase
+                        .from("suggestions")
+                        .select("created_at")
+                        .order("created_at", { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                      localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
                     }
                     setUnreadAnnouncements(0);
                   }
