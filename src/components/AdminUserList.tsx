@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, UserPlus, Check, Loader2, ChevronDown, Crown } from "lucide-react";
+import { Users, UserPlus, Check, Loader2, ChevronDown, Crown, Eye } from "lucide-react";
+import FriendProfileView from "@/components/FriendProfileView";
 
 interface AdminUserListProps {
   userId: string;
@@ -24,7 +25,7 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
   const [loading, setLoading] = useState(false);
   const [addingFriend, setAddingFriend] = useState<string | null>(null);
   const [togglingHonorary, setTogglingHonorary] = useState<string | null>(null);
-
+  const [viewingProfile, setViewingProfile] = useState<{ userId: string; nickname: string } | null>(null);
   useEffect(() => {
     if (!open) return;
     fetchData();
@@ -102,6 +103,7 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
   };
 
   return (
+    <>
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
       <button
         onClick={() => setOpen(!open)}
@@ -149,6 +151,13 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button
+                          onClick={() => setViewingProfile({ userId: u.user_id, nickname: u.nickname })}
+                          title="Visa profil"
+                          className="p-1.5 rounded-md bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => toggleHonorary(u.user_id, u.is_honorary)}
                           disabled={togglingHonorary === u.user_id}
                           title={u.is_honorary ? "Ta bort hedersmedlemskap" : "Gör till hedersmedlem"}
@@ -193,6 +202,15 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
         </div>
       )}
     </div>
+
+    {viewingProfile && (
+      <FriendProfileView
+        friendUserId={viewingProfile.userId}
+        nickname={viewingProfile.nickname}
+        onClose={() => setViewingProfile(null)}
+      />
+    )}
+    </>
   );
 };
 
