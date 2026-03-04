@@ -429,27 +429,28 @@ const Index = () => {
               <button
               onClick={async () => {
                   setShowInboxDropdown((prev) => !prev);
-                  if (unreadAnnouncements > 0) {
-                    // Use the latest announcement's server timestamp to avoid clock skew issues
-                    const { data: latestAnn } = await supabase
-                      .from("announcements")
+                  // Always mark as read when opening inbox
+                  const { data: latestAnn } = await supabase
+                    .from("announcements")
+                    .select("created_at")
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                  if (latestAnn?.created_at) {
+                    localStorage.setItem("gymberget_last_read_announcements", latestAnn.created_at);
+                  }
+                  if (userRole === "admin") {
+                    const { data: latestSug } = await supabase
+                      .from("suggestions")
                       .select("created_at")
                       .order("created_at", { ascending: false })
                       .limit(1)
                       .maybeSingle();
-                    const ts = latestAnn?.created_at || new Date().toISOString();
-                    localStorage.setItem("gymberget_last_read_announcements", ts);
-                    if (userRole === "admin") {
-                      const { data: latestSug } = await supabase
-                        .from("suggestions")
-                        .select("created_at")
-                        .order("created_at", { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
-                      localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
+                    if (latestSug?.created_at) {
+                      localStorage.setItem("grim_last_read_suggestions", latestSug.created_at);
                     }
-                    setUnreadAnnouncements(0);
                   }
+                  setUnreadAnnouncements(0);
                 }}
                 className="p-1.5 text-muted-foreground hover:text-foreground transition-colors relative"
                 title="Inkorg">
@@ -655,12 +656,24 @@ const Index = () => {
           {tabs.map(({ key, icon: Icon, label, badge }) =>
           <button
             key={key}
-            onClick={() => {
+            onClick={async () => {
               setTab(key);
               if (key === "settings" && unreadAnnouncements > 0) {
-                localStorage.setItem("gymberget_last_read_announcements", new Date().toISOString());
+                const { data: latestAnn } = await supabase
+                  .from("announcements")
+                  .select("created_at")
+                  .order("created_at", { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                localStorage.setItem("gymberget_last_read_announcements", latestAnn?.created_at || new Date().toISOString());
                 if (userRole === "admin") {
-                  localStorage.setItem("grim_last_read_suggestions", new Date().toISOString());
+                  const { data: latestSug } = await supabase
+                    .from("suggestions")
+                    .select("created_at")
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                  localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
                 }
                 setUnreadAnnouncements(0);
               }
