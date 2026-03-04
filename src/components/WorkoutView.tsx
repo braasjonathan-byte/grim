@@ -247,6 +247,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [chatFriends, setChatFriends] = useState<{user_id: string; nickname: string}[]>([]);
   const [chatShareSending, setChatShareSending] = useState(false);
 
+  // Copy to date
+  const [copyToDateSource, setCopyToDateSource] = useState<PlanDay | null>(null);
+  const [copyToDateSelected, setCopyToDateSelected] = useState<Date>(new Date());
+  const [copyToDateConflict, setCopyToDateConflict] = useState<"ask" | "replace" | "add" | null>(null);
+  const [copyToDateSaving, setCopyToDateSaving] = useState(false);
+
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
@@ -954,6 +960,84 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     if (copyFrom) {
       toast.success("Pass kopierat med vikter & reps från förra gången. Öka själv för progression! 💪");
     }
+    fetchData();
+  };
+
+  const handleCopyToDateConfirm = async () => {
+    if (!copyToDateSource) return;
+    const dateStr = format(copyToDateSelected, "yyyy-MM-dd");
+    
+    // Check if there are already exercises on this date
+    const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr) && p.details.trim() !== "");
+
+    if (existingOnDate.length > 0) {
+      setCopyToDateConflict("ask");
+      return;
+    }
+
+    await executeCopyToDate("add");
+  };
+
+  const executeCopyToDate = async (conflictMode: "replace" | "add") => {
+    if (!copyToDateSource) return;
+    setCopyToDateSaving(true);
+
+    const dateStr = format(copyToDateSelected, "yyyy-MM-dd");
+
+    if (conflictMode === "replace") {
+      const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr));
+      for (const p of existingOnDate) {
+        if (p.id) {
+          await supabase.from("workout_plans").delete().eq("id", p.id);
+          await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", 0).eq("day", p.day);
+        }
+      }
+    }
+
+    const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+
+    let details = copyToDateSource.details || "";
+    if (conflictMode === "add") {
+      const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr) && p.details.trim() !== "");
+      if (existingOnDate.length > 0) {
+        const target = existingOnDate[0];
+        const combined = [target.details.trim(), details.trim()].filter(Boolean).join("\n");
+        await supabase.from("workout_plans").update({ details: combined }).eq("id", target.id);
+        toast.success("Övningar tillagda!");
+        setCopyToDateSource(null);
+        setCopyToDateConflict(null);
+        setCopyToDateSaving(false);
+        fetchData();
+        return;
+      }
+    }
+
+    await supabase.from("workout_plans").insert({
+      user_id: userId,
+      week: 0,
+      day: uniqueKey,
+      session_name: copyToDateSource.session_name,
+      details,
+      tempo: copyToDateSource.tempo || null
+    });
+
+    const sourceKey = `${copyToDateSource.week}-${copyToDateSource.day}`;
+    const sourceCompletion = completions[sourceKey];
+    if (sourceCompletion?.logged_weights && Object.keys(sourceCompletion.logged_weights).length > 0) {
+      await supabase.from("workout_completions").upsert({
+        user_id: userId,
+        week: 0,
+        day: uniqueKey,
+        done: false,
+        skipped: false,
+        logged_weights: sourceCompletion.logged_weights,
+      }, { onConflict: "user_id,week,day" });
+    }
+
+    toast.success("Pass kopierat!");
+    setCopyToDateSource(null);
+    setCopyToDateConflict(null);
+    setCopyToDateSaving(false);
     fetchData();
   };
 
@@ -4474,6 +4558,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           setChatFriends(profiles || []);
           setChatShareTarget(plan);
         }}
+        onCopyToDate={() => {
+          const plan = shareTarget.plan;
+          setShareTarget(null);
+          setCopyToDateSource(plan);
+          setCopyToDateSelected(new Date());
+          setCopyToDateConflict(null);
+        }}
       />
     )}
 
@@ -4674,6 +4765,81 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
               </button>
             ))}
           </div>
+        </div>
+      </>
+    )}
+
+    {/* Copy to date dialog */}
+    {copyToDateSource && (
+      <>
+        <div className="fixed inset-0 bg-black/60 z-[80]" onClick={() => setCopyToDateSource(null)} />
+        <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[90] max-w-sm mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-primary" />
+                Kopiera till datum
+              </h3>
+              <button onClick={() => setCopyToDateSource(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {copyToDateSource.session_name}
+            </p>
+          </div>
+
+          {copyToDateConflict === "ask" ? (
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Det finns redan övningar på <span className="font-semibold text-foreground">{format(copyToDateSelected, "d MMMM yyyy", { locale: sv })}</span>. Vad vill du göra?
+              </p>
+              <button
+                onClick={async () => {
+                  setCopyToDateConflict("replace");
+                  await executeCopyToDate("replace");
+                }}
+                disabled={copyToDateSaving}
+                className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg text-sm disabled:opacity-50"
+              >
+                Ersätt befintliga övningar
+              </button>
+              <button
+                onClick={async () => {
+                  setCopyToDateConflict("add");
+                  await executeCopyToDate("add");
+                }}
+                disabled={copyToDateSaving}
+                className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg text-sm disabled:opacity-50"
+              >
+                Lägg till efter befintliga
+              </button>
+            </div>
+          ) : (
+            <div className="p-4 space-y-3">
+              <div className="flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={copyToDateSelected}
+                  onSelect={(d) => d && setCopyToDateSelected(d)}
+                  locale={sv}
+                  className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
+                />
+              </div>
+              <div className="bg-secondary/50 border border-border rounded-lg p-2.5 text-center">
+                <p className="text-xs font-medium">
+                  Kopiera till: <span className="text-primary">{format(copyToDateSelected, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                </p>
+              </div>
+              <button
+                onClick={handleCopyToDateConfirm}
+                disabled={copyToDateSaving}
+                className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg text-sm disabled:opacity-50"
+              >
+                {copyToDateSaving ? "Kopierar..." : "Kopiera"}
+              </button>
+            </div>
+          )}
         </div>
       </>
     )}
