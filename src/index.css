@@ -154,3 +154,14 @@
     @apply opacity-60;
   }
 }
+
+@keyframes slide-in-from-right {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-in-from-left {
+  from { transform: translateX(-30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.swipe-left { animation: slide-in-from-right 0.25s ease-out; }
+.swipe-right { animation: slide-in-from-left 0.25s ease-out; }
