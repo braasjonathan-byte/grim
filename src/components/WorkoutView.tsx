@@ -470,6 +470,19 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false })),
   ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true }))];
 
+// Compute date for a plan week/day given a plan start date
+const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string): string | null => {
+  if (!planStart || week <= 0) return null;
+  const [y, m, d] = planStart.split("-").map(Number);
+  const startDate = new Date(y, m - 1, d);
+  const startMonday = getMonday(startDate);
+  const dayIndex = DAYS.indexOf(dayAbbr);
+  if (dayIndex < 0) return null;
+  const targetDate = new Date(startMonday);
+  targetDate.setDate(targetDate.getDate() + (week - 1) * 7 + dayIndex);
+  return format(targetDate, "d MMM yyyy", { locale: sv });
+};
+
 
   const filteredExercises = allExercises.filter((e) => {
     const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
@@ -2016,9 +2029,6 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                       <CalendarIcon className="w-3 h-3" />
                       {formatDayDisplay(plan.day)}
                     </span>
-                    {plan.tempo && plan.tempo !== "—" &&
-                    <span className="text-xs text-muted-foreground font-mono block">{plan.tempo}</span>
-                    }
                   </div>
                   <div className="flex items-center gap-1">
                     {(() => {
@@ -2996,9 +3006,15 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                       {plan.session_name}
                     </span>
                   </div>
-                  {plan.tempo && plan.tempo !== "—" &&
-                  <span className="text-xs text-muted-foreground font-mono">{plan.tempo}</span>
-                  }
+                  {(() => {
+                    const dateStr = getPlanDayDate(planStartDate, plan.week, plan.day);
+                    return dateStr ? (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <CalendarIcon className="w-3 h-3" />
+                        {dateStr}
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                     {(() => {
