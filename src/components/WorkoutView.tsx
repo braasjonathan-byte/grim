@@ -136,6 +136,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
+  const swipeKey = useRef(0);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
@@ -2668,7 +2670,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
               return (
                 <button
                   key={k}
-                  onClick={() => { setActiveDayIndex(idx); setExpandedDay(null); }}
+                  onClick={() => { setSwipeDirection(idx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(idx); setExpandedDay(null); }}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
                       ? done
@@ -2694,7 +2696,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
         );
       })()}
       <div
-        className={isMobile && weekDays.length > 1 ? "" : "space-y-2"}
+        key={isMobile && weekDays.length > 1 ? `swipe-${swipeKey.current}` : undefined}
+        className={`${isMobile && weekDays.length > 1 ? (swipeDirection === "left" ? "swipe-left" : swipeDirection === "right" ? "swipe-right" : "") : "space-y-2"}`}
         onTouchStart={(e) => {
           if (!isMobile || weekDays.length <= 1) return;
           touchStartX.current = e.touches[0].clientX;
@@ -2708,9 +2711,13 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
           touchStartY.current = null;
           if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
             if (dx < 0 && activeDayIndex < weekDays.length - 1) {
+              setSwipeDirection("left");
+              swipeKey.current++;
               setActiveDayIndex(activeDayIndex + 1);
               setExpandedDay(null);
             } else if (dx > 0 && activeDayIndex > 0) {
+              setSwipeDirection("right");
+              swipeKey.current++;
               setActiveDayIndex(activeDayIndex - 1);
               setExpandedDay(null);
             }
