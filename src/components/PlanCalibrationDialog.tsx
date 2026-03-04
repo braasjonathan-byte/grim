@@ -66,6 +66,9 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
     try {
       const startDate = calculateStartDate(selectedSession.week, selectedSession.day, sessionDate);
 
+      // Format as YYYY-MM-DD for timezone-safe storage
+      const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+
       const { error } = await supabase
         .from("workout_plans")
         .update({ created_at: startDate.toISOString() })
@@ -76,7 +79,10 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
 
       await supabase
         .from("profiles")
-        .update({ plan_start_calibrated: true })
+        .update({ 
+          plan_start_calibrated: true,
+          plan_start_date: startDateStr,
+        } as any)
         .eq("user_id", userId);
 
       toast.success("Kalibrering klar!");
