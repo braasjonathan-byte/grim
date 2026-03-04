@@ -324,9 +324,9 @@ const WorkoutShareCard = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative w-full max-w-sm mx-4 space-y-3 animate-fade-in">
+      <div className="relative w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto space-y-3 animate-fade-in">
         {/* Theme selector */}
         <div className="flex items-center justify-center gap-2">
           <Palette className="w-4 h-4 text-muted-foreground" />
