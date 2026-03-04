@@ -963,16 +963,44 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     fetchData();
   };
 
+  // Helper: map a calendar date to plan week number and day abbreviation
+  const mapDateToPlanWeekDay = (date: Date): { week: number; day: string } | null => {
+    if (mode !== "plan" || !planStartDate) return null;
+    const [y, m, d] = planStartDate.split("-").map(Number);
+    const startLocal = new Date(y, m - 1, d);
+    const planStartMonday = getMonday(startLocal);
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.floor((targetDate.getTime() - planStartMonday.getTime()) / 86400000);
+    if (diffDays < 0) return null;
+    const weekNum = Math.floor(diffDays / 7) + 1;
+    const dayIndex = ((targetDate.getDay() + 6) % 7); // 0=Mon, 6=Sun
+    const dayName = DAYS[dayIndex];
+    const maxWeek = Math.max(...weeks.filter(w => w > 0), 0);
+    if (weekNum > maxWeek || weekNum < 1) return null;
+    return { week: weekNum, day: dayName };
+  };
+
   const handleCopyToDateConfirm = async () => {
     if (!copyToDateSource) return;
-    const dateStr = format(copyToDateSelected, "yyyy-MM-dd");
-    
-    // Check if there are already exercises on this date
-    const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr) && p.details.trim() !== "");
 
-    if (existingOnDate.length > 0) {
-      setCopyToDateConflict("ask");
-      return;
+    const planTarget = mapDateToPlanWeekDay(copyToDateSelected);
+
+    if (planTarget) {
+      // Plan mode: check if plan has exercises on that week/day
+      const existingOnDay = plans.filter(p => p.week === planTarget.week && p.day === planTarget.day && p.details.trim() !== "");
+      if (existingOnDay.length > 0) {
+        setCopyToDateConflict("ask");
+        return;
+      }
+    } else {
+      // Standalone mode: check for existing standalone exercises on date
+      const dateStr = format(copyToDateSelected, "yyyy-MM-dd");
+      const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr) && p.details.trim() !== "");
+      if (existingOnDate.length > 0) {
+        setCopyToDateConflict("ask");
+        return;
+      }
     }
 
     await executeCopyToDate("add");
@@ -982,59 +1010,123 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     if (!copyToDateSource) return;
     setCopyToDateSaving(true);
 
-    const dateStr = format(copyToDateSelected, "yyyy-MM-dd");
+    const planTarget = mapDateToPlanWeekDay(copyToDateSelected);
+    const details = copyToDateSource.details || "";
 
-    if (conflictMode === "replace") {
-      const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr));
-      for (const p of existingOnDate) {
-        if (p.id) {
-          await supabase.from("workout_plans").delete().eq("id", p.id);
-          await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", 0).eq("day", p.day);
+    if (planTarget) {
+      // --- Plan mode: insert into plan week/day ---
+      const existingOnDay = plans.filter(p => p.week === planTarget.week && p.day === planTarget.day);
+
+      if (conflictMode === "replace") {
+        // Clear existing details on that day
+        for (const p of existingOnDay) {
+          await supabase.from("workout_plans").update({ details, session_name: copyToDateSource.session_name }).eq("id", p.id);
+          // Clear completion
+          await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", planTarget.week).eq("day", planTarget.day);
+        }
+        if (existingOnDay.length === 0) {
+          await supabase.from("workout_plans").insert({
+            user_id: userId,
+            week: planTarget.week,
+            day: planTarget.day,
+            session_name: copyToDateSource.session_name,
+            details,
+            tempo: copyToDateSource.tempo || null
+          });
+        }
+      } else {
+        // Add mode
+        const withDetails = existingOnDay.filter(p => p.details.trim() !== "");
+        if (withDetails.length > 0) {
+          const target = withDetails[0];
+          const combined = [target.details.trim(), details.trim()].filter(Boolean).join("\n");
+          await supabase.from("workout_plans").update({ details: combined }).eq("id", target.id);
+        } else if (existingOnDay.length > 0) {
+          // Day exists but empty details
+          await supabase.from("workout_plans").update({ details, session_name: copyToDateSource.session_name }).eq("id", existingOnDay[0].id);
+        } else {
+          await supabase.from("workout_plans").insert({
+            user_id: userId,
+            week: planTarget.week,
+            day: planTarget.day,
+            session_name: copyToDateSource.session_name,
+            details,
+            tempo: copyToDateSource.tempo || null
+          });
         }
       }
-    }
 
-    const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-
-    let details = copyToDateSource.details || "";
-    if (conflictMode === "add") {
-      const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr) && p.details.trim() !== "");
-      if (existingOnDate.length > 0) {
-        const target = existingOnDate[0];
-        const combined = [target.details.trim(), details.trim()].filter(Boolean).join("\n");
-        await supabase.from("workout_plans").update({ details: combined }).eq("id", target.id);
-        toast.success("Övningar tillagda!");
-        setCopyToDateSource(null);
-        setCopyToDateConflict(null);
-        setCopyToDateSaving(false);
-        fetchData();
-        return;
+      // Copy logged weights if available
+      const sourceKey = `${copyToDateSource.week}-${copyToDateSource.day}`;
+      const sourceCompletion = completions[sourceKey];
+      if (sourceCompletion?.logged_weights && Object.keys(sourceCompletion.logged_weights).length > 0) {
+        await supabase.from("workout_completions").upsert({
+          user_id: userId,
+          week: planTarget.week,
+          day: planTarget.day,
+          done: false,
+          skipped: false,
+          logged_weights: sourceCompletion.logged_weights,
+        }, { onConflict: "user_id,week,day" });
       }
-    }
 
-    await supabase.from("workout_plans").insert({
-      user_id: userId,
-      week: 0,
-      day: uniqueKey,
-      session_name: copyToDateSource.session_name,
-      details,
-      tempo: copyToDateSource.tempo || null
-    });
+      toast.success(`Pass kopierat till v${planTarget.week} ${planTarget.day}!`);
+    } else {
+      // --- Standalone mode (fallback) ---
+      const dateStr = format(copyToDateSelected, "yyyy-MM-dd");
 
-    const sourceKey = `${copyToDateSource.week}-${copyToDateSource.day}`;
-    const sourceCompletion = completions[sourceKey];
-    if (sourceCompletion?.logged_weights && Object.keys(sourceCompletion.logged_weights).length > 0) {
-      await supabase.from("workout_completions").upsert({
+      if (conflictMode === "replace") {
+        const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr));
+        for (const p of existingOnDate) {
+          if (p.id) {
+            await supabase.from("workout_plans").delete().eq("id", p.id);
+            await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", 0).eq("day", p.day);
+          }
+        }
+      }
+
+      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+
+      if (conflictMode === "add") {
+        const existingOnDate = plans.filter(p => p.week === 0 && p.day.startsWith(dateStr) && p.details.trim() !== "");
+        if (existingOnDate.length > 0) {
+          const target = existingOnDate[0];
+          const combined = [target.details.trim(), details.trim()].filter(Boolean).join("\n");
+          await supabase.from("workout_plans").update({ details: combined }).eq("id", target.id);
+          toast.success("Övningar tillagda!");
+          setCopyToDateSource(null);
+          setCopyToDateConflict(null);
+          setCopyToDateSaving(false);
+          fetchData();
+          return;
+        }
+      }
+
+      await supabase.from("workout_plans").insert({
         user_id: userId,
         week: 0,
         day: uniqueKey,
-        done: false,
-        skipped: false,
-        logged_weights: sourceCompletion.logged_weights,
-      }, { onConflict: "user_id,week,day" });
+        session_name: copyToDateSource.session_name,
+        details,
+        tempo: copyToDateSource.tempo || null
+      });
+
+      const sourceKey = `${copyToDateSource.week}-${copyToDateSource.day}`;
+      const sourceCompletion = completions[sourceKey];
+      if (sourceCompletion?.logged_weights && Object.keys(sourceCompletion.logged_weights).length > 0) {
+        await supabase.from("workout_completions").upsert({
+          user_id: userId,
+          week: 0,
+          day: uniqueKey,
+          done: false,
+          skipped: false,
+          logged_weights: sourceCompletion.logged_weights,
+        }, { onConflict: "user_id,week,day" });
+      }
+
+      toast.success("Pass kopierat!");
     }
 
-    toast.success("Pass kopierat!");
     setCopyToDateSource(null);
     setCopyToDateConflict(null);
     setCopyToDateSaving(false);
