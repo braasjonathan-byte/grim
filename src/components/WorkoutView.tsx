@@ -969,10 +969,17 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     }
   };
 
+  // Strip daily challenge lines from workout details
+  const stripChallengeLines = (details: string): string => {
+    return details.split("\n").filter(line => !line.trim().startsWith("⚔️ Utmaning:")).join("\n");
+  };
+
   // Change weekday for a workout in a plan week
   const changeWorkoutDay = async (planId: string, newDay: string, week: number) => {
-    // Update the plan row's day
-    await supabase.from("workout_plans").update({ day: newDay }).eq("id", planId);
+    // Strip challenge lines before moving — challenges stay on their original day
+    const plan = plans.find(p => p.id === planId);
+    const cleanDetails = plan ? stripChallengeLines(plan.details) : undefined;
+    await supabase.from("workout_plans").update({ day: newDay, ...(cleanDetails !== undefined ? { details: cleanDetails } : {}) }).eq("id", planId);
 
     // Also move any completion data to the new day
     const oldPlan = plans.find(p => p.id === planId);
@@ -4491,10 +4498,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
                           const compOld = completions[`${week}-${oldDay}`];
                           const compNew = completions[`${week}-${newDay}`];
 
+                          // Strip challenge lines from both plans before swapping
+                          const cleanDetailsCurrent = stripChallengeLines(
+                            plans.find(p => p.id === changeDayDialog.planId)?.details || ""
+                          );
+                          const cleanDetailsTarget = stripChallengeLines(targetPlan.details || "");
+
                           // Swap plan days using a temp value to avoid unique constraint conflict
                           const tempDay = `__swap_${Date.now()}`;
-                          await supabase.from("workout_plans").update({ day: tempDay }).eq("id", changeDayDialog.planId);
-                          await supabase.from("workout_plans").update({ day: oldDay }).eq("id", targetPlan.id);
+                          await supabase.from("workout_plans").update({ day: tempDay, details: cleanDetailsCurrent }).eq("id", changeDayDialog.planId);
+                          await supabase.from("workout_plans").update({ day: oldDay, details: cleanDetailsTarget }).eq("id", targetPlan.id);
                           await supabase.from("workout_plans").update({ day: newDay }).eq("id", changeDayDialog.planId);
 
                           // Delete both completions first, then re-insert swapped
