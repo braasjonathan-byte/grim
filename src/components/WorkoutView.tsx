@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -1724,7 +1724,17 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
   // Plan picker
   if (mode === "plan" && weeks.length === 0) {
-    return <PlanPicker userId={userId} onDone={() => { setNeedsCalibration(false); fetchData(); }} />;
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <button
+          onClick={() => setMode("choose")}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Tillbaka
+        </button>
+        <PlanPicker userId={userId} onDone={() => { setNeedsCalibration(false); fetchData(); }} />
+      </div>
+    );
   }
 
   // Single workouts mode
@@ -1768,6 +1778,14 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return (
       <>
       <div className="space-y-4 animate-fade-in">
+        {singlePlans.length === 0 && (
+          <button
+            onClick={() => setMode("choose")}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Tillbaka
+          </button>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black tracking-tight">Mina pass</h2>
