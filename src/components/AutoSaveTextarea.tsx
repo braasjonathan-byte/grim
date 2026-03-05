@@ -8,6 +8,7 @@ interface AutoSaveTextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTe
 
 const AutoSaveTextarea = ({ initialValue, onSave, debounceMs = 800, ...props }: AutoSaveTextareaProps) => {
   const [value, setValue] = useState(initialValue);
+  const valueRef = useRef(initialValue);
   const lastSaved = useRef(initialValue);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSaveRef = useRef(onSave);
@@ -15,6 +16,7 @@ const AutoSaveTextarea = ({ initialValue, onSave, debounceMs = 800, ...props }: 
 
   useEffect(() => {
     setValue(initialValue);
+    valueRef.current = initialValue;
     lastSaved.current = initialValue;
   }, [initialValue]);
 
@@ -28,6 +30,7 @@ const AutoSaveTextarea = ({ initialValue, onSave, debounceMs = 800, ...props }: 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newVal = e.target.value;
     setValue(newVal);
+    valueRef.current = newVal;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => doSave(newVal), debounceMs);
   }, [debounceMs, doSave]);
@@ -38,12 +41,12 @@ const AutoSaveTextarea = ({ initialValue, onSave, debounceMs = 800, ...props }: 
   }, [value, doSave]);
 
   useEffect(() => {
-    const save = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } doSave(value); };
+    const save = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } doSave(valueRef.current); };
     const onVis = () => { if (document.visibilityState === "hidden") save(); };
     window.addEventListener("beforeunload", save);
     document.addEventListener("visibilitychange", onVis);
-    return () => { window.removeEventListener("beforeunload", save); document.removeEventListener("visibilitychange", onVis); if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [value, doSave]);
+    return () => { window.removeEventListener("beforeunload", save); document.removeEventListener("visibilitychange", onVis); if (timerRef.current) clearTimeout(timerRef.current); doSave(valueRef.current); };
+  }, [doSave]);
 
   return <textarea {...props} value={value} onChange={handleChange} onBlur={handleBlur} />;
 };

@@ -12,23 +12,24 @@ interface AutoSaveInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
  */
 const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, ...props }: AutoSaveInputProps) => {
   const [value, setValue] = useState(initialValue);
+  const valueRef = useRef(initialValue);
   const lastSaved = useRef(initialValue);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
-  // Sync if initialValue changes externally
   useEffect(() => {
     setValue(initialValue);
+    valueRef.current = initialValue;
     lastSaved.current = initialValue;
   }, [initialValue]);
 
+  // Flush pending save immediately
   const flush = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    // Use the latest value from the ref
   }, []);
 
   const doSave = useCallback((val: string) => {
@@ -41,6 +42,7 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, ...props }: Aut
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newVal = e.target.value;
     setValue(newVal);
+    valueRef.current = newVal;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       doSave(newVal);
@@ -55,15 +57,15 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, ...props }: Aut
     doSave(value);
   }, [value, doSave]);
 
-  // Save on page unload / visibility hidden (mobile close)
+  // Save on page unload / visibility hidden (mobile close) / component unmount
   useEffect(() => {
     const saveBeforeLeave = () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      // Read current value from state
-      doSave(value);
+      // Use ref for latest value to avoid stale closure
+      doSave(valueRef.current);
     };
 
     const handleVisibilityChange = () => {
@@ -78,8 +80,10 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, ...props }: Aut
       window.removeEventListener("beforeunload", saveBeforeLeave);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (timerRef.current) clearTimeout(timerRef.current);
+      // Save on unmount (e.g. tab switch within app)
+      doSave(valueRef.current);
     };
-  }, [value, doSave]);
+  }, [doSave]);
 
   return (
     <input
