@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
@@ -669,8 +670,7 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
       });
     });
 
-    await supabase.from("workout_completions").upsert(
-      {
+    const upsertData = {
         user_id: userId,
         week,
         day,
@@ -681,9 +681,34 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
         logged_pulse: payload.logged_pulse,
         logged_distance_km: payload.logged_distance_km,
         logged_weights: payload.logged_weights,
-      } as any,
+      };
+
+    // Queue to localStorage first so data survives if the page is killed before network completes
+    queueOfflineUpsert("workout_completions", upsertData as any, "user_id,week,day");
+
+    const { error } = await supabase.from("workout_completions").upsert(
+      upsertData as any,
       { onConflict: "user_id,week,day" }
     );
+
+    // If network save succeeded, remove from offline queue (it will be a duplicate but harmless)
+    if (!error) {
+      // Clear the queued item since it saved successfully
+      try {
+        const raw = localStorage.getItem("grim_offline_queue");
+        if (raw) {
+          const queue = JSON.parse(raw) as any[];
+          // Remove matching items (same table + user + week + day)
+          const filtered = queue.filter((item: any) =>
+            !(item.table === "workout_completions" &&
+              item.data.user_id === userId &&
+              item.data.week === week &&
+              item.data.day === day)
+          );
+          localStorage.setItem("grim_offline_queue", JSON.stringify(filtered));
+        }
+      } catch { /* ignore */ }
+    }
     triggerSave();
   };
 
