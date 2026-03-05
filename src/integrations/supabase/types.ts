@@ -635,18 +635,24 @@ export type Database = {
       suggestions: {
         Row: {
           created_at: string
+          handled_at: string | null
+          handled_by: string | null
           id: string
           message: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
           id?: string
           message: string
           user_id: string
         }
         Update: {
           created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
           id?: string
           message?: string
           user_id?: string
