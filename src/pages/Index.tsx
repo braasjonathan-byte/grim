@@ -191,6 +191,23 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+  // Clear PWA app icon badge on load/focus
+  useEffect(() => {
+    const clearBadge = () => {
+      if ("clearAppBadge" in navigator) {
+        (navigator as any).clearAppBadge().catch(() => {});
+      }
+    };
+    clearBadge();
+    window.addEventListener("focus", clearBadge);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") clearBadge();
+    });
+    return () => {
+      window.removeEventListener("focus", clearBadge);
+    };
+  }, []);
+
   // Check for unread announcements + suggestions (for admins)
   useEffect(() => {
     if (!user) return;

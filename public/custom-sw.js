@@ -49,7 +49,12 @@ self.addEventListener("push", (event) => {
     };
 
     event.waitUntil(
-      self.registration.showNotification(data.title || "Grim", options)
+      self.registration.showNotification(data.title || "Grim", options).then(() => {
+        // Set app icon badge
+        if (navigator.setAppBadge) {
+          navigator.setAppBadge().catch(() => {});
+        }
+      })
     );
   } catch (e) {
     // Fallback for plain text
@@ -64,6 +69,10 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  // Clear app icon badge when user taps notification
+  if (navigator.clearAppBadge) {
+    navigator.clearAppBadge().catch(() => {});
+  }
   const targetUrl = event.notification.data?.url || "/";
   const fullUrl = new URL(targetUrl, self.location.origin).href;
   event.waitUntil(
