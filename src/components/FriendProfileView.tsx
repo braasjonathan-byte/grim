@@ -180,8 +180,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
       const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }, { count: challengeTotal }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
-        supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary").eq("user_id", friendUserId).single(),
-        supabase.from("workout_plans").select("week, day, details, created_at").eq("user_id", friendUserId),
+        supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date").eq("user_id", friendUserId).single(),
+        supabase.from("workout_plans").select("week, day, details").eq("user_id", friendUserId),
         supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
         supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", friendUserId),
       ]);
@@ -199,8 +199,11 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         spotify_anthem_name: pd?.spotify_anthem_name || null,
       });
 
-      // Determine plan start date from earliest created_at
-      if (plansData && plansData.length > 0) {
+      // Use calibrated plan_start_date from profile (consistent with leaderboard)
+      if (profileData?.plan_start_date) {
+        setPlanStartDate(getMonday(new Date(profileData.plan_start_date + "T00:00:00")));
+      } else if (plansData && plansData.length > 0) {
+        // Fallback: derive from earliest plan created_at
         const earliest = plansData.reduce((min, p) => {
           const d = new Date((p as any).created_at);
           return d < min ? d : min;
