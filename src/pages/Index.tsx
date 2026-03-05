@@ -4,6 +4,7 @@ import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone,
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import type { User } from "@supabase/supabase-js";
+import TabSkeleton from "@/components/TabSkeleton";
 import AuthScreen from "@/components/AuthScreen";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
@@ -378,8 +379,23 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <img src={grimIcon} alt="Grim" className="w-8 h-8 animate-pulse" />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <img src={grimIcon} alt="Grim" className="w-8 h-8 animate-pulse" />
+            <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+          </div>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border border-border p-4 space-y-3">
+              <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
+              <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
+              <div className="flex gap-2">
+                <div className="h-8 w-20 rounded bg-muted animate-pulse" />
+                <div className="h-8 w-20 rounded bg-muted animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>);
 
   }
@@ -520,7 +536,7 @@ const Index = () => {
       </header>
 
       {/* Content */}
-      <Suspense fallback={<div className="max-w-lg mx-auto px-4 py-8 text-center text-muted-foreground text-sm">Laddar…</div>}>
+      <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4">
         {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
         {tab === "friends" &&
