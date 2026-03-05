@@ -1,0 +1,67 @@
+
+CREATE OR REPLACE FUNCTION public.get_leaderboard(filter_year integer, filter_month integer DEFAULT NULL::integer)
+ RETURNS TABLE(user_id uuid, nickname text, avatar_url text, done_count bigint, is_honorary boolean)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  day_offsets jsonb := '{"Mån":0,"Tis":1,"Ons":2,"Tors":3,"Fre":4,"Lör":5,"Sön":6}'::jsonb;
+BEGIN
+  IF auth.uid() IS NULL THEN RETURN; END IF;
+  
+  RETURN QUERY
+  SELECT 
+    p.user_id,
+    p.nickname,
+    p.avatar_url,
+    COUNT(wc.id) AS done_count,
+    p.is_honorary
+  FROM profiles p
+  LEFT JOIN workout_completions wc ON wc.user_id = p.user_id
+    AND wc.done = true
+    AND (
+      -- Calculate the actual workout date:
+      -- For standalone sessions (week=0): extract date from day field
+      -- For plan-based sessions: use plan_start_date + (week-1)*7 + day_offset
+      -- Fallback to updated_at if no plan_start_date
+      EXTRACT(YEAR FROM 
+        CASE 
+          WHEN wc.week = 0 AND wc.day ~ '^\d{4}-\d{2}-\d{2}' THEN
+            substring(wc.day from '^\d{4}-\d{2}-\d{2}')::date
+          WHEN wc.week > 0 AND p.plan_start_date IS NOT NULL THEN
+            p.plan_start_date + ((wc.week - 1) * 7 + COALESCE((day_offsets->>wc.day)::int, 0)) * interval '1 day'
+          ELSE
+            wc.updated_at
+        END
+      ) = filter_year
+    )
+    AND (
+      filter_month IS NULL OR
+      EXTRACT(MONTH FROM 
+        CASE 
+          WHEN wc.week = 0 AND wc.day ~ '^\d{4}-\d{2}-\d{2}' THEN
+            substring(wc.day from '^\d{4}-\d{2}-\d{2}')::date
+          WHEN wc.week > 0 AND p.plan_start_date IS NOT NULL THEN
+            p.plan_start_date + ((wc.week - 1) * 7 + COALESCE((day_offsets->>wc.day)::int, 0)) * interval '1 day'
+          ELSE
+            wc.updated_at
+        END
+      ) = filter_month
+    )
+    AND (
+      wc.logged_distance_km IS NOT NULL
+      OR wc.logged_tempo IS NOT NULL
+      OR wc.logged_pulse IS NOT NULL
+      OR (wc.logged_weights IS NOT NULL AND wc.logged_weights::text != '{}')
+      OR EXISTS (
+        SELECT 1 FROM workout_plans wp
+        WHERE wp.user_id = wc.user_id AND wp.week = wc.week AND wp.day = wc.day
+        AND wp.details IS NOT NULL AND TRIM(wp.details) != ''
+      )
+    )
+  GROUP BY p.user_id, p.nickname, p.avatar_url, p.is_honorary
+  HAVING COUNT(wc.id) > 0
+  ORDER BY done_count DESC;
+END;
+$function$;
