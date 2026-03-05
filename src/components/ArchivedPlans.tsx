@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Archive, ChevronDown, Check, X, Trash2, Dumbbell, Footprints, Moon, Bike } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 
 interface ArchivedPlan {
   id: string;
@@ -57,11 +58,12 @@ const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
 
   if (archives.length === 0) {
     return (
-      <div className="text-center py-6 space-y-2">
-        <Archive className="w-8 h-8 text-muted-foreground mx-auto" />
-        <p className="text-sm text-muted-foreground">Inga arkiverade scheman ännu.</p>
-        <p className="text-xs text-muted-foreground">När du avslutar ett schema sparas det här.</p>
-      </div>
+      <EmptyState
+        icon={Archive}
+        title="Inga arkiverade scheman"
+        description="När du avslutar ett schema sparas det här för framtida referens."
+        emoji="📦"
+      />
     );
   }
 

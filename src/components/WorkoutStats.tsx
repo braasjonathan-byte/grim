@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, CheckCircle, XCircle, Flame, Footprints, Weight, Star, Swords } from "lucide-react";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
+import EmptyState from "@/components/EmptyState";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
@@ -639,7 +640,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Stats list */}
       {stats.length === 0 ?
-      <p className="text-sm text-muted-foreground text-center py-8">Ingen data ännu</p> :
+      <EmptyState icon={BarChart3} title="Ingen statistik ännu" description="Genomför ditt första pass så dyker din data upp här!" emoji="📊" /> :
 
       <div className="space-y-2">
           {stats.map((b) => {
