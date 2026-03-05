@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCircle, ArrowLeft } from "lucide-react";
 import ChatConversation from "./ChatConversation";
+import EmptyState from "@/components/EmptyState";
 
 interface ChatViewProps {
   userId: string;
@@ -148,9 +149,12 @@ const ChatView = ({ userId, initialFriendId }: ChatViewProps) => {
       {loading ? (
         <p className="text-sm text-muted-foreground text-center py-8">Laddar...</p>
       ) : friends.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
-          Lägg till vänner för att börja chatta!
-        </p>
+        <EmptyState
+          icon={MessageCircle}
+          title="Inga chattar ännu"
+          description="Lägg till vänner under Vänner-fliken för att börja chatta!"
+          emoji="💬"
+        />
       ) : (
         <div className="space-y-1">
           {sortedFriends.map(friend => {

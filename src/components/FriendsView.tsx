@@ -5,6 +5,7 @@ import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import FriendProfileView from "@/components/FriendProfileView";
+import EmptyState from "@/components/EmptyState";
 
 interface FriendActivity {
   nickname: string;
@@ -1307,10 +1308,12 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           Dina vänner ({friends.length})
         </h3>
         {friends.length === 0 ? (
-          <div className="text-center py-8 space-y-2">
-            <Users className="w-10 h-10 text-muted-foreground mx-auto" />
-            <p className="text-sm text-muted-foreground">Inga vänner ännu. Sök efter användarnamn ovan!</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="Inga vänner ännu"
+            description="Sök efter användarnamn ovan för att hitta och lägga till vänner!"
+            emoji="🤝"
+          />
         ) : (
           friends.map((friend) => {
             const recentCount = friendActivities.filter(a => a.nickname === friend.profile.nickname).length;

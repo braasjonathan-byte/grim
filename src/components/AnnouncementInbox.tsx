@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Megaphone, Loader2, Check, Trash2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import EmptyState from "@/components/EmptyState";
 
 interface AnnouncementInboxProps {
   userId: string;
@@ -120,7 +121,7 @@ const AnnouncementInbox = ({ userId, isAdmin }: AnnouncementInboxProps) => {
 
       {/* Announcements list */}
       {announcements.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-2">Inga meddelanden ännu.</p>
+        <EmptyState icon={Megaphone} title="Inga meddelanden" description="Nya meddelanden från Grim-teamet dyker upp här." emoji="📭" />
       ) : (
         <div className="space-y-2">
           {announcements.map((a) => (
