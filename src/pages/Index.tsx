@@ -595,7 +595,7 @@ const Index = () => {
       {/* Notification toast at bottom */}
       {notification &&
       <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[60] animate-fade-in">
-          <div className="bg-card border border-primary/40 rounded-lg px-4 py-3 shadow-lg flex items-center gap-3 max-w-sm">
+          <div className="bg-card border border-primary/40 rounded-lg px-4 py-3 flex items-center gap-3 max-w-sm">
             <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center flex-shrink-0">
               <Bell className="w-4 h-4 text-success" />
             </div>
