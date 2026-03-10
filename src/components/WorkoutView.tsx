@@ -2507,12 +2507,11 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                       return null;
                     })()}
                     {/* Add warmup & exercise buttons */}
-                    {!isExercisePickerOpen && !weightDialog && !conditioningDialog ?
+                    {!weightDialog && !conditioningDialog &&
                   <div className="space-y-1.5">
                     <button
                       onClick={() => {
                         setShowExercisePicker(plan.id);
-                        setExerciseSearch("");
                         setSelectedMuscle(null);
                         setIsWarmupMode(true);
                       }}
@@ -2522,80 +2521,25 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                     <button
                       onClick={() => {
                         setShowExercisePicker(plan.id);
-                        setExerciseSearch("");
                         setSelectedMuscle(null);
                         setIsWarmupMode(false);
                       }}
                       className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <Plus className="w-3 h-3" /> Lägg till övning
                       </button>
-                  </div> :
-                  isExercisePickerOpen && !weightDialog && !conditioningDialog ?
-                  <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
-                         <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold">{replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Välj övning"}</h4>
-                          <button onClick={() => { setShowExercisePicker(null); setIsWarmupMode(false); setReplaceExerciseTarget(null); }} className="text-muted-foreground hover:text-foreground">
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground" />
-                          <input
-                        type="text"
-                        value={exerciseSearch}
-                        onChange={(e) => setExerciseSearch(e.target.value)}
-                        placeholder="Sök övning..."
-                        className="w-full bg-background text-foreground text-xs pl-8 pr-3 py-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-                        autoFocus />
-
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          <button
-                        onClick={() => setSelectedMuscle(null)}
-                        className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${!selectedMuscle ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>
-
-                            Alla
-                          </button>
-                          {muscleGroups.map((mg) =>
-                      <button
-                        key={mg}
-                        onClick={() => setSelectedMuscle(mg === selectedMuscle ? null : mg)}
-                        className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${selectedMuscle === mg ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>
-
-                              {mg}
-                            </button>
-                      )}
-                        </div>
-                        <div className="max-h-32 overflow-y-auto space-y-0.5">
-                          {filteredExercises.map((e, i) => {
-                        const lastW = findLastWeight(e.name);
-                        return (
-                          <button
-                            key={`${e.name}-${i}`}
-                            onClick={() => handleExerciseSelect(plan.id, e.name)}
-                            className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors">
-
-                                <div className="flex items-center gap-1">
-                                  <span>{e.name}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    onClick={(ev) => {ev.stopPropagation();setExerciseInfoName(e.name);}}
-                                    className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
-                                    title="Info">
-                                    <Info className="w-3 h-3" />
-                                  </button>
-                                  {lastW &&
-                              <span className="text-[10px] font-mono text-primary">{lastW}</span>
-                              }
-                                  <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
-                                </div>
-                              </button>);
-
-                      })}
-                        </div>
-                      </div> :
-                  null}
+                  </div>
+                    }
+                    <ExercisePickerDialog
+                      open={isExercisePickerOpen && !weightDialog && !conditioningDialog}
+                      onClose={() => { setShowExercisePicker(null); setIsWarmupMode(false); setReplaceExerciseTarget(null); }}
+                      onSelect={(name) => handleExerciseSelect(plan.id, name)}
+                      title={replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Välj övning"}
+                      initialMuscleGroup={selectedMuscle}
+                      getLastWeight={findLastWeight}
+                      onExerciseInfo={(name) => setExerciseInfoName(name)}
+                      allowCreate
+                      userId={userId}
+                    />
 
                     {/* Friend comments */}
                     {(() => {
