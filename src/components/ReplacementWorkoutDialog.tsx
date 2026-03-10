@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { X, Plus, Search, Dumbbell } from "lucide-react";
-import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { X, Plus, Dumbbell } from "lucide-react";
+import ExercisePickerDialog from "@/components/ExercisePickerDialog";
 
 interface ReplacementWorkoutDialogProps {
   userId: string;
