@@ -10,6 +10,7 @@ import PlanPicker from "@/components/PlanPicker";
 import PlanCalibrationDialog from "@/components/PlanCalibrationDialog";
 import ReplacementWorkoutDialog from "@/components/ReplacementWorkoutDialog";
 import WorkoutLogDialog from "@/components/WorkoutLogDialog";
+import ExercisePickerDialog from "@/components/ExercisePickerDialog";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
