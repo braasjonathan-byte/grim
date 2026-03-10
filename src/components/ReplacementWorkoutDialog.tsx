@@ -27,22 +27,11 @@ const ReplacementWorkoutDialog = ({
   const [newName, setNewName] = useState("");
   const [exercises, setExercises] = useState<string[]>([]);
   const [showPicker, setShowPicker] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
-  const [customExercise, setCustomExercise] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const filteredExercises = exerciseLibrary.filter((e) => {
-    const matchesSearch = !searchTerm || e.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
-    return matchesSearch && matchesMuscle;
-  });
 
   const addExercise = (name: string) => {
     setExercises((prev) => [...prev, name]);
     setShowPicker(false);
-    setSearchTerm("");
-    setCustomExercise("");
   };
 
   const removeExercise = (index: number) => {
