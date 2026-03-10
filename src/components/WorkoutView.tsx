@@ -4299,68 +4299,7 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                 }
 
                   {/* Add exercise to plan session */}
-                  {showExercisePicker === plan.id && !weightDialog && !conditioningDialog ?
-                <div className="bg-secondary/50 rounded-lg p-3 space-y-2 animate-fade-in">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-semibold">{replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Lägg till övning"}</h4>
-                        <button onClick={() => {setShowExercisePicker(null);setShowAddCustomExercise(false);setIsWarmupMode(false);setReplaceExerciseTarget(null);}} className="text-muted-foreground hover:text-foreground">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground" />
-                        <input type="text" value={exerciseSearch} onChange={(e) => setExerciseSearch(e.target.value)} placeholder="Sök övning..." className="w-full bg-background text-foreground text-xs pl-8 pr-3 py-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground" autoFocus />
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        <button onClick={() => setSelectedMuscle(null)} className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${!selectedMuscle ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>Alla</button>
-                        {muscleGroups.map((mg) =>
-                    <button key={mg} onClick={() => setSelectedMuscle(mg === selectedMuscle ? null : mg)} className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${selectedMuscle === mg ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>{mg}</button>
-                    )}
-                      </div>
-                      <div className="max-h-36 overflow-y-auto space-y-0.5">
-                        {filteredExercises.map((e, i) =>
-                    <button key={`${e.name}-${i}`} onClick={() => handleExerciseSelect(plan.id, e.name)} className="w-full text-left flex items-center justify-between p-1.5 bg-background rounded text-xs hover:bg-primary/10 transition-colors">
-                            <span>{e.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
-                          </button>
-                    )}
-                      </div>
-                      {showAddCustomExercise ?
-                  <div className="border border-primary/30 rounded-md p-2 space-y-1.5">
-                          <input type="text" value={newExName} onChange={(e) => setNewExName(e.target.value)} placeholder="Övningens namn" className="w-full bg-background text-foreground text-xs p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground" />
-                          <div className="flex gap-1.5">
-                            <select value={newExCategory} onChange={(e) => setNewExCategory(e.target.value)} className="flex-1 bg-background text-foreground text-[10px] p-1.5 rounded-md border-none outline-none">
-                              <option value="styrka">Styrka</option><option value="kondition">Kondition</option><option value="rörlighet">Rörlighet</option><option value="core">Core</option>
-                            </select>
-                            <select value={newExMuscle} onChange={(e) => setNewExMuscle(e.target.value)} className="flex-1 bg-background text-foreground text-[10px] p-1.5 rounded-md border-none outline-none">
-                              {muscleGroups.map((mg) => <option key={mg} value={mg}>{mg}</option>)}
-                            </select>
-                          </div>
-                          <div className="flex gap-1.5">
-                            <button onClick={async () => {
-                              if (!newExName.trim()) return;
-                              const trimmedName = newExName.trim();
-                              // Check for duplicates in built-in exercises
-                              const builtInDupe = exerciseLibrary.find(e => e.name.toLowerCase() === trimmedName.toLowerCase());
-                              if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
-                              // Check for duplicates in custom exercises
-                              const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmedName.toLowerCase());
-                              if (customDupe) { alert("Övningen finns redan."); return; }
-                              await supabase.from("custom_exercises").insert({ name: trimmedName, category: newExCategory, muscle_group: newExMuscle, created_by: userId });
-                              setNewExName("");setShowAddCustomExercise(false);
-                              const { data } = await supabase.from("custom_exercises").select("*").order("name");
-                              if (data) setCustomExercises(data);
-                            }} className="flex-1 py-1 bg-primary text-primary-foreground font-semibold rounded-md text-[10px]">Spara</button>
-                            <button onClick={() => setShowAddCustomExercise(false)} className="px-2 py-1 bg-secondary text-muted-foreground rounded-md text-[10px]">Avbryt</button>
-                          </div>
-                        </div> :
-
-                  <button onClick={() => setShowAddCustomExercise(true)} className="w-full py-1.5 border border-dashed border-border rounded-md text-[10px] text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
-                          <Plus className="w-3 h-3" /> Lägg till egen övning
-                        </button>
-                  }
-                    </div> :
-                !weightDialog ?
+                  {!weightDialog && !conditioningDialog &&
                 <div className="space-y-1.5">
                   {/* Suggest adding interval training for tröskelpass (plan mode) */}
                   {(() => {
@@ -4392,14 +4331,25 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                     }
                     return null;
                   })()}
-                  <button onClick={() => {setShowExercisePicker(plan.id);setExerciseSearch("");setSelectedMuscle(null);setShowAddCustomExercise(false);setIsWarmupMode(true);}} className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-muted-foreground hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                  <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(true);}} className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-muted-foreground hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till uppvärmning
                     </button>
-                  <button onClick={() => {setShowExercisePicker(plan.id);setExerciseSearch("");setSelectedMuscle(null);setShowAddCustomExercise(false);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
+                  <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till övning
                     </button>
-                </div> :
-                null}
+                </div>
+                  }
+                  <ExercisePickerDialog
+                    open={showExercisePicker === plan.id && !weightDialog && !conditioningDialog}
+                    onClose={() => { setShowExercisePicker(null); setShowAddCustomExercise(false); setIsWarmupMode(false); setReplaceExerciseTarget(null); }}
+                    onSelect={(name) => handleExerciseSelect(plan.id, name)}
+                    title={replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Lägg till övning"}
+                    initialMuscleGroup={selectedMuscle}
+                    getLastWeight={findLastWeight}
+                    onExerciseInfo={(name) => setExerciseInfoName(name)}
+                    allowCreate
+                    userId={userId}
+                  />
 
                   {/* Likes from friends */}
                   {(() => {
