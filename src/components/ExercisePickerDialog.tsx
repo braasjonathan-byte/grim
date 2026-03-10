@@ -1,0 +1,296 @@
+import { useState, useEffect, useRef } from "react";
+import { Search, X, Plus, Dumbbell, Info } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { cn } from "@/lib/utils";
+
+interface CustomExercise {
+  id: string;
+  name: string;
+  category: string;
+  muscle_group: string;
+}
+
+interface ExercisePickerDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (exerciseName: string) => void;
+  title?: string;
+  /** Pre-filter to a specific muscle group */
+  initialMuscleGroup?: string | null;
+  /** Show last-used weight next to exercise */
+  getLastWeight?: (name: string) => string | null;
+  /** Show info button */
+  onExerciseInfo?: (name: string) => void;
+  /** Allow creating custom exercises */
+  allowCreate?: boolean;
+  /** User id for creating custom exercises */
+  userId?: string;
+}
+
+const ExercisePickerDialog = ({
+  open,
+  onClose,
+  onSelect,
+  title = "Välj övning",
+  initialMuscleGroup = null,
+  getLastWeight,
+  onExerciseInfo,
+  allowCreate = false,
+  userId,
+}: ExercisePickerDialogProps) => {
+  const [search, setSearch] = useState("");
+  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(initialMuscleGroup);
+  const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCategory, setNewCategory] = useState("styrka");
+  const [newMuscle, setNewMuscle] = useState("Helkropp");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setSearch("");
+      setSelectedMuscle(initialMuscleGroup);
+      setShowCreate(false);
+      setNewName("");
+      supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
+        if (data) setCustomExercises(data);
+      });
+      // Focus search after animation
+      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+  }, [open, initialMuscleGroup]);
+
+  // Handle keyboard on mobile — keep content visible
+  useEffect(() => {
+    if (!open) return;
+    const handleResize = () => {
+      if (contentRef.current) {
+        const vh = window.visualViewport?.height || window.innerHeight;
+        contentRef.current.style.maxHeight = `${vh - 24}px`;
+      }
+    };
+    handleResize();
+    window.visualViewport?.addEventListener("resize", handleResize);
+    return () => window.visualViewport?.removeEventListener("resize", handleResize);
+  }, [open]);
+
+  if (!open) return null;
+
+  const allExercises = [
+    ...exerciseLibrary.map(e => ({ name: e.name, muscleGroup: e.muscleGroup, category: e.category, isCustom: false })),
+    ...customExercises.map(e => ({ name: e.name, muscleGroup: e.muscle_group, category: e.category, isCustom: true })),
+  ];
+
+  const filtered = allExercises.filter(e => {
+    const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase());
+    const matchMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
+    return matchSearch && matchMuscle;
+  });
+
+  const handleSelect = (name: string) => {
+    onSelect(name);
+    onClose();
+  };
+
+  const handleCreateExercise = async () => {
+    if (!newName.trim() || !userId) return;
+    const trimmed = newName.trim();
+    const builtInDupe = exerciseLibrary.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
+    if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
+    const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
+    if (customDupe) { alert("Övningen finns redan."); return; }
+    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId });
+    const { data } = await supabase.from("custom_exercises").select("*").order("name");
+    if (data) setCustomExercises(data);
+    setNewName("");
+    setShowCreate(false);
+    // Auto-select the newly created exercise
+    handleSelect(trimmed);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Dialog */}
+      <div
+        ref={contentRef}
+        className="relative w-full max-w-md bg-card border border-border rounded-t-2xl sm:rounded-2xl flex flex-col animate-fade-in overflow-hidden"
+        style={{ maxHeight: "85vh" }}
+      >
+        {/* Handle bar on mobile */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <div className="flex items-center gap-2">
+            <Dumbbell className="w-4 h-4 text-primary" />
+            <h3 className="font-bold text-sm">{title}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 pb-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Sök övning..."
+              className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2.5 rounded-xl border-none outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground transition-shadow"
+            />
+          </div>
+        </div>
+
+        {/* Muscle group filters */}
+        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setSelectedMuscle(null)}
+            className={cn(
+              "text-xs px-2.5 py-1 rounded-lg font-medium transition-colors",
+              !selectedMuscle
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Alla
+          </button>
+          {muscleGroups.map(mg => (
+            <button
+              key={mg}
+              onClick={() => setSelectedMuscle(mg === selectedMuscle ? null : mg)}
+              className={cn(
+                "text-xs px-2.5 py-1 rounded-lg font-medium transition-colors",
+                selectedMuscle === mg
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {mg}
+            </button>
+          ))}
+        </div>
+
+        {/* Exercise list */}
+        <div className="flex-1 overflow-y-auto px-4 pb-2 min-h-0">
+          <div className="space-y-1">
+            {filtered.map((e, i) => {
+              const lastW = getLastWeight?.(e.name);
+              return (
+                <button
+                  key={`${e.name}-${i}`}
+                  onClick={() => handleSelect(e.name)}
+                  className="w-full flex items-center justify-between p-2.5 bg-secondary/60 hover:bg-primary/10 rounded-xl text-sm transition-colors text-left group active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 flex-shrink-0 group-hover:bg-primary transition-colors" />
+                    <span className="truncate">{e.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    {onExerciseInfo && (
+                      <button
+                        onClick={(ev) => { ev.stopPropagation(); onExerciseInfo(e.name); }}
+                        className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                        title="Info"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {lastW && (
+                      <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">
+                        {lastW}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
+                  </div>
+                </button>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div className="text-center py-8">
+                <Dumbbell className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Inga övningar hittades</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Create custom exercise */}
+        {allowCreate && userId && (
+          <div className="border-t border-border px-4 py-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+            {showCreate ? (
+              <div className="space-y-2 animate-fade-in">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && newName.trim() && handleCreateExercise()}
+                  placeholder="Namn på övning..."
+                  className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={newCategory}
+                    onChange={e => setNewCategory(e.target.value)}
+                    className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                  >
+                    <option value="styrka">Styrka</option>
+                    <option value="kondition">Kondition</option>
+                    <option value="rörlighet">Rörlighet</option>
+                    <option value="core">Core</option>
+                  </select>
+                  <select
+                    value={newMuscle}
+                    onChange={e => setNewMuscle(e.target.value)}
+                    className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                  >
+                    {muscleGroups.map(mg => <option key={mg} value={mg}>{mg}</option>)}
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCreateExercise}
+                    disabled={!newName.trim()}
+                    className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-lg text-xs disabled:opacity-40 transition-opacity"
+                  >
+                    Spara
+                  </button>
+                  <button
+                    onClick={() => setShowCreate(false)}
+                    className="px-4 py-2 bg-secondary text-muted-foreground rounded-lg text-xs hover:text-foreground transition-colors"
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="w-full py-2.5 border border-dashed border-border rounded-xl text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" /> Lägg till egen övning
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ExercisePickerDialog;
