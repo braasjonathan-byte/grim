@@ -286,67 +286,14 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
   );
 
   // --- Exercise picker modal ---
-  const renderExercisePicker = () => {
-    if (!pickerTarget) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-        <div className="fixed inset-0 bg-black/50" onClick={() => { setPickerTarget(null); setExerciseSearch(""); setSelectedMuscle(null); }} />
-        <div className="relative bg-card border border-border rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] flex flex-col animate-fade-in">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-bold text-sm">Välj övning</h3>
-            <button onClick={() => { setPickerTarget(null); setExerciseSearch(""); setSelectedMuscle(null); }} className="text-muted-foreground">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="p-3 space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={exerciseSearch}
-                onChange={e => setExerciseSearch(e.target.value)}
-                placeholder="Sök övning..."
-                className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-                autoFocus
-              />
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => setSelectedMuscle(null)}
-                className={`text-xs px-2 py-1 rounded-md transition-colors ${!selectedMuscle ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-              >
-                Alla
-              </button>
-              {muscleGroups.map(mg => (
-                <button
-                  key={mg}
-                  onClick={() => setSelectedMuscle(mg === selectedMuscle ? null : mg)}
-                  className={`text-xs px-2 py-1 rounded-md transition-colors ${selectedMuscle === mg ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-                >
-                  {mg}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1">
-            {filteredExercises.map((e, i) => (
-              <button
-                key={`${e.name}-${i}`}
-                onClick={() => addExerciseToTarget(e.name)}
-                className="w-full flex items-center justify-between p-2.5 bg-secondary hover:bg-muted rounded-md text-sm transition-colors text-left"
-              >
-                <span>{e.name}</span>
-                <span className="text-xs text-muted-foreground">{e.muscleGroup}</span>
-              </button>
-            ))}
-            {filteredExercises.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">Inga övningar hittades</p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const renderExercisePicker = () => (
+    <ExercisePickerDialog
+      open={!!pickerTarget}
+      onClose={() => { setPickerTarget(null); setExerciseSearch(""); setSelectedMuscle(null); }}
+      onSelect={(name) => addExerciseToTarget(name)}
+      title="Välj övning"
+    />
+  );
 
   return (
     <div className="space-y-5 animate-fade-in">
