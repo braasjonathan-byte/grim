@@ -448,7 +448,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     if (completions) {
       const map: Record<string, FriendCompletion> = {};
       for (const c of completions) {
-        map[`${c.week}-${c.day}`] = c;
+        map[`${c.week}-${c.day}`] = c as unknown as FriendCompletion;
       }
       setFriendCompletions(map);
     }
