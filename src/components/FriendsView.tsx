@@ -1105,20 +1105,54 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                             </div>
                           </div>
                         ) : (
-                          /* Workout details */
+                          /* Workout details with logged weights */
                           (() => {
                             const detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
-                            return detailParts.length > 1 ? (
-                              <ul className="space-y-1.5">
-                                {detailParts.map((line, i) => (
-                                  <li key={i} className="flex items-center gap-2 text-sm text-foreground">
-                                    <span className="text-muted-foreground">•</span>
-                                    <span className="flex-1">{line}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                            const weights = completion?.logged_weights;
+                            return (
+                              <div className="space-y-1.5">
+                                {detailParts.length > 1 ? (
+                                  <ul className="space-y-1.5">
+                                    {detailParts.map((line, idx) => {
+                                      const nameMatch = line.match(/^([^–—\d]+)/);
+                                      const exerciseName = nameMatch ? nameMatch[1].replace(/^[•\-\s]+/, "").trim().toLowerCase() : "";
+                                      let setData: { kg?: string | number; reps?: string | number }[] | null = null;
+                                      if (weights && typeof weights === "object") {
+                                        for (const [k, v] of Object.entries(weights)) {
+                                          if (k.startsWith("__setdata__") && k.replace("__setdata__", "").toLowerCase() === exerciseName) {
+                                            try { setData = typeof v === "string" ? JSON.parse(v) : Array.isArray(v) ? v : null; } catch {}
+                                          }
+                                        }
+                                      }
+                                      return (
+                                        <li key={idx} className="text-sm text-foreground">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-muted-foreground">•</span>
+                                            <span className="flex-1">{line}</span>
+                                          </div>
+                                          {setData && setData.length > 0 && (
+                                            <div className="ml-5 mt-1 flex flex-wrap gap-1">
+                                              {setData.map((s, si) => (
+                                                <span key={si} className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                                  {s.kg || 0}kg × {s.reps || 0}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                ) : (
+                                  <p className="text-sm text-foreground leading-relaxed">{plan.details}</p>
+                                )}
+                                {completion?.logged_distance_km && (
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                    <Footprints className="w-3.5 h-3.5" />
+                                    <span>{completion.logged_distance_km} km</span>
+                                  </div>
+                                )}
+                              </div>
                             );
                           })()
                         )}
