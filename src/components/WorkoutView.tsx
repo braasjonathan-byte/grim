@@ -255,6 +255,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [copyToDateConflict, setCopyToDateConflict] = useState<"ask" | "replace" | "add" | null>(null);
   const [copyToDateSaving, setCopyToDateSaving] = useState(false);
 
+  // Exercise dropdown menu close on scroll
+  const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!openExerciseMenuId) return;
+    const handleScroll = () => setOpenExerciseMenuId(null);
+    window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", handleScroll, { capture: true });
+  }, [openExerciseMenuId]);
+
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
