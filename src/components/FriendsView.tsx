@@ -51,6 +51,8 @@ interface FriendCompletion {
   day: string;
   done: boolean;
   user_comment: string | null;
+  logged_weights?: Record<string, any> | null;
+  logged_distance_km?: number | null;
 }
 
 interface WorkoutComment {
