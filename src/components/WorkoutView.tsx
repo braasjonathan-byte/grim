@@ -255,6 +255,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [copyToDateConflict, setCopyToDateConflict] = useState<"ask" | "replace" | "add" | null>(null);
   const [copyToDateSaving, setCopyToDateSaving] = useState(false);
 
+  // Exercise dropdown menu close on scroll
+  const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!openExerciseMenuId) return;
+    const handleScroll = () => setOpenExerciseMenuId(null);
+    window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+    return () => window.removeEventListener("scroll", handleScroll, { capture: true });
+  }, [openExerciseMenuId]);
+
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
@@ -4070,7 +4080,7 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                   </div>
-                                   <DropdownMenu modal={false}>
+                                   <DropdownMenu modal={false} open={openExerciseMenuId === `${plan.id}-${i}`} onOpenChange={(open) => setOpenExerciseMenuId(open ? `${plan.id}-${i}` : null)}>
                                       <DropdownMenuTrigger asChild>
                                         <button
                                           onPointerDown={(e) => {
