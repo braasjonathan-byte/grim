@@ -1257,14 +1257,61 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
     return { name: line.trim(), weight: null };
   };
 
-  // Find last weight used for an exercise across all single workouts
-  const findLastWeight = (exerciseName: string): string | null => {
-    const singlePlans = plans.filter((p) => p.week === 0);
-    for (const plan of singlePlans) {
+  // Find last weight used for an exercise across ALL workouts (single + plan),
+  // preferring matching rep count. Returns e.g. "3×10 @ 80 kg" or "80 kg (8 reps)"
+  const findLastWeight = (exerciseName: string, targetReps?: number): string | null => {
+    const exLower = exerciseName.toLowerCase();
+
+    // Collect all logged set data across all completed workouts
+    type SetInfo = { kg: number; reps: number; label: string };
+    const allSets: SetInfo[] = [];
+
+    // Search all completions for logged set data
+    for (const [k, comp] of Object.entries(completions)) {
+      if (!comp?.done) continue;
+      const weights = comp.logged_weights as Record<string, any> | null;
+      if (!weights) continue;
+      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
+      if (setDataRaw) {
+        try {
+          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
+          if (Array.isArray(setData) && setData.length > 0) {
+            for (const s of setData) {
+              const kg = parseFloat(s.kg);
+              const reps = parseInt(s.reps);
+              if (kg > 0) {
+                allSets.push({ kg, reps: reps || 0, label: `${kg} kg (${reps || '?'} reps)` });
+              }
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // If we found logged sets, prefer matching rep count
+    if (allSets.length > 0) {
+      if (targetReps) {
+        const matching = allSets.filter(s => s.reps === targetReps);
+        if (matching.length > 0) {
+          const best = matching[matching.length - 1];
+          return `${best.kg} kg (${best.reps} reps)`;
+        }
+      }
+      // Fallback: latest set
+      const last = allSets[allSets.length - 1];
+      return `${last.kg} kg (${last.reps || '?'} reps)`;
+    }
+
+    // Fallback: search plan details text for weight info
+    const allPlans = [...plans].sort((a, b) => {
+      if (a.week !== b.week) return b.week - a.week;
+      return b.day.localeCompare(a.day);
+    });
+    for (const plan of allPlans) {
       if (!plan.details) continue;
       for (const line of plan.details.split("\n")) {
         const { name, weight } = parseExerciseWeight(line);
-        if (name.toLowerCase() === exerciseName.toLowerCase() && weight) {
+        if (name.toLowerCase() === exLower && weight) {
           return weight;
         }
       }
