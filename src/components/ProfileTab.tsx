@@ -34,7 +34,7 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
       </div>
 
       {/* Archived plans */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className="bg-background border border-border rounded-lg p-4">
         <button
           onClick={() => setArchiveOpen(!archiveOpen)}
           className="w-full flex items-center justify-between py-1"

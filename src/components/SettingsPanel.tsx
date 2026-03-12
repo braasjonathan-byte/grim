@@ -188,7 +188,7 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+    <div className="bg-background border border-border rounded-lg p-4 space-y-4">
       <h3 className="text-sm font-bold">⚙️ Inställningar</h3>
 
       {/* Theme toggle */}
