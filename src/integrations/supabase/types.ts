@@ -496,6 +496,7 @@ export type Database = {
           time_10km_min: number | null
           training_days_per_week: number | null
           user_id: string
+          weight_kg: number | null
         }
         Insert: {
           age?: number | null
@@ -521,6 +522,7 @@ export type Database = {
           time_10km_min?: number | null
           training_days_per_week?: number | null
           user_id: string
+          weight_kg?: number | null
         }
         Update: {
           age?: number | null
@@ -546,6 +548,7 @@ export type Database = {
           time_10km_min?: number | null
           training_days_per_week?: number | null
           user_id?: string
+          weight_kg?: number | null
         }
         Relationships: []
       }
