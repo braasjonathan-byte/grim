@@ -270,6 +270,12 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [profileGender, setProfileGender] = useState<string | null>(null);
   const [profileAge, setProfileAge] = useState<number | null>(null);
 
+  // Calibration state
+  const [needsCalibration, setNeedsCalibration] = useState(false);
+
+  // Plan start date from profile (timezone-safe)
+  const [planStartDate, setPlanStartDate] = useState<string | null>(null);
+
   // Fetch user nickname + calibration status + body data
   useEffect(() => {
     supabase.from("profiles").select("nickname, plan_start_calibrated, plan_start_date, weight_kg, gender, age").eq("user_id", userId).single().then(({ data }) => {
