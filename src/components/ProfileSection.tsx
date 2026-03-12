@@ -31,6 +31,7 @@ const extractUsername = (input: string, domain: string): string => {
 const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState<string>("");
+  const [weightKg, setWeightKg] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
