@@ -74,9 +74,9 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false }: Exercise
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-card border border-border rounded-t-2xl sm:rounded-2xl overflow-hidden animate-fade-in max-h-[85vh] flex flex-col">
+      <div className="relative w-full max-w-md bg-card border border-border rounded-t-2xl overflow-hidden animate-fade-in max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <Info className="w-4 h-4 text-primary flex-shrink-0" />
