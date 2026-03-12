@@ -3049,7 +3049,7 @@ const estimateCalories = (
                       ? done
                         ? "bg-success text-success-foreground shadow-sm"
                         : isToday
-                        ? "bg-warning text-warning-foreground shadow-sm"
+                        ? "bg-warning/10 text-warning border border-warning/30 shadow-sm"
                         : "bg-primary text-primary-foreground shadow-sm"
                       : done
                       ? "bg-success/20 text-success"
