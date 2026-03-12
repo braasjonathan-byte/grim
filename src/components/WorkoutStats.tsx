@@ -557,8 +557,15 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
             sets = value;
           }
           for (const s of sets) {
-            const kg = Number(s.kg) || 0;
+            let kg = Number(s.kg) || 0;
             const reps = Number(s.reps) || 0;
+            // Negative kg = assisted exercise: effective weight = bodyweight + kg (which subtracts)
+            if (kg < 0 && userWeightKg) {
+              kg = userWeightKg + kg; // e.g. -20 + 102 = 82
+              if (kg < 0) kg = 0;
+            } else if (kg < 0) {
+              kg = 0; // Can't compute without body weight
+            }
             total += kg * reps;
           }
         }
