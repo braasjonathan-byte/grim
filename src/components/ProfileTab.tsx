@@ -15,7 +15,7 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
   return (
     <div className="py-2 space-y-4">
       {/* Profile settings */}
-      <div className="bg-card border border-border rounded-lg p-4">
+      <div className="bg-background border border-border rounded-lg p-4">
         <button
           onClick={() => setProfileOpen(!profileOpen)}
           className="w-full flex items-center justify-between py-1"
