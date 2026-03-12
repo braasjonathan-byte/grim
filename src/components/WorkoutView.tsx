@@ -2736,33 +2736,30 @@ const estimateCalories = (
                       </div>
                     </div>
                     {/* Calorie burn estimate */}
-                    {isDone && plan.details && (() => {
-                      const comp = completions[key];
-                      if (profileWeight) {
+                    {isDone && plan.details && (
+                      profileWeight ? (() => {
+                        const comp = completions[key];
                         const cal = estimateCalories(plan.details, comp?.logged_weights as Record<string, any> | null, comp?.logged_pulse || null, profileWeight, profileGender, profileAge);
-                        if (cal > 0) return (
-                          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-2 flex items-center gap-2">
-                            <Flame className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                        return cal > 0 ? (
+                          <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-center gap-2">
+                            <Flame className="w-4 h-4 text-destructive flex-shrink-0" />
                             <div className="flex-1">
-                              <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">~{cal} kcal</span>
+                              <span className="text-xs font-semibold text-destructive">~{cal} kcal</span>
                               <span className="text-[10px] text-muted-foreground ml-1.5">
                                 {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
                               </span>
                             </div>
                           </div>
-                        );
-                      } else {
-                        return (
-                          <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 flex items-center gap-2">
-                            <Flame className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                            <p className="text-[10px] text-muted-foreground">
-                              Lägg till din vikt i profilen för att se kaloriförbrukning
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
+                        ) : null;
+                      })() : (
+                        <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 flex items-center gap-2">
+                          <Flame className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                          <p className="text-[10px] text-muted-foreground">
+                            Lägg till din vikt i profilen för att se kaloriförbrukning
+                          </p>
+                        </div>
+                      )
+                    )}
                 }
               </div>);
 
