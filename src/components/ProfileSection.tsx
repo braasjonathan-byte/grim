@@ -61,6 +61,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       if (data) {
         setAge(data.age?.toString() || "");
         setGender(data.gender || "");
+        setWeightKg((data as any).weight_kg?.toString() || "");
         setAvatarUrl(data.avatar_url || null);
         setInstagram((data as any).instagram || "");
         setTiktok((data as any).tiktok || "");
