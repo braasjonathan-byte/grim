@@ -3636,7 +3636,25 @@ const estimateCalories = (
                   };
 
                   // Find last logged kg+reps for a strength exercise from completed sessions
-                  const findLastLoggedKg = (exerciseName: string, currentWeek: number): { kg: number; reps?: number } | null => {
+                  // If targetReps is provided, prefer sets with matching rep count
+                  const findLastLoggedKg = (exerciseName: string, currentWeek: number, targetReps?: number): { kg: number; reps?: number } | null => {
+                    // Collect all matching sets first
+                    type SetInfo = { kg: number; reps: number };
+                    const allSets: SetInfo[] = [];
+                    const collectSets = (weights: Record<string, any>) => {
+                      const setDataRaw = weights[`__setdata__${exerciseName}`];
+                      if (setDataRaw) {
+                        try {
+                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
+                          if (Array.isArray(setData)) {
+                            for (const s of setData) {
+                              const kg = parseFloat(s.kg);
+                              if (kg > 0) allSets.push({ kg, reps: parseInt(s.reps) || 0 });
+                            }
+                          }
+                        } catch {}
+                      }
+                    };
                     // Search plan weeks backwards
                     for (let w = currentWeek - 1; w >= 1; w--) {
                       for (const p of plans.filter(pp => pp.week === w)) {
