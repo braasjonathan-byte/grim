@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { User, Camera, Loader2, Check, Instagram, Music, Crown, Shield } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { User, Camera, Loader2, Instagram, Music, Crown, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileSectionProps {
@@ -20,7 +20,6 @@ const extractUsername = (input: string, domain: string): string => {
   try {
     if (trimmed.includes(domain)) {
       const url = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
-      // pathname like /username or /@username
       const path = url.pathname.replace(/^\/+/, "").replace(/\/+$/, "").replace(/^@/, "");
       return path || "";
     }
@@ -34,9 +33,6 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [weightKg, setWeightKg] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [dirty, setDirty] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
@@ -46,6 +42,8 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [fetchingSpotify, setFetchingSpotify] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -71,9 +69,51 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         setIsHonorary(data.is_honorary ?? false);
       }
       setIsAdmin(!!roleData);
+      setLoaded(true);
     };
     fetchProfile();
   }, [userId]);
+
+  // Auto-save profile with debounce
+  const doSave = useCallback(async () => {
+    const ageNum = age.trim() ? parseInt(age) : null;
+    await supabase
+      .from("profiles")
+      .update({
+        age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
+        gender: gender || null,
+        weight_kg: weightKg.trim() ? parseFloat(weightKg) : null,
+        instagram: extractUsername(instagram, "instagram.com") || null,
+        tiktok: extractUsername(tiktok, "tiktok.com") || null,
+        snapchat: extractUsername(snapchat, "snapchat.com") || null,
+        spotify_anthem_url: spotifyUrl.trim() || null,
+        spotify_anthem_name: spotifyName.trim() || null,
+      } as any)
+      .eq("user_id", userId);
+  }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
+
+  // Trigger auto-save when any field changes (after initial load)
+  useEffect(() => {
+    if (!loaded) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      doSave();
+    }, 1000);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
+
+  // Save on unmount/visibility change
+  useEffect(() => {
+    if (!loaded) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") doSave();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      doSave();
+    };
+  }, [loaded, doSave]);
 
   // Auto-fetch Spotify track name from oEmbed
   useEffect(() => {
@@ -90,7 +130,6 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           const data = await res.json();
           if (data.title) {
             setSpotifyName(data.title);
-            setDirty(true);
           }
         }
       } catch {
@@ -106,65 +145,28 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Validate file type
     if (!file.type.startsWith("image/")) return;
-    // Limit to 2MB
     if (file.size > 2 * 1024 * 1024) return;
-
     setUploading(true);
-
     const fileExt = file.name.split(".").pop();
     const filePath = `${userId}/avatar.${fileExt}`;
-
-    // Upload to storage
     const { error: uploadError } = await supabase.storage
       .from("avatars")
       .upload(filePath, file, { upsert: true });
-
     if (uploadError) {
       setUploading(false);
       return;
     }
-
     const { data: urlData } = supabase.storage
       .from("avatars")
       .getPublicUrl(filePath);
-
     const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-
-    // Save to profile
     await supabase
       .from("profiles")
       .update({ avatar_url: publicUrl })
       .eq("user_id", userId);
-
     setAvatarUrl(publicUrl);
     setUploading(false);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-
-    const ageNum = age.trim() ? parseInt(age) : null;
-    await supabase
-      .from("profiles")
-      .update({
-        age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
-        gender: gender || null,
-        weight_kg: weightKg.trim() ? parseFloat(weightKg) : null,
-        instagram: extractUsername(instagram, "instagram.com") || null,
-        tiktok: extractUsername(tiktok, "tiktok.com") || null,
-        snapchat: extractUsername(snapchat, "snapchat.com") || null,
-        spotify_anthem_url: spotifyUrl.trim() || null,
-        spotify_anthem_name: spotifyName.trim() || null,
-      } as any)
-      .eq("user_id", userId);
-
-    setSaved(true);
-    setDirty(false);
-    setTimeout(() => setSaved(false), 2000);
-    setSaving(false);
   };
 
   return (
@@ -226,10 +228,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           type="number"
           inputMode="numeric"
           value={age}
-          onChange={(e) => {
-            setAge(e.target.value);
-            setDirty(true);
-          }}
+          onChange={(e) => setAge(e.target.value)}
           placeholder="Ange din ålder"
           min={1}
           max={120}
@@ -242,10 +241,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         <label className="text-xs text-muted-foreground block">Kön</label>
         <select
           value={gender}
-          onChange={(e) => {
-            setGender(e.target.value);
-            setDirty(true);
-          }}
+          onChange={(e) => setGender(e.target.value)}
           className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
         >
           {GENDER_OPTIONS.map((opt) => (
@@ -263,10 +259,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           type="number"
           inputMode="decimal"
           value={weightKg}
-          onChange={(e) => {
-            setWeightKg(e.target.value);
-            setDirty(true);
-          }}
+          onChange={(e) => setWeightKg(e.target.value)}
           placeholder="Ange din vikt"
           min={30}
           max={300}
@@ -286,7 +279,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={instagram}
-            onChange={(e) => { setInstagram(e.target.value); setDirty(true); }}
+            onChange={(e) => setInstagram(e.target.value)}
             placeholder="t.ex. mittnamn"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -297,7 +290,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={tiktok}
-            onChange={(e) => { setTiktok(e.target.value); setDirty(true); }}
+            onChange={(e) => setTiktok(e.target.value)}
             placeholder="t.ex. mittnamn"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -308,7 +301,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={snapchat}
-            onChange={(e) => { setSnapchat(e.target.value); setDirty(true); }}
+            onChange={(e) => setSnapchat(e.target.value)}
             placeholder="t.ex. mittnamn"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -327,7 +320,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="url"
             value={spotifyUrl}
-            onChange={(e) => { setSpotifyUrl(e.target.value); setDirty(true); }}
+            onChange={(e) => setSpotifyUrl(e.target.value)}
             placeholder="https://open.spotify.com/track/..."
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -338,36 +331,12 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={spotifyName}
-            onChange={(e) => { setSpotifyName(e.target.value); setDirty(true); }}
+            onChange={(e) => setSpotifyName(e.target.value)}
             placeholder="Fylls i automatiskt från länken"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
         </div>
       </div>
-
-      {/* Save button */}
-      {dirty && (
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-1"
-        >
-          {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : saved ? (
-            <>
-              <Check className="w-4 h-4" /> Sparat!
-            </>
-          ) : (
-            "Spara profil"
-          )}
-        </button>
-      )}
-      {saved && !dirty && (
-        <p className="text-xs text-center text-success flex items-center justify-center gap-1">
-          <Check className="w-3 h-3" /> Sparat!
-        </p>
-      )}
     </div>
   );
 };
