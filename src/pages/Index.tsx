@@ -385,8 +385,8 @@ const Index = () => {
             <img src={grimIcon} alt="Grim" className="w-8 h-8 animate-pulse" />
             <div className="h-4 w-32 rounded bg-muted animate-pulse" />
           </div>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-xl border border-border p-4 space-y-3">
+          {[1, 2, 3].map((i) =>
+          <div key={i} className="rounded-xl border border-border p-4 space-y-3">
               <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
               <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
               <div className="flex gap-2">
@@ -394,7 +394,7 @@ const Index = () => {
                 <div className="h-8 w-20 rounded bg-muted animate-pulse" />
               </div>
             </div>
-          ))}
+          )}
         </div>
       </div>);
 
@@ -420,7 +420,7 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-primary backdrop-blur-xl border-b border-border text-primary-foreground">
-        <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between">
+        <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
           <div className="flex items-center gap-2">
             <img alt="Grim" className="w-[48px] h-[48px] shrink-0" src="/lovable-uploads/c1220791-bb57-493f-b09f-0fb458028ded.png" />
             <h1 className="text-base font-black tracking-tight">
@@ -460,25 +460,25 @@ const Index = () => {
             }
             <div className="relative">
               <button
-              onClick={async () => {
+                onClick={async () => {
                   setShowInboxDropdown((prev) => !prev);
                   // Always mark as read when opening inbox
-                  const { data: latestAnn } = await supabase
-                    .from("announcements")
-                    .select("created_at")
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                  const { data: latestAnn } = await supabase.
+                  from("announcements").
+                  select("created_at").
+                  order("created_at", { ascending: false }).
+                  limit(1).
+                  maybeSingle();
                   if (latestAnn?.created_at) {
                     localStorage.setItem("gymberget_last_read_announcements", latestAnn.created_at);
                   }
                   if (userRole === "admin") {
-                    const { data: latestSug } = await supabase
-                      .from("suggestions")
-                      .select("created_at")
-                      .order("created_at", { ascending: false })
-                      .limit(1)
-                      .maybeSingle();
+                    const { data: latestSug } = await supabase.
+                    from("suggestions").
+                    select("created_at").
+                    order("created_at", { ascending: false }).
+                    limit(1).
+                    maybeSingle();
                     if (latestSug?.created_at) {
                       localStorage.setItem("grim_last_read_suggestions", latestSug.created_at);
                     }
@@ -679,8 +679,8 @@ const Index = () => {
 
       {/* AI Chat Button - temporarily disabled */}
       {/* <AIChatButton
-          userId={user.id}
-          onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
+             userId={user.id}
+             onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
 
 
       {/* Bottom tab bar */}
@@ -692,20 +692,20 @@ const Index = () => {
             onClick={async () => {
               setTab(key);
               if (key === "settings" && unreadAnnouncements > 0) {
-                const { data: latestAnn } = await supabase
-                  .from("announcements")
-                  .select("created_at")
-                  .order("created_at", { ascending: false })
-                  .limit(1)
-                  .maybeSingle();
+                const { data: latestAnn } = await supabase.
+                from("announcements").
+                select("created_at").
+                order("created_at", { ascending: false }).
+                limit(1).
+                maybeSingle();
                 localStorage.setItem("gymberget_last_read_announcements", latestAnn?.created_at || new Date().toISOString());
                 if (userRole === "admin") {
-                  const { data: latestSug } = await supabase
-                    .from("suggestions")
-                    .select("created_at")
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                  const { data: latestSug } = await supabase.
+                  from("suggestions").
+                  select("created_at").
+                  order("created_at", { ascending: false }).
+                  limit(1).
+                  maybeSingle();
                   localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
                 }
                 setUnreadAnnouncements(0);
