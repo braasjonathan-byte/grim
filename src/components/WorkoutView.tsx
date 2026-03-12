@@ -4365,13 +4365,26 @@ const estimateCalories = (
                                       const isSetDone = setsStrPlan[si] === "1";
                                       const saved = planSetData[si];
                                       return (
-                                        <div key={si} className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
+                                        <div key={si}>
+                                          <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, defKg, defReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={saved?.reps || defReps} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, defKg, defReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
                                           <span className="text-[10px] text-muted-foreground">reps</span>
                                           <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defKg} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
+                                          </div>
+                                          {(() => {
+                                            const currentKg = parseFloat(saved?.kg || defKg);
+                                            if (!isNaN(currentKg) && currentKg < 0) {
+                                              if (profileWeight) {
+                                                return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round((profileWeight + currentKg) * 10) / 10} kg effektiv</p>;
+                                              } else {
+                                                return <p className="text-[9px] text-warning pl-8 -mt-0.5">⚠ Ange vikt i profilen</p>;
+                                              }
+                                            }
+                                            return null;
+                                          })()}
                                         </div>
                                       );
                                     });
