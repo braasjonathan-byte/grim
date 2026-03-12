@@ -139,7 +139,7 @@ const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
         <div className="flex gap-2">
           <button
             onClick={handleAccept}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-md bg-success text-white hover:bg-success/90 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-md bg-success/20 text-success hover:bg-success/30 transition-colors"
           >
             <Check className="w-3.5 h-3.5" />
             Klarad!
