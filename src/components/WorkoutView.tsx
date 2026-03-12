@@ -1349,7 +1349,7 @@ const estimateCalories = (
             for (const s of setData) {
               const kg = parseFloat(s.kg);
               const reps = parseInt(s.reps);
-              if (kg > 0) {
+              if (kg !== 0 && !isNaN(kg)) {
                 allSets.push({ kg, reps: reps || 0, label: `${kg} kg (${reps || '?'} reps)` });
               }
             }
