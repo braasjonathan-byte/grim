@@ -52,7 +52,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       const [{ data }, { data: roleData }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary")
+          .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, weight_kg")
           .eq("user_id", userId)
           .single(),
         supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle(),
