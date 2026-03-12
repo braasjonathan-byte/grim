@@ -2157,7 +2157,7 @@ const estimateCalories = (
             return (
               <div
                 key={plan.id}
-                className={`rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""}`}>
+                className={`rounded-lg border bg-card transition-colors ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""}`}>
 
                 <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; setExpandedDay(expanded ? null : key); }}>
                   <div className="flex items-center gap-1 flex-shrink-0">
