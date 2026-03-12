@@ -2372,15 +2372,23 @@ const estimateCalories = (
                                 const lastW = findLastWeight(name);
                                 const lastKg = lastW ? { kg: lastW.replace(/\s*kg.*/, '').replace(/.*@\s*/, '').trim(), reps: lastW.match(/\((\d+)\s*reps\)/)?.[1] || null } : null;
                                 if (!lastKg || !lastKg.kg) return null;
-                                if (!lastKg) return null;
-                                const hasCurrentData = getSetData(key, name).some(s => s.kg && parseFloat(s.kg) > 0);
+                                const hasCurrentData = getSetData(key, name).some(s => s.kg && parseFloat(s.kg) !== 0);
                                 if (hasCurrentData) return null;
+                                const kgVal = parseFloat(lastKg.kg);
+                                const isNegative = kgVal < 0;
+                                const effectiveKg = isNegative && profileWeight ? profileWeight + kgVal : null;
                                 return (
                                   <div className="pl-1 mb-1">
                                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                                       <Weight className="w-3 h-3" />
                                       Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
                                     </p>
+                                    {isNegative && effectiveKg !== null && (
+                                      <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
+                                    )}
+                                    {isNegative && !profileWeight && (
+                                      <p className="text-[10px] text-warning pl-4">⚠ Ange din vikt i profilen för korrekt statistik</p>
+                                    )}
                                     <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
                                   </div>
                                 );
