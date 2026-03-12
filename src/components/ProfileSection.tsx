@@ -152,6 +152,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .update({
         age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
         gender: gender || null,
+        weight_kg: weightKg.trim() ? parseFloat(weightKg) : null,
         instagram: extractUsername(instagram, "instagram.com") || null,
         tiktok: extractUsername(tiktok, "tiktok.com") || null,
         snapchat: extractUsername(snapchat, "snapchat.com") || null,
