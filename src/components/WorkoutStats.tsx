@@ -572,7 +572,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
     }
     return Math.round(total / 1000 * 10) / 10;
-  }, [filteredCompletions]);
+  }, [filteredCompletions, userWeightKg]);
 
   const cyclePeriod = () => {
     const order: SummaryPeriod[] = ["all", "week", "month", "year"];
