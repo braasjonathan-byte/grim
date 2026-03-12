@@ -4311,7 +4311,8 @@ const estimateCalories = (
                               </div>
                               {/* Last logged weight note */}
                               {(() => {
-                                const lastKg = findLastLoggedKg(partName, plan.week);
+                                const targetReps = partReps ? parseInt(partReps) : undefined;
+                                const lastKg = findLastLoggedKg(partName, plan.week, targetReps);
                                 if (!lastKg) return null;
                                 // Don't show if user already has saved data for this session
                                 const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) > 0);
