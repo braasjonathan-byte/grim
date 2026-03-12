@@ -256,7 +256,25 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         </select>
       </div>
 
-      {/* Social media */}
+      {/* Weight */}
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground block">Vikt (kg)</label>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={weightKg}
+          onChange={(e) => {
+            setWeightKg(e.target.value);
+            setDirty(true);
+          }}
+          placeholder="Ange din vikt"
+          min={30}
+          max={300}
+          className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+        />
+        <p className="text-[10px] text-muted-foreground">Används för att beräkna kaloriförbrukning</p>
+      </div>
+
       <div className="pt-2 space-y-1">
         <div className="flex items-center gap-2 mb-2">
           <Instagram className="w-4 h-4 text-primary" />
