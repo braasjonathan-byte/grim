@@ -4289,10 +4289,13 @@ const estimateCalories = (
                                 const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) > 0);
                                 if (hasCurrentData) return null;
                                 return (
-                                  <p className="text-[10px] text-muted-foreground pl-1 flex items-center gap-1">
-                                    <Weight className="w-3 h-3" />
-                                    Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span> — öka vikten själv för progression
-                                  </p>
+                                  <div className="pl-1">
+                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      <Weight className="w-3 h-3" />
+                                      Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
+                                  </div>
                                 );
                               })()}
                               <div className="space-y-1 pl-1">
