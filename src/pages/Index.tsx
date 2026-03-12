@@ -419,7 +419,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl border-b bg-background text-background border-primary">
+      <header className="sticky top-0 z-50 border-b bg-background border-primary">
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black tracking-tight font-serif text-foreground">
@@ -683,7 +683,7 @@ const Index = () => {
 
 
       {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur-xl border-t border-border z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
         <div className="max-w-lg mx-auto flex">
           {tabs.map(({ key, icon: Icon, label, badge }) =>
           <button
