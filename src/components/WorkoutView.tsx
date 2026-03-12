@@ -4778,7 +4778,7 @@ const estimateCalories = (
                   }
                 }
                 await performToggleDone(week, day);
-              }
+              }}
               className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
             >
               Klarmarkera
