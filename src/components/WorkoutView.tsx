@@ -3047,10 +3047,10 @@ const estimateCalories = (
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
                       ? done
-                        ? "bg-success text-success-foreground shadow-[0_2px_8px_0_rgba(156,163,175,0.5)]"
+                        ? "bg-success text-success-foreground shadow-[0_3px_12px_0_rgba(156,163,175,0.7)]"
                         : isToday
-                        ? "bg-warning/10 text-warning border border-warning/30 shadow-[0_2px_8px_0_rgba(156,163,175,0.5)]"
-                        : "bg-primary text-primary-foreground shadow-[0_2px_8px_0_rgba(156,163,175,0.5)]"
+                        ? "bg-warning/10 text-warning border border-warning/30 shadow-[0_3px_12px_0_rgba(156,163,175,0.7)]"
+                        : "bg-primary text-primary-foreground shadow-[0_3px_12px_0_rgba(156,163,175,0.7)]"
                       : done
                       ? "bg-success/20 text-success"
                       : skipped
