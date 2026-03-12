@@ -213,6 +213,7 @@ const extractDistanceFromDetails = (details: string): number => {
 };
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
+  const [userWeightKg, setUserWeightKg] = useState<number | null>(null);
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("all");
@@ -234,6 +235,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       year: date.getUTCFullYear()
     };
   };
+
+  useEffect(() => {
+    supabase.from("profiles").select("weight_kg").eq("user_id", userId).maybeSingle().then(({ data }) => {
+      if (data && (data as any).weight_kg) setUserWeightKg(parseFloat((data as any).weight_kg));
+    });
+  }, [userId]);
 
   useEffect(() => {
     Promise.all([
@@ -550,15 +557,22 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
             sets = value;
           }
           for (const s of sets) {
-            const kg = Number(s.kg) || 0;
+            let kg = Number(s.kg) || 0;
             const reps = Number(s.reps) || 0;
+            // Negative kg = assisted exercise: effective weight = bodyweight + kg (which subtracts)
+            if (kg < 0 && userWeightKg) {
+              kg = userWeightKg + kg; // e.g. -20 + 102 = 82
+              if (kg < 0) kg = 0;
+            } else if (kg < 0) {
+              kg = 0; // Can't compute without body weight
+            }
             total += kg * reps;
           }
         }
       }
     }
     return Math.round(total / 1000 * 10) / 10;
-  }, [filteredCompletions]);
+  }, [filteredCompletions, userWeightKg]);
 
   const cyclePeriod = () => {
     const order: SummaryPeriod[] = ["all", "week", "month", "year"];
