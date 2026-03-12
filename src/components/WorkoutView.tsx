@@ -3663,19 +3663,7 @@ const estimateCalories = (
                         if (!comp?.done) continue;
                         const weights = comp.logged_weights as Record<string, any> | null;
                         if (!weights) continue;
-                        const setDataRaw = weights[`__setdata__${exerciseName}`];
-                        if (setDataRaw) {
-                          try {
-                            const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-                            if (Array.isArray(setData) && setData.length > 0) {
-                              const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
-                              if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
-                            }
-                          } catch {}
-                        }
-                        if (weights[exerciseName] && typeof weights[exerciseName] === 'number') {
-                          return { kg: weights[exerciseName] };
-                        }
+                        collectSets(weights);
                       }
                     }
                     // Also search single workouts (week 0)
@@ -3686,18 +3674,22 @@ const estimateCalories = (
                       if (!comp?.done) continue;
                       const weights = comp.logged_weights as Record<string, any> | null;
                       if (!weights) continue;
-                      const setDataRaw = weights[`__setdata__${exerciseName}`];
-                      if (setDataRaw) {
-                        try {
-                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-                          if (Array.isArray(setData) && setData.length > 0) {
-                            const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
-                            if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
-                          }
-                        } catch {}
+                      collectSets(weights);
+                    }
+
+                    if (allSets.length === 0) return null;
+
+                    // Prefer matching rep count
+                    if (targetReps) {
+                      const matching = allSets.filter(s => s.reps === targetReps);
+                      if (matching.length > 0) {
+                        const best = matching[matching.length - 1];
+                        return { kg: best.kg, reps: best.reps };
                       }
                     }
-                    return null;
+                    // Fallback: latest set
+                    const last = allSets[allSets.length - 1];
+                    return { kg: last.kg, reps: last.reps || undefined };
                   };
 
                   // Progressive increase: vary by rep range
