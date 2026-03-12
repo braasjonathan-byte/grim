@@ -3,7 +3,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -265,24 +265,31 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return () => window.removeEventListener("scroll", handleScroll, { capture: true });
   }, [openExerciseMenuId]);
 
+  // Profile data for calorie estimation
+  const [profileWeight, setProfileWeight] = useState<number | null>(null);
+  const [profileGender, setProfileGender] = useState<string | null>(null);
+  const [profileAge, setProfileAge] = useState<number | null>(null);
+
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
   // Plan start date from profile (timezone-safe)
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
 
-  // Fetch user nickname + calibration status
+  // Fetch user nickname + calibration status + body data
   useEffect(() => {
-    supabase.from("profiles").select("nickname, plan_start_calibrated, plan_start_date").eq("user_id", userId).single().then(({ data }) => {
+    supabase.from("profiles").select("nickname, plan_start_calibrated, plan_start_date, weight_kg, gender, age").eq("user_id", userId).single().then(({ data }) => {
       if (data) {
         setUserNickname(data.nickname);
         if ((data as any).plan_start_date) {
           setPlanStartDate((data as any).plan_start_date);
         }
-        // Will be checked after plans load
         if (!(data as any).plan_start_calibrated) {
           setNeedsCalibration(true);
         }
+        if ((data as any).weight_kg) setProfileWeight(parseFloat((data as any).weight_kg));
+        if (data.gender) setProfileGender(data.gender);
+        if (data.age) setProfileAge(data.age);
       }
     });
   }, [userId]);
@@ -499,6 +506,69 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
   return format(targetDate, "d MMM yyyy", { locale: sv });
 };
 
+// Estimate calories burned for a workout based on exercises, weight, gender, and pulse
+const estimateCalories = (
+  details: string,
+  loggedWeights: Record<string, any> | null,
+  loggedPulse: number | null,
+  weightKg: number,
+  gender: string | null,
+  age: number | null
+): number => {
+  let totalMinutes = 0;
+  const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+  
+  for (const line of lines) {
+    // Check for conditioning: "30 min", "5 km"
+    const timeMatch = line.match(/(\d+)\s*min/i);
+    if (timeMatch) {
+      totalMinutes += parseInt(timeMatch[1]);
+      continue;
+    }
+    // Check for sets×reps format
+    const setsMatch = line.match(/(\d+)\s*[×x]\s*(\d+)/i);
+    if (setsMatch) {
+      const sets = parseInt(setsMatch[1]);
+      // ~2 min per set (including rest)
+      totalMinutes += sets * 2;
+      continue;
+    }
+    // Default: assume ~3 min per exercise line
+    totalMinutes += 3;
+  }
+
+  // Also count logged conditioning data
+  if (loggedWeights) {
+    for (const [k, v] of Object.entries(loggedWeights)) {
+      if (k.startsWith('__cond__')) {
+        try {
+          const data = typeof v === 'string' ? JSON.parse(v) : v;
+          if (data.time && parseFloat(data.time) > 0) {
+            // Already counted in details parse, skip duplicates
+          }
+        } catch {}
+      }
+    }
+  }
+
+  if (totalMinutes <= 0) return 0;
+
+  // Use heart rate based formula if pulse is available (more accurate)
+  if (loggedPulse && loggedPulse > 0 && age) {
+    // Keytel et al. formula
+    if (gender === 'male') {
+      return Math.round(totalMinutes * ((-55.0969 + 0.6309 * loggedPulse + 0.1988 * weightKg + 0.2017 * age) / 4.184));
+    } else {
+      return Math.round(totalMinutes * ((-20.4022 + 0.4472 * loggedPulse - 0.1263 * weightKg + 0.074 * age) / 4.184));
+    }
+  }
+
+  // Fallback: MET-based estimate
+  // Strength training: MET ~5.0, Cardio: MET ~8.0, average ~6.0
+  const avgMET = 6.0;
+  const hours = totalMinutes / 60;
+  return Math.round(avgMET * weightKg * hours);
+};
 
   const filteredExercises = allExercises.filter((e) => {
     const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
@@ -1257,14 +1327,61 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
     return { name: line.trim(), weight: null };
   };
 
-  // Find last weight used for an exercise across all single workouts
-  const findLastWeight = (exerciseName: string): string | null => {
-    const singlePlans = plans.filter((p) => p.week === 0);
-    for (const plan of singlePlans) {
+  // Find last weight used for an exercise across ALL workouts (single + plan),
+  // preferring matching rep count. Returns e.g. "3×10 @ 80 kg" or "80 kg (8 reps)"
+  const findLastWeight = (exerciseName: string, targetReps?: number): string | null => {
+    const exLower = exerciseName.toLowerCase();
+
+    // Collect all logged set data across all completed workouts
+    type SetInfo = { kg: number; reps: number; label: string };
+    const allSets: SetInfo[] = [];
+
+    // Search all completions for logged set data
+    for (const [k, comp] of Object.entries(completions)) {
+      if (!comp?.done) continue;
+      const weights = comp.logged_weights as Record<string, any> | null;
+      if (!weights) continue;
+      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
+      if (setDataRaw) {
+        try {
+          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
+          if (Array.isArray(setData) && setData.length > 0) {
+            for (const s of setData) {
+              const kg = parseFloat(s.kg);
+              const reps = parseInt(s.reps);
+              if (kg > 0) {
+                allSets.push({ kg, reps: reps || 0, label: `${kg} kg (${reps || '?'} reps)` });
+              }
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // If we found logged sets, prefer matching rep count
+    if (allSets.length > 0) {
+      if (targetReps) {
+        const matching = allSets.filter(s => s.reps === targetReps);
+        if (matching.length > 0) {
+          const best = matching[matching.length - 1];
+          return `${best.kg} kg (${best.reps} reps)`;
+        }
+      }
+      // Fallback: latest set
+      const last = allSets[allSets.length - 1];
+      return `${last.kg} kg (${last.reps || '?'} reps)`;
+    }
+
+    // Fallback: search plan details text for weight info
+    const allPlans = [...plans].sort((a, b) => {
+      if (a.week !== b.week) return b.week - a.week;
+      return b.day.localeCompare(a.day);
+    });
+    for (const plan of allPlans) {
       if (!plan.details) continue;
       for (const line of plan.details.split("\n")) {
         const { name, weight } = parseExerciseWeight(line);
-        if (name.toLowerCase() === exerciseName.toLowerCase() && weight) {
+        if (name.toLowerCase() === exLower && weight) {
           return weight;
         }
       }
@@ -2616,7 +2733,32 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                         className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground" />
 
                       </div>
-                    </div>
+                      </div>
+                    {/* Calorie burn estimate */}
+                    {isDone && plan.details && (
+                      profileWeight ? (() => {
+                        const comp = completions[key];
+                        const cal = estimateCalories(plan.details, comp?.logged_weights as Record<string, any> | null, comp?.logged_pulse || null, profileWeight, profileGender, profileAge);
+                        return cal > 0 ? (
+                          <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-center gap-2">
+                            <Flame className="w-4 h-4 text-destructive flex-shrink-0" />
+                            <div className="flex-1">
+                              <span className="text-xs font-semibold text-destructive">~{cal} kcal</span>
+                              <span className="text-[10px] text-muted-foreground ml-1.5">
+                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : null;
+                      })() : (
+                        <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 flex items-center gap-2">
+                          <Flame className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                          <p className="text-[10px] text-muted-foreground">
+                            Lägg till din vikt i profilen för att se kaloriförbrukning
+                          </p>
+                        </div>
+                      )
+                    )}
                   </div>
                 }
               </div>);
@@ -3475,8 +3617,9 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                     }).length;
                   };
 
-                  // Find last logged kg for a strength exercise from completed sessions
-                  const findLastLoggedKg = (exerciseName: string, currentWeek: number): number | null => {
+                  // Find last logged kg+reps for a strength exercise from completed sessions
+                  const findLastLoggedKg = (exerciseName: string, currentWeek: number): { kg: number; reps?: number } | null => {
+                    // Search plan weeks backwards
                     for (let w = currentWeek - 1; w >= 1; w--) {
                       for (const p of plans.filter(pp => pp.week === w)) {
                         const k = `${w}-${p.day}`;
@@ -3490,13 +3633,32 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                             const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
                             if (Array.isArray(setData) && setData.length > 0) {
                               const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
-                              if (withKg) return parseFloat(withKg.kg);
+                              if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
                             }
                           } catch {}
                         }
                         if (weights[exerciseName] && typeof weights[exerciseName] === 'number') {
-                          return weights[exerciseName];
+                          return { kg: weights[exerciseName] };
                         }
+                      }
+                    }
+                    // Also search single workouts (week 0)
+                    const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
+                    for (const p of singlePlans) {
+                      const k = `0-${p.day}`;
+                      const comp = completions[k];
+                      if (!comp?.done) continue;
+                      const weights = comp.logged_weights as Record<string, any> | null;
+                      if (!weights) continue;
+                      const setDataRaw = weights[`__setdata__${exerciseName}`];
+                      if (setDataRaw) {
+                        try {
+                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
+                          if (Array.isArray(setData) && setData.length > 0) {
+                            const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
+                            if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
+                          }
+                        } catch {}
                       }
                     }
                     return null;
@@ -4129,7 +4291,7 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                                 return (
                                   <p className="text-[10px] text-muted-foreground pl-1 flex items-center gap-1">
                                     <Weight className="w-3 h-3" />
-                                    Senast: <span className="font-mono font-semibold text-foreground">{lastKg} kg</span> — öka vikten själv för progression
+                                    Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span> — öka vikten själv för progression
                                   </p>
                                 );
                               })()}
@@ -4439,6 +4601,31 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
 
                     </div>
                   </div>
+                    {/* Calorie burn estimate */}
+                    {isDone && plan.details && (
+                      profileWeight ? (() => {
+                        const comp = completions[key];
+                        const cal = estimateCalories(plan.details, comp?.logged_weights as Record<string, any> | null, comp?.logged_pulse || null, profileWeight, profileGender, profileAge);
+                        return cal > 0 ? (
+                          <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-center gap-2">
+                            <Flame className="w-4 h-4 text-destructive flex-shrink-0" />
+                            <div className="flex-1">
+                              <span className="text-xs font-semibold text-destructive">~{cal} kcal</span>
+                              <span className="text-[10px] text-muted-foreground ml-1.5">
+                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : null;
+                      })() : (
+                        <div className="bg-muted/50 border border-border rounded-lg px-3 py-2 flex items-center gap-2">
+                          <Flame className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                          <p className="text-[10px] text-muted-foreground">
+                            Lägg till din vikt i profilen för att se kaloriförbrukning
+                          </p>
+                        </div>
+                      )
+                    )}
                 </div>
               }
             </div>);

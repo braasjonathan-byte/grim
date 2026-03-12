@@ -31,6 +31,7 @@ const extractUsername = (input: string, domain: string): string => {
 const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState<string>("");
+  const [weightKg, setWeightKg] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,7 +52,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       const [{ data }, { data: roleData }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary")
+          .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, weight_kg")
           .eq("user_id", userId)
           .single(),
         supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle(),
@@ -60,6 +61,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       if (data) {
         setAge(data.age?.toString() || "");
         setGender(data.gender || "");
+        setWeightKg((data as any).weight_kg?.toString() || "");
         setAvatarUrl(data.avatar_url || null);
         setInstagram((data as any).instagram || "");
         setTiktok((data as any).tiktok || "");
@@ -150,6 +152,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .update({
         age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
         gender: gender || null,
+        weight_kg: weightKg.trim() ? parseFloat(weightKg) : null,
         instagram: extractUsername(instagram, "instagram.com") || null,
         tiktok: extractUsername(tiktok, "tiktok.com") || null,
         snapchat: extractUsername(snapchat, "snapchat.com") || null,
@@ -253,7 +256,25 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         </select>
       </div>
 
-      {/* Social media */}
+      {/* Weight */}
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground block">Vikt (kg)</label>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={weightKg}
+          onChange={(e) => {
+            setWeightKg(e.target.value);
+            setDirty(true);
+          }}
+          placeholder="Ange din vikt"
+          min={30}
+          max={300}
+          className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+        />
+        <p className="text-[10px] text-muted-foreground">Används för att beräkna kaloriförbrukning</p>
+      </div>
+
       <div className="pt-2 space-y-1">
         <div className="flex items-center gap-2 mb-2">
           <Instagram className="w-4 h-4 text-primary" />
