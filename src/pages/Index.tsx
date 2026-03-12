@@ -422,9 +422,8 @@ const Index = () => {
       <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-primary-foreground bg-background text-background">
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
           <div className="flex items-center gap-2">
-            <img alt="Grim" className="w-[48px] h-[48px] shrink-0" src="/lovable-uploads/c1220791-bb57-493f-b09f-0fb458028ded.png" />
-            <h1 className="text-base font-black tracking-tight">
-              <span className="text-primary"></span>
+            <h1 className="text-2xl font-black tracking-tight font-serif">
+              Grim<span className="text-accent">.</span>
             </h1>
           </div>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
