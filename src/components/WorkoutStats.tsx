@@ -237,6 +237,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   };
 
   useEffect(() => {
+    supabase.from("profiles").select("weight_kg").eq("user_id", userId).maybeSingle().then(({ data }) => {
+      if (data && (data as any).weight_kg) setUserWeightKg(parseFloat((data as any).weight_kg));
+    });
+  }, [userId]);
+
+  useEffect(() => {
     Promise.all([
     supabase.
     from("workout_completions").
