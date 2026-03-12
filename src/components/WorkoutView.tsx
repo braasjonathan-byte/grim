@@ -4723,8 +4723,43 @@ const estimateCalories = (
               onClick={async () => {
                 const { week, day } = uncheckedSetsDialog;
                 setUncheckedSetsDialog(null);
+                // Auto-check all unchecked sets before completing
+                const dayPlans = plans.filter(p => p.week === week && p.day === day);
+                for (const plan of dayPlans) {
+                  if (!plan.details) continue;
+                  const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                  for (const part of parts) {
+                    if (part.startsWith("⚔️")) continue;
+                    const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+                    if (isCondExercise) continue;
+                    if (/^(vila|vilodag)/i.test(part)) continue;
+                    const { clean: cleanPart } = extractRpe(part);
+                    const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                    const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
+                    const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
+                    const exerciseName = nameMatch ? nameMatch[1].trim() : null;
+                    const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+                    const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
+                    const k = `${week}-${day}`;
+                    const currentSets = getSetsDone(k, pName);
+                    const allChecked = "1".repeat(sc);
+                    if (currentSets !== allChecked) {
+                      const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
+                      const updated = { ...existing, [`__sets__${pName}`]: allChecked };
+                      // Ensure setdata exists
+                      const setDataKey = `__setdata__${pName}`;
+                      if (!updated[setDataKey]) {
+                        const defReps = partStructMatch ? partStructMatch[3] : "10";
+                        const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
+                        const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
+                        updated[setDataKey] = JSON.stringify(initData);
+                      }
+                      await safeUpsertCompletion(week, day, { logged_weights: updated });
+                    }
+                  }
+                }
                 await performToggleDone(week, day);
-              }}
+              }
               className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
             >
               Klarmarkera
