@@ -4323,14 +4323,22 @@ const estimateCalories = (
                                 const lastKg = findLastLoggedKg(partName, plan.week, targetReps);
                                 if (!lastKg) return null;
                                 // Don't show if user already has saved data for this session
-                                const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) > 0);
+                                const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) !== 0);
                                 if (hasCurrentData) return null;
+                                const isNegative = lastKg.kg < 0;
+                                const effectiveKg = isNegative && profileWeight ? profileWeight + lastKg.kg : null;
                                 return (
                                   <div className="pl-1">
                                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                                       <Weight className="w-3 h-3" />
                                       Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
                                     </p>
+                                    {isNegative && effectiveKg !== null && (
+                                      <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
+                                    )}
+                                    {isNegative && !profileWeight && (
+                                      <p className="text-[10px] text-warning pl-4">⚠ Ange din vikt i profilen för korrekt statistik</p>
+                                    )}
                                     <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
                                   </div>
                                 );
