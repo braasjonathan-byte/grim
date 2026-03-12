@@ -2369,7 +2369,9 @@ const estimateCalories = (
                               </div>
                               {/* Last logged weight note for single workouts */}
                               {(() => {
-                                const lastKg = findLastLoggedKg(name, 999);
+                                const lastW = findLastWeight(name);
+                                const lastKg = lastW ? { kg: lastW.replace(/\s*kg.*/, '').replace(/.*@\s*/, '').trim(), reps: lastW.match(/\((\d+)\s*reps\)/)?.[1] || null } : null;
+                                if (!lastKg || !lastKg.kg) return null;
                                 if (!lastKg) return null;
                                 const hasCurrentData = getSetData(key, name).some(s => s.kg && parseFloat(s.kg) > 0);
                                 if (hasCurrentData) return null;
