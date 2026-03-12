@@ -3110,7 +3110,7 @@ const estimateCalories = (
           return (
             <div
               key={key}
-              className={`relative rounded-lg border bg-card transition-all animate-fade-in ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
+              className={`relative rounded-lg border bg-card transition-colors ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
