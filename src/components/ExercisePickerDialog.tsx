@@ -112,18 +112,18 @@ const ExercisePickerDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Dialog */}
       <div
         ref={contentRef}
-        className="relative w-full max-w-md bg-card border border-border rounded-t-2xl sm:rounded-2xl flex flex-col animate-fade-in overflow-hidden"
+        className="relative w-full max-w-md bg-card border border-border rounded-t-2xl flex flex-col animate-fade-in overflow-hidden shadow-lg"
         style={{ maxHeight: "85vh" }}
       >
         {/* Handle bar on mobile */}
-        <div className="sm:hidden flex justify-center pt-2 pb-1">
+        <div className="flex justify-center pt-2 pb-1">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
 

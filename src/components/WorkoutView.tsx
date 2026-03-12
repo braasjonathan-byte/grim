@@ -2367,6 +2367,24 @@ const estimateCalories = (
                                    </button>
                                 </div>
                               </div>
+                              {/* Last logged weight note for single workouts */}
+                              {(() => {
+                                const lastW = findLastWeight(name);
+                                const lastKg = lastW ? { kg: lastW.replace(/\s*kg.*/, '').replace(/.*@\s*/, '').trim(), reps: lastW.match(/\((\d+)\s*reps\)/)?.[1] || null } : null;
+                                if (!lastKg || !lastKg.kg) return null;
+                                if (!lastKg) return null;
+                                const hasCurrentData = getSetData(key, name).some(s => s.kg && parseFloat(s.kg) > 0);
+                                if (hasCurrentData) return null;
+                                return (
+                                  <div className="pl-1 mb-1">
+                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      <Weight className="w-3 h-3" />
+                                      Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
+                                  </div>
+                                );
+                              })()}
                               <div className="space-y-1">
                                   {(() => {
                                     const setData = getSetData(key, name);
@@ -3618,7 +3636,25 @@ const estimateCalories = (
                   };
 
                   // Find last logged kg+reps for a strength exercise from completed sessions
-                  const findLastLoggedKg = (exerciseName: string, currentWeek: number): { kg: number; reps?: number } | null => {
+                  // If targetReps is provided, prefer sets with matching rep count
+                  const findLastLoggedKg = (exerciseName: string, currentWeek: number, targetReps?: number): { kg: number; reps?: number } | null => {
+                    // Collect all matching sets first
+                    type SetInfo = { kg: number; reps: number };
+                    const allSets: SetInfo[] = [];
+                    const collectSets = (weights: Record<string, any>) => {
+                      const setDataRaw = weights[`__setdata__${exerciseName}`];
+                      if (setDataRaw) {
+                        try {
+                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
+                          if (Array.isArray(setData)) {
+                            for (const s of setData) {
+                              const kg = parseFloat(s.kg);
+                              if (kg > 0) allSets.push({ kg, reps: parseInt(s.reps) || 0 });
+                            }
+                          }
+                        } catch {}
+                      }
+                    };
                     // Search plan weeks backwards
                     for (let w = currentWeek - 1; w >= 1; w--) {
                       for (const p of plans.filter(pp => pp.week === w)) {
@@ -3627,19 +3663,7 @@ const estimateCalories = (
                         if (!comp?.done) continue;
                         const weights = comp.logged_weights as Record<string, any> | null;
                         if (!weights) continue;
-                        const setDataRaw = weights[`__setdata__${exerciseName}`];
-                        if (setDataRaw) {
-                          try {
-                            const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-                            if (Array.isArray(setData) && setData.length > 0) {
-                              const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
-                              if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
-                            }
-                          } catch {}
-                        }
-                        if (weights[exerciseName] && typeof weights[exerciseName] === 'number') {
-                          return { kg: weights[exerciseName] };
-                        }
+                        collectSets(weights);
                       }
                     }
                     // Also search single workouts (week 0)
@@ -3650,18 +3674,22 @@ const estimateCalories = (
                       if (!comp?.done) continue;
                       const weights = comp.logged_weights as Record<string, any> | null;
                       if (!weights) continue;
-                      const setDataRaw = weights[`__setdata__${exerciseName}`];
-                      if (setDataRaw) {
-                        try {
-                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-                          if (Array.isArray(setData) && setData.length > 0) {
-                            const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
-                            if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
-                          }
-                        } catch {}
+                      collectSets(weights);
+                    }
+
+                    if (allSets.length === 0) return null;
+
+                    // Prefer matching rep count
+                    if (targetReps) {
+                      const matching = allSets.filter(s => s.reps === targetReps);
+                      if (matching.length > 0) {
+                        const best = matching[matching.length - 1];
+                        return { kg: best.kg, reps: best.reps };
                       }
                     }
-                    return null;
+                    // Fallback: latest set
+                    const last = allSets[allSets.length - 1];
+                    return { kg: last.kg, reps: last.reps || undefined };
                   };
 
                   // Progressive increase: vary by rep range
@@ -4283,16 +4311,20 @@ const estimateCalories = (
                               </div>
                               {/* Last logged weight note */}
                               {(() => {
-                                const lastKg = findLastLoggedKg(partName, plan.week);
+                                const targetReps = partReps ? parseInt(partReps) : undefined;
+                                const lastKg = findLastLoggedKg(partName, plan.week, targetReps);
                                 if (!lastKg) return null;
                                 // Don't show if user already has saved data for this session
                                 const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) > 0);
                                 if (hasCurrentData) return null;
                                 return (
-                                  <p className="text-[10px] text-muted-foreground pl-1 flex items-center gap-1">
-                                    <Weight className="w-3 h-3" />
-                                    Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span> — öka vikten själv för progression
-                                  </p>
+                                  <div className="pl-1">
+                                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                      <Weight className="w-3 h-3" />
+                                      Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
+                                  </div>
                                 );
                               })()}
                               <div className="space-y-1 pl-1">
@@ -4723,6 +4755,41 @@ const estimateCalories = (
               onClick={async () => {
                 const { week, day } = uncheckedSetsDialog;
                 setUncheckedSetsDialog(null);
+                // Auto-check all unchecked sets before completing
+                const dayPlans = plans.filter(p => p.week === week && p.day === day);
+                for (const plan of dayPlans) {
+                  if (!plan.details) continue;
+                  const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                  for (const part of parts) {
+                    if (part.startsWith("⚔️")) continue;
+                    const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+                    if (isCondExercise) continue;
+                    if (/^(vila|vilodag)/i.test(part)) continue;
+                    const { clean: cleanPart } = extractRpe(part);
+                    const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                    const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
+                    const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
+                    const exerciseName = nameMatch ? nameMatch[1].trim() : null;
+                    const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+                    const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
+                    const k = `${week}-${day}`;
+                    const currentSets = getSetsDone(k, pName);
+                    const allChecked = "1".repeat(sc);
+                    if (currentSets !== allChecked) {
+                      const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
+                      const updated = { ...existing, [`__sets__${pName}`]: allChecked };
+                      // Ensure setdata exists
+                      const setDataKey = `__setdata__${pName}`;
+                      if (!updated[setDataKey]) {
+                        const defReps = partStructMatch ? partStructMatch[3] : "10";
+                        const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
+                        const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
+                        updated[setDataKey] = JSON.stringify(initData);
+                      }
+                      await safeUpsertCompletion(week, day, { logged_weights: updated });
+                    }
+                  }
+                }
                 await performToggleDone(week, day);
               }}
               className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
