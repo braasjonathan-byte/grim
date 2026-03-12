@@ -422,7 +422,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-primary-foreground bg-background text-background">
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black tracking-tight font-serif">
+            <h1 className="text-2xl font-black tracking-tight font-serif text-foreground">
               Grim<span className="text-accent">.</span>
             </h1>
           </div>
