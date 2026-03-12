@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound } from "lucide-react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
@@ -357,6 +357,46 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
           >
             <KeyRound className="w-4 h-4 text-primary" />
             Byt lösenord
+          </button>
+        </div>
+      )}
+
+      {/* Leave plan */}
+      {userId && (
+        <div className="border-t border-border pt-2">
+          <button
+            onClick={async () => {
+              if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort.")) return;
+              try {
+                const [{ data: planData }, { data: compData }] = await Promise.all([
+                  supabase.from("workout_plans").select("*").eq("user_id", userId),
+                  supabase.from("workout_completions").select("*").eq("user_id", userId),
+                ]);
+                if (planData && planData.length > 0) {
+                  const firstSession = planData.find(p => p.session_name.trim() !== "");
+                  const planName = firstSession
+                    ? `Schema (${planData.filter(p => p.session_name.trim() !== "").length} pass, ${[...new Set(planData.map(p => p.week))].length} veckor)`
+                    : "Schema";
+                  await supabase.from("archived_plans").insert({
+                    user_id: userId,
+                    plan_name: planName,
+                    plan_data: planData as any,
+                    completion_data: (compData || []) as any,
+                  });
+                }
+              } catch (e) {
+                console.error("Failed to archive plan:", e);
+              }
+              await Promise.all([
+                supabase.from("workout_plans").delete().eq("user_id", userId),
+                supabase.from("workout_completions").delete().eq("user_id", userId),
+              ]);
+              window.location.reload();
+            }}
+            className="w-full flex items-center gap-2 py-2 text-sm font-semibold text-destructive hover:opacity-80 transition-opacity"
+          >
+            <LogOut className="w-4 h-4" />
+            Avsluta nuvarande plan
           </button>
         </div>
       )}

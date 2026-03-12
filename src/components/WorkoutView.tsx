@@ -2975,17 +2975,6 @@ const estimateCalories = (
               )}
             </p>
           </div>
-          <div className="absolute right-14 top-1 flex gap-3">
-            <div className="flex flex-col items-center gap-0.5">
-              <button
-                onClick={leavePlan}
-                className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-                title="Lämna plan">
-                <LogOut className="w-4 h-4" />
-              </button>
-              <span className="text-[9px] text-muted-foreground leading-tight">Avsluta</span>
-            </div>
-          </div>
           <button
             onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
             disabled={weekIdx >= weeks.length - 1}
