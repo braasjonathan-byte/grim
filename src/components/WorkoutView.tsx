@@ -2734,7 +2734,6 @@ const estimateCalories = (
 
                       </div>
                       </div>
-                    </div>
                     {/* Calorie burn estimate */}
                     {isDone && plan.details && (
                       profileWeight ? (() => {
@@ -2760,6 +2759,7 @@ const estimateCalories = (
                         </div>
                       )
                     )}
+                  </div>
                 }
               </div>);
 
