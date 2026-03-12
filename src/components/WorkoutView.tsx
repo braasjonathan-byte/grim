@@ -265,24 +265,25 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     return () => window.removeEventListener("scroll", handleScroll, { capture: true });
   }, [openExerciseMenuId]);
 
-  // Calibration state
-  const [needsCalibration, setNeedsCalibration] = useState(false);
+  // Profile data for calorie estimation
+  const [profileWeight, setProfileWeight] = useState<number | null>(null);
+  const [profileGender, setProfileGender] = useState<string | null>(null);
+  const [profileAge, setProfileAge] = useState<number | null>(null);
 
-  // Plan start date from profile (timezone-safe)
-  const [planStartDate, setPlanStartDate] = useState<string | null>(null);
-
-  // Fetch user nickname + calibration status
+  // Fetch user nickname + calibration status + body data
   useEffect(() => {
-    supabase.from("profiles").select("nickname, plan_start_calibrated, plan_start_date").eq("user_id", userId).single().then(({ data }) => {
+    supabase.from("profiles").select("nickname, plan_start_calibrated, plan_start_date, weight_kg, gender, age").eq("user_id", userId).single().then(({ data }) => {
       if (data) {
         setUserNickname(data.nickname);
         if ((data as any).plan_start_date) {
           setPlanStartDate((data as any).plan_start_date);
         }
-        // Will be checked after plans load
         if (!(data as any).plan_start_calibrated) {
           setNeedsCalibration(true);
         }
+        if ((data as any).weight_kg) setProfileWeight(parseFloat((data as any).weight_kg));
+        if (data.gender) setProfileGender(data.gender);
+        if (data.age) setProfileAge(data.age);
       }
     });
   }, [userId]);
