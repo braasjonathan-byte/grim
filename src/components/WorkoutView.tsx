@@ -3522,8 +3522,9 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                     }).length;
                   };
 
-                  // Find last logged kg for a strength exercise from completed sessions
-                  const findLastLoggedKg = (exerciseName: string, currentWeek: number): number | null => {
+                  // Find last logged kg+reps for a strength exercise from completed sessions
+                  const findLastLoggedKg = (exerciseName: string, currentWeek: number): { kg: number; reps?: number } | null => {
+                    // Search plan weeks backwards
                     for (let w = currentWeek - 1; w >= 1; w--) {
                       for (const p of plans.filter(pp => pp.week === w)) {
                         const k = `${w}-${p.day}`;
@@ -3537,13 +3538,32 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
                             const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
                             if (Array.isArray(setData) && setData.length > 0) {
                               const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
-                              if (withKg) return parseFloat(withKg.kg);
+                              if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
                             }
                           } catch {}
                         }
                         if (weights[exerciseName] && typeof weights[exerciseName] === 'number') {
-                          return weights[exerciseName];
+                          return { kg: weights[exerciseName] };
                         }
+                      }
+                    }
+                    // Also search single workouts (week 0)
+                    const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
+                    for (const p of singlePlans) {
+                      const k = `0-${p.day}`;
+                      const comp = completions[k];
+                      if (!comp?.done) continue;
+                      const weights = comp.logged_weights as Record<string, any> | null;
+                      if (!weights) continue;
+                      const setDataRaw = weights[`__setdata__${exerciseName}`];
+                      if (setDataRaw) {
+                        try {
+                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
+                          if (Array.isArray(setData) && setData.length > 0) {
+                            const withKg = setData.find((s: any) => s.kg && parseFloat(s.kg) > 0);
+                            if (withKg) return { kg: parseFloat(withKg.kg), reps: parseInt(withKg.reps) || undefined };
+                          }
+                        } catch {}
                       }
                     }
                     return null;
