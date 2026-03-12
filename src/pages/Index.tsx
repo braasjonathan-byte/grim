@@ -419,7 +419,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl border-b text-primary-foreground bg-primary-foreground border-primary-foreground">
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-primary-foreground bg-background text-background">
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
           <div className="flex items-center gap-2">
             <img alt="Grim" className="w-[48px] h-[48px] shrink-0" src="/lovable-uploads/c1220791-bb57-493f-b09f-0fb458028ded.png" />
@@ -679,8 +679,8 @@ const Index = () => {
 
       {/* AI Chat Button - temporarily disabled */}
       {/* <AIChatButton
-               userId={user.id}
-               onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
+                 userId={user.id}
+                 onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
 
 
       {/* Bottom tab bar */}
