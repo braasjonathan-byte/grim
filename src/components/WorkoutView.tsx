@@ -506,6 +506,69 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
   return format(targetDate, "d MMM yyyy", { locale: sv });
 };
 
+// Estimate calories burned for a workout based on exercises, weight, gender, and pulse
+const estimateCalories = (
+  details: string,
+  loggedWeights: Record<string, any> | null,
+  loggedPulse: number | null,
+  weightKg: number,
+  gender: string | null,
+  age: number | null
+): number => {
+  let totalMinutes = 0;
+  const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+  
+  for (const line of lines) {
+    // Check for conditioning: "30 min", "5 km"
+    const timeMatch = line.match(/(\d+)\s*min/i);
+    if (timeMatch) {
+      totalMinutes += parseInt(timeMatch[1]);
+      continue;
+    }
+    // Check for sets×reps format
+    const setsMatch = line.match(/(\d+)\s*[×x]\s*(\d+)/i);
+    if (setsMatch) {
+      const sets = parseInt(setsMatch[1]);
+      // ~2 min per set (including rest)
+      totalMinutes += sets * 2;
+      continue;
+    }
+    // Default: assume ~3 min per exercise line
+    totalMinutes += 3;
+  }
+
+  // Also count logged conditioning data
+  if (loggedWeights) {
+    for (const [k, v] of Object.entries(loggedWeights)) {
+      if (k.startsWith('__cond__')) {
+        try {
+          const data = typeof v === 'string' ? JSON.parse(v) : v;
+          if (data.time && parseFloat(data.time) > 0) {
+            // Already counted in details parse, skip duplicates
+          }
+        } catch {}
+      }
+    }
+  }
+
+  if (totalMinutes <= 0) return 0;
+
+  // Use heart rate based formula if pulse is available (more accurate)
+  if (loggedPulse && loggedPulse > 0 && age) {
+    // Keytel et al. formula
+    if (gender === 'male') {
+      return Math.round(totalMinutes * ((-55.0969 + 0.6309 * loggedPulse + 0.1988 * weightKg + 0.2017 * age) / 4.184));
+    } else {
+      return Math.round(totalMinutes * ((-20.4022 + 0.4472 * loggedPulse - 0.1263 * weightKg + 0.074 * age) / 4.184));
+    }
+  }
+
+  // Fallback: MET-based estimate
+  // Strength training: MET ~5.0, Cardio: MET ~8.0, average ~6.0
+  const avgMET = 6.0;
+  const hours = totalMinutes / 60;
+  return Math.round(avgMET * weightKg * hours);
+};
 
   const filteredExercises = allExercises.filter((e) => {
     const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
