@@ -3649,7 +3649,7 @@ const estimateCalories = (
                           if (Array.isArray(setData)) {
                             for (const s of setData) {
                               const kg = parseFloat(s.kg);
-                              if (kg > 0) allSets.push({ kg, reps: parseInt(s.reps) || 0 });
+                              if (kg !== 0 && !isNaN(kg)) allSets.push({ kg, reps: parseInt(s.reps) || 0 });
                             }
                           }
                         } catch {}
