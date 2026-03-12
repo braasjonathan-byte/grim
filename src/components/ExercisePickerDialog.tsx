@@ -123,7 +123,7 @@ const ExercisePickerDialog = ({
         style={{ maxHeight: "85vh" }}
       >
         {/* Handle bar on mobile */}
-        <div className="sm:hidden flex justify-center pt-2 pb-1">
+        <div className="flex justify-center pt-2 pb-1">
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
 
