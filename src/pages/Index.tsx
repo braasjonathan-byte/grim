@@ -419,7 +419,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
+      <header className="sticky top-0 z-50 bg-primary backdrop-blur-xl border-b border-border text-primary-foreground">
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img alt="Grim" className="w-[48px] h-[48px] shrink-0" src="/lovable-uploads/c1220791-bb57-493f-b09f-0fb458028ded.png" />
