@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Receipt, Loader2, ExternalLink, ChevronDown } from "lucide-react";
+import { Receipt, Loader2, ExternalLink, Download, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ReceiptEntry {
