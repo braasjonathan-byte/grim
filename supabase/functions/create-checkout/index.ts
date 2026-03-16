@@ -22,13 +22,22 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
-    if (!user) throw new Error("User not authenticated");
+    if (!user?.email) throw new Error("User not authenticated or email not available");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
+    // Check if customer already exists in Stripe
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    let customerId: string | undefined;
+    if (customers.data.length > 0) {
+      customerId = customers.data[0].id;
+    }
+
     const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      customer_email: customerId ? undefined : user.email,
       line_items: [
         {
           price: "price_1TBY4mHrbSIRvq07XH8LmNTT",
