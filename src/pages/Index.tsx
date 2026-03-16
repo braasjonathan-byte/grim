@@ -25,6 +25,7 @@ const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 const ReferralLink = lazy(() => import("@/components/ReferralLink"));
 const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
 const AnnouncementInbox = lazy(() => import("@/components/AnnouncementInbox"));
+const SupporterButton = lazy(() => import("@/components/SupporterButton"));
 const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
@@ -584,6 +585,7 @@ const Index = () => {
             {userRole === "admin" && <ExerciseGifManager />}
             <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
             <NotificationSettings userId={user.id} />
+            <SupporterButton userId={user.id} />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
             <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
           </div>
