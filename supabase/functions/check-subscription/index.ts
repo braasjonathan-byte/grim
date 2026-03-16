@@ -7,6 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// These nicknames are always honorary regardless of subscription
+const ALWAYS_HONORARY_NICKNAMES = ["jonne", "wilma02"];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -31,34 +34,49 @@ serve(async (req) => {
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
+    // Get user's nickname to check if they're always-honorary
+    const { data: profile } = await supabaseClient
+      .from("profiles")
+      .select("nickname")
+      .eq("user_id", user.id)
+      .single();
+
+    const nickname = profile?.nickname?.toLowerCase() ?? "";
+    const isAlwaysHonorary = ALWAYS_HONORARY_NICKNAMES.includes(nickname);
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
-    if (customers.data.length === 0) {
-      return new Response(JSON.stringify({ subscribed: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    const customerId = customers.data[0].id;
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
-
-    const hasActiveSub = subscriptions.data.length > 0;
+    let hasActiveSub = false;
     let subscriptionEnd = null;
 
-    if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+    if (customers.data.length > 0) {
+      const customerId = customers.data[0].id;
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "active",
+        limit: 1,
+      });
+
+      hasActiveSub = subscriptions.data.length > 0;
+
+      if (hasActiveSub) {
+        const subscription = subscriptions.data[0];
+        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      }
     }
+
+    // Sync is_honorary: true if paying subscriber OR always-honorary nickname
+    const shouldBeHonorary = hasActiveSub || isAlwaysHonorary;
+    await supabaseClient
+      .from("profiles")
+      .update({ is_honorary: shouldBeHonorary })
+      .eq("user_id", user.id);
 
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       subscription_end: subscriptionEnd,
+      is_honorary: shouldBeHonorary,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
