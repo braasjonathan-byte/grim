@@ -11,21 +11,26 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
+  const [isHonorary, setIsHonorary] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   const checkSubscription = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("check-subscription");
-      if (error) throw error;
-      setSubscribed(data?.subscribed ?? false);
-      setSubscriptionEnd(data?.subscription_end ?? null);
+      const [subResult, profileResult] = await Promise.all([
+        supabase.functions.invoke("check-subscription"),
+        supabase.from("profiles").select("is_honorary").eq("user_id", userId).single(),
+      ]);
+      if (subResult.error) throw subResult.error;
+      setSubscribed(subResult.data?.subscribed ?? false);
+      setSubscriptionEnd(subResult.data?.subscription_end ?? null);
+      setIsHonorary(profileResult.data?.is_honorary ?? false);
     } catch {
       // silently fail
     } finally {
       setChecking(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     checkSubscription();
@@ -65,37 +70,39 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
 
   if (checking) return null;
 
-  if (subscribed) {
+  if (isHonorary) {
     return (
       <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Crown className="w-5 h-5 text-primary" />
-          <span className="text-sm font-bold text-primary">Supporter ⭐</span>
+          <span className="text-sm font-bold text-primary">Hedersmedlem ⭐</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Tack för ditt stöd! Din prenumeration förnyas{" "}
-          {subscriptionEnd
-            ? new Date(subscriptionEnd).toLocaleDateString("sv-SE", {
-                day: "numeric",
-                month: "long",
-              })
-            : "automatiskt"}
-          .
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleManage}
-          disabled={portalLoading}
-          className="text-xs"
-        >
-          {portalLoading ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <ExternalLink className="w-3 h-3" />
+          Tack för att du supportar Grim! 💪
+          {subscribed && subscriptionEnd && (
+            <> Din prenumeration förnyas{" "}
+            {new Date(subscriptionEnd).toLocaleDateString("sv-SE", {
+              day: "numeric",
+              month: "long",
+            })}.</>
           )}
-          Hantera prenumeration
-        </Button>
+        </p>
+        {subscribed && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManage}
+            disabled={portalLoading}
+            className="text-xs"
+          >
+            {portalLoading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <ExternalLink className="w-3 h-3" />
+            )}
+            Hantera prenumeration
+          </Button>
+        )}
       </div>
     );
   }
