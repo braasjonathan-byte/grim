@@ -15,22 +15,32 @@ if (shouldBeDark) {
   if (meta) meta.setAttribute("content", "#ffffff");
 }
 
-// Force service worker update check on every app load
+// Force service worker update check on every app load + periodically
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistration().then((reg) => {
-    if (reg) {
-      reg.update().catch(() => {});
-    }
+  const checkForUpdate = () => {
+    navigator.serviceWorker.getRegistration().then((reg) => {
+      if (reg) reg.update().catch(() => {});
+    });
+  };
+
+  // Check on load
+  checkForUpdate();
+
+  // Check every 2 minutes
+  setInterval(checkForUpdate, 2 * 60 * 1000);
+
+  // Check when app returns to foreground
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate();
   });
 
-  // Reload once when a new SW takes control (prevents infinite loops via sessionStorage flag)
+  // Reload once when a new SW takes control
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
     const key = "grim_sw_reload";
     const last = sessionStorage.getItem(key);
     const now = Date.now();
-    // Only reload if we haven't reloaded in the last 10 seconds
     if (!last || now - Number(last) > 10000) {
       refreshing = true;
       sessionStorage.setItem(key, String(now));
