@@ -349,6 +349,9 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
           )}
         </div>
       )}
+      {/* Receipts */}
+      {userId && <ReceiptsList />}
+
       {/* Change password */}
       {userId && (
         <div className="border-t border-border pt-2">
