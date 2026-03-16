@@ -29,10 +29,19 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user) throw new Error("User not authenticated");
+
+    // Get registered email from user_emails table
+    const { data: emailRow } = await supabaseClient
+      .from("user_emails")
+      .select("email")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!emailRow?.email) throw new Error("No registered email found");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({ email: emailRow.email, limit: 1 });
     if (customers.data.length === 0) {
       throw new Error("No Stripe customer found for this user");
     }

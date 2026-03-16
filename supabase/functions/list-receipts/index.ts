@@ -29,13 +29,28 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user) throw new Error("User not authenticated");
+
+    // Get registered email from user_emails table
+    const { data: emailRow } = await supabaseClient
+      .from("user_emails")
+      .select("email")
+      .eq("user_id", user.id)
+      .single();
+
+    const registeredEmail = emailRow?.email;
+    if (!registeredEmail) {
+      return new Response(JSON.stringify({ receipts: [], email: null }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
 
     if (customers.data.length === 0) {
-      return new Response(JSON.stringify({ receipts: [] }), {
+      return new Response(JSON.stringify({ receipts: [], email: registeredEmail }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -56,10 +71,10 @@ serve(async (req) => {
       description: inv.lines.data[0]?.description || "Supporter-prenumeration",
       receipt_url: inv.hosted_invoice_url,
       pdf_url: inv.invoice_pdf,
-      email: user.email,
+      email: registeredEmail,
     }));
 
-    return new Response(JSON.stringify({ receipts, email: user.email }), {
+    return new Response(JSON.stringify({ receipts, email: registeredEmail }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

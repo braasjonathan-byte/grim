@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { Crown, Loader2, ExternalLink } from "lucide-react";
+import { Crown, Loader2, ExternalLink, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface SupporterButtonProps {
   userId: string;
@@ -14,6 +16,18 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   const [isHonorary, setIsHonorary] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [emailInput, setEmailInput] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+
+  const fetchEmail = useCallback(async () => {
+    const { data } = await supabase
+      .from("user_emails")
+      .select("email")
+      .eq("user_id", userId)
+      .single();
+    setRegisteredEmail(data?.email ?? null);
+  }, [userId]);
 
   const checkSubscription = useCallback(async () => {
     try {
@@ -33,16 +47,42 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   }, [userId]);
 
   useEffect(() => {
+    fetchEmail();
     checkSubscription();
     const interval = setInterval(checkSubscription, 60_000);
     return () => clearInterval(interval);
-  }, [checkSubscription]);
+  }, [fetchEmail, checkSubscription]);
+
+  const handleSaveEmail = async () => {
+    const trimmed = emailInput.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes("@")) {
+      toast.error("Ange en giltig e-postadress");
+      return;
+    }
+    setSavingEmail(true);
+    try {
+      const { error } = await supabase
+        .from("user_emails")
+        .upsert({ user_id: userId, email: trimmed }, { onConflict: "user_id" });
+      if (error) throw error;
+      setRegisteredEmail(trimmed);
+      toast.success("E-postadress sparad!");
+    } catch {
+      toast.error("Kunde inte spara e-postadressen");
+    } finally {
+      setSavingEmail(false);
+    }
+  };
 
   const handleCheckout = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-checkout");
       if (error) throw error;
+      if (data?.error === "NO_EMAIL_REGISTERED") {
+        toast.error("Registrera din e-postadress först");
+        return;
+      }
       if (data?.url) {
         window.location.href = data.url;
       }
@@ -87,6 +127,11 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
             })}.</>
           )}
         </p>
+        {registeredEmail && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Mail className="w-3 h-3" /> {registeredEmail}
+          </p>
+        )}
         {subscribed && (
           <Button
             variant="outline"
@@ -116,19 +161,51 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
       <p className="text-xs text-muted-foreground">
         Stöd Grim med 29 kr/mån och hjälp oss bygga vidare! 💪
       </p>
-      <Button
-        onClick={handleCheckout}
-        disabled={loading}
-        size="sm"
-        className="w-full"
-      >
-        {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Crown className="w-4 h-4" />
-        )}
-        Bli Supporter – 29 kr/mån
-      </Button>
+
+      {!registeredEmail ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Registrera din e-postadress först – kvitton skickas hit.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              type="email"
+              placeholder="din@email.com"
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+              className="text-sm h-9"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSaveEmail}
+              disabled={savingEmail}
+              className="shrink-0"
+            >
+              {savingEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : "Spara"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Mail className="w-3 h-3" /> {registeredEmail}
+          </p>
+          <Button
+            onClick={handleCheckout}
+            disabled={loading}
+            size="sm"
+            className="w-full"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Crown className="w-4 h-4" />
+            )}
+            Bli Supporter – 29 kr/mån
+          </Button>
+        </>
+      )}
     </div>
   );
 };
