@@ -1,0 +1,1 @@
+UPDATE profiles SET is_honorary = false WHERE is_honorary = true AND LOWER(nickname) NOT IN ('jonne', 'wilma02');
