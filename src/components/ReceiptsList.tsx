@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Receipt, Loader2, ExternalLink, ChevronDown } from "lucide-react";
+import { Receipt, Loader2, ExternalLink, Download, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ReceiptEntry {
@@ -87,16 +87,30 @@ const ReceiptsList = () => {
                         })}
                       </p>
                     </div>
-                    {r.receipt_url && (
-                      <a
-                        href={r.receipt_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 rounded-md text-primary hover:bg-primary/10 transition-colors flex-shrink-0"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {r.pdf_url && (
+                        <a
+                          href={r.pdf_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Ladda ner PDF"
+                          className="p-2 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      )}
+                      {r.receipt_url && (
+                        <a
+                          href={r.receipt_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Visa kvitto"
+                          className="p-2 rounded-md text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
