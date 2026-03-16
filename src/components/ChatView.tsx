@@ -70,7 +70,7 @@ const ChatView = ({ userId, initialFriendId }: ChatViewProps) => {
 
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, nickname, avatar_url")
+      .select("user_id, nickname, avatar_url, is_honorary")
       .in("user_id", friendIds);
 
     const friendList = (profiles || []).sort((a, b) => a.nickname.localeCompare(b.nickname));
