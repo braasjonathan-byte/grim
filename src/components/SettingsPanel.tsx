@@ -3,6 +3,7 @@ import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mai
 import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
+import ReceiptsList from "@/components/ReceiptsList";
 
 const THEME_KEY = "gymberget_theme";
 
