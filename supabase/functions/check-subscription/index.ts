@@ -32,7 +32,7 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user) throw new Error("User not authenticated");
 
     // Get user's nickname to check if they're always-honorary
     const { data: profile } = await supabaseClient
@@ -44,25 +44,36 @@ serve(async (req) => {
     const nickname = profile?.nickname?.toLowerCase() ?? "";
     const isAlwaysHonorary = ALWAYS_HONORARY_NICKNAMES.includes(nickname);
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Get registered email from user_emails table
+    const { data: emailRow } = await supabaseClient
+      .from("user_emails")
+      .select("email")
+      .eq("user_id", user.id)
+      .single();
+
+    const registeredEmail = emailRow?.email;
 
     let hasActiveSub = false;
     let subscriptionEnd = null;
 
-    if (customers.data.length > 0) {
-      const customerId = customers.data[0].id;
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        status: "active",
-        limit: 1,
-      });
+    if (registeredEmail) {
+      const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+      const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
 
-      hasActiveSub = subscriptions.data.length > 0;
+      if (customers.data.length > 0) {
+        const customerId = customers.data[0].id;
+        const subscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          status: "active",
+          limit: 1,
+        });
 
-      if (hasActiveSub) {
-        const subscription = subscriptions.data[0];
-        subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        hasActiveSub = subscriptions.data.length > 0;
+
+        if (hasActiveSub) {
+          const subscription = subscriptions.data[0];
+          subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+        }
       }
     }
 

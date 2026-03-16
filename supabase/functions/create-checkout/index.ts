@@ -14,7 +14,8 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
   );
 
   try {
@@ -22,14 +23,27 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
+    if (!user) throw new Error("User not authenticated");
+
+    // Get registered email from user_emails table
+    const { data: emailRow } = await supabaseClient
+      .from("user_emails")
+      .select("email")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!emailRow?.email) {
+      throw new Error("NO_EMAIL_REGISTERED");
+    }
+
+    const registeredEmail = emailRow.email;
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
-    // Check if customer already exists in Stripe
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Check if customer already exists in Stripe with the registered email
+    const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
     let customerId: string | undefined;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
@@ -37,7 +51,7 @@ serve(async (req) => {
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
+      customer_email: customerId ? undefined : registeredEmail,
       line_items: [
         {
           price: "price_1TBY4mHrbSIRvq07XH8LmNTT",
