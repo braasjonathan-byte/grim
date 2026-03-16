@@ -152,7 +152,15 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
               </div>
 
               {/* Name */}
-              <span className="font-semibold text-sm flex-1 truncate">{entry.nickname}</span>
+              <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                <span className="font-semibold text-sm truncate">{entry.nickname}</span>
+                {entry.is_honorary && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 text-warning px-2 py-0.5 text-[10px] font-bold whitespace-nowrap flex-shrink-0">
+                    <Crown className="w-3 h-3" />
+                    Hedersmedlem
+                  </span>
+                )}
+              </div>
 
               {/* Count */}
               <span className="text-sm font-black text-primary">{entry.done_count}</span>
