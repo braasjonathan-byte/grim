@@ -585,6 +585,7 @@ const Index = () => {
             {userRole === "admin" && <ExerciseGifManager />}
             <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
             <NotificationSettings userId={user.id} />
+            <SupporterButton userId={user.id} />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
             <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
           </div>
