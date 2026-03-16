@@ -13,6 +13,7 @@ interface Friend {
   user_id: string;
   nickname: string;
   avatar_url: string | null;
+  is_honorary?: boolean;
 }
 
 interface LastMessage {
