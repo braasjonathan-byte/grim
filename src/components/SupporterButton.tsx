@@ -11,21 +11,26 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
+  const [isHonorary, setIsHonorary] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   const checkSubscription = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke("check-subscription");
-      if (error) throw error;
-      setSubscribed(data?.subscribed ?? false);
-      setSubscriptionEnd(data?.subscription_end ?? null);
+      const [subResult, profileResult] = await Promise.all([
+        supabase.functions.invoke("check-subscription"),
+        supabase.from("profiles").select("is_honorary").eq("user_id", userId).single(),
+      ]);
+      if (subResult.error) throw subResult.error;
+      setSubscribed(subResult.data?.subscribed ?? false);
+      setSubscriptionEnd(subResult.data?.subscription_end ?? null);
+      setIsHonorary(profileResult.data?.is_honorary ?? false);
     } catch {
       // silently fail
     } finally {
       setChecking(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     checkSubscription();
