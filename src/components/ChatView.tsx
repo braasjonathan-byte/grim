@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, ArrowLeft } from "lucide-react";
+import { MessageCircle, ArrowLeft, Crown } from "lucide-react";
 import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
 
@@ -13,6 +13,7 @@ interface Friend {
   user_id: string;
   nickname: string;
   avatar_url: string | null;
+  is_honorary?: boolean;
 }
 
 interface LastMessage {
@@ -69,7 +70,7 @@ const ChatView = ({ userId, initialFriendId }: ChatViewProps) => {
 
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("user_id, nickname, avatar_url")
+      .select("user_id, nickname, avatar_url, is_honorary")
       .in("user_id", friendIds);
 
     const friendList = (profiles || []).sort((a, b) => a.nickname.localeCompare(b.nickname));
@@ -177,6 +178,12 @@ const ChatView = ({ userId, initialFriendId }: ChatViewProps) => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold truncate">{friend.nickname}</span>
+                    {friend.is_honorary && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-warning/15 text-warning px-1.5 py-0.5 text-[9px] font-bold whitespace-nowrap flex-shrink-0">
+                        <Crown className="w-2.5 h-2.5" />
+                        Hedersmedlem
+                      </span>
+                    )}
                     {lastMsg && (
                       <span className="text-[10px] text-muted-foreground flex-shrink-0">
                         {formatTime(lastMsg.created_at)}
