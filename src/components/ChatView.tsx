@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, ArrowLeft, Crown } from "lucide-react";
+import { MessageCircle, ArrowLeft } from "lucide-react";
+import HonoraryBadge from "./HonoraryBadge";
 import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
 
