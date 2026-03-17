@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, UserPlus, Check, Loader2, ChevronDown, Crown, Eye } from "lucide-react";
 import FriendProfileView from "@/components/FriendProfileView";
+import HonoraryBadge from "./HonoraryBadge";
 
 interface AdminUserListProps {
   userId: string;
