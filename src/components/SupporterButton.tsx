@@ -114,10 +114,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   if (isHonorary) {
     return (
       <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Crown className="w-5 h-5 text-primary" />
-          <span className="text-sm font-bold text-primary">Hedersmedlem ⭐</span>
-        </div>
+        <HonoraryBadge size="md" />
         <p className="text-xs text-muted-foreground">
           Tack för att du supportar Grim! 💪
           {subscribed && subscriptionEnd && (
