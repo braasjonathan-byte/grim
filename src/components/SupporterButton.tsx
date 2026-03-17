@@ -1,10 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
-import { Crown, Loader2, ExternalLink, Mail } from "lucide-react";
+import { Crown, Loader2, ExternalLink, Mail, XCircle } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SupporterButtonProps {
   userId: string;
@@ -17,6 +28,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   const [isHonorary, setIsHonorary] = useState(false);
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
@@ -109,6 +121,27 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
     }
   };
 
+  const handleCancel = async () => {
+    setCancelLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+      if (data?.success) {
+        const endDate = data.cancel_at
+          ? new Date(data.cancel_at).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })
+          : "";
+        toast.success(`Prenumerationen avslutas ${endDate}`);
+        checkSubscription();
+      } else {
+        toast.error(data?.error || "Kunde inte avbryta prenumerationen");
+      }
+    } catch {
+      toast.error("Kunde inte avbryta prenumerationen");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   if (checking) return null;
 
   if (isHonorary) {
@@ -130,20 +163,62 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
             <Mail className="w-3 h-3" /> {registeredEmail}
           </p>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleManage}
-          disabled={portalLoading}
-          className="w-full text-xs"
-        >
-          {portalLoading ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <ExternalLink className="w-3 h-3" />
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManage}
+            disabled={portalLoading}
+            className="flex-1 text-xs"
+          >
+            {portalLoading ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <ExternalLink className="w-3 h-3" />
+            )}
+            Hantera medlemskap
+          </Button>
+          {subscribed && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                  disabled={cancelLoading}
+                >
+                  {cancelLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <XCircle className="w-3 h-3" />
+                  )}
+                  Avsluta
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Avsluta prenumeration?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Din prenumeration avslutas vid nästa förnyelsedatum
+                    {subscriptionEnd && (
+                      <> ({new Date(subscriptionEnd).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })})</>
+                    )}
+                    . Du behåller supporter-status till dess.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Behåll</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleCancel}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Avsluta prenumeration
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
-          Hantera medlemskap
-        </Button>
+        </div>
       </div>
     );
   }
