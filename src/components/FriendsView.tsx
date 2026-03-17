@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import FriendProfileView from "@/components/FriendProfileView";
 import EmptyState from "@/components/EmptyState";
+import HonoraryBadge from "./HonoraryBadge";
 
 interface FriendActivity {
   nickname: string;
