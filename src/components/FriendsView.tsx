@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import FriendProfileView from "@/components/FriendProfileView";
 import EmptyState from "@/components/EmptyState";
+import HonoraryBadge from "./HonoraryBadge";
 
 interface FriendActivity {
   nickname: string;
@@ -1349,6 +1350,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                     )}
                   </div>
                   <span className="font-semibold text-sm">{friend.profile.nickname}</span>
+                  {friend.profile.is_honorary && <HonoraryBadge size="xs" />}
                   {recentCount > 0 && (
                     <span className="px-1.5 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full">
                       🔥 {recentCount} pass

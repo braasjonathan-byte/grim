@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
+import HonoraryBadge from "./HonoraryBadge";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -324,10 +325,17 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
              </button>
               <div>
                 <h3 className="text-sm font-bold">{nickname}</h3>
-                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 ${isAdmin ? "bg-primary/20 text-primary" : isHonorary ? "bg-warning/20 text-warning" : "bg-secondary text-muted-foreground"}`}>
-                  {isAdmin ? <Shield className="w-3 h-3" /> : isHonorary ? <Crown className="w-3 h-3" /> : null}
-                  {isAdmin ? "Admin" : isHonorary ? "Hedersmedlem" : "Medlem"}
-                </span>
+                {isAdmin ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 bg-primary/20 text-primary">
+                    <Shield className="w-3 h-3" /> Admin
+                  </span>
+                ) : isHonorary ? (
+                  <HonoraryBadge size="sm" className="mt-0.5" />
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 bg-secondary text-muted-foreground">
+                    Medlem
+                  </span>
+                )}
               </div>
             </div>
            <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
