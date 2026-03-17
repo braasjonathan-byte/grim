@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Medal, Crown, ChevronLeft, ChevronRight } from "lucide-react";
+import HonoraryBadge from "./HonoraryBadge";
 
 interface LeaderboardProps {
   userId: string;
