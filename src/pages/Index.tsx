@@ -9,6 +9,7 @@ import AuthScreen from "@/components/AuthScreen";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
+import HonoraryBadge from "@/components/HonoraryBadge";
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
