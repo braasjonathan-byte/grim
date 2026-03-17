@@ -130,22 +130,20 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
             <Mail className="w-3 h-3" /> {registeredEmail}
           </p>
         )}
-        {subscribed && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleManage}
-            disabled={portalLoading}
-            className="text-xs"
-          >
-            {portalLoading ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <ExternalLink className="w-3 h-3" />
-            )}
-            Hantera prenumeration
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManage}
+          disabled={portalLoading}
+          className="w-full text-xs"
+        >
+          {portalLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <ExternalLink className="w-3 h-3" />
+          )}
+          Hantera medlemskap
+        </Button>
       </div>
     );
   }
