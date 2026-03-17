@@ -577,9 +577,10 @@ const Index = () => {
             <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />
             {/* Role badge */}
             <div className="flex items-center gap-2">
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${userRole === "admin" ? "bg-primary/20 text-primary" : isHonorary ? "bg-warning/20 text-warning" : "bg-secondary text-muted-foreground"}`}>
-                {userRole === "admin" ? "👑 Admin" : isHonorary ? "👑 Hedersmedlem" : "👤 Medlem"}
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${userRole === "admin" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                {userRole === "admin" ? "👑 Admin" : isHonorary ? "" : "👤 Medlem"}
               </span>
+              {isHonorary && userRole !== "admin" && <HonoraryBadge size="md" />}
             </div>
             <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
             {userRole === "admin" && <AdminUserList userId={user.id} />}

@@ -54,11 +54,7 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
       <div className="flex items-center gap-2">
         <Link className="w-5 h-5 text-primary" />
         <h3 className="text-sm font-bold">Bjud in en vän</h3>
-        {isHonorary && (
-          <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/20 text-warning">
-            <Crown className="w-3 h-3" /> Hedersmedlem
-          </span>
-        )}
+        {isHonorary && <HonoraryBadge size="sm" />}
       </div>
       <p className="text-xs text-muted-foreground">
         Dela din personliga länk. När någon registrerar sig via den blir du hedersmedlem!

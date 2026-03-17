@@ -178,10 +178,17 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       </div>
 
       {/* Membership status */}
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${isAdmin ? "bg-primary/15 text-primary" : isHonorary ? "bg-warning/15 text-warning" : "bg-secondary text-muted-foreground"}`}>
-        {isAdmin ? <Shield className="w-4 h-4" /> : isHonorary ? <Crown className="w-4 h-4" /> : <User className="w-4 h-4" />}
-        {isAdmin ? "Admin" : isHonorary ? "Hedersmedlem" : "Medlem"}
-      </div>
+      {isAdmin ? (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-primary/15 text-primary">
+          <Shield className="w-4 h-4" /> Admin
+        </div>
+      ) : isHonorary ? (
+        <HonoraryBadge size="md" />
+      ) : (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
+          <User className="w-4 h-4" /> Medlem
+        </div>
+      )}
 
       {/* Avatar */}
       <div className="flex items-center gap-4">
