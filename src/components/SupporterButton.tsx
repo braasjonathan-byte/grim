@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Crown, Loader2, ExternalLink, Mail } from "lucide-react";
+import HonoraryBadge from "./HonoraryBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
