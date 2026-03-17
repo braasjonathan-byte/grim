@@ -148,7 +148,7 @@ const AdminUserList = ({ userId }: AdminUserListProps) => {
                           )}
                         </div>
                         <span className="text-sm font-medium truncate">{u.nickname}</span>
-                        {u.is_honorary && <Crown className="w-3 h-3 text-warning flex-shrink-0" />}
+                        {u.is_honorary && <HonoraryBadge size="xs" />}
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button
