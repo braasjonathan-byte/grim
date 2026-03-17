@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, Copy, Check, Crown } from "lucide-react";
+import HonoraryBadge from "./HonoraryBadge";
 
 interface ReferralLinkProps {
   userId: string;
