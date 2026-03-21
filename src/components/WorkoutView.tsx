@@ -1004,6 +1004,43 @@ const estimateCalories = (
   // adaptProgression removed: automatic plan mutations caused data corruption.
   // Progression is now only applied when the user explicitly chooses "Alla framtida" in the edit dialog.
 
+  // Add a new week by copying from a source week
+  const addWeekByCopy = async (sourceWeek: number) => {
+    setAddWeekSaving(true);
+    try {
+      const planWeeks = weeks.filter(w => w > 0);
+      const newWeekNum = planWeeks.length > 0 ? Math.max(...planWeeks) + 1 : 1;
+      const sourcePlans = plans.filter(p => p.week === sourceWeek);
+      
+      if (sourcePlans.length === 0) {
+        toast.error("Inga pass att kopiera från den veckan");
+        return;
+      }
+
+      const inserts = sourcePlans.map(p => ({
+        user_id: userId,
+        week: newWeekNum,
+        day: p.day,
+        session_name: p.session_name,
+        details: p.details,
+        tempo: p.tempo || "",
+      }));
+
+      const { error } = await supabase.from("workout_plans").insert(inserts);
+      if (error) throw error;
+
+      toast.success(`Vecka ${newWeekNum} skapad (kopierad från V${sourceWeek})`);
+      setShowAddWeekDialog(false);
+      setAddWeekSourceWeek(null);
+      await fetchData();
+      setCurrentWeek(newWeekNum);
+    } catch (err) {
+      toast.error("Kunde inte lägga till vecka");
+    } finally {
+      setAddWeekSaving(false);
+    }
+  };
+
   const leavePlan = async () => {
     if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort.")) return;
 
