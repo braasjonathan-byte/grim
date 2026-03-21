@@ -5255,6 +5255,51 @@ const estimateCalories = (
     )}
     </>);
 
+    // Add week dialog (rendered at end)
+    const addWeekDialog = showAddWeekDialog && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowAddWeekDialog(false)}>
+        <div className="bg-card rounded-xl border border-border p-5 w-[90%] max-w-sm space-y-4 animate-fade-in" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm">Lägg till vecka</h3>
+            <button onClick={() => setShowAddWeekDialog(false)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">Välj vilken vecka du vill kopiera till den nya veckan:</p>
+          <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+            {weeks.filter(w => w > 0).map(w => (
+              <button
+                key={w}
+                onClick={() => setAddWeekSourceWeek(w)}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  addWeekSourceWeek === w
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                V{w}
+              </button>
+            ))}
+          </div>
+          {addWeekSourceWeek && (
+            <p className="text-xs text-muted-foreground text-center">
+              Kopierar {plans.filter(p => p.week === addWeekSourceWeek).length} pass från vecka {addWeekSourceWeek}
+            </p>
+          )}
+          <button
+            onClick={() => addWeekSourceWeek && addWeekByCopy(addWeekSourceWeek)}
+            disabled={!addWeekSourceWeek || addWeekSaving}
+            className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg text-sm disabled:opacity-50"
+          >
+            {addWeekSaving ? "Skapar..." : `Skapa vecka ${(weeks.filter(w => w > 0).length > 0 ? Math.max(...weeks.filter(w => w > 0)) + 1 : 1)}`}
+          </button>
+        </div>
+      </div>
+    );
+
+    return (<>{planModeResult}{addWeekDialog}</>);
+  })();
+
 };
 
 export default WorkoutView;
