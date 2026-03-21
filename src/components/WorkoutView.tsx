@@ -3053,6 +3053,14 @@ const estimateCalories = (
               )}
             </button>);
         })}
+        {/* Add week button */}
+        <button
+          onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
+          className="flex flex-col items-center justify-center p-2 rounded-md text-xs bg-secondary text-muted-foreground hover:bg-muted hover:text-foreground transition-all border border-dashed border-border"
+          title="Lägg till vecka"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Warning when viewing non-active week */}
