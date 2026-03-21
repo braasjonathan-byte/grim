@@ -5253,10 +5253,8 @@ const estimateCalories = (
         </div>
       </>
     )}
-    </>);
-
-    // Add week dialog (rendered at end)
-    const addWeekDialog = showAddWeekDialog && (
+    {/* Add week dialog */}
+    {showAddWeekDialog && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowAddWeekDialog(false)}>
         <div className="bg-card rounded-xl border border-border p-5 w-[90%] max-w-sm space-y-4 animate-fade-in" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between">
@@ -5295,10 +5293,8 @@ const estimateCalories = (
           </button>
         </div>
       </div>
-    );
-
-    return (<>{planModeResult}{addWeekDialog}</>);
-  })();
+    )}
+    </>);
 
 };
 
