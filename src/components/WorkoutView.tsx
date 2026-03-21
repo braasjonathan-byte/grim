@@ -255,6 +255,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [copyToDateConflict, setCopyToDateConflict] = useState<"ask" | "replace" | "add" | null>(null);
   const [copyToDateSaving, setCopyToDateSaving] = useState(false);
 
+  // Add week by copying dialog
+  const [showAddWeekDialog, setShowAddWeekDialog] = useState(false);
+  const [addWeekSourceWeek, setAddWeekSourceWeek] = useState<number | null>(null);
+  const [addWeekSaving, setAddWeekSaving] = useState(false);
+
   // Exercise dropdown menu close on scroll
   const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
 
