@@ -255,6 +255,11 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [copyToDateConflict, setCopyToDateConflict] = useState<"ask" | "replace" | "add" | null>(null);
   const [copyToDateSaving, setCopyToDateSaving] = useState(false);
 
+  // Add week by copying dialog
+  const [showAddWeekDialog, setShowAddWeekDialog] = useState(false);
+  const [addWeekSourceWeek, setAddWeekSourceWeek] = useState<number | null>(null);
+  const [addWeekSaving, setAddWeekSaving] = useState(false);
+
   // Exercise dropdown menu close on scroll
   const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
 
@@ -998,6 +1003,43 @@ const estimateCalories = (
   // Adaptive progression: adjust ALL future weeks based on logged results
   // adaptProgression removed: automatic plan mutations caused data corruption.
   // Progression is now only applied when the user explicitly chooses "Alla framtida" in the edit dialog.
+
+  // Add a new week by copying from a source week
+  const addWeekByCopy = async (sourceWeek: number) => {
+    setAddWeekSaving(true);
+    try {
+      const planWeeks = weeks.filter(w => w > 0);
+      const newWeekNum = planWeeks.length > 0 ? Math.max(...planWeeks) + 1 : 1;
+      const sourcePlans = plans.filter(p => p.week === sourceWeek);
+      
+      if (sourcePlans.length === 0) {
+        toast.error("Inga pass att kopiera från den veckan");
+        return;
+      }
+
+      const inserts = sourcePlans.map(p => ({
+        user_id: userId,
+        week: newWeekNum,
+        day: p.day,
+        session_name: p.session_name,
+        details: p.details,
+        tempo: p.tempo || "",
+      }));
+
+      const { error } = await supabase.from("workout_plans").insert(inserts);
+      if (error) throw error;
+
+      toast.success(`Vecka ${newWeekNum} skapad (kopierad från V${sourceWeek})`);
+      setShowAddWeekDialog(false);
+      setAddWeekSourceWeek(null);
+      await fetchData();
+      setCurrentWeek(newWeekNum);
+    } catch (err) {
+      toast.error("Kunde inte lägga till vecka");
+    } finally {
+      setAddWeekSaving(false);
+    }
+  };
 
   const leavePlan = async () => {
     if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort.")) return;
@@ -3011,6 +3053,14 @@ const estimateCalories = (
               )}
             </button>);
         })}
+        {/* Add week button */}
+        <button
+          onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
+          className="flex flex-col items-center justify-center p-2 rounded-md text-xs bg-secondary text-muted-foreground hover:bg-muted hover:text-foreground transition-all border border-dashed border-border"
+          title="Lägg till vecka"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Warning when viewing non-active week */}
@@ -5202,6 +5252,47 @@ const estimateCalories = (
           )}
         </div>
       </>
+    )}
+    {/* Add week dialog */}
+    {showAddWeekDialog && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowAddWeekDialog(false)}>
+        <div className="bg-card rounded-xl border border-border p-5 w-[90%] max-w-sm space-y-4 animate-fade-in" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm">Lägg till vecka</h3>
+            <button onClick={() => setShowAddWeekDialog(false)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">Välj vilken vecka du vill kopiera till den nya veckan:</p>
+          <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+            {weeks.filter(w => w > 0).map(w => (
+              <button
+                key={w}
+                onClick={() => setAddWeekSourceWeek(w)}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${
+                  addWeekSourceWeek === w
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                V{w}
+              </button>
+            ))}
+          </div>
+          {addWeekSourceWeek && (
+            <p className="text-xs text-muted-foreground text-center">
+              Kopierar {plans.filter(p => p.week === addWeekSourceWeek).length} pass från vecka {addWeekSourceWeek}
+            </p>
+          )}
+          <button
+            onClick={() => addWeekSourceWeek && addWeekByCopy(addWeekSourceWeek)}
+            disabled={!addWeekSourceWeek || addWeekSaving}
+            className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg text-sm disabled:opacity-50"
+          >
+            {addWeekSaving ? "Skapar..." : `Skapa vecka ${(weeks.filter(w => w > 0).length > 0 ? Math.max(...weeks.filter(w => w > 0)) + 1 : 1)}`}
+          </button>
+        </div>
+      </div>
     )}
     </>);
 
