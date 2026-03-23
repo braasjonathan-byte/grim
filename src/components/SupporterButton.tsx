@@ -111,11 +111,15 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
     try {
       const { data, error } = await supabase.functions.invoke("customer-portal");
       if (error) throw error;
+      if (data?.error) {
+        toast.error("Kunde inte öppna kundportalen. Kontrollera att din e-post matchar den du betalade med.");
+        return;
+      }
       if (data?.url) {
         window.open(data.url, "_blank");
       }
     } catch {
-      // silently fail
+      toast.error("Kunde inte öppna kundportalen");
     } finally {
       setPortalLoading(false);
     }
