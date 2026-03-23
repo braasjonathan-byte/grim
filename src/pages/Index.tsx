@@ -131,69 +131,48 @@ const Index = () => {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  // Shared helper to load profile + role (called once per session)
+  const loadUserData = useCallback(async (uid: string) => {
+    const [{ data }, { data: roleData }] = await Promise.all([
+      supabase.from("profiles").select("nickname, must_change_password, is_honorary").eq("user_id", uid).single(),
+      supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
+    ]);
+    if (data) {
+      setNickname(data.nickname);
+      setIsHonorary((data as any).is_honorary || false);
+      if (data.must_change_password) {
+        setForceChangePassword(true);
+        setShowChangePassword(true);
+      }
+    }
+    if (roleData) setUserRole(roleData.role);
+  }, []);
+
   useEffect(() => {
+    let initialDone = false;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(async () => {
-            const { data } = await supabase.
-            from("profiles").
-            select("nickname, must_change_password, is_honorary").
-            eq("user_id", session.user.id).
-            single();
-            if (data) {
-              setNickname(data.nickname);
-              setIsHonorary((data as any).is_honorary || false);
-              if (data.must_change_password) {
-                setForceChangePassword(true);
-                setShowChangePassword(true);
-              }
-            }
-            const { data: roleData } = await supabase.
-            from("user_roles").
-            select("role").
-            eq("user_id", session.user.id).
-            maybeSingle();
-            if (roleData) setUserRole(roleData.role);
-          }, 0);
+        if (session?.user && initialDone) {
+          // Only load if getSession didn't already handle it
+          setTimeout(() => loadUserData(session.user.id), 0);
         }
         setLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      initialDone = true;
       setUser(session?.user ?? null);
       if (session?.user) {
-        supabase.
-        from("profiles").
-        select("nickname, must_change_password, is_honorary").
-        eq("user_id", session.user.id).
-        single().
-        then(({ data }) => {
-          if (data) {
-            setNickname(data.nickname);
-            setIsHonorary((data as any).is_honorary || false);
-            if (data.must_change_password) {
-              setForceChangePassword(true);
-              setShowChangePassword(true);
-            }
-          }
-        });
-        supabase.
-        from("user_roles").
-        select("role").
-        eq("user_id", session.user.id).
-        maybeSingle().
-        then(({ data: roleData }) => {
-          if (roleData) setUserRole(roleData.role);
-        });
+        loadUserData(session.user.id);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadUserData]);
   // Clear PWA app icon badge on load/focus
   useEffect(() => {
     const clearBadge = () => {
@@ -211,39 +190,39 @@ const Index = () => {
     };
   }, []);
 
-  // Check for unread announcements + suggestions (for admins)
+  // Check for unread announcements + suggestions (for admins) — single combined query
   useEffect(() => {
     if (!user) return;
     const checkUnread = async () => {
       const lastRead = localStorage.getItem("gymberget_last_read_announcements") || "1970-01-01T00:00:00Z";
-      const { count: announcementCount } = await supabase.
-      from("announcements").
-      select("*", { count: "exact", head: true }).
-      gt("created_at", lastRead);
 
-      let suggestionCount = 0;
-      if (userRole === "admin") {
-        const lastReadSuggestions = localStorage.getItem("grim_last_read_suggestions") || "1970-01-01T00:00:00Z";
-        const { count } = await supabase.
-        from("suggestions").
-        select("*", { count: "exact", head: true }).
-        gt("created_at", lastReadSuggestions);
-        suggestionCount = count || 0;
-      }
-
-      setUnreadAnnouncements((announcementCount || 0) + suggestionCount);
-
+      // Fetch announcements (serves both count and display — avoids separate head query)
       const { data } = await supabase.
       from("announcements").
       select("id, title, message, created_at").
       order("created_at", { ascending: false }).
-      limit(5);
-      if (data) setHeaderAnnouncements(data);
+      limit(20);
+      if (data) {
+        setHeaderAnnouncements(data.slice(0, 5));
+        const unreadCount = data.filter(a => a.created_at > lastRead).length;
+
+        let suggestionCount = 0;
+        if (userRole === "admin") {
+          const lastReadSuggestions = localStorage.getItem("grim_last_read_suggestions") || "1970-01-01T00:00:00Z";
+          const { count } = await supabase.
+          from("suggestions").
+          select("*", { count: "exact", head: true }).
+          gt("created_at", lastReadSuggestions);
+          suggestionCount = count || 0;
+        }
+
+        setUnreadAnnouncements(unreadCount + suggestionCount);
+      }
     };
     checkUnread();
   }, [user, userRole]);
 
-  // Fetch unread chat count
+  // Fetch unread chat count — use incremental updates from realtime instead of refetching
   useEffect(() => {
     if (!user) return;
     const fetchUnreadChats = async () => {
@@ -259,10 +238,15 @@ const Index = () => {
     const channel = supabase.
     channel("unread-chat-count").
     on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
-      fetchUnreadChats();
+      // Increment locally instead of refetching
+      setUnreadChats(prev => prev + 1);
     }).
-    on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
-      fetchUnreadChats();
+    on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, (payload) => {
+      // If message was marked as read, decrement
+      const newMsg = payload.new as any;
+      if (newMsg.read) {
+        setUnreadChats(prev => Math.max(0, prev - 1));
+      }
     }).
     subscribe();
     return () => {supabase.removeChannel(channel);};

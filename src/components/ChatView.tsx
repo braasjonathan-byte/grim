@@ -33,13 +33,26 @@ const ChatView = ({ userId, initialFriendId }: ChatViewProps) => {
 
   useEffect(() => {
     fetchFriendsAndMessages();
-    // Subscribe to new messages for unread counts
+    // Subscribe to new messages — update incrementally instead of refetching everything
     const channel = supabase
       .channel("chat-list")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload) => {
         const msg = payload.new as any;
         if (msg.sender_id === userId || msg.receiver_id === userId) {
-          fetchFriendsAndMessages();
+          const friendId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+          // Update last message incrementally
+          setLastMessages(prev => {
+            const updated = new Map(prev);
+            const existing = updated.get(friendId);
+            updated.set(friendId, {
+              friend_id: friendId,
+              message: msg.message_type === 'workout' ? '🏋️ Delade ett pass' : msg.message,
+              message_type: msg.message_type,
+              created_at: msg.created_at,
+              unread_count: msg.receiver_id === userId ? (existing?.unread_count || 0) + 1 : (existing?.unread_count || 0),
+            });
+            return updated;
+          });
         }
       })
       .subscribe();
