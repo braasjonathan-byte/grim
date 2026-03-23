@@ -190,34 +190,34 @@ const Index = () => {
     };
   }, []);
 
-  // Check for unread announcements + suggestions (for admins)
+  // Check for unread announcements + suggestions (for admins) — single combined query
   useEffect(() => {
     if (!user) return;
     const checkUnread = async () => {
       const lastRead = localStorage.getItem("gymberget_last_read_announcements") || "1970-01-01T00:00:00Z";
-      const { count: announcementCount } = await supabase.
-      from("announcements").
-      select("*", { count: "exact", head: true }).
-      gt("created_at", lastRead);
 
-      let suggestionCount = 0;
-      if (userRole === "admin") {
-        const lastReadSuggestions = localStorage.getItem("grim_last_read_suggestions") || "1970-01-01T00:00:00Z";
-        const { count } = await supabase.
-        from("suggestions").
-        select("*", { count: "exact", head: true }).
-        gt("created_at", lastReadSuggestions);
-        suggestionCount = count || 0;
-      }
-
-      setUnreadAnnouncements((announcementCount || 0) + suggestionCount);
-
+      // Fetch announcements (serves both count and display — avoids separate head query)
       const { data } = await supabase.
       from("announcements").
       select("id, title, message, created_at").
       order("created_at", { ascending: false }).
-      limit(5);
-      if (data) setHeaderAnnouncements(data);
+      limit(20);
+      if (data) {
+        setHeaderAnnouncements(data.slice(0, 5));
+        const unreadCount = data.filter(a => a.created_at > lastRead).length;
+
+        let suggestionCount = 0;
+        if (userRole === "admin") {
+          const lastReadSuggestions = localStorage.getItem("grim_last_read_suggestions") || "1970-01-01T00:00:00Z";
+          const { count } = await supabase.
+          from("suggestions").
+          select("*", { count: "exact", head: true }).
+          gt("created_at", lastReadSuggestions);
+          suggestionCount = count || 0;
+        }
+
+        setUnreadAnnouncements(unreadCount + suggestionCount);
+      }
     };
     checkUnread();
   }, [user, userRole]);
