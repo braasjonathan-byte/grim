@@ -131,69 +131,48 @@ const Index = () => {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  // Shared helper to load profile + role (called once per session)
+  const loadUserData = useCallback(async (uid: string) => {
+    const [{ data }, { data: roleData }] = await Promise.all([
+      supabase.from("profiles").select("nickname, must_change_password, is_honorary").eq("user_id", uid).single(),
+      supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
+    ]);
+    if (data) {
+      setNickname(data.nickname);
+      setIsHonorary((data as any).is_honorary || false);
+      if (data.must_change_password) {
+        setForceChangePassword(true);
+        setShowChangePassword(true);
+      }
+    }
+    if (roleData) setUserRole(roleData.role);
+  }, []);
+
   useEffect(() => {
+    let initialDone = false;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(async () => {
-            const { data } = await supabase.
-            from("profiles").
-            select("nickname, must_change_password, is_honorary").
-            eq("user_id", session.user.id).
-            single();
-            if (data) {
-              setNickname(data.nickname);
-              setIsHonorary((data as any).is_honorary || false);
-              if (data.must_change_password) {
-                setForceChangePassword(true);
-                setShowChangePassword(true);
-              }
-            }
-            const { data: roleData } = await supabase.
-            from("user_roles").
-            select("role").
-            eq("user_id", session.user.id).
-            maybeSingle();
-            if (roleData) setUserRole(roleData.role);
-          }, 0);
+        if (session?.user && initialDone) {
+          // Only load if getSession didn't already handle it
+          setTimeout(() => loadUserData(session.user.id), 0);
         }
         setLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      initialDone = true;
       setUser(session?.user ?? null);
       if (session?.user) {
-        supabase.
-        from("profiles").
-        select("nickname, must_change_password, is_honorary").
-        eq("user_id", session.user.id).
-        single().
-        then(({ data }) => {
-          if (data) {
-            setNickname(data.nickname);
-            setIsHonorary((data as any).is_honorary || false);
-            if (data.must_change_password) {
-              setForceChangePassword(true);
-              setShowChangePassword(true);
-            }
-          }
-        });
-        supabase.
-        from("user_roles").
-        select("role").
-        eq("user_id", session.user.id).
-        maybeSingle().
-        then(({ data: roleData }) => {
-          if (roleData) setUserRole(roleData.role);
-        });
+        loadUserData(session.user.id);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadUserData]);
   // Clear PWA app icon badge on load/focus
   useEffect(() => {
     const clearBadge = () => {

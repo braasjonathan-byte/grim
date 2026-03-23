@@ -78,7 +78,7 @@ export function useDataSnapshots(userId: string | null) {
     // Only one snapshot per day
     if (existing.some(s => s.id === today)) return;
 
-    const data = await fetchAllUserData(userId);
+    const data = await fetchSnapshotData(userId);
     const now = new Date();
     const snapshot: DataSnapshot = {
       id: today,
