@@ -41,23 +41,22 @@ function todayKey() {
   return new Date().toISOString().split("T")[0];
 }
 
-async function fetchAllUserData(userId: string) {
-  const [plans, completions, profile, stars, goals, exercises] = await Promise.all([
+async function fetchSnapshotData(userId: string) {
+  // Only fetch the two most critical tables for backup purposes
+  // Profile, plans, and completions are the core data worth snapshotting
+  const [plans, completions, profile] = await Promise.all([
     supabase.from("workout_plans").select("*").eq("user_id", userId),
     supabase.from("workout_completions").select("*").eq("user_id", userId),
     supabase.from("profiles").select("*").eq("user_id", userId).single(),
-    supabase.from("pr_stars").select("*").eq("user_id", userId),
-    supabase.from("pr_goals").select("*").eq("user_id", userId),
-    supabase.from("custom_exercises").select("*").eq("created_by", userId),
   ]);
 
   return {
     workout_plans: plans.data || [],
     workout_completions: completions.data || [],
     profile: profile.data || null,
-    pr_stars: stars.data || [],
-    pr_goals: goals.data || [],
-    custom_exercises: exercises.data || [],
+    pr_stars: [],
+    pr_goals: [],
+    custom_exercises: [],
   };
 }
 
