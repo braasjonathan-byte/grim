@@ -222,7 +222,7 @@ const Index = () => {
     checkUnread();
   }, [user, userRole]);
 
-  // Fetch unread chat count
+  // Fetch unread chat count — use incremental updates from realtime instead of refetching
   useEffect(() => {
     if (!user) return;
     const fetchUnreadChats = async () => {
@@ -238,10 +238,15 @@ const Index = () => {
     const channel = supabase.
     channel("unread-chat-count").
     on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
-      fetchUnreadChats();
+      // Increment locally instead of refetching
+      setUnreadChats(prev => prev + 1);
     }).
-    on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
-      fetchUnreadChats();
+    on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, (payload) => {
+      // If message was marked as read, decrement
+      const newMsg = payload.new as any;
+      if (newMsg.read) {
+        setUnreadChats(prev => Math.max(0, prev - 1));
+      }
     }).
     subscribe();
     return () => {supabase.removeChannel(channel);};
