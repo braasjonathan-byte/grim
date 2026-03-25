@@ -4296,14 +4296,14 @@ const estimateCalories = (
                         if (isDailyChallenge) {
                           const challengeName = part.replace("⚔️ Utmaning:", "").trim();
                           return (
-                            <div key={i} className="bg-warning/10 rounded-lg p-2.5 border border-warning/30 space-y-1">
+                            <div key={i} className="bg-muted/30 rounded-lg p-2.5 border border-border space-y-1">
                               <div className="flex items-center gap-2">
-                                <Swords className="w-4 h-4 text-warning flex-shrink-0" />
+                                <Swords className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Dagens utmaning</span>
-                                  <p className="text-sm font-semibold text-foreground">{challengeName}</p>
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Utmaning</span>
+                                  <p className="text-xs font-semibold text-foreground">{challengeName}</p>
                                 </div>
-                                <Check className="w-4 h-4 text-success" />
+                                <Check className="w-3.5 h-3.5 text-muted-foreground" />
                               </div>
                             </div>
                           );
