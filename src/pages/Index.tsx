@@ -410,7 +410,7 @@ const Index = () => {
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "social", icon: Users, label: "Social", badge: (friendActivityCount + unreadChats) > 0 ? (friendActivityCount + unreadChats) : undefined },
+  { key: "social", icon: Users, label: "Social", badge: (friendActivityCount + unreadChats + unreadPosts) > 0 ? (friendActivityCount + unreadChats + unreadPosts) : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
