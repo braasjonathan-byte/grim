@@ -24,6 +24,7 @@ import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
+import EventProgressBar from "@/components/EventProgressBar";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
