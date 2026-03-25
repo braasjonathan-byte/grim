@@ -25,10 +25,9 @@ serve(async (req) => {
     const user = data.user;
     if (!user) throw new Error("User not authenticated");
 
-    // Get registered email from user_emails table
     const { data: emailRow } = await supabaseClient
       .from("user_emails")
-      .select("email")
+      .select("email, stripe_customer_id")
       .eq("user_id", user.id)
       .single();
 
@@ -37,21 +36,27 @@ serve(async (req) => {
     }
 
     const registeredEmail = emailRow.email;
+    let stripeCustomerId = emailRow.stripe_customer_id;
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
-    // Check if customer already exists in Stripe with the registered email
-    const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
-    let customerId: string | undefined;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
+    // Find existing customer: prefer stored ID, fall back to email
+    if (!stripeCustomerId) {
+      const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
+      if (customers.data.length > 0) {
+        stripeCustomerId = customers.data[0].id;
+        await supabaseClient
+          .from("user_emails")
+          .update({ stripe_customer_id: stripeCustomerId })
+          .eq("user_id", user.id);
+      }
     }
 
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      customer_email: customerId ? undefined : registeredEmail,
+      customer: stripeCustomerId || undefined,
+      customer_email: stripeCustomerId ? undefined : registeredEmail,
       line_items: [
         {
           price: "price_1TBY4mHrbSIRvq07XH8LmNTT",
@@ -62,6 +67,8 @@ serve(async (req) => {
       success_url: `${req.headers.get("origin")}/?tab=settings`,
       cancel_url: `${req.headers.get("origin")}/?tab=settings`,
     });
+
+    // If a new customer was created via checkout, we'll link it in check-subscription later
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

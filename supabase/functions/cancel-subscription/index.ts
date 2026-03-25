@@ -33,20 +33,29 @@ serve(async (req) => {
 
     const { data: emailRow } = await supabaseClient
       .from("user_emails")
-      .select("email")
+      .select("email, stripe_customer_id")
       .eq("user_id", user.id)
       .single();
 
     if (!emailRow?.email) throw new Error("No registered email found");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: emailRow.email, limit: 1 });
-    if (customers.data.length === 0) {
-      throw new Error("No Stripe customer found");
+    let stripeCustomerId = emailRow.stripe_customer_id;
+
+    if (!stripeCustomerId) {
+      const customers = await stripe.customers.list({ email: emailRow.email, limit: 1 });
+      if (customers.data.length === 0) {
+        throw new Error("No Stripe customer found");
+      }
+      stripeCustomerId = customers.data[0].id;
+      await supabaseClient
+        .from("user_emails")
+        .update({ stripe_customer_id: stripeCustomerId })
+        .eq("user_id", user.id);
     }
 
     const subscriptions = await stripe.subscriptions.list({
-      customer: customers.data[0].id,
+      customer: stripeCustomerId,
       status: "active",
       limit: 1,
     });
@@ -55,7 +64,6 @@ serve(async (req) => {
       throw new Error("No active subscription found");
     }
 
-    // Cancel at end of current period so user keeps access until then
     const canceled = await stripe.subscriptions.update(subscriptions.data[0].id, {
       cancel_at_period_end: true,
     });
@@ -75,4 +83,3 @@ serve(async (req) => {
     });
   }
 });
-

@@ -7,7 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// These nicknames are always honorary regardless of subscription
 const ALWAYS_HONORARY_NICKNAMES = ["jonne", "wilma02"];
 
 serve(async (req) => {
@@ -34,7 +33,6 @@ serve(async (req) => {
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
 
-    // Get user's nickname to check if they're always-honorary
     const { data: profile } = await supabaseClient
       .from("profiles")
       .select("nickname")
@@ -44,26 +42,37 @@ serve(async (req) => {
     const nickname = profile?.nickname?.toLowerCase() ?? "";
     const isAlwaysHonorary = ALWAYS_HONORARY_NICKNAMES.includes(nickname);
 
-    // Get registered email from user_emails table
     const { data: emailRow } = await supabaseClient
       .from("user_emails")
-      .select("email")
+      .select("email, stripe_customer_id")
       .eq("user_id", user.id)
       .single();
 
     const registeredEmail = emailRow?.email;
+    let stripeCustomerId = emailRow?.stripe_customer_id;
 
     let hasActiveSub = false;
     let subscriptionEnd = null;
 
-    if (registeredEmail) {
+    if (registeredEmail || stripeCustomerId) {
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-      const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
 
-      if (customers.data.length > 0) {
-        const customerId = customers.data[0].id;
+      // Find customer: prefer stored ID, fall back to email lookup
+      if (!stripeCustomerId && registeredEmail) {
+        const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
+        if (customers.data.length > 0) {
+          stripeCustomerId = customers.data[0].id;
+          // Persist for future lookups
+          await supabaseClient
+            .from("user_emails")
+            .update({ stripe_customer_id: stripeCustomerId })
+            .eq("user_id", user.id);
+        }
+      }
+
+      if (stripeCustomerId) {
         const subscriptions = await stripe.subscriptions.list({
-          customer: customerId,
+          customer: stripeCustomerId,
           status: "active",
           limit: 1,
         });
@@ -77,7 +86,6 @@ serve(async (req) => {
       }
     }
 
-    // Sync is_honorary: true if paying subscriber OR always-honorary nickname
     const shouldBeHonorary = hasActiveSub || isAlwaysHonorary;
     await supabaseClient
       .from("profiles")
