@@ -103,6 +103,7 @@ const Index = () => {
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [unreadChats, setUnreadChats] = useState(0);
+  const [unreadPosts, setUnreadPosts] = useState(0);
 
   usePushNotifications(user?.id ?? null);
   useOfflineSync();
