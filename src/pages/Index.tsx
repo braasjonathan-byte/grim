@@ -240,6 +240,33 @@ const Index = () => {
     return () => {supabase.removeChannel(channel);};
   }, [user]);
 
+  // Track unread social posts
+  useEffect(() => {
+    if (!user) return;
+    const lastRead = localStorage.getItem("grim_last_read_posts") || "1970-01-01T00:00:00Z";
+
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("social_posts")
+        .select("*", { count: "exact", head: true })
+        .gt("created_at", lastRead)
+        .neq("user_id", user.id);
+      setUnreadPosts(count || 0);
+    };
+    fetchUnread();
+
+    const channel = supabase
+      .channel("unread-social-posts")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "social_posts" }, (payload) => {
+        const newPost = payload.new as any;
+        if (newPost.user_id !== user.id) {
+          setUnreadPosts(prev => prev + 1);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   // Subscribe to friend workout completions in real-time
   useEffect(() => {
     if (!user) return;
