@@ -584,7 +584,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-2">
         <BarChart3 className="w-5 h-5 text-primary" />
-        <h2 className="text-xl font-black tracking-tight">Sammanfattning</h2>
+        <h2 className="text-xl font-black tracking-tight">Statistik</h2>
       </div>
 
       {/* Period toggle */}
