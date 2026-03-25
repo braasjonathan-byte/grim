@@ -183,7 +183,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
       ty += nameH;
       if (ex.detail) {
         els.push(
-          `<text x="${bx + ep}" y="${ty}" fill="${t.subtext}" font-size="10" font-family="'Lora',Georgia,serif" letter-spacing="0.02em">${esc(ex.detail)}</text>`
+          `<text x="${bx + ep}" y="${ty}" fill="${t.subtext}" font-size="10" font-family="'Permanent Marker',Georgia,serif" letter-spacing="0.02em">${esc(ex.detail)}</text>`
         );
         ty += detailH;
       }
@@ -202,7 +202,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const bw = 120;
   const bh = 32;
   els.push(
-    `<text x="${W / 2}" y="${y + bh / 2}" fill="${t.text}" font-size="14" font-weight="700" font-family="'Lora',Georgia,serif" letter-spacing="0.05em" text-anchor="middle" dy="0.35em">#BeGrim</text>`
+    `<text x="${W / 2}" y="${y + bh / 2}" fill="${t.text}" font-size="14" font-weight="700" font-family="'Permanent Marker',Georgia,serif" letter-spacing="0.05em" text-anchor="middle" dy="0.35em">#BeGrim</text>`
   );
   y += bh + 12;
 
