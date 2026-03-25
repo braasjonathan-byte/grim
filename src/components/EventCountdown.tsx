@@ -31,6 +31,11 @@ function getTips(eventType: string, daysLeft: number): Tip[] {
   const baseType = eventType.startsWith("annat:") ? "annat" : eventType;
   const isRunning = ["halvmaraton", "maraton", "5k", "10k"].includes(baseType);
   const isStrength = ["styrkelyft"].includes(baseType);
+  const isCycling = baseType === "cykling";
+  const isSwimming = baseType === "simning";
+  const isTriathlon = baseType === "triathlon";
+  const isCrossfit = baseType === "crossfit";
+  const isObstacle = baseType === "hinderbana";
 
   if (daysLeft <= 0) {
     tips.push({ title: "Idag är dagen! 🔥", text: "Ge allt! Du har tränat för det här. Lita på din kropp." });
@@ -42,7 +47,8 @@ function getTips(eventType: string, daysLeft: number): Tip[] {
   }
   if (daysLeft <= 3) {
     tips.push({ title: "Sista dagarna", text: "Håll träningen kort och lätt. Fokusera på sömn och näringsintag." });
-    if (isRunning) tips.push({ title: "Carb loading", text: "Öka kolhydratintaget de sista 2-3 dagarna för att fylla glykogenlagren." });
+    if (isRunning || isTriathlon) tips.push({ title: "Carb loading", text: "Öka kolhydratintaget de sista 2-3 dagarna för att fylla glykogenlagren." });
+    if (isCycling) tips.push({ title: "Kolla cykeln", text: "Kontrollera däcktryck, kedja och bromsar. Packa reservslang." });
     return tips;
   }
   if (daysLeft <= 7) {
@@ -52,24 +58,37 @@ function getTips(eventType: string, daysLeft: number): Tip[] {
       tips.push({ title: "Testa utrustningen", text: "Kör i exakt de skor och kläder du ska tävla i. Inga nya grejer på tävlingsdagen!" });
     }
     if (isStrength) tips.push({ title: "Openers", text: "Kör lätta openers 2-3 dagar före. Teknikfokus, inga tunga lyft." });
+    if (isSwimming) tips.push({ title: "Känn av vattnet", text: "Simma korta pass med tävlingstempo för att hålla känslan." });
+    if (isTriathlon) tips.push({ title: "Brick-pass", text: "Kör ett kort brick-pass (cykel + löpning) tidigt i veckan, sedan vila." });
+    if (isCrossfit) tips.push({ title: "Mobilitet", text: "Fokusera på mobilitet och aktivering. Inga tunga WODs." });
+    if (isObstacle) tips.push({ title: "Grepp & klättring", text: "Öva lätt på grepp och hinder. Fetta inte in händerna." });
     return tips;
   }
   if (daysLeft <= 14) {
     tips.push({ title: "2 veckor kvar", text: "Börja minska träningsvolymen (tapering). Behåll intensiteten men kör färre set/km." });
     if (isRunning) tips.push({ title: "Sista långpasset", text: "Kör ditt sista riktigt långa pass nu. Inte för nära tävlingen." });
     if (isStrength) tips.push({ title: "Sista tunga veckan", text: "Den här veckan kan du fortfarande lyfta tungt. Nästa vecka börjar du trappa ner." });
+    if (isCycling) tips.push({ title: "Ruttplanering", text: "Studera banan och planera din strategi för stigningar och energiintag." });
+    if (isTriathlon) tips.push({ title: "Övergångar", text: "Öva på T1 och T2. Snabba övergångar kan spara minuter." });
     return tips;
   }
   if (daysLeft <= 30) {
     tips.push({ title: `${weeksLeft} veckor kvar`, text: "Fortsätt träna som vanligt men börja finslipa detaljer som sömnrutiner och kost." });
     if (isRunning) tips.push({ title: "Tempopass", text: "Lägg in specifika tempopass som simulerar tävlingsfart." });
+    if (isStrength) tips.push({ title: "Accessory-arbete", text: "Fokusera på svaga punkter i dina lyft med specifikt accessory-arbete." });
+    if (isCycling) tips.push({ title: "Långpass", text: "Kör ett längre pass i veckan i tävlingstempo." });
+    if (isSwimming) tips.push({ title: "Teknikfokus", text: "Jobba på effektivitet i vattnet – minimera motstånd och förbättra vändningar." });
     return tips;
   }
   if (daysLeft <= 60) {
     tips.push({ title: `${weeksLeft} veckor kvar`, text: "Bra tid att bygga specifik uthållighet. Fokusera på tävlingsspecifik träning." });
+    if (isRunning) tips.push({ title: "Bygg distans", text: "Öka gradvis din längsta distans. Max 10% mer per vecka." });
+    if (isCrossfit) tips.push({ title: "Svagheter", text: "Identifiera och jobba på dina svagaste rörelser nu när du har tid." });
     return tips;
   }
   tips.push({ title: `${weeksLeft} veckor kvar`, text: "Du har gott om tid! Bygg en stabil bas och öka gradvis." });
+  if (isRunning) tips.push({ title: "Basträning", text: "Bygg en stark aerob bas med lugna distanspass. Skynda inte!" });
+  if (isStrength) tips.push({ title: "Volymfas", text: "Perfekt tid för hypertrofi och volymträning innan du går in i styrkeblock." });
   return tips;
 }
 
@@ -305,9 +324,9 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
                 </div>
 
                 {/* Tips for this event */}
-                {tips.length > 0 && daysLeft >= 0 && daysLeft <= 14 && (
+                {tips.length > 0 && daysLeft >= 0 && (
                   <div className="space-y-1 pt-1 border-t border-border/50">
-                    {tips.slice(0, 2).map((tip, i) => (
+                    {tips.map((tip, i) => (
                       <div key={i} className="flex items-start gap-1.5">
                         <Lightbulb className="w-3 h-3 text-yellow-500 mt-0.5 flex-shrink-0" />
                         <p className="text-[11px] text-muted-foreground"><strong>{tip.title}:</strong> {tip.text}</p>
