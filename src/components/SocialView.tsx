@@ -507,6 +507,17 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
 
       {/* GROUPS TAB */}
       {subTab === "groups" && (
+        openGroupId ? (
+          <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
+            <EventGroupPage
+              groupId={openGroupId}
+              userId={userId}
+              isAdmin={isAdmin}
+              onBack={() => setOpenGroupId(null)}
+              onDeleted={() => { loadGroups(); setOpenGroupId(null); }}
+            />
+          </Suspense>
+        ) : (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Gå med i grupper för event du ska delta i. Dela bilder och peppa varandra!
@@ -518,16 +529,23 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mina grupper</h4>
               {groups.filter(g => myGroups.includes(g.id)).map(g => (
                 <div key={g.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold">{g.event_name}</p>
+                  <button onClick={() => setOpenGroupId(g.id)} className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-bold truncate">{g.event_name}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
                       {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
                     </p>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {isAdmin && (
+                      <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="ghost" size="sm" className="text-destructive hover:text-destructive px-2">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    <Button onClick={(e) => { e.stopPropagation(); leaveGroup(g.id); }} variant="ghost" size="sm" className="text-xs text-destructive">
+                      Lämna
+                    </Button>
                   </div>
-                  <Button onClick={() => leaveGroup(g.id)} variant="ghost" size="sm" className="text-xs text-destructive">
-                    Lämna
-                  </Button>
                 </div>
               ))}
             </div>
@@ -543,20 +561,28 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
             )}
             {groups.filter(g => !myGroups.includes(g.id)).map(g => (
               <div key={g.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold">{g.event_name}</p>
+                <button onClick={() => setOpenGroupId(g.id)} className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-bold truncate">{g.event_name}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
                     {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
                   </p>
+                </button>
+                <div className="flex items-center gap-1">
+                  {isAdmin && (
+                    <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="ghost" size="sm" className="text-destructive hover:text-destructive px-2">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  <Button onClick={(e) => { e.stopPropagation(); joinGroup(g.id); }} size="sm" className="text-xs">
+                    Gå med
+                  </Button>
                 </div>
-                <Button onClick={() => joinGroup(g.id)} size="sm" className="text-xs">
-                  Gå med
-                </Button>
               </div>
             ))}
           </div>
         </div>
+        )
       )}
     </div>
   );
