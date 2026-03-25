@@ -15,6 +15,7 @@ import HonoraryBadge from "@/components/HonoraryBadge";
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
 const AIChatButton = lazy(() => import("@/components/AIChatButton"));
 const FriendsView = lazy(() => import("@/components/FriendsView"));
+const SocialView = lazy(() => import("@/components/SocialView"));
 const OneRMCalculator = lazy(() => import("@/components/OneRMCalculator"));
 const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"));
 const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
