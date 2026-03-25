@@ -39,14 +39,14 @@ export default {
   				'monospace'
   			],
   			serif: [
-  				'Lora',
-  				'ui-serif',
-  				'Georgia',
-  				'Cambria',
-  				'Times New Roman',
-  				'Times',
-  				'serif'
-  			]
+				'Permanent Marker',
+				'ui-serif',
+				'Georgia',
+				'Cambria',
+				'Times New Roman',
+				'Times',
+				'serif'
+			]
   		},
   		colors: {
   			border: 'hsl(var(--border))',
