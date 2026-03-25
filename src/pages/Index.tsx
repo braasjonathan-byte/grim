@@ -514,6 +514,7 @@ const Index = () => {
             userId={user.id}
             isAdmin={userRole === "admin"}
             friendActivities={friendActivities}
+            unreadChats={unreadChats}
             onClearActivitiesForFriend={(nickname) => {
               setFriendActivities((prev) => {
                 const remaining = prev.filter((a) => a.nickname !== nickname);
