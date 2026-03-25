@@ -353,7 +353,16 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                 {/* Visibility selector */}
                 <select
                   value={postVisibility}
-                  onChange={e => { setPostVisibility(e.target.value); if (e.target.value !== "group") setPostGroupId(null); }}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val.startsWith("group:")) {
+                      setPostVisibility("group");
+                      setPostGroupId(val.replace("group:", ""));
+                    } else {
+                      setPostVisibility(val);
+                      setPostGroupId(null);
+                    }
+                  }}
                   className="flex-1 rounded-lg border border-input bg-background px-2 py-1 text-xs outline-none"
                 >
                   <option value="public">🌍 Alla</option>
