@@ -3002,6 +3002,9 @@ const estimateCalories = (
   return (
     <>
     <div className="space-y-4">
+      {/* Event countdown progress bar */}
+      <EventProgressBar userId={userId} />
+
       {/* Week navigation */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between relative">
