@@ -58,9 +58,26 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
   const [postVisibility, setPostVisibility] = useState<string>("public");
   const [postGroupId, setPostGroupId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadFeed(); loadGroups(); }, [userId]);
+  useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
+
+  const loadFriendIds = async () => {
+    const { data } = await supabase
+      .from("friendships")
+      .select("user_id, friend_id")
+      .eq("status", "accepted")
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+    if (data) {
+      const ids = new Set<string>();
+      data.forEach((f: { user_id: string; friend_id: string }) => {
+        ids.add(f.user_id === userId ? f.friend_id : f.user_id);
+      });
+      setFriendIds(ids);
+    }
+  };
 
   const loadFeed = async () => {
     const { data: postsData } = await supabase
@@ -265,6 +282,25 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
       {/* FEED TAB */}
       {subTab === "feed" && (
         <div className="space-y-4">
+          {/* Feed filter toggle */}
+          <div className="flex gap-1 bg-muted/30 rounded-lg p-0.5">
+            <button
+              onClick={() => setFeedFilter("all")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                feedFilter === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Alla
+            </button>
+            <button
+              onClick={() => setFeedFilter("friends")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                feedFilter === "friends" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Vänner
+            </button>
+          </div>
           {/* Compose button */}
           {!showCompose && (
             <Button onClick={() => setShowCompose(true)} className="w-full" variant="outline">
@@ -347,14 +383,21 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
           )}
 
           {/* Posts feed */}
-          {posts.length === 0 && (
-            <div className="text-center py-8">
-              <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Inga inlägg ännu. Var den första!</p>
-            </div>
-          )}
+          {(() => {
+            const filteredPosts = feedFilter === "friends"
+              ? posts.filter(p => friendIds.has(p.user_id) || p.user_id === userId)
+              : posts;
+            
+            if (filteredPosts.length === 0) return (
+              <div className="text-center py-8">
+                <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  {feedFilter === "friends" ? "Inga inlägg från vänner ännu." : "Inga inlägg ännu. Var den första!"}
+                </p>
+              </div>
+            );
 
-          {posts.map(post => (
+            return filteredPosts.map(post => (
             <div key={post.id} className="border border-border rounded-xl overflow-hidden bg-card">
               {/* Post header */}
               <div className="px-4 py-3 flex items-center justify-between">
@@ -395,7 +438,8 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                 </button>
               </div>
             </div>
-          ))}
+          ));
+          })()}
         </div>
       )}
 
