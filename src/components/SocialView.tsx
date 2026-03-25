@@ -9,6 +9,7 @@ import HonoraryBadge from "./HonoraryBadge";
 import { lazy, Suspense } from "react";
 
 const FriendsView = lazy(() => import("./FriendsView"));
+const ChatView = lazy(() => import("./ChatView"));
 
 interface SocialViewProps {
   userId: string;
