@@ -118,12 +118,42 @@ const SocialView = ({ userId, isAdmin, friendActivities, onClearActivitiesForFri
     }
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const resizeImage = (file: File, maxDim = 1920, maxBytes = 2 * 1024 * 1024): Promise<File> =>
+    new Promise((resolve) => {
+      if (file.size <= maxBytes) { resolve(file); return; }
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(file); return; }
+            resolve(new File([blob], file.name, { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          0.82
+        );
+      };
+      img.src = url;
+    });
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5 MB"); return; }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+    if (file.size > 20 * 1024 * 1024) { toast.error("Max 20 MB"); return; }
+    const resized = await resizeImage(file);
+    setImageFile(resized);
+    setImagePreview(URL.createObjectURL(resized));
   };
 
   const submitPost = async () => {
