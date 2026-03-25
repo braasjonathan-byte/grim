@@ -3005,41 +3005,74 @@ const estimateCalories = (
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
-      {/* Week navigation - horizontal scrollable row */}
+      {/* Week navigation - swipe to change week */}
       <div className="flex flex-col gap-2">
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1" ref={(el) => {
-          if (el) {
-            const activeBtn = el.querySelector('[data-active-week="true"]');
-            if (activeBtn) activeBtn.scrollIntoView({ inline: "center", block: "nearest" });
-          }
-        }}>
-          {weeks.map((w) => {
-            const isCurrent = w === currentWeek;
-            const isActive = w === activePlanWeek;
-            return (
-              <button
-                key={w}
-                data-active-week={isCurrent ? "true" : undefined}
-                onClick={() => setCurrentWeek(w)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  isCurrent
-                    ? "bg-primary text-primary-foreground"
-                    : isActive
-                    ? "bg-muted text-foreground border border-primary/30"
-                    : "bg-secondary text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                V{w}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary text-muted-foreground hover:bg-muted border border-dashed border-border transition-all"
-            title="Lägg till vecka"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
+        <div
+          className="flex items-center justify-center py-2 select-none touch-pan-x"
+          onTouchStart={(e) => {
+            (e.currentTarget as any)._swipeX = e.touches[0].clientX;
+          }}
+          onTouchEnd={(e) => {
+            const startX = (e.currentTarget as any)._swipeX;
+            if (startX == null) return;
+            const dx = e.changedTouches[0].clientX - startX;
+            if (Math.abs(dx) > 40) {
+              if (dx < 0 && weekIdx < weeks.length - 1) setCurrentWeek(weeks[weekIdx + 1]);
+              else if (dx > 0 && weekIdx > 0) setCurrentWeek(weeks[weekIdx - 1]);
+            }
+            (e.currentTarget as any)._swipeX = null;
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => weekIdx > 0 && setCurrentWeek(weeks[weekIdx - 1])}
+              disabled={weekIdx <= 0}
+              className="p-1 text-muted-foreground disabled:opacity-20"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-1.5 min-w-[120px] justify-center">
+              {weeks.map((w) => {
+                const isCurrent = w === currentWeek;
+                const isActive = w === activePlanWeek;
+                const distance = Math.abs(weeks.indexOf(w) - weekIdx);
+                if (distance > 2) return null;
+                return (
+                  <button
+                    key={w}
+                    onClick={() => setCurrentWeek(w)}
+                    className={`flex-shrink-0 rounded-full text-xs font-semibold transition-all ${
+                      isCurrent
+                        ? "px-4 py-1.5 bg-primary text-primary-foreground"
+                        : isActive
+                        ? "px-3 py-1 bg-muted text-foreground border border-primary/30"
+                        : distance === 1
+                        ? "px-3 py-1 text-muted-foreground hover:bg-muted"
+                        : "px-2.5 py-1 text-muted-foreground/50 text-[10px]"
+                    }`}
+                  >
+                    V{w}
+                  </button>
+                );
+              })}
+              {weekIdx >= weeks.length - 2 && (
+                <button
+                  onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
+                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground/50 border border-dashed border-border hover:bg-muted"
+                  title="Lägg till vecka"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
+              disabled={weekIdx >= weeks.length - 1}
+              className="p-1 text-muted-foreground disabled:opacity-20"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
           <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
