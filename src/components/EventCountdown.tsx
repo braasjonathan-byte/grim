@@ -205,9 +205,29 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       await supabase.from("event_countdowns").insert(payload);
     }
 
+    // Save custom events to popular_events so others can discover them
+    const eventNameTrimmed = name.trim();
+    try {
+      const { data: existingPopular } = await supabase
+        .from("popular_events")
+        .select("id")
+        .ilike("name", eventNameTrimmed)
+        .maybeSingle();
+
+      if (!existingPopular) {
+        await supabase.from("popular_events").insert({
+          name: eventNameTrimmed,
+          start_date: format(date, "yyyy-MM-dd"),
+          end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
+          event_type: resolvedType.startsWith("annat:") ? "annat" : resolvedType,
+          city: null,
+          country: "Sverige",
+        }).then(() => {});
+      }
+    } catch {}
+
     // Auto-create/join event group for this event
     try {
-      const eventNameTrimmed = name.trim();
       const { data: existingGroup } = await supabase
         .from("event_groups")
         .select("id")

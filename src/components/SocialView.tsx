@@ -10,6 +10,7 @@ import { lazy, Suspense } from "react";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
+const EventGroupPage = lazy(() => import("./EventGroupPage"));
 
 interface SocialViewProps {
   userId: string;
@@ -61,6 +62,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
   const [uploading, setUploading] = useState(false);
   const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
@@ -256,6 +258,16 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
     setMyGroups(prev => prev.filter(id => id !== groupId));
     setGroups(prev => prev.map(g => g.id === groupId ? { ...g, member_count: Math.max(0, (g.member_count || 1) - 1) } : g));
     toast.success("Du lämnade gruppen");
+  };
+
+  const deleteGroup = async (groupId: string) => {
+    if (!confirm("Ta bort hela gruppen?")) return;
+    await supabase.from("event_group_members").delete().eq("group_id", groupId);
+    await supabase.from("social_posts").delete().eq("group_id", groupId);
+    await supabase.from("event_groups").delete().eq("id", groupId);
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+    setMyGroups(prev => prev.filter(id => id !== groupId));
+    toast.success("Grupp borttagen");
   };
 
   const groupsForPosting = groups.filter(g => myGroups.includes(g.id));
@@ -495,6 +507,17 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
 
       {/* GROUPS TAB */}
       {subTab === "groups" && (
+        openGroupId ? (
+          <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
+            <EventGroupPage
+              groupId={openGroupId}
+              userId={userId}
+              isAdmin={isAdmin}
+              onBack={() => setOpenGroupId(null)}
+              onDeleted={() => { loadGroups(); setOpenGroupId(null); }}
+            />
+          </Suspense>
+        ) : (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Gå med i grupper för event du ska delta i. Dela bilder och peppa varandra!
@@ -506,16 +529,23 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mina grupper</h4>
               {groups.filter(g => myGroups.includes(g.id)).map(g => (
                 <div key={g.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold">{g.event_name}</p>
+                  <button onClick={() => setOpenGroupId(g.id)} className="flex-1 text-left min-w-0">
+                    <p className="text-sm font-bold truncate">{g.event_name}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
                       {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
                     </p>
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {isAdmin && (
+                      <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="ghost" size="sm" className="text-destructive hover:text-destructive px-2">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
+                    <Button onClick={(e) => { e.stopPropagation(); leaveGroup(g.id); }} variant="ghost" size="sm" className="text-xs text-destructive">
+                      Lämna
+                    </Button>
                   </div>
-                  <Button onClick={() => leaveGroup(g.id)} variant="ghost" size="sm" className="text-xs text-destructive">
-                    Lämna
-                  </Button>
                 </div>
               ))}
             </div>
@@ -531,20 +561,28 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
             )}
             {groups.filter(g => !myGroups.includes(g.id)).map(g => (
               <div key={g.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold">{g.event_name}</p>
+                <button onClick={() => setOpenGroupId(g.id)} className="flex-1 text-left min-w-0">
+                  <p className="text-sm font-bold truncate">{g.event_name}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
                     {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
                   </p>
+                </button>
+                <div className="flex items-center gap-1">
+                  {isAdmin && (
+                    <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="ghost" size="sm" className="text-destructive hover:text-destructive px-2">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  <Button onClick={(e) => { e.stopPropagation(); joinGroup(g.id); }} size="sm" className="text-xs">
+                    Gå med
+                  </Button>
                 </div>
-                <Button onClick={() => joinGroup(g.id)} size="sm" className="text-xs">
-                  Gå med
-                </Button>
               </div>
             ))}
           </div>
         </div>
+        )
       )}
     </div>
   );
