@@ -42,6 +42,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
   const [saved, setSaved] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  const autoScrollRef = useRef<number | null>(null);
 
   const allSections: SectionDef[] = [
     { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
