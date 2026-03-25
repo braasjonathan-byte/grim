@@ -53,17 +53,19 @@ const Index = () => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
-    if (urlTab === "workout" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
-      localStorage.setItem("grim_active_tab", urlTab);
-      return urlTab;
+    if (urlTab === "workout" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
+      const resolvedTab = urlTab === "friends" ? "social" : urlTab;
+      localStorage.setItem("grim_active_tab", resolvedTab);
+      return resolvedTab as Tab;
     }
     if (urlTab === "profile") {
-      localStorage.setItem("grim_active_tab", "settings");
-      return "settings";
+      localStorage.setItem("grim_active_tab", "calc");
+      return "calc";
     }
     const saved = localStorage.getItem("grim_active_tab");
-    if (saved === "profile") return "settings";
-    return saved === "workout" || saved === "friends" || saved === "chat" || saved === "calc" || saved === "stats" || saved === "settings" ? saved : "workout";
+    if (saved === "profile" || saved === "settings") return "calc";
+    if (saved === "friends") return "social";
+    return saved === "workout" || saved === "social" || saved === "chat" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
   });
 
   // Handle deep link params from push notifications
