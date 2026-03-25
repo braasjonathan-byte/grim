@@ -47,8 +47,8 @@ const Index = () => {
     }
     const saved = localStorage.getItem("grim_active_tab");
     if (saved === "profile" || saved === "settings") return "calc";
-    if (saved === "friends") return "social";
-    return saved === "workout" || saved === "social" || saved === "chat" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
+    if (saved === "friends" || saved === "chat") return "social";
+    return saved === "workout" || saved === "social" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
   });
 
   // Handle deep link params from push notifications
