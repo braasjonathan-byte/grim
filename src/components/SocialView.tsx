@@ -62,6 +62,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
   const [uploading, setUploading] = useState(false);
   const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
