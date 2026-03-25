@@ -134,11 +134,13 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       return;
     }
 
+    const resolvedType = type === "annat" && customType.trim() ? `annat:${customType.trim()}` : type;
+
     const payload = {
       user_id: userId,
       event_name: name.trim(),
       event_date: format(date, "yyyy-MM-dd"),
-      event_type: type,
+      event_type: resolvedType,
     };
 
     if (event) {
