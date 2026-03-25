@@ -541,37 +541,8 @@ const Index = () => {
         {tab === "chat" && <ChatView userId={user.id} />}
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
-          <div className="py-2 space-y-4">
-            {/* Profile & Settings at the top */}
-            <SupporterButton userId={user.id} />
-            <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />
-            <div className="flex items-center gap-2">
-              {userRole === "admin" ? (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
-              ) : isHonorary ? (
-                <HonoraryBadge size="md" />
-              ) : (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">👤 Medlem</span>
-              )}
-            </div>
-            <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
-            {userRole === "admin" && <AdminUserList userId={user.id} />}
-            {userRole === "admin" && <ExerciseGifManager />}
-            <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
-            <NotificationSettings userId={user.id} />
-
-            {/* Tools */}
-            <ReferralLink userId={user.id} />
-            <EventCountdown userId={user.id} />
-            <WorkoutTimer />
-            <OneRMCalculator />
-            <PulseZoneCalculator />
-            <CalorieCalculator />
-            <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
-            <HelpSection />
-            <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
-          </div>
-          }
+          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} />
+        }
       </main>
       </Suspense>
 
