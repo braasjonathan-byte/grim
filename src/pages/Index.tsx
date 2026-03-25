@@ -526,7 +526,7 @@ const Index = () => {
             }}
             initialFriendId={notificationFriendId} />
           }
-        {tab === "chat" && <ChatView userId={user.id} />}
+        
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
           <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} />
