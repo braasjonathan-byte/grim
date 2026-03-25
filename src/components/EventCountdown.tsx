@@ -96,6 +96,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
   const [name, setName] = useState("");
   const [date, setDate] = useState<Date | undefined>();
   const [type, setType] = useState("halvmaraton");
+  const [customType, setCustomType] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
