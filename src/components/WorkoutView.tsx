@@ -1185,7 +1185,7 @@ const estimateCalories = (
     setCopyToDateSaving(true);
 
     const planTarget = mapDateToPlanWeekDay(copyToDateSelected);
-    const details = copyToDateSource.details || "";
+    const details = stripChallengeLines(copyToDateSource.details || "");
 
     if (planTarget) {
       // --- Plan mode: insert into plan week/day ---
