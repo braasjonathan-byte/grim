@@ -238,6 +238,12 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
     toast.success("Inlägg borttaget");
   };
 
+  const togglePin = async (postId: string, currentlyPinned: boolean) => {
+    await supabase.from("social_posts").update({ pinned: !currentlyPinned }).eq("id", postId);
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, pinned: !currentlyPinned } : p));
+    toast.success(currentlyPinned ? "Inlägg lossat" : "Inlägg nålat");
+  };
+
   const joinGroup = async (groupId: string) => {
     await supabase.from("event_group_members").insert({ group_id: groupId, user_id: userId });
     setMyGroups(prev => [...prev, groupId]);
