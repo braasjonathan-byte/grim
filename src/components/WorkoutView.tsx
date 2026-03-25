@@ -3054,7 +3054,15 @@ const estimateCalories = (
                     V{w}
                   </button>
                 );
-              })}
+              {weekIdx >= weeks.length - 2 && (
+                <button
+                  onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
+                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground/50 border border-dashed border-border hover:bg-muted"
+                  title="Lägg till vecka"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <button
               onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
