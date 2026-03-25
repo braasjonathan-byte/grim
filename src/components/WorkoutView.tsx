@@ -3005,69 +3005,46 @@ const estimateCalories = (
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
-      {/* Week navigation */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between relative">
+      {/* Week navigation - horizontal scrollable row */}
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1" ref={(el) => {
+          if (el) {
+            const activeBtn = el.querySelector('[data-active-week="true"]');
+            if (activeBtn) activeBtn.scrollIntoView({ inline: "center", block: "nearest" });
+          }
+        }}>
+          {weeks.map((w) => {
+            const isCurrent = w === currentWeek;
+            const isActive = w === activePlanWeek;
+            return (
+              <button
+                key={w}
+                data-active-week={isCurrent ? "true" : undefined}
+                onClick={() => setCurrentWeek(w)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  isCurrent
+                    ? "bg-primary text-primary-foreground"
+                    : isActive
+                    ? "bg-muted text-foreground border border-primary/30"
+                    : "bg-secondary text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                V{w}
+              </button>
+            );
+          })}
           <button
-            onClick={() => weekIdx > 0 && setCurrentWeek(weeks[weekIdx - 1])}
-            disabled={weekIdx <= 0}
-            className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
-
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <div className="text-center">
-            <h2 className="text-2xl font-black tracking-tight">Vecka {currentWeek}</h2>
-            <p className="text-sm text-muted-foreground">
-              av {weeks.length} veckor
-              {activePlanWeek && activePlanWeek !== currentWeek && (
-                <span className="ml-1 text-warning">(aktiv: V{activePlanWeek})</span>
-              )}
-            </p>
-          </div>
-          <button
-            onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
-            disabled={weekIdx >= weeks.length - 1}
-            className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
-
-            <ChevronRight className="w-5 h-5" />
+            onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary text-muted-foreground hover:bg-muted border border-dashed border-border transition-all"
+            title="Lägg till vecka"
+          >
+            <Plus className="w-3.5 h-3.5" />
           </button>
         </div>
-        <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
           <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
-        <p className="text-xs text-muted-foreground text-center">{progress}% avklarat</p>
-      </div>
-
-      {/* Week overview */}
-      <div className="grid grid-cols-6 gap-1.5">
-        {weeks.map((w) => {
-          const isCurrent = w === currentWeek;
-          const isActive = w === activePlanWeek;
-          return (
-            <button
-              key={w}
-              onClick={() => setCurrentWeek(w)}
-              className={`flex flex-col items-center p-2 rounded-md text-xs transition-all relative ${
-              isCurrent ?
-              "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background" :
-              isActive ?
-              "bg-warning/20 text-warning border border-warning/50 hover:bg-warning/30" :
-              "bg-secondary text-muted-foreground hover:bg-muted"}`
-              }>
-              <span className="font-bold">V{w}</span>
-              {isActive && !isCurrent && (
-                <span className="text-[8px] leading-none mt-0.5">Aktiv</span>
-              )}
-            </button>);
-        })}
-        {/* Add week button */}
-        <button
-          onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
-          className="flex flex-col items-center justify-center p-2 rounded-md text-xs bg-secondary text-muted-foreground hover:bg-muted hover:text-foreground transition-all border border-dashed border-border"
-          title="Lägg till vecka"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+        <p className="text-[10px] text-muted-foreground text-center">{progress}% avklarat · Vecka {currentWeek} av {weeks.length}</p>
       </div>
 
       {/* Warning when viewing non-active week */}
