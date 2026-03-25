@@ -312,6 +312,79 @@ export type Database = {
         }
         Relationships: []
       }
+      event_group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "event_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_date: string | null
+          event_end_date: string | null
+          event_name: string
+          event_type: string
+          id: string
+          is_auto: boolean
+          popular_event_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_date?: string | null
+          event_end_date?: string | null
+          event_name: string
+          event_type?: string
+          id?: string
+          is_auto?: boolean
+          popular_event_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_date?: string | null
+          event_end_date?: string | null
+          event_name?: string
+          event_type?: string
+          id?: string
+          is_auto?: boolean
+          popular_event_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_groups_popular_event_id_fkey"
+            columns: ["popular_event_id"]
+            isOneToOne: false
+            referencedRelation: "popular_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_gif_mappings: {
         Row: {
           created_at: string
@@ -660,6 +733,71 @@ export type Database = {
           id?: string
           question_index?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      social_post_likes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_posts: {
+        Row: {
+          caption: string | null
+          created_at: string
+          group_id: string | null
+          id: string
+          image_url: string | null
+          user_id: string
+          visibility: string
+          workout_day: string | null
+          workout_week: number | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          image_url?: string | null
+          user_id: string
+          visibility?: string
+          workout_day?: string | null
+          workout_week?: number | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          image_url?: string | null
+          user_id?: string
+          visibility?: string
+          workout_day?: string | null
+          workout_week?: number | null
         }
         Relationships: []
       }

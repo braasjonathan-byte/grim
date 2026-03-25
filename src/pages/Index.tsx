@@ -15,6 +15,7 @@ import HonoraryBadge from "@/components/HonoraryBadge";
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
 const AIChatButton = lazy(() => import("@/components/AIChatButton"));
 const FriendsView = lazy(() => import("@/components/FriendsView"));
+const SocialView = lazy(() => import("@/components/SocialView"));
 const OneRMCalculator = lazy(() => import("@/components/OneRMCalculator"));
 const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"));
 const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
@@ -35,7 +36,7 @@ const HelpSection = lazy(() => import("@/components/HelpSection"));
 const EventCountdown = lazy(() => import("@/components/EventCountdown"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
-type Tab = "workout" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
+type Tab = "workout" | "social" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
@@ -52,17 +53,19 @@ const Index = () => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
-    if (urlTab === "workout" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
-      localStorage.setItem("grim_active_tab", urlTab);
-      return urlTab;
+    if (urlTab === "workout" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
+      const resolvedTab = urlTab === "friends" ? "social" : urlTab;
+      localStorage.setItem("grim_active_tab", resolvedTab);
+      return resolvedTab as Tab;
     }
     if (urlTab === "profile") {
-      localStorage.setItem("grim_active_tab", "settings");
-      return "settings";
+      localStorage.setItem("grim_active_tab", "calc");
+      return "calc";
     }
     const saved = localStorage.getItem("grim_active_tab");
-    if (saved === "profile") return "settings";
-    return saved === "workout" || saved === "friends" || saved === "chat" || saved === "calc" || saved === "stats" || saved === "settings" ? saved : "workout";
+    if (saved === "profile" || saved === "settings") return "calc";
+    if (saved === "friends") return "social";
+    return saved === "workout" || saved === "social" || saved === "chat" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
   });
 
   // Handle deep link params from push notifications
@@ -396,10 +399,9 @@ const Index = () => {
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
+  { key: "social", icon: Users, label: "Social", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
   { key: "chat", icon: MessageCircle, label: "Chatt", badge: unreadChats > 0 ? unreadChats : undefined },
-  { key: "calc", icon: Calculator, label: "Verktyg" },
-  { key: "settings", icon: Settings, label: "Inställningar", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
+  { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
 
@@ -525,8 +527,8 @@ const Index = () => {
       <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4">
         {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
-        {tab === "friends" &&
-          <FriendsView
+        {tab === "social" &&
+          <SocialView
             userId={user.id}
             isAdmin={userRole === "admin"}
             friendActivities={friendActivities}
@@ -541,28 +543,14 @@ const Index = () => {
               });
             }}
             initialFriendId={notificationFriendId} />
-
-
           }
         {tab === "chat" && <ChatView userId={user.id} />}
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
           <div className="py-2 space-y-4">
-            <ReferralLink userId={user.id} />
-            <EventCountdown userId={user.id} />
-            <WorkoutTimer />
-            <OneRMCalculator />
-            <PulseZoneCalculator />
-            <CalorieCalculator />
-            <HelpSection />
-          </div>
-          }
-        {tab === "settings" &&
-          <div className="py-2 space-y-4">
+            {/* Profile & Settings at the top */}
             <SupporterButton userId={user.id} />
-            {/* Profile section */}
             <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />
-            {/* Role badge */}
             <div className="flex items-center gap-2">
               {userRole === "admin" ? (
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
@@ -577,7 +565,16 @@ const Index = () => {
             {userRole === "admin" && <ExerciseGifManager />}
             <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
             <NotificationSettings userId={user.id} />
+
+            {/* Tools */}
+            <ReferralLink userId={user.id} />
+            <EventCountdown userId={user.id} />
+            <WorkoutTimer />
+            <OneRMCalculator />
+            <PulseZoneCalculator />
+            <CalorieCalculator />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
+            <HelpSection />
             <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
           </div>
           }
@@ -683,7 +680,7 @@ const Index = () => {
             key={key}
             onClick={async () => {
               setTab(key);
-              if (key === "settings" && unreadAnnouncements > 0) {
+              if (key === "calc" && unreadAnnouncements > 0) {
                 const { data: latestAnn } = await supabase.
                 from("announcements").
                 select("created_at").
