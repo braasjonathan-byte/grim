@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Link, Copy, Check, Crown } from "lucide-react";
+import { Link, Copy, Check, QrCode, X } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
+import { QRCodeSVG } from "qrcode.react";
 
 interface ReferralLinkProps {
   userId: string;
@@ -11,6 +12,7 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     supabase
@@ -37,7 +39,6 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       const input = document.createElement("input");
       input.value = referralUrl;
       document.body.appendChild(input);
@@ -57,7 +58,7 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
         {isHonorary && <HonoraryBadge size="sm" />}
       </div>
       <p className="text-xs text-muted-foreground">
-        Dela din personliga länk. När någon registrerar sig via den blir du hedersmedlem!
+        Dela din personliga länk eller QR-kod. När någon registrerar sig via den blir du hedersmedlem!
       </p>
       <div className="flex gap-2">
         <div className="flex-1 bg-secondary text-foreground text-xs p-2.5 rounded-lg font-mono truncate select-all">
@@ -70,7 +71,30 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           {copied ? "Kopierad!" : "Kopiera"}
         </button>
+        <button
+          onClick={() => setShowQR(!showQR)}
+          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity border border-border"
+          title="Visa QR-kod"
+        >
+          {showQR ? <X className="w-3.5 h-3.5" /> : <QrCode className="w-3.5 h-3.5" />}
+        </button>
       </div>
+
+      {showQR && (
+        <div className="flex flex-col items-center gap-3 pt-2">
+          <div className="bg-white p-4 rounded-xl">
+            <QRCodeSVG
+              value={referralUrl}
+              size={200}
+              level="M"
+              includeMargin={false}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground text-center">
+            Skanna QR-koden för att registrera dig via min inbjudan
+          </p>
+        </div>
+      )}
     </div>
   );
 };
