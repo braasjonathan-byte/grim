@@ -42,6 +42,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
   const [saved, setSaved] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+  const autoScrollRef = useRef<number | null>(null);
 
   const allSections: SectionDef[] = [
     { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
@@ -125,7 +126,40 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
     dragOverItem.current = index;
   };
 
+  const stopAutoScroll = () => {
+    if (autoScrollRef.current !== null) {
+      cancelAnimationFrame(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    const threshold = 80;
+    const speed = 8;
+    const y = e.clientY;
+    const vh = window.innerHeight;
+
+    stopAutoScroll();
+
+    const scroll = () => {
+      if (y < threshold) {
+        window.scrollBy(0, -speed);
+      } else if (y > vh - threshold) {
+        window.scrollBy(0, speed);
+      } else {
+        return;
+      }
+      autoScrollRef.current = requestAnimationFrame(scroll);
+    };
+
+    if (y < threshold || y > vh - threshold) {
+      autoScrollRef.current = requestAnimationFrame(scroll);
+    }
+  };
+
   const handleDragEnd = () => {
+    stopAutoScroll();
     if (dragItem.current === null || dragOverItem.current === null) return;
     const newOrder = [...localOrder];
     const draggedItem = newOrder.splice(dragItem.current, 1)[0];
@@ -204,7 +238,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
             onDragStart={() => handleDragStart(index)}
             onDragEnter={() => handleDragEnter(index)}
             onDragEnd={handleDragEnd}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={handleDragOver}
             className={editMode ? "relative cursor-grab active:cursor-grabbing" : ""}
           >
             {editMode && (
