@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon, Dumbbell, MessageCircle } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, Megaphone, Download, X, Smartphone, MessageCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import type { User } from "@supabase/supabase-js";
