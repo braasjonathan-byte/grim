@@ -67,6 +67,10 @@ const Index = () => {
     setTabState(newTab);
     localStorage.setItem("grim_active_tab", newTab);
     window.history.pushState({ tab: newTab }, "", "");
+    if (newTab === "social") {
+      localStorage.setItem("grim_last_read_posts", new Date().toISOString());
+      setUnreadPosts(0);
+    }
   }, []);
 
   // Listen for popstate (Android back button / browser back)
@@ -103,6 +107,7 @@ const Index = () => {
   const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [unreadChats, setUnreadChats] = useState(0);
+  const [unreadPosts, setUnreadPosts] = useState(0);
 
   usePushNotifications(user?.id ?? null);
   useOfflineSync();
@@ -237,6 +242,33 @@ const Index = () => {
     }).
     subscribe();
     return () => {supabase.removeChannel(channel);};
+  }, [user]);
+
+  // Track unread social posts
+  useEffect(() => {
+    if (!user) return;
+    const lastRead = localStorage.getItem("grim_last_read_posts") || "1970-01-01T00:00:00Z";
+
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from("social_posts")
+        .select("*", { count: "exact", head: true })
+        .gt("created_at", lastRead)
+        .neq("user_id", user.id);
+      setUnreadPosts(count || 0);
+    };
+    fetchUnread();
+
+    const channel = supabase
+      .channel("unread-social-posts")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "social_posts" }, (payload) => {
+        const newPost = payload.new as any;
+        if (newPost.user_id !== user.id) {
+          setUnreadPosts(prev => prev + 1);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   // Subscribe to friend workout completions in real-time
@@ -382,7 +414,7 @@ const Index = () => {
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "social", icon: Users, label: "Social", badge: (friendActivityCount + unreadChats) > 0 ? (friendActivityCount + unreadChats) : undefined },
+  { key: "social", icon: Users, label: "Social", badge: (friendActivityCount + unreadChats + unreadPosts) > 0 ? (friendActivityCount + unreadChats + unreadPosts) : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
