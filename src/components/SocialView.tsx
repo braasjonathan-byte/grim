@@ -30,6 +30,7 @@ interface SocialPost {
   workout_week: number | null;
   workout_day: string | null;
   created_at: string;
+  pinned: boolean;
 }
 
 interface EventGroup {
