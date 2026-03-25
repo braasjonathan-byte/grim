@@ -282,6 +282,25 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
       {/* FEED TAB */}
       {subTab === "feed" && (
         <div className="space-y-4">
+          {/* Feed filter toggle */}
+          <div className="flex gap-1 bg-muted/30 rounded-lg p-0.5">
+            <button
+              onClick={() => setFeedFilter("all")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                feedFilter === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Alla
+            </button>
+            <button
+              onClick={() => setFeedFilter("friends")}
+              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                feedFilter === "friends" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              Vänner
+            </button>
+          </div>
           {/* Compose button */}
           {!showCompose && (
             <Button onClick={() => setShowCompose(true)} className="w-full" variant="outline">
