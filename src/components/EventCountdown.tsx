@@ -202,6 +202,14 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
                 <option key={et.value} value={et.value}>{et.emoji} {et.label}</option>
               ))}
             </select>
+            {type === "annat" && (
+              <input
+                value={customType}
+                onChange={e => setCustomType(e.target.value)}
+                placeholder="Beskriv ditt event, t.ex. Tough Viking"
+                className="w-full mt-2 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              />
+            )}
           </div>
 
           {/* Event date */}
