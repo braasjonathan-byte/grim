@@ -67,6 +67,10 @@ const Index = () => {
     setTabState(newTab);
     localStorage.setItem("grim_active_tab", newTab);
     window.history.pushState({ tab: newTab }, "", "");
+    if (newTab === "social") {
+      localStorage.setItem("grim_last_read_posts", new Date().toISOString());
+      setUnreadPosts(0);
+    }
   }, []);
 
   // Listen for popstate (Android back button / browser back)
