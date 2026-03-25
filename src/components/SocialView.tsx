@@ -377,20 +377,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                 </select>
               </div>
 
-              {/* If group visibility, show group picker */}
-              {postVisibility === "group" && groupsForPosting.length > 0 && !postGroupId && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Välj grupp:</p>
-                  {groupsForPosting.map(g => (
-                    <button key={g.id} onClick={() => setPostGroupId(g.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
-                        postGroupId === g.id ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
-                      }`}>
-                      {g.event_name}
-                    </button>
-                  ))}
-                </div>
-              )}
+
 
               <Button onClick={submitPost} disabled={uploading} className="w-full">
                 <Send className="w-4 h-4 mr-1.5" />
