@@ -10,6 +10,7 @@ import { lazy, Suspense } from "react";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
+const EventGroupPage = lazy(() => import("./EventGroupPage"));
 
 interface SocialViewProps {
   userId: string;
