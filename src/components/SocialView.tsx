@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera } from "lucide-react";
+import { Users, Heart, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
@@ -30,6 +30,7 @@ interface SocialPost {
   workout_week: number | null;
   workout_day: string | null;
   created_at: string;
+  pinned: boolean;
 }
 
 interface EventGroup {
@@ -237,6 +238,12 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
     toast.success("Inlägg borttaget");
   };
 
+  const togglePin = async (postId: string, currentlyPinned: boolean) => {
+    await supabase.from("social_posts").update({ pinned: !currentlyPinned }).eq("id", postId);
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, pinned: !currentlyPinned } : p));
+    toast.success(currentlyPinned ? "Inlägg lossat" : "Inlägg nålat");
+  };
+
   const joinGroup = async (groupId: string) => {
     await supabase.from("event_group_members").insert({ group_id: groupId, user_id: userId });
     setMyGroups(prev => [...prev, groupId]);
@@ -401,8 +408,20 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
               </div>
             );
 
-            return filteredPosts.map(post => (
-            <div key={post.id} className="border border-border rounded-xl overflow-hidden bg-card">
+            const sortedPosts = [...filteredPosts].sort((a, b) => {
+              if (a.pinned && !b.pinned) return -1;
+              if (!a.pinned && b.pinned) return 1;
+              return 0;
+            });
+
+            return sortedPosts.map(post => (
+            <div key={post.id} className={`border rounded-xl overflow-hidden bg-card ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"}`}>
+              {/* Pinned indicator */}
+              {post.pinned && (
+                <div className="px-4 py-1.5 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
+                  <Pin className="w-3 h-3" /> Nålat inlägg
+                </div>
+              )}
               {/* Post header */}
               <div className="px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -417,11 +436,18 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                     </p>
                   </div>
                 </div>
-                {post.user_id === userId && (
-                  <button onClick={() => deletePost(post.id)} className="text-muted-foreground hover:text-destructive p-1">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                <div className="flex items-center gap-1">
+                  {isAdmin && (
+                    <button onClick={() => togglePin(post.id, post.pinned)} className={`p-1 transition-colors ${post.pinned ? "text-primary" : "text-muted-foreground hover:text-primary"}`} title={post.pinned ? "Lossa" : "Nåla fast"}>
+                      <Pin className="w-4 h-4" />
+                    </button>
+                  )}
+                  {(post.user_id === userId || isAdmin) && (
+                    <button onClick={() => deletePost(post.id)} className="text-muted-foreground hover:text-destructive p-1">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Image */}

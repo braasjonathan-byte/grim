@@ -772,6 +772,7 @@ export type Database = {
           group_id: string | null
           id: string
           image_url: string | null
+          pinned: boolean
           user_id: string
           visibility: string
           workout_day: string | null
@@ -783,6 +784,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           image_url?: string | null
+          pinned?: boolean
           user_id: string
           visibility?: string
           workout_day?: string | null
@@ -794,6 +796,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           image_url?: string | null
+          pinned?: boolean
           user_id?: string
           visibility?: string
           workout_day?: string | null
