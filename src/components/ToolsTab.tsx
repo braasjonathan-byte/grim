@@ -238,7 +238,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
             onDragStart={() => handleDragStart(index)}
             onDragEnter={() => handleDragEnter(index)}
             onDragEnd={handleDragEnd}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={handleDragOver}
             className={editMode ? "relative cursor-grab active:cursor-grabbing" : ""}
           >
             {editMode && (
