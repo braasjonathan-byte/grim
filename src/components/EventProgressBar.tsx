@@ -7,16 +7,18 @@ interface EventProgressBarProps {
 }
 
 const EventProgressBar = ({ userId }: EventProgressBarProps) => {
-  const [event, setEvent] = useState<{ event_name: string; event_date: string; event_type: string; created_at: string } | null>(null);
+  const [event, setEvent] = useState<{ event_name: string; event_date: string; created_at: string } | null>(null);
 
   useEffect(() => {
+    // Get the closest upcoming event
     supabase
       .from("event_countdowns")
-      .select("event_name, event_date, event_type, created_at")
+      .select("event_name, event_date, created_at")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false })
+      .gte("event_date", new Date().toISOString().split("T")[0])
+      .order("event_date", { ascending: true })
       .limit(1)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) setEvent(data);
       });
@@ -49,7 +51,7 @@ const EventProgressBar = ({ userId }: EventProgressBarProps) => {
           className="h-full rounded-full transition-all duration-500"
           style={{
             width: `${progress}%`,
-            background: "linear-gradient(90deg, #71717a, #a1a1aa, #d4d4d8)",
+            background: "linear-gradient(90deg, hsl(var(--muted-foreground) / 0.4), hsl(var(--muted-foreground) / 0.6), hsl(var(--muted-foreground) / 0.2))",
           }}
         />
       </div>
