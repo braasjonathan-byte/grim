@@ -3054,6 +3054,7 @@ const estimateCalories = (
                     V{w}
                   </button>
                 );
+              })}
               {weekIdx >= weeks.length - 2 && (
                 <button
                   onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
