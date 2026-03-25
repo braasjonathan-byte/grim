@@ -185,6 +185,41 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
     } else {
       await supabase.from("event_countdowns").insert(payload);
     }
+
+    // Auto-create/join event group for this event
+    try {
+      const eventNameNorm = name.trim().toLowerCase();
+      const { data: existingGroup } = await supabase
+        .from("event_groups")
+        .select("id")
+        .ilike("event_name", eventNameNorm)
+        .maybeSingle();
+
+      let groupId: string;
+      if (existingGroup) {
+        groupId = existingGroup.id;
+      } else {
+        const { data: newGroup } = await supabase
+          .from("event_groups")
+          .insert({
+            event_name: name.trim(),
+            event_date: format(date, "yyyy-MM-dd"),
+            event_end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
+            event_type: resolvedType,
+            created_by: userId,
+            is_auto: true,
+          })
+          .select("id")
+          .single();
+        groupId = newGroup!.id;
+      }
+
+      // Join the group
+      await supabase
+        .from("event_group_members")
+        .upsert({ group_id: groupId, user_id: userId }, { onConflict: "group_id,user_id" });
+    } catch {}
+
     toast.success("Event sparat!");
     resetForm();
     loadEvents();
