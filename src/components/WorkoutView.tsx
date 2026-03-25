@@ -3163,6 +3163,8 @@ const estimateCalories = (
           const Icon = getSessionIcon(plan.session_name);
           const colorClass = getSessionColor(plan.session_name);
           const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
+          const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+          const isCardToday = plan.day === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
 
           return (
             <div
