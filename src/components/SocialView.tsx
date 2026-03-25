@@ -438,7 +438,8 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                 </button>
               </div>
             </div>
-          ))}
+          ));
+          })()}
         </div>
       )}
 
