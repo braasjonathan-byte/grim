@@ -2120,6 +2120,9 @@ const estimateCalories = (
           }
         </div>
 
+        {/* Event countdown progress bar */}
+        <EventProgressBar userId={userId} />
+
         {/* Week navigation */}
         {singleWeeks.length > 0 && (
           <div className="flex flex-col gap-3">
