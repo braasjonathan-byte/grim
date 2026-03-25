@@ -24,6 +24,7 @@ import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
+import EventProgressBar from "@/components/EventProgressBar";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -2119,6 +2120,9 @@ const estimateCalories = (
           }
         </div>
 
+        {/* Event countdown progress bar */}
+        <EventProgressBar userId={userId} />
+
         {/* Week navigation */}
         {singleWeeks.length > 0 && (
           <div className="flex flex-col gap-3">
@@ -2998,6 +3002,9 @@ const estimateCalories = (
   return (
     <>
     <div className="space-y-4">
+      {/* Event countdown progress bar */}
+      <EventProgressBar userId={userId} />
+
       {/* Week navigation */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between relative">

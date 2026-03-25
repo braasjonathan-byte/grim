@@ -32,6 +32,7 @@ const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
 const HelpSection = lazy(() => import("@/components/HelpSection"));
+const EventCountdown = lazy(() => import("@/components/EventCountdown"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
 type Tab = "workout" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
@@ -548,6 +549,7 @@ const Index = () => {
         {tab === "calc" &&
           <div className="py-2 space-y-4">
             <ReferralLink userId={user.id} />
+            <EventCountdown userId={user.id} />
             <WorkoutTimer />
             <OneRMCalculator />
             <PulseZoneCalculator />
