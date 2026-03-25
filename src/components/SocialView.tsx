@@ -236,6 +236,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
         {([
           { key: "feed" as SubTab, label: "Flöde", icon: Globe },
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
+          { key: "chat" as SubTab, label: "Chatt", icon: MessageCircle, badge: unreadChats },
           { key: "groups" as SubTab, label: "Grupper", icon: UsersRound },
         ]).map(st => (
           <button
@@ -250,6 +251,11 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
             {st.key === "friends" && friendActivities.length > 0 && (
               <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                 {friendActivities.length > 9 ? "9+" : friendActivities.length}
+              </span>
+            )}
+            {st.key === "chat" && (st.badge || 0) > 0 && (
+              <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                {(st.badge || 0) > 9 ? "9+" : st.badge}
               </span>
             )}
           </button>
