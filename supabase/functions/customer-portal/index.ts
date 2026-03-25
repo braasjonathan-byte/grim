@@ -31,25 +31,33 @@ serve(async (req) => {
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
 
-    // Get registered email from user_emails table
     const { data: emailRow } = await supabaseClient
       .from("user_emails")
-      .select("email")
+      .select("email, stripe_customer_id")
       .eq("user_id", user.id)
       .single();
 
     if (!emailRow?.email) throw new Error("No registered email found");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: emailRow.email, limit: 1 });
-    if (customers.data.length === 0) {
-      throw new Error("No Stripe customer found for this user");
+    let stripeCustomerId = emailRow.stripe_customer_id;
+
+    // Fall back to email lookup if no stored ID
+    if (!stripeCustomerId) {
+      const customers = await stripe.customers.list({ email: emailRow.email, limit: 1 });
+      if (customers.data.length === 0) {
+        throw new Error("No Stripe customer found for this user");
+      }
+      stripeCustomerId = customers.data[0].id;
+      await supabaseClient
+        .from("user_emails")
+        .update({ stripe_customer_id: stripeCustomerId })
+        .eq("user_id", user.id);
     }
 
-    const customerId = customers.data[0].id;
     const origin = req.headers.get("origin") || "https://grim.lovable.app";
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
+      customer: stripeCustomerId,
       return_url: `${origin}/?tab=settings`,
     });
 
