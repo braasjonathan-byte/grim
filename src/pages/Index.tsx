@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Calculator, Heart, Bell, KeyRound, BarChart3, Megaphone, Download, X, Smartphone, Settings, User as UserIcon, Dumbbell, MessageCircle } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, Megaphone, Download, X, Smartphone, MessageCircle, Dumbbell, Calculator } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import type { User } from "@supabase/supabase-js";
@@ -13,27 +13,10 @@ import HonoraryBadge from "@/components/HonoraryBadge";
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
-const AIChatButton = lazy(() => import("@/components/AIChatButton"));
-const FriendsView = lazy(() => import("@/components/FriendsView"));
 const SocialView = lazy(() => import("@/components/SocialView"));
-const OneRMCalculator = lazy(() => import("@/components/OneRMCalculator"));
-const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"));
-const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
-const WorkoutTimer = lazy(() => import("@/components/WorkoutTimer"));
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
-const WhatsNewDialog = lazy(() => import("@/components/WhatsNewDialog"));
-const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
-const ReferralLink = lazy(() => import("@/components/ReferralLink"));
-const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
-const AnnouncementInbox = lazy(() => import("@/components/AnnouncementInbox"));
-const SupporterButton = lazy(() => import("@/components/SupporterButton"));
-const AdminUserList = lazy(() => import("@/components/AdminUserList"));
-const ProfileTab = lazy(() => import("@/components/ProfileTab"));
-const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
-const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
-const HelpSection = lazy(() => import("@/components/HelpSection"));
-const EventCountdown = lazy(() => import("@/components/EventCountdown"));
+const ToolsTab = lazy(() => import("@/components/ToolsTab"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
 type Tab = "workout" | "social" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
@@ -547,37 +530,8 @@ const Index = () => {
         {tab === "chat" && <ChatView userId={user.id} />}
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
-          <div className="py-2 space-y-4">
-            {/* Profile & Settings at the top */}
-            <SupporterButton userId={user.id} />
-            <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />
-            <div className="flex items-center gap-2">
-              {userRole === "admin" ? (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
-              ) : isHonorary ? (
-                <HonoraryBadge size="md" />
-              ) : (
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">👤 Medlem</span>
-              )}
-            </div>
-            <AnnouncementInbox userId={user.id} isAdmin={userRole === "admin"} />
-            {userRole === "admin" && <AdminUserList userId={user.id} />}
-            {userRole === "admin" && <ExerciseGifManager />}
-            <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
-            <NotificationSettings userId={user.id} />
-
-            {/* Tools */}
-            <ReferralLink userId={user.id} />
-            <EventCountdown userId={user.id} />
-            <WorkoutTimer />
-            <OneRMCalculator />
-            <PulseZoneCalculator />
-            <CalorieCalculator />
-            <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
-            <HelpSection />
-            <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
-          </div>
-          }
+          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} />
+        }
       </main>
       </Suspense>
 

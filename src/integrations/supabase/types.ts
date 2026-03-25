@@ -860,6 +860,27 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_layout: {
+        Row: {
+          id: string
+          section_order: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          section_order?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          section_order?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       user_emails: {
         Row: {
           created_at: string
