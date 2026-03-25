@@ -348,8 +348,8 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                 value={caption}
                 onChange={e => setCaption(e.target.value)}
                 placeholder="Skriv något om ditt pass..."
-                rows={3}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none outline-none focus:ring-2 focus:ring-primary/30"
+                rows={6}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-y outline-none focus:ring-2 focus:ring-primary/30 min-h-[120px]"
               />
 
               {/* Image upload */}
