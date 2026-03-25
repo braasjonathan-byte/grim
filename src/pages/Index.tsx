@@ -35,7 +35,7 @@ const HelpSection = lazy(() => import("@/components/HelpSection"));
 const EventCountdown = lazy(() => import("@/components/EventCountdown"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
-type Tab = "workout" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
+type Tab = "workout" | "social" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
