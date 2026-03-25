@@ -285,6 +285,7 @@ export type Database = {
       event_countdowns: {
         Row: {
           created_at: string
+          end_date: string | null
           event_date: string
           event_name: string
           event_type: string
@@ -293,6 +294,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          end_date?: string | null
           event_date: string
           event_name: string
           event_type?: string
@@ -301,6 +303,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          end_date?: string | null
           event_date?: string
           event_name?: string
           event_type?: string
@@ -420,6 +423,36 @@ export type Database = {
           last_attempt_at?: string
           locked_until?: string | null
           nickname_attempted?: string
+        }
+        Relationships: []
+      }
+      popular_events: {
+        Row: {
+          city: string | null
+          country: string
+          end_date: string | null
+          event_type: string
+          id: string
+          name: string
+          start_date: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          name: string
+          start_date: string
+        }
+        Update: {
+          city?: string | null
+          country?: string
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          name?: string
+          start_date?: string
         }
         Relationships: []
       }
