@@ -58,9 +58,26 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
   const [postVisibility, setPostVisibility] = useState<string>("public");
   const [postGroupId, setPostGroupId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadFeed(); loadGroups(); }, [userId]);
+  useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
+
+  const loadFriendIds = async () => {
+    const { data } = await supabase
+      .from("friendships")
+      .select("user_id, friend_id")
+      .eq("status", "accepted")
+      .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+    if (data) {
+      const ids = new Set<string>();
+      data.forEach((f: { user_id: string; friend_id: string }) => {
+        ids.add(f.user_id === userId ? f.friend_id : f.user_id);
+      });
+      setFriendIds(ids);
+    }
+  };
 
   const loadFeed = async () => {
     const { data: postsData } = await supabase
