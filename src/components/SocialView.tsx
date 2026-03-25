@@ -408,8 +408,20 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
               </div>
             );
 
-            return filteredPosts.map(post => (
-            <div key={post.id} className="border border-border rounded-xl overflow-hidden bg-card">
+            const sortedPosts = [...filteredPosts].sort((a, b) => {
+              if (a.pinned && !b.pinned) return -1;
+              if (!a.pinned && b.pinned) return 1;
+              return 0;
+            });
+
+            return sortedPosts.map(post => (
+            <div key={post.id} className={`border rounded-xl overflow-hidden bg-card ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"}`}>
+              {/* Pinned indicator */}
+              {post.pinned && (
+                <div className="px-4 py-1.5 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
+                  <Pin className="w-3 h-3" /> Nålat inlägg
+                </div>
+              )}
               {/* Post header */}
               <div className="px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -424,11 +436,18 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                     </p>
                   </div>
                 </div>
-                {post.user_id === userId && (
-                  <button onClick={() => deletePost(post.id)} className="text-muted-foreground hover:text-destructive p-1">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                <div className="flex items-center gap-1">
+                  {isAdmin && (
+                    <button onClick={() => togglePin(post.id, post.pinned)} className={`p-1 transition-colors ${post.pinned ? "text-primary" : "text-muted-foreground hover:text-primary"}`} title={post.pinned ? "Lossa" : "Nåla fast"}>
+                      <Pin className="w-4 h-4" />
+                    </button>
+                  )}
+                  {(post.user_id === userId || isAdmin) && (
+                    <button onClick={() => deletePost(post.id)} className="text-muted-foreground hover:text-destructive p-1">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Image */}
