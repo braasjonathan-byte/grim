@@ -117,7 +117,13 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       setEvent(data as EventData);
       setName(data.event_name);
       setDate(new Date(data.event_date));
-      setType(data.event_type);
+      if (data.event_type.startsWith("annat:")) {
+        setType("annat");
+        setCustomType(data.event_type.slice(6));
+      } else {
+        setType(data.event_type);
+        setCustomType("");
+      }
     }
     setLoading(false);
   };
