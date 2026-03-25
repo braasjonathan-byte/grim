@@ -189,19 +189,21 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
         imageUrl = urlData.publicUrl;
       }
 
+      const resolvedVisibility = postVisibility === "group" ? "group" : postVisibility === "friends" ? "friends" : "public";
+
       await supabase.from("social_posts").insert({
         user_id: userId,
         image_url: imageUrl,
         caption: caption.trim() || null,
-        visibility: postVisibility === "group" ? "group" : "public",
-        group_id: postVisibility === "group" ? postGroupId : null,
+        visibility: resolvedVisibility,
+        group_id: resolvedVisibility === "group" ? postGroupId : null,
       });
 
       toast.success("Inlägg publicerat!");
 
       // Send push notification to friends (fire-and-forget)
       supabase.functions.invoke("notify-social-post", {
-        body: { caption: caption.trim() || null },
+        body: { caption: caption.trim() || null, visibility: resolvedVisibility },
       }).catch(() => {});
       setShowCompose(false);
       setCaption("");
@@ -352,33 +354,30 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
 
                 {/* Visibility selector */}
                 <select
-                  value={postVisibility}
-                  onChange={e => { setPostVisibility(e.target.value); if (e.target.value !== "group") setPostGroupId(null); }}
+                  value={postVisibility === "group" && postGroupId ? `group:${postGroupId}` : postVisibility}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val.startsWith("group:")) {
+                      setPostVisibility("group");
+                      setPostGroupId(val.replace("group:", ""));
+                    } else {
+                      setPostVisibility(val);
+                      setPostGroupId(null);
+                    }
+                  }}
                   className="flex-1 rounded-lg border border-input bg-background px-2 py-1 text-xs outline-none"
                 >
-                  <option value="public">🌍 Öppet (alla vänner)</option>
+                  <option value="public">🌍 Alla</option>
+                  <option value="friends">👫 Bara vänner</option>
                   {groupsForPosting.map(g => (
-                    <option key={g.id} value="group" onClick={() => setPostGroupId(g.id)}>
+                    <option key={g.id} value={`group:${g.id}`}>
                       👥 {g.event_name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* If group visibility, show group picker */}
-              {postVisibility === "group" && groupsForPosting.length > 0 && !postGroupId && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Välj grupp:</p>
-                  {groupsForPosting.map(g => (
-                    <button key={g.id} onClick={() => setPostGroupId(g.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
-                        postGroupId === g.id ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
-                      }`}>
-                      {g.event_name}
-                    </button>
-                  ))}
-                </div>
-              )}
+
 
               <Button onClick={submitPost} disabled={uploading} className="w-full">
                 <Send className="w-4 h-4 mr-1.5" />

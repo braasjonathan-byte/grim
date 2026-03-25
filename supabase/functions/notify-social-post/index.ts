@@ -134,7 +134,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { caption } = await req.json();
+    const { caption, visibility } = await req.json();
 
     // Get poster's nickname
     const { data: profile } = await supabaseAdmin.from("profiles").select("nickname").eq("user_id", user.id).single();
@@ -144,17 +144,31 @@ serve(async (req) => {
     const { data: roleData } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
     const isAdmin = roleData?.role === "admin";
 
-    // Get target user IDs: friends always, ALL users if admin
+    // Determine target audience based on visibility
     let targetUserIds: string[] = [];
 
-    if (isAdmin) {
-      // Admin posts notify ALL users (except the poster)
-      const { data: allProfiles } = await supabaseAdmin.from("profiles").select("user_id");
-      if (allProfiles) {
-        targetUserIds = allProfiles.map(p => p.user_id).filter(id => id !== user.id);
+    if (visibility === "friends") {
+      // Friends-only post: notify friends
+      const { data: friendships } = await supabaseAdmin.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+      if (friendships) {
+        targetUserIds = friendships.map(f => f.user_id === user.id ? f.friend_id : f.user_id);
+      }
+    } else if (visibility === "public") {
+      if (isAdmin) {
+        // Admin public posts notify ALL users
+        const { data: allProfiles } = await supabaseAdmin.from("profiles").select("user_id");
+        if (allProfiles) {
+          targetUserIds = allProfiles.map(p => p.user_id).filter(id => id !== user.id);
+        }
+      } else {
+        // Regular user public posts also notify all users
+        const { data: allProfiles } = await supabaseAdmin.from("profiles").select("user_id");
+        if (allProfiles) {
+          targetUserIds = allProfiles.map(p => p.user_id).filter(id => id !== user.id);
+        }
       }
     } else {
-      // Regular users notify friends only
+      // Group posts: notify friends for now
       const { data: friendships } = await supabaseAdmin.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
       if (friendships) {
         targetUserIds = friendships.map(f => f.user_id === user.id ? f.friend_id : f.user_id);
