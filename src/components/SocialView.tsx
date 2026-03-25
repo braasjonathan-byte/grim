@@ -412,6 +412,13 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
         </Suspense>
       )}
 
+      {/* CHAT TAB */}
+      {subTab === "chat" && (
+        <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
+          <ChatView userId={userId} />
+        </Suspense>
+      )}
+
       {/* GROUPS TAB */}
       {subTab === "groups" && (
         <div className="space-y-3">
