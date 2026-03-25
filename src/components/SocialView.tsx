@@ -203,7 +203,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
 
       // Send push notification to friends (fire-and-forget)
       supabase.functions.invoke("notify-social-post", {
-        body: { caption: caption.trim() || null },
+        body: { caption: caption.trim() || null, visibility: resolvedVisibility },
       }).catch(() => {});
       setShowCompose(false);
       setCaption("");
