@@ -383,14 +383,21 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
           )}
 
           {/* Posts feed */}
-          {posts.length === 0 && (
-            <div className="text-center py-8">
-              <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Inga inlägg ännu. Var den första!</p>
-            </div>
-          )}
+          {(() => {
+            const filteredPosts = feedFilter === "friends"
+              ? posts.filter(p => friendIds.has(p.user_id) || p.user_id === userId)
+              : posts;
+            
+            if (filteredPosts.length === 0) return (
+              <div className="text-center py-8">
+                <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  {feedFilter === "friends" ? "Inga inlägg från vänner ännu." : "Inga inlägg ännu. Var den första!"}
+                </p>
+              </div>
+            );
 
-          {posts.map(post => (
+            return filteredPosts.map(post => (
             <div key={post.id} className="border border-border rounded-xl overflow-hidden bg-card">
               {/* Post header */}
               <div className="px-4 py-3 flex items-center justify-between">
