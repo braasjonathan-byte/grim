@@ -1,0 +1,1 @@
+UPDATE popular_events SET start_date = '2026-05-23' WHERE id IN ('7d61437c-c395-48b7-a277-851d17d478ff', '2bfe648d-a897-44bb-870a-ebdf222baab9');
