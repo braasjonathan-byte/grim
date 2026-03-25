@@ -19,7 +19,7 @@ const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
 const ToolsTab = lazy(() => import("@/components/ToolsTab"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
-type Tab = "workout" | "social" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
+type Tab = "workout" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
@@ -37,7 +37,7 @@ const Index = () => {
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
     if (urlTab === "workout" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
-      const resolvedTab = urlTab === "friends" ? "social" : urlTab;
+      const resolvedTab = (urlTab === "friends" || urlTab === "chat") ? "social" : urlTab;
       localStorage.setItem("grim_active_tab", resolvedTab);
       return resolvedTab as Tab;
     }
@@ -47,8 +47,8 @@ const Index = () => {
     }
     const saved = localStorage.getItem("grim_active_tab");
     if (saved === "profile" || saved === "settings") return "calc";
-    if (saved === "friends") return "social";
-    return saved === "workout" || saved === "social" || saved === "chat" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
+    if (saved === "friends" || saved === "chat") return "social";
+    return saved === "workout" || saved === "social" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
   });
 
   // Handle deep link params from push notifications
@@ -382,8 +382,7 @@ const Index = () => {
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "social", icon: Users, label: "Social", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
-  { key: "chat", icon: MessageCircle, label: "Chatt", badge: unreadChats > 0 ? unreadChats : undefined },
+  { key: "social", icon: Users, label: "Social", badge: (friendActivityCount + unreadChats) > 0 ? (friendActivityCount + unreadChats) : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
@@ -515,6 +514,7 @@ const Index = () => {
             userId={user.id}
             isAdmin={userRole === "admin"}
             friendActivities={friendActivities}
+            unreadChats={unreadChats}
             onClearActivitiesForFriend={(nickname) => {
               setFriendActivities((prev) => {
                 const remaining = prev.filter((a) => a.nickname !== nickname);
@@ -527,7 +527,7 @@ const Index = () => {
             }}
             initialFriendId={notificationFriendId} />
           }
-        {tab === "chat" && <ChatView userId={user.id} />}
+        
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
           <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} />
