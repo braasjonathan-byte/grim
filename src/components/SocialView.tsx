@@ -15,6 +15,7 @@ interface SocialViewProps {
   userId: string;
   isAdmin: boolean;
   friendActivities: { nickname: string; day: string; week: number; timestamp: string }[];
+  unreadChats?: number;
   onClearActivitiesForFriend: (nickname: string) => void;
   initialFriendId?: string | null;
 }
