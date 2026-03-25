@@ -260,6 +260,16 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
     toast.success("Du lämnade gruppen");
   };
 
+  const deleteGroup = async (groupId: string) => {
+    if (!confirm("Ta bort hela gruppen?")) return;
+    await supabase.from("event_group_members").delete().eq("group_id", groupId);
+    await supabase.from("social_posts").delete().eq("group_id", groupId);
+    await supabase.from("event_groups").delete().eq("id", groupId);
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+    setMyGroups(prev => prev.filter(id => id !== groupId));
+    toast.success("Grupp borttagen");
+  };
+
   const groupsForPosting = groups.filter(g => myGroups.includes(g.id));
 
   return (
