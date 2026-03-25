@@ -198,6 +198,11 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
       });
 
       toast.success("Inlägg publicerat!");
+
+      // Send push notification to friends (fire-and-forget)
+      supabase.functions.invoke("notify-social-post", {
+        body: { caption: caption.trim() || null },
+      }).catch(() => {});
       setShowCompose(false);
       setCaption("");
       setImageFile(null);
