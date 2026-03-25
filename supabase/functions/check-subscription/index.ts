@@ -35,12 +35,13 @@ serve(async (req) => {
 
     const { data: profile } = await supabaseClient
       .from("profiles")
-      .select("nickname")
+      .select("nickname, is_honorary, referred_by")
       .eq("user_id", user.id)
       .single();
 
     const nickname = profile?.nickname?.toLowerCase() ?? "";
     const isAlwaysHonorary = ALWAYS_HONORARY_NICKNAMES.includes(nickname);
+    const wasHonoraryViaReferral = !!profile?.referred_by && profile?.is_honorary === true;
 
     const { data: emailRow } = await supabaseClient
       .from("user_emails")
@@ -86,7 +87,7 @@ serve(async (req) => {
       }
     }
 
-    const shouldBeHonorary = hasActiveSub || isAlwaysHonorary;
+    const shouldBeHonorary = hasActiveSub || isAlwaysHonorary || wasHonoraryViaReferral;
     await supabaseClient
       .from("profiles")
       .update({ is_honorary: shouldBeHonorary })
