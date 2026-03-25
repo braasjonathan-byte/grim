@@ -189,12 +189,14 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
         imageUrl = urlData.publicUrl;
       }
 
+      const resolvedVisibility = postVisibility === "group" ? "group" : postVisibility === "friends" ? "friends" : "public";
+
       await supabase.from("social_posts").insert({
         user_id: userId,
         image_url: imageUrl,
         caption: caption.trim() || null,
-        visibility: postVisibility === "group" ? "group" : "public",
-        group_id: postVisibility === "group" ? postGroupId : null,
+        visibility: resolvedVisibility,
+        group_id: resolvedVisibility === "group" ? postGroupId : null,
       });
 
       toast.success("Inlägg publicerat!");
