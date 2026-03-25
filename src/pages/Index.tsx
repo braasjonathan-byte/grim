@@ -18,7 +18,6 @@ const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
 const ToolsTab = lazy(() => import("@/components/ToolsTab"));
 const ChatView = lazy(() => import("@/components/ChatView"));
-const ChatView = lazy(() => import("@/components/ChatView"));
 
 type Tab = "workout" | "social" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
 
