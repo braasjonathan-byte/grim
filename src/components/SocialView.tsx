@@ -356,9 +356,10 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
                   onChange={e => { setPostVisibility(e.target.value); if (e.target.value !== "group") setPostGroupId(null); }}
                   className="flex-1 rounded-lg border border-input bg-background px-2 py-1 text-xs outline-none"
                 >
-                  <option value="public">🌍 Öppet (alla vänner)</option>
+                  <option value="public">🌍 Alla</option>
+                  <option value="friends">👫 Bara vänner</option>
                   {groupsForPosting.map(g => (
-                    <option key={g.id} value="group" onClick={() => setPostGroupId(g.id)}>
+                    <option key={g.id} value={`group:${g.id}`}>
                       👥 {g.event_name}
                     </option>
                   ))}
