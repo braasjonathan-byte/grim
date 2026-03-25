@@ -207,11 +207,11 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
 
     // Auto-create/join event group for this event
     try {
-      const eventNameNorm = name.trim().toLowerCase();
+      const eventNameTrimmed = name.trim();
       const { data: existingGroup } = await supabase
         .from("event_groups")
         .select("id")
-        .ilike("event_name", eventNameNorm)
+        .ilike("event_name", eventNameTrimmed)
         .maybeSingle();
 
       let groupId: string;
@@ -221,7 +221,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
         const { data: newGroup } = await supabase
           .from("event_groups")
           .insert({
-            event_name: name.trim(),
+            event_name: eventNameTrimmed,
             event_date: format(date, "yyyy-MM-dd"),
             event_end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
             event_type: resolvedType,
