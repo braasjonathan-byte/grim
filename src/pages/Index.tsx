@@ -13,21 +13,11 @@ import HonoraryBadge from "@/components/HonoraryBadge";
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
-const AIChatButton = lazy(() => import("@/components/AIChatButton"));
-const FriendsView = lazy(() => import("@/components/FriendsView"));
 const SocialView = lazy(() => import("@/components/SocialView"));
-const OneRMCalculator = lazy(() => import("@/components/OneRMCalculator"));
-const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"));
-const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
-const WorkoutTimer = lazy(() => import("@/components/WorkoutTimer"));
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
-const WhatsNewDialog = lazy(() => import("@/components/WhatsNewDialog"));
-const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
-const ReferralLink = lazy(() => import("@/components/ReferralLink"));
-const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
-const AnnouncementInbox = lazy(() => import("@/components/AnnouncementInbox"));
 const ToolsTab = lazy(() => import("@/components/ToolsTab"));
+const ChatView = lazy(() => import("@/components/ChatView"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
 type Tab = "workout" | "social" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
