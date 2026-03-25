@@ -27,13 +27,7 @@ const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 const ReferralLink = lazy(() => import("@/components/ReferralLink"));
 const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
 const AnnouncementInbox = lazy(() => import("@/components/AnnouncementInbox"));
-const SupporterButton = lazy(() => import("@/components/SupporterButton"));
-const AdminUserList = lazy(() => import("@/components/AdminUserList"));
-const ProfileTab = lazy(() => import("@/components/ProfileTab"));
-const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
-const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
-const HelpSection = lazy(() => import("@/components/HelpSection"));
-const EventCountdown = lazy(() => import("@/components/EventCountdown"));
+const ToolsTab = lazy(() => import("@/components/ToolsTab"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 
 type Tab = "workout" | "social" | "friends" | "chat" | "calc" | "stats" | "profile" | "settings";
