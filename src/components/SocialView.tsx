@@ -354,7 +354,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
 
                 {/* Visibility selector */}
                 <select
-                  value={postVisibility}
+                  value={postVisibility === "group" && postGroupId ? `group:${postGroupId}` : postVisibility}
                   onChange={e => {
                     const val = e.target.value;
                     if (val.startsWith("group:")) {
