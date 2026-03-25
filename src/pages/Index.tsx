@@ -548,6 +548,7 @@ const Index = () => {
         {tab === "calc" &&
           <div className="py-2 space-y-4">
             <ReferralLink userId={user.id} />
+            <EventCountdown userId={user.id} />
             <WorkoutTimer />
             <OneRMCalculator />
             <PulseZoneCalculator />
