@@ -457,7 +457,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
 
               {/* Caption */}
               {post.caption && (
-                <p className="px-4 py-2 text-sm">{post.caption}</p>
+                <p className="px-4 py-2 text-sm whitespace-pre-line">{post.caption}</p>
               )}
 
               {/* Like button */}
