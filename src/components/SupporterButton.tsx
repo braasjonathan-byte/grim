@@ -154,75 +154,26 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
         <HonoraryBadge size="md" />
         <p className="text-xs text-muted-foreground">
           Tack för att du supportar Grim! 💪
-          {subscribed && subscriptionEnd && (
-            <> Din prenumeration förnyas{" "}
-            {new Date(subscriptionEnd).toLocaleDateString("sv-SE", {
-              day: "numeric",
-              month: "long",
-            })}.</>
-          )}
         </p>
         {registeredEmail && (
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <Mail className="w-3 h-3" /> {registeredEmail}
           </p>
         )}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleManage}
-            disabled={portalLoading}
-            className="flex-1 text-xs"
-          >
-            {portalLoading ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <ExternalLink className="w-3 h-3" />
-            )}
-            Hantera medlemskap
-          </Button>
-          {subscribed && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                  disabled={cancelLoading}
-                >
-                  {cancelLoading ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <XCircle className="w-3 h-3" />
-                  )}
-                  Avsluta
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Avsluta prenumeration?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Din prenumeration avslutas vid nästa förnyelsedatum
-                    {subscriptionEnd && (
-                      <> ({new Date(subscriptionEnd).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })})</>
-                    )}
-                    . Du behåller supporter-status till dess.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Behåll</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleCancel}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Avsluta prenumeration
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleManage}
+          disabled={portalLoading}
+          className="w-full text-xs"
+        >
+          {portalLoading ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <ExternalLink className="w-3 h-3" />
           )}
-        </div>
+          Hantera medlemskap
+        </Button>
       </div>
     );
   }
