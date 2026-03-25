@@ -159,6 +159,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
     setName("");
     setDate(undefined);
     setType("halvmaraton");
+    setCustomType("");
     toast.success("Event borttaget");
   };
 
