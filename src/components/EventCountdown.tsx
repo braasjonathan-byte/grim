@@ -96,6 +96,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
   const [name, setName] = useState("");
   const [date, setDate] = useState<Date | undefined>();
   const [type, setType] = useState("halvmaraton");
+  const [customType, setCustomType] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -116,7 +117,13 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       setEvent(data as EventData);
       setName(data.event_name);
       setDate(new Date(data.event_date));
-      setType(data.event_type);
+      if (data.event_type.startsWith("annat:")) {
+        setType("annat");
+        setCustomType(data.event_type.slice(6));
+      } else {
+        setType(data.event_type);
+        setCustomType("");
+      }
     }
     setLoading(false);
   };
@@ -127,11 +134,13 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       return;
     }
 
+    const resolvedType = type === "annat" && customType.trim() ? `annat:${customType.trim()}` : type;
+
     const payload = {
       user_id: userId,
       event_name: name.trim(),
       event_date: format(date, "yyyy-MM-dd"),
-      event_type: type,
+      event_type: resolvedType,
     };
 
     if (event) {
@@ -150,6 +159,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
     setName("");
     setDate(undefined);
     setType("halvmaraton");
+    setCustomType("");
     toast.success("Event borttaget");
   };
 
@@ -202,6 +212,14 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
                 <option key={et.value} value={et.value}>{et.emoji} {et.label}</option>
               ))}
             </select>
+            {type === "annat" && (
+              <input
+                value={customType}
+                onChange={e => setCustomType(e.target.value)}
+                placeholder="Beskriv ditt event, t.ex. Tough Viking"
+                className="w-full mt-2 rounded-lg border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+              />
+            )}
           </div>
 
           {/* Event date */}
