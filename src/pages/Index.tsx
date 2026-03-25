@@ -527,8 +527,8 @@ const Index = () => {
       <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4">
         {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
-        {tab === "friends" &&
-          <FriendsView
+        {tab === "social" &&
+          <SocialView
             userId={user.id}
             isAdmin={userRole === "admin"}
             friendActivities={friendActivities}
@@ -543,28 +543,14 @@ const Index = () => {
               });
             }}
             initialFriendId={notificationFriendId} />
-
-
           }
         {tab === "chat" && <ChatView userId={user.id} />}
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
           <div className="py-2 space-y-4">
-            <ReferralLink userId={user.id} />
-            <EventCountdown userId={user.id} />
-            <WorkoutTimer />
-            <OneRMCalculator />
-            <PulseZoneCalculator />
-            <CalorieCalculator />
-            <HelpSection />
-          </div>
-          }
-        {tab === "settings" &&
-          <div className="py-2 space-y-4">
+            {/* Profile & Settings at the top */}
             <SupporterButton userId={user.id} />
-            {/* Profile section */}
             <ProfileTab userId={user.id} isAdmin={userRole === "admin"} />
-            {/* Role badge */}
             <div className="flex items-center gap-2">
               {userRole === "admin" ? (
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
@@ -579,7 +565,16 @@ const Index = () => {
             {userRole === "admin" && <ExerciseGifManager />}
             <SettingsPanel userId={user.id} isAdmin={userRole === "admin"} />
             <NotificationSettings userId={user.id} />
+
+            {/* Tools */}
+            <ReferralLink userId={user.id} />
+            <EventCountdown userId={user.id} />
+            <WorkoutTimer />
+            <OneRMCalculator />
+            <PulseZoneCalculator />
+            <CalorieCalculator />
             <SuggestionBox userId={user.id} isAdmin={userRole === "admin"} />
+            <HelpSection />
             <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
           </div>
           }
