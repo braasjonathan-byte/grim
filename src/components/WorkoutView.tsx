@@ -4766,20 +4766,6 @@ const estimateCalories = (
         })}
       </div>
 
-      {/* Daily challenge — below workout cards */}
-      <DailyChallenge userId={userId} onComplete={async (challengeText) => {
-        const dayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-        const todayName = dayNames[new Date().getDay()];
-        const todayPlan = plans.find(p => p.week === currentWeek && p.day === todayName);
-        if (todayPlan) {
-          const cleanChallenge = challengeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
-          const challengeEntry = `⚔️ Utmaning: ${cleanChallenge}`;
-          const joinSep = todayPlan.details.includes("\n") ? "\n" : todayPlan.details.includes(";") ? "; " : "\n";
-          const newDetails = todayPlan.details ? `${todayPlan.details}${joinSep}${challengeEntry}` : challengeEntry;
-          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", todayPlan.id);
-          setPlans(prev => prev.map(p => p.id === todayPlan.id ? { ...p, details: newDetails } : p));
-        }
-      }} />
 
       {replacementTarget &&
       <ReplacementWorkoutDialog
