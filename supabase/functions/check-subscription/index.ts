@@ -87,7 +87,7 @@ serve(async (req) => {
       }
     }
 
-    const shouldBeHonorary = hasActiveSub || isAlwaysHonorary;
+    const shouldBeHonorary = hasActiveSub || isAlwaysHonorary || wasHonoraryViaReferral;
     await supabaseClient
       .from("profiles")
       .update({ is_honorary: shouldBeHonorary })
