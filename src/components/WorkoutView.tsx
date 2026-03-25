@@ -4723,6 +4723,17 @@ const estimateCalories = (
 
                     </div>
                   </div>
+                    {/* Daily challenge inside today's card */}
+                    {isCardToday && (
+                      <DailyChallenge userId={userId} onComplete={async (challengeText) => {
+                        const cleanChallenge = challengeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
+                        const challengeEntry = `⚔️ Utmaning: ${cleanChallenge}`;
+                        const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+                        const newDetails = plan.details ? `${plan.details}${joinSep}${challengeEntry}` : challengeEntry;
+                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                        setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                      }} />
+                    )}
                     {/* Calorie burn estimate */}
                     {isDone && plan.details && (
                       profileWeight ? (() => {
