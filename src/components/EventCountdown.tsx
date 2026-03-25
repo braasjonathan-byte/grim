@@ -305,9 +305,9 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
                 </div>
 
                 {/* Tips for this event */}
-                {tips.length > 0 && daysLeft >= 0 && daysLeft <= 14 && (
+                {tips.length > 0 && daysLeft >= 0 && (
                   <div className="space-y-1 pt-1 border-t border-border/50">
-                    {tips.slice(0, 2).map((tip, i) => (
+                    {tips.map((tip, i) => (
                       <div key={i} className="flex items-start gap-1.5">
                         <Lightbulb className="w-3 h-3 text-yellow-500 mt-0.5 flex-shrink-0" />
                         <p className="text-[11px] text-muted-foreground"><strong>{tip.title}:</strong> {tip.text}</p>
