@@ -680,7 +680,7 @@ const Index = () => {
             key={key}
             onClick={async () => {
               setTab(key);
-              if (key === "settings" && unreadAnnouncements > 0) {
+              if (key === "calc" && unreadAnnouncements > 0) {
                 const { data: latestAnn } = await supabase.
                 from("announcements").
                 select("created_at").
