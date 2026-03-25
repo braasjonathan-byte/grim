@@ -183,7 +183,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
       ty += nameH;
       if (ex.detail) {
         els.push(
-          `<text x="${bx + ep}" y="${ty}" fill="${t.subtext}" font-size="10" font-family="'Lora',Georgia,serif" letter-spacing="0.02em">${esc(ex.detail)}</text>`
+          `<text x="${bx + ep}" y="${ty}" fill="${t.subtext}" font-size="10" font-family="'Permanent Marker',Georgia,serif" letter-spacing="0.02em">${esc(ex.detail)}</text>`
         );
         ty += detailH;
       }
