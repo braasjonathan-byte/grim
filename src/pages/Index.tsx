@@ -37,7 +37,7 @@ const Index = () => {
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
     if (urlTab === "workout" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
-      const resolvedTab = urlTab === "friends" ? "social" : urlTab;
+      const resolvedTab = (urlTab === "friends" || urlTab === "chat") ? "social" : urlTab;
       localStorage.setItem("grim_active_tab", resolvedTab);
       return resolvedTab as Tab;
     }
