@@ -399,10 +399,9 @@ const Index = () => {
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "friends", icon: Users, label: "Vänner", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
+  { key: "social", icon: Users, label: "Social", badge: friendActivityCount > 0 ? friendActivityCount : undefined },
   { key: "chat", icon: MessageCircle, label: "Chatt", badge: unreadChats > 0 ? unreadChats : undefined },
-  { key: "calc", icon: Calculator, label: "Verktyg" },
-  { key: "settings", icon: Settings, label: "Inställningar", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
+  { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
 
 
