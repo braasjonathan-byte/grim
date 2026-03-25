@@ -3163,6 +3163,8 @@ const estimateCalories = (
           const Icon = getSessionIcon(plan.session_name);
           const colorClass = getSessionColor(plan.session_name);
           const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
+          const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+          const isCardToday = plan.day === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
 
           return (
             <div
@@ -4294,14 +4296,14 @@ const estimateCalories = (
                         if (isDailyChallenge) {
                           const challengeName = part.replace("⚔️ Utmaning:", "").trim();
                           return (
-                            <div key={i} className="bg-warning/10 rounded-lg p-2.5 border border-warning/30 space-y-1">
+                            <div key={i} className="bg-muted/30 rounded-lg p-2.5 border border-border space-y-1">
                               <div className="flex items-center gap-2">
-                                <Swords className="w-4 h-4 text-warning flex-shrink-0" />
+                                <Swords className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                                 <div className="flex-1 min-w-0">
-                                  <span className="text-[10px] font-bold text-warning uppercase tracking-wider">Dagens utmaning</span>
-                                  <p className="text-sm font-semibold text-foreground">{challengeName}</p>
+                                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Utmaning</span>
+                                  <p className="text-xs font-semibold text-foreground">{challengeName}</p>
                                 </div>
-                                <Check className="w-4 h-4 text-success" />
+                                <Check className="w-3.5 h-3.5 text-muted-foreground" />
                               </div>
                             </div>
                           );
@@ -4721,6 +4723,17 @@ const estimateCalories = (
 
                     </div>
                   </div>
+                    {/* Daily challenge inside today's card */}
+                    {isCardToday && (
+                      <DailyChallenge userId={userId} onComplete={async (challengeText) => {
+                        const cleanChallenge = challengeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
+                        const challengeEntry = `⚔️ Utmaning: ${cleanChallenge}`;
+                        const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+                        const newDetails = plan.details ? `${plan.details}${joinSep}${challengeEntry}` : challengeEntry;
+                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                        setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                      }} />
+                    )}
                     {/* Calorie burn estimate */}
                     {isDone && plan.details && (
                       profileWeight ? (() => {
@@ -4753,20 +4766,6 @@ const estimateCalories = (
         })}
       </div>
 
-      {/* Daily challenge — below workout cards */}
-      <DailyChallenge userId={userId} onComplete={async (challengeText) => {
-        const dayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-        const todayName = dayNames[new Date().getDay()];
-        const todayPlan = plans.find(p => p.week === currentWeek && p.day === todayName);
-        if (todayPlan) {
-          const cleanChallenge = challengeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim();
-          const challengeEntry = `⚔️ Utmaning: ${cleanChallenge}`;
-          const joinSep = todayPlan.details.includes("\n") ? "\n" : todayPlan.details.includes(";") ? "; " : "\n";
-          const newDetails = todayPlan.details ? `${todayPlan.details}${joinSep}${challengeEntry}` : challengeEntry;
-          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", todayPlan.id);
-          setPlans(prev => prev.map(p => p.id === todayPlan.id ? { ...p, details: newDetails } : p));
-        }
-      }} />
 
       {replacementTarget &&
       <ReplacementWorkoutDialog

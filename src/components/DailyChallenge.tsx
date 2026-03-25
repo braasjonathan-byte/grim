@@ -69,7 +69,6 @@ const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
 
   useEffect(() => {
     const check = async () => {
-      // Check if already completed today
       const { data } = await supabase
         .from("daily_challenge_completions")
         .select("id")
@@ -82,7 +81,6 @@ const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
         return;
       }
 
-      // Check if declined today (stored in localStorage)
       const declined = localStorage.getItem(`challenge_declined_${today}`);
       if (declined) {
         setStatus("declined");
@@ -118,37 +116,38 @@ const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
 
   if (status === "completed") {
     return (
-      <div className="bg-success/10 border border-success/30 rounded-lg p-3 flex items-center gap-3 animate-fade-in">
-        <Swords className="w-5 h-5 text-success flex-shrink-0" />
+      <div className="bg-muted/30 border border-border rounded-lg p-2.5 flex items-center gap-2.5">
+        <Swords className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-success">Dagens utmaning klarad! ✅</p>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Utmaning klarad</p>
           <p className="text-[11px] text-muted-foreground truncate">{challenge}</p>
         </div>
+        <Check className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <>
-      <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 animate-fade-in">
-        <div className="flex items-center gap-2 mb-2">
-          <Swords className="w-5 h-5 text-warning" />
-          <p className="text-xs font-bold text-foreground">Dagens utmaning</p>
+      <div className="bg-muted/20 border border-border rounded-lg p-2.5">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Swords className="w-3.5 h-3.5 text-muted-foreground" />
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Dagens utmaning</p>
         </div>
-        <p className="text-sm font-semibold mb-3">{challenge}</p>
+        <p className="text-xs font-semibold text-foreground mb-2">{challenge}</p>
         <div className="flex gap-2">
           <button
             onClick={handleAccept}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-md bg-success/20 text-success hover:bg-success/30 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 text-[11px] font-semibold rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors"
           >
-            <Check className="w-3.5 h-3.5" />
-            Klarad!
+            <Check className="w-3 h-3" />
+            Klarad
           </button>
           <button
             onClick={handleDecline}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 text-[11px] font-semibold rounded-md bg-muted/50 text-muted-foreground hover:bg-muted/70 transition-colors"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3 h-3" />
             Neka
           </button>
         </div>
@@ -158,7 +157,7 @@ const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-warning" />
+              <AlertTriangle className="w-5 h-5 text-muted-foreground" />
               Neka utmaningen?
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -167,7 +166,7 @@ const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Avbryt</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDecline} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmDecline} className="bg-muted text-foreground hover:bg-muted/80">
               Ja, neka
             </AlertDialogAction>
           </AlertDialogFooter>
