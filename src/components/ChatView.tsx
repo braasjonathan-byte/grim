@@ -604,6 +604,42 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
     inputRef.current?.focus();
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUserId) return;
+    if (!file.type.startsWith("image/")) { toast.error("Endast bilder tillåtna"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5 MB"); return; }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `support/${userId}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("social-images").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage.from("social-images").getPublicUrl(path);
+      const imageUrl = urlData.publicUrl;
+      const msgText = `[bild]${imageUrl}`;
+
+      if (isAdmin) {
+        await supabase.from("support_messages").insert({ user_id: userId, message: msgText, is_from_admin: true, admin_id: currentUserId });
+      } else {
+        await supabase.from("support_messages").insert({ user_id: userId, message: msgText, is_from_admin: false });
+        supabase.functions.invoke("notify-support", { body: { messagePreview: "📸 Skickade en bild" } }).catch(() => {});
+      }
+    } catch {
+      toast.error("Kunde inte ladda upp bilden");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleQuickReply = (text: string) => {
+    setNewMessage(text);
+    inputRef.current?.focus();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
