@@ -748,8 +748,8 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
         {messages.length > 0 && !isAdmin && (
           <div className="flex flex-wrap gap-1.5 px-1 pt-2">
             {QUICK_REPLIES.map(q => (
-              <button key={q} onClick={() => handleQuickReply(q)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
-                {q}
+              <button key={q.question} onClick={() => handleQuickReply(q.question)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
+                {q.question}
               </button>
             ))}
           </div>
