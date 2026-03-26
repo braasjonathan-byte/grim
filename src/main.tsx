@@ -15,6 +15,16 @@ if (shouldBeDark) {
   if (meta) meta.setAttribute("content", "#ffffff");
 }
 
+// Clear app icon badge when app is opened
+if ("clearAppBadge" in navigator) {
+  (navigator as any).clearAppBadge().catch(() => {});
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && "clearAppBadge" in navigator) {
+    (navigator as any).clearAppBadge().catch(() => {});
+  }
+});
+
 // Force service worker update check on every app load + periodically
 if ("serviceWorker" in navigator) {
   const checkForUpdate = () => {
