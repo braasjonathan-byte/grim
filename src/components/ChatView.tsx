@@ -727,18 +727,50 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
           </div>
         ))}
 
-        {messages.length === 0 && (
+        {messages.length === 0 && !isAdmin && (
+          <div className="text-center py-8 space-y-3">
+            <img src={grimIcon} alt="Grim" className="w-16 h-16 rounded-full mx-auto opacity-60" />
+            <p className="text-sm text-muted-foreground">Hej! 👋 Skriv till oss så hjälper vi dig.</p>
+            <div className="flex flex-wrap justify-center gap-1.5 px-2">
+              {QUICK_REPLIES.map(q => (
+                <button key={q} onClick={() => handleQuickReply(q)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && isAdmin && (
           <div className="text-center py-12 space-y-2">
             <img src={grimIcon} alt="Grim" className="w-16 h-16 rounded-full mx-auto opacity-60" />
-            <p className="text-sm text-muted-foreground">
-              {isAdmin ? "Inga meddelanden från denna användare ännu." : "Hej! 👋 Skriv till oss så hjälper vi dig."}
-            </p>
+            <p className="text-sm text-muted-foreground">Inga meddelanden från denna användare ännu.</p>
+          </div>
+        )}
+
+        {/* Quick replies shown when there are messages too (for non-admin) */}
+        {messages.length > 0 && !isAdmin && (
+          <div className="flex flex-wrap gap-1.5 px-1 pt-2">
+            {QUICK_REPLIES.map(q => (
+              <button key={q} onClick={() => handleQuickReply(q)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
+                {q}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
       {/* Input */}
       <div className="border-t border-border pt-2 flex gap-2 items-end">
+        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
+        {!isAdmin && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            className="p-2.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 flex-shrink-0"
+          >
+            <ImagePlus className="w-5 h-5" />
+          </button>
+        )}
         <input
           ref={inputRef}
           value={newMessage}
@@ -746,11 +778,11 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
           onKeyDown={handleKeyDown}
           placeholder={isAdmin ? "Svara som Grim..." : "Skriv till Grim..."}
           className="flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
-          disabled={sending}
+          disabled={sending || uploading}
         />
         <button
           onClick={sendMessage}
-          disabled={!newMessage.trim() || sending}
+          disabled={!newMessage.trim() || sending || uploading}
           className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 transition-colors hover:bg-primary/90 flex-shrink-0"
         >
           <Send className="w-4 h-4" />
