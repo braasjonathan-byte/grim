@@ -438,13 +438,31 @@ import { useRef } from "react";
 import { ArrowLeft, Send, Crown as CrownIcon, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 
-const QUICK_REPLIES = [
-  "Hur ändrar jag min träningsplan?",
-  "Hur lägger jag till en övning?",
-  "Hur funkar leaderboarden?",
-  "Hur bjuder jag in en vän?",
-  "Hur ändrar jag mitt lösenord?",
-  "Vad är Protein Bars?",
+const QUICK_REPLIES: { question: string; answer: string }[] = [
+  {
+    question: "Hur ändrar jag min träningsplan?",
+    answer: "Du kan redigera din plan genom att gå till Plan-fliken och trycka på pennikonen ✏️ vid den vecka/dag du vill ändra. Där kan du byta övningar, ändra sets/reps och lägga till nya pass.",
+  },
+  {
+    question: "Hur lägger jag till en övning?",
+    answer: "Öppna ett pass i din plan och skriv in övningen i textfältet. Du kan söka bland fördefinierade övningar eller skriva in en egen. Separera övningar med semikolon (;) eller ny rad.",
+  },
+  {
+    question: "Hur funkar leaderboarden?",
+    answer: "Leaderboarden rangordnar användare baserat på antal genomförda pass. Du kan filtrera per månad eller se hela årets statistik. Bara avklarade pass räknas – inte skippade!",
+  },
+  {
+    question: "Hur bjuder jag in en vän?",
+    answer: "Gå till Social-fliken och tryck på Vänner. Där kan du söka efter användarnamn och skicka en vänförfrågan. Du kan också dela din referral-länk via Verktyg → Bjud in en vän.",
+  },
+  {
+    question: "Hur ändrar jag mitt lösenord?",
+    answer: "Gå till din Profil (kugghjulet ⚙️) och scrolla ner till 'Byt lösenord'. Ange ditt nya lösenord och bekräfta. Lösenordet måste vara minst 6 tecken.",
+  },
+  {
+    question: "Vad är Protein Bars?",
+    answer: "Protein Bars är en valuta du tjänar genom att bjuda in vänner via din referral-länk. Du kan använda dem i Avatar-shopen för att köpa kläder och tillbehör till din avatar! 💪",
+  },
 ];
 
 interface GrimSupportConversationProps {
@@ -591,8 +609,31 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
     }
   };
 
-  const handleQuickReply = (text: string) => {
-    setNewMessage(text);
+  const handleQuickReply = async (text: string) => {
+    if (!currentUserId) return;
+    setSending(true);
+
+    // Send user's question
+    await supabase.from("support_messages").insert({
+      user_id: userId,
+      message: text,
+      is_from_admin: false,
+    });
+
+    // Find auto-reply
+    const match = QUICK_REPLIES.find(q => q.question === text);
+    if (match) {
+      // Small delay for natural feel
+      await new Promise(r => setTimeout(r, 600));
+      await supabase.from("support_messages").insert({
+        user_id: userId,
+        message: match.answer,
+        is_from_admin: true,
+        admin_id: null,
+      });
+    }
+
+    setSending(false);
     inputRef.current?.focus();
   };
 
@@ -689,8 +730,8 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
             <p className="text-sm text-muted-foreground">Hej! 👋 Skriv till oss så hjälper vi dig.</p>
             <div className="flex flex-wrap justify-center gap-1.5 px-2">
               {QUICK_REPLIES.map(q => (
-                <button key={q} onClick={() => handleQuickReply(q)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
-                  {q}
+                <button key={q.question} onClick={() => handleQuickReply(q.question)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
+                  {q.question}
                 </button>
               ))}
             </div>
@@ -707,8 +748,8 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
         {messages.length > 0 && !isAdmin && (
           <div className="flex flex-wrap gap-1.5 px-1 pt-2">
             {QUICK_REPLIES.map(q => (
-              <button key={q} onClick={() => handleQuickReply(q)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
-                {q}
+              <button key={q.question} onClick={() => handleQuickReply(q.question)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
+                {q.question}
               </button>
             ))}
           </div>
