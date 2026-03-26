@@ -50,10 +50,6 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [loading, setLoading] = useState(true);
   const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
-  // Grim info dialog moved to Index.tsx
-  useEffect(() => {
-    if (isPremium && !isAdmin) {
-  }, []);
 
   useEffect(() => {
     fetchFriendsAndMessages();
