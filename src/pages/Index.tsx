@@ -587,8 +587,8 @@ const Index = () => {
         </div>
       }
 
-      {/* What's new dialog - temporarily hidden */}
-      {/* {!forceChangePassword && <WhatsNewDialog />} */}
+      {/* Grim support info – shown once for all users */}
+      {!forceChangePassword && <GrimInfoDialog />}
 
       {/* Install guide modal */}
       {showInstallGuide &&
