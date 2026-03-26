@@ -609,8 +609,31 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
     }
   };
 
-  const handleQuickReply = (text: string) => {
-    setNewMessage(text);
+  const handleQuickReply = async (text: string) => {
+    if (!currentUserId) return;
+    setSending(true);
+
+    // Send user's question
+    await supabase.from("support_messages").insert({
+      user_id: userId,
+      message: text,
+      is_from_admin: false,
+    });
+
+    // Find auto-reply
+    const match = QUICK_REPLIES.find(q => q.question === text);
+    if (match) {
+      // Small delay for natural feel
+      await new Promise(r => setTimeout(r, 600));
+      await supabase.from("support_messages").insert({
+        user_id: userId,
+        message: match.answer,
+        is_from_admin: true,
+        admin_id: null,
+      });
+    }
+
+    setSending(false);
     inputRef.current?.focus();
   };
 
