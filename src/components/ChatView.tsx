@@ -53,10 +53,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   // Grim info dialog moved to Index.tsx
   useEffect(() => {
     if (isPremium && !isAdmin) {
-      const seen = localStorage.getItem(GRIM_INFO_KEY);
-      if (!seen) setShowGrimInfo(true);
-    }
-  }, [isPremium, isAdmin]);
+  }, []);
 
   useEffect(() => {
     fetchFriendsAndMessages();
