@@ -419,6 +419,46 @@ const Index = () => {
   { key: "social", icon: Users, label: "Social", badge: (friendActivityCount + unreadChats + unreadPosts) > 0 ? (friendActivityCount + unreadChats + unreadPosts) : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
 
+const GRIM_INFO_KEY = "gymberget_grim_info_seen";
+
+const GrimInfoDialog = () => {
+  const [open, setOpen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
+  const handleClose = () => { localStorage.setItem(GRIM_INFO_KEY, "1"); setOpen(false); };
+  if (!open) return null;
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            Nytt: Grim Premium Support
+          </DialogTitle>
+          <DialogDescription>En ny funktion för Premium-medlemmar</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <img src={grimIcon} alt="Grim" className="w-12 h-12 rounded-full" />
+            <p className="text-sm text-foreground">
+              Premium-medlemmar har nu tillgång till <strong>direktsupport via Grim</strong> i chatten!
+            </p>
+          </div>
+          <ul className="space-y-1.5 text-sm text-muted-foreground">
+            <li>💬 Skriv direkt till Grim för hjälp och frågor</li>
+            <li>📸 Skicka bilder i supportchatten</li>
+            <li>⚡ Snabbsvar på vanliga frågor</li>
+          </ul>
+          <p className="text-xs text-muted-foreground italic">
+            Bli Premium för att få tillgång – hitta Grim i chatten!
+          </p>
+        </div>
+        <button onClick={handleClose} className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-md text-sm mt-2">
+          Förstått!
+        </button>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 
 
   return (
