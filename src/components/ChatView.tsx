@@ -438,13 +438,31 @@ import { useRef } from "react";
 import { ArrowLeft, Send, Crown as CrownIcon, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 
-const QUICK_REPLIES = [
-  "Hur ändrar jag min träningsplan?",
-  "Hur lägger jag till en övning?",
-  "Hur funkar leaderboarden?",
-  "Hur bjuder jag in en vän?",
-  "Hur ändrar jag mitt lösenord?",
-  "Vad är Protein Bars?",
+const QUICK_REPLIES: { question: string; answer: string }[] = [
+  {
+    question: "Hur ändrar jag min träningsplan?",
+    answer: "Du kan redigera din plan genom att gå till Plan-fliken och trycka på pennikonen ✏️ vid den vecka/dag du vill ändra. Där kan du byta övningar, ändra sets/reps och lägga till nya pass.",
+  },
+  {
+    question: "Hur lägger jag till en övning?",
+    answer: "Öppna ett pass i din plan och skriv in övningen i textfältet. Du kan söka bland fördefinierade övningar eller skriva in en egen. Separera övningar med semikolon (;) eller ny rad.",
+  },
+  {
+    question: "Hur funkar leaderboarden?",
+    answer: "Leaderboarden rangordnar användare baserat på antal genomförda pass. Du kan filtrera per månad eller se hela årets statistik. Bara avklarade pass räknas – inte skippade!",
+  },
+  {
+    question: "Hur bjuder jag in en vän?",
+    answer: "Gå till Social-fliken och tryck på Vänner. Där kan du söka efter användarnamn och skicka en vänförfrågan. Du kan också dela din referral-länk via Verktyg → Bjud in en vän.",
+  },
+  {
+    question: "Hur ändrar jag mitt lösenord?",
+    answer: "Gå till din Profil (kugghjulet ⚙️) och scrolla ner till 'Byt lösenord'. Ange ditt nya lösenord och bekräfta. Lösenordet måste vara minst 6 tecken.",
+  },
+  {
+    question: "Vad är Protein Bars?",
+    answer: "Protein Bars är en valuta du tjänar genom att bjuda in vänner via din referral-länk. Du kan använda dem i Avatar-shopen för att köpa kläder och tillbehör till din avatar! 💪",
+  },
 ];
 
 interface GrimSupportConversationProps {
