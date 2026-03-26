@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, Crown } from "lucide-react";
+import { MessageCircle, Crown, Sparkles } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
+const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 
 const GRIM_SUPPORT_ID = "grim-support";
 
