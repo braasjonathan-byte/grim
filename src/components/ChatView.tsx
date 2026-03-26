@@ -479,7 +479,17 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
 // Grim Support Conversation component
 import { useRef } from "react";
-import { ArrowLeft, Send, Crown as CrownIcon } from "lucide-react";
+import { ArrowLeft, Send, Crown as CrownIcon, ImagePlus } from "lucide-react";
+import { toast } from "sonner";
+
+const QUICK_REPLIES = [
+  "Hur ändrar jag min träningsplan?",
+  "Hur lägger jag till en övning?",
+  "Hur funkar leaderboarden?",
+  "Hur bjuder jag in en vän?",
+  "Hur ändrar jag mitt lösenord?",
+  "Vad är Protein Bars?",
+];
 
 interface GrimSupportConversationProps {
   userId: string; // The premium user's ID
