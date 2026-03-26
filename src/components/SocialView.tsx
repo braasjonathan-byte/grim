@@ -46,7 +46,7 @@ interface EventGroup {
 
 type SubTab = "feed" | "friends" | "chat" | "groups";
 
-const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
+const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
   const [subTab, setSubTab] = useState<SubTab>(initialFriendId ? "friends" : "feed");
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [groups, setGroups] = useState<EventGroup[]>([]);
