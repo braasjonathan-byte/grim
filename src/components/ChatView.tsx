@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, Crown } from "lucide-react";
+import { MessageCircle, Crown, Sparkles } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
+const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 
 const GRIM_SUPPORT_ID = "grim-support";
 
@@ -47,6 +50,15 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [loading, setLoading] = useState(true);
   const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
+  const [showGrimInfo, setShowGrimInfo] = useState(false);
+
+  // One-time info dialog for premium users
+  useEffect(() => {
+    if (isPremium && !isAdmin) {
+      const seen = localStorage.getItem(GRIM_INFO_KEY);
+      if (!seen) setShowGrimInfo(true);
+    }
+  }, [isPremium, isAdmin]);
 
   useEffect(() => {
     fetchFriendsAndMessages();
@@ -268,6 +280,41 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
   return (
     <div className="py-2">
+      {/* One-time Grim info dialog for premium users */}
+      <Dialog open={showGrimInfo} onOpenChange={(v) => { if (!v) { localStorage.setItem(GRIM_INFO_KEY, "1"); setShowGrimInfo(false); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Nytt: Grim Support
+            </DialogTitle>
+            <DialogDescription>En ny funktion för Premium-medlemmar</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <img src={grimIcon} alt="Grim" className="w-12 h-12 rounded-full" />
+              <p className="text-sm text-foreground">
+                Som Premium-medlem har du nu tillgång till <strong>direktsupport via Grim</strong> i chatten!
+              </p>
+            </div>
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
+              <li>💬 Skriv direkt till Grim för hjälp och frågor</li>
+              <li>📸 Skicka bilder i supportchatten</li>
+              <li>⚡ Snabbsvar på vanliga frågor</li>
+            </ul>
+            <p className="text-xs text-muted-foreground italic">
+              Hitta Grim högst upp i din chattlista!
+            </p>
+          </div>
+          <button
+            onClick={() => { localStorage.setItem(GRIM_INFO_KEY, "1"); setShowGrimInfo(false); }}
+            className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-md text-sm mt-2"
+          >
+            Förstått!
+          </button>
+        </DialogContent>
+      </Dialog>
+
       <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
         <MessageCircle className="w-5 h-5 text-primary" />
         Chatt
@@ -432,7 +479,17 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
 // Grim Support Conversation component
 import { useRef } from "react";
-import { ArrowLeft, Send, Crown as CrownIcon } from "lucide-react";
+import { ArrowLeft, Send, Crown as CrownIcon, ImagePlus } from "lucide-react";
+import { toast } from "sonner";
+
+const QUICK_REPLIES = [
+  "Hur ändrar jag min träningsplan?",
+  "Hur lägger jag till en övning?",
+  "Hur funkar leaderboarden?",
+  "Hur bjuder jag in en vän?",
+  "Hur ändrar jag mitt lösenord?",
+  "Vad är Protein Bars?",
+];
 
 interface GrimSupportConversationProps {
   userId: string; // The premium user's ID
@@ -456,8 +513,10 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -545,6 +604,42 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
     inputRef.current?.focus();
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUserId) return;
+    if (!file.type.startsWith("image/")) { toast.error("Endast bilder tillåtna"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Max 5 MB"); return; }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `support/${userId}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("social-images").upload(path, file, { cacheControl: "3600", upsert: false });
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage.from("social-images").getPublicUrl(path);
+      const imageUrl = urlData.publicUrl;
+      const msgText = `[bild]${imageUrl}`;
+
+      if (isAdmin) {
+        await supabase.from("support_messages").insert({ user_id: userId, message: msgText, is_from_admin: true, admin_id: currentUserId });
+      } else {
+        await supabase.from("support_messages").insert({ user_id: userId, message: msgText, is_from_admin: false });
+        supabase.functions.invoke("notify-support", { body: { messagePreview: "📸 Skickade en bild" } }).catch(() => {});
+      }
+    } catch {
+      toast.error("Kunde inte ladda upp bilden");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleQuickReply = (text: string) => {
+    setNewMessage(text);
+    inputRef.current?.focus();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -617,7 +712,11 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
                         Grim
                       </p>
                     )}
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                    {msg.message.startsWith("[bild]") ? (
+                      <img src={msg.message.replace("[bild]", "")} alt="Bild" className="max-w-full rounded-lg max-h-60 cursor-pointer" onClick={() => window.open(msg.message.replace("[bild]", ""), "_blank")} />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                    )}
                     <p className={`text-[10px] mt-0.5 ${isMine ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
                       {new Date(msg.created_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
                     </p>
@@ -628,18 +727,50 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
           </div>
         ))}
 
-        {messages.length === 0 && (
+        {messages.length === 0 && !isAdmin && (
+          <div className="text-center py-8 space-y-3">
+            <img src={grimIcon} alt="Grim" className="w-16 h-16 rounded-full mx-auto opacity-60" />
+            <p className="text-sm text-muted-foreground">Hej! 👋 Skriv till oss så hjälper vi dig.</p>
+            <div className="flex flex-wrap justify-center gap-1.5 px-2">
+              {QUICK_REPLIES.map(q => (
+                <button key={q} onClick={() => handleQuickReply(q)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && isAdmin && (
           <div className="text-center py-12 space-y-2">
             <img src={grimIcon} alt="Grim" className="w-16 h-16 rounded-full mx-auto opacity-60" />
-            <p className="text-sm text-muted-foreground">
-              {isAdmin ? "Inga meddelanden från denna användare ännu." : "Hej! 👋 Skriv till oss så hjälper vi dig."}
-            </p>
+            <p className="text-sm text-muted-foreground">Inga meddelanden från denna användare ännu.</p>
+          </div>
+        )}
+
+        {/* Quick replies shown when there are messages too (for non-admin) */}
+        {messages.length > 0 && !isAdmin && (
+          <div className="flex flex-wrap gap-1.5 px-1 pt-2">
+            {QUICK_REPLIES.map(q => (
+              <button key={q} onClick={() => handleQuickReply(q)} className="text-[11px] bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-full transition-colors border border-border/50">
+                {q}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
       {/* Input */}
       <div className="border-t border-border pt-2 flex gap-2 items-end">
+        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
+        {!isAdmin && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            className="p-2.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 flex-shrink-0"
+          >
+            <ImagePlus className="w-5 h-5" />
+          </button>
+        )}
         <input
           ref={inputRef}
           value={newMessage}
@@ -647,11 +778,11 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
           onKeyDown={handleKeyDown}
           placeholder={isAdmin ? "Svara som Grim..." : "Skriv till Grim..."}
           className="flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
-          disabled={sending}
+          disabled={sending || uploading}
         />
         <button
           onClick={sendMessage}
-          disabled={!newMessage.trim() || sending}
+          disabled={!newMessage.trim() || sending || uploading}
           className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 transition-colors hover:bg-primary/90 flex-shrink-0"
         >
           <Send className="w-4 h-4" />
