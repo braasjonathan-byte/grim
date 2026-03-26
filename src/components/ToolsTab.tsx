@@ -45,7 +45,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
   const autoScrollRef = useRef<number | null>(null);
 
   const allSections: SectionDef[] = [
-    { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
+    { key: "supporter", label: "Premium", render: () => <SupporterButton userId={userId} /> },
     { key: "profile", label: "Profil", render: () => <ProfileTab userId={userId} isAdmin={isAdmin} /> },
     { key: "role-badge", label: "Roll", render: () => (
       <div className="flex items-center gap-2">

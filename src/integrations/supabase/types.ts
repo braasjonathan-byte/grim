@@ -863,6 +863,36 @@ export type Database = {
         }
         Relationships: []
       }
+      support_messages: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          id: string
+          is_from_admin: boolean
+          message: string
+          read: boolean
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          is_from_admin?: boolean
+          message: string
+          read?: boolean
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          id?: string
+          is_from_admin?: boolean
+          message?: string
+          read?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       tool_layout: {
         Row: {
           id: string

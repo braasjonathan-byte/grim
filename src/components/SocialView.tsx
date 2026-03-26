@@ -15,6 +15,7 @@ const EventGroupPage = lazy(() => import("./EventGroupPage"));
 interface SocialViewProps {
   userId: string;
   isAdmin: boolean;
+  isHonorary?: boolean;
   friendActivities: { nickname: string; day: string; week: number; timestamp: string }[];
   unreadChats?: number;
   onClearActivitiesForFriend: (nickname: string) => void;
@@ -45,7 +46,7 @@ interface EventGroup {
 
 type SubTab = "feed" | "friends" | "chat" | "groups";
 
-const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
+const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
   const [subTab, setSubTab] = useState<SubTab>(initialFriendId ? "friends" : "feed");
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [groups, setGroups] = useState<EventGroup[]>([]);
@@ -501,7 +502,7 @@ const SocialView = ({ userId, isAdmin, friendActivities, unreadChats = 0, onClea
       {/* CHAT TAB */}
       {subTab === "chat" && (
         <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
-          <ChatView userId={userId} />
+          <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
         </Suspense>
       )}
 
