@@ -15,6 +15,7 @@ const EventGroupPage = lazy(() => import("./EventGroupPage"));
 interface SocialViewProps {
   userId: string;
   isAdmin: boolean;
+  isHonorary?: boolean;
   friendActivities: { nickname: string; day: string; week: number; timestamp: string }[];
   unreadChats?: number;
   onClearActivitiesForFriend: (nickname: string) => void;
