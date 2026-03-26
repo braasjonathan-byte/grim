@@ -50,6 +50,15 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [loading, setLoading] = useState(true);
   const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
+  const [showGrimInfo, setShowGrimInfo] = useState(false);
+
+  // One-time info dialog for premium users
+  useEffect(() => {
+    if (isPremium && !isAdmin) {
+      const seen = localStorage.getItem(GRIM_INFO_KEY);
+      if (!seen) setShowGrimInfo(true);
+    }
+  }, [isPremium, isAdmin]);
 
   useEffect(() => {
     fetchFriendsAndMessages();
