@@ -1,21 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Crown, Loader2, ExternalLink, Mail, XCircle } from "lucide-react";
+import { Crown, Loader2, ExternalLink, Mail, ChevronDown, ChevronUp, Sparkles, MessageCircle } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SupporterButtonProps {
   userId: string;
@@ -26,12 +16,11 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   const [checking, setChecking] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
-  const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
-  const [cancelLoading, setCancelLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [savingEmail, setSavingEmail] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const fetchEmail = useCallback(async () => {
     const { data } = await supabase
@@ -50,7 +39,6 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
       ]);
       if (subResult.error) throw subResult.error;
       setSubscribed(subResult.data?.subscribed ?? false);
-      setSubscriptionEnd(subResult.data?.subscription_end ?? null);
       setIsHonorary(profileResult.data?.is_honorary ?? false);
     } catch {
       // silently fail
@@ -125,27 +113,6 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
     }
   };
 
-  const handleCancel = async () => {
-    setCancelLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("cancel-subscription");
-      if (error) throw error;
-      if (data?.success) {
-        const endDate = data.cancel_at
-          ? new Date(data.cancel_at).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })
-          : "";
-        toast.success(`Prenumerationen avslutas ${endDate}`);
-        checkSubscription();
-      } else {
-        toast.error(data?.error || "Kunde inte avbryta prenumerationen");
-      }
-    } catch {
-      toast.error("Kunde inte avbryta prenumerationen");
-    } finally {
-      setCancelLoading(false);
-    }
-  };
-
   if (checking) return null;
 
   if (isHonorary) {
@@ -179,60 +146,86 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Crown className="w-5 h-5 text-muted-foreground" />
-        <span className="text-sm font-bold">Bli Supporter</span>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Stöd Grim med 29 kr/mån och hjälp oss bygga vidare! 💪
-      </p>
-
-      {!registeredEmail ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">
-            Registrera din e-postadress först – kvitton skickas hit.
-          </p>
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              placeholder="din@email.com"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              className="text-sm h-9"
-            />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSaveEmail}
-              disabled={savingEmail}
-              className="shrink-0"
-            >
-              {savingEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : "Spara"}
-            </Button>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger asChild>
+        <button className="w-full rounded-xl border border-border bg-card p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+          <div className="flex items-center gap-2">
+            <Crown className="w-5 h-5 text-primary" />
+            <span className="text-sm font-bold">Bli Premium</span>
           </div>
-        </div>
-      ) : (
-        <>
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Mail className="w-3 h-3" /> {registeredEmail}
+          {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="rounded-b-xl border border-t-0 border-border bg-card p-4 space-y-3 -mt-2">
+          <p className="text-xs text-muted-foreground">
+            Stöd Grim med 29 kr/mån och få tillgång till exklusiva funktioner! 💪
           </p>
-          <Button
-            onClick={handleCheckout}
-            disabled={loading}
-            size="sm"
-            className="w-full"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Crown className="w-4 h-4" />
-            )}
-            Bli Supporter – 29 kr/mån
-          </Button>
-        </>
-      )}
-    </div>
+
+          <div className="space-y-2 bg-primary/5 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+              <MessageCircle className="w-3.5 h-3.5 text-primary" />
+              Direktsupport via Grim
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Som Premium-medlem kan du chatta direkt med Grim i chatten för personlig hjälp och support.
+            </p>
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground mt-2">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              Fler funktioner kommer
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Vi jobbar på fler exklusiva funktioner för Premium-medlemmar. Håll utkik!
+            </p>
+          </div>
+
+          {!registeredEmail ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Registrera din e-postadress först – kvitton skickas hit.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="din@email.com"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  className="text-sm h-9"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSaveEmail}
+                  disabled={savingEmail}
+                  className="shrink-0"
+                >
+                  {savingEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : "Spara"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Mail className="w-3 h-3" /> {registeredEmail}
+              </p>
+              <Button
+                onClick={handleCheckout}
+                disabled={loading}
+                size="sm"
+                className="w-full"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Crown className="w-4 h-4" />
+                )}
+                Bli Premium – 29 kr/mån
+              </Button>
+            </>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 };
 
