@@ -730,8 +730,8 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
             <p className="text-sm text-muted-foreground">Hej! 👋 Skriv till oss så hjälper vi dig.</p>
             <div className="flex flex-wrap justify-center gap-1.5 px-2">
               {QUICK_REPLIES.map(q => (
-                <button key={q} onClick={() => handleQuickReply(q)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
-                  {q}
+                <button key={q.question} onClick={() => handleQuickReply(q.question)} className="text-xs bg-muted hover:bg-muted/80 text-foreground px-3 py-1.5 rounded-full transition-colors border border-border">
+                  {q.question}
                 </button>
               ))}
             </div>
