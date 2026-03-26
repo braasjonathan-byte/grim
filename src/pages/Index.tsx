@@ -545,6 +545,7 @@ const Index = () => {
           <SocialView
             userId={user.id}
             isAdmin={userRole === "admin"}
+            isHonorary={isHonorary}
             friendActivities={friendActivities}
             unreadChats={unreadChats}
             onClearActivitiesForFriend={(nickname) => {

@@ -502,7 +502,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       {/* CHAT TAB */}
       {subTab === "chat" && (
         <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
-          <ChatView userId={userId} />
+          <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
         </Suspense>
       )}
 
