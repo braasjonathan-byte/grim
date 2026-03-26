@@ -280,6 +280,41 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
   return (
     <div className="py-2">
+      {/* One-time Grim info dialog for premium users */}
+      <Dialog open={showGrimInfo} onOpenChange={(v) => { if (!v) { localStorage.setItem(GRIM_INFO_KEY, "1"); setShowGrimInfo(false); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Nytt: Grim Support
+            </DialogTitle>
+            <DialogDescription>En ny funktion för Premium-medlemmar</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <img src={grimIcon} alt="Grim" className="w-12 h-12 rounded-full" />
+              <p className="text-sm text-foreground">
+                Som Premium-medlem har du nu tillgång till <strong>direktsupport via Grim</strong> i chatten!
+              </p>
+            </div>
+            <ul className="space-y-1.5 text-sm text-muted-foreground">
+              <li>💬 Skriv direkt till Grim för hjälp och frågor</li>
+              <li>📸 Skicka bilder i supportchatten</li>
+              <li>⚡ Snabbsvar på vanliga frågor</li>
+            </ul>
+            <p className="text-xs text-muted-foreground italic">
+              Hitta Grim högst upp i din chattlista!
+            </p>
+          </div>
+          <button
+            onClick={() => { localStorage.setItem(GRIM_INFO_KEY, "1"); setShowGrimInfo(false); }}
+            className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-md text-sm mt-2"
+          >
+            Förstått!
+          </button>
+        </DialogContent>
+      </Dialog>
+
       <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
         <MessageCircle className="w-5 h-5 text-primary" />
         Chatt
