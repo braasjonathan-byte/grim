@@ -712,7 +712,11 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
                         Grim
                       </p>
                     )}
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                    {msg.message.startsWith("[bild]") ? (
+                      <img src={msg.message.replace("[bild]", "")} alt="Bild" className="max-w-full rounded-lg max-h-60 cursor-pointer" onClick={() => window.open(msg.message.replace("[bild]", ""), "_blank")} />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                    )}
                     <p className={`text-[10px] mt-0.5 ${isMine ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
                       {new Date(msg.created_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
                     </p>
