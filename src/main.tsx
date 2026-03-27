@@ -15,14 +15,19 @@ if (shouldBeDark) {
   if (meta) meta.setAttribute("content", "#ffffff");
 }
 
-// Clear app icon badge when app is opened
-if ("clearAppBadge" in navigator) {
-  (navigator as any).clearAppBadge().catch(() => {});
-}
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && "clearAppBadge" in navigator) {
+// Clear app icon badge when app is opened — try both main thread and SW
+const clearBadge = () => {
+  if ("clearAppBadge" in navigator) {
     (navigator as any).clearAppBadge().catch(() => {});
   }
+  // Also ask the service worker to clear it (works on more platforms)
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: "CLEAR_BADGE" });
+  }
+};
+clearBadge();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") clearBadge();
 });
 
 // Force service worker update check on every app load + periodically
