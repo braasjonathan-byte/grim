@@ -71,6 +71,8 @@ const GrimInfoDialog = () => {
 };
 
 const Index = () => {
+  const bottomSafeInset = "max(env(safe-area-inset-bottom), 16px)";
+  const bottomNavOffset = `calc(5.5rem + ${bottomSafeInset})`;
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationFriendId, setNotificationFriendId] = useState<string | null>(null);
@@ -581,7 +583,7 @@ const Index = () => {
 
       {/* Content */}
       <Suspense fallback={<TabSkeleton />}>
-      <main className="max-w-lg mx-auto px-4 py-4">
+      <main className="max-w-lg mx-auto px-4 py-4" style={{ paddingBottom: bottomNavOffset }}>
         {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
         {tab === "social" &&
           <SocialView
@@ -702,7 +704,10 @@ const Index = () => {
 
 
       {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 will-change-transform" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav
+        className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 will-change-transform"
+        style={{ paddingBottom: bottomSafeInset }}
+      >
         <div className="max-w-lg mx-auto flex">
           {tabs.map(({ key, icon: Icon, label, badge }) =>
           <button
