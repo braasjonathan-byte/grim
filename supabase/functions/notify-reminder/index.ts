@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendNativePush } from "../_shared/sendFcm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -223,6 +224,15 @@ serve(async (req) => {
         );
         if (ok) { totalSent++; } else { staleEndpoints.push(sub.endpoint); }
       }
+
+      // Native push for reminder
+      const nativePayload = JSON.parse(payload);
+      const nativeSent = await sendNativePush(supabaseAdmin, [reminder.user_id], {
+        title: nativePayload.title,
+        body: nativePayload.body,
+        data: nativePayload.data ? Object.fromEntries(Object.entries(nativePayload.data).map(([k, v]) => [k, String(v)])) : {},
+      });
+      totalSent += nativeSent;
     }
 
     // Clean up stale endpoints
