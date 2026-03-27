@@ -67,11 +67,20 @@ self.addEventListener("push", (event) => {
   }
 });
 
+// Listen for messages from the client (e.g. clear badge)
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CLEAR_BADGE") {
+    if (self.navigator && self.navigator.clearAppBadge) {
+      self.navigator.clearAppBadge().catch(() => {});
+    }
+  }
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   // Clear app icon badge when user taps notification
-  if (navigator.clearAppBadge) {
-    navigator.clearAppBadge().catch(() => {});
+  if (self.navigator && self.navigator.clearAppBadge) {
+    self.navigator.clearAppBadge().catch(() => {});
   }
   const targetUrl = event.notification.data?.url || "/";
   const fullUrl = new URL(targetUrl, self.location.origin).href;
