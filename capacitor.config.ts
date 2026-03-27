@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.8d2935479e27403da8dd0848a67777b7',
+  appId: 'se.grim.app',
   appName: 'Grim',
   webDir: 'dist',
   server: {
