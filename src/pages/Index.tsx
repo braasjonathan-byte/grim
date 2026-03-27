@@ -152,6 +152,7 @@ const Index = () => {
   const [unreadPosts, setUnreadPosts] = useState(0);
 
   usePushNotifications(user?.id ?? null);
+  useNativePush(user?.id ?? null);
   useOfflineSync();
   useDataSnapshots(user?.id ?? null);
 
