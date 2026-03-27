@@ -183,7 +183,15 @@ serve(async (req) => {
       await supabaseAdmin.from("push_subscriptions").delete().in("endpoint", staleEndpoints);
     }
 
-    return new Response(JSON.stringify({ sent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Native push
+    const nativePayload = JSON.parse(payload);
+    const nativeSent = await sendNativePush(supabaseAdmin, [receiverId], {
+      title: nativePayload.title,
+      body: nativePayload.body,
+      data: nativePayload.data ? Object.fromEntries(Object.entries(nativePayload.data).map(([k, v]) => [k, String(v)])) : {},
+    });
+
+    return new Response(JSON.stringify({ sent: sent + nativeSent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

@@ -304,7 +304,16 @@ serve(async (req) => {
       await supabaseAdmin.from("push_subscriptions").delete().in("endpoint", staleEndpoints);
     }
 
-    return new Response(JSON.stringify({ sent }), {
+    // Native push to all non-admin users
+    const allNonAdminIds = subscriptions.map(s => s.user_id).filter((id, i, arr) => arr.indexOf(id) === i);
+    const nativePayload = JSON.parse(payload);
+    const nativeSent = await sendNativePush(supabaseAdmin, allNonAdminIds, {
+      title: nativePayload.title,
+      body: nativePayload.body,
+      data: nativePayload.data ? Object.fromEntries(Object.entries(nativePayload.data).map(([k, v]) => [k, String(v)])) : {},
+    });
+
+    return new Response(JSON.stringify({ sent: sent + nativeSent }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

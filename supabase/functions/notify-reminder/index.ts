@@ -224,6 +224,15 @@ serve(async (req) => {
         );
         if (ok) { totalSent++; } else { staleEndpoints.push(sub.endpoint); }
       }
+
+      // Native push for reminder
+      const nativePayload = JSON.parse(payload);
+      const nativeSent = await sendNativePush(supabaseAdmin, [reminder.user_id], {
+        title: nativePayload.title,
+        body: nativePayload.body,
+        data: nativePayload.data ? Object.fromEntries(Object.entries(nativePayload.data).map(([k, v]) => [k, String(v)])) : {},
+      });
+      totalSent += nativeSent;
     }
 
     // Clean up stale endpoints
