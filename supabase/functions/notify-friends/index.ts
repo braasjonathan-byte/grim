@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendNativePush } from "../_shared/sendFcm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -194,7 +195,15 @@ serve(async (req) => {
       await supabaseAdmin.from("push_subscriptions").delete().in("endpoint", staleEndpoints);
     }
 
-    return new Response(JSON.stringify({ sent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Also send to native devices (FCM/APNs)
+    const nativePayload = JSON.parse(payload);
+    const nativeSent = await sendNativePush(supabaseAdmin, friendIds, {
+      title: nativePayload.title,
+      body: nativePayload.body,
+      data: nativePayload.data ? Object.fromEntries(Object.entries(nativePayload.data).map(([k, v]) => [k, String(v)])) : {},
+    });
+
+    return new Response(JSON.stringify({ sent: sent + nativeSent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
