@@ -485,25 +485,6 @@ const Index = () => {
                 <path d="M448 209.9a210.1 210.1 0 0 1-122.8-39.3v178.8A162.6 162.6 0 1 1 185 188.3v89.9a74.6 74.6 0 1 0 52.2 71.2V0h88a121 121 0 0 0 122.8 121.3z" />
               </svg>
             </a>
-            {!window.matchMedia('(display-mode: standalone)').matches &&
-            <button
-              onClick={async () => {
-                if (deferredPrompt) {
-                  deferredPrompt.prompt();
-                  const result = await deferredPrompt.userChoice;
-                  if (result.outcome === 'accepted') {
-                    setDeferredPrompt(null);
-                  }
-                } else {
-                  setShowInstallGuide(true);
-                }
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
-
-                <Download className="w-3.5 h-3.5" />
-                Installera
-              </button>
-            }
             <div className="relative">
               <button
                 onClick={async () => {
