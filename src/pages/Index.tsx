@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Bell, BarChart3, Megaphone, Download, X, Smartphone, MessageCircle, Dumbbell, Calculator } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, Calculator } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -148,8 +148,6 @@ const Index = () => {
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
 
@@ -158,15 +156,6 @@ const Index = () => {
   useOfflineSync();
   useDataSnapshots(user?.id ?? null);
 
-  // Capture beforeinstallprompt for native Android install
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
 
   // Shared helper to load profile + role (called once per session)
   const loadUserData = useCallback(async (uid: string) => {
@@ -485,25 +474,6 @@ const Index = () => {
                 <path d="M448 209.9a210.1 210.1 0 0 1-122.8-39.3v178.8A162.6 162.6 0 1 1 185 188.3v89.9a74.6 74.6 0 1 0 52.2 71.2V0h88a121 121 0 0 0 122.8 121.3z" />
               </svg>
             </a>
-            {!window.matchMedia('(display-mode: standalone)').matches &&
-            <button
-              onClick={async () => {
-                if (deferredPrompt) {
-                  deferredPrompt.prompt();
-                  const result = await deferredPrompt.userChoice;
-                  if (result.outcome === 'accepted') {
-                    setDeferredPrompt(null);
-                  }
-                } else {
-                  setShowInstallGuide(true);
-                }
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
-
-                <Download className="w-3.5 h-3.5" />
-                Installera
-              </button>
-            }
             <div className="relative">
               <button
                 onClick={async () => {
@@ -632,54 +602,7 @@ const Index = () => {
       {/* Grim support info – shown once for all users */}
       {!forceChangePassword && <GrimInfoDialog />}
 
-      {/* Install guide modal */}
-      {showInstallGuide &&
-      <>
-          <div className="fixed inset-0 bg-black/60 z-[70]" onClick={() => setShowInstallGuide(false)} />
-          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[80] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-bold">Installera Grim</h3>
-              </div>
-              <button onClick={() => setShowInstallGuide(false)} className="p-1 text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-              {/* iPhone */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold flex items-center gap-1.5">🍎 iPhone / iPad</h4>
-                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-                  <li>Öppna <strong className="text-foreground">grim.lovable.app</strong> i <strong className="text-foreground">Safari</strong></li>
-                  <li>Tryck på <strong className="text-foreground">dela-ikonen</strong> (rutan med pil uppåt) längst ner</li>
-                  <li>Scrolla ner och tryck <strong className="text-foreground">"Lägg till på hemskärmen"</strong></li>
-                  <li>Tryck <strong className="text-foreground">"Lägg till"</strong> uppe till höger</li>
-                  <li>Öppna appen från hemskärmen – den körs nu i helskärm!</li>
-                </ol>
-                <p className="text-[10px] text-muted-foreground italic">
-                  💡 Push-notiser kräver iOS 16.4+ och att appen öppnas via hemskärmen.
-                </p>
-              </div>
 
-              {/* Android */}
-              <div className="space-y-2 border-t border-border pt-4">
-                <h4 className="text-sm font-bold flex items-center gap-1.5">🤖 Android</h4>
-                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-                  <li>Öppna <strong className="text-foreground">grim.lovable.app</strong> i <strong className="text-foreground">Chrome</strong></li>
-                  <li>Tryck på <strong className="text-foreground">⋮ menyn</strong> (tre prickar uppe till höger)</li>
-                  <li>Tryck <strong className="text-foreground">"Installera app"</strong> eller <strong className="text-foreground">"Lägg till på startskärmen"</strong></li>
-                  <li>Bekräfta genom att trycka <strong className="text-foreground">"Installera"</strong></li>
-                  <li>Appen syns nu som en vanlig app på din startskärm!</li>
-                </ol>
-                <p className="text-[10px] text-muted-foreground italic">
-                  💡 Chrome visar ofta en installationsbanner automatiskt – tryck på den om den dyker upp.
-                </p>
-              </div>
-            </div>
-          </div>
-        </>
-      }
 
       {/* Change password modal */}
       {showChangePassword &&
