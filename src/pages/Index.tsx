@@ -156,15 +156,6 @@ const Index = () => {
   useOfflineSync();
   useDataSnapshots(user?.id ?? null);
 
-  // Capture beforeinstallprompt for native Android install
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
 
   // Shared helper to load profile + role (called once per session)
   const loadUserData = useCallback(async (uid: string) => {
