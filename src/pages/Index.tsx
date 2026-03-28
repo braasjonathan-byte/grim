@@ -613,54 +613,7 @@ const Index = () => {
       {/* Grim support info – shown once for all users */}
       {!forceChangePassword && <GrimInfoDialog />}
 
-      {/* Install guide modal */}
-      {showInstallGuide &&
-      <>
-          <div className="fixed inset-0 bg-black/60 z-[70]" onClick={() => setShowInstallGuide(false)} />
-          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[80] max-w-sm mx-auto bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-bold">Installera Grim</h3>
-              </div>
-              <button onClick={() => setShowInstallGuide(false)} className="p-1 text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
-              {/* iPhone */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold flex items-center gap-1.5">🍎 iPhone / iPad</h4>
-                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-                  <li>Öppna <strong className="text-foreground">grim.lovable.app</strong> i <strong className="text-foreground">Safari</strong></li>
-                  <li>Tryck på <strong className="text-foreground">dela-ikonen</strong> (rutan med pil uppåt) längst ner</li>
-                  <li>Scrolla ner och tryck <strong className="text-foreground">"Lägg till på hemskärmen"</strong></li>
-                  <li>Tryck <strong className="text-foreground">"Lägg till"</strong> uppe till höger</li>
-                  <li>Öppna appen från hemskärmen – den körs nu i helskärm!</li>
-                </ol>
-                <p className="text-[10px] text-muted-foreground italic">
-                  💡 Push-notiser kräver iOS 16.4+ och att appen öppnas via hemskärmen.
-                </p>
-              </div>
 
-              {/* Android */}
-              <div className="space-y-2 border-t border-border pt-4">
-                <h4 className="text-sm font-bold flex items-center gap-1.5">🤖 Android</h4>
-                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-                  <li>Öppna <strong className="text-foreground">grim.lovable.app</strong> i <strong className="text-foreground">Chrome</strong></li>
-                  <li>Tryck på <strong className="text-foreground">⋮ menyn</strong> (tre prickar uppe till höger)</li>
-                  <li>Tryck <strong className="text-foreground">"Installera app"</strong> eller <strong className="text-foreground">"Lägg till på startskärmen"</strong></li>
-                  <li>Bekräfta genom att trycka <strong className="text-foreground">"Installera"</strong></li>
-                  <li>Appen syns nu som en vanlig app på din startskärm!</li>
-                </ol>
-                <p className="text-[10px] text-muted-foreground italic">
-                  💡 Chrome visar ofta en installationsbanner automatiskt – tryck på den om den dyker upp.
-                </p>
-              </div>
-            </div>
-          </div>
-        </>
-      }
 
       {/* Change password modal */}
       {showChangePassword &&
