@@ -629,7 +629,7 @@ const Index = () => {
       {/* Bottom tab bar */}
       <nav
         className="fixed left-0 right-0 bottom-0 border-t border-border z-50 will-change-transform"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", backgroundColor: "hsl(var(--card))" }}
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)", backgroundColor: "#000000" }}
       >
         <div className="max-w-lg mx-auto flex">
           {tabs.map(({ key, icon: Icon, label, badge }) =>
