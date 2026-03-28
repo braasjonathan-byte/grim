@@ -455,7 +455,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background border-primary will-change-transform">
+      <header className="sticky top-0 z-50 border-b bg-background border-primary will-change-transform" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
           <button onClick={() => setTab("workout")} className="flex items-center gap-2 cursor-pointer">
             <h1 className="text-2xl font-black tracking-tight font-serif text-foreground">
