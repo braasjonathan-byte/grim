@@ -148,8 +148,6 @@ const Index = () => {
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   const [showInboxDropdown, setShowInboxDropdown] = useState(false);
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
 
