@@ -4,7 +4,8 @@ import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, 
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import TabSkeleton from "@/components/TabSkeleton";
 import AuthScreen from "@/components/AuthScreen";
@@ -137,6 +138,7 @@ const Index = () => {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
   const [workoutRefreshKey, setWorkoutRefreshKey] = useState(0);
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
@@ -150,6 +152,23 @@ const Index = () => {
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
+  const [isAppInstalled, setIsAppInstalled] = useState(true); // default true to avoid flash
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
+
+  // Detect if app is installed (standalone mode)
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as any).standalone === true;
+    setIsAppInstalled(isStandalone);
+
+    if (!isStandalone && user) {
+      const dismissed = sessionStorage.getItem("grim_install_prompt_dismissed");
+      if (!dismissed) {
+        setShowInstallDialog(true);
+      }
+    }
+  }, [user]);
 
   usePushNotifications(user?.id ?? null);
   useNativePush(user?.id ?? null);
@@ -454,6 +473,47 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {/* Install prompt dialog */}
+      <Dialog open={showInstallDialog} onOpenChange={(v) => {
+        if (!v) {
+          sessionStorage.setItem("grim_install_prompt_dismissed", "1");
+          setShowInstallDialog(false);
+        }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5 text-primary" />
+              Installera Grim
+            </DialogTitle>
+            <DialogDescription>
+              Lägg till Grim på din hemskärm för en snabbare och bättre upplevelse – precis som en vanlig app!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => {
+                sessionStorage.setItem("grim_install_prompt_dismissed", "1");
+                setShowInstallDialog(false);
+                navigate("/install");
+              }}
+              className="flex-1 bg-primary text-primary-foreground font-bold py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity active:scale-95"
+            >
+              Visa guide
+            </button>
+            <button
+              onClick={() => {
+                sessionStorage.setItem("grim_install_prompt_dismissed", "1");
+                setShowInstallDialog(false);
+              }}
+              className="flex-1 bg-secondary text-secondary-foreground font-medium py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity active:scale-95"
+            >
+              Inte nu
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background border-primary will-change-transform" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
@@ -463,17 +523,16 @@ const Index = () => {
             </h1>
           </button>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
-            <a
-              href="https://www.tiktok.com/@jonathankarlsson98"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
-              aria-label="TikTok">
-
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" className="w-4 h-4 fill-primary">
-                <path d="M448 209.9a210.1 210.1 0 0 1-122.8-39.3v178.8A162.6 162.6 0 1 1 185 188.3v89.9a74.6 74.6 0 1 0 52.2 71.2V0h88a121 121 0 0 0 122.8 121.3z" />
-              </svg>
-            </a>
+            {!isAppInstalled && (
+              <button
+                onClick={() => navigate("/install")}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+                aria-label="Installera appen"
+                title="Installera appen"
+              >
+                <Download className="w-4 h-4 text-primary" />
+              </button>
+            )}
             <div className="relative">
               <button
                 onClick={async () => {
