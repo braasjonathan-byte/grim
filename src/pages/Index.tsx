@@ -473,6 +473,47 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {/* Install prompt dialog */}
+      <Dialog open={showInstallDialog} onOpenChange={(v) => {
+        if (!v) {
+          sessionStorage.setItem("grim_install_prompt_dismissed", "1");
+          setShowInstallDialog(false);
+        }
+      }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5 text-primary" />
+              Installera Grim
+            </DialogTitle>
+            <DialogDescription>
+              Lägg till Grim på din hemskärm för en snabbare och bättre upplevelse – precis som en vanlig app!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => {
+                sessionStorage.setItem("grim_install_prompt_dismissed", "1");
+                setShowInstallDialog(false);
+                navigate("/install");
+              }}
+              className="flex-1 bg-primary text-primary-foreground font-bold py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity active:scale-95"
+            >
+              Visa guide
+            </button>
+            <button
+              onClick={() => {
+                sessionStorage.setItem("grim_install_prompt_dismissed", "1");
+                setShowInstallDialog(false);
+              }}
+              className="flex-1 bg-secondary text-secondary-foreground font-medium py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity active:scale-95"
+            >
+              Inte nu
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background border-primary will-change-transform" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
