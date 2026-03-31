@@ -4,7 +4,8 @@ import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, 
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import TabSkeleton from "@/components/TabSkeleton";
 import AuthScreen from "@/components/AuthScreen";
