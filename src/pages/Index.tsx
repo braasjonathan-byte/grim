@@ -152,7 +152,11 @@ const Index = () => {
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
-  const [isAppInstalled, setIsAppInstalled] = useState(true); // default true to avoid flash
+  const [isAppInstalled, setIsAppInstalled] = useState(() => {
+    const isPreview = window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
+    if (isPreview) return false;
+    return window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+  });
   const [showInstallDialog, setShowInstallDialog] = useState(false);
 
   // Detect if app is installed (standalone mode)
