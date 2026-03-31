@@ -138,6 +138,7 @@ const Index = () => {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
   const [workoutRefreshKey, setWorkoutRefreshKey] = useState(0);
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
@@ -151,6 +152,23 @@ const Index = () => {
   const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
+  const [isAppInstalled, setIsAppInstalled] = useState(true); // default true to avoid flash
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
+
+  // Detect if app is installed (standalone mode)
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as any).standalone === true;
+    setIsAppInstalled(isStandalone);
+
+    if (!isStandalone && user) {
+      const dismissed = sessionStorage.getItem("grim_install_prompt_dismissed");
+      if (!dismissed) {
+        setShowInstallDialog(true);
+      }
+    }
+  }, [user]);
 
   usePushNotifications(user?.id ?? null);
   useNativePush(user?.id ?? null);
