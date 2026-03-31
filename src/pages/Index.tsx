@@ -157,10 +157,11 @@ const Index = () => {
 
   // Detect if app is installed (standalone mode)
   useEffect(() => {
+    const isPreview = window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as any).standalone === true;
-    setIsAppInstalled(isStandalone);
+    setIsAppInstalled(isStandalone && !isPreview);
 
     if (!isStandalone && user) {
       const dismissed = sessionStorage.getItem("grim_install_prompt_dismissed");
