@@ -124,7 +124,8 @@ const Install = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    setPlatform(detectPlatform());
+    const isPreview = window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
+    setPlatform(isPreview ? "ios" : detectPlatform());
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
