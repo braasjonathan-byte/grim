@@ -1145,8 +1145,13 @@ const estimateCalories = (
     const planStartMonday = getMonday(startLocal);
     const targetDate = new Date(date);
     targetDate.setHours(0, 0, 0, 0);
-    const diffDays = Math.floor((targetDate.getTime() - planStartMonday.getTime()) / 86400000);
+
+    const toCalendarDayNumber = (value: Date) =>
+      Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / 86400000;
+
+    const diffDays = toCalendarDayNumber(targetDate) - toCalendarDayNumber(planStartMonday);
     if (diffDays < 0) return null;
+
     const weekNum = Math.floor(diffDays / 7) + 1;
     const dayIndex = ((targetDate.getDay() + 6) % 7); // 0=Mon, 6=Sun
     const dayName = DAYS[dayIndex];
