@@ -748,6 +748,427 @@ function generateSeniorHomeWorkout(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
+// ─── PPL 6 dagar/vecka (8v) ─────────────────────────────────────────────────
+function generatePPL6Days(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const sets = isDeload ? 2 : Math.min(4, 3 + Math.floor(w / 3));
+    const reps = isDeload ? 10 : w <= 4 ? 8 : 6;
+    days.push(
+      { week: w, day: "Mån", session_name: isDeload ? "Push A – Deload" : "Push A – Tungt", details: isDeload ? `Bänkpress 2×10 @ RPE ${r}\nAxelpress 2×10\nSidolyft 2×15` : `Bänkpress ${sets}×${reps} @ RPE ${r}\nAxelpress ${sets}×${reps + 2} @ RPE ${r}\nIncline hantelpress 3×${reps + 2}\nSidolyft 4×15\nTriceps pushdown 3×12\nSkallkross 3×12`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Tis", session_name: isDeload ? "Pull A – Deload" : "Pull A – Tungt", details: isDeload ? `Rodd 2×10\nLatsdrag 2×10\nBicepscurl 2×12` : `Rodd ${sets}×${reps} @ RPE ${r}\nChins ${sets}×max\nFace pulls 3×15\nHammarcurl 3×12\nBicepscurl 3×12\nRear delt flyes 3×15`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Ons", session_name: isDeload ? "Legs A – Deload" : "Legs A – Tungt", details: isDeload ? `Knäböj 2×8 @ RPE ${r}\nBenpress 2×10\nVadpress 2×15` : `Knäböj ${sets}×${reps} @ RPE ${r}\nRumänsk marklyft ${sets}×${reps + 2} @ RPE ${r}\nBenpress 3×${reps + 4}\nBencurl 3×12\nVadpress 4×15`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Tors", session_name: isDeload ? "Push B – Deload" : "Push B – Volym", details: isDeload ? `Incline hantelpress 2×10\nKabel-flyes 2×12\nSidolyft 2×15` : `Incline hantelpress 4×${reps + 4}\nAxelpress hantlar 3×${reps + 4}\nKabel-flyes 3×15\nSidolyft 4×15\nDips 3×max\nTriceps overhead 3×12`, tempo: isDeload ? "Deload" : `RPE ${(rpe - 1).toFixed(1).replace(".0", "")}` },
+      { week: w, day: "Fre", session_name: isDeload ? "Pull B – Deload" : "Pull B – Volym", details: isDeload ? `Kabelrodd 2×10\nLatsdrag 2×10\nBicepscurl 2×12` : `Kabelrodd 4×${reps + 4}\nLatsdrag 4×${reps + 4}\nFace pulls 3×15\nConcentration curl 3×12\nReverse curl 3×12\nShrugs 3×15`, tempo: isDeload ? "Deload" : `RPE ${(rpe - 1).toFixed(1).replace(".0", "")}` },
+      { week: w, day: "Lör", session_name: isDeload ? "Legs B – Deload" : "Legs B – Volym", details: isDeload ? `Frontböj 2×8\nHip thrust 2×10\nVadpress 2×15` : `Frontböj 4×${reps + 4}\nHip thrust 4×${reps + 4}\nBulgarska utfall 3×10/ben\nBencurl 3×12\nVadpress 4×20\nHängande benlyft 3×12`, tempo: isDeload ? "Deload" : `RPE ${(rpe - 1).toFixed(1).replace(".0", "")}` },
+    );
+  }
+  return days;
+}
+
+// ─── HIIT – Fettförbränning (6v) ────────────────────────────────────────────
+function generateHIITFatLoss(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  const baseRounds = exp === "nybörjare" ? 3 : exp === "avancerad" ? 6 : 4;
+  for (let w = 1; w <= 6; w++) {
+    const isDeload = w === 4;
+    const rounds = isDeload ? baseRounds : baseRounds + Math.floor((w - 1) / 2);
+    const work = isDeload ? 25 : 30 + w * 2;
+    const rest = isDeload ? 30 : Math.max(15, 30 - w * 2);
+    days.push(
+      { week: w, day: "Mån", session_name: "HIIT – Helkropp", details: `${rounds} rundor: ${work}s arbete / ${rest}s vila\nBurpees; Mountain climbers; Jump squats; High knees\nVila 90s mellan rundor`, tempo: "Max intensitet" },
+      { week: w, day: "Tis", session_name: "Styrka – Överkropp", details: `Armhävningar 3×${8 + w}; Rodd med hantlar 3×10; Axelpress 3×10; Planka 3×${30 + w * 5}s; Bicepscurl 2×12`, tempo: "" },
+      { week: w, day: "Ons", session_name: "Kondition – Löpintervaller", details: isDeload ? "20 min lugn jogg" : `10 min uppvärmning; ${3 + Math.floor(w / 2)}×${work}s sprint / ${rest + 10}s jogg; 10 min nedvarvning`, tempo: isDeload ? "Lugnt" : "Zon 4–5" },
+      { week: w, day: "Tors", session_name: "Vila / Stretching", details: "20 min stretching eller yoga", tempo: "" },
+      { week: w, day: "Fre", session_name: "HIIT – Cirkelträning", details: `${rounds} cirklar: Kettlebell swings ${work}s; Box jumps ${work}s; Medicinbollskast ${work}s; Planka ${work}s\nVila ${rest}s mellan övningar, 90s mellan cirklar`, tempo: "Max intensitet" },
+      { week: w, day: "Lör", session_name: "Styrka – Underkropp", details: `Knäböj 3×${8 + w}; Utfallssteg 3×10/ben; Hip thrust 3×12; Vadpress 3×15; Hängande benlyft 3×10`, tempo: "" },
+    );
+  }
+  return days;
+}
+
+// ─── 5K Nybörjare – Couch to 5K-inspirerad (8v) ────────────────────────────
+function generateCouch5K(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  const walkMin = [5, 4, 3, 3, 2, 1, 1, 0];
+  const runMin = [1, 2, 3, 4, 5, 7, 10, 15];
+  const intervals = [6, 5, 5, 4, 4, 3, 2, 2];
+  for (let w = 1; w <= 8; w++) {
+    const totalMin = (walkMin[w - 1] + runMin[w - 1]) * intervals[w - 1];
+    days.push(
+      { week: w, day: "Mån", session_name: "Löpning – Intervaller", details: w <= 6 ? `5 min uppvärmning; ${intervals[w - 1]}×(${runMin[w - 1]} min jogg / ${walkMin[w - 1]} min gång); 5 min nedvarvning\nTotal: ~${totalMin + 10} min` : w === 7 ? "5 min uppvärmning; 20 min sammanhängande jogg; 5 min nedvarvning" : "5 min uppvärmning; 25 min sammanhängande jogg; 5 min nedvarvning", tempo: "Prata-tempo" },
+      { week: w, day: "Ons", session_name: "Styrka – Löparstöd", details: `Knäböj 3×${8 + w}; Utfallssteg 2×8/ben; Vadpress 3×15; Bäckenlyft 3×12; Planka 3×${20 + w * 5}s`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Löpning – Lugn", details: w <= 4 ? `${15 + w * 3} min gång/jogg i lugnt tempo` : `${20 + w * 2} min sammanhängande lugn jogg`, tempo: "Lugnt – du ska kunna prata" },
+    );
+  }
+  return days;
+}
+
+// ─── Halvmaraton – Förberedelse (12v) ───────────────────────────────────────
+function generateHalfMarathon(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  const longKm = [10, 12, 14, 12, 16, 14, 18, 16, 20, 18, 14, 21.1];
+  for (let w = 1; w <= 12; w++) {
+    const pace = calcPaceForWeek(profile.time_10km_min, w, 12);
+    const dist = profile.max_distance_km ? Math.round(longKm[w - 1] * Math.min(1, profile.max_distance_km / 21)) : longKm[w - 1];
+    const isDeload = w === 4 || w === 7 || w === 11;
+    const tempoMin = isDeload ? 15 : 15 + Math.floor(w / 2) * 2;
+    days.push(
+      { week: w, day: "Mån", session_name: "Vila / Promenad", details: "Vilodag eller 20 min promenad", tempo: "" },
+      { week: w, day: "Tis", session_name: "Löpning – Lugn", details: `${30 + w} min i lugnt tempo`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Ons", session_name: "Styrka – Löparben", details: `Knäböj 3×${isDeload ? 8 : 6 + Math.floor(w / 3)}; Hip thrust 3×12; Utfallssteg 3×8/ben; Vadpress 3×15; Planka 3×${30 + w * 3}s`, tempo: "" },
+      { week: w, day: "Tors", session_name: "Löpning – Tempo", details: isDeload ? `${20} min lugn jogg` : `15 min uppvärmning; ${tempoMin} min i tröskeltempo; 10 min nedvarvning`, tempo: isDeload ? pace.easy : pace.threshold },
+      { week: w, day: "Fre", session_name: "Vila", details: "Vilodag", tempo: "" },
+      { week: w, day: "Lör", session_name: "Löpning – Lugn kort", details: `${20 + Math.min(w, 8)} min lugn jogg`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Sön", session_name: "Löpning – Långpass", details: `${dist} km i lugnt, jämnt tempo`, tempo: `${pace.long} min/km` },
+    );
+  }
+  return days;
+}
+
+// ─── Funktionell Fitness / CrossFit-inspirerad (8v) ─────────────────────────
+function generateFunctionalFitness(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  const baseMin = exp === "nybörjare" ? 8 : exp === "avancerad" ? 15 : 12;
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const wodMin = isDeload ? baseMin : baseMin + w;
+    const reps = exp === "nybörjare" ? 8 + w : 12 + w;
+    days.push(
+      { week: w, day: "Mån", session_name: isDeload ? "Styrka – Deload" : "Styrka – Tungt", details: isDeload ? `Knäböj 3×5; Axelpress 3×5; Pull-ups 3×max` : `Knäböj 5×${Math.max(3, 6 - Math.floor(w / 3))}\nAxelpress 5×${Math.max(3, 6 - Math.floor(w / 3))}\nMarklyft 3×${Math.max(2, 5 - Math.floor(w / 3))}\nPull-ups 4×max`, tempo: "" },
+      { week: w, day: "Tis", session_name: "WOD – AMRAP", details: `${wodMin} min AMRAP:\n${reps} Kettlebell swings\n${Math.round(reps * 0.7)} Box jumps\n${Math.round(reps * 0.5)} Burpees\nMål: så många rundor som möjligt`, tempo: `${wodMin} min` },
+      { week: w, day: "Ons", session_name: "Vila / Rörlighet", details: "30 min rörlighet och stretching", tempo: "" },
+      { week: w, day: "Tors", session_name: "WOD – For Time", details: isDeload ? `3 rundor:\n10 Armhävningar\n15 Knäböj\n200m löpning` : `5 rundor:\n${reps} Thrusters\n${reps} Pull-ups/Ring rows\n200m löpning\nMål: snabbast möjlig tid`, tempo: "For Time" },
+      { week: w, day: "Fre", session_name: "Olympiska lyft + Kondition", details: `Power clean 5×3\nFront squat 4×5\n3 rundor: 10 Push press + 15 Box jumps + 200m rodd/löpning`, tempo: "" },
+    );
+  }
+  return days;
+}
+
+// ─── Hinderbanelopp / OCR (8v) ──────────────────────────────────────────────
+function generateOCR(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4;
+    const gripSec = 20 + w * 5;
+    const runMin = exp === "nybörjare" ? 20 + w * 2 : 25 + w * 3;
+    days.push(
+      { week: w, day: "Mån", session_name: "Styrka – Grepp & Drag", details: `Dead hang ${3}×${gripSec}s; Pull-ups ${3}×max; Farmers walk 3×40m; Rodd 4×8; Kettlebell swings 3×15; Planka 3×${30 + w * 5}s`, tempo: "" },
+      { week: w, day: "Tis", session_name: "Löpning – Kuperad terräng", details: isDeload ? "20 min lugn jogg" : `${runMin} min löpning i varierande terräng/lutning`, tempo: "Zon 2–3" },
+      { week: w, day: "Ons", session_name: "Vila / Stretching", details: "20 min stretching, fokus höfter och axlar", tempo: "" },
+      { week: w, day: "Tors", session_name: "Hinderspecifik – Circuit", details: isDeload ? "Lätt circuit: 3 rundor à 5 övningar" : `${3 + Math.floor(w / 3)} rundor:\nBurpees ×10; Wall climbs ×5; Bear crawl 20m;\nBox jumps ×8; Monkey bars/dead hang ${gripSec}s\nVila 60s mellan rundor`, tempo: "Max intensitet" },
+      { week: w, day: "Fre", session_name: "Styrka – Helkropp", details: `Marklyft 4×5; Knäböj 3×8; Axelpress 3×8; Dips 3×max; Sled push/Farmers walk 3×30m`, tempo: "" },
+      { week: w, day: "Lör", session_name: "Löpning – Långpass", details: `${isDeload ? 30 : 30 + w * 5} min löpning i lugnt tempo. Bygg uthållighet.`, tempo: "Zon 2" },
+    );
+  }
+  return days;
+}
+
+// ─── Bro Split – Kroppsbyggare (8v) ─────────────────────────────────────────
+function generateBroSplit(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const sets = isDeload ? 2 : 3 + Math.floor(w / 4);
+    const reps = isDeload ? 12 : 10 + Math.floor(w / 3);
+    days.push(
+      { week: w, day: "Mån", session_name: isDeload ? "Bröst – Deload" : "Bröst", details: isDeload ? `Bänkpress 2×10\nIncline hantlar 2×10\nKabel-flyes 2×12` : `Bänkpress ${sets}×${reps} @ RPE ${r}\nIncline hantelpress ${sets}×${reps}\nKabel-flyes 3×15\nDips 3×max\nPec deck 3×15`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Tis", session_name: isDeload ? "Rygg – Deload" : "Rygg", details: isDeload ? `Latsdrag 2×10\nKabelrodd 2×10\nShrugs 2×12` : `Latsdrag ${sets}×${reps}\nKabelrodd ${sets}×${reps}\nEnhandsrodd 3×10\nFace pulls 3×15\nShrugs 3×15\nHyperextension 3×12`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Ons", session_name: isDeload ? "Axlar – Deload" : "Axlar & Bål", details: isDeload ? `Axelpress 2×10\nSidolyft 2×12\nPlanka 2×30s` : `Axelpress ${sets}×${reps} @ RPE ${r}\nSidolyft 4×15\nReverse fly 3×15\nUpright row 3×12\nShrugs 3×15\nHängande benlyft 3×12\nAb wheel 3×10`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Tors", session_name: isDeload ? "Ben – Deload" : "Ben", details: isDeload ? `Knäböj 2×8\nBenpress 2×10\nVadpress 2×15` : `Knäböj ${sets}×${Math.max(6, reps - 2)} @ RPE ${r}\nBenpress ${sets}×${reps}\nRumänsk marklyft 3×10\nBencurl 3×12\nBensträck 3×15\nVadpress 4×20`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Fre", session_name: isDeload ? "Armar – Deload" : "Armar", details: isDeload ? `Bicepscurl 2×12\nTriceps pushdown 2×12\nHammarcurl 2×12` : `Bicepscurl ${sets}×12\nSkallkross ${sets}×12\nHammarcurl 3×12\nTriceps pushdown 3×12\nConcentration curl 3×10\nTriceps overhead 3×12\nUnderarmscurl 3×15`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+    );
+  }
+  return days;
+}
+
+// ─── Rygghälsa – Stärk ryggen (6v) ──────────────────────────────────────────
+function generateBackHealth(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 6; w++) {
+    const hold = 20 + w * 5;
+    const reps = 8 + w;
+    days.push(
+      { week: w, day: "Mån", session_name: "Core & Stabilitet", details: `Dead bug 3×${reps}; Bird dog 3×${reps}/sida; Planka 3×${hold}s; Sidoplanka 2×${Math.round(hold * 0.6)}s/sida; Bäckenlyft 3×${reps + 4}; Katt/ko-stretch 10 reps`, tempo: "" },
+      { week: w, day: "Ons", session_name: "Styrka – Rygg & Höfter", details: `Rodd 3×${reps}; Hyperextension 3×${reps}; Hip thrust 3×${reps + 2}; Face pulls 3×15; Latsdrag 3×${reps + 2}; Pallof press 3×${reps}/sida`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Rörlighet & Styrka", details: `Sittande vridning 2×${reps}/sida; Höftböjarstretch 2×30s/sida; Bröstryggsrotation 2×10/sida; Superman hold 3×${hold}s; Knäböj (goblet) 3×${reps}; 15 min stretching`, tempo: "" },
+    );
+  }
+  return days;
+}
+
+// ─── Vandring & Bergsförberedelse (8v) ──────────────────────────────────────
+function generateHikingPrep(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4;
+    const walkMin = isDeload ? 40 : 40 + w * 8;
+    const stairMin = isDeload ? 10 : 10 + w * 2;
+    days.push(
+      { week: w, day: "Mån", session_name: "Styrka – Ben & Core", details: `Knäböj 3×${8 + w}; Utfallssteg med ryggsäck 3×8/ben; Step-ups 3×10/ben; Vadpress 3×15; Planka 3×${30 + w * 5}s; Farmers walk 3×40m`, tempo: "" },
+      { week: w, day: "Ons", session_name: "Kondition – Trappmaskin/Backe", details: `${stairMin} min trappmaskin eller backlöpning. ${isDeload ? "Lugnt tempo." : "Successivt ökande intensitet."}`, tempo: isDeload ? "Lugnt" : "Zon 2–3" },
+      { week: w, day: "Fre", session_name: "Styrka – Överkropp & Balans", details: `Rodd 3×10; Axelpress 3×10; Pull-ups 3×max; Enbensstående balans 3×30s/sida; Sidosteg med band 3×10/sida; Core-circuit`, tempo: "" },
+      { week: w, day: "Lör", session_name: "Vandring – Långpass", details: `${walkMin} min vandring, gärna kuperad terräng.${w >= 5 ? " Bär ryggsäck med 5–10 kg." : ""} Fokus uthållighet.`, tempo: "Lugnt och jämnt" },
+    );
+  }
+  return days;
+}
+
+// ─── Calisthenics – Avancerad Kroppsvikt (8v) ───────────────────────────────
+function generateCalisthenics(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const reps = exp === "nybörjare" ? 4 + w : exp === "avancerad" ? 8 + w : 6 + w;
+    const hold = exp === "nybörjare" ? 10 + w * 3 : exp === "avancerad" ? 20 + w * 5 : 15 + w * 4;
+    days.push(
+      { week: w, day: "Mån", session_name: isDeload ? "Push – Deload" : "Push – Styrka", details: isDeload ? `Armhävningar 3×${reps}\nDips 2×max\nPike push-ups 2×${Math.round(reps * 0.7)}\nPlanka 2×${hold}s` : `Armhävningar 4×${reps}\nDips 4×max\nPike push-ups 4×${reps}\nDiamond push-ups 3×${Math.max(4, reps - 3)}\nHandstand hold (vägg) 3×${hold}s\nL-sit hold 3×${Math.round(hold * 0.5)}s`, tempo: "" },
+      { week: w, day: "Tis", session_name: isDeload ? "Pull – Deload" : "Pull – Styrka", details: isDeload ? `Pull-ups 2×max\nAustralian rows 2×10\nDead hang 2×${hold}s` : `Pull-ups 4×max\nChin-ups 3×max\nAustralian rows 4×${reps + 4}\nDead hang 3×${hold}s\nFront lever progressions 3×${Math.round(hold * 0.4)}s\nBicepscurl (ryggsäck) 3×12`, tempo: "" },
+      { week: w, day: "Ons", session_name: "Vila / Rörlighet", details: "30 min stretching, yoga eller lätt promenad", tempo: "" },
+      { week: w, day: "Tors", session_name: isDeload ? "Ben – Deload" : "Ben – Styrka", details: isDeload ? `Pistol squat progressions 2×5/ben\nKnäböj 3×12\nBäckenlyft 2×12` : `Pistol squat (progressioner) 4×${Math.max(3, Math.round(reps * 0.5))}/ben\nBulgarska utfall 4×${reps}/ben\nNordic hamstring curl 3×${Math.max(3, reps - 4)}\nExplosiva knäböj 3×${reps}\nVadpress (enbens) 3×15/ben\nHip thrust 3×${reps + 4}`, tempo: "" },
+      { week: w, day: "Fre", session_name: isDeload ? "Skills – Deload" : "Skills & Core", details: isDeload ? `Handstand practice 5 min\nPlanka 2×${hold}s\nDead bug 2×10` : `Handstand practice 10 min\nMuscle-up progressioner 5×${Math.max(1, Math.round(reps * 0.3))}\nHuman flag progressioner 3×hold\nPlanche lean 3×${Math.round(hold * 0.5)}s\nDragon flag 3×${Math.max(3, reps - 4)}\nHängande benlyft 3×${reps}`, tempo: "" },
+    );
+  }
+  return days;
+}
+
+// ─── Morgonrutin – 30 min snabbpass (6v) ────────────────────────────────────
+function generateMorningRoutine(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const daysPerWeek = profile.training_days_per_week || 5;
+  const days: TemplatePlanDay[] = [];
+  const baseReps = exp === "nybörjare" ? 8 : exp === "avancerad" ? 15 : 12;
+  const allSessions = (w: number) => {
+    const r = baseReps + w;
+    const plank = 25 + w * 5;
+    return [
+      { day: "Mån", session_name: "30 min – Push & Core", details: `Armhävningar 3×${r}; Dips (stol) 3×${r - 2}; Pike push-ups 3×${Math.max(5, r - 4)}; Planka 3×${plank}s; Mountain climbers 3×${r + 4}; Stretching 3 min`, tempo: "30 min" },
+      { day: "Tis", session_name: "30 min – Underkropp", details: `Knäböj 3×${r + 4}; Utfallssteg 3×${r}/ben; Hip thrust 3×${r + 4}; Vadpress 3×20; Sidosteg 2×10/sida; Stretching 3 min`, tempo: "30 min" },
+      { day: "Ons", session_name: "30 min – HIIT", details: `4 rundor: 40s arbete / 20s vila\nBurpees; Jump squats; Mountain climbers; High knees; Planka\nVila 60s mellan rundor. Stretching 3 min.`, tempo: "30 min" },
+      { day: "Tors", session_name: "30 min – Pull & Core", details: `Australian rows 3×${r}; Superman hold 3×${plank}s; Bird dog 3×${r}/sida; Bicepscurl (ryggsäck) 3×12; Dead bug 3×${r}; Stretching 3 min`, tempo: "30 min" },
+      { day: "Fre", session_name: "30 min – Helkropp", details: `Armhävningar 2×${r}; Knäböj 2×${r + 4}; Rodd (ryggsäck) 2×${r}; Utfallssteg 2×${r}/ben; Planka 2×${plank}s; Burpees 2×8; Stretching 3 min`, tempo: "30 min" },
+      { day: "Lör", session_name: "30 min – Kondition & Rörlighet", details: `15 min löpning/snabb promenad; 15 min yoga/stretching. Fokus höfter, axlar och bröstrygg.`, tempo: "30 min" },
+    ];
+  };
+  for (let w = 1; w <= 6; w++) {
+    const pool = allSessions(w);
+    const selected = pool.slice(0, Math.min(daysPerWeek, pool.length));
+    for (const s of selected) {
+      days.push({ week: w, ...s });
+    }
+  }
+  return days;
+}
+
+// ─── Stressreducering – Yoga & Rörlighet (6v) ──────────────────────────────
+function generateYogaMobility(profile: FitnessProfile): TemplatePlanDay[] {
+  const daysPerWeek = profile.training_days_per_week || 4;
+  const days: TemplatePlanDay[] = [];
+  const allSessions = (w: number) => {
+    const hold = 25 + w * 5;
+    return [
+      { day: "Mån", session_name: "Yoga – Vinyasa Flow", details: `30 min vinyasa flow. Solhälsning A ×5, Solhälsning B ×3; Stående balanser; Krigarpositioner I, II, III; Nedvarvning i savasana 5 min`, tempo: "" },
+      { day: "Tis", session_name: "Rörlighet – Höfter & Rygg", details: `Pigeon pose 2×60s/sida; Djup knäböj-hold ${hold}s; Höftböjarstretch 2×45s/sida; Bröstryggsrotation 2×10/sida; Katt/ko 10 reps; Barnets ställning 60s`, tempo: "" },
+      { day: "Ons", session_name: "Styrka – Lätt Core", details: `Dead bug 3×10; Bird dog 3×10/sida; Planka 3×${hold}s; Sidoplanka 2×${Math.round(hold * 0.6)}s/sida; Bäckenlyft 3×12; Superman 3×${Math.round(hold * 0.8)}s`, tempo: "" },
+      { day: "Tors", session_name: "Yoga – Yin / Djupstretch", details: `40 min yin yoga. Varje position 3–5 min: Fjäril; Dragon pose; Sphinx; Bananform; Snöring; Savasana 5 min`, tempo: "" },
+      { day: "Fre", session_name: "Rörlighet – Axlar & Överkropp", details: `Axelcirklar 2×15; Bröstspenat vägg 2×45s/sida; Thread the needle 2×10/sida; Lat-stretch 2×45s/sida; Nackstretch 2×30s/sida; Armcirklar 2×15`, tempo: "" },
+      { day: "Lör", session_name: "Promenad & Meditation", details: `${25 + w * 3} min medveten promenad. 10 min andningsövningar (4-7-8 eller boxandning). Stretching 10 min.`, tempo: "" },
+    ];
+  };
+  for (let w = 1; w <= 6; w++) {
+    const pool = allSessions(w);
+    const selected = pool.slice(0, Math.min(daysPerWeek, pool.length));
+    for (const s of selected) {
+      days.push({ week: w, ...s });
+    }
+  }
+  return days;
+}
+
+// ─── Triatlon – Sprint (8v) ────────────────────────────────────────────────
+function generateSprintTriathlon(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const pace = calcPaceForWeek(profile.time_10km_min, w, 8);
+    const isDeload = w === 4;
+    const swimDist = 400 + w * 100;
+    const bikeMin = isDeload ? 25 : 25 + w * 3;
+    const runMin = isDeload ? 15 : 15 + w * 2;
+    days.push(
+      { week: w, day: "Mån", session_name: "Simning – Teknik", details: `200m uppvärmning; 4×100m crawl; 4×50m teknikfokus; 200m nedvarvning. Total: ~${swimDist}m`, tempo: "Lugnt" },
+      { week: w, day: "Tis", session_name: "Löpning – Tempo", details: isDeload ? "20 min lugn jogg" : `10 min uppvärmning; ${10 + w} min tröskeltempo; 10 min nedvarvning`, tempo: isDeload ? pace.easy : pace.threshold },
+      { week: w, day: "Ons", session_name: "Cykling – Uthållighet", details: `${bikeMin} min i zon 2. Fokus kadens 85–95 rpm.`, tempo: "Zon 2" },
+      { week: w, day: "Tors", session_name: "Styrka – Helkropp", details: `Knäböj 3×8; Bänkpress 3×8; Rodd 3×10; Planka 3×${30 + w * 5}s; Vadpress 3×15`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Vila", details: "Vilodag", tempo: "" },
+      { week: w, day: "Lör", session_name: "Brick – Cykel + Löpning", details: isDeload ? "20 min cykel + 10 min jogg" : `${bikeMin} min cykel direkt följt av ${runMin} min löpning. Öva transition.`, tempo: "Zon 2–3" },
+      { week: w, day: "Sön", session_name: "Simning – Distans", details: `${isDeload ? swimDist - 200 : swimDist}m sammanhängande simning`, tempo: "Zon 2" },
+    );
+  }
+  return days;
+}
+
+// ─── Strongman-inspirerad (8v) ──────────────────────────────────────────────
+function generateStrongman(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const baseRpe = exp === "nybörjare" ? 6 : exp === "avancerad" ? 8 : 7;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    const rpe = isDeload ? Math.max(5, baseRpe - 2) : Math.min(9.5, baseRpe + (w - 1) * 0.15);
+    const r = rpe.toFixed(1).replace(".0", "");
+    const sets = isDeload ? 2 : 3 + Math.floor(w / 3);
+    const reps = isDeload ? 5 : Math.max(3, 6 - Math.floor(w / 3));
+    days.push(
+      { week: w, day: "Mån", session_name: isDeload ? "Pressing – Deload" : "Pressing – Tungt", details: isDeload ? `Axelpress 2×8 @ RPE ${r}\nPush press 2×5\nDips 2×max` : `Axelpress ${sets}×${reps} @ RPE ${r}\nPush press ${sets}×${reps}\nIncline bänk 3×${reps + 4}\nSidolyft 3×15\nTriceps pushdown 3×12`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Tis", session_name: isDeload ? "Marklyft – Deload" : "Marklyft & Carries", details: isDeload ? `Marklyft 2×5 @ RPE ${r}\nFarmers walk 2×30m` : `Marklyft ${sets}×${reps} @ RPE ${r}\nDeficit marklyft 3×${reps + 2}\nFarmers walk 4×40m\nYoke walk (tungt) 3×20m\nShrugs 3×15`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Ons", session_name: "Vila / Kondition", details: isDeload ? "Vilodag" : "20–30 min lätt kondition + stretching", tempo: "" },
+      { week: w, day: "Tors", session_name: isDeload ? "Knäböj – Deload" : "Knäböj & Events", details: isDeload ? `Knäböj 2×8 @ RPE ${r}\nBenpress 2×10` : `Knäböj ${sets}×${reps} @ RPE ${r}\nFrontböj 3×${reps + 2}\nSandsäck/Atlas stone 4×3\nSled push/drag 4×20m`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+      { week: w, day: "Fre", session_name: isDeload ? "Drag – Deload" : "Drag & Volym", details: isDeload ? `Rodd 2×10\nPull-ups 2×max\nBicepscurl 2×12` : `Rodd ${sets}×${reps + 2} @ RPE ${r}\nPull-ups ${sets}×max\nLatsdrag 3×${reps + 4}\nHammarcurl 3×12\nAb wheel 3×10`, tempo: isDeload ? "Deload" : `RPE ${r}` },
+    );
+  }
+  return days;
+}
+
+// ─── Skadeförebyggande – Rehab & Prehab (6v) ───────────────────────────────
+function generateRehabPrehab(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 6; w++) {
+    const hold = 20 + w * 5;
+    const reps = 8 + w;
+    days.push(
+      { week: w, day: "Mån", session_name: "Axlar & Överkropp – Prehab", details: `Band pull-aparts 3×${reps + 4}; External rotation 3×${reps}/sida; Face pulls 3×15; Scapula push-ups 3×${reps}; YTWL 2×8; Axelcirklar 2×15`, tempo: "" },
+      { week: w, day: "Tis", session_name: "Höfter & Knän – Prehab", details: `Clamshells 3×${reps}/sida; Monster walks 3×10/sida; Enbensstående 3×${hold}s/sida; Terminal knee extensions 3×12; Sidolyft ben 3×${reps}/sida; Knäcirklar 2×10`, tempo: "" },
+      { week: w, day: "Ons", session_name: "Vila / Promenad", details: `${20 + w * 2} min lugn promenad`, tempo: "" },
+      { week: w, day: "Tors", session_name: "Core & Rygg – Stabilitet", details: `Dead bug 3×${reps}; Bird dog 3×${reps}/sida; Pallof press 3×${reps}/sida; Planka 3×${hold}s; Superman 3×${hold}s; McGill curl-up 3×${reps}`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Fotled & Balans", details: `Enbensstående (blunda) 3×20s/sida; Bosu-balans 3×30s; Vadpress (enbens) 3×15/sida; Tåhävningar 3×15; Ankelcirklar 2×15/sida; Towel scrunches 3×${reps}`, tempo: "" },
+    );
+  }
+  return days;
+}
+
+// ─── Intervallöpning – Fartlek & Tempo (8v) ─────────────────────────────────
+function generateIntervalRunning(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const pace = calcPaceForWeek(profile.time_10km_min, w, 8);
+    const isDeload = w === 4;
+    const intervalCount = isDeload ? 3 : 3 + Math.floor(w / 2);
+    const intervalMin = isDeload ? 3 : 2 + Math.floor(w / 3);
+    days.push(
+      { week: w, day: "Mån", session_name: "Löpning – Lugn", details: `${30 + w * 2} min i lugnt tempo`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Ons", session_name: "Löpning – Fartlek", details: isDeload ? "25 min med 3 lätta fartökningar" : `10 min uppvärmning; ${intervalCount}×${intervalMin} min fartökning (${Math.max(60, 120 - w * 10)}s joggvila); 10 min nedvarvning`, tempo: `Fartökningar: ${pace.threshold}` },
+      { week: w, day: "Fre", session_name: "Löpning – Tempo", details: isDeload ? "20 min lugn jogg" : `10 min uppvärmning; ${15 + w * 2} min i tröskeltempo; 10 min nedvarvning`, tempo: `${pace.threshold} min/km` },
+      { week: w, day: "Sön", session_name: "Löpning – Långpass", details: `${isDeload ? 35 : 40 + w * 5} min lugnt tempo. Bygg aerob bas.`, tempo: `${pace.long} min/km` },
+    );
+  }
+  return days;
+}
+
+// ─── Aktiv Återhämtning – Deload/Återställning (4v) ────────────────────────
+function generateActiveRecovery(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 4; w++) {
+    const walkMin = 20 + w * 5;
+    const hold = 25 + w * 5;
+    days.push(
+      { week: w, day: "Mån", session_name: "Rörlighet – Helkropp", details: `Dynamisk stretching 10 min; Foam rolling 10 min; Statisk stretching 10 min – fokus problemområden`, tempo: "" },
+      { week: w, day: "Tis", session_name: "Lätt Styrka – Core", details: `Dead bug 3×10; Bird dog 3×10/sida; Planka 3×${hold}s; Bäckenlyft 3×12; McGill curl-up 3×10; Stretching 5 min`, tempo: "RPE 4–5" },
+      { week: w, day: "Ons", session_name: "Promenad", details: `${walkMin} min promenad i lugnt tempo`, tempo: "" },
+      { week: w, day: "Tors", session_name: "Yoga – Lugn", details: `30 min lugn yoga/stretching. Fokus andning och avspänning. Solhälsning ×3; Djupstretch höfter och hamstrings; Savasana 5 min`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Lätt Styrka – Helkropp", details: `Goblet squat 2×10; Armhävningar 2×10; Rodd (band/lätt) 2×12; Axelpress (lätt) 2×10; Vadpress 2×15; Stretching 5 min`, tempo: "RPE 4–5" },
+    );
+  }
+  return days;
+}
+
+// ─── Fotboll – Säsongsförberedelse (8v) ─────────────────────────────────────
+function generateSoccerPrep(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4;
+    const sprintCount = isDeload ? 4 : 4 + Math.floor(w / 2);
+    const sprintDist = 20 + w * 5;
+    const agilityMin = isDeload ? 10 : 10 + w;
+    days.push(
+      { week: w, day: "Mån", session_name: "Styrka – Explosiv", details: `Knäböj 4×${isDeload ? 8 : Math.max(4, 7 - Math.floor(w / 3))}; Box jumps 3×5; Utfallssteg 3×8/ben; Marklyft 3×5; Planka 3×${30 + w * 5}s`, tempo: "" },
+      { week: w, day: "Tis", session_name: "Kondition – Sprint & Agility", details: `15 min uppvärmning; ${sprintCount}×${sprintDist}m sprint (gångvila tillbaka); ${agilityMin} min agility: T-test, zigzag, sidoförflyttningar; 10 min nedvarvning`, tempo: "Max intensitet" },
+      { week: w, day: "Ons", session_name: "Vila / Lätt jogg", details: isDeload ? "Vilodag" : "20 min lugn jogg + stretching", tempo: "" },
+      { week: w, day: "Tors", session_name: "Styrka – Underkropp & Prehab", details: `Hip thrust 3×12; Hamstring curl 3×12; Clamshells 3×15/sida; Single-leg squat 3×8/ben; Vadpress 3×15; Nordic hamstring curl 3×${Math.max(3, Math.min(8, w))}`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Kondition – Intervaller", details: isDeload ? "20 min fartlek" : `${3 + Math.floor(w / 2)}×3 min i hög intensitet (90s joggvila).\nSimulerar matchbelastning.`, tempo: "Zon 4" },
+      { week: w, day: "Lör", session_name: "Uthållighet – Långpass", details: `${isDeload ? 25 : 25 + w * 3} min löpning i lugnt tempo. Fokus aerob bas.`, tempo: "Zon 2" },
+    );
+  }
+  return days;
+}
+
+// ─── Trappmaskin & Kondition (6v) ───────────────────────────────────────────
+function generateStairClimber(profile: FitnessProfile): TemplatePlanDay[] {
+  const exp = profile.experience_level;
+  const days: TemplatePlanDay[] = [];
+  const baseSpm = exp === "nybörjare" ? 50 : exp === "avancerad" ? 80 : 65;
+  for (let w = 1; w <= 6; w++) {
+    const isDeload = w === 4;
+    const steadyMin = isDeload ? 15 : 15 + w * 3;
+    const intervalMin = isDeload ? 10 : 10 + w * 2;
+    const spm = baseSpm + w * 3;
+    days.push(
+      { week: w, day: "Mån", session_name: "Trappmaskin – Uthållighet", details: `Stair machine ${steadyMin} min @ ${spm} SPM. Jämnt tempo, fokus andning.`, tempo: `${spm} SPM` },
+      { week: w, day: "Tis", session_name: "Styrka – Ben & Rumpa", details: `Knäböj 3×${8 + w}; Hip thrust 3×12; Utfallssteg 3×10/ben; Step-ups 3×10/ben; Vadpress 3×15; Planka 3×${30 + w * 5}s`, tempo: "" },
+      { week: w, day: "Ons", session_name: "Vila / Promenad", details: "20 min lugn promenad", tempo: "" },
+      { week: w, day: "Tors", session_name: "Trappmaskin – Intervaller", details: isDeload ? `15 min lugnt tempo @ ${spm - 10} SPM` : `5 min uppvärmning; ${3 + Math.floor(w / 2)}×2 min @ ${spm + 15} SPM (1 min vila @ ${spm - 15} SPM); 5 min nedvarvning`, tempo: "Intervaller" },
+      { week: w, day: "Fre", session_name: "Styrka – Överkropp", details: `Bänkpress 3×10; Rodd 3×10; Axelpress 3×10; Latsdrag 3×10; Bicepscurl 2×12; Triceps pushdown 2×12`, tempo: "" },
+      { week: w, day: "Lör", session_name: "Kondition – Valfri", details: `${20 + w * 3} min valfri kondition: löpning, cykling eller simning i lugnt tempo`, tempo: "Zon 2" },
+    );
+  }
+  return days;
+}
+
+// ─── Graviditetsträning – Prenatal (12v) ────────────────────────────────────
+function generatePrenatal(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 12; w++) {
+    const reps = Math.max(6, 12 - Math.floor(w / 4));
+    const walkMin = 20 + Math.min(w, 6) * 2;
+    const hold = Math.max(15, 30 - w);
+    days.push(
+      { week: w, day: "Mån", session_name: "Styrka – Helkropp (anpassad)", details: `Goblet squat 3×${reps}; Hip thrust 3×${reps + 2}; Rodd (sittande) 3×${reps + 2}; Axelpress (sittande) 3×${reps}; Bäckenlyft 3×${reps + 4}; Bäckenbottenträning 3×10`, tempo: "Lugnt och kontrollerat" },
+      { week: w, day: "Ons", session_name: "Promenad & Rörlighet", details: `${walkMin} min promenad i lugnt tempo; 15 min stretching: höftböjare, bröstrygg, axlar; Bäckenbottenträning 3×10; Djupandning 5 min`, tempo: "" },
+      { week: w, day: "Fre", session_name: "Styrka – Core & Stabilitet", details: `Dead bug 3×${reps}; Bird dog 3×${reps}/sida; Sidoplanka (modifierad) 2×${hold}s/sida; Sittande pallof press 3×${reps}; Vadpress 3×15; ${w <= 6 ? `Planka 2×${hold}s` : "Cat/cow 10 reps"}`, tempo: "Lugnt och kontrollerat" },
+    );
+  }
+  return days;
+}
+
+// ─── Postpartum – Comeback (8v) ─────────────────────────────────────────────
+function generatePostpartum(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const reps = 6 + w;
+    const hold = 15 + w * 3;
+    const walkMin = 15 + w * 3;
+    days.push(
+      { week: w, day: "Mån", session_name: "Bäckenbotten & Core", details: `Bäckenbottenträning 3×${reps + 4}; Dead bug 3×${Math.min(reps, 10)}; Bäckenlyft 3×${reps}; ${w <= 4 ? "Knästående planka" : "Planka"} 3×${hold}s; Djupandning 3×10 andetag`, tempo: "Mycket lugnt" },
+      { week: w, day: "Ons", session_name: w <= 3 ? "Promenad" : "Styrka – Lätt Helkropp", details: w <= 3 ? `${walkMin} min lugn promenad. Lyssna på kroppen.` : `Goblet squat 3×${reps}; Hip thrust 3×${reps + 2}; Rodd (lätt) 3×${reps + 2}; Axelpress (lätt) 3×${reps}; Bäckenlyft 3×${reps + 4}`, tempo: w <= 3 ? "" : "RPE 5–6" },
+      { week: w, day: "Fre", session_name: "Promenad & Stretching", details: `${walkMin} min promenad; 15 min stretching: höfter, rygg, axlar; Bäckenbottenträning 2×${reps + 4}`, tempo: "" },
+    );
+  }
+  return days;
+}
+
 export const planTemplates: TemplatePlan[] = [
   {
     name: "🏋️ Styrka 1 dag/vecka – Helkropp",
@@ -788,6 +1209,14 @@ export const planTemplates: TemplatePlan[] = [
     category: "styrka",
     requiredLifts: [],
     generateFromProfile: generateStrength5Days,
+  },
+  {
+    name: "🏋️ PPL 6 dagar/vecka – Push/Pull/Legs × 2",
+    description: "8 veckor, 6 pass/vecka. Klassisk PPL-split med tunga och volympass. Maximal frekvens och muskelstimulans.",
+    weeks: 8,
+    category: "styrka",
+    requiredLifts: [],
+    generateFromProfile: generatePPL6Days,
   },
   {
     name: "💪 Styrka & Löpning – Kombination",
@@ -838,6 +1267,22 @@ export const planTemplates: TemplatePlan[] = [
     generateDays: generateMachineStrength,
   },
   {
+    name: "💪 Bro Split – Kroppsbyggare",
+    description: "8 veckor, 5 pass/vecka. Klassisk split med en muskelgrupp per dag: bröst, rygg, axlar, ben, armar. För maximal isolering och volym.",
+    weeks: 8,
+    category: "styrka",
+    requiredLifts: [],
+    generateFromProfile: generateBroSplit,
+  },
+  {
+    name: "🦍 Strongman – Styrka & Events",
+    description: "8 veckor, 4 pass/vecka. Tungt pressing, marklyft, carries och events. Bygg rå styrka och funktionell kapacitet.",
+    weeks: 8,
+    category: "styrka",
+    requiredLifts: [],
+    generateFromProfile: generateStrongman,
+  },
+  {
     name: "🏠 Hemmaträning – Kroppsvikt",
     description: "6 veckor, 2–6 pass/vecka. Ingen utrustning behövs. Anpassas efter erfarenhet och tillgängliga dagar.",
     weeks: 6,
@@ -854,12 +1299,52 @@ export const planTemplates: TemplatePlan[] = [
     generateFromProfile: generateSeniorHomeWorkout,
   },
   {
+    name: "🤸 Calisthenics – Avancerad Kroppsvikt",
+    description: "8 veckor, 5 pass/vecka. Handstands, muscle-ups, levers och pistol squats. Bygg imponerande kroppskontroll utan vikter.",
+    weeks: 8,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generateCalisthenics,
+  },
+  {
+    name: "☀️ Morgonrutin – 30 min snabbpass",
+    description: "6 veckor, 2–6 pass/vecka. Varje pass tar max 30 minuter. Ingen utrustning behövs. Perfekt för den som vill träna effektivt på morgonen.",
+    weeks: 6,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generateMorningRoutine,
+  },
+  {
     name: "🏃 Löpfokus – Distansbygge",
     description: "8 veckor, 3 löppass + 2 styrkepass. Tempo och distanser anpassas efter din löpnivå.",
     weeks: 8,
     category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateRunningPlan,
+  },
+  {
+    name: "🏃 5K Nybörjare – Börja springa",
+    description: "8 veckor, 3 pass/vecka. Från gång till 25 min sammanhängande jogg. Inspirerad av Couch to 5K. Perfekt för absoluta nybörjare.",
+    weeks: 8,
+    category: "löpning",
+    requiredLifts: [],
+    generateFromProfile: generateCouch5K,
+  },
+  {
+    name: "🏃 Halvmaraton – Förberedelse",
+    description: "12 veckor, 4 löppass + styrkepass. Progressiv distansökning upp till 21.1 km. Anpassas efter din löpnivå och max-distans.",
+    weeks: 12,
+    category: "löpning",
+    requiredLifts: [],
+    generateFromProfile: generateHalfMarathon,
+  },
+  {
+    name: "⚡ Intervallöpning – Fartlek & Tempo",
+    description: "8 veckor, 4 löppass/vecka. Fokus på fartlekar, tempopass och uthållighet. Bli snabbare genom varierad intensitet.",
+    weeks: 8,
+    category: "löpning",
+    requiredLifts: [],
+    generateFromProfile: generateIntervalRunning,
   },
   {
     name: "🚴 Cykling – Uthållighet & Intervaller",
@@ -884,6 +1369,110 @@ export const planTemplates: TemplatePlan[] = [
     category: "kampsport",
     requiredLifts: [],
     generateFromProfile: generateMartialArtsPlan,
+  },
+  {
+    name: "🔥 HIIT – Fettförbränning",
+    description: "6 veckor, 5 pass/vecka. Högintensiva intervaller, cirkelträning och styrkepass. Maximal kaloriförbränning på kort tid.",
+    weeks: 6,
+    category: "kombination",
+    requiredLifts: [],
+    generateFromProfile: generateHIITFatLoss,
+  },
+  {
+    name: "🏔️ Funktionell Fitness – WOD",
+    description: "8 veckor, 4 pass/vecka. CrossFit-inspirerat med AMRAP, For Time och olympiska lyft. Bygg allsidig kapacitet.",
+    weeks: 8,
+    category: "kombination",
+    requiredLifts: [],
+    generateFromProfile: generateFunctionalFitness,
+  },
+  {
+    name: "🏅 Hinderbanelopp – OCR-förberedelse",
+    description: "8 veckor, 5 pass/vecka. Grepp, klättring, löpning och hinderspecifik circuit. Förbered dig för Tough Viking, Toughest och liknande.",
+    weeks: 8,
+    category: "kombination",
+    requiredLifts: [],
+    generateFromProfile: generateOCR,
+  },
+  {
+    name: "🏆 Triatlon Sprint – Sim/Cykel/Löp",
+    description: "8 veckor, 6 pass/vecka. Simning, cykling och löpning med brick-pass. Förbered dig för din första sprinttriatlon.",
+    weeks: 8,
+    category: "kombination",
+    requiredLifts: [],
+    generateFromProfile: generateSprintTriathlon,
+  },
+  {
+    name: "⚽ Fotboll – Säsongsförberedelse",
+    description: "8 veckor, 5 pass/vecka. Explosiv styrka, sprint, agility och uthållighet. Perfekt pre-season-förberedelse.",
+    weeks: 8,
+    category: "kombination",
+    requiredLifts: [],
+    generateFromProfile: generateSoccerPrep,
+  },
+  {
+    name: "🪜 Trappmaskin & Kondition",
+    description: "6 veckor, 5 pass/vecka. Trappmaskin-uthållighet och intervaller kombinerat med styrka. Bygg kondition och benstyrka.",
+    weeks: 6,
+    category: "kombination",
+    requiredLifts: [],
+    generateFromProfile: generateStairClimber,
+  },
+  {
+    name: "🧘 Yoga & Rörlighet – Stressreducering",
+    description: "6 veckor, 2–6 pass/vecka. Vinyasa, yin yoga, rörlighet och meditation. Minska stress och förbättra flexibilitet.",
+    weeks: 6,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generateYogaMobility,
+  },
+  {
+    name: "🦴 Rygghälsa – Stärk ryggen",
+    description: "6 veckor, 3 pass/vecka. Core-stabilitet, ryggstyrkande övningar och rörlighet. Förebygg och lindra ryggbesvär.",
+    weeks: 6,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generateBackHealth,
+  },
+  {
+    name: "🏔️ Vandring – Bergsförberedelse",
+    description: "8 veckor, 4 pass/vecka. Benstyrka, trappmaskin och progressiva vandringslångpass. Förbered dig för fjällvandring.",
+    weeks: 8,
+    category: "kombination",
+    requiredLifts: [],
+    generateFromProfile: generateHikingPrep,
+  },
+  {
+    name: "🩹 Skadeförebyggande – Prehab",
+    description: "6 veckor, 5 pass/vecka. Axelstabilitet, höft/knä-prehab, core och balansträning. Håll kroppen skaderesistent.",
+    weeks: 6,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generateRehabPrehab,
+  },
+  {
+    name: "🔄 Aktiv Återhämtning – Deload",
+    description: "4 veckor, 5 pass/vecka. Lätt styrka, yoga, promenader och rörlighet. Perfekt återhämtningscykel mellan intensiva program.",
+    weeks: 4,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generateActiveRecovery,
+  },
+  {
+    name: "🤰 Graviditetsträning – Prenatal",
+    description: "12 veckor, 3 pass/vecka. Anpassad styrka, bäckenbottenträning och promenader. Säker träning under graviditet.",
+    weeks: 12,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generatePrenatal,
+  },
+  {
+    name: "👶 Postpartum – Comeback",
+    description: "8 veckor, 3 pass/vecka. Gradvis återgång till träning efter förlossning. Bäckenbotten, core och lätt styrka.",
+    weeks: 8,
+    category: "kroppsvikt",
+    requiredLifts: [],
+    generateFromProfile: generatePostpartum,
   },
 ];
 
