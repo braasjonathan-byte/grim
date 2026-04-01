@@ -230,20 +230,26 @@ FÖRESLÅ ALTERNATIVA ÖVNINGAR:
         }
 
         if (action.type === "set_session_name") {
+          const sessionName = (action.session_name || "").slice(0, 100);
           const { error } = await supabase
             .from("workout_plans")
-            .update({ session_name: action.session_name || "" })
+            .update({ session_name: sessionName })
             .eq("id", planRow.id);
           if (error) {
             results.push(`❌ Kunde inte ändra passnamn: ${error.message}`);
           } else {
-            results.push(`✅ Ändrade passnamn till "${action.session_name}" på ${targetDay}`);
+            results.push(`✅ Ändrade passnamn till "${sessionName}" på ${targetDay}`);
           }
         } else if (action.type === "add_exercise") {
+          const exerciseText = (action.exercise || "").slice(0, 200);
           const currentDetails = planRow.details || "";
           const newDetails = currentDetails
-            ? currentDetails + "\n" + action.exercise
-            : action.exercise;
+            ? currentDetails + "\n" + exerciseText
+            : exerciseText;
+          if (newDetails.length > 5000) {
+            results.push(`❌ För många övningar på ${targetDay}, ta bort några först`);
+            continue;
+          }
           const { error } = await supabase
             .from("workout_plans")
             .update({ details: newDetails })
@@ -251,7 +257,7 @@ FÖRESLÅ ALTERNATIVA ÖVNINGAR:
           if (error) {
             results.push(`❌ Kunde inte lägga till: ${error.message}`);
           } else {
-            results.push(`✅ La till "${action.exercise}" på ${targetDay}`);
+            results.push(`✅ La till "${exerciseText}" på ${targetDay}`);
           }
         } else if (action.type === "remove_exercise") {
           const lines = (planRow.details || "").split("\n");
