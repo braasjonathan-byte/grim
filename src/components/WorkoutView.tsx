@@ -1150,8 +1150,7 @@ const estimateCalories = (
     const weekNum = Math.floor(diffDays / 7) + 1;
     const dayIndex = ((targetDate.getDay() + 6) % 7); // 0=Mon, 6=Sun
     const dayName = DAYS[dayIndex];
-    const maxWeek = Math.max(...weeks.filter(w => w > 0), 0);
-    if (weekNum > maxWeek || weekNum < 1) return null;
+    if (weekNum < 1) return null;
     return { week: weekNum, day: dayName };
   };
 
