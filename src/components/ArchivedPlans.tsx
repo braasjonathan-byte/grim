@@ -168,7 +168,18 @@ const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRestore(archive);
+                  }}
+                  disabled={restoring === archive.id}
+                  className="p-1.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                  title="Återställ schema"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${restoring === archive.id ? "animate-spin" : ""}`} />
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
