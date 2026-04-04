@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Archive, ChevronDown, Check, X, Trash2, Dumbbell, Footprints, Moon, Bike } from "lucide-react";
+import { Archive, ChevronDown, Check, X, Trash2, Dumbbell, Footprints, Moon, Bike, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
 
 interface ArchivedPlan {
