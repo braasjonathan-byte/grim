@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Link2, Trash2, Loader2, ChevronDown, Check, FileText, Image, X, Pencil, Save, Eye } from "lucide-react";
-import { exerciseLibrary } from "@/data/exerciseLibrary";
+import { Search, Link2, Trash2, Loader2, ChevronDown, Check, FileText, Image, X, Pencil, Save, Eye, BookOpen } from "lucide-react";
+import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { toast } from "sonner";
 
 interface Mapping {
   id: string;
@@ -20,13 +21,22 @@ interface ExerciseDBResult {
   instructions: string[];
 }
 
+interface CustomExercise {
+  id: string;
+  name: string;
+  category: string;
+  muscle_group: string;
+}
+
 const ExerciseGifManager = () => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
+  const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const [showOnlyMapped, setShowOnlyMapped] = useState(false);
   const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false);
+  const [muscleGroupFilter, setMuscleGroupFilter] = useState<string | null>(null);
 
   // Linking state
   const [linkingExercise, setLinkingExercise] = useState<string | null>(null);
@@ -50,17 +60,31 @@ const ExerciseGifManager = () => {
   const [editEnglishName, setEditEnglishName] = useState("");
   const [savingName, setSavingName] = useState(false);
 
+  // Muscle group editing
+  const [editingMuscleFor, setEditingMuscleFor] = useState<string | null>(null);
+  const [editMuscleGroup, setEditMuscleGroup] = useState("");
+  const [savingMuscle, setSavingMuscle] = useState(false);
+
   const fetchMappings = async () => {
     const { data } = await supabase
       .from("exercise_gif_mappings")
       .select("id, exercise_name, exercisedb_name, gif_url, custom_instructions, created_at")
       .order("exercise_name");
     setMappings((data as Mapping[]) || []);
-    setLoading(false);
+  };
+
+  const fetchCustomExercises = async () => {
+    const { data } = await supabase
+      .from("custom_exercises")
+      .select("id, name, category, muscle_group")
+      .order("name");
+    setCustomExercises((data as CustomExercise[]) || []);
   };
 
   useEffect(() => {
-    if (open) fetchMappings();
+    if (open) {
+      Promise.all([fetchMappings(), fetchCustomExercises()]).then(() => setLoading(false));
+    }
   }, [open]);
 
   const handleSearch = async () => {
@@ -127,8 +151,10 @@ const ExerciseGifManager = () => {
       });
       await fetchMappings();
       setEditingInstructionsFor(null);
+      toast.success("Instruktioner sparade");
     } catch (e) {
       console.error("Failed to save instructions:", e);
+      toast.error("Kunde inte spara instruktioner");
     }
     setSavingInstructions(false);
   };
@@ -147,21 +173,71 @@ const ExerciseGifManager = () => {
         .eq("id", mappingId);
       await fetchMappings();
       setEditingNameFor(null);
+      toast.success("Namn uppdaterat");
     } catch (e) {
       console.error("Failed to save names:", e);
     }
     setSavingName(false);
   };
 
-  // All exercises from library (non-cardio)
-  const linkableExercises = useMemo(
-    () =>
-      exerciseLibrary
-        .filter((e) => e.category !== "kondition" && e.category !== "rörlighet")
-        .map((e) => e.name)
-        .sort((a, b) => a.localeCompare(b, "sv")),
-    []
-  );
+  const saveMuscleGroup = async (exerciseName: string, newMuscle: string) => {
+    setSavingMuscle(true);
+    try {
+      // Check if it's a custom exercise
+      const custom = customExercises.find(c => c.name.toLowerCase() === exerciseName.toLowerCase());
+      if (custom) {
+        await supabase.from("custom_exercises").update({ muscle_group: newMuscle }).eq("id", custom.id);
+        await fetchCustomExercises();
+      }
+      // Note: built-in exercises from exerciseLibrary are static - we'd need a mapping table for those
+      // For now we update custom_exercises or create an override entry
+      if (!custom) {
+        // Check if a custom_exercises entry exists for this built-in exercise, if not create one as override
+        const { data: { user } } = await supabase.auth.getUser();
+        const existing = customExercises.find(c => c.name.toLowerCase() === exerciseName.toLowerCase());
+        if (!existing) {
+          const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === exerciseName.toLowerCase());
+          await supabase.from("custom_exercises").insert({
+            name: exerciseName,
+            category: libEntry?.category || "styrka",
+            muscle_group: newMuscle,
+            created_by: user!.id,
+          });
+          await fetchCustomExercises();
+        }
+      }
+      setEditingMuscleFor(null);
+      toast.success("Muskelgrupp uppdaterad");
+    } catch (e) {
+      console.error("Failed to save muscle group:", e);
+      toast.error("Kunde inte spara muskelgrupp");
+    }
+    setSavingMuscle(false);
+  };
+
+  // All exercises: library + custom, deduplicated, sorted alphabetically
+  const allExercises = useMemo(() => {
+    const nameSet = new Map<string, { name: string; category: string; muscleGroup: string }>();
+    
+    // Add library exercises
+    for (const e of exerciseLibrary) {
+      nameSet.set(e.name.toLowerCase(), { name: e.name, category: e.category, muscleGroup: e.muscleGroup });
+    }
+    
+    // Add/override with custom exercises
+    for (const c of customExercises) {
+      const key = c.name.toLowerCase();
+      if (nameSet.has(key)) {
+        // Custom exercise overrides muscle group
+        const existing = nameSet.get(key)!;
+        nameSet.set(key, { ...existing, muscleGroup: c.muscle_group });
+      } else {
+        nameSet.set(key, { name: c.name, category: c.category, muscleGroup: c.muscle_group });
+      }
+    }
+    
+    return Array.from(nameSet.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  }, [customExercises]);
 
   const mappingsByName = useMemo(() => {
     const map = new Map<string, Mapping>();
@@ -169,24 +245,34 @@ const ExerciseGifManager = () => {
     return map;
   }, [mappings]);
 
-  // Build unified list: every exercise from library, with mapping info if available
+  // Build unified list with filtering
   const exerciseList = useMemo(() => {
     const filterLower = filter.toLowerCase();
-    return linkableExercises
-      .map((name) => ({
-        name,
-        mapping: mappingsByName.get(name.toLowerCase()) || null,
+    return allExercises
+      .map((ex) => ({
+        name: ex.name,
+        category: ex.category,
+        muscleGroup: ex.muscleGroup,
+        mapping: mappingsByName.get(ex.name.toLowerCase()) || null,
       }))
       .filter((item) => {
         if (filterLower && !item.name.toLowerCase().includes(filterLower) && !item.mapping?.exercisedb_name.toLowerCase().includes(filterLower)) return false;
         if (showOnlyMapped && !item.mapping) return false;
         if (showOnlyUnmapped && item.mapping) return false;
+        if (muscleGroupFilter && item.muscleGroup !== muscleGroupFilter) return false;
         return true;
       });
-  }, [linkableExercises, mappingsByName, filter, showOnlyMapped, showOnlyUnmapped]);
+  }, [allExercises, mappingsByName, filter, showOnlyMapped, showOnlyUnmapped, muscleGroupFilter]);
 
-  const mappedCount = linkableExercises.filter((n) => mappingsByName.has(n.toLowerCase())).length;
-  const totalCount = linkableExercises.length;
+  const mappedCount = allExercises.filter((e) => mappingsByName.has(e.name.toLowerCase())).length;
+  const totalCount = allExercises.length;
+
+  // Get all unique muscle groups from exercises
+  const availableMuscleGroups = useMemo(() => {
+    const groups = new Set<string>();
+    for (const ex of allExercises) groups.add(ex.muscleGroup);
+    return Array.from(groups).sort((a, b) => a.localeCompare(b, "sv"));
+  }, [allExercises]);
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -195,10 +281,10 @@ const ExerciseGifManager = () => {
         className="w-full flex items-center justify-between p-4"
       >
         <div className="flex items-center gap-2">
-          <Link2 className="w-4 h-4 text-primary" />
-          <span className="text-sm font-bold">GIF-kopplingar</span>
+          <BookOpen className="w-4 h-4 text-primary" />
+          <span className="text-sm font-bold">Övningsbibliotek</span>
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-            {mappedCount}/{totalCount}
+            {totalCount} övningar
           </span>
         </div>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
@@ -206,7 +292,7 @@ const ExerciseGifManager = () => {
 
       {open && (
         <div className="border-t border-border p-4 space-y-3">
-          {/* Search & filter bar */}
+          {/* Search bar */}
           <div className="flex gap-2">
             <div className="flex-1 relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -214,13 +300,13 @@ const ExerciseGifManager = () => {
                 type="text"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                placeholder="Filtrera övningar..."
+                placeholder="Sök övningar..."
                 className="w-full bg-secondary text-foreground text-sm pl-8 pr-3 py-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
             </div>
           </div>
 
-          {/* Filter chips */}
+          {/* GIF filter chips */}
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => { setShowOnlyMapped(false); setShowOnlyUnmapped(false); }}
@@ -236,7 +322,7 @@ const ExerciseGifManager = () => {
                 showOnlyMapped ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
               }`}
             >
-              ✅ Kopplade ({mappedCount})
+              ✅ GIF ({mappedCount})
             </button>
             <button
               onClick={() => { setShowOnlyMapped(false); setShowOnlyUnmapped(true); }}
@@ -244,9 +330,34 @@ const ExerciseGifManager = () => {
                 showOnlyUnmapped ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
               }`}
             >
-              ❌ Ej kopplade ({totalCount - mappedCount})
+              ❌ Utan GIF ({totalCount - mappedCount})
             </button>
           </div>
+
+          {/* Muscle group filter */}
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => setMuscleGroupFilter(null)}
+              className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                !muscleGroupFilter ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              Alla grupper
+            </button>
+            {availableMuscleGroups.map((mg) => (
+              <button
+                key={mg}
+                onClick={() => setMuscleGroupFilter(muscleGroupFilter === mg ? null : mg)}
+                className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                  muscleGroupFilter === mg ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                {mg}
+              </button>
+            ))}
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">{exerciseList.length} övningar visas</p>
 
           {/* Exercise list */}
           {loading ? (
@@ -259,6 +370,7 @@ const ExerciseGifManager = () => {
                 const m = item.mapping;
                 const isExpanded = expandedId === (m?.id || item.name);
                 const isEditing = editingInstructionsFor === item.name;
+                const isEditingMuscle = editingMuscleFor === item.name;
 
                 return (
                   <div key={item.name} className="rounded-lg border border-border overflow-hidden">
@@ -280,9 +392,10 @@ const ExerciseGifManager = () => {
 
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold truncate">{item.name}</p>
-                        {m && (
-                          <p className="text-[10px] text-muted-foreground truncate">→ {m.exercisedb_name}</p>
-                        )}
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {item.muscleGroup}
+                          {m && <> → {m.exercisedb_name}</>}
+                        </p>
                       </div>
 
                       {/* Status badges */}
@@ -309,6 +422,59 @@ const ExerciseGifManager = () => {
                         {m?.gif_url && (
                           <div className="flex justify-center">
                             <img src={m.gif_url} alt={m.exercisedb_name} className="w-48 h-48 object-contain rounded-lg bg-white border border-border" />
+                          </div>
+                        )}
+
+                        {/* Muscle group editing */}
+                        {isEditingMuscle ? (
+                          <div className="space-y-2">
+                            <span className="text-[11px] font-bold text-foreground">Ändra muskelgrupp</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {muscleGroups.map((mg) => (
+                                <button
+                                  key={mg}
+                                  onClick={() => setEditMuscleGroup(mg)}
+                                  className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors ${
+                                    editMuscleGroup === mg ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                                  }`}
+                                >
+                                  {mg}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingMuscleFor(null)}
+                                className="flex-1 py-2 bg-secondary text-muted-foreground text-xs font-semibold rounded-lg"
+                              >
+                                Avbryt
+                              </button>
+                              <button
+                                onClick={() => saveMuscleGroup(item.name, editMuscleGroup)}
+                                disabled={savingMuscle || !editMuscleGroup}
+                                className="flex-1 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg disabled:opacity-40 flex items-center justify-center gap-1"
+                              >
+                                {savingMuscle ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                Spara
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px]">
+                              <span className="text-muted-foreground">Muskelgrupp: </span>
+                              <span className="font-semibold text-foreground">{item.muscleGroup}</span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingMuscleFor(item.name);
+                                setEditMuscleGroup(item.muscleGroup);
+                              }}
+                              className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:opacity-80"
+                            >
+                              <Pencil className="w-3 h-3" /> Ändra
+                            </button>
                           </div>
                         )}
 
@@ -376,7 +542,7 @@ const ExerciseGifManager = () => {
                         {m?.custom_instructions && m.custom_instructions.length > 0 && !isEditing && (
                           <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-foreground">Anpassade instruktioner</span>
+                              <span className="text-[11px] font-bold text-foreground">Instruktioner</span>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -438,7 +604,7 @@ const ExerciseGifManager = () => {
                             }}
                             className="text-[11px] px-3 py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold flex items-center gap-1 hover:opacity-90"
                           >
-                            <Link2 className="w-3 h-3" /> {m ? "Byt GIF-koppling" : "Koppla GIF"}
+                            <Link2 className="w-3 h-3" /> {m ? "Byt GIF" : "Koppla GIF"}
                           </button>
 
                           {!isEditing && (
@@ -462,7 +628,7 @@ const ExerciseGifManager = () => {
                               }}
                               className="text-[11px] px-3 py-1.5 bg-destructive/10 text-destructive rounded-lg font-semibold flex items-center gap-1 hover:opacity-90"
                             >
-                              <Trash2 className="w-3 h-3" /> Ta bort koppling
+                              <Trash2 className="w-3 h-3" /> Ta bort GIF
                             </button>
                           )}
                         </div>
