@@ -184,31 +184,51 @@ const ExerciseGifManager = () => {
     setSavingMuscle(true);
     try {
       const custom = customExercises.find(c => c.name.toLowerCase() === exerciseName.toLowerCase());
+
       if (custom) {
-        // Update existing custom exercise entry
-        await supabase.from("custom_exercises").update({ muscle_group: newMuscle }).eq("id", custom.id);
+        const { data: updatedRows, error: updateError } = await supabase
+          .from("custom_exercises")
+          .update({ muscle_group: newMuscle })
+          .eq("id", custom.id)
+          .select("id, muscle_group");
+
+        if (updateError) throw updateError;
+        if (!updatedRows || updatedRows.length === 0) {
+          throw new Error("Ingen övning uppdaterades");
+        }
       } else {
-        // Create a new custom_exercises entry as an override for the built-in exercise
         const { data: { user } } = await supabase.auth.getUser();
         const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === exerciseName.toLowerCase());
-        const { error } = await supabase.from("custom_exercises").insert({
+        const { error: insertError } = await supabase.from("custom_exercises").insert({
           name: exerciseName,
           category: libEntry?.category || "styrka",
           muscle_group: newMuscle,
           created_by: user!.id,
         });
-        if (error) {
-          // If duplicate name (race condition), try update instead
-          const { data: existing } = await supabase
+
+        if (insertError) {
+          const { data: existing, error: existingError } = await supabase
             .from("custom_exercises")
             .select("id")
             .ilike("name", exerciseName)
             .maybeSingle();
-          if (existing) {
-            await supabase.from("custom_exercises").update({ muscle_group: newMuscle }).eq("id", existing.id);
+
+          if (existingError) throw existingError;
+          if (!existing) throw insertError;
+
+          const { data: updatedRows, error: fallbackUpdateError } = await supabase
+            .from("custom_exercises")
+            .update({ muscle_group: newMuscle })
+            .eq("id", existing.id)
+            .select("id, muscle_group");
+
+          if (fallbackUpdateError) throw fallbackUpdateError;
+          if (!updatedRows || updatedRows.length === 0) {
+            throw new Error("Ingen övning uppdaterades vid fallback");
           }
         }
       }
+
       await fetchCustomExercises();
       setEditingMuscleFor(null);
       toast.success("Muskelgrupp uppdaterad");
