@@ -50,6 +50,72 @@ const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
     setArchives((prev) => prev.filter((a) => a.id !== id));
   };
 
+  const handleRestore = async (archive: ArchivedPlan) => {
+    if (!confirm("Återställa detta schema? Ditt nuvarande aktiva schema (om du har ett) arkiveras först.")) return;
+    setRestoring(archive.id);
+    try {
+      // 1. Archive current active plan if exists
+      const [{ data: currentPlan }, { data: currentComp }] = await Promise.all([
+        supabase.from("workout_plans").select("*").eq("user_id", userId),
+        supabase.from("workout_completions").select("*").eq("user_id", userId),
+      ]);
+      if (currentPlan && currentPlan.length > 0) {
+        const planName = `Schema (${currentPlan.filter(p => p.session_name.trim() !== "").length} pass, ${[...new Set(currentPlan.map(p => p.week))].length} veckor)`;
+        await supabase.from("archived_plans").insert({
+          user_id: userId,
+          plan_name: planName,
+          plan_data: currentPlan as any,
+          completion_data: (currentComp || []) as any,
+        });
+      }
+
+      // 2. Delete current active data
+      await Promise.all([
+        supabase.from("workout_plans").delete().eq("user_id", userId),
+        supabase.from("workout_completions").delete().eq("user_id", userId),
+      ]);
+
+      // 3. Insert archived plan data back
+      const planRows = (archive.plan_data || []).map((p: any) => ({
+        user_id: userId,
+        week: p.week,
+        day: p.day,
+        session_name: p.session_name || "",
+        details: p.details || "",
+        tempo: p.tempo || null,
+      }));
+      if (planRows.length > 0) {
+        await supabase.from("workout_plans").insert(planRows);
+      }
+
+      const compRows = (archive.completion_data || []).map((c: any) => ({
+        user_id: userId,
+        week: c.week,
+        day: c.day,
+        done: c.done || false,
+        skipped: c.skipped || false,
+        user_comment: c.user_comment || null,
+        logged_weights: c.logged_weights || null,
+        logged_pulse: c.logged_pulse || null,
+        logged_tempo: c.logged_tempo || null,
+        logged_distance_km: c.logged_distance_km || null,
+      }));
+      if (compRows.length > 0) {
+        await supabase.from("workout_completions").insert(compRows);
+      }
+
+      // 4. Delete the archive entry
+      await supabase.from("archived_plans").delete().eq("id", archive.id);
+
+      toast.success("Schemat har återställts!");
+      window.location.reload();
+    } catch (e) {
+      console.error("Failed to restore plan:", e);
+      toast.error("Kunde inte återställa schemat");
+      setRestoring(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
