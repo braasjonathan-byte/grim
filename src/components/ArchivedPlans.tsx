@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Archive, ChevronDown, Check, X, Trash2, Dumbbell, Footprints, Moon, Bike } from "lucide-react";
+import { Archive, ChevronDown, Check, X, Trash2, Dumbbell, Footprints, Moon, Bike, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState";
 
 interface ArchivedPlan {
@@ -26,6 +27,7 @@ const getSessionIcon = (session: string) => {
 const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
   const [archives, setArchives] = useState<ArchivedPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
 
@@ -46,6 +48,72 @@ const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
     if (!confirm("Ta bort detta arkiverade schema permanent?")) return;
     await supabase.from("archived_plans").delete().eq("id", id);
     setArchives((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleRestore = async (archive: ArchivedPlan) => {
+    if (!confirm("Återställa detta schema? Ditt nuvarande aktiva schema (om du har ett) arkiveras först.")) return;
+    setRestoring(archive.id);
+    try {
+      // 1. Archive current active plan if exists
+      const [{ data: currentPlan }, { data: currentComp }] = await Promise.all([
+        supabase.from("workout_plans").select("*").eq("user_id", userId),
+        supabase.from("workout_completions").select("*").eq("user_id", userId),
+      ]);
+      if (currentPlan && currentPlan.length > 0) {
+        const planName = `Schema (${currentPlan.filter(p => p.session_name.trim() !== "").length} pass, ${[...new Set(currentPlan.map(p => p.week))].length} veckor)`;
+        await supabase.from("archived_plans").insert({
+          user_id: userId,
+          plan_name: planName,
+          plan_data: currentPlan as any,
+          completion_data: (currentComp || []) as any,
+        });
+      }
+
+      // 2. Delete current active data
+      await Promise.all([
+        supabase.from("workout_plans").delete().eq("user_id", userId),
+        supabase.from("workout_completions").delete().eq("user_id", userId),
+      ]);
+
+      // 3. Insert archived plan data back
+      const planRows = (archive.plan_data || []).map((p: any) => ({
+        user_id: userId,
+        week: p.week,
+        day: p.day,
+        session_name: p.session_name || "",
+        details: p.details || "",
+        tempo: p.tempo || null,
+      }));
+      if (planRows.length > 0) {
+        await supabase.from("workout_plans").insert(planRows);
+      }
+
+      const compRows = (archive.completion_data || []).map((c: any) => ({
+        user_id: userId,
+        week: c.week,
+        day: c.day,
+        done: c.done || false,
+        skipped: c.skipped || false,
+        user_comment: c.user_comment || null,
+        logged_weights: c.logged_weights || null,
+        logged_pulse: c.logged_pulse || null,
+        logged_tempo: c.logged_tempo || null,
+        logged_distance_km: c.logged_distance_km || null,
+      }));
+      if (compRows.length > 0) {
+        await supabase.from("workout_completions").insert(compRows);
+      }
+
+      // 4. Delete the archive entry
+      await supabase.from("archived_plans").delete().eq("id", archive.id);
+
+      toast.success("Schemat har återställts!");
+      window.location.reload();
+    } catch (e) {
+      console.error("Failed to restore plan:", e);
+      toast.error("Kunde inte återställa schemat");
+      setRestoring(null);
+    }
   };
 
   if (loading) {
@@ -100,7 +168,18 @@ const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRestore(archive);
+                  }}
+                  disabled={restoring === archive.id}
+                  className="p-1.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                  title="Återställ schema"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 ${restoring === archive.id ? "animate-spin" : ""}`} />
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
