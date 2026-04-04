@@ -104,8 +104,13 @@ const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
         await supabase.from("workout_completions").insert(compRows);
       }
 
-      // 4. Delete the archive entry
-      await supabase.from("archived_plans").delete().eq("id", archive.id);
+      // 4. Delete the archive entry and set plan_start_date to today
+      const today = new Date();
+      const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      await Promise.all([
+        supabase.from("archived_plans").delete().eq("id", archive.id),
+        supabase.from("profiles").update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any).eq("user_id", userId),
+      ]);
 
       toast.success("Schemat har återställts!");
       window.location.reload();

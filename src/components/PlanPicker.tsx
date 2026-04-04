@@ -150,8 +150,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
       await supabase.from("workout_plans").insert(rows.slice(i, i + 50));
     }
 
-    // Mark user as calibrated since they chose a start date
-    await supabase.from("profiles").update({ plan_start_calibrated: true }).eq("user_id", userId);
+    // Save plan_start_date and mark as calibrated
+    const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+    await supabase.from("profiles").update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any).eq("user_id", userId);
 
     setLoading(false);
     onDone();
