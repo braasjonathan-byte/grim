@@ -27,6 +27,7 @@ const getSessionIcon = (session: string) => {
 const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
   const [archives, setArchives] = useState<ArchivedPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
 
