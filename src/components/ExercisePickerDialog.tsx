@@ -79,10 +79,24 @@ const ExercisePickerDialog = ({
 
   if (!open) return null;
 
-  const allExercises = [
-    ...exerciseLibrary.map(e => ({ name: e.name, muscleGroup: e.muscleGroup, category: e.category, isCustom: false })),
-    ...customExercises.map(e => ({ name: e.name, muscleGroup: e.muscle_group, category: e.category, isCustom: true })),
-  ];
+  // Deduplicate: custom exercises override library entries (e.g. muscle group edits by admin)
+  const allExercises = (() => {
+    const nameMap = new Map<string, { name: string; muscleGroup: string; category: string; isCustom: boolean }>();
+    for (const e of exerciseLibrary) {
+      nameMap.set(e.name.toLowerCase(), { name: e.name, muscleGroup: e.muscleGroup, category: e.category, isCustom: false });
+    }
+    for (const e of customExercises) {
+      const key = e.name.toLowerCase();
+      if (nameMap.has(key)) {
+        // Override muscle group from custom/admin edit
+        const existing = nameMap.get(key)!;
+        nameMap.set(key, { ...existing, muscleGroup: e.muscle_group, isCustom: false });
+      } else {
+        nameMap.set(key, { name: e.name, muscleGroup: e.muscle_group, category: e.category, isCustom: true });
+      }
+    }
+    return Array.from(nameMap.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  })();
 
   const filtered = allExercises.filter(e => {
     const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase());
