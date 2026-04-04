@@ -183,29 +183,33 @@ const ExerciseGifManager = () => {
   const saveMuscleGroup = async (exerciseName: string, newMuscle: string) => {
     setSavingMuscle(true);
     try {
-      // Check if it's a custom exercise
       const custom = customExercises.find(c => c.name.toLowerCase() === exerciseName.toLowerCase());
       if (custom) {
+        // Update existing custom exercise entry
         await supabase.from("custom_exercises").update({ muscle_group: newMuscle }).eq("id", custom.id);
-        await fetchCustomExercises();
-      }
-      // Note: built-in exercises from exerciseLibrary are static - we'd need a mapping table for those
-      // For now we update custom_exercises or create an override entry
-      if (!custom) {
-        // Check if a custom_exercises entry exists for this built-in exercise, if not create one as override
+      } else {
+        // Create a new custom_exercises entry as an override for the built-in exercise
         const { data: { user } } = await supabase.auth.getUser();
-        const existing = customExercises.find(c => c.name.toLowerCase() === exerciseName.toLowerCase());
-        if (!existing) {
-          const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === exerciseName.toLowerCase());
-          await supabase.from("custom_exercises").insert({
-            name: exerciseName,
-            category: libEntry?.category || "styrka",
-            muscle_group: newMuscle,
-            created_by: user!.id,
-          });
-          await fetchCustomExercises();
+        const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === exerciseName.toLowerCase());
+        const { error } = await supabase.from("custom_exercises").insert({
+          name: exerciseName,
+          category: libEntry?.category || "styrka",
+          muscle_group: newMuscle,
+          created_by: user!.id,
+        });
+        if (error) {
+          // If duplicate name (race condition), try update instead
+          const { data: existing } = await supabase
+            .from("custom_exercises")
+            .select("id")
+            .ilike("name", exerciseName)
+            .maybeSingle();
+          if (existing) {
+            await supabase.from("custom_exercises").update({ muscle_group: newMuscle }).eq("id", existing.id);
+          }
         }
       }
+      await fetchCustomExercises();
       setEditingMuscleFor(null);
       toast.success("Muskelgrupp uppdaterad");
     } catch (e) {
