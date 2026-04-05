@@ -53,6 +53,7 @@ const ExerciseGifManager = () => {
   const [editingInstructionsFor, setEditingInstructionsFor] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [savingInstructions, setSavingInstructions] = useState(false);
+  const [loadingInstructions, setLoadingInstructions] = useState(false);
 
   // Name editing
   const [editingNameFor, setEditingNameFor] = useState<string | null>(null);
@@ -140,6 +141,29 @@ const ExerciseGifManager = () => {
   const handleDelete = async (id: string) => {
     await supabase.from("exercise_gif_mappings").delete().eq("id", id);
     setMappings((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const startEditingInstructions = async (exerciseName: string, existingCustom: string[] | null) => {
+    setEditingInstructionsFor(exerciseName);
+    if (existingCustom && existingCustom.length > 0) {
+      setEditText(existingCustom.join("\n"));
+      return;
+    }
+    // Fetch current instructions from the API so admin sees what users see
+    setLoadingInstructions(true);
+    try {
+      const { data: result } = await supabase.functions.invoke("exercise-gif", {
+        body: { exerciseName },
+      });
+      if (result?.instructions && result.instructions.length > 0) {
+        setEditText(result.instructions.map((inst: string) => inst.replace(/^(Step|Steg)\s*:?\s*\d+\s*:?\s*/i, "")).join("\n"));
+      } else {
+        setEditText("");
+      }
+    } catch {
+      setEditText("");
+    }
+    setLoadingInstructions(false);
   };
 
   const saveInstructions = async (exerciseName: string) => {
@@ -570,8 +594,7 @@ const ExerciseGifManager = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setEditingInstructionsFor(item.name);
-                                  setEditText(m.custom_instructions!.join("\n"));
+                                  startEditingInstructions(item.name, m.custom_instructions!);
                                 }}
                                 className="text-[10px] text-primary font-semibold flex items-center gap-1 hover:opacity-80"
                               >
@@ -590,13 +613,20 @@ const ExerciseGifManager = () => {
                         {isEditing && (
                           <div className="space-y-2">
                             <span className="text-[11px] font-bold text-foreground">Redigera instruktioner</span>
-                            <textarea
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              placeholder="En instruktion per rad..."
-                              className="w-full bg-secondary text-foreground text-xs p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[120px] resize-y"
-                              rows={6}
-                            />
+                            {loadingInstructions ? (
+                              <div className="flex items-center justify-center py-6">
+                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground ml-2">Hämtar befintliga instruktioner...</span>
+                              </div>
+                            ) : (
+                              <textarea
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                placeholder="En instruktion per rad..."
+                                className="w-full bg-secondary text-foreground text-xs p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[120px] resize-y"
+                                rows={6}
+                              />
+                            )}
                             <div className="flex gap-2">
                               <button
                                 onClick={() => setEditingInstructionsFor(null)}
@@ -635,8 +665,7 @@ const ExerciseGifManager = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingInstructionsFor(item.name);
-                                setEditText(m?.custom_instructions?.join("\n") || "");
+                                startEditingInstructions(item.name, m?.custom_instructions || null);
                               }}
                               className="text-[11px] px-3 py-1.5 bg-secondary text-foreground rounded-lg font-semibold flex items-center gap-1 hover:opacity-90"
                             >
