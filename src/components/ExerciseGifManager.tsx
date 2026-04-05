@@ -53,6 +53,7 @@ const ExerciseGifManager = () => {
   const [editingInstructionsFor, setEditingInstructionsFor] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [savingInstructions, setSavingInstructions] = useState(false);
+  const [loadingInstructions, setLoadingInstructions] = useState(false);
 
   // Name editing
   const [editingNameFor, setEditingNameFor] = useState<string | null>(null);
