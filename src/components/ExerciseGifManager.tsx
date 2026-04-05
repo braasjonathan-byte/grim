@@ -613,13 +613,20 @@ const ExerciseGifManager = () => {
                         {isEditing && (
                           <div className="space-y-2">
                             <span className="text-[11px] font-bold text-foreground">Redigera instruktioner</span>
-                            <textarea
-                              value={editText}
-                              onChange={(e) => setEditText(e.target.value)}
-                              placeholder="En instruktion per rad..."
-                              className="w-full bg-secondary text-foreground text-xs p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[120px] resize-y"
-                              rows={6}
-                            />
+                            {loadingInstructions ? (
+                              <div className="flex items-center justify-center py-6">
+                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground ml-2">Hämtar befintliga instruktioner...</span>
+                              </div>
+                            ) : (
+                              <textarea
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                placeholder="En instruktion per rad..."
+                                className="w-full bg-secondary text-foreground text-xs p-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground min-h-[120px] resize-y"
+                                rows={6}
+                              />
+                            )}
                             <div className="flex gap-2">
                               <button
                                 onClick={() => setEditingInstructionsFor(null)}
