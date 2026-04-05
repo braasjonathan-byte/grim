@@ -143,6 +143,29 @@ const ExerciseGifManager = () => {
     setMappings((prev) => prev.filter((m) => m.id !== id));
   };
 
+  const startEditingInstructions = async (exerciseName: string, existingCustom: string[] | null) => {
+    setEditingInstructionsFor(exerciseName);
+    if (existingCustom && existingCustom.length > 0) {
+      setEditText(existingCustom.join("\n"));
+      return;
+    }
+    // Fetch current instructions from the API so admin sees what users see
+    setLoadingInstructions(true);
+    try {
+      const { data: result } = await supabase.functions.invoke("exercise-gif", {
+        body: { exerciseName },
+      });
+      if (result?.instructions && result.instructions.length > 0) {
+        setEditText(result.instructions.map((inst: string) => inst.replace(/^(Step|Steg)\s*:?\s*\d+\s*:?\s*/i, "")).join("\n"));
+      } else {
+        setEditText("");
+      }
+    } catch {
+      setEditText("");
+    }
+    setLoadingInstructions(false);
+  };
+
   const saveInstructions = async (exerciseName: string) => {
     setSavingInstructions(true);
     const instructions = editText.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
