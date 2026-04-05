@@ -665,8 +665,7 @@ const ExerciseGifManager = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingInstructionsFor(item.name);
-                                setEditText(m?.custom_instructions?.join("\n") || "");
+                                startEditingInstructions(item.name, m?.custom_instructions || null);
                               }}
                               className="text-[11px] px-3 py-1.5 bg-secondary text-foreground rounded-lg font-semibold flex items-center gap-1 hover:opacity-90"
                             >
