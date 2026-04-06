@@ -230,7 +230,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={handleAvatarUpload}
+            onChange={handleFileSelect}
             className="hidden"
           />
         </div>
