@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { User, Camera, Loader2, Instagram, Music, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
+import AvatarCropDialog from "./AvatarCropDialog";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileSectionProps {
