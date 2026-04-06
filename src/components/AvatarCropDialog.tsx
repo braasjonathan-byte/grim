@@ -115,7 +115,7 @@ const AvatarCropDialog = ({ open, imageFile, onClose, onSave, saving }: AvatarCr
                 onLoad={handleImageLoad}
                 alt="Förhandsvisning"
                 draggable={false}
-                className="absolute select-none pointer-events-none"
+                className="absolute select-none pointer-events-none max-w-none max-h-none"
                 style={{
                   width: displayW,
                   height: displayH,
