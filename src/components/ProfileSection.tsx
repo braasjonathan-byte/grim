@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { User, Camera, Loader2, Instagram, Music, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
+import AvatarCropDialog from "./AvatarCropDialog";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileSectionProps {
@@ -143,17 +144,25 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     return () => { clearTimeout(timeout); controller.abort(); };
   }, [spotifyUrl]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return;
-    if (file.size > 2 * 1024 * 1024) return;
+    setCropFile(file);
+    setCropOpen(true);
+    // Reset input so same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleCropSave = async (blob: Blob) => {
     setUploading(true);
-    const fileExt = file.name.split(".").pop();
-    const filePath = `${userId}/avatar.${fileExt}`;
+    const filePath = `${userId}/avatar.jpg`;
     const { error: uploadError } = await supabase.storage
       .from("avatars")
-      .upload(filePath, file, { upsert: true });
+      .upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
     if (uploadError) {
       setUploading(false);
       return;
@@ -168,6 +177,8 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .eq("user_id", userId);
     setAvatarUrl(publicUrl);
     setUploading(false);
+    setCropOpen(false);
+    setCropFile(null);
   };
 
   return (
@@ -219,7 +230,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={handleAvatarUpload}
+            onChange={handleFileSelect}
             className="hidden"
           />
         </div>
@@ -345,6 +356,13 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           />
         </div>
       </div>
+      <AvatarCropDialog
+        open={cropOpen}
+        imageFile={cropFile}
+        onClose={() => { setCropOpen(false); setCropFile(null); }}
+        onSave={handleCropSave}
+        saving={uploading}
+      />
     </div>
   );
 };
