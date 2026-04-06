@@ -356,6 +356,13 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           />
         </div>
       </div>
+      <AvatarCropDialog
+        open={cropOpen}
+        imageFile={cropFile}
+        onClose={() => { setCropOpen(false); setCropFile(null); }}
+        onSave={handleCropSave}
+        saving={uploading}
+      />
     </div>
   );
 };
