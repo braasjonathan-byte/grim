@@ -340,7 +340,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="url"
             value={spotifyUrl}
-            onChange={(e) => setSpotifyUrl(e.target.value)}
+            onChange={(e) => { dirty.current = true; setSpotifyUrl(e.target.value); }}
             placeholder="https://open.spotify.com/track/..."
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
