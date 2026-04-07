@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut } from "lucide-react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
@@ -44,6 +44,9 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
   const [secHasExisting, setSecHasExisting] = useState(false);
 
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [spotifyWidget, setSpotifyWidget] = useState(() => {
+    return localStorage.getItem("gymberget_spotify_widget") !== "false";
+  });
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -222,7 +225,24 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
         </div>
       )}
 
-      {/* Security questions */}
+      {/* Spotify widget toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Music className="w-4 h-4 text-primary" />
+          <span className="text-sm">Visa Spotify i träningsvyn</span>
+        </div>
+        <button
+          onClick={() => {
+            const next = localStorage.getItem("gymberget_spotify_widget") !== "true";
+            localStorage.setItem("gymberget_spotify_widget", next ? "true" : "false");
+            setSpotifyWidget(next);
+          }}
+          className={`relative w-11 h-6 rounded-full transition-colors ${spotifyWidget ? "bg-primary" : "bg-secondary border border-border"}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${spotifyWidget ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
+        </button>
+      </div>
+
       {userId && (
         <div className="border-t border-border pt-2">
           <button
