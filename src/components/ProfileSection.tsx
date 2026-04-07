@@ -45,6 +45,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const dirty = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
