@@ -45,6 +45,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const dirty = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -94,9 +95,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .eq("user_id", userId);
   }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
 
-  // Trigger auto-save when any field changes (after initial load)
+  // Trigger auto-save when any field changes (after initial load AND user interaction)
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !dirty.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       doSave();
@@ -104,16 +105,16 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
 
-  // Save on unmount/visibility change
+  // Save on unmount/visibility change (only if user changed something)
   useEffect(() => {
     if (!loaded) return;
     const handleVisibility = () => {
-      if (document.visibilityState === "hidden") doSave();
+      if (document.visibilityState === "hidden" && dirty.current) doSave();
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      doSave();
+      if (dirty.current) doSave();
     };
   }, [loaded, doSave]);
 
@@ -131,6 +132,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         if (res.ok) {
           const data = await res.json();
           if (data.title) {
+            dirty.current = true;
             setSpotifyName(data.title);
           }
         }
@@ -247,7 +249,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           type="number"
           inputMode="numeric"
           value={age}
-          onChange={(e) => setAge(e.target.value)}
+          onChange={(e) => { dirty.current = true; setAge(e.target.value); }}
           placeholder="Ange din ålder"
           min={1}
           max={120}
@@ -260,7 +262,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         <label className="text-xs text-muted-foreground block">Kön</label>
         <select
           value={gender}
-          onChange={(e) => setGender(e.target.value)}
+          onChange={(e) => { dirty.current = true; setGender(e.target.value); }}
           className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
         >
           {GENDER_OPTIONS.map((opt) => (
@@ -278,7 +280,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           type="number"
           inputMode="decimal"
           value={weightKg}
-          onChange={(e) => setWeightKg(e.target.value)}
+          onChange={(e) => { dirty.current = true; setWeightKg(e.target.value); }}
           placeholder="Ange din vikt"
           min={30}
           max={300}
@@ -298,7 +300,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={instagram}
-            onChange={(e) => setInstagram(e.target.value)}
+            onChange={(e) => { dirty.current = true; setInstagram(e.target.value); }}
             placeholder="t.ex. mittnamn"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -309,7 +311,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={tiktok}
-            onChange={(e) => setTiktok(e.target.value)}
+            onChange={(e) => { dirty.current = true; setTiktok(e.target.value); }}
             placeholder="t.ex. mittnamn"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -320,7 +322,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={snapchat}
-            onChange={(e) => setSnapchat(e.target.value)}
+            onChange={(e) => { dirty.current = true; setSnapchat(e.target.value); }}
             placeholder="t.ex. mittnamn"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -339,7 +341,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="url"
             value={spotifyUrl}
-            onChange={(e) => setSpotifyUrl(e.target.value)}
+            onChange={(e) => { dirty.current = true; setSpotifyUrl(e.target.value); }}
             placeholder="https://open.spotify.com/track/..."
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
@@ -350,7 +352,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={spotifyName}
-            onChange={(e) => setSpotifyName(e.target.value)}
+            onChange={(e) => { dirty.current = true; setSpotifyName(e.target.value); }}
             placeholder="Fylls i automatiskt från länken"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
