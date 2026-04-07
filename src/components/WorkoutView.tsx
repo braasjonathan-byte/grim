@@ -1579,7 +1579,7 @@ const estimateCalories = (
         setCondTempoInput(lastCondTempo || "");
         setCondSpmInput("");
       }
-      setCondTimeInput("");
+      resetCondTime();
       setCondDistanceInput("");
       setCondIntervalsInput("");
       setCondRestInput("");
