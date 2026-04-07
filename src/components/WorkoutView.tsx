@@ -1801,7 +1801,7 @@ const estimateCalories = (
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
     setEditingCondLine(null);
-    setCondTimeInput("");
+    resetCondTime();
     setCondTempoInput("");
     setCondDistanceInput("");
     setCondPulseInput("");
