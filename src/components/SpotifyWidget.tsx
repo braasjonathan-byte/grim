@@ -30,6 +30,7 @@ const SpotifyWidget = ({ userId }: SpotifyWidgetProps) => {
   }, [userId]);
 
   if (!loaded || !isHonorary || !anthemUrl) return null;
+  if (localStorage.getItem("gymberget_spotify_widget") === "false") return null;
 
   // Convert web URL to deep link: https://open.spotify.com/track/xxx → spotify:track:xxx
   const getDeepLink = (url: string): string => {
