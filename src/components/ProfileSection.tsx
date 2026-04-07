@@ -132,6 +132,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         if (res.ok) {
           const data = await res.json();
           if (data.title) {
+            dirty.current = true;
             setSpotifyName(data.title);
           }
         }
