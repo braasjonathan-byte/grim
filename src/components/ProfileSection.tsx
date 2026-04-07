@@ -95,9 +95,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       .eq("user_id", userId);
   }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
 
-  // Trigger auto-save when any field changes (after initial load)
+  // Trigger auto-save when any field changes (after initial load AND user interaction)
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !dirty.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       doSave();
