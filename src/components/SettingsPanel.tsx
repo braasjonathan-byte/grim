@@ -44,6 +44,9 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
   const [secHasExisting, setSecHasExisting] = useState(false);
 
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [spotifyWidget, setSpotifyWidget] = useState(() => {
+    return localStorage.getItem("gymberget_spotify_widget") !== "false";
+  });
 
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState("");
