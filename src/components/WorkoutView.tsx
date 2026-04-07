@@ -1781,7 +1781,7 @@ const estimateCalories = (
     if (!plan) return;
     const infoParts: string[] = [];
     const isStair = isStairMachine(editingCondLine.name);
-    if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+    if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
     if (isStair) {
       if (condSpmInput.trim()) infoParts.push(`${condSpmInput.trim()} spm`);
       const time = parseFloat(condTimeInput.replace(",", "."));
