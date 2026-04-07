@@ -1694,7 +1694,7 @@ const estimateCalories = (
     triggerSave();
     setConditioningDialog(null);
     setCondTempoInput("");
-    setCondTimeInput("");
+    resetCondTime();
     setCondDistanceInput("");
     setCondIntervalsInput("");
     setCondRestInput("");
