@@ -3088,12 +3088,39 @@ const estimateCalories = (
 
       {/* Warning when viewing non-active week */}
       {activePlanWeek && currentWeek !== activePlanWeek && (
-        <div className="flex items-center gap-2 bg-warning/15 border border-warning/30 rounded-lg px-3 py-2">
-          <CalendarIcon className="w-4 h-4 text-warning shrink-0" />
-          <p className="text-xs text-warning">
-            Du tittar på vecka {currentWeek} — din aktiva vecka är <button onClick={() => setCurrentWeek(activePlanWeek)} className="font-bold underline">vecka {activePlanWeek}</button>.
-            Pass du registrerar här tillhör inte den aktuella veckan.
-          </p>
+        <div className="flex flex-col gap-2 bg-warning/15 border border-warning/30 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="w-4 h-4 text-warning shrink-0" />
+            <p className="text-xs text-warning">
+              Du tittar på vecka {currentWeek} — din aktiva vecka är <button onClick={() => setCurrentWeek(activePlanWeek)} className="font-bold underline">vecka {activePlanWeek}</button>.
+              Pass du registrerar här tillhör inte den aktuella veckan.
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              if (!planStartDate) return;
+              // Recalculate plan_start_date so that currentWeek becomes the active week
+              const [y, m, d] = planStartDate.split("-").map(Number);
+              const oldStart = new Date(y, m - 1, d);
+              const oldMonday = getMonday(oldStart);
+              const now = new Date();
+              now.setHours(0, 0, 0, 0);
+              const nowMonday = getMonday(now);
+              // Current active week = floor((nowMonday - oldMonday) / 7) + 1
+              // We want currentWeek to be active, so: newStart = nowMonday - (currentWeek - 1) * 7 days
+              const newStartMonday = new Date(nowMonday.getTime() - (currentWeek - 1) * 7 * 86400000);
+              // Preserve day-of-week offset from original start
+              const dayOffset = Math.floor((oldStart.getTime() - oldMonday.getTime()) / 86400000);
+              const newStart = new Date(newStartMonday.getTime() + dayOffset * 86400000);
+              const newDateStr = `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}-${String(newStart.getDate()).padStart(2, "0")}`;
+              await supabase.from("profiles").update({ plan_start_date: newDateStr } as any).eq("user_id", userId);
+              setPlanStartDate(newDateStr);
+              setActivePlanWeek(currentWeek);
+            }}
+            className="self-start text-xs font-semibold text-warning bg-warning/20 hover:bg-warning/30 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Gör vecka {currentWeek} till aktiv vecka
+          </button>
         </div>
       )}
 
