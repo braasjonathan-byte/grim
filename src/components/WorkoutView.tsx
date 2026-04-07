@@ -2127,6 +2127,7 @@ const estimateCalories = (
 
         {/* Event countdown progress bar */}
         <EventProgressBar userId={userId} />
+        <SpotifyWidget userId={userId} />
 
         {/* Week navigation */}
         {singleWeeks.length > 0 && (
