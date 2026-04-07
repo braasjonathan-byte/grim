@@ -187,8 +187,46 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   // Conditioning exercise dialog
   const [conditioningDialog, setConditioningDialog] = useState<{planId: string;exerciseName: string;} | null>(null);
   const [condTempoInput, setCondTempoInput] = useState("");
-  const [condTimeInput, setCondTimeInput] = useState("");
+  const [condTimeHours, setCondTimeHours] = useState("");
+  const [condTimeMinutes, setCondTimeMinutes] = useState("");
+  const [condTimeSeconds, setCondTimeSeconds] = useState("");
   const [condDistanceInput, setCondDistanceInput] = useState("");
+
+  // Compute total minutes from H:M:S
+  const condTimeTotalMin = (() => {
+    const h = parseInt(condTimeHours) || 0;
+    const m = parseInt(condTimeMinutes) || 0;
+    const s = parseInt(condTimeSeconds) || 0;
+    const total = h * 60 + m + s / 60;
+    return total > 0 ? total : 0;
+  })();
+  const condTimeTotalMinStr = condTimeTotalMin > 0 ? String(Math.round(condTimeTotalMin * 100) / 100) : "";
+
+  const setCondTimeFromMinutes = (totalMin: number) => {
+    if (totalMin <= 0) { setCondTimeHours(""); setCondTimeMinutes(""); setCondTimeSeconds(""); return; }
+    const h = Math.floor(totalMin / 60);
+    const rem = totalMin - h * 60;
+    const m = Math.floor(rem);
+    const s = Math.round((rem - m) * 60);
+    setCondTimeHours(h > 0 ? String(h) : "");
+    setCondTimeMinutes(String(m));
+    setCondTimeSeconds(s > 0 ? String(s) : "");
+  };
+
+  const resetCondTime = () => { setCondTimeHours(""); setCondTimeMinutes(""); setCondTimeSeconds(""); };
+
+  const handleCondTimeChange = (field: 'h' | 'm' | 's', value: string, withAutoCalc = true) => {
+    if (field === 'h') setCondTimeHours(value);
+    else if (field === 'm') setCondTimeMinutes(value);
+    else setCondTimeSeconds(value);
+    if (withAutoCalc) {
+      const h = field === 'h' ? (parseInt(value) || 0) : (parseInt(condTimeHours) || 0);
+      const m = field === 'm' ? (parseInt(value) || 0) : (parseInt(condTimeMinutes) || 0);
+      const s = field === 's' ? (parseInt(value) || 0) : (parseInt(condTimeSeconds) || 0);
+      const total = h * 60 + m + s / 60;
+      autoCalcCond(total, condTempoInput, condDistanceInput, "time");
+    }
+  };
   const [condIntervalsInput, setCondIntervalsInput] = useState("");
   const [condRestInput, setCondRestInput] = useState("");
   const [condPulseInput, setCondPulseInput] = useState("");
@@ -527,9 +565,9 @@ const estimateCalories = (
   
   for (const line of lines) {
     // Check for conditioning: "30 min", "5 km"
-    const timeMatch = line.match(/(\d+)\s*min/i);
+    const timeMatch = line.match(/(\d+(?:[.,]\d+)?)\s*min/i);
     if (timeMatch) {
-      totalMinutes += parseInt(timeMatch[1]);
+      totalMinutes += parseFloat(timeMatch[1].replace(",", "."));
       continue;
     }
     // Check for sets×reps format
@@ -1516,10 +1554,14 @@ const estimateCalories = (
   // Helper: check if exercise is a stair machine (Trappmaskin)
   const isStairMachine = (name: string) => name.toLowerCase().includes("trappmaskin");
 
-  const autoCalcCond = (time: string, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
-    const t = parseFloat(time.replace(",", "."));
+  const autoCalcCond = (totalMinutes: number, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
+    const t = totalMinutes;
     const p = parseCondTempo(tempo);
     const d = parseFloat(dist.replace(",", "."));
+
+    // Only calculate when 2 of 3 fields are filled
+    const filledCount = (t > 0 ? 1 : 0) + (p && p > 0 ? 1 : 0) + (d > 0 ? 1 : 0);
+    if (filledCount < 2) return;
 
     if (changed === "time" && t > 0 && p && p > 0) {
       setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
@@ -1528,11 +1570,11 @@ const estimateCalories = (
     } else if (changed === "tempo" && p && p > 0 && t > 0) {
       setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
     } else if (changed === "tempo" && p && p > 0 && d > 0) {
-      setCondTimeInput(String(Math.round(p * d * 10) / 10));
+      setCondTimeFromMinutes(p * d);
     } else if (changed === "distance" && d > 0 && t > 0) {
       setCondTempoInput(formatCondTempo(t / d));
     } else if (changed === "distance" && d > 0 && p && p > 0) {
-      setCondTimeInput(String(Math.round(p * d * 10) / 10));
+      setCondTimeFromMinutes(p * d);
     }
   };
 
@@ -1550,7 +1592,7 @@ const estimateCalories = (
         setCondTempoInput(lastCondTempo || "");
         setCondSpmInput("");
       }
-      setCondTimeInput("");
+      resetCondTime();
       setCondDistanceInput("");
       setCondIntervalsInput("");
       setCondRestInput("");
@@ -1623,15 +1665,15 @@ const estimateCalories = (
     const isStair = isStairMachine(conditioningDialog.exerciseName);
     
     if (isInterval && condIntervalsInput.trim()) {
-      const intervalPart = `${condIntervalsInput.trim()}×${condTimeInput.trim() || "?"} min`;
+      const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
       infoParts.push(intervalPart);
       if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
     } else {
-      if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+      if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
     }
     if (isStair) {
       if (condSpmInput.trim()) infoParts.push(`${condSpmInput.trim()} spm`);
-      const time = parseFloat(condTimeInput.replace(",", "."));
+      const time = condTimeTotalMin;
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
     } else {
@@ -1665,7 +1707,7 @@ const estimateCalories = (
     triggerSave();
     setConditioningDialog(null);
     setCondTempoInput("");
-    setCondTimeInput("");
+    resetCondTime();
     setCondDistanceInput("");
     setCondIntervalsInput("");
     setCondRestInput("");
@@ -1728,7 +1770,11 @@ const estimateCalories = (
     const distM = info.match(/([\d.,]+)\s*km(?!\/)/);
     const pulseM = info.match(/(\d+)\s*bpm/);
     const spmM = info.match(/(\d+)\s*spm/);
-    setCondTimeInput(timeM ? timeM[1] : "");
+    if (timeM) {
+      setCondTimeFromMinutes(parseFloat(timeM[1].replace(",", ".")));
+    } else {
+      resetCondTime();
+    }
     setCondTempoInput(tempoM ? tempoM[1] : "");
     setCondDistanceInput(distM ? distM[1].replace(",", ".") : "");
     setCondPulseInput(pulseM ? pulseM[1] : "");
@@ -1748,10 +1794,10 @@ const estimateCalories = (
     if (!plan) return;
     const infoParts: string[] = [];
     const isStair = isStairMachine(editingCondLine.name);
-    if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+    if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
     if (isStair) {
       if (condSpmInput.trim()) infoParts.push(`${condSpmInput.trim()} spm`);
-      const time = parseFloat(condTimeInput.replace(",", "."));
+      const time = condTimeTotalMin;
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
     } else {
@@ -1768,7 +1814,7 @@ const estimateCalories = (
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
     setEditingCondLine(null);
-    setCondTimeInput("");
+    resetCondTime();
     setCondTempoInput("");
     setCondDistanceInput("");
     setCondPulseInput("");
@@ -2590,8 +2636,15 @@ const estimateCalories = (
                           <>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
-                                <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => { setCondTimeInput(e.target.value); }} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                            <div className="flex items-center gap-1">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+                            </div>
                               </div>
                               <div>
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
@@ -2599,7 +2652,7 @@ const estimateCalories = (
                               </div>
                             </div>
                             {(() => {
-                              const time = parseFloat(condTimeInput.replace(",", "."));
+                              const time = condTimeTotalMin;
                               const spm = parseFloat(condSpmInput.replace(",", "."));
                               if (time > 0 && spm > 0) {
                                 return (
@@ -2620,20 +2673,15 @@ const estimateCalories = (
                           <>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
-                              {conditioningDialog.exerciseName.toLowerCase().includes("intervall") ? "Tid per intervall (min)" : "Tid (min)"}
-                            </label>
-                            <input
-                          type="number"
-                          inputMode="numeric"
-                          value={condTimeInput}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setCondTimeInput(v);
-                            autoCalcCond(v, condTempoInput, condDistanceInput, "time");
-                          }}
-                          placeholder="t.ex. 30"
-                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                            <div className="flex items-center gap-1">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+                            </div>
                           </div>
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
@@ -2643,7 +2691,7 @@ const estimateCalories = (
                           onChange={(e) => {
                             const v = e.target.value;
                             setCondTempoInput(v);
-                            autoCalcCond(condTimeInput, v, condDistanceInput, "tempo");
+                            autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo");
                           }}
                           placeholder="t.ex. 5:30"
                           className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
@@ -2661,7 +2709,7 @@ const estimateCalories = (
                           onChange={(e) => {
                             const v = e.target.value;
                             setCondDistanceInput(v);
-                            autoCalcCond(condTimeInput, condTempoInput, v, "distance");
+                            autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance");
                           }}
                           placeholder="t.ex. 5"
                           className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
@@ -2686,7 +2734,7 @@ const estimateCalories = (
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}}
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                             Avbryt
                           </button>
@@ -2707,7 +2755,7 @@ const estimateCalories = (
                               setConditioningDialog({ planId: plan.id, exerciseName: "Intervallträning" });
                               const lastCondTempo = findLastCondTempo("Intervallträning");
                               setCondTempoInput(lastCondTempo || "");
-                              setCondTimeInput("");
+                              resetCondTime();
                               setCondDistanceInput("");
                               setCondIntervalsInput("");
                               setCondRestInput("");
@@ -3562,8 +3610,15 @@ const estimateCalories = (
                                     <>
                                       <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
-                                          <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                            <div className="flex items-center gap-1">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+                            </div>
                                         </div>
                                         <div>
                                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
@@ -3571,7 +3626,7 @@ const estimateCalories = (
                                         </div>
                                       </div>
                                       {(() => {
-                                        const time = parseFloat(condTimeInput.replace(",", "."));
+                                        const time = condTimeTotalMin;
                                         const spm = parseFloat(condSpmInput.replace(",", "."));
                                         if (time > 0 && spm > 0) {
                                           return (
@@ -3592,8 +3647,15 @@ const estimateCalories = (
                                     <>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
-                                      <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                            <div className="flex items-center gap-1">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+                            </div>
                                     </div>
                                     <div>
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
@@ -3616,7 +3678,7 @@ const estimateCalories = (
                                     <button onClick={saveEditedCondLine} className="flex-1 py-2 bg-success text-success-foreground rounded-md text-xs font-semibold">
                                       Spara
                                     </button>
-                                    <button onClick={() => { setEditingCondLine(null); setCondTimeInput(""); setCondTempoInput(""); setCondDistanceInput(""); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                    <button onClick={() => { setEditingCondLine(null); resetCondTime(); setCondTempoInput(""); setCondDistanceInput(""); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                                       Avbryt
                                     </button>
                                   </div>
@@ -4572,8 +4634,15 @@ const estimateCalories = (
                         <>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
-                              <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => setCondTimeInput(e.target.value)} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                            <div className="flex items-center gap-1">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+                            </div>
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
@@ -4581,7 +4650,7 @@ const estimateCalories = (
                             </div>
                           </div>
                           {(() => {
-                            const time = parseFloat(condTimeInput.replace(",", "."));
+                            const time = condTimeTotalMin;
                             const spm = parseFloat(condSpmInput.replace(",", "."));
                             if (time > 0 && spm > 0) {
                               return (
@@ -4602,20 +4671,25 @@ const estimateCalories = (
                         <>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">
-                            {conditioningDialog.exerciseName.toLowerCase().includes("intervall") ? "Tid per intervall (min)" : "Tid (min)"}
-                          </label>
-                          <input type="number" inputMode="numeric" value={condTimeInput} onChange={(e) => { const v = e.target.value; setCondTimeInput(v); autoCalcCond(v, condTempoInput, condDistanceInput, "time"); }} placeholder="t.ex. 30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                            <div className="flex items-center gap-1">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+                            </div>
                         </div>
                         <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                          <input type="text" value={condTempoInput} onChange={(e) => { const v = e.target.value; setCondTempoInput(v); autoCalcCond(condTimeInput, v, condDistanceInput, "tempo"); }} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <input type="text" value={condTempoInput} onChange={(e) => { const v = e.target.value; setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                          <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeInput, condTempoInput, v, "distance"); }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                         <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
@@ -4628,7 +4702,7 @@ const estimateCalories = (
                         <button onClick={addConditioningExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
                           <Plus className="w-3.5 h-3.5" /> Lägg till
                         </button>
-                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");setCondTimeInput("");setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                           Avbryt
                         </button>
                       </div>
@@ -4651,7 +4725,7 @@ const estimateCalories = (
                             setConditioningDialog({ planId: plan.id, exerciseName: "Intervallträning" });
                             const lastCondTempo = findLastCondTempo("Intervallträning");
                             setCondTempoInput(lastCondTempo || "");
-                            setCondTimeInput("");
+                            resetCondTime();
                             setCondDistanceInput("");
                             setCondIntervalsInput("");
                             setCondRestInput("");
