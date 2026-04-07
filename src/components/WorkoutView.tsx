@@ -1757,7 +1757,11 @@ const estimateCalories = (
     const distM = info.match(/([\d.,]+)\s*km(?!\/)/);
     const pulseM = info.match(/(\d+)\s*bpm/);
     const spmM = info.match(/(\d+)\s*spm/);
-    setCondTimeInput(timeM ? timeM[1] : "");
+    if (timeM) {
+      setCondTimeFromMinutes(parseFloat(timeM[1].replace(",", ".")));
+    } else {
+      resetCondTime();
+    }
     setCondTempoInput(tempoM ? tempoM[1] : "");
     setCondDistanceInput(distM ? distM[1].replace(",", ".") : "");
     setCondPulseInput(pulseM ? pulseM[1] : "");
