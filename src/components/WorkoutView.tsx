@@ -1541,10 +1541,14 @@ const estimateCalories = (
   // Helper: check if exercise is a stair machine (Trappmaskin)
   const isStairMachine = (name: string) => name.toLowerCase().includes("trappmaskin");
 
-  const autoCalcCond = (time: string, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
-    const t = parseFloat(time.replace(",", "."));
+  const autoCalcCond = (totalMinutes: number, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
+    const t = totalMinutes;
     const p = parseCondTempo(tempo);
     const d = parseFloat(dist.replace(",", "."));
+
+    // Only calculate when 2 of 3 fields are filled
+    const filledCount = (t > 0 ? 1 : 0) + (p && p > 0 ? 1 : 0) + (d > 0 ? 1 : 0);
+    if (filledCount < 2) return;
 
     if (changed === "time" && t > 0 && p && p > 0) {
       setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
@@ -1553,11 +1557,11 @@ const estimateCalories = (
     } else if (changed === "tempo" && p && p > 0 && t > 0) {
       setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
     } else if (changed === "tempo" && p && p > 0 && d > 0) {
-      setCondTimeInput(String(Math.round(p * d * 10) / 10));
+      setCondTimeFromMinutes(p * d);
     } else if (changed === "distance" && d > 0 && t > 0) {
       setCondTempoInput(formatCondTempo(t / d));
     } else if (changed === "distance" && d > 0 && p && p > 0) {
-      setCondTimeInput(String(Math.round(p * d * 10) / 10));
+      setCondTimeFromMinutes(p * d);
     }
   };
 
