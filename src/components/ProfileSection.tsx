@@ -248,7 +248,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           type="number"
           inputMode="numeric"
           value={age}
-          onChange={(e) => setAge(e.target.value)}
+          onChange={(e) => { dirty.current = true; setAge(e.target.value); }}
           placeholder="Ange din ålder"
           min={1}
           max={120}
