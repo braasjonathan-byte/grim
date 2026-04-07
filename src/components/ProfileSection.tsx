@@ -310,7 +310,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <input
             type="text"
             value={tiktok}
-            onChange={(e) => setTiktok(e.target.value)}
+            onChange={(e) => { dirty.current = true; setTiktok(e.target.value); }}
             placeholder="t.ex. mittnamn"
             className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
           />
