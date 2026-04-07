@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "Admin upload exercise images" ON storage.objects;
+CREATE POLICY "Admin upload exercise images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'exercise-images' AND public.has_role(auth.uid(), 'admin'));
