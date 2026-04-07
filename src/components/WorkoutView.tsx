@@ -1784,7 +1784,7 @@ const estimateCalories = (
     if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
     if (isStair) {
       if (condSpmInput.trim()) infoParts.push(`${condSpmInput.trim()} spm`);
-      const time = parseFloat(condTimeInput.replace(",", "."));
+      const time = condTimeTotalMin;
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
     } else {
