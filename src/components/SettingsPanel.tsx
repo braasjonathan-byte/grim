@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut } from "lucide-react";
+import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
