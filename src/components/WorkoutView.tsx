@@ -25,6 +25,7 @@ import WorkoutShareCard from "@/components/WorkoutShareCard";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
+import SpotifyWidget from "@/components/SpotifyWidget";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -2126,6 +2127,7 @@ const estimateCalories = (
 
         {/* Event countdown progress bar */}
         <EventProgressBar userId={userId} />
+        <SpotifyWidget userId={userId} />
 
         {/* Week navigation */}
         {singleWeeks.length > 0 && (
