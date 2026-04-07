@@ -261,7 +261,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         <label className="text-xs text-muted-foreground block">Kön</label>
         <select
           value={gender}
-          onChange={(e) => setGender(e.target.value)}
+          onChange={(e) => { dirty.current = true; setGender(e.target.value); }}
           className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
         >
           {GENDER_OPTIONS.map((opt) => (
