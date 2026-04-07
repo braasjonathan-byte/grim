@@ -187,8 +187,33 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   // Conditioning exercise dialog
   const [conditioningDialog, setConditioningDialog] = useState<{planId: string;exerciseName: string;} | null>(null);
   const [condTempoInput, setCondTempoInput] = useState("");
-  const [condTimeInput, setCondTimeInput] = useState("");
+  const [condTimeHours, setCondTimeHours] = useState("");
+  const [condTimeMinutes, setCondTimeMinutes] = useState("");
+  const [condTimeSeconds, setCondTimeSeconds] = useState("");
   const [condDistanceInput, setCondDistanceInput] = useState("");
+
+  // Compute total minutes from H:M:S
+  const condTimeTotalMin = (() => {
+    const h = parseInt(condTimeHours) || 0;
+    const m = parseInt(condTimeMinutes) || 0;
+    const s = parseInt(condTimeSeconds) || 0;
+    const total = h * 60 + m + s / 60;
+    return total > 0 ? total : 0;
+  })();
+  const condTimeTotalMinStr = condTimeTotalMin > 0 ? String(Math.round(condTimeTotalMin * 100) / 100) : "";
+
+  const setCondTimeFromMinutes = (totalMin: number) => {
+    if (totalMin <= 0) { setCondTimeHours(""); setCondTimeMinutes(""); setCondTimeSeconds(""); return; }
+    const h = Math.floor(totalMin / 60);
+    const rem = totalMin - h * 60;
+    const m = Math.floor(rem);
+    const s = Math.round((rem - m) * 60);
+    setCondTimeHours(h > 0 ? String(h) : "");
+    setCondTimeMinutes(String(m));
+    setCondTimeSeconds(s > 0 ? String(s) : "");
+  };
+
+  const resetCondTime = () => { setCondTimeHours(""); setCondTimeMinutes(""); setCondTimeSeconds(""); };
   const [condIntervalsInput, setCondIntervalsInput] = useState("");
   const [condRestInput, setCondRestInput] = useState("");
   const [condPulseInput, setCondPulseInput] = useState("");
