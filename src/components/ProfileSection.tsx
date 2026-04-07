@@ -105,16 +105,16 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
 
-  // Save on unmount/visibility change
+  // Save on unmount/visibility change (only if user changed something)
   useEffect(() => {
     if (!loaded) return;
     const handleVisibility = () => {
-      if (document.visibilityState === "hidden") doSave();
+      if (document.visibilityState === "hidden" && dirty.current) doSave();
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
-      doSave();
+      if (dirty.current) doSave();
     };
   }, [loaded, doSave]);
 
