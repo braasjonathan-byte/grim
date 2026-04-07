@@ -279,7 +279,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           type="number"
           inputMode="decimal"
           value={weightKg}
-          onChange={(e) => setWeightKg(e.target.value)}
+          onChange={(e) => { dirty.current = true; setWeightKg(e.target.value); }}
           placeholder="Ange din vikt"
           min={30}
           max={300}
