@@ -1652,11 +1652,11 @@ const estimateCalories = (
     const isStair = isStairMachine(conditioningDialog.exerciseName);
     
     if (isInterval && condIntervalsInput.trim()) {
-      const intervalPart = `${condIntervalsInput.trim()}×${condTimeInput.trim() || "?"} min`;
+      const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
       infoParts.push(intervalPart);
       if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
     } else {
-      if (condTimeInput.trim()) infoParts.push(`${condTimeInput.trim()} min`);
+      if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
     }
     if (isStair) {
       if (condSpmInput.trim()) infoParts.push(`${condSpmInput.trim()} spm`);
