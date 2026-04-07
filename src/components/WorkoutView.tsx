@@ -552,9 +552,9 @@ const estimateCalories = (
   
   for (const line of lines) {
     // Check for conditioning: "30 min", "5 km"
-    const timeMatch = line.match(/(\d+)\s*min/i);
+    const timeMatch = line.match(/(\d+(?:[.,]\d+)?)\s*min/i);
     if (timeMatch) {
-      totalMinutes += parseInt(timeMatch[1]);
+      totalMinutes += parseFloat(timeMatch[1].replace(",", "."));
       continue;
     }
     // Check for sets×reps format
