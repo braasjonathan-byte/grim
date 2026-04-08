@@ -318,7 +318,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         }
       }
     });
-  }, [userId]);
+  }, [userId, planStartDate]);
 
   const hasLoggedData = (c: CompletionRecord) => {
     // Check for logged conditioning data
