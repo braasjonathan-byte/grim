@@ -205,15 +205,18 @@ const Index = () => {
       (_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user && initialDone) {
-          // Only load if getSession didn't already handle it
           setTimeout(() => loadUserData(session.user.id), 0);
         }
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       initialDone = true;
+      if (error || !session) {
+        // Clear any stale/invalid session so user gets a clean login screen
+        supabase.auth.signOut().catch(() => {});
+      }
       setUser(session?.user ?? null);
       if (session?.user) {
         loadUserData(session.user.id);
