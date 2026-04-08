@@ -2636,14 +2636,22 @@ const estimateCalories = (
                           <>
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-                            <div className="flex items-center gap-1">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+                                <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
+                            <div className="flex items-center gap-1.5">
+                              <div className="flex-1 relative">
+                                <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">tim</span>
+                              </div>
+                              <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
+                              <div className="flex-1 relative">
+                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">min</span>
+                              </div>
+                              <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
+                              <div className="flex-1 relative">
+                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">sek</span>
+                              </div>
                             </div>
                               </div>
                               <div>
