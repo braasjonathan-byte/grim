@@ -237,8 +237,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   };
 
   useEffect(() => {
-    supabase.from("profiles").select("weight_kg").eq("user_id", userId).maybeSingle().then(({ data }) => {
+    supabase.from("profiles").select("weight_kg, plan_start_date").eq("user_id", userId).maybeSingle().then(({ data }) => {
       if (data && (data as any).weight_kg) setUserWeightKg(parseFloat((data as any).weight_kg));
+      if (data && (data as any).plan_start_date) {
+        const psd = new Date((data as any).plan_start_date + "T00:00:00");
+        if (!isNaN(psd.getTime())) setPlanStartDate(psd);
+      }
     });
   }, [userId]);
 
@@ -258,9 +262,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     eq("user_id", userId).order("completed_at", { ascending: false })]
     ).then(([{ data: compData }, { data: planData }, { data: challengeData }]) => {
       if (compData) setCompletions(compData as CompletionRecord[]);
-      // Determine plan start date first (needed for challenge week filter)
-      let userPlanStartDate: Date | null = null;
-      if (planData && planData.length > 0) {
+      // Use plan_start_date from profile (already set above), fallback to earliest plan created_at
+      let userPlanStartDate: Date | null = planStartDate;
+      if (!userPlanStartDate && planData && planData.length > 0) {
         const earliest = planData.reduce((min, p) =>
           p.created_at < min.created_at ? p : min
         );
@@ -314,7 +318,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         }
       }
     });
-  }, [userId]);
+  }, [userId, planStartDate]);
 
   const hasLoggedData = (c: CompletionRecord) => {
     // Check for logged conditioning data
