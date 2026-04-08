@@ -237,33 +237,33 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   };
 
   useEffect(() => {
-    supabase.from("profiles").select("weight_kg, plan_start_date").eq("user_id", userId).maybeSingle().then(({ data }) => {
-      if (data && (data as any).weight_kg) setUserWeightKg(parseFloat((data as any).weight_kg));
-      if (data && (data as any).plan_start_date) {
-        const psd = new Date((data as any).plan_start_date + "T00:00:00");
-        if (!isNaN(psd.getTime())) setPlanStartDate(psd);
-      }
-    });
-  }, [userId]);
-
-  useEffect(() => {
     Promise.all([
-    supabase.
-    from("workout_completions").
-    select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo, logged_pulse, logged_weights").
-    eq("user_id", userId),
-    supabase.
-    from("workout_plans").
-    select("week, day, details, created_at").
-    eq("user_id", userId),
-    supabase.
-    from("daily_challenge_completions").
-    select("completed_at, challenge_text, challenge_date").
-    eq("user_id", userId).order("completed_at", { ascending: false })]
-    ).then(([{ data: compData }, { data: planData }, { data: challengeData }]) => {
+      supabase.from("profiles").select("weight_kg, plan_start_date").eq("user_id", userId).maybeSingle(),
+      supabase.from("workout_completions")
+        .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo, logged_pulse, logged_weights")
+        .eq("user_id", userId),
+      supabase.from("workout_plans")
+        .select("week, day, details, created_at")
+        .eq("user_id", userId),
+      supabase.from("daily_challenge_completions")
+        .select("completed_at, challenge_text, challenge_date")
+        .eq("user_id", userId).order("completed_at", { ascending: false }),
+    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }]) => {
+      // Profile
+      let profileStartDate: Date | null = null;
+      if (profileData) {
+        if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
+        if ((profileData as any).plan_start_date) {
+          const psd = new Date((profileData as any).plan_start_date + "T00:00:00");
+          if (!isNaN(psd.getTime())) profileStartDate = psd;
+        }
+      }
+
       if (compData) setCompletions(compData as CompletionRecord[]);
-      // Use plan_start_date from profile (already set above), fallback to earliest plan created_at
-      let userPlanStartDate: Date | null = planStartDate;
+
+      // Determine plan start date: prefer profile, fallback to earliest plan
+      let userPlanStartDate: Date | null = profileStartDate;
+      let usedProfileDate = !!profileStartDate;
       if (!userPlanStartDate && planData && planData.length > 0) {
         const earliest = planData.reduce((min, p) =>
           p.created_at < min.created_at ? p : min
@@ -277,7 +277,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const yearStart = getStartOfYear(now);
       const cCounts = { week: 0, month: 0, year: 0, all: 0 };
       if (challengeData) {
-        // For "week", use current calendar week (Mon-Sun)
         const currentMonday = getMonday(now);
         const endOfWeek = new Date(currentMonday);
         endOfWeek.setDate(endOfWeek.getDate() + 7);
@@ -308,17 +307,23 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         if (userPlanStartDate) {
           setPlanStartDate(userPlanStartDate);
           const isoStart = getISOWeek(userPlanStartDate);
-          const planWeekOfEarliest = planData.reduce((min, p) =>
-            p.created_at < min.created_at ? p : min
-          ).week as number;
+          // When using profile's plan_start_date, it represents week 1 directly.
+          // Only apply planWeekOfEarliest offset when using fallback.
+          let weekOffset = 0;
+          if (!usedProfileDate && planData.length > 0) {
+            const planWeekOfEarliest = planData.reduce((min, p) =>
+              p.created_at < min.created_at ? p : min
+            ).week as number;
+            weekOffset = planWeekOfEarliest - 1;
+          }
           setPlanStartCalendarWeek({
-            week: isoStart.week - (planWeekOfEarliest - 1),
+            week: isoStart.week - weekOffset,
             year: isoStart.year
           });
         }
       }
     });
-  }, [userId, planStartDate]);
+  }, [userId]);
 
   const hasLoggedData = (c: CompletionRecord) => {
     // Check for logged conditioning data
