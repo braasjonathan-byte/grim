@@ -2634,8 +2634,8 @@ const estimateCalories = (
                         )}
                         {isStairMachine(conditioningDialog.exerciseName) ? (
                           <>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
+                            <div className="space-y-3">
+                              <div className="mb-4">
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
                             <div className="flex items-center gap-1.5">
                               <div className="flex-1 relative">
