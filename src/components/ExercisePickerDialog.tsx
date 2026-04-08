@@ -133,7 +133,7 @@ const ExercisePickerDialog = ({
       {/* Dialog */}
       <div
         ref={contentRef}
-        className="relative w-full max-w-md bg-card border border-border rounded-t-2xl flex flex-col animate-fade-in overflow-hidden shadow-lg"
+        className="relative w-full max-w-md bg-card border border-border rounded-b-none flex flex-col animate-fade-in overflow-hidden shadow-lg"
         style={{ maxHeight: "100vh", height: "100%" }}
       >
         {/* Handle bar on mobile */}
