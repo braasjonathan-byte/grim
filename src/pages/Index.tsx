@@ -45,7 +45,7 @@ const GrimInfoDialog = () => {
             <Sparkles className="w-5 h-5 text-primary" />
             Nytt: Grim Supporter Support
           </DialogTitle>
-          <DialogDescription>En ny funktion för Premium-medlemmar</DialogDescription>
+          <DialogDescription>En ny funktion för Supporters</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
