@@ -1112,7 +1112,13 @@ function generateSoccerPrep(profile: FitnessProfile): TemplatePlanDay[] {
       { week: w, day: "Tis", session_name: "Kondition – Sprint & Agility", details: `15 min uppvärmning; ${sprintCount}×${sprintDist}m sprint (gångvila tillbaka); ${agilityMin} min agility: T-test, zigzag, sidoförflyttningar; 10 min nedvarvning`, tempo: "Max intensitet" },
       { week: w, day: "Ons", session_name: "Vila / Lätt jogg", details: isDeload ? "Vilodag" : "20 min lugn jogg + stretching", tempo: "" },
       { week: w, day: "Tors", session_name: "Styrka – Underkropp & Prehab", details: `Hip thrust 3×12; Hamstring curl 3×12; Clamshells 3×15/sida; Single-leg squat 3×8/ben; Vadpress 3×15; Nordic hamstring curl 3×${Math.max(3, Math.min(8, w))}`, tempo: "" },
-      { week: w, day: "Fre", session_name: "Kondition – Intervaller", details: isDeload ? "20 min fartlek" : `${3 + Math.floor(w / 2)}×3 min i hög intensitet (90s joggvila).\nSimulerar matchbelastning.`, tempo: "Zon 4" },
+      { week: w, day: "Fre", session_name: "Kondition – Intervaller", details: (() => {
+        if (isDeload) return "20 min fartlek";
+        const runTypes = ["Tempoväxlingar", "Backsprints", "Fartlek med spurter", "Shuttlerun", "Progressiva intervaller", "Pyramidintervaller", "Sidoförflyttningar + sprint", "Tempoökning varje minut"];
+        const runType = runTypes[(w - 1) % runTypes.length];
+        const count = 3 + Math.floor(w / 2);
+        return `${count}×3 min i hög intensitet (90s joggvila).\nSimulerar matchbelastning.\nIntervallöpning: ${runType} ${count}×${Math.min(2 + Math.floor(w / 3), 4)} min`;
+      })(), tempo: "Zon 4" },
       { week: w, day: "Lör", session_name: "Uthållighet – Långpass", details: `${isDeload ? 25 : 25 + w * 3} min löpning i lugnt tempo. Fokus aerob bas.`, tempo: "Zon 2" },
     );
   }
