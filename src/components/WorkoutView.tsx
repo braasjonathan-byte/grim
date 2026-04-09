@@ -5229,7 +5229,7 @@ const estimateCalories = (
       <ExerciseInfoDialog
         exerciseName={exerciseInfoName}
         onClose={() => setExerciseInfoName(null)}
-        isAdmin={isAdmin}
+        isAdmin={canEditExercises}
       />
     )}
     {showFireworks && (
