@@ -311,7 +311,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         <Dumbbell className="w-10 h-10 text-primary mx-auto" />
         <h2 className="text-2xl font-black tracking-tight">Välj träningsplan</h2>
         <p className="text-sm text-muted-foreground">
-          Välj en färdig plan eller bygg din egen från grunden
+          Antal pass/vecka är rekommenderat — du väljer själv hur många dagar du vill träna i nästa steg
         </p>
       </div>
 
