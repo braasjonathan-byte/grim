@@ -495,7 +495,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      if (!isAdmin) {
+      const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
+      if (!isAdmin && !EXERCISE_EDITOR_IDS.includes(user.id)) {
         return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
