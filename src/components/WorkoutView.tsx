@@ -3910,7 +3910,7 @@ const estimateCalories = (
                         // Check if this is a conditioning exercise
                         const { name: partCondCheckName } = parseExerciseWeight(part);
                         const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
-                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
+                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
                         
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
@@ -4505,9 +4505,11 @@ const estimateCalories = (
                         const roundsHeaderMatch = part.trim().match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
                         const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
                         const intervalHeaderMatch = !roundsHeaderMatch && !amrapHeaderMatch ? part.trim().match(/^(\d+)\s*[×x]\s*(\d+)\s*min\b(.*)/i) : null;
-                        if (roundsHeaderMatch || amrapHeaderMatch || intervalHeaderMatch) {
-                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : (amrapHeaderMatch ? parseInt(amrapHeaderMatch[1]) : (intervalHeaderMatch ? parseInt(intervalHeaderMatch[1]) : 0));
+                        const namedIntervalMatch = !roundsHeaderMatch && !amrapHeaderMatch && !intervalHeaderMatch ? part.trim().match(/^(intervallöpning|intervall)\s*:\s*(.+?)\s+(\d+)\s*[×x]\s*(\d+)\s*min\s*$/i) : null;
+                        if (roundsHeaderMatch || amrapHeaderMatch || intervalHeaderMatch || namedIntervalMatch) {
+                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : (amrapHeaderMatch ? parseInt(amrapHeaderMatch[1]) : (intervalHeaderMatch ? parseInt(intervalHeaderMatch[1]) : (namedIntervalMatch ? parseInt(namedIntervalMatch[3]) : 0)));
                           const restOfLine = (roundsHeaderMatch ? roundsHeaderMatch[2] : amrapHeaderMatch ? amrapHeaderMatch[3] : intervalHeaderMatch ? intervalHeaderMatch[3] : "").trim();
+                          const namedIntervalLabel = namedIntervalMatch ? `${namedIntervalMatch[2]} (${namedIntervalMatch[4]} min)` : "";
                           const isForTime = plan.session_name.toLowerCase().includes("for time") || plan.details.toLowerCase().includes("for time");
                           const isHiit = plan.session_name.toLowerCase().includes("hiit") || plan.session_name.toLowerCase().includes("cirkel") || plan.details.toLowerCase().includes("hiit");
                           const isIntervall = plan.session_name.toLowerCase().includes("intervall");
@@ -4518,13 +4520,16 @@ const estimateCalories = (
                             ? restOfLine.split(/[/;]/).map(s => s.replace(/\.\s*$/, "").trim()).filter(Boolean)
                             : [];
 
-                          // Get saved round completions from logged_weights
+                          // Use unique key per round block to avoid conflicts when multiple blocks exist
+                          const roundKey = `__wod_rounds_done_${i}__`;
                           const roundWeights = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                          const savedRoundsDone = roundWeights["__wod_rounds_done__"] || "";
+                          const savedRoundsDone = roundWeights[roundKey] || "";
                           const roundsDoneStr = typeof savedRoundsDone === "string" ? savedRoundsDone : String(savedRoundsDone);
 
                           // Build header text (without the inline exercises)
-                          const headerText = roundsHeaderMatch
+                          const headerText = namedIntervalMatch
+                            ? `Intervallöpning: ${namedIntervalLabel}`
+                            : roundsHeaderMatch
                             ? `${roundsHeaderMatch[1]} ${part.trim().match(/rundor|cirklar/i)?.[0] || "rundor"}`
                             : part.trim().split(":")[0];
 
@@ -4557,7 +4562,7 @@ const estimateCalories = (
                                             return (roundsDoneStr[j] || "0");
                                           }).join("");
                                           const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                                          const updated = { ...existing, "__wod_rounds_done__": newStr } as any;
+                                          const updated = { ...existing, [roundKey]: newStr } as any;
                                           setCompletions(prev => ({
                                             ...prev,
                                             [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
