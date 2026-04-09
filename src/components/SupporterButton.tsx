@@ -175,7 +175,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
               Fler funktioner kommer
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Vi jobbar på fler exklusiva funktioner för Premium-medlemmar. Håll utkik!
+              Vi jobbar på fler exklusiva funktioner för Supporters. Håll utkik!
             </p>
           </div>
 
