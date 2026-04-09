@@ -320,6 +320,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
+      console.log("[WorkoutView] authUser:", data?.user?.id, "isAdmin:", isAdmin);
       if (data?.user) setAuthUserId(data.user.id);
     });
   }, []);
