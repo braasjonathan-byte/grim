@@ -30,36 +30,50 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
 
   useEffect(() => {
     const fetchData = async () => {
+      const shouldOpenEditor = initialEditMode && isAdmin;
+
       try {
         const { data: result, error: fnError } = await supabase.functions.invoke("exercise-gif", {
           body: { exerciseName },
         });
         if (fnError) throw fnError;
-        if (result?.isCardio) {
+
+        if (result?.isCardio || result?.gifUrl || (result?.instructions && result.instructions.length > 0)) {
           setData(result);
-        } else if (result?.gifUrl || (result?.instructions && result.instructions.length > 0)) {
-          setData(result);
+          if (shouldOpenEditor) {
+            setEditText((result.instructions || []).join("
+"));
+            setEditing(true);
+          }
         } else {
-          setError("Ingen demonstration hittades för denna övning.");
+          if (shouldOpenEditor) {
+            setData({ gifUrl: null, name: exerciseName, instructions: [], targetMuscles: [], equipments: [] });
+            setEditText("");
+            setEditing(true);
+          } else {
+            setError("Ingen demonstration hittades för denna övning.");
+          }
         }
       } catch (e) {
-        setError("Kunde inte hämta övningsinformation.");
+        if (shouldOpenEditor) {
+          setData({ gifUrl: null, name: exerciseName, instructions: [], targetMuscles: [], equipments: [] });
+          setEditText("");
+          setEditing(true);
+        } else {
+          setError("Kunde inte hämta övningsinformation.");
+        }
       } finally {
         setLoading(false);
       }
     };
+
     setLoading(true);
     setError(null);
     setData(null);
+    setEditText("");
     setEditing(false);
     fetchData();
-  }, [exerciseName]);
-
-  useEffect(() => {
-    if (!loading && initialEditMode && isAdmin) {
-      setEditing(true);
-    }
-  }, [loading, initialEditMode, isAdmin]);
+  }, [exerciseName, initialEditMode, isAdmin]);
 
   const startEditing = () => {
     const lines = data?.instructions || [];

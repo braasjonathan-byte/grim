@@ -2841,7 +2841,7 @@ const estimateCalories = (
                       title={replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Välj övning"}
                       initialMuscleGroup={selectedMuscle}
                       getLastWeight={findLastWeight}
-                      onExerciseInfo={(name) => setExerciseInfoState({ name: name)}
+                      onExerciseInfo={(name) => setExerciseInfoState({ name })}
                       allowCreate
                       userId={userId}
                     />
@@ -3055,8 +3055,9 @@ const estimateCalories = (
       {exerciseInfoState && (
         <ExerciseInfoDialog
           exerciseName={exerciseInfoState.name}
-          onClose={() => setExerciseInfoState({ name: null)}
+          onClose={() => setExerciseInfoState(null)}
           isAdmin={canEditExercises}
+          initialEditMode={exerciseInfoState.editMode}
         />
       )}
       {deleteExerciseConfirm && (
@@ -4658,7 +4659,7 @@ const estimateCalories = (
                                           Byt ut övning
                                         </DropdownMenuItem>
                                         {canEditExercises && (
-                                          <DropdownMenuItem onClick={() => setExerciseInfoState({ name: partName)}>
+                                          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpenExerciseMenuId(null); setTimeout(() => setExerciseInfoState({ name: partName, editMode: true }), 0); }}>
                                             <Pencil className="w-4 h-4 mr-2" />
                                             Redigera beskrivning
                                           </DropdownMenuItem>
@@ -4952,7 +4953,7 @@ const estimateCalories = (
                     title={replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Lägg till övning"}
                     initialMuscleGroup={selectedMuscle}
                     getLastWeight={findLastWeight}
-                    onExerciseInfo={(name) => setExerciseInfoState({ name: name)}
+                    onExerciseInfo={(name) => setExerciseInfoState({ name })}
                     allowCreate
                     userId={userId}
                   />
@@ -5235,8 +5236,9 @@ const estimateCalories = (
     {exerciseInfoState && (
       <ExerciseInfoDialog
         exerciseName={exerciseInfoState.name}
-        onClose={() => setExerciseInfoState({ name: null)}
+        onClose={() => setExerciseInfoState(null)}
         isAdmin={canEditExercises}
+        initialEditMode={exerciseInfoState.editMode}
       />
     )}
     {showFireworks && (
