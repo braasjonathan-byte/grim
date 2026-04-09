@@ -41,8 +41,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
         if (result?.isCardio || result?.gifUrl || (result?.instructions && result.instructions.length > 0)) {
           setData(result);
           if (shouldOpenEditor) {
-            setEditText((result.instructions || []).join("
-"));
+            setEditText((result.instructions || []).join("\n"));
             setEditing(true);
           }
         } else {
