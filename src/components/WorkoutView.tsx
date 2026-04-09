@@ -4506,9 +4506,10 @@ const estimateCalories = (
                         const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
                         const intervalHeaderMatch = !roundsHeaderMatch && !amrapHeaderMatch ? part.trim().match(/^(\d+)\s*[×x]\s*(\d+)\s*min\b(.*)/i) : null;
                         const namedIntervalMatch = !roundsHeaderMatch && !amrapHeaderMatch && !intervalHeaderMatch ? part.trim().match(/^(intervallöpning|intervall)\s*:\s*(.+?)\s+(\d+)\s*[×x]\s*(\d+)\s*min\s*$/i) : null;
-                        if (roundsHeaderMatch || amrapHeaderMatch || intervalHeaderMatch) {
-                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : (amrapHeaderMatch ? parseInt(amrapHeaderMatch[1]) : (intervalHeaderMatch ? parseInt(intervalHeaderMatch[1]) : 0));
+                        if (roundsHeaderMatch || amrapHeaderMatch || intervalHeaderMatch || namedIntervalMatch) {
+                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : (amrapHeaderMatch ? parseInt(amrapHeaderMatch[1]) : (intervalHeaderMatch ? parseInt(intervalHeaderMatch[1]) : (namedIntervalMatch ? parseInt(namedIntervalMatch[3]) : 0)));
                           const restOfLine = (roundsHeaderMatch ? roundsHeaderMatch[2] : amrapHeaderMatch ? amrapHeaderMatch[3] : intervalHeaderMatch ? intervalHeaderMatch[3] : "").trim();
+                          const namedIntervalLabel = namedIntervalMatch ? `${namedIntervalMatch[2]} (${namedIntervalMatch[4]} min)` : "";
                           const isForTime = plan.session_name.toLowerCase().includes("for time") || plan.details.toLowerCase().includes("for time");
                           const isHiit = plan.session_name.toLowerCase().includes("hiit") || plan.session_name.toLowerCase().includes("cirkel") || plan.details.toLowerCase().includes("hiit");
                           const isIntervall = plan.session_name.toLowerCase().includes("intervall");
