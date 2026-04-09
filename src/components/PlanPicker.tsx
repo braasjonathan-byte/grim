@@ -311,7 +311,7 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
         <Dumbbell className="w-10 h-10 text-primary mx-auto" />
         <h2 className="text-2xl font-black tracking-tight">Välj träningsplan</h2>
         <p className="text-sm text-muted-foreground">
-          Välj en färdig plan eller bygg din egen från grunden
+          Antal pass/vecka är rekommenderat — du väljer själv hur många dagar du vill träna i nästa steg
         </p>
       </div>
 
@@ -360,7 +360,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
                 <Sparkles className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selected === realIdx ? "text-primary" : "text-muted-foreground"}`} />
                 <div className="flex-1">
                   <h3 className="font-bold text-sm">{template.name}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {template.description.replace(/(\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka").replace(/(\d+–\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka")}
+                  </p>
                   {template.requiredLifts.length > 0 && (
                     <p className="text-xs text-primary mt-1.5 font-medium">
                       📊 Beräknar vikter från din 1RM
