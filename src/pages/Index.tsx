@@ -43,7 +43,7 @@ const GrimInfoDialog = () => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            Nytt: Grim Premium Support
+            Nytt: Grim Supporter Support
           </DialogTitle>
           <DialogDescription>En ny funktion för Premium-medlemmar</DialogDescription>
         </DialogHeader>
