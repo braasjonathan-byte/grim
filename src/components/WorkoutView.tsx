@@ -4501,14 +4501,56 @@ const estimateCalories = (
                           );
                         }
 
-                        // Detect lines that are just descriptions (e.g. "X rundor:", "X min AMRAP:") - render as info
-                        if (/^\d+\s*(min\s+)?amrap\s*:/i.test(part.trim()) || /^\d+\s+rundor\s*:/i.test(part.trim())) {
+                        // Detect lines that are just descriptions (e.g. "X rundor:", "X min AMRAP:") - render as info with round checkboxes
+                        const roundsHeaderMatch = part.trim().match(/^(\d+)\s+rundor\s*:/i);
+                        const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:/i) : null;
+                        if (roundsHeaderMatch || amrapHeaderMatch) {
+                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : 0;
+                          const isForTime = plan.session_name.toLowerCase().includes("for time") || plan.details.toLowerCase().includes("for time");
+
+                          // Get saved round completions from logged_weights
+                          const roundWeights = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                          const savedRoundsDone = roundWeights["__wod_rounds_done__"] || "";
+                          const roundsDoneStr = typeof savedRoundsDone === "string" ? savedRoundsDone : String(savedRoundsDone);
+
                           return (
-                            <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+                            <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 space-y-2">
                               <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                                 <Timer className="w-3.5 h-3.5 text-primary" />
                                 {part}
                               </p>
+                              {isForTime && roundCount > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {Array.from({ length: roundCount }, (_, ri) => {
+                                    const isRoundDone = roundsDoneStr[ri] === "1";
+                                    return (
+                                      <button
+                                        key={ri}
+                                        onClick={async () => {
+                                          const newStr = Array.from({ length: roundCount }, (_, j) => {
+                                            if (j === ri) return isRoundDone ? "0" : "1";
+                                            return (roundsDoneStr[j] || "0");
+                                          }).join("");
+                                          const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                          const updated = { ...existing, "__wod_rounds_done__": newStr } as any;
+                                          setCompletions(prev => ({
+                                            ...prev,
+                                            [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
+                                          }));
+                                          await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
+                                        }}
+                                        className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                                          isRoundDone
+                                            ? "bg-success border-success text-success-foreground"
+                                            : "border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary"
+                                        }`}
+                                      >
+                                        {isRoundDone ? <Check className="w-4 h-4" /> : ri + 1}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           );
                         }
