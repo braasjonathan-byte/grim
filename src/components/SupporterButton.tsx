@@ -219,7 +219,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
                 ) : (
                   <Crown className="w-4 h-4" />
                 )}
-                Bli Premium – 29 kr/mån
+                Bli Supporter – 29 kr/mån
               </Button>
             </>
           )}

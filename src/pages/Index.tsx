@@ -60,7 +60,7 @@ const GrimInfoDialog = () => {
             <li>⚡ Snabbsvar på vanliga frågor</li>
           </ul>
           <p className="text-xs text-muted-foreground italic">
-            Bli Premium för att få tillgång – hitta Grim i chatten!
+            Bli Supporter för att få tillgång – hitta Grim i chatten!
           </p>
         </div>
         <button onClick={handleClose} className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-md text-sm mt-2">

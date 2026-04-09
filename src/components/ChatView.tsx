@@ -561,7 +561,7 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
         admin_id: currentUserId,
       });
     } else {
-      // Premium user sends to Grim
+      // Supporter user sends to Grim
       await supabase.from("support_messages").insert({
         user_id: userId,
         message: msgText,
