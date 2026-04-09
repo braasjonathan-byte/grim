@@ -3910,7 +3910,7 @@ const estimateCalories = (
                         // Check if this is a conditioning exercise
                         const { name: partCondCheckName } = parseExerciseWeight(part);
                         const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
-                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+rundor\s*:/i.test(part.trim()) && !/^mål:/i.test(part.trim());
+                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*:/i.test(part.trim()) && !/^mål:/i.test(part.trim());
                         
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
@@ -4501,26 +4501,49 @@ const estimateCalories = (
                           );
                         }
 
-                        // Detect lines that are just descriptions (e.g. "X rundor:", "X min AMRAP:") - render as info with round checkboxes
-                        const roundsHeaderMatch = part.trim().match(/^(\d+)\s+rundor\s*:/i);
-                        const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:/i) : null;
+                        // Detect lines with round structure: "X rundor:", "X cirklar:", "X min AMRAP:", or "X rundor: exercise / exercise / ..."
+                        const roundsHeaderMatch = part.trim().match(/^(\d+)\s+(?:rundor|cirklar)\s*:(.*)/i);
+                        const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
                         if (roundsHeaderMatch || amrapHeaderMatch) {
-                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : 0;
+                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : (amrapHeaderMatch ? parseInt(amrapHeaderMatch[1]) : 0);
+                          const restOfLine = (roundsHeaderMatch ? roundsHeaderMatch[2] : amrapHeaderMatch ? amrapHeaderMatch[3] : "").trim();
                           const isForTime = plan.session_name.toLowerCase().includes("for time") || plan.details.toLowerCase().includes("for time");
+                          const isHiit = plan.session_name.toLowerCase().includes("hiit") || plan.session_name.toLowerCase().includes("cirkel") || plan.details.toLowerCase().includes("hiit");
+                          const showRoundCheckboxes = isForTime || isHiit;
+
+                          // Parse exercises from rest of line (separated by / or ;)
+                          const inlineExercises = restOfLine
+                            ? restOfLine.split(/[/;]/).map(s => s.replace(/\.\s*$/, "").trim()).filter(Boolean)
+                            : [];
 
                           // Get saved round completions from logged_weights
                           const roundWeights = (completions[key]?.logged_weights || {}) as Record<string, any>;
                           const savedRoundsDone = roundWeights["__wod_rounds_done__"] || "";
                           const roundsDoneStr = typeof savedRoundsDone === "string" ? savedRoundsDone : String(savedRoundsDone);
 
+                          // Build header text (without the inline exercises)
+                          const headerText = roundsHeaderMatch
+                            ? `${roundsHeaderMatch[1]} ${part.trim().match(/rundor|cirklar/i)?.[0] || "rundor"}`
+                            : part.trim().split(":")[0];
+
                           return (
-                            <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 space-y-2">
-                              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5 space-y-2">
+                              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
                                 <Timer className="w-3.5 h-3.5 text-primary" />
-                                {part}
+                                {headerText}
                               </p>
-                              {isForTime && roundCount > 0 && (
-                                <div className="flex flex-wrap gap-2">
+                              {inlineExercises.length > 0 && (
+                                <div className="space-y-1 pl-5">
+                                  {inlineExercises.map((ex, ei) => (
+                                    <p key={ei} className="text-xs text-foreground flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-primary/50 flex-shrink-0" />
+                                      {ex}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                              {showRoundCheckboxes && roundCount > 0 && (
+                                <div className="flex flex-wrap gap-2 pt-1">
                                   {Array.from({ length: roundCount }, (_, ri) => {
                                     const isRoundDone = roundsDoneStr[ri] === "1";
                                     return (
