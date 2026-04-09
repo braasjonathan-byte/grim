@@ -492,7 +492,11 @@ function generateMartialArtsPlan(profile: FitnessProfile): TemplatePlanDay[] {
 
     days.push(
       { week: w, day: "Mån", session_name: "Styrka – Funktionell", details: `Marklyft 4×${isDeload ? 3 : 5}; Knäböj 3×${isDeload ? 5 : 8}; Kettlebell swings 3×15; Pull-ups 3×max; Farmers walk 3×40m`, tempo: "" },
-      { week: w, day: "Tis", session_name: "Kondition – Intervaller", details: `${rounds} rundor à ${roundMin} min: Skuggboxning/slag+spark-combo. Vila ${restSec}s mellan rundor.`, tempo: `${roundMin} min rundor` },
+      { week: w, day: "Tis", session_name: "Kondition – Intervaller", details: (() => {
+        const runTypes = ["Löpning i uppförsbacke", "Tempointervaller", "Sprintintervaller", "Fartlek", "Trappsprints", "Shuttlerun", "Tempoväxlingar", "Sidoförflyttningar"];
+        const runType = runTypes[(w - 1) % runTypes.length];
+        return `${rounds} rundor à ${roundMin} min: Skuggboxning/slag+spark-combo. Vila ${restSec}s mellan rundor.\nIntervallöpning: ${runType} ${isDeload ? "3" : Math.min(3 + Math.floor(w / 2), 6)}×${isDeload ? 1 : Math.min(1 + Math.floor(w / 3), 3)} min`;
+      })(), tempo: `${roundMin} min rundor` },
       { week: w, day: "Ons", session_name: "Vila / Rörlighet", details: "Rörlighetspass 30 min. Höfter, axlar, handleder.", tempo: "" },
       { week: w, day: "Tors", session_name: "Styrka – Explosiv", details: `Box jumps 4×5; Medicinbollskast 3×10; Enbens-knäböj 3×8/ben; Ab wheel 3×10; Planka 3×${35 + w * 5}s`, tempo: "" },
       { week: w, day: "Fre", session_name: "Kondition – HIIT", details: `${rounds} rundor: 30s burpees / 30s mountain climbers / 30s jump squats / ${restSec}s vila. Avsluta med 5 min skipping.`, tempo: "Max intensitet" },
@@ -1108,7 +1112,13 @@ function generateSoccerPrep(profile: FitnessProfile): TemplatePlanDay[] {
       { week: w, day: "Tis", session_name: "Kondition – Sprint & Agility", details: `15 min uppvärmning; ${sprintCount}×${sprintDist}m sprint (gångvila tillbaka); ${agilityMin} min agility: T-test, zigzag, sidoförflyttningar; 10 min nedvarvning`, tempo: "Max intensitet" },
       { week: w, day: "Ons", session_name: "Vila / Lätt jogg", details: isDeload ? "Vilodag" : "20 min lugn jogg + stretching", tempo: "" },
       { week: w, day: "Tors", session_name: "Styrka – Underkropp & Prehab", details: `Hip thrust 3×12; Hamstring curl 3×12; Clamshells 3×15/sida; Single-leg squat 3×8/ben; Vadpress 3×15; Nordic hamstring curl 3×${Math.max(3, Math.min(8, w))}`, tempo: "" },
-      { week: w, day: "Fre", session_name: "Kondition – Intervaller", details: isDeload ? "20 min fartlek" : `${3 + Math.floor(w / 2)}×3 min i hög intensitet (90s joggvila).\nSimulerar matchbelastning.`, tempo: "Zon 4" },
+      { week: w, day: "Fre", session_name: "Kondition – Intervaller", details: (() => {
+        if (isDeload) return "20 min fartlek";
+        const runTypes = ["Tempoväxlingar", "Backsprints", "Fartlek med spurter", "Shuttlerun", "Progressiva intervaller", "Pyramidintervaller", "Sidoförflyttningar + sprint", "Tempoökning varje minut"];
+        const runType = runTypes[(w - 1) % runTypes.length];
+        const count = 3 + Math.floor(w / 2);
+        return `${count}×3 min i hög intensitet (90s joggvila).\nSimulerar matchbelastning.\nIntervallöpning: ${runType} ${count}×${Math.min(2 + Math.floor(w / 3), 4)} min`;
+      })(), tempo: "Zon 4" },
       { week: w, day: "Lör", session_name: "Uthållighet – Långpass", details: `${isDeload ? 25 : 25 + w * 3} min löpning i lugnt tempo. Fokus aerob bas.`, tempo: "Zon 2" },
     );
   }
