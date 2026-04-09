@@ -51,7 +51,7 @@ const GrimInfoDialog = () => {
           <div className="flex items-center gap-3">
             <img src={grimIcon} alt="Grim" className="w-12 h-12 rounded-full" />
             <p className="text-sm text-foreground">
-              Premium-medlemmar har nu tillgång till <strong>direktsupport via Grim</strong> i chatten!
+              Supporters har nu tillgång till <strong>direktsupport via Grim</strong> i chatten!
             </p>
           </div>
           <ul className="space-y-1.5 text-sm text-muted-foreground">
