@@ -1642,6 +1642,17 @@ const estimateCalories = (
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
+
+    // Pre-populate per-set weight data so the weight carries into each set row
+    if (weightStr) {
+      const exerciseName = weightDialog.exerciseName;
+      const initData = Array.from({ length: sets }, () => ({ kg: weightStr, reps: String(reps) }));
+      await updateCompletionWeights(plan.week, plan.day, (existing) => ({
+        ...existing,
+        [`__setdata__${exerciseName}`]: JSON.stringify(initData),
+      }));
+    }
+
     setWeightDialog(null);
     setWeightInput("");
     setRepsInput("10");
