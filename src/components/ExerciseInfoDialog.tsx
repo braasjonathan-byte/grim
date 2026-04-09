@@ -20,7 +20,7 @@ interface ExerciseData {
   hasCustomInstructions?: boolean;
 }
 
-const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false }: ExerciseInfoDialogProps) => {
+const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEditMode = false }: ExerciseInfoDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExerciseData | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -244,7 +244,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [runLogTarget, setRunLogTarget] = useState<{week: number;day: string;sessionName: string;details: string;} | null>(null);
 
   // Exercise info dialog
-  const [exerciseInfoName, setExerciseInfoName] = useState<string | null>(null);
+  const [exerciseInfoState, setExerciseInfoState] = useState<{ name: string; editMode?: boolean } | null>(null);
 
   // Fireworks celebration
   const [showFireworks, setShowFireworks] = useState(false);
