@@ -466,7 +466,7 @@ const QUICK_REPLIES: { question: string; answer: string }[] = [
 ];
 
 interface GrimSupportConversationProps {
-  userId: string; // The premium user's ID
+  userId: string; // The supporter user's ID
   isAdmin: boolean;
   targetNickname: string;
   targetAvatar: string | null;
