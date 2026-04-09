@@ -2372,7 +2372,7 @@ const estimateCalories = (
                                        <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === exerciseLines.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                      </div>
                                      <button
-                                   onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
+                                   onClick={(e) => {e.stopPropagation();setExerciseInfoState({ name: name });}}
                                   className="p-0.5 text-muted-foreground hover:text-warning transition-colors"
                                   title="Visa övningsinformation">
                                       <Info className="w-3.5 h-3.5" />
@@ -2461,7 +2461,7 @@ const estimateCalories = (
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === exerciseLines.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                   </div>
                                   <button
-                                onClick={(e) => {e.stopPropagation();setExerciseInfoName(name);}}
+                                onClick={(e) => {e.stopPropagation();setExerciseInfoState({ name: name });}}
                                 className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
                                 title="Visa övningsinformation">
                                     <Info className="w-3.5 h-3.5" />
@@ -2841,7 +2841,7 @@ const estimateCalories = (
                       title={replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Välj övning"}
                       initialMuscleGroup={selectedMuscle}
                       getLastWeight={findLastWeight}
-                      onExerciseInfo={(name) => setExerciseInfoName(name)}
+                      onExerciseInfo={(name) => setExerciseInfoState({ name: name)}
                       allowCreate
                       userId={userId}
                     />
@@ -3052,10 +3052,10 @@ const estimateCalories = (
           </button>
         }
       </div>
-      {exerciseInfoName && (
+      {exerciseInfoState && (
         <ExerciseInfoDialog
-          exerciseName={exerciseInfoName}
-          onClose={() => setExerciseInfoName(null)}
+          exerciseName={exerciseInfoState.name}
+          onClose={() => setExerciseInfoState({ name: null)}
           isAdmin={canEditExercises}
         />
       )}
@@ -3482,7 +3482,7 @@ const estimateCalories = (
                                   <li key={i} className="flex items-center gap-2 text-sm text-foreground">
                                     <span className="text-muted-foreground">•</span>
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); setExerciseInfoName(cleanName); }}
+                                      onClick={(e) => { e.stopPropagation(); setExerciseInfoState({ name: cleanName }); }}
                                       className="p-0.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
                                       title="Visa övningsinformation">
                                       <Info className="w-3.5 h-3.5" />
@@ -4023,7 +4023,7 @@ const estimateCalories = (
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
                                   </div>
-                                  <button onClick={(e) => { e.stopPropagation(); setExerciseInfoName(condName || part); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
+                                  <button onClick={(e) => { e.stopPropagation(); setExerciseInfoState({ name: condName || part }); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
                                   <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condName || part) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
@@ -4601,7 +4601,7 @@ const estimateCalories = (
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
                                   <button
-                                    onClick={(e) => {e.stopPropagation();setExerciseInfoName(partName);}}
+                                    onClick={(e) => {e.stopPropagation();setExerciseInfoState({ name: partName });}}
                                     className="p-0.5 text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
                                     title="Visa övningsinformation">
                                     <Info className="w-3.5 h-3.5" />
@@ -4658,7 +4658,7 @@ const estimateCalories = (
                                           Byt ut övning
                                         </DropdownMenuItem>
                                         {canEditExercises && (
-                                          <DropdownMenuItem onClick={() => setExerciseInfoName(partName)}>
+                                          <DropdownMenuItem onClick={() => setExerciseInfoState({ name: partName)}>
                                             <Pencil className="w-4 h-4 mr-2" />
                                             Redigera beskrivning
                                           </DropdownMenuItem>
@@ -4952,7 +4952,7 @@ const estimateCalories = (
                     title={replaceExerciseTarget ? `Byt ut: ${replaceExerciseTarget.name}` : isWarmupMode ? "Välj uppvärmning" : "Lägg till övning"}
                     initialMuscleGroup={selectedMuscle}
                     getLastWeight={findLastWeight}
-                    onExerciseInfo={(name) => setExerciseInfoName(name)}
+                    onExerciseInfo={(name) => setExerciseInfoState({ name: name)}
                     allowCreate
                     userId={userId}
                   />
@@ -5232,10 +5232,10 @@ const estimateCalories = (
       }
     </div>
 
-    {exerciseInfoName && (
+    {exerciseInfoState && (
       <ExerciseInfoDialog
-        exerciseName={exerciseInfoName}
-        onClose={() => setExerciseInfoName(null)}
+        exerciseName={exerciseInfoState.name}
+        onClose={() => setExerciseInfoState({ name: null)}
         isAdmin={canEditExercises}
       />
     )}
