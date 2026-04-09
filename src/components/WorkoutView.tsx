@@ -315,6 +315,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [profileGender, setProfileGender] = useState<string | null>(null);
   const [profileAge, setProfileAge] = useState<number | null>(null);
 
+  // Users allowed to edit exercise descriptions (admin or specific users)
+  const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setAuthUserId(data.user.id);
+    });
+  }, []);
+  const canEditExercises = isAdmin || (authUserId ? EXERCISE_EDITOR_IDS.includes(authUserId) : false);
+
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
@@ -3045,7 +3055,7 @@ const estimateCalories = (
         <ExerciseInfoDialog
           exerciseName={exerciseInfoName}
           onClose={() => setExerciseInfoName(null)}
-          isAdmin={isAdmin}
+          isAdmin={canEditExercises}
         />
       )}
       {deleteExerciseConfirm && (
@@ -4641,16 +4651,22 @@ const estimateCalories = (
                                           <Settings className="w-4 h-4" />
                                         </button>
                                       </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                         <DropdownMenuItem onClick={() => startReplaceExercise(plan.id, i, partName)}>
                                           <ArrowLeftRight className="w-4 h-4 mr-2" />
                                           Byt ut övning
                                         </DropdownMenuItem>
+                                        {canEditExercises && (
+                                          <DropdownMenuItem onClick={() => setExerciseInfoName(partName)}>
+                                            <Pencil className="w-4 h-4 mr-2" />
+                                            Redigera beskrivning
+                                          </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) })}>
                                           <X className="w-4 h-4 mr-2" />
                                           Ta bort övning
                                         </DropdownMenuItem>
-                                      </DropdownMenuContent>
+                                       </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
                               </div>
@@ -5219,7 +5235,7 @@ const estimateCalories = (
       <ExerciseInfoDialog
         exerciseName={exerciseInfoName}
         onClose={() => setExerciseInfoName(null)}
-        isAdmin={isAdmin}
+        isAdmin={canEditExercises}
       />
     )}
     {showFireworks && (
