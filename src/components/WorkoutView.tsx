@@ -4855,6 +4855,113 @@ const estimateCalories = (
                     </div>
                 }
 
+                  {/* WOD time logging */}
+                  {(() => {
+                    const sn = plan.session_name.toLowerCase();
+                    const det = plan.details.toLowerCase();
+                    const isWod = sn.includes("wod") || sn.includes("amrap") || sn.includes("for time") || sn.includes("emom") || det.includes("amrap") || det.includes("for time") || det.includes("emom");
+                    if (!isWod) return null;
+
+                    const comp = completions[key];
+                    const weights = (comp?.logged_weights || {}) as Record<string, any>;
+                    const savedWodTime = weights["__wod_time__"];
+                    const wodData = savedWodTime ? (typeof savedWodTime === "string" ? JSON.parse(savedWodTime) : savedWodTime) : null;
+
+                    // Find previous WOD time from identical session_name
+                    const findPrevWodTime = (): { time: string; week: number } | null => {
+                      // Look at earlier weeks with same session_name
+                      const matchingPlans = plans
+                        .filter(p => p.session_name === plan.session_name && p.details === plan.details && (p.week < plan.week || (p.week === plan.week && p.day < plan.day)))
+                        .sort((a, b) => b.week - a.week || b.day.localeCompare(a.day));
+                      for (const mp of matchingPlans) {
+                        const mk = `${mp.week}-${mp.day}`;
+                        const mc = completions[mk];
+                        if (!mc?.done) continue;
+                        const mw = (mc.logged_weights || {}) as Record<string, any>;
+                        const mt = mw["__wod_time__"];
+                        if (mt) {
+                          const mtd = typeof mt === "string" ? JSON.parse(mt) : mt;
+                          if (mtd.totalSeconds) return { time: mtd.display || formatWodSeconds(mtd.totalSeconds), week: mp.week };
+                        }
+                      }
+                      return null;
+                    };
+
+                    const formatWodSeconds = (s: number): string => {
+                      const m = Math.floor(s / 60);
+                      const sec = s % 60;
+                      return `${m}:${sec.toString().padStart(2, "0")}`;
+                    };
+
+                    const prevWod = findPrevWodTime();
+
+                    return (
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Timer className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span className="text-xs font-bold text-foreground">WOD-tid</span>
+                          {prevWod && (
+                            <span className="text-[10px] text-muted-foreground ml-auto">
+                              Förra: <span className="font-semibold text-primary">{prevWod.time}</span> (v{prevWod.week})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <AutoSaveInput
+                            type="number"
+                            inputMode="numeric"
+                            initialValue={wodData?.min?.toString() || ""}
+                            onSave={async (v) => {
+                              const min = parseInt(v) || 0;
+                              const sec = wodData?.sec || 0;
+                              const totalSeconds = min * 60 + sec;
+                              const display = formatWodSeconds(totalSeconds);
+                              const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                              const updated = { ...existing, "__wod_time__": JSON.stringify({ min, sec, totalSeconds, display }) };
+                              setCompletions(prev => ({
+                                ...prev,
+                                [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                              }));
+                              await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
+                            }}
+                            placeholder="0"
+                            className="w-16 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
+                          />
+                          <span className="text-[10px] text-muted-foreground font-medium">min</span>
+                          <AutoSaveInput
+                            type="number"
+                            inputMode="numeric"
+                            initialValue={wodData?.sec?.toString() || ""}
+                            onSave={async (v) => {
+                              const sec = Math.min(59, parseInt(v) || 0);
+                              const min = wodData?.min || 0;
+                              const totalSeconds = min * 60 + sec;
+                              const display = formatWodSeconds(totalSeconds);
+                              const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                              const updated = { ...existing, "__wod_time__": JSON.stringify({ min, sec, totalSeconds, display }) };
+                              setCompletions(prev => ({
+                                ...prev,
+                                [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                              }));
+                              await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
+                            }}
+                            placeholder="0"
+                            className="w-16 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
+                          />
+                          <span className="text-[10px] text-muted-foreground font-medium">sek</span>
+                        </div>
+                        {isDone && wodData?.totalSeconds > 0 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Loggad tid: <span className="font-semibold text-foreground">{wodData.display}</span>
+                            {prevWod && wodData.totalSeconds < ((() => { const pts = prevWod.time.split(":"); return parseInt(pts[0]) * 60 + parseInt(pts[1]); })()) && (
+                              <span className="text-success ml-1.5 font-semibold">⬇ Nytt PB!</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <MessageSquare className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
