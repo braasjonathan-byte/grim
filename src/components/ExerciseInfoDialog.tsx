@@ -244,7 +244,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
                     </div>
                   )}
 
-                  {(!data.instructions || data.instructions.length === 0) && isAdmin && !data.isCardio && (
+                  {(!data.instructions || data.instructions.length === 0) && isAdmin && (
                     <button
                       onClick={startEditing}
                       className="text-xs text-primary font-semibold flex items-center gap-1 mx-auto hover:opacity-80"
