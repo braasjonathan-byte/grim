@@ -191,6 +191,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [condTimeMinutes, setCondTimeMinutes] = useState("");
   const [condTimeSeconds, setCondTimeSeconds] = useState("");
   const [condDistanceInput, setCondDistanceInput] = useState("");
+  const [condAutoField, setCondAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
 
   // Compute total minutes from H:M:S
   const condTimeTotalMin = (() => {
@@ -1550,9 +1551,20 @@ const estimateCalories = (
 
   // Auto-calc for conditioning: fill in the 3rd field when 2 are provided
   const parseCondTempo = (t: string): number | null => {
-    const m = t.trim().match(/^(\d+)[:\.](\d+)$/);
-    if (m) return parseInt(m[1]) + parseInt(m[2]) / 60;
-    const v = parseFloat(t.replace(",", "."));
+    const trimmed = t.trim();
+    if (!trimmed) return null;
+
+    const colonMatch = trimmed.match(/^(\d+):(\d{1,2})$/);
+    if (colonMatch) return parseInt(colonMatch[1]) + parseInt(colonMatch[2]) / 60;
+
+    const dotTimeMatch = trimmed.match(/^(\d+)\.(\d{2})$/);
+    if (dotTimeMatch && parseInt(dotTimeMatch[2]) < 60) {
+      return parseInt(dotTimeMatch[1]) + parseInt(dotTimeMatch[2]) / 60;
+    }
+
+    if (!/^\d+(?:[.,]\d+)?$/.test(trimmed)) return null;
+
+    const v = parseFloat(trimmed.replace(",", "."));
     return isNaN(v) ? null : v;
   };
 
@@ -1569,23 +1581,44 @@ const estimateCalories = (
     const t = totalMinutes;
     const p = parseCondTempo(tempo);
     const d = parseFloat(dist.replace(",", "."));
+    const filled = {
+      time: t > 0,
+      tempo: tempo.trim().length > 0 && p !== null && p > 0,
+      distance: dist.trim().length > 0 && !isNaN(d) && d > 0,
+    };
 
-    // Only calculate when 2 of 3 fields are filled
-    const filledCount = (t > 0 ? 1 : 0) + (p && p > 0 ? 1 : 0) + (d > 0 ? 1 : 0);
+    const calculateField = (field: "time" | "tempo" | "distance") => {
+      if (field === "distance" && t > 0 && p && p > 0) {
+        setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
+      } else if (field === "tempo" && t > 0 && d > 0) {
+        setCondTempoInput(formatCondTempo(t / d));
+      } else if (field === "time" && d > 0 && p && p > 0) {
+        setCondTimeFromMinutes(p * d);
+      }
+    };
+
+    const filledCount = Object.values(filled).filter(Boolean).length;
+    if (!filled[changed]) {
+      if (condAutoField === changed) setCondAutoField(null);
+      return;
+    }
+
     if (filledCount < 2) return;
 
-    if (changed === "time" && t > 0 && p && p > 0) {
-      setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
-    } else if (changed === "time" && t > 0 && d > 0) {
-      setCondTempoInput(formatCondTempo(t / d));
-    } else if (changed === "tempo" && p && p > 0 && t > 0) {
-      setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
-    } else if (changed === "tempo" && p && p > 0 && d > 0) {
-      setCondTimeFromMinutes(p * d);
-    } else if (changed === "distance" && d > 0 && t > 0) {
-      setCondTempoInput(formatCondTempo(t / d));
-    } else if (changed === "distance" && d > 0 && p && p > 0) {
-      setCondTimeFromMinutes(p * d);
+    const missingField = (["time", "tempo", "distance"] as const).find((field) => !filled[field]);
+    if (filledCount === 2 && missingField) {
+      calculateField(missingField);
+      setCondAutoField(missingField);
+      return;
+    }
+
+    if (filledCount === 3 && condAutoField) {
+      if (condAutoField === changed) {
+        setCondAutoField(null);
+        return;
+      }
+
+      calculateField(condAutoField);
     }
   };
 
@@ -1605,6 +1638,7 @@ const estimateCalories = (
       }
       resetCondTime();
       setCondDistanceInput("");
+      setCondAutoField(null);
       setCondIntervalsInput("");
       setCondRestInput("");
       setCondPulseInput("");
@@ -1731,6 +1765,7 @@ const estimateCalories = (
     setCondTempoInput("");
     resetCondTime();
     setCondDistanceInput("");
+    setCondAutoField(null);
     setCondIntervalsInput("");
     setCondRestInput("");
     setCondPulseInput("");
@@ -1799,6 +1834,7 @@ const estimateCalories = (
     }
     setCondTempoInput(tempoM ? tempoM[1] : "");
     setCondDistanceInput(distM ? distM[1].replace(",", ".") : "");
+    setCondAutoField(null);
     setCondPulseInput(pulseM ? pulseM[1] : "");
     setCondSpmInput(spmM ? spmM[1] : "");
     setCondIntervalsInput("");
@@ -1839,6 +1875,7 @@ const estimateCalories = (
     resetCondTime();
     setCondTempoInput("");
     setCondDistanceInput("");
+    setCondAutoField(null);
     setCondPulseInput("");
     setCondSpmInput("");
   };
@@ -2773,7 +2810,7 @@ const estimateCalories = (
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}}
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondAutoField(null);setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                             Avbryt
                           </button>
@@ -2796,6 +2833,7 @@ const estimateCalories = (
                               setCondTempoInput(lastCondTempo || "");
                               resetCondTime();
                               setCondDistanceInput("");
+                              setCondAutoField(null);
                               setCondIntervalsInput("");
                               setCondRestInput("");
                               setCondPulseInput("");
@@ -3718,7 +3756,7 @@ const estimateCalories = (
                                     <button onClick={saveEditedCondLine} className="flex-1 py-2 bg-success text-success-foreground rounded-md text-xs font-semibold">
                                       Spara
                                     </button>
-                                    <button onClick={() => { setEditingCondLine(null); resetCondTime(); setCondTempoInput(""); setCondDistanceInput(""); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                      <button onClick={() => { setEditingCondLine(null); resetCondTime(); setCondTempoInput(""); setCondDistanceInput(""); setCondAutoField(null); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                                       Avbryt
                                     </button>
                                   </div>
