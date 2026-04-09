@@ -357,7 +357,6 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
               }`}
             >
               <div className="flex items-start gap-3">
-                <Sparkles className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selected === realIdx ? "text-primary" : "text-muted-foreground"}`} />
                 <div className="flex-1">
                   <h3 className="font-bold text-sm">{template.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1">
