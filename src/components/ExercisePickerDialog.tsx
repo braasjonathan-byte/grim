@@ -210,11 +210,11 @@ const ExercisePickerDialog = ({
                   onClick={() => handleSelect(e.name)}
                   className="w-full flex items-center justify-between p-2.5 bg-secondary/60 hover:bg-primary/10 rounded-xl text-sm transition-colors text-left group active:scale-[0.98]"
                 >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0 flex-shrink-1 flex-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary/50 flex-shrink-0 group-hover:bg-primary transition-colors" />
-                    <span className="truncate">{e.name}</span>
+                    <span className="truncate font-medium">{e.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                  <div className="flex items-center gap-1.5 flex-shrink-0 ml-1" style={{ maxWidth: "45%" }}>
                     {onExerciseInfo && (
                       <button
                         onClick={(ev) => { ev.stopPropagation(); onExerciseInfo(e.name); }}
@@ -225,11 +225,11 @@ const ExercisePickerDialog = ({
                       </button>
                     )}
                     {lastW && (
-                      <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">
+                      <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">
                         {lastW}
                       </span>
                     )}
-                    <span className="text-[10px] text-muted-foreground">{e.muscleGroup}</span>
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0">{e.muscleGroup}</span>
                   </div>
                 </button>
               );
