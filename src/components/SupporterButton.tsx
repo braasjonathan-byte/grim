@@ -151,7 +151,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
         <button className="w-full rounded-xl border border-border bg-card p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-primary" />
-            <span className="text-sm font-bold">Bli Premium</span>
+            <span className="text-sm font-bold">Bli Supporter</span>
           </div>
           {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
@@ -168,14 +168,14 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
               Direktsupport via Grim
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Som Premium-medlem kan du chatta direkt med Grim i chatten för personlig hjälp och support.
+              Som Supporter kan du chatta direkt med Grim i chatten för personlig hjälp och support.
             </p>
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground mt-2">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
               Fler funktioner kommer
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Vi jobbar på fler exklusiva funktioner för Premium-medlemmar. Håll utkik!
+              Vi jobbar på fler exklusiva funktioner för Supporters. Håll utkik!
             </p>
           </div>
 
@@ -219,7 +219,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
                 ) : (
                   <Crown className="w-4 h-4" />
                 )}
-                Bli Premium – 29 kr/mån
+                Bli Supporter – 29 kr/mån
               </Button>
             </>
           )}

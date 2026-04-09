@@ -68,7 +68,7 @@ serve(async (req) => {
       amount: inv.amount_paid,
       currency: inv.currency,
       date: inv.created,
-      description: inv.lines.data[0]?.description || "Premium-prenumeration",
+      description: inv.lines.data[0]?.description || "Supporter-prenumeration",
       receipt_url: inv.hosted_invoice_url,
       pdf_url: inv.invoice_pdf,
       email: registeredEmail,

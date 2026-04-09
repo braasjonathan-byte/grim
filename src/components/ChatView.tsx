@@ -285,7 +285,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
         <p className="text-sm text-muted-foreground text-center py-8">Laddar...</p>
       ) : (
         <div className="space-y-1">
-          {/* Grim support for premium users */}
+          {/* Grim support for supporter users */}
           {isPremium && !isAdmin && (
             <button
               onClick={() => setSelectedFriend({ user_id: GRIM_SUPPORT_ID, nickname: "Grim", avatar_url: grimIcon, isGrimSupport: true })}
@@ -311,7 +311,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
                     {grimLastMessage.message}
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">Premium-support – skriv till oss!</p>
+                  <p className="text-xs text-muted-foreground italic">Supporter-support – skriv till oss!</p>
                 )}
               </div>
               {grimLastMessage && grimLastMessage.unread_count > 0 && (
@@ -466,7 +466,7 @@ const QUICK_REPLIES: { question: string; answer: string }[] = [
 ];
 
 interface GrimSupportConversationProps {
-  userId: string; // The premium user's ID
+  userId: string; // The supporter user's ID
   isAdmin: boolean;
   targetNickname: string;
   targetAvatar: string | null;
@@ -561,7 +561,7 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
         admin_id: currentUserId,
       });
     } else {
-      // Premium user sends to Grim
+      // Supporter user sends to Grim
       await supabase.from("support_messages").insert({
         user_id: userId,
         message: msgText,
