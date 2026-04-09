@@ -315,6 +315,16 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [profileGender, setProfileGender] = useState<string | null>(null);
   const [profileAge, setProfileAge] = useState<number | null>(null);
 
+  // Users allowed to edit exercise descriptions (admin or specific users)
+  const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setAuthUserId(data.user.id);
+    });
+  }, []);
+  const canEditExercises = isAdmin || (authUserId ? EXERCISE_EDITOR_IDS.includes(authUserId) : false);
+
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
