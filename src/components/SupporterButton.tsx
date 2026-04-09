@@ -151,7 +151,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
         <button className="w-full rounded-xl border border-border bg-card p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
           <div className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-primary" />
-            <span className="text-sm font-bold">Bli Premium</span>
+            <span className="text-sm font-bold">Bli Supporter</span>
           </div>
           {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </button>
