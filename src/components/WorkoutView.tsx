@@ -428,7 +428,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
       }
 
       if (planData.length === 0) {
-        setMode("choose");
+        setMode(prev => (prev === "loading" || prev === "choose") ? "choose" : prev);
       } else {
         const allSingle = planData.every((p) => p.week === 0);
         setMode(allSingle ? "single" : "plan");
