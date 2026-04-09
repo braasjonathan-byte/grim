@@ -4938,10 +4938,10 @@ const estimateCalories = (
                               const totalSeconds = min * 60 + sec;
                               const display = formatWodSeconds(totalSeconds);
                               const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                              const updated = { ...existing, "__wod_time__": JSON.stringify({ min, sec, totalSeconds, display }) };
+                              const updated = { ...existing, "__wod_time__": JSON.stringify({ min, sec, totalSeconds, display }) } as any;
                               setCompletions(prev => ({
                                 ...prev,
-                                [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
                               }));
                               await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
                             }}
