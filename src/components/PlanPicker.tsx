@@ -360,7 +360,9 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
                 <Sparkles className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selected === realIdx ? "text-primary" : "text-muted-foreground"}`} />
                 <div className="flex-1">
                   <h3 className="font-bold text-sm">{template.name}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{template.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {template.description.replace(/(\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka").replace(/(\d+–\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka")}
+                  </p>
                   {template.requiredLifts.length > 0 && (
                     <p className="text-xs text-primary mt-1.5 font-medium">
                       📊 Beräknar vikter från din 1RM
