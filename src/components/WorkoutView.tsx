@@ -4501,15 +4501,17 @@ const estimateCalories = (
                           );
                         }
 
-                        // Detect lines with round structure: "X rundor:", "X cirklar:", "X min AMRAP:", or "X rundor: exercise / exercise / ..."
-                        const roundsHeaderMatch = part.trim().match(/^(\d+)\s+(?:rundor|cirklar)\s*:(.*)/i);
+                        // Detect lines with round structure: "X rundor:", "X rundor à Y min:", "X cirklar:", "X min AMRAP:", "X×Y min ...", or "X rundor: exercise / exercise / ..."
+                        const roundsHeaderMatch = part.trim().match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
                         const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
-                        if (roundsHeaderMatch || amrapHeaderMatch) {
-                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : (amrapHeaderMatch ? parseInt(amrapHeaderMatch[1]) : 0);
-                          const restOfLine = (roundsHeaderMatch ? roundsHeaderMatch[2] : amrapHeaderMatch ? amrapHeaderMatch[3] : "").trim();
+                        const intervalHeaderMatch = !roundsHeaderMatch && !amrapHeaderMatch ? part.trim().match(/^(\d+)\s*[×x]\s*(\d+)\s*min\b(.*)/i) : null;
+                        if (roundsHeaderMatch || amrapHeaderMatch || intervalHeaderMatch) {
+                          const roundCount = roundsHeaderMatch ? parseInt(roundsHeaderMatch[1]) : (amrapHeaderMatch ? parseInt(amrapHeaderMatch[1]) : (intervalHeaderMatch ? parseInt(intervalHeaderMatch[1]) : 0));
+                          const restOfLine = (roundsHeaderMatch ? roundsHeaderMatch[2] : amrapHeaderMatch ? amrapHeaderMatch[3] : intervalHeaderMatch ? intervalHeaderMatch[3] : "").trim();
                           const isForTime = plan.session_name.toLowerCase().includes("for time") || plan.details.toLowerCase().includes("for time");
                           const isHiit = plan.session_name.toLowerCase().includes("hiit") || plan.session_name.toLowerCase().includes("cirkel") || plan.details.toLowerCase().includes("hiit");
-                          const showRoundCheckboxes = isForTime || isHiit;
+                          const isIntervall = plan.session_name.toLowerCase().includes("intervall");
+                          const showRoundCheckboxes = isForTime || isHiit || isIntervall;
 
                           // Parse exercises from rest of line (separated by / or ;)
                           const inlineExercises = restOfLine
