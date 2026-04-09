@@ -6,6 +6,7 @@ interface ExerciseInfoDialogProps {
   exerciseName: string;
   onClose: () => void;
   isAdmin?: boolean;
+  initialEditMode?: boolean;
 }
 
 interface ExerciseData {
