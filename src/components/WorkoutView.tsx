@@ -4526,7 +4526,9 @@ const estimateCalories = (
                           const roundsDoneStr = typeof savedRoundsDone === "string" ? savedRoundsDone : String(savedRoundsDone);
 
                           // Build header text (without the inline exercises)
-                          const headerText = roundsHeaderMatch
+                          const headerText = namedIntervalMatch
+                            ? `Intervallöpning: ${namedIntervalLabel}`
+                            : roundsHeaderMatch
                             ? `${roundsHeaderMatch[1]} ${part.trim().match(/rundor|cirklar/i)?.[0] || "rundor"}`
                             : part.trim().split(":")[0];
 
