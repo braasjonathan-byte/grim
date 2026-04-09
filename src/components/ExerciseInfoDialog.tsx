@@ -48,8 +48,18 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
         setLoading(false);
       }
     };
+    setLoading(true);
+    setError(null);
+    setData(null);
+    setEditing(false);
     fetchData();
   }, [exerciseName]);
+
+  useEffect(() => {
+    if (!loading && initialEditMode && isAdmin) {
+      setEditing(true);
+    }
+  }, [loading, initialEditMode, isAdmin]);
 
   const startEditing = () => {
     const lines = data?.instructions || [];
