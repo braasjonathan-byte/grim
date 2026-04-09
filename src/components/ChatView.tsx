@@ -285,7 +285,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
         <p className="text-sm text-muted-foreground text-center py-8">Laddar...</p>
       ) : (
         <div className="space-y-1">
-          {/* Grim support for premium users */}
+          {/* Grim support for supporter users */}
           {isPremium && !isAdmin && (
             <button
               onClick={() => setSelectedFriend({ user_id: GRIM_SUPPORT_ID, nickname: "Grim", avatar_url: grimIcon, isGrimSupport: true })}
