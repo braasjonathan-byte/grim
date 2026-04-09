@@ -168,7 +168,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
               Direktsupport via Grim
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Som Premium-medlem kan du chatta direkt med Grim i chatten för personlig hjälp och support.
+              Som Supporter kan du chatta direkt med Grim i chatten för personlig hjälp och support.
             </p>
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground mt-2">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
