@@ -4520,9 +4520,10 @@ const estimateCalories = (
                             ? restOfLine.split(/[/;]/).map(s => s.replace(/\.\s*$/, "").trim()).filter(Boolean)
                             : [];
 
-                          // Get saved round completions from logged_weights
+                          // Use unique key per round block to avoid conflicts when multiple blocks exist
+                          const roundKey = `__wod_rounds_done_${i}__`;
                           const roundWeights = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                          const savedRoundsDone = roundWeights["__wod_rounds_done__"] || "";
+                          const savedRoundsDone = roundWeights[roundKey] || "";
                           const roundsDoneStr = typeof savedRoundsDone === "string" ? savedRoundsDone : String(savedRoundsDone);
 
                           // Build header text (without the inline exercises)
