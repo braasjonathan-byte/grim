@@ -4613,6 +4613,9 @@ const estimateCalories = (
                                     const planSetData = getSetData(key, partName);
                                     const defKg = partKg || "";
                                     const defReps = partReps || repsStr || "10";
+                                    // Detect bodyweight exercises that don't need kg input
+                                    const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "dips", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
+                                    const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
                                     return Array.from({ length: setsCountPlan }, (_, si) => {
                                       const isSetDone = setsStrPlan[si] === "1";
                                       const saved = planSetData[si];
@@ -4623,10 +4626,14 @@ const estimateCalories = (
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={saved?.reps || defReps} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, defKg, defReps)} className="w-11 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
                                           <span className="text-[10px] text-muted-foreground">reps</span>
-                                          <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defKg} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
-                                          <span className="text-[10px] text-muted-foreground">kg</span>
+                                          {!isBodyweight && (
+                                            <>
+                                              <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defKg} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                              <span className="text-[10px] text-muted-foreground">kg</span>
+                                            </>
+                                          )}
                                           </div>
-                                          {(() => {
+                                          {!isBodyweight && (() => {
                                             const currentKg = parseFloat(saved?.kg || defKg);
                                             if (!isNaN(currentKg) && currentKg < 0) {
                                               if (profileWeight) {
