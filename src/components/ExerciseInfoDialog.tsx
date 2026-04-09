@@ -6,6 +6,7 @@ interface ExerciseInfoDialogProps {
   exerciseName: string;
   onClose: () => void;
   isAdmin?: boolean;
+  initialEditMode?: boolean;
 }
 
 interface ExerciseData {
@@ -19,7 +20,7 @@ interface ExerciseData {
   hasCustomInstructions?: boolean;
 }
 
-const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false }: ExerciseInfoDialogProps) => {
+const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEditMode = false }: ExerciseInfoDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExerciseData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,26 +30,50 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false }: Exercise
 
   useEffect(() => {
     const fetchData = async () => {
+      const shouldOpenEditor = initialEditMode && isAdmin;
+
       try {
         const { data: result, error: fnError } = await supabase.functions.invoke("exercise-gif", {
           body: { exerciseName },
         });
         if (fnError) throw fnError;
-        if (result?.isCardio) {
+
+        if (result?.isCardio || result?.gifUrl || (result?.instructions && result.instructions.length > 0)) {
           setData(result);
-        } else if (result?.gifUrl || (result?.instructions && result.instructions.length > 0)) {
-          setData(result);
+          if (shouldOpenEditor) {
+            setEditText((result.instructions || []).join("
+"));
+            setEditing(true);
+          }
         } else {
-          setError("Ingen demonstration hittades för denna övning.");
+          if (shouldOpenEditor) {
+            setData({ gifUrl: null, name: exerciseName, instructions: [], targetMuscles: [], equipments: [] });
+            setEditText("");
+            setEditing(true);
+          } else {
+            setError("Ingen demonstration hittades för denna övning.");
+          }
         }
       } catch (e) {
-        setError("Kunde inte hämta övningsinformation.");
+        if (shouldOpenEditor) {
+          setData({ gifUrl: null, name: exerciseName, instructions: [], targetMuscles: [], equipments: [] });
+          setEditText("");
+          setEditing(true);
+        } else {
+          setError("Kunde inte hämta övningsinformation.");
+        }
       } finally {
         setLoading(false);
       }
     };
+
+    setLoading(true);
+    setError(null);
+    setData(null);
+    setEditText("");
+    setEditing(false);
     fetchData();
-  }, [exerciseName]);
+  }, [exerciseName, initialEditMode, isAdmin]);
 
   const startEditing = () => {
     const lines = data?.instructions || [];
@@ -233,7 +258,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false }: Exercise
                     </div>
                   )}
 
-                  {(!data.instructions || data.instructions.length === 0) && isAdmin && !data.isCardio && (
+                  {(!data.instructions || data.instructions.length === 0) && isAdmin && (
                     <button
                       onClick={startEditing}
                       className="text-xs text-primary font-semibold flex items-center gap-1 mx-auto hover:opacity-80"
