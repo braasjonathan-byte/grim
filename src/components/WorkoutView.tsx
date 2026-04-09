@@ -4651,16 +4651,22 @@ const estimateCalories = (
                                           <Settings className="w-4 h-4" />
                                         </button>
                                       </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                         <DropdownMenuItem onClick={() => startReplaceExercise(plan.id, i, partName)}>
                                           <ArrowLeftRight className="w-4 h-4 mr-2" />
                                           Byt ut övning
                                         </DropdownMenuItem>
+                                        {canEditExercises && (
+                                          <DropdownMenuItem onClick={() => setExerciseInfoName(partName)}>
+                                            <Pencil className="w-4 h-4 mr-2" />
+                                            Redigera beskrivning
+                                          </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(partName) })}>
                                           <X className="w-4 h-4 mr-2" />
                                           Ta bort övning
                                         </DropdownMenuItem>
-                                      </DropdownMenuContent>
+                                       </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
                               </div>
