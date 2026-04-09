@@ -4562,7 +4562,7 @@ const estimateCalories = (
                                             return (roundsDoneStr[j] || "0");
                                           }).join("");
                                           const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                                          const updated = { ...existing, "__wod_rounds_done__": newStr } as any;
+                                          const updated = { ...existing, [roundKey]: newStr } as any;
                                           setCompletions(prev => ({
                                             ...prev,
                                             [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
