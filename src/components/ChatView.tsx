@@ -311,7 +311,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
                     {grimLastMessage.message}
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">Premium-support – skriv till oss!</p>
+                  <p className="text-xs text-muted-foreground italic">Supporter-support – skriv till oss!</p>
                 )}
               </div>
               {grimLastMessage && grimLastMessage.unread_count > 0 && (
