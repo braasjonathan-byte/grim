@@ -4442,6 +4442,77 @@ const estimateCalories = (
                           );
                         }
 
+                        // "Mål:" line - render as goal info with rounds input for AMRAP
+                        if (/^mål:/i.test(part.trim())) {
+                          const goalText = part.replace(/^mål:\s*/i, "").trim();
+                          const isAmrap = goalText.toLowerCase().includes("rundor") || plan.session_name.toLowerCase().includes("amrap");
+                          const wodWeights = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                          const savedRoundsRaw = wodWeights["__wod_rounds__"];
+                          const savedRounds = savedRoundsRaw ? (typeof savedRoundsRaw === "string" ? savedRoundsRaw : String(savedRoundsRaw)) : "";
+
+                          // Find previous rounds from identical WOD
+                          const prevRounds = (() => {
+                            const matching = plans
+                              .filter(p => p.session_name === plan.session_name && p.details === plan.details && (p.week < plan.week || (p.week === plan.week && p.day < plan.day)))
+                              .sort((a, b) => b.week - a.week || b.day.localeCompare(a.day));
+                            for (const mp of matching) {
+                              const mc = completions[`${mp.week}-${mp.day}`];
+                              if (!mc?.done) continue;
+                              const mw = (mc.logged_weights || {}) as Record<string, any>;
+                              const mr = mw["__wod_rounds__"];
+                              if (mr) return { rounds: String(mr), week: mp.week };
+                            }
+                            return null;
+                          })();
+
+                          return (
+                            <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
+                                <span className="text-xs font-bold text-foreground">{goalText}</span>
+                              </div>
+                              {isAmrap && (
+                                <div className="flex items-center gap-2">
+                                  <AutoSaveInput
+                                    type="number"
+                                    inputMode="numeric"
+                                    initialValue={savedRounds}
+                                    onSave={async (v) => {
+                                      const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                      const updated = { ...existing, "__wod_rounds__": v } as any;
+                                      setCompletions(prev => ({
+                                        ...prev,
+                                        [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
+                                      }));
+                                      await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
+                                    }}
+                                    placeholder="0"
+                                    className="w-16 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-primary/30 outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground"
+                                  />
+                                  <span className="text-xs text-muted-foreground font-medium">rundor</span>
+                                  {prevRounds && (
+                                    <span className="text-[10px] text-muted-foreground ml-auto">
+                                      Förra: <span className="font-semibold text-primary">{prevRounds.rounds} rundor</span> (v{prevRounds.week})
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        // Detect lines that are just descriptions (e.g. "X rundor:", "X min AMRAP:") - render as info
+                        if (/^\d+\s*(min\s+)?amrap\s*:/i.test(part.trim()) || /^\d+\s+rundor\s*:/i.test(part.trim())) {
+                          return (
+                            <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+                              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                                <Timer className="w-3.5 h-3.5 text-primary" />
+                                {part}
+                              </p>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div key={i} className="bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1">
                               <div className="flex items-center justify-between">
