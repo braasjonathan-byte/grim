@@ -3854,64 +3854,46 @@ const estimateCalories = (
                                   const pTime = cTimeM ? cTimeM[1] : "";
                                   const pDist = cDistM ? cDistM[1] : "";
                                   const pTempo = cTempoM ? cTempoM[1] : "";
-
                                   const cKey = `__cond__${condLineName}`;
                                   const cRaw = (completions[key]?.logged_weights as Record<string, any>)?.[cKey];
                                   let cSaved: Record<string, any> | null = null;
                                   if (cRaw) { try { const p = typeof cRaw === "string" ? JSON.parse(cRaw) : cRaw; if (p && typeof p === "object") cSaved = p; } catch {} }
-                                  const dTime = cSaved?.time || pTime;
-                                  const dDist = cSaved?.dist || pDist;
-                                  let dTempo = cSaved?.tempo || pTempo;
-                                  if (!dTempo && dTime && dDist) {
-                                    const t = parseFloat(dTime); const d = parseFloat(String(dDist).replace(",", "."));
-                                    if (t > 0 && d > 0) { const tm = t / d; dTempo = `${Math.floor(tm)}:${Math.round((tm - Math.floor(tm)) * 60).toString().padStart(2, '0')}`; }
-                                  }
-
-                                  const saveCondInline = async (field: string, value: any) => {
-                                    await updateCompletionWeights(plan.week, plan.day, (existing) => {
-                                      let cur: Record<string, any> = { time: pTime, dist: pDist, tempo: pTempo };
-                                      const raw = existing[cKey];
-                                      if (raw) { try { const p = typeof raw === "string" ? JSON.parse(raw) : raw; if (p && typeof p === "object") cur = { ...cur, ...p }; } catch {} }
-                                      const upd = { ...cur, [field]: value };
-                                      if ((field === "time" || field === "dist") && !upd.tempo) {
-                                        const t2 = parseFloat(field === "time" ? value : upd.time || "0");
-                                        const d2 = parseFloat(String(field === "dist" ? value : upd.dist || "0").replace(",", "."));
-                                        if (t2 > 0 && d2 > 0) { const tm = t2 / d2; upd.tempo = `${Math.floor(tm)}:${Math.round((tm - Math.floor(tm)) * 60).toString().padStart(2, "0")}`; }
-                                      }
-                                      return { ...existing, [cKey]: JSON.stringify(upd) };
-                                    });
-                                  };
-
+                                  const cHasSaved = !!(cSaved && (cSaved.time || cSaved.dist || cSaved.tempo || cSaved.pulse));
                                   return (
-                                    <li key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2 list-none">
-                                      <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                                          <Footprints className="w-3.5 h-3.5 text-warning" />
-                                          {toTitleCase(condLineName)}
-                                        </span>
-                                        <div className="flex items-center gap-0.5">
-                                          <div className="flex flex-col">
-                                            <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3 h-3" /></button>
-                                            <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === detailParts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3 h-3" /></button>
-                                          </div>
-                                          <button onClick={(e) => {e.stopPropagation();setExerciseInfoState({ name: condLineName });}} className="p-0.5 text-muted-foreground hover:text-warning transition-colors"><Info className="w-3.5 h-3.5" /></button>
-                                          <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condLineName) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"><X className="w-4 h-4" /></button>
-                                        </div>
-                                      </div>
-                                      <div className="grid grid-cols-3 gap-2">
-                                        <div className="space-y-0.5">
-                                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
-                                          <AutoSaveInput type="number" inputMode="numeric" initialValue={dTime} onSave={(v) => saveCondInline('time', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                        </div>
-                                        <div className="space-y-0.5">
-                                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
-                                          <AutoSaveInput type="text" inputMode="decimal" initialValue={dDist} onSave={(v) => saveCondInline('dist', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                        </div>
-                                        <div className="space-y-0.5">
-                                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
-                                          <AutoSaveInput type="text" initialValue={dTempo} onSave={(v) => saveCondInline('tempo', v)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                        </div>
-                                      </div>
+                                    <li key={i} className="list-none">
+                                      <ConditioningEditCard
+                                        name={condLineName}
+                                        lineIndex={i}
+                                        planId={plan.id}
+                                        planCondTime={pTime}
+                                        planCondDist={pDist}
+                                        planCondTempo={pTempo}
+                                        savedData={cSaved}
+                                        hasSavedData={cHasSaved}
+                                        exerciseLinesCount={detailParts.length}
+                                        onMoveUp={() => moveExercise(plan.id, i, "up")}
+                                        onMoveDown={() => moveExercise(plan.id, i, "down")}
+                                        onShowInfo={() => setExerciseInfoState({ name: condLineName })}
+                                        onDelete={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condLineName) })}
+                                        onSave={async (data) => {
+                                          await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                                            return { ...existing, [cKey]: JSON.stringify(data) };
+                                          });
+                                          const infoParts: string[] = [];
+                                          if (data.time) infoParts.push(`${data.time} min`);
+                                          if (data.tempo) infoParts.push(`${data.tempo}/km`);
+                                          if (data.dist) infoParts.push(`${data.dist} km`);
+                                          if (data.pulse) infoParts.push(`${data.pulse} bpm`);
+                                          const entry = infoParts.length > 0 ? `${condLineName} — ${infoParts.join(", ")}` : condLineName;
+                                          const separator = plan.details.includes("\n") ? "\n" : "; ";
+                                          const allLines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                                          allLines[i] = entry;
+                                          const newDetails = allLines.join(separator);
+                                          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                          setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                          triggerSave();
+                                        }}
+                                      />
                                     </li>
                                   );
                                 }
