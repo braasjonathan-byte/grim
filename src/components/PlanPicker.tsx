@@ -156,6 +156,17 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
     const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
     await supabase.from("profiles").update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any).eq("user_id", userId);
 
+    // Auto-create event countdown for event-prep plans
+    if (template.isEventPrep && eventDate && eventName.trim()) {
+      const evDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`;
+      await supabase.from("event_countdowns").insert({
+        user_id: userId,
+        event_name: eventName.trim(),
+        event_date: evDateStr,
+        event_type: template.defaultEventType || "annat",
+      });
+    }
+
     setLoading(false);
     onDone();
   };
