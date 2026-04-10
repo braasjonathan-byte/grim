@@ -190,23 +190,32 @@ const getStandaloneDate = (day: string): Date | null => {
 
 /** Extract distance from plan details text, using only LOGGED conditioning entries (with "—" separator and tempo/time data).
  *  Excludes cycling (cykel/motioncykel) — only counts running/walking exercises.
- *  Logged entries look like "Löpning — 37 min, 7:19/km, 5.06 km". Suggested distances like "Löpning 8.5 km" are NOT counted. */
+ *  Logged entries look like "Löpning — 37 min, 7:19/km, 5.06 km".
+ *  Also handles plan lines like "Löpning 8.5 km" (without dash separator). */
 const CYCLING_KEYWORDS = /cykel|motioncykel|spinning|crosstrainer/i;
+const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|långpass|distanslöpning|promenad|gång/i;
 const extractDistanceFromDetails = (details: string): number => {
   let loggedTotal = 0;
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
   for (const line of lines) {
-    // Only process logged conditioning lines (with "—" separator)
-    const dashMatch = line.match(/^(.+?)\s*—\s*(.+)$/);
-    if (!dashMatch) continue;
-    const name = dashMatch[1].trim();
-    const info = dashMatch[2];
     // Skip cycling exercises
-    if (CYCLING_KEYWORDS.test(name)) continue;
-    // Extract distance: look for X km (not /km)
-    const distMatch = info.match(/([\d.,]+)\s*km(?!\/)/);
-    if (distMatch) {
-      loggedTotal += parseFloat(distMatch[1].replace(",", ".")) || 0;
+    if (CYCLING_KEYWORDS.test(line)) continue;
+    // Process lines with "—" separator (e.g. "Löpning — 10 km")
+    const dashMatch = line.match(/^(.+?)\s*—\s*(.+)$/);
+    if (dashMatch) {
+      const info = dashMatch[2];
+      const distMatch = info.match(/([\d.,]+)\s*km(?!\/)/);
+      if (distMatch) {
+        loggedTotal += parseFloat(distMatch[1].replace(",", ".")) || 0;
+      }
+      continue;
+    }
+    // Also match plan lines without dash: "Löpning 8.5 km"
+    if (RUNNING_KEYWORDS.test(line)) {
+      const directDist = line.match(/([\d.,]+)\s*km(?!\/)/);
+      if (directDist) {
+        loggedTotal += parseFloat(directDist[1].replace(",", ".")) || 0;
+      }
     }
   }
   return loggedTotal;
