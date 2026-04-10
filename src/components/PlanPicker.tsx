@@ -201,6 +201,17 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
   }
 
   if (step === "start-date") {
+    const isEvent = selectedTemplate?.isEventPrep;
+
+    // For event-prep plans, calculate start date from event date
+    const computedStartDate = isEvent && eventDate
+      ? addDays(eventDate, -(selectedTemplate!.weeks * 7))
+      : startDate;
+
+    const canConfirm = isEvent
+      ? !!(eventDate && eventName.trim())
+      : true;
+
     return (
       <div className="space-y-6 animate-fade-in">
         <button
@@ -210,41 +221,104 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
           <ArrowLeft className="w-4 h-4" /> Tillbaka
         </button>
 
-        <div className="text-center space-y-2">
-          <CalendarIcon className="w-10 h-10 text-primary mx-auto" />
-          <h2 className="text-xl font-black tracking-tight">Välj startdatum</h2>
-          <p className="text-sm text-muted-foreground">
-            Välj vilket datum schemat ska börja från. Du kan starta mitt i en vecka.
-          </p>
-        </div>
-
         <div className="bg-card border border-border rounded-lg p-4 space-y-1">
           <p className="font-semibold text-sm">{selectedTemplate?.name}</p>
           <p className="text-xs text-muted-foreground">{selectedTemplate?.weeks} veckor</p>
         </div>
 
-        <div className="flex justify-center">
-          <Calendar
-            mode="single"
-            selected={startDate}
-            onSelect={(d) => d && setStartDate(d)}
-            locale={sv}
-            className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
-          />
-        </div>
+        {isEvent ? (
+          <>
+            <div className="text-center space-y-2">
+              <Trophy className="w-10 h-10 text-primary mx-auto" />
+              <h2 className="text-xl font-black tracking-tight">När är ditt event?</h2>
+              <p className="text-sm text-muted-foreground">
+                Planen räknas bakåt så att du är i toppform på eventdagen. Nedräkning skapas automatiskt.
+              </p>
+            </div>
 
-        <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
-          <p className="text-sm font-medium">
-            Startdatum: <span className="text-primary">{format(startDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
-          </p>
-        </div>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground block">Eventnamn</label>
+                <input
+                  type="text"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  placeholder="t.ex. Stockholm Halvmaraton"
+                  className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">Eventdatum</label>
+              <div className="flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={eventDate}
+                  onSelect={(d) => {
+                    if (d) {
+                      setEventDate(d);
+                      setStartDate(addDays(d, -(selectedTemplate!.weeks * 7)));
+                    }
+                  }}
+                  locale={sv}
+                  disabled={(d) => d < new Date()}
+                  className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
+                />
+              </div>
+            </div>
+
+            {eventDate && eventName.trim() && (
+              <div className="bg-secondary/50 border border-border rounded-lg p-3 space-y-1 text-center">
+                <p className="text-sm font-medium">
+                  🎯 Event: <span className="text-primary">{format(eventDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                </p>
+                <p className="text-sm font-medium">
+                  📅 Planen startar: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                </p>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="text-center space-y-2">
+              <CalendarIcon className="w-10 h-10 text-primary mx-auto" />
+              <h2 className="text-xl font-black tracking-tight">Välj startdatum</h2>
+              <p className="text-sm text-muted-foreground">
+                Välj vilket datum schemat ska börja från. Du kan starta mitt i en vecka.
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={(d) => d && setStartDate(d)}
+                locale={sv}
+                className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
+              />
+            </div>
+
+            <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
+              <p className="text-sm font-medium">
+                Startdatum: <span className="text-primary">{format(startDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+              </p>
+            </div>
+          </>
+        )}
 
         <button
-          onClick={handleStartDateConfirm}
-          disabled={loading}
+          onClick={() => {
+            if (isEvent && eventDate) {
+              const computed = addDays(eventDate, -(selectedTemplate!.weeks * 7));
+              setStartDate(computed);
+            }
+            handleStartDateConfirm();
+          }}
+          disabled={loading || !canConfirm}
           className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
         >
-          Starta schemat
+          {isEvent ? "Starta schemat mot eventet" : "Starta schemat"}
         </button>
       </div>
     );
