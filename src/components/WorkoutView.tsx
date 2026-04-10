@@ -3556,8 +3556,13 @@ const estimateCalories = (
                                 if (inlineIntervalMatch) {
                                   const iCount = parseInt(inlineIntervalMatch[1]);
                                   const iDuration = parseInt(inlineIntervalMatch[2]);
-                                  const iTempoM = line.match(/([\d:.]+)\s*\/km/);
-                                  const iPlanTempo = iTempoM ? iTempoM[1] : "";
+                                   const iTempoM = line.match(/([\d:.]+)\s*\/km/);
+                                   // Fall back to plan.tempo if the line doesn't contain tempo
+                                   let iPlanTempo = iTempoM ? iTempoM[1] : "";
+                                   if (!iPlanTempo && plan.tempo) {
+                                     const planTempoMatch = plan.tempo.match(/([\d:.]+)\s*(?:min\/km|\/km)/);
+                                     if (planTempoMatch) iPlanTempo = planTempoMatch[1];
+                                   }
                                   const iCondKey = `__cond__${line}`;
                                   const iComp = completions[key];
                                   const iRawSaved = (iComp?.logged_weights as Record<string, any>)?.[iCondKey];
