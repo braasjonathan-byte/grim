@@ -836,6 +836,47 @@ function generateHalfMarathon(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
+// ─── Halvmaraton – 6 veckor, 3 pass/vecka ───────────────────────────────────
+function generateHalfMarathon6w(profile: FitnessProfile): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  // Progressive long run: build up to 20 km, then taper
+  const longKm = [12, 14, 16, 18, 20, 14];
+  // Interval structure per week: sets × minutes
+  const intervals: [number, number][] = [[4, 4], [5, 4], [4, 5], [5, 5], [6, 4], [3, 3]];
+
+  for (let w = 1; w <= 6; w++) {
+    const pace = calcPaceForWeek(profile.time_10km_min, w, 6);
+    const dist = profile.max_distance_km
+      ? Math.round(longKm[w - 1] * Math.min(1, profile.max_distance_km / 21))
+      : longKm[w - 1];
+    const isTaper = w === 6;
+    const [intSets, intMin] = intervals[w - 1];
+
+    days.push(
+      {
+        week: w, day: "Tis", session_name: "Löpning – Intervaller",
+        details: isTaper
+          ? `15 min uppvärmning; ${intSets}×${intMin} min i tröskeltempo (90 s joggvila); 10 min nedvarvning`
+          : `15 min uppvärmning; ${intSets}×${intMin} min i tröskeltempo (90 s joggvila); 10 min nedvarvning`,
+        tempo: `${pace.threshold} min/km`,
+      },
+      {
+        week: w, day: "Tors", session_name: "Löpning – Lugn",
+        details: `${isTaper ? 30 : 35 + w * 2} min i lugnt, avslappnat tempo`,
+        tempo: `${pace.easy} min/km`,
+      },
+      {
+        week: w, day: "Sön", session_name: "Löpning – Långpass",
+        details: isTaper
+          ? `${dist} km i lugnt tempo – avslutande taper inför loppet`
+          : `${dist} km i jämnt, lugnt tempo`,
+        tempo: `${pace.long} min/km`,
+      },
+    );
+  }
+  return days;
+}
+
 // ─── Funktionell Fitness / CrossFit-inspirerad (8v) ─────────────────────────
 function generateFunctionalFitness(profile: FitnessProfile): TemplatePlanDay[] {
   const exp = profile.experience_level;
