@@ -855,21 +855,19 @@ function generateHalfMarathon6w(profile: FitnessProfile): TemplatePlanDay[] {
     days.push(
       {
         week: w, day: "Tis", session_name: "Löpning – Intervaller",
-        details: isTaper
-          ? `15 min uppvärmning; ${intSets}×${intMin} min i tröskeltempo (90 s joggvila); 10 min nedvarvning`
-          : `15 min uppvärmning; ${intSets}×${intMin} min i tröskeltempo (90 s joggvila); 10 min nedvarvning`,
+        details: `Uppvärmning — 15 min\n${intSets}×${intMin} min i tröskeltempo (90 s joggvila)\nNedvarvning — 10 min`,
         tempo: `${pace.threshold} min/km`,
       },
       {
         week: w, day: "Tors", session_name: "Löpning – Lugn",
-        details: `${isTaper ? 30 : 35 + w * 2} min i lugnt, avslappnat tempo`,
+        details: `Löpning — ${isTaper ? 30 : 35 + w * 2} min`,
         tempo: `${pace.easy} min/km`,
       },
       {
         week: w, day: "Sön", session_name: "Löpning – Långpass",
         details: isTaper
-          ? `${dist} km i lugnt tempo – avslutande taper inför loppet`
-          : `${dist} km i jämnt, lugnt tempo`,
+          ? `Löpning — ${dist} km`
+          : `Löpning — ${dist} km`,
         tempo: `${pace.long} min/km`,
       },
     );
