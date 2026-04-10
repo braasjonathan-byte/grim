@@ -257,7 +257,10 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       supabase.from("daily_challenge_completions")
         .select("completed_at, challenge_text, challenge_date")
         .eq("user_id", userId).order("completed_at", { ascending: false }),
-    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }]) => {
+      supabase.from("archived_plans")
+        .select("plan_data")
+        .eq("user_id", userId),
+    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archivedData }]) => {
       // Profile
       let profileStartDate: Date | null = null;
       if (profileData) {
@@ -300,36 +303,59 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       setChallengeCounts(cCounts);
       setChallengeCount(cCounts.all);
       if (challengeData) setAllChallenges(challengeData as any);
+
+      // Build plan details map from active plans
+      const detailsMap = new Map<string, string>();
+      const exerciseKeys = new Set<string>();
+      const perWeek = new Map<number, number>();
+
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
-        setPlansWithExercises(new Set(withExercises.map((p) => `${p.week}-${p.day}`)));
-        const detailsMap = new Map<string, string>();
         for (const p of withExercises) {
-          detailsMap.set(`${p.week}-${p.day}`, p.details);
-        }
-        setPlanDetailsMap(detailsMap);
-        const perWeek = new Map<number, number>();
-        for (const p of withExercises) {
+          const key = `${p.week}-${p.day}`;
+          exerciseKeys.add(key);
+          detailsMap.set(key, p.details);
           perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
         }
-        setScheduledPerWeek(perWeek);
-        if (userPlanStartDate) {
-          setPlanStartDate(userPlanStartDate);
-          const isoStart = getISOWeek(userPlanStartDate);
-          // When using profile's plan_start_date, it represents week 1 directly.
-          // Only apply planWeekOfEarliest offset when using fallback.
-          let weekOffset = 0;
-          if (!usedProfileDate && planData.length > 0) {
-            const planWeekOfEarliest = planData.reduce((min, p) =>
-              p.created_at < min.created_at ? p : min
-            ).week as number;
-            weekOffset = planWeekOfEarliest - 1;
+      }
+
+      // Merge archived plan details as fallback (for distance calculation on historical completions)
+      if (archivedData) {
+        for (const archive of archivedData) {
+          const plans = archive.plan_data as any[];
+          if (!Array.isArray(plans)) continue;
+          for (const p of plans) {
+            if (!p.details || !p.details.trim()) continue;
+            const key = `${p.week}-${p.day}`;
+            if (!detailsMap.has(key)) {
+              detailsMap.set(key, p.details);
+            }
+            if (!exerciseKeys.has(key)) {
+              exerciseKeys.add(key);
+            }
           }
-          setPlanStartCalendarWeek({
-            week: isoStart.week - weekOffset,
-            year: isoStart.year
-          });
         }
+      }
+
+      setPlansWithExercises(exerciseKeys);
+      setPlanDetailsMap(detailsMap);
+      setScheduledPerWeek(perWeek);
+
+      // Set plan start date even if no active plans (needed for period filtering)
+      if (userPlanStartDate) {
+        setPlanStartDate(userPlanStartDate);
+        const isoStart = getISOWeek(userPlanStartDate);
+        let weekOffset = 0;
+        if (!usedProfileDate && planData && planData.length > 0) {
+          const planWeekOfEarliest = planData.reduce((min, p) =>
+            p.created_at < min.created_at ? p : min
+          ).week as number;
+          weekOffset = planWeekOfEarliest - 1;
+        }
+        setPlanStartCalendarWeek({
+          week: isoStart.week - weekOffset,
+          year: isoStart.year
+        });
       }
     });
   }, [userId]);
