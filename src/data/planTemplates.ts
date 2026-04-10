@@ -153,13 +153,13 @@ function generateOriginalPlan(profile: FitnessProfile): TemplatePlanDay[] {
       {
         week: w, day: "Tors", session_name: "Tröskellöpning",
         details: isDeload
-          ? `2×12 min (2 min joggvila) – deload`
-          : `${thresholdSets}×${thresholdMin} min (${thresholdRest})`,
+          ? `Uppvärmning — 10 min\n2×12 min i tröskeltempo (2 min joggvila)\nNedvarvning — 10 min`
+          : `Uppvärmning — 10 min\n${thresholdSets}×${thresholdMin} min i tröskeltempo (${thresholdRest})\nNedvarvning — 10 min`,
         tempo: pace.threshold,
       },
       {
         week: w, day: "Fre", session_name: "Vila eller lätt jogg",
-        details: `${isDeload ? "15–20" : `${20 + Math.min(10, w)}–${30 + Math.min(5, w)}`} min`,
+        details: isDeload ? `Löpning — 18 min` : `Löpning — ${25 + Math.min(8, w)} min`,
         tempo: pace.easy,
       },
       {
@@ -169,7 +169,7 @@ function generateOriginalPlan(profile: FitnessProfile): TemplatePlanDay[] {
           : `Böj ${squatSets}×${squatReps} @ RPE ${rpe(7)}; Mark ${Math.min(5, 3 + Math.floor(w / 3))}×${squatReps} @ RPE ${rpe(7)}; ${w <= 6 ? `Frontböj 3×3 @ RPE ${rpe(6)}` : `Enbensarbete 3×8`}`,
         tempo: "RPE enligt text",
       },
-      { week: w, day: "Sön", session_name: "Långpass", details: `Löpning ${dist} km`, tempo: pace.long },
+      { week: w, day: "Sön", session_name: "Långpass", details: `Löpning — ${dist} km`, tempo: pace.long },
     );
   }
   return weekPlans;
