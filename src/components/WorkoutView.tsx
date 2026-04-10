@@ -2356,7 +2356,7 @@ const estimateCalories = (
                   <div className="flex items-center gap-1">
                     {(() => {
                       const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
-                      const dayFriendComments = friendComments.filter((c) => c.week === 0 && c.day === plan.day);
+                      const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id);
                       const totalComments = ownLines + dayFriendComments.length;
                       return totalComments > 0 ?
                       <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
@@ -2887,7 +2887,7 @@ const estimateCalories = (
 
                     {/* Friend comments */}
                     {(() => {
-                    const dayComments = friendComments.filter((c) => c.week === 0 && c.day === plan.day);
+                    const dayComments = friendComments.filter((c) => c.plan_id === plan.id);
                     return dayComments.length > 0 ?
                     <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
                           <p className="text-xs font-bold text-primary flex items-center gap-1.5">
@@ -3410,7 +3410,7 @@ const estimateCalories = (
                 <div className="flex items-center gap-2 text-muted-foreground">
                     {(() => {
                     const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
-                    const dayFriendComments = friendComments.filter((c) => c.week === plan.week && c.day === plan.day);
+                    const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id);
                     const totalComments = ownLines + dayFriendComments.length;
                     return totalComments > 0 ?
                     <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full animate-fade-in">
@@ -5021,7 +5021,7 @@ const estimateCalories = (
 
                   {/* Friend comments */}
                   {(() => {
-                  const dayComments = friendComments.filter((c) => c.week === plan.week && c.day === plan.day);
+                  const dayComments = friendComments.filter((c) => c.plan_id === plan.id);
                   return dayComments.length > 0 ?
                   <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
                         <p className="text-xs font-bold text-primary flex items-center gap-1.5">
