@@ -1111,10 +1111,10 @@ function generateIntervalRunning(profile: FitnessProfile): TemplatePlanDay[] {
     const intervalCount = isDeload ? 3 : 3 + Math.floor(w / 2);
     const intervalMin = isDeload ? 3 : 2 + Math.floor(w / 3);
     days.push(
-      { week: w, day: "Mån", session_name: "Löpning – Lugn", details: `${30 + w * 2} min i lugnt tempo`, tempo: `${pace.easy} min/km` },
-      { week: w, day: "Ons", session_name: "Löpning – Fartlek", details: isDeload ? "25 min med 3 lätta fartökningar" : `10 min uppvärmning; ${intervalCount}×${intervalMin} min fartökning (${Math.max(60, 120 - w * 10)}s joggvila); 10 min nedvarvning`, tempo: `Fartökningar: ${pace.threshold}` },
-      { week: w, day: "Fre", session_name: "Löpning – Tempo", details: isDeload ? "20 min lugn jogg" : `10 min uppvärmning; ${15 + w * 2} min i tröskeltempo; 10 min nedvarvning`, tempo: `${pace.threshold} min/km` },
-      { week: w, day: "Sön", session_name: "Löpning – Långpass", details: `${isDeload ? 35 : 40 + w * 5} min lugnt tempo. Bygg aerob bas.`, tempo: `${pace.long} min/km` },
+      { week: w, day: "Mån", session_name: "Löpning – Lugn", details: `Löpning — ${30 + w * 2} min`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Ons", session_name: "Löpning – Fartlek", details: isDeload ? `Löpning — 25 min` : `Uppvärmning — 10 min\n${intervalCount}×${intervalMin} min fartökning (${Math.max(60, 120 - w * 10)}s joggvila)\nNedvarvning — 10 min`, tempo: `Fartökningar: ${pace.threshold}` },
+      { week: w, day: "Fre", session_name: "Löpning – Tempo", details: isDeload ? `Löpning — 20 min` : `Uppvärmning — 10 min\n1×${15 + w * 2} min i tröskeltempo\nNedvarvning — 10 min`, tempo: `${pace.threshold} min/km` },
+      { week: w, day: "Sön", session_name: "Löpning – Långpass", details: `Löpning — ${isDeload ? 35 : 40 + w * 5} min`, tempo: `${pace.long} min/km` },
     );
   }
   return days;
