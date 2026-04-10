@@ -313,7 +313,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .select("completed_at, challenge_text, challenge_date")
         .eq("user_id", userId).order("completed_at", { ascending: false }),
       supabase.from("archived_plans")
-        .select("plan_data")
+        .select("plan_data, completion_data")
         .eq("user_id", userId),
     ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archivedData }]) => {
       let profileStartDate: Date | null = null;
