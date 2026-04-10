@@ -61,6 +61,7 @@ interface WorkoutComment {
   target_user_id: string;
   week: number;
   day: string;
+  plan_id: string | null;
   author_id: string;
   comment: string;
   created_at: string;
@@ -643,7 +644,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setTogglingDone(null);
   };
 
-  const postComment = async (week: number, day: string) => {
+  const postComment = async (week: number, day: string, planId?: string) => {
     const key = `${week}-${day}`;
     const text = newComment[key]?.trim();
     if (!text || !viewingFriend) return;
@@ -652,9 +653,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       target_user_id: viewingFriend.profile.user_id,
       week,
       day,
+      plan_id: planId || null,
       author_id: userId,
       comment: text,
-    }).select().single();
+    } as any).select().single();
 
     if (data) {
       setComments((prev) => [...prev, data]);
@@ -857,7 +859,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                 const Icon = getSessionIcon(plan.session_name);
                 const colorClass = getSessionColor(plan.session_name);
                 const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
-                const dayComments = comments.filter((c) => c.week === plan.week && c.day === plan.day);
+                const dayComments = comments.filter((c) => c.plan_id ? c.plan_id === plan.id : (c.week === plan.week && c.day === plan.day));
                 const dayLikes = likes.filter((l) => l.week === plan.week && l.day === plan.day);
                 const hasLiked = dayLikes.some((l) => l.user_id === userId);
                 const likeCount = dayLikes.length;
@@ -1198,7 +1200,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                               type="text"
                               value={newComment[key] || ""}
                               onChange={(e) => setNewComment((prev) => ({ ...prev, [key]: e.target.value }))}
-                              onKeyDown={(e) => e.key === "Enter" && postComment(plan.week, plan.day)}
+                              onKeyDown={(e) => e.key === "Enter" && postComment(plan.week, plan.day, plan.id)}
                               placeholder="Skriv en kommentar..."
                               className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                             />
@@ -1215,7 +1217,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                             🔥{likeCount > 0 ? ` ${likeCount}` : ""}
                           </button>
                           <button
-                            onClick={() => postComment(plan.week, plan.day)}
+                            onClick={() => postComment(plan.week, plan.day, plan.id)}
                             disabled={!newComment[key]?.trim()}
                             className="px-3 py-2 bg-primary text-primary-foreground rounded-md disabled:opacity-40"
                           >

@@ -1014,6 +1014,7 @@ export type Database = {
           created_at: string
           day: string
           id: string
+          plan_id: string | null
           target_user_id: string
           week: number
         }
@@ -1023,6 +1024,7 @@ export type Database = {
           created_at?: string
           day: string
           id?: string
+          plan_id?: string | null
           target_user_id: string
           week: number
         }
@@ -1032,10 +1034,19 @@ export type Database = {
           created_at?: string
           day?: string
           id?: string
+          plan_id?: string | null
           target_user_id?: string
           week?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workout_comments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "workout_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workout_completions: {
         Row: {

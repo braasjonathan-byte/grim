@@ -1,0 +1,1 @@
+ALTER TABLE public.workout_comments ADD COLUMN plan_id uuid REFERENCES public.workout_plans(id) ON DELETE CASCADE;
