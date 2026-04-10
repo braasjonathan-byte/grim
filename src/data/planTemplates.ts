@@ -370,12 +370,12 @@ function generateRunningPlan(profile: FitnessProfile): TemplatePlanDay[] {
     const reps = strengthReps[w - 1];
 
     days.push(
-      { week: w, day: "Mån", session_name: "Löpning – Lugn", details: `${easyRunMin[w - 1]}–${easyRunMin[w - 1] + 10} min i lugnt tempo. Prata-testet: du ska kunna prata.`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Mån", session_name: "Löpning – Lugn", details: `Löpning — ${easyRunMin[w - 1]} min`, tempo: `${pace.easy} min/km` },
       { week: w, day: "Tis", session_name: "Styrka – Helkropp", details: `Knäböj 3×${reps}; Bänkpress 3×${reps}; Rodd 3×${reps + 2}; Axelpress 3×${reps + 2}; Planka 3×${35 + w * 5}s`, tempo: "" },
       { week: w, day: "Ons", session_name: "Vila", details: isDeload ? "Deload-vecka. Vilodag." : "Vilodag. Lätt promenad okej.", tempo: "" },
-      { week: w, day: "Tors", session_name: "Löpning – Tröskellopp", details: `15 min uppvärmning; ${thresholdMin[w - 1]} min i tröskeltempo; 10 min nedvarvning`, tempo: `${pace.threshold} min/km` },
+      { week: w, day: "Tors", session_name: "Löpning – Tröskellopp", details: `Uppvärmning — 15 min\n${thresholdMin[w - 1]} min i tröskeltempo\nNedvarvning — 10 min`, tempo: `${pace.threshold} min/km` },
       { week: w, day: "Fre", session_name: "Styrka – Benstyrka", details: `Marklyft 3×${Math.max(3, 6 - Math.floor(w / 3))}; Benpress 3×${reps + 2}; Hip thrust 3×${reps + 4}; Bencurl 3×12; Core-circuit`, tempo: "" },
-      { week: w, day: "Lör", session_name: "Löpning – Långpass", details: `${longMin} min i lätt tempo. Bygg uthållighet.`, tempo: `${pace.long} min/km` },
+      { week: w, day: "Lör", session_name: "Löpning – Långpass", details: `Löpning — ${longMin} min`, tempo: `${pace.long} min/km` },
     );
   }
   return days;
