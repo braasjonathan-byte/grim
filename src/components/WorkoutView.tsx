@@ -2445,46 +2445,50 @@ const estimateCalories = (
                           });
                         };
 
+                        // Check if this conditioning line has been saved (has __cond__ data with actual values)
+                        const hasSavedCondData = (() => {
+                          if (!condSavedInline) return false;
+                          return !!(condSavedInline.time || condSavedInline.dist || condSavedInline.tempo || condSavedInline.pulse);
+                        })();
+
                         return (
-                          <div key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                                    <Footprints className="w-3.5 h-3.5 text-warning" />
-                                    {toTitleCase(name)}
-                                   </span>
-                                   <div className="flex items-center gap-0.5">
-                                     <div className="flex flex-col">
-                                       <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
-                                       <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === exerciseLines.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
-                                     </div>
-                                     <button
-                                   onClick={(e) => {e.stopPropagation();setExerciseInfoState({ name: name });}}
-                                  className="p-0.5 text-muted-foreground hover:text-warning transition-colors"
-                                  title="Visa övningsinformation">
-                                      <Info className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                    onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) });}}
-                                   className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
-                                       <X className="w-4 h-4" />
-                                     </button>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
-                                    <AutoSaveInput type="number" inputMode="numeric" initialValue={displayCondTime} onSave={(v) => saveCondFieldInline('time', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
-                                    <AutoSaveInput type="text" inputMode="decimal" initialValue={displayCondDist} onSave={(v) => saveCondFieldInline('dist', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
-                                    <AutoSaveInput type="text" initialValue={displayCondTempo} onSave={(v) => saveCondFieldInline('tempo', v)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                  </div>
-                                </div>
-                              </div>);
+                          <ConditioningEditCard
+                            key={i}
+                            name={name}
+                            lineIndex={i}
+                            planId={plan.id}
+                            planCondTime={planCondTime}
+                            planCondDist={planCondDist}
+                            planCondTempo={planCondTempo}
+                            savedData={condSavedInline}
+                            hasSavedData={hasSavedCondData}
+                            exerciseLinesCount={exerciseLines.length}
+                            onMoveUp={() => moveExercise(plan.id, i, "up")}
+                            onMoveDown={() => moveExercise(plan.id, i, "down")}
+                            onShowInfo={() => setExerciseInfoState({ name })}
+                            onDelete={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) })}
+                            onSave={async (data) => {
+                              // Save to __cond__ logged_weights
+                              await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                                const condKey = `__cond__${name}`;
+                                return { ...existing, [condKey]: JSON.stringify(data) };
+                              });
+                              // Also update plan details text
+                              const infoParts: string[] = [];
+                              if (data.time) infoParts.push(`${data.time} min`);
+                              if (data.tempo) infoParts.push(`${data.tempo}/km`);
+                              if (data.dist) infoParts.push(`${data.dist} km`);
+                              if (data.pulse) infoParts.push(`${data.pulse} bpm`);
+                              const entry = infoParts.length > 0 ? `${name} — ${infoParts.join(", ")}` : name;
+                              const separator = plan.details.includes("\n") ? "\n" : "; ";
+                              const allLines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                              allLines[i] = entry;
+                              const newDetails = allLines.join(separator);
+                              await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                              setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                              triggerSave();
+                            }}
+                          />);
                       }
                       
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
