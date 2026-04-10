@@ -75,6 +75,136 @@ interface CustomExercise {
   created_by: string;
 }
 
+// Inline conditioning editing card (green, open by default)
+const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, savedData, hasSavedData, exerciseLinesCount, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
+  name: string; lineIndex: number; planId: string;
+  planCondTime: string; planCondDist: string; planCondTempo: string;
+  savedData: Record<string, any> | null; hasSavedData: boolean;
+  exerciseLinesCount: number;
+  onMoveUp: () => void; onMoveDown: () => void; onShowInfo: () => void; onDelete: () => void;
+  onSave: (data: Record<string, any>) => Promise<void>;
+}) => {
+  const [isEditing, setIsEditing] = useState(!hasSavedData);
+  const initTime = savedData?.time || planCondTime || "";
+  const initDist = savedData?.dist || planCondDist || "";
+  const initTempo = savedData?.tempo || planCondTempo || "";
+  const initPulse = savedData?.pulse || "";
+
+  // H:M:S state from total minutes
+  const totalMin = parseFloat(initTime) || 0;
+  const [hours, setHours] = useState(() => { const h = Math.floor(totalMin / 60); return h > 0 ? String(h) : ""; });
+  const [minutes, setMinutes] = useState(() => { const m = Math.floor(totalMin % 60); return totalMin > 0 ? String(m) : ""; });
+  const [seconds, setSeconds] = useState(() => { const s = Math.round((totalMin % 1) * 60); return s > 0 ? String(s) : ""; });
+  const [tempo, setTempo] = useState(initTempo);
+  const [distance, setDistance] = useState(initDist);
+  const [pulse, setPulse] = useState(initPulse);
+
+  const getTotalMin = () => {
+    const h = parseInt(hours) || 0;
+    const m = parseInt(minutes) || 0;
+    const s = parseInt(seconds) || 0;
+    return h * 60 + m + s / 60;
+  };
+
+  const handleSave = async () => {
+    const t = getTotalMin();
+    const timeStr = t > 0 ? String(Math.round(t * 100) / 100) : "";
+    const data: Record<string, any> = {};
+    if (timeStr) data.time = timeStr;
+    if (distance.trim()) data.dist = distance.trim();
+    if (tempo.trim()) data.tempo = tempo.trim();
+    if (pulse.trim()) data.pulse = pulse.trim();
+    // Auto-calc tempo if time + dist
+    if (data.time && data.dist && !data.tempo) {
+      const tVal = parseFloat(data.time);
+      const dVal = parseFloat(String(data.dist).replace(",", "."));
+      if (tVal > 0 && dVal > 0) {
+        const tm = tVal / dVal;
+        const mn = Math.floor(tm);
+        const sc = Math.round((tm - mn) * 60);
+        data.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
+      }
+    }
+    await onSave(data);
+    setIsEditing(false);
+  };
+
+  if (!isEditing) {
+    // Compact read-only summary
+    const displayTime = savedData?.time || initTime;
+    const displayDist = savedData?.dist || initDist;
+    const displayTempo = savedData?.tempo || initTempo;
+    const displayPulse = savedData?.pulse || initPulse;
+    return (
+      <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+            <Footprints className="w-3.5 h-3.5 text-success" />
+            {toTitleCase(name)}
+          </span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setIsEditing(true)} className="p-1 text-success hover:text-success/80"><Pencil className="w-3.5 h-3.5" /></button>
+            <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+          {displayTime && <p className="text-xs">⏱ <span className="font-mono font-semibold">{displayTime} min</span></p>}
+          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{displayTempo}/km</span></p>}
+          {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} km</span></p>}
+          {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-success flex items-center gap-1">✏️ {toTitleCase(name)}</span>
+        <div className="flex items-center gap-0.5">
+          <div className="flex flex-col">
+            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={lineIndex === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3.5 h-3.5" /></button>
+            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={lineIndex === exerciseLinesCount - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3.5 h-3.5" /></button>
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); onShowInfo(); }} className="p-0.5 text-muted-foreground hover:text-success transition-colors"><Info className="w-3.5 h-3.5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+          <div className="flex items-center gap-1">
+            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <span className="text-[10px] text-muted-foreground font-medium">h</span>
+            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <span className="text-[10px] text-muted-foreground font-medium">m</span>
+            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => setSeconds(e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <span className="text-[10px] text-muted-foreground font-medium">s</span>
+          </div>
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
+          <input type="text" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
+          <input type="number" inputMode="decimal" value={distance} onChange={(e) => setDistance(e.target.value)} placeholder={planCondDist || "—"} className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
+          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={handleSave} className="flex-1 py-2 bg-success text-success-foreground rounded-md text-xs font-semibold">Spara</button>
+        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">Avbryt</button>}
+      </div>
+    </div>
+  );
+};
+
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
 const getSessionIcon = (session: string) => {
