@@ -4258,11 +4258,11 @@ const estimateCalories = (
                             return (
                               <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
                                 <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
-                                {loggedEntries.map((e, i) => (
-                                  <div key={i} className={`${loggedEntries.length > 1 ? "border-l-2 border-success/30 pl-2" : ""} group`}>
+                                {filteredEntries.map((e, i) => (
+                                  <div key={i} className={`${filteredEntries.length > 1 ? "border-l-2 border-success/30 pl-2" : ""} group`}>
                                     <div className="flex items-start justify-between gap-1">
                                       <div className="flex-1">
-                                        {loggedEntries.length > 1 && <p className="text-[10px] font-semibold text-success/80">{e.name}</p>}
+                                        {filteredEntries.length > 1 && <p className="text-[10px] font-semibold text-success/80">{e.name}</p>}
                                         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                                           {e.time && <p className="text-xs">⏱ <span className="font-mono font-semibold">{e.time} min</span></p>}
                                           {e.spm && <p className="text-xs">🦶 <span className="font-mono font-semibold">{e.spm} spm</span></p>}
