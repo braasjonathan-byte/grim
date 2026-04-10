@@ -806,9 +806,9 @@ function generateCouch5K(profile: FitnessProfile): TemplatePlanDay[] {
   for (let w = 1; w <= 8; w++) {
     const totalMin = (walkMin[w - 1] + runMin[w - 1]) * intervals[w - 1];
     days.push(
-      { week: w, day: "Mån", session_name: "Löpning – Intervaller", details: w <= 6 ? `5 min uppvärmning; ${intervals[w - 1]}×(${runMin[w - 1]} min jogg / ${walkMin[w - 1]} min gång); 5 min nedvarvning\nTotal: ~${totalMin + 10} min` : w === 7 ? "5 min uppvärmning; 20 min sammanhängande jogg; 5 min nedvarvning" : "5 min uppvärmning; 25 min sammanhängande jogg; 5 min nedvarvning", tempo: "Prata-tempo" },
+      { week: w, day: "Mån", session_name: "Löpning – Intervaller", details: w <= 6 ? `Uppvärmning — 5 min\n${intervals[w - 1]}×${runMin[w - 1]} min jogg (${walkMin[w - 1]} min gångvila)\nNedvarvning — 5 min` : w === 7 ? `Uppvärmning — 5 min\nLöpning — 20 min\nNedvarvning — 5 min` : `Uppvärmning — 5 min\nLöpning — 25 min\nNedvarvning — 5 min`, tempo: "Prata-tempo" },
       { week: w, day: "Ons", session_name: "Styrka – Löparstöd", details: `Knäböj 3×${8 + w}; Utfallssteg 2×8/ben; Vadpress 3×15; Bäckenlyft 3×12; Planka 3×${20 + w * 5}s`, tempo: "" },
-      { week: w, day: "Fre", session_name: "Löpning – Lugn", details: w <= 4 ? `${15 + w * 3} min gång/jogg i lugnt tempo` : `${20 + w * 2} min sammanhängande lugn jogg`, tempo: "Lugnt – du ska kunna prata" },
+      { week: w, day: "Fre", session_name: "Löpning – Lugn", details: `Löpning — ${w <= 4 ? 15 + w * 3 : 20 + w * 2} min`, tempo: "Lugnt – du ska kunna prata" },
     );
   }
   return days;
