@@ -3662,7 +3662,7 @@ const estimateCalories = (
                             <div className="flex items-start gap-2 bg-primary/5 border border-primary/20 rounded-md px-3 py-2">
                               <TrendingUp className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
                               <p className="text-[11px] text-muted-foreground leading-snug">
-                                Vikter & reps hämtade från förra passet — <span className="text-foreground font-medium">justera själv för progression</span>
+                                Data hämtad från förra passet — <span className="text-foreground font-medium">justera själv för progression</span>
                               </p>
                             </div>
                           )}
