@@ -3551,6 +3551,143 @@ const estimateCalories = (
                                   );
                                 }
 
+                                // Check for interval pattern like "4×4 min i tröskeltempo (90 s joggvila)"
+                                const inlineIntervalMatch = line.match(/(\d+)\s*[×x]\s*(\d+)\s*min/i);
+                                if (inlineIntervalMatch) {
+                                  const iCount = parseInt(inlineIntervalMatch[1]);
+                                  const iDuration = parseInt(inlineIntervalMatch[2]);
+                                  const iTempoM = line.match(/([\d:.]+)\s*\/km/);
+                                  const iPlanTempo = iTempoM ? iTempoM[1] : "";
+                                  const iCondKey = `__cond__${line}`;
+                                  const iComp = completions[key];
+                                  const iRawSaved = (iComp?.logged_weights as Record<string, any>)?.[iCondKey];
+                                  let iCondSaved: Record<string, any> | null = null;
+                                  if (iRawSaved) {
+                                    try {
+                                      const p = typeof iRawSaved === "string" ? JSON.parse(iRawSaved) : iRawSaved;
+                                      if (p && typeof p === "object") iCondSaved = p;
+                                    } catch {}
+                                  }
+
+                                  const saveInlineIntervalField = async (field: string, value: any) => {
+                                    await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                                      let currentData: Record<string, any> = {};
+                                      const rawCurrent = existing[iCondKey];
+                                      if (rawCurrent) {
+                                        try {
+                                          const parsed = typeof rawCurrent === "string" ? JSON.parse(rawCurrent) : rawCurrent;
+                                          if (parsed && typeof parsed === "object") currentData = { ...currentData, ...parsed };
+                                        } catch {}
+                                      }
+                                      return { ...existing, [iCondKey]: JSON.stringify({ ...currentData, [field]: value }) };
+                                    });
+                                  };
+
+                                  const savedIntervals: Array<{time: string; tempo: string; dist: string}> = iCondSaved?.intervals || [];
+                                  const activeCount = savedIntervals.length > 0 ? savedIntervals.length : iCount;
+
+                                  return (
+                                    <li key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2 list-none">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                                          <Timer className="w-3.5 h-3.5 text-warning" />
+                                          {line}
+                                        </span>
+                                        <div className="flex items-center gap-0.5">
+                                          <div className="flex flex-col">
+                                            <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3 h-3" /></button>
+                                            <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === detailParts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3 h-3" /></button>
+                                          </div>
+                                          <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
+                                            <X className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                      {/* Per-interval header */}
+                                      <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                                        <span className="w-7" />
+                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-warning" />Tid</span>
+                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
+                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-warning" />Distans</span>
+                                      </div>
+                                      {Array.from({ length: activeCount }, (_, ii) => {
+                                        const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
+                                        const rowTempo = row.tempo;
+                                        const rowTime = parseFloat(row.time) || 0;
+                                        let rowDist = '';
+                                        if (rowTempo && rowTime > 0) {
+                                          const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
+                                          const tSingle = rowTempo.match(/^(\d+)$/);
+                                          let minPerKm = 0;
+                                          if (tMatch) minPerKm = (parseInt(tMatch[1]) * 60 + parseInt(tMatch[2])) / 60;
+                                          else if (tSingle) minPerKm = parseInt(tSingle[1]);
+                                          if (minPerKm > 0) rowDist = String(Math.round((rowTime / minPerKm) * 100) / 100);
+                                        }
+                                        if (row.dist && !rowDist) rowDist = row.dist;
+
+                                        const intervalSetsKey = `__sets__interval_${line}`;
+                                        const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
+                                        const isDoneI = setsStr[ii] === "1";
+
+                                        return (
+                                          <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation();
+                                                const arr = Array.from({ length: activeCount }, (_, j) => setsStr[j] === "1");
+                                                arr[ii] = !arr[ii];
+                                                const newStr = arr.map(b => b ? "1" : "0").join("");
+                                                const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                                const updated = { ...existing, [intervalSetsKey]: newStr };
+                                                setCompletions(prev => ({
+                                                  ...prev,
+                                                  [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                                }));
+                                                await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
+                                              }}
+                                              className={`w-7 h-7 rounded-md border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
+                                                isDoneI ? "bg-success border-success text-success-foreground" : "border-warning/30 text-muted-foreground hover:border-warning"
+                                              }`}
+                                            >
+                                              {isDoneI ? <Check className="w-3.5 h-3.5" /> : ii + 1}
+                                            </button>
+                                            <AutoSaveInput
+                                              type="number" inputMode="numeric"
+                                              initialValue={row.time || String(iDuration)}
+                                              onSave={(v) => {
+                                                const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
+                                                arr[ii] = { ...arr[ii], time: v };
+                                                saveInlineIntervalField('intervals', arr);
+                                              }}
+                                              className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none"
+                                            />
+                                            <AutoSaveInput
+                                              type="text"
+                                              initialValue={rowTempo}
+                                              onSave={(v) => {
+                                                const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
+                                                arr[ii] = { ...arr[ii], tempo: v };
+                                                if (ii === 0 && v.trim()) {
+                                                  const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
+                                                  if (allEmpty) {
+                                                    for (let j = 1; j < arr.length; j++) arr[j] = { ...arr[j], tempo: v };
+                                                  }
+                                                }
+                                                saveInlineIntervalField('intervals', arr);
+                                              }}
+                                              placeholder="5:30"
+                                              className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground"
+                                            />
+                                            <span className={`text-xs font-mono text-center px-2 py-1.5 rounded-md ${rowDist ? 'bg-primary/10 text-foreground ring-1 ring-primary/30' : 'text-muted-foreground'}`}>
+                                              {rowDist || '—'}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </li>
+                                  );
+                                }
+
                                 const isExercise = isExerciseLine(line);
 
                                 if (!isExercise) {
