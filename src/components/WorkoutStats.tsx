@@ -540,6 +540,15 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
               if (data?.dist) {
                 total += parseFloat(String(data.dist).replace(",", ".")) || 0;
                 distFound = true;
+              } else if (!data?.intervals && data?.time && data?.tempo) {
+                // Calculate distance from time + tempo when dist is empty
+                const tm = String(data.tempo).match(/^(\d+)[:\.](\d+)$/);
+                const ts = String(data.tempo).match(/^(\d+)$/);
+                let mpk = 0;
+                if (tm) mpk = (parseInt(tm[1]) * 60 + parseInt(tm[2])) / 60;
+                else if (ts) mpk = parseInt(ts[1]);
+                const t = parseFloat(String(data.time)) || 0;
+                if (mpk > 0 && t > 0) { total += t / mpk; distFound = true; }
               }
               // Sum distances from per-interval data
               if (data?.intervals && Array.isArray(data.intervals)) {
