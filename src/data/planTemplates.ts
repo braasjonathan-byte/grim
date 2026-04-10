@@ -1294,6 +1294,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "styrka",
     requiredLifts: ["knäböj", "bänk", "marklyft"],
     generateDays: generatePowerlifting,
+    isEventPrep: true,
+    defaultEventType: "styrkelyft",
   },
   {
     name: "💎 Hypertrofi – Muskelbygge",
@@ -1390,6 +1392,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateHalfMarathon,
+    isEventPrep: true,
+    defaultEventType: "halvmaraton",
   },
   {
     name: "🏃 Halvmaraton – 6 veckor",
@@ -1398,6 +1402,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateHalfMarathon6w,
+    isEventPrep: true,
+    defaultEventType: "halvmaraton",
   },
   {
     name: "⚡ Intervallöpning – Fartlek & Tempo",
@@ -1454,6 +1460,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateOCR,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "🏆 Triatlon Sprint – Sim/Cykel/Löp",
@@ -1462,6 +1470,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateSprintTriathlon,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "⚽ Fotboll – Säsongsförberedelse",
@@ -1470,6 +1480,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateSoccerPrep,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "🪜 Trappmaskin & Kondition",
@@ -1502,6 +1514,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateHikingPrep,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "🩹 Skadeförebyggande – Prehab",
