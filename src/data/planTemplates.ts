@@ -29,6 +29,10 @@ export interface TemplatePlan {
   days?: TemplatePlanDay[];
   /** Function that generates days from fitness profile only (no 1RM needed) */
   generateFromProfile?: (profile: FitnessProfile) => TemplatePlanDay[];
+  /** If true, user picks an event date and name; start date is calculated backwards */
+  isEventPrep?: boolean;
+  /** Default event type for event_countdowns table */
+  defaultEventType?: string;
 }
 
 export interface TemplatePlanDay {
