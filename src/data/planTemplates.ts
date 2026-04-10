@@ -29,6 +29,10 @@ export interface TemplatePlan {
   days?: TemplatePlanDay[];
   /** Function that generates days from fitness profile only (no 1RM needed) */
   generateFromProfile?: (profile: FitnessProfile) => TemplatePlanDay[];
+  /** If true, user picks an event date and name; start date is calculated backwards */
+  isEventPrep?: boolean;
+  /** Default event type for event_countdowns table */
+  defaultEventType?: string;
 }
 
 export interface TemplatePlanDay {
@@ -1290,6 +1294,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "styrka",
     requiredLifts: ["knäböj", "bänk", "marklyft"],
     generateDays: generatePowerlifting,
+    isEventPrep: true,
+    defaultEventType: "styrkelyft",
   },
   {
     name: "💎 Hypertrofi – Muskelbygge",
@@ -1386,6 +1392,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateHalfMarathon,
+    isEventPrep: true,
+    defaultEventType: "halvmaraton",
   },
   {
     name: "🏃 Halvmaraton – 6 veckor",
@@ -1394,6 +1402,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateHalfMarathon6w,
+    isEventPrep: true,
+    defaultEventType: "halvmaraton",
   },
   {
     name: "⚡ Intervallöpning – Fartlek & Tempo",
@@ -1450,6 +1460,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateOCR,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "🏆 Triatlon Sprint – Sim/Cykel/Löp",
@@ -1458,6 +1470,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateSprintTriathlon,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "⚽ Fotboll – Säsongsförberedelse",
@@ -1466,6 +1480,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateSoccerPrep,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "🪜 Trappmaskin & Kondition",
@@ -1498,6 +1514,8 @@ export const planTemplates: TemplatePlan[] = [
     category: "kombination",
     requiredLifts: [],
     generateFromProfile: generateHikingPrep,
+    isEventPrep: true,
+    defaultEventType: "annat",
   },
   {
     name: "🩹 Skadeförebyggande – Prehab",
