@@ -62,6 +62,7 @@ interface FriendComment {
   target_user_id: string;
   week: number;
   day: string;
+  plan_id: string | null;
   comment: string;
   created_at: string;
 }
