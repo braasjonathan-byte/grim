@@ -3978,51 +3978,37 @@ const estimateCalories = (
                               const scRaw = (completions[key]?.logged_weights as Record<string, any>)?.[scKey];
                               let scSaved: Record<string, any> | null = null;
                               if (scRaw) { try { const p = typeof scRaw === "string" ? JSON.parse(scRaw) : scRaw; if (p && typeof p === "object") scSaved = p; } catch {} }
-                              const sdTime = scSaved?.time || spTime;
-                              const sdDist = scSaved?.dist || spDist;
-                              let sdTempo = scSaved?.tempo || spTempo;
-                              if (!sdTempo && sdTime && sdDist) {
-                                const t = parseFloat(sdTime); const d = parseFloat(String(sdDist).replace(",", "."));
-                                if (t > 0 && d > 0) { const tm = t / d; sdTempo = `${Math.floor(tm)}:${Math.round((tm - Math.floor(tm)) * 60).toString().padStart(2, '0')}`; }
-                              }
-                              const saveSingleCond = async (field: string, value: any) => {
-                                await updateCompletionWeights(plan.week, plan.day, (existing) => {
-                                  let cur: Record<string, any> = { time: spTime, dist: spDist, tempo: spTempo };
-                                  const raw = existing[scKey];
-                                  if (raw) { try { const p = typeof raw === "string" ? JSON.parse(raw) : raw; if (p && typeof p === "object") cur = { ...cur, ...p }; } catch {} }
-                                  const upd = { ...cur, [field]: value };
-                                  if ((field === "time" || field === "dist") && !upd.tempo) {
-                                    const t2 = parseFloat(field === "time" ? value : upd.time || "0");
-                                    const d2 = parseFloat(String(field === "dist" ? value : upd.dist || "0").replace(",", "."));
-                                    if (t2 > 0 && d2 > 0) { const tm = t2 / d2; upd.tempo = `${Math.floor(tm)}:${Math.round((tm - Math.floor(tm)) * 60).toString().padStart(2, "0")}`; }
-                                  }
-                                  return { ...existing, [scKey]: JSON.stringify(upd) };
-                                });
-                              };
+                              const scHasSaved = !!(scSaved && (scSaved.time || scSaved.dist || scSaved.tempo || scSaved.pulse));
                               return (
-                                <div className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                                      <Footprints className="w-3.5 h-3.5 text-warning" />
-                                      {toTitleCase(sCondName)}
-                                    </span>
-                                    <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: 0, name: toTitleCase(sCondName) });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation"><X className="w-4 h-4" /></button>
-                                  </div>
-                                  <div className="grid grid-cols-3 gap-2">
-                                    <div className="space-y-0.5">
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
-                                      <AutoSaveInput type="number" inputMode="numeric" initialValue={sdTime} onSave={(v) => saveSingleCond('time', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
-                                      <AutoSaveInput type="text" inputMode="decimal" initialValue={sdDist} onSave={(v) => saveSingleCond('dist', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
-                                      <AutoSaveInput type="text" initialValue={sdTempo} onSave={(v) => saveSingleCond('tempo', v)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
-                                    </div>
-                                  </div>
-                                </div>
+                                <ConditioningEditCard
+                                  name={sCondName}
+                                  lineIndex={0}
+                                  planId={plan.id}
+                                  planCondTime={spTime}
+                                  planCondDist={spDist}
+                                  planCondTempo={spTempo}
+                                  savedData={scSaved}
+                                  hasSavedData={scHasSaved}
+                                  exerciseLinesCount={1}
+                                  onMoveUp={() => {}}
+                                  onMoveDown={() => {}}
+                                  onShowInfo={() => setExerciseInfoState({ name: sCondName })}
+                                  onDelete={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: 0, name: toTitleCase(sCondName) })}
+                                  onSave={async (data) => {
+                                    await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                                      return { ...existing, [scKey]: JSON.stringify(data) };
+                                    });
+                                    const infoParts: string[] = [];
+                                    if (data.time) infoParts.push(`${data.time} min`);
+                                    if (data.tempo) infoParts.push(`${data.tempo}/km`);
+                                    if (data.dist) infoParts.push(`${data.dist} km`);
+                                    if (data.pulse) infoParts.push(`${data.pulse} bpm`);
+                                    const entry = infoParts.length > 0 ? `${sCondName} — ${infoParts.join(", ")}` : sCondName;
+                                    await supabase.from("workout_plans").update({ details: entry }).eq("id", plan.id);
+                                    setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: entry } : p));
+                                    triggerSave();
+                                  }}
+                                />
                               );
                             }
 
