@@ -825,12 +825,12 @@ function generateHalfMarathon(profile: FitnessProfile): TemplatePlanDay[] {
     const tempoMin = isDeload ? 15 : 15 + Math.floor(w / 2) * 2;
     days.push(
       { week: w, day: "Mån", session_name: "Vila / Promenad", details: "Vilodag eller 20 min promenad", tempo: "" },
-      { week: w, day: "Tis", session_name: "Löpning – Lugn", details: `${30 + w} min i lugnt tempo`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Tis", session_name: "Löpning – Lugn", details: `Löpning — ${30 + w} min`, tempo: `${pace.easy} min/km` },
       { week: w, day: "Ons", session_name: "Styrka – Löparben", details: `Knäböj 3×${isDeload ? 8 : 6 + Math.floor(w / 3)}; Hip thrust 3×12; Utfallssteg 3×8/ben; Vadpress 3×15; Planka 3×${30 + w * 3}s`, tempo: "" },
-      { week: w, day: "Tors", session_name: "Löpning – Tempo", details: isDeload ? `${20} min lugn jogg` : `15 min uppvärmning; ${tempoMin} min i tröskeltempo; 10 min nedvarvning`, tempo: isDeload ? pace.easy : pace.threshold },
+      { week: w, day: "Tors", session_name: "Löpning – Tempo", details: isDeload ? `Löpning — 20 min` : `Uppvärmning — 15 min\n1×${tempoMin} min i tröskeltempo\nNedvarvning — 10 min`, tempo: isDeload ? pace.easy : pace.threshold },
       { week: w, day: "Fre", session_name: "Vila", details: "Vilodag", tempo: "" },
-      { week: w, day: "Lör", session_name: "Löpning – Lugn kort", details: `${20 + Math.min(w, 8)} min lugn jogg`, tempo: `${pace.easy} min/km` },
-      { week: w, day: "Sön", session_name: "Löpning – Långpass", details: `${dist} km i lugnt, jämnt tempo`, tempo: `${pace.long} min/km` },
+      { week: w, day: "Lör", session_name: "Löpning – Lugn kort", details: `Löpning — ${20 + Math.min(w, 8)} min`, tempo: `${pace.easy} min/km` },
+      { week: w, day: "Sön", session_name: "Löpning – Långpass", details: `Löpning — ${dist} km`, tempo: `${pace.long} min/km` },
     );
   }
   return days;
