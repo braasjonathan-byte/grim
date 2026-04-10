@@ -350,10 +350,6 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
 
         <button
           onClick={() => {
-            if (isEvent && eventDate) {
-              const computed = addDays(eventDate, -(selectedTemplate!.weeks * 7));
-              setStartDate(computed);
-            }
             handleStartDateConfirm();
           }}
           disabled={loading || !canConfirm}
