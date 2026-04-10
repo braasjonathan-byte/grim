@@ -3657,6 +3657,14 @@ const estimateCalories = (
                                               onSave={(v) => {
                                                 const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
                                                 arr[ii] = { ...arr[ii], time: v };
+                                                // Auto-calc dist from time + tempo
+                                                const t = parseFloat(v) || 0;
+                                                const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
+                                                const ts = arr[ii].tempo?.match(/^(\d+)$/);
+                                                let mpk = 0;
+                                                if (tm) mpk = (parseInt(tm[1]) * 60 + parseInt(tm[2])) / 60;
+                                                else if (ts) mpk = parseInt(ts[1]);
+                                                if (t > 0 && mpk > 0) arr[ii].dist = String(Math.round((t / mpk) * 100) / 100);
                                                 saveInlineIntervalField('intervals', arr);
                                               }}
                                               className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none"
@@ -3672,6 +3680,16 @@ const estimateCalories = (
                                                   if (allEmpty) {
                                                     for (let j = 1; j < arr.length; j++) arr[j] = { ...arr[j], tempo: v };
                                                   }
+                                                }
+                                                // Auto-calc dist for all rows with tempo + time
+                                                for (let j = 0; j < arr.length; j++) {
+                                                  const rt = parseFloat(arr[j].time) || 0;
+                                                  const tm2 = arr[j].tempo?.match(/^(\d+)[:\.](\d+)$/);
+                                                  const ts2 = arr[j].tempo?.match(/^(\d+)$/);
+                                                  let mpk2 = 0;
+                                                  if (tm2) mpk2 = (parseInt(tm2[1]) * 60 + parseInt(tm2[2])) / 60;
+                                                  else if (ts2) mpk2 = parseInt(ts2[1]);
+                                                  if (rt > 0 && mpk2 > 0) arr[j].dist = String(Math.round((rt / mpk2) * 100) / 100);
                                                 }
                                                 saveInlineIntervalField('intervals', arr);
                                               }}
@@ -4448,6 +4466,14 @@ const estimateCalories = (
                                           onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], time: v };
+                                            // Auto-calc dist
+                                            const t = parseFloat(v) || 0;
+                                            const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
+                                            const ts = arr[ii].tempo?.match(/^(\d+)$/);
+                                            let mpk = 0;
+                                            if (tm) mpk = (parseInt(tm[1]) * 60 + parseInt(tm[2])) / 60;
+                                            else if (ts) mpk = parseInt(ts[1]);
+                                            if (t > 0 && mpk > 0) arr[ii].dist = String(Math.round((t / mpk) * 100) / 100);
                                             saveCondField('intervals', arr as any);
                                           }}
                                           className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none"
@@ -4458,7 +4484,6 @@ const estimateCalories = (
                                           onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], tempo: v };
-                                            // If first row and others empty, apply to all
                                             if (ii === 0 && v.trim()) {
                                               const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
                                               if (allEmpty) {
@@ -4466,6 +4491,16 @@ const estimateCalories = (
                                                   arr[j] = { ...arr[j], tempo: v };
                                                 }
                                               }
+                                            }
+                                            // Auto-calc dist for all rows
+                                            for (let j = 0; j < arr.length; j++) {
+                                              const rt = parseFloat(arr[j].time) || 0;
+                                              const tm2 = arr[j].tempo?.match(/^(\d+)[:\.](\d+)$/);
+                                              const ts2 = arr[j].tempo?.match(/^(\d+)$/);
+                                              let mpk2 = 0;
+                                              if (tm2) mpk2 = (parseInt(tm2[1]) * 60 + parseInt(tm2[2])) / 60;
+                                              else if (ts2) mpk2 = parseInt(ts2[1]);
+                                              if (rt > 0 && mpk2 > 0) arr[j].dist = String(Math.round((rt / mpk2) * 100) / 100);
                                             }
                                             saveCondField('intervals', arr as any);
                                           }}
