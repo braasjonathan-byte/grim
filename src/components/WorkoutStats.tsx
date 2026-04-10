@@ -313,7 +313,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .select("completed_at, challenge_text, challenge_date")
         .eq("user_id", userId).order("completed_at", { ascending: false }),
       supabase.from("archived_plans")
-        .select("plan_data")
+        .select("plan_data, completion_data")
         .eq("user_id", userId),
     ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archivedData }]) => {
       let profileStartDate: Date | null = null;
@@ -325,7 +325,26 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         }
       }
 
-      if (compData) setCompletions(compData as CompletionRecord[]);
+      // Merge completions from workout_completions + archived completion_data
+      const mergedCompletions = new Map<string, CompletionRecord>();
+      if (compData) {
+        for (const c of compData as any[]) {
+          mergedCompletions.set(c.id || `${c.week}-${c.day}`, c as CompletionRecord);
+        }
+      }
+      if (archivedData) {
+        for (const archive of archivedData) {
+          const archiveCompletions = archive.completion_data as any[];
+          if (!Array.isArray(archiveCompletions)) continue;
+          for (const c of archiveCompletions) {
+            const key = c.id || `archived-${c.week}-${c.day}`;
+            if (!mergedCompletions.has(key)) {
+              mergedCompletions.set(key, c as CompletionRecord);
+            }
+          }
+        }
+      }
+      setCompletions(Array.from(mergedCompletions.values()));
 
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
