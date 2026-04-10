@@ -269,14 +269,55 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
             </div>
 
             {eventDate && eventName.trim() && (
-              <div className="bg-secondary/50 border border-border rounded-lg p-3 space-y-1 text-center">
-                <p className="text-sm font-medium">
-                  🎯 Event: <span className="text-primary">{format(eventDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
-                </p>
-                <p className="text-sm font-medium">
-                  📅 Planen startar: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
-                </p>
-              </div>
+              <>
+                <div className="bg-secondary/50 border border-border rounded-lg p-3 space-y-1 text-center">
+                  <p className="text-sm font-medium">
+                    🎯 Event: <span className="text-primary">{format(eventDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                  </p>
+                  <p className="text-sm font-medium">
+                    📅 Rekommenderat startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs text-muted-foreground block text-center">
+                    Vill du starta ett annat datum? Välj nedan (programmet förkortas/förlängs)
+                  </label>
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(d) => d && setStartDate(d)}
+                      locale={sv}
+                      disabled={(d) => d >= eventDate}
+                      className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
+                    />
+                  </div>
+                  {startDate.getTime() !== computedStartDate.getTime() && (
+                    <div className="bg-accent/30 border border-accent rounded-lg p-2 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        {(() => {
+                          const diffDays = Math.round((eventDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                          const diffWeeks = Math.round(diffDays / 7);
+                          const origWeeks = selectedTemplate!.weeks;
+                          if (diffWeeks > origWeeks) {
+                            return `Programmet förlängs till ~${diffWeeks} veckor (normalt ${origWeeks})`;
+                          } else if (diffWeeks < origWeeks) {
+                            return `Programmet förkortas till ~${diffWeeks} veckor (normalt ${origWeeks})`;
+                          }
+                          return "";
+                        })()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
+                  <p className="text-sm font-medium">
+                    📅 Valt startdatum: <span className="text-primary">{format(startDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                  </p>
+                </div>
+              </>
             )}
           </>
         ) : (
@@ -309,10 +350,6 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
 
         <button
           onClick={() => {
-            if (isEvent && eventDate) {
-              const computed = addDays(eventDate, -(selectedTemplate!.weeks * 7));
-              setStartDate(computed);
-            }
             handleStartDateConfirm();
           }}
           disabled={loading || !canConfirm}
