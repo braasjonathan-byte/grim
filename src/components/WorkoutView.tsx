@@ -2393,13 +2393,63 @@ const estimateCalories = (
                         const condTimeM = weight.match(/(\d+)\s*min/);
                         const condTempoM = weight.match(/([\d:.]+)\/km/);
                         const condDistM = weight.match(/([\d.,]+)\s*km(?!\/)/);
-                        const condTime = condTimeM ? condTimeM[1] : null;
-                        const condTempo = condTempoM ? condTempoM[1] : null;
-                        const condDist = condDistM ? condDistM[1] : null;
-                        
+                        const planCondTime = condTimeM ? condTimeM[1] : "";
+                        const planCondTempo = condTempoM ? condTempoM[1] : "";
+                        const planCondDist = condDistM ? condDistM[1] : "";
+
+                        // Read saved conditioning data from logged_weights
+                        const condKeyInline = `__cond__${name}`;
+                        const compForCond = completions[key];
+                        const rawCondSaved = compForCond?.logged_weights?.[condKeyInline];
+                        let condSavedInline: Record<string, any> | null = null;
+                        if (rawCondSaved) {
+                          try {
+                            const p = typeof rawCondSaved === "string" ? JSON.parse(rawCondSaved) : rawCondSaved;
+                            if (p && typeof p === "object") condSavedInline = p;
+                          } catch {}
+                        }
+                        const displayCondTime = condSavedInline?.time || planCondTime;
+                        const displayCondDist = condSavedInline?.dist || planCondDist;
+                        let displayCondTempo = condSavedInline?.tempo || planCondTempo;
+                        if (!displayCondTempo && displayCondTime && displayCondDist) {
+                          const t = parseFloat(displayCondTime);
+                          const d = parseFloat(String(displayCondDist).replace(",", "."));
+                          if (t > 0 && d > 0) {
+                            const tempoMin = t / d;
+                            const mins = Math.floor(tempoMin);
+                            const secs = Math.round((tempoMin - mins) * 60);
+                            displayCondTempo = `${mins}:${secs.toString().padStart(2, '0')}`;
+                          }
+                        }
+
+                        const saveCondFieldInline = async (field: string, value: any) => {
+                          await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                            let currentData: Record<string, any> = { time: planCondTime, dist: planCondDist, tempo: planCondTempo };
+                            const rawCurrent = existing[condKeyInline];
+                            if (rawCurrent) {
+                              try {
+                                const parsed = typeof rawCurrent === "string" ? JSON.parse(rawCurrent) : rawCurrent;
+                                if (parsed && typeof parsed === "object") currentData = { ...currentData, ...parsed };
+                              } catch {}
+                            }
+                            const updated = { ...currentData, [field]: value };
+                            if ((field === "time" || field === "dist") && !updated.tempo) {
+                              const t2 = parseFloat(field === "time" ? value : updated.time || "0");
+                              const d2 = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
+                              if (t2 > 0 && d2 > 0) {
+                                const tm = t2 / d2;
+                                const mn = Math.floor(tm);
+                                const sc = Math.round((tm - mn) * 60);
+                                updated.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
+                              }
+                            }
+                            return { ...existing, [condKeyInline]: JSON.stringify(updated) };
+                          });
+                        };
+
                         return (
-                          <div key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20">
-                                <div className="flex items-center justify-between mb-1.5">
+                          <div key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2">
+                                <div className="flex items-center justify-between">
                                   <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
                                     <Footprints className="w-3.5 h-3.5 text-warning" />
                                     {toTitleCase(name)}
@@ -2422,25 +2472,19 @@ const estimateCalories = (
                                      </button>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {condTime &&
-                              <div className="flex items-center gap-1 bg-warning/10 rounded-md px-2 py-1 border border-warning/20">
-                                      <Timer className="w-3 h-3 text-warning" />
-                                      <span className="text-xs font-bold text-warning">{condTime} min</span>
-                                    </div>
-                              }
-                                  {condTempo &&
-                              <div className="flex items-center gap-1 bg-warning/10 rounded-md px-2 py-1 border border-warning/20">
-                                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                      <span className="text-xs font-bold text-warning">{condTempo}/km</span>
-                                    </div>
-                              }
-                                  {condDist &&
-                              <div className="flex items-center gap-1 bg-warning/10 rounded-md px-2 py-1 border border-warning/20">
-                                      <Route className="w-3 h-3 text-warning" />
-                                      <span className="text-xs font-bold text-warning">{condDist} km</span>
-                                    </div>
-                              }
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
+                                    <AutoSaveInput type="number" inputMode="numeric" initialValue={displayCondTime} onSave={(v) => saveCondFieldInline('time', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
+                                    <AutoSaveInput type="text" inputMode="decimal" initialValue={displayCondDist} onSave={(v) => saveCondFieldInline('dist', v)} placeholder="—" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
+                                    <AutoSaveInput type="text" initialValue={displayCondTempo} onSave={(v) => saveCondFieldInline('tempo', v)} placeholder="auto" className="w-full bg-warning/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-warning/20 text-center font-mono focus:ring-1 focus:ring-warning outline-none placeholder:text-muted-foreground" />
+                                  </div>
                                 </div>
                               </div>);
                       }
