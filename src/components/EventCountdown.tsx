@@ -9,6 +9,16 @@ import { sv } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+/** Parse YYYY-MM-DD (or ISO timestamp) to UTC noon to avoid timezone off-by-one */
+const parseDateUTC = (s: string) => {
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12)) : new Date(s);
+};
+const todayUTC = () => {
+  const n = new Date();
+  return new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate(), 12));
+};
+
 const EVENT_TYPES = [
   { value: "halvmaraton", label: "Halvmaraton", emoji: "🏃" },
   { value: "maraton", label: "Maraton", emoji: "🏃‍♂️" },
