@@ -188,36 +188,91 @@ const getStandaloneDate = (day: string): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
-/** Extract distance from plan details text, using only LOGGED conditioning entries (with "—" separator and tempo/time data).
- *  Excludes cycling (cykel/motioncykel) — only counts running/walking exercises.
- *  Logged entries look like "Löpning — 37 min, 7:19/km, 5.06 km".
- *  Also handles plan lines like "Löpning 8.5 km" (without dash separator). */
+/** Extract distance from plan details text.
+ * Supports:
+ * - explicit distance rows like "Löpning — 8 km"
+ * - time-based running rows like "Löpning — 30 min" using plan tempo fallback
+ * - interval rows like "4×4 min i tröskeltempo" using plan tempo fallback
+ * - warmup/cooldown rows like "Uppvärmning — 10 min" in running plans */
 const CYCLING_KEYWORDS = /cykel|motioncykel|spinning|crosstrainer/i;
-const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|långpass|distanslöpning|promenad|gång/i;
-const extractDistanceFromDetails = (details: string): number => {
+const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|långpass|distanslöpning|promenad|gång|tröskel/i;
+const RUN_SEGMENT_KEYWORDS = /uppvärmning|nedvarvning|avjogg|joggvila|joggvila|jogg|promenad|gång/i;
+
+const parseMinPerKm = (tempo: string): number => {
+  const normalized = String(tempo || "").trim();
+  if (!normalized) return 0;
+  const tempoMatch = normalized.match(/([\d:.]+)\s*(?:min\/km|\/km)/i);
+  const raw = tempoMatch ? tempoMatch[1] : normalized;
+  if (!tempoMatch && !/^(\d+)[:\.](\d+)$/.test(raw) && !/^(\d+)$/.test(raw)) return 0;
+
+  const pair = raw.match(/^(\d+)[:\.](\d+)$/);
+  const single = raw.match(/^(\d+)$/);
+  if (pair) return (parseInt(pair[1]) * 60 + parseInt(pair[2])) / 60;
+  if (single) return parseInt(single[1]);
+  return 0;
+};
+
+const extractDistanceFromDetails = (rawInput: string): number => {
+  let details = rawInput;
+  let fallbackTempo = "";
+
+  if (rawInput.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(rawInput);
+      if (parsed && typeof parsed === "object") {
+        details = String(parsed.details || "");
+        fallbackTempo = String(parsed.tempo || "");
+      }
+    } catch {}
+  }
+
+  const fallbackMinPerKm = parseMinPerKm(fallbackTempo);
   let loggedTotal = 0;
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+
   for (const line of lines) {
-    // Skip cycling exercises
     if (CYCLING_KEYWORDS.test(line)) continue;
-    // Process lines with "—" separator (e.g. "Löpning — 10 km")
+
     const dashMatch = line.match(/^(.+?)\s*—\s*(.+)$/);
     if (dashMatch) {
+      const name = dashMatch[1].trim();
       const info = dashMatch[2];
       const distMatch = info.match(/([\d.,]+)\s*km(?!\/)/);
       if (distMatch) {
         loggedTotal += parseFloat(distMatch[1].replace(",", ".")) || 0;
+        continue;
+      }
+
+      const timeMatch = info.match(/(\d+(?:[.,]\d+)?)\s*min/i);
+      const minPerKm = parseMinPerKm(info) || fallbackMinPerKm;
+      if (timeMatch && minPerKm > 0 && (RUNNING_KEYWORDS.test(name) || RUN_SEGMENT_KEYWORDS.test(name))) {
+        loggedTotal += (parseFloat(timeMatch[1].replace(",", ".")) || 0) / minPerKm;
       }
       continue;
     }
-    // Also match plan lines without dash: "Löpning 8.5 km"
+
     if (RUNNING_KEYWORDS.test(line)) {
       const directDist = line.match(/([\d.,]+)\s*km(?!\/)/);
       if (directDist) {
         loggedTotal += parseFloat(directDist[1].replace(",", ".")) || 0;
+        continue;
       }
     }
+
+    const intervalMatch = line.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min/i);
+    if (intervalMatch && fallbackMinPerKm > 0) {
+      const count = parseInt(intervalMatch[1]) || 0;
+      const duration = parseFloat(intervalMatch[2].replace(",", ".")) || 0;
+      loggedTotal += (count * duration) / fallbackMinPerKm;
+      continue;
+    }
+
+    const segmentTimeMatch = line.match(/(\d+(?:[.,]\d+)?)\s*min/i);
+    if (segmentTimeMatch && fallbackMinPerKm > 0 && RUN_SEGMENT_KEYWORDS.test(line)) {
+      loggedTotal += (parseFloat(segmentTimeMatch[1].replace(",", ".")) || 0) / fallbackMinPerKm;
+    }
   }
+
   return loggedTotal;
 };
 
@@ -252,7 +307,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .select("week, day, done, skipped, updated_at, logged_distance_km, logged_tempo, logged_pulse, logged_weights")
         .eq("user_id", userId),
       supabase.from("workout_plans")
-        .select("week, day, details, created_at")
+        .select("week, day, details, tempo, created_at")
         .eq("user_id", userId),
       supabase.from("daily_challenge_completions")
         .select("completed_at, challenge_text, challenge_date")
@@ -261,7 +316,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .select("plan_data")
         .eq("user_id", userId),
     ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archivedData }]) => {
-      // Profile
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
@@ -273,7 +327,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       if (compData) setCompletions(compData as CompletionRecord[]);
 
-      // Determine plan start date: prefer profile, fallback to earliest plan
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
       if (!userPlanStartDate && planData && planData.length > 0) {
@@ -283,7 +336,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         userPlanStartDate = getMonday(new Date(earliest.created_at));
       }
 
-      // Compute challenge counts per period
       const now = new Date();
       const monthStart = getStartOfMonth(now);
       const yearStart = getStartOfYear(now);
@@ -304,7 +356,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       setChallengeCount(cCounts.all);
       if (challengeData) setAllChallenges(challengeData as any);
 
-      // Build plan details map from active plans
       const detailsMap = new Map<string, string>();
       const exerciseKeys = new Set<string>();
       const perWeek = new Map<number, number>();
@@ -314,12 +365,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         for (const p of withExercises) {
           const key = `${p.week}-${p.day}`;
           exerciseKeys.add(key);
-          detailsMap.set(key, p.details);
+          detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
           perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
         }
       }
 
-      // Merge archived plan details as fallback (for distance calculation on historical completions)
       if (archivedData) {
         for (const archive of archivedData) {
           const plans = archive.plan_data as any[];
@@ -328,7 +378,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
             if (!p.details || !p.details.trim()) continue;
             const key = `${p.week}-${p.day}`;
             if (!detailsMap.has(key)) {
-              detailsMap.set(key, p.details);
+              detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
             }
             if (!exerciseKeys.has(key)) {
               exerciseKeys.add(key);
@@ -341,7 +391,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       setPlanDetailsMap(detailsMap);
       setScheduledPerWeek(perWeek);
 
-      // Set plan start date even if no active plans (needed for period filtering)
       if (userPlanStartDate) {
         setPlanStartDate(userPlanStartDate);
         const isoStart = getISOWeek(userPlanStartDate);
