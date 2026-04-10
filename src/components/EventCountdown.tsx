@@ -284,9 +284,9 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
     EVENT_TYPES.find(e => e.value === (eventType.startsWith("annat") ? "annat" : eventType));
 
   // Closest upcoming event for header display
-  const upcomingEvents = events.filter(e => differenceInDays(new Date(e.event_date), new Date()) >= 0);
+  const upcomingEvents = events.filter(e => differenceInDays(parseDateUTC(e.event_date), todayUTC()) >= 0);
   const nextEvent = upcomingEvents[0];
-  const nextDaysLeft = nextEvent ? differenceInDays(new Date(nextEvent.event_date), new Date()) : null;
+  const nextDaysLeft = nextEvent ? differenceInDays(parseDateUTC(nextEvent.event_date), todayUTC()) : null;
 
   if (loading) return null;
 
@@ -312,7 +312,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
         <div className="space-y-3 pt-2">
           {/* List existing events */}
           {events.map(ev => {
-            const daysLeft = differenceInDays(new Date(ev.event_date), new Date());
+            const daysLeft = differenceInDays(parseDateUTC(ev.event_date), todayUTC());
             const info = getEventTypeInfo(ev.event_type);
             const tips = getTips(ev.event_type, daysLeft);
             const eventDays: Date[] = [];
