@@ -85,11 +85,17 @@ const EventProgressBar = ({ userId }: EventProgressBarProps) => {
 
   if (!event) return null;
 
+  // Use local date at UTC noon to avoid timezone off-by-one
   const now = new Date();
-  const eventDate = new Date(event.event_date);
-  const createdDate = new Date(event.created_at);
+  const todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12));
+  const parseDate = (s: string) => {
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12)) : new Date(s);
+  };
+  const eventDate = parseDate(event.event_date);
+  const createdDate = parseDate(event.created_at);
   const totalDays = differenceInDays(eventDate, createdDate);
-  const daysLeft = differenceInDays(eventDate, now);
+  const daysLeft = differenceInDays(eventDate, todayUTC);
 
   if (daysLeft < 0 || totalDays <= 0) return null;
 
