@@ -788,7 +788,7 @@ function generateHIITFatLoss(profile: FitnessProfile): TemplatePlanDay[] {
     days.push(
       { week: w, day: "Mån", session_name: "HIIT – Helkropp", details: `${rounds} rundor: ${work}s arbete / ${rest}s vila\nBurpees; Mountain climbers; Jump squats; High knees\nVila 90s mellan rundor`, tempo: "Max intensitet" },
       { week: w, day: "Tis", session_name: "Styrka – Överkropp", details: `Armhävningar 3×${8 + w}; Rodd med hantlar 3×10; Axelpress 3×10; Planka 3×${30 + w * 5}s; Bicepscurl 2×12`, tempo: "" },
-      { week: w, day: "Ons", session_name: "Kondition – Löpintervaller", details: isDeload ? "20 min lugn jogg" : `10 min uppvärmning; ${3 + Math.floor(w / 2)}×${work}s sprint / ${rest + 10}s jogg; 10 min nedvarvning`, tempo: isDeload ? "Lugnt" : "Zon 4–5" },
+      { week: w, day: "Ons", session_name: "Kondition – Löpintervaller", details: isDeload ? `Löpning — 20 min` : `Uppvärmning — 10 min\n${3 + Math.floor(w / 2)}×${Math.round(work / 60 * 10) / 10} min sprint (${Math.round((rest + 10) / 60 * 10) / 10} min joggvila)\nNedvarvning — 10 min`, tempo: isDeload ? "Lugnt" : "Zon 4–5" },
       { week: w, day: "Tors", session_name: "Vila / Stretching", details: "20 min stretching eller yoga", tempo: "" },
       { week: w, day: "Fre", session_name: "HIIT – Cirkelträning", details: `${rounds} cirklar: Kettlebell swings ${work}s; Box jumps ${work}s; Medicinbollskast ${work}s; Planka ${work}s\nVila ${rest}s mellan övningar, 90s mellan cirklar`, tempo: "Max intensitet" },
       { week: w, day: "Lör", session_name: "Styrka – Underkropp", details: `Knäböj 3×${8 + w}; Utfallssteg 3×10/ben; Hip thrust 3×12; Vadpress 3×15; Hängande benlyft 3×10`, tempo: "" },
@@ -1052,7 +1052,7 @@ function generateSprintTriathlon(profile: FitnessProfile): TemplatePlanDay[] {
     const runMin = isDeload ? 15 : 15 + w * 2;
     days.push(
       { week: w, day: "Mån", session_name: "Simning – Teknik", details: `200m uppvärmning; 4×100m crawl; 4×50m teknikfokus; 200m nedvarvning. Total: ~${swimDist}m`, tempo: "Lugnt" },
-      { week: w, day: "Tis", session_name: "Löpning – Tempo", details: isDeload ? "20 min lugn jogg" : `10 min uppvärmning; ${10 + w} min tröskeltempo; 10 min nedvarvning`, tempo: isDeload ? pace.easy : pace.threshold },
+      { week: w, day: "Tis", session_name: "Löpning – Tempo", details: isDeload ? `Löpning — 20 min` : `Uppvärmning — 10 min\n1×${10 + w} min i tröskeltempo\nNedvarvning — 10 min`, tempo: isDeload ? pace.easy : pace.threshold },
       { week: w, day: "Ons", session_name: "Cykling – Uthållighet", details: `${bikeMin} min i zon 2. Fokus kadens 85–95 rpm.`, tempo: "Zon 2" },
       { week: w, day: "Tors", session_name: "Styrka – Helkropp", details: `Knäböj 3×8; Bänkpress 3×8; Rodd 3×10; Planka 3×${30 + w * 5}s; Vadpress 3×15`, tempo: "" },
       { week: w, day: "Fre", session_name: "Vila", details: "Vilodag", tempo: "" },
