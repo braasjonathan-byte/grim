@@ -459,6 +459,11 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
                       ✨ Anpassas efter dina förutsättningar
                     </p>
                   )}
+                  {template.isEventPrep && (
+                    <p className="text-xs text-primary mt-1.5 font-medium">
+                      🎯 Anpassas till ditt eventdatum
+                    </p>
+                  )}
                 </div>
                 <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
               </div>
