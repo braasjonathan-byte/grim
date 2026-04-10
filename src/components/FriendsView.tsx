@@ -643,7 +643,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setTogglingDone(null);
   };
 
-  const postComment = async (week: number, day: string) => {
+  const postComment = async (week: number, day: string, planId?: string) => {
     const key = `${week}-${day}`;
     const text = newComment[key]?.trim();
     if (!text || !viewingFriend) return;
@@ -652,9 +652,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       target_user_id: viewingFriend.profile.user_id,
       week,
       day,
+      plan_id: planId || null,
       author_id: userId,
       comment: text,
-    }).select().single();
+    } as any).select().single();
 
     if (data) {
       setComments((prev) => [...prev, data]);
