@@ -61,6 +61,7 @@ interface WorkoutComment {
   target_user_id: string;
   week: number;
   day: string;
+  plan_id: string | null;
   author_id: string;
   comment: string;
   created_at: string;
