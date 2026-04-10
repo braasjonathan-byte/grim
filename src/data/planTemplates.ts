@@ -1390,6 +1390,14 @@ export const planTemplates: TemplatePlan[] = [
     generateFromProfile: generateHalfMarathon,
   },
   {
+    name: "🏃 Halvmaraton – 6 veckor",
+    description: "6 veckor, 3 löppass/vecka. Kompakt förberedelse för halvmaraton med intervaller, lugna pass och progressiva långpass upp till 20 km.",
+    weeks: 6,
+    category: "löpning",
+    requiredLifts: [],
+    generateFromProfile: generateHalfMarathon6w,
+  },
+  {
     name: "⚡ Intervallöpning – Fartlek & Tempo",
     description: "8 veckor, 4 löppass/vecka. Fokus på fartlekar, tempopass och uthållighet. Bli snabbare genom varierad intensitet.",
     weeks: 8,
