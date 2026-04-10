@@ -3509,10 +3509,19 @@ const estimateCalories = (
                                 const isExercise = isExerciseLine(line);
 
                                 if (!isExercise) {
-                                  // Descriptive text - render as muted italic text
+                                  // Descriptive text - render as muted italic text with delete button
                                   return (
-                                    <li key={i} className="text-xs text-muted-foreground italic leading-relaxed px-1 py-0.5">
-                                      {line}
+                                    <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground italic leading-relaxed px-1 py-0.5">
+                                      <span className="flex-1">{line}</span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });
+                                        }}
+                                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 touch-manipulation">
+                                        <X className="w-4 h-4" />
+                                      </button>
                                     </li>
                                   );
                                 }
