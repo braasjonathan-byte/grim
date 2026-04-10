@@ -2156,7 +2156,7 @@ const estimateCalories = (
         >
           <ArrowLeft className="w-4 h-4" /> Tillbaka
         </button>
-        <PlanPicker userId={userId} onDone={() => { setNeedsCalibration(false); fetchData(); }} />
+        <PlanPicker userId={userId} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); fetchData(); }} />
       </div>
     );
   }
