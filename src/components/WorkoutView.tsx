@@ -898,7 +898,7 @@ const estimateCalories = (
       allExercisesDone = parts.every(part => {
         // Skip conditioning exercises
         const { name: pName, weight: pWeight } = parseExerciseWeight(part);
-        const isCondFormat = pWeight && (pWeight.includes("min") || pWeight.includes("/km"));
+        const isCondFormat = pWeight && (pWeight.includes("min") || pWeight.includes("/km") || /\d+\s*km/i.test(pWeight));
         if (isCondFormat) return true; // conditioning doesn't need set tracking
         
         const { clean: cp } = extractRpe(pWeight || '');
@@ -2386,8 +2386,8 @@ const estimateCalories = (
                         {exerciseLines.map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
                       
-                      // Check if this is a conditioning exercise (format includes "min", "/km")
-                      const isCondFormat = weight && (weight.includes("min") || weight.includes("/km"));
+                      // Check if this is a conditioning exercise (format includes "min", "/km", or "km")
+                      const isCondFormat = weight && (weight.includes("min") || weight.includes("/km") || /\d+\s*km/i.test(weight));
                       
                       if (isCondFormat) {
                         const condTimeM = weight.match(/(\d+)\s*min/);
