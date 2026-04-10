@@ -3912,7 +3912,7 @@ const estimateCalories = (
                             ) : (
                               <p className="text-xs text-muted-foreground italic leading-relaxed">{plan.details}</p>
                             );
-                          })()
+                          })()}
                           {(() => {
                             // Parse logged conditioning data from plan details + saved conditioning payloads + direct fields
                             const loggedEntries: {
