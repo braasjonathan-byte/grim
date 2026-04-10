@@ -1120,10 +1120,8 @@ const estimateCalories = (
       console.error("Failed to archive plan:", e);
     }
 
-    await Promise.all([
-      supabase.from("workout_plans").delete().eq("user_id", userId),
-      supabase.from("workout_completions").delete().eq("user_id", userId),
-    ]);
+    // Only delete plans, keep completions so stats (done count, distance) persist
+    await supabase.from("workout_plans").delete().eq("user_id", userId);
     setPlans([]);
     setWeeks([]);
     setCompletions({});
