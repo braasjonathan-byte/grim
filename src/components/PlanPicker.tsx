@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon } from "lucide-react";
+import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { sv } from "date-fns/locale";
 
 interface PlanPickerProps {
@@ -32,6 +32,8 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [pendingRmValues, setPendingRmValues] = useState<Record<string, number> | undefined>(undefined);
   const [pendingProfile, setPendingProfile] = useState<FitnessProfile | undefined>(undefined);
+  const [eventName, setEventName] = useState("");
+  const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
   const filteredTemplates = activeFilter
