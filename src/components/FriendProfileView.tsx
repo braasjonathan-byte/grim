@@ -118,8 +118,32 @@ const getStandaloneDate = (day: string): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+const getUpdatedAtDate = (updatedAt: string | null | undefined): Date | null => {
+  if (!updatedAt) return null;
+  const date = new Date(updatedAt);
+  if (isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const getCompletionDate = (
+  c: CompletionRow,
+  planStartDate: Date | null
+): Date | null => {
+  if (isStandaloneSession(c)) {
+    return getStandaloneDate(c.day) ?? getUpdatedAtDate(c.updated_at);
+  }
+  if (c.done || c.skipped) {
+    return getUpdatedAtDate(c.updated_at)
+      ?? (planStartDate ? getWorkoutCalendarDate(c.week, c.day, planStartDate) : null);
+  }
+  if (planStartDate) {
+    return getWorkoutCalendarDate(c.week, c.day, planStartDate);
+  }
+  return getUpdatedAtDate(c.updated_at);
+};
+
 const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planStartDate: Date | null): CompletionRow[] => {
-  if (!planStartDate) return completions;
   const now = new Date();
   const currentMonday = getMonday(now);
   const endOfWeek = new Date(currentMonday);
@@ -127,11 +151,7 @@ const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planSt
 
   if (period === "week") {
     return completions.filter((c) => {
-      if (isStandaloneSession(c)) {
-        const d = getStandaloneDate(c.day);
-        return d ? d >= currentMonday && d < endOfWeek : false;
-      }
-      const d = getWorkoutCalendarDate(c.week, c.day, planStartDate);
+      const d = getCompletionDate(c, planStartDate);
       return d >= currentMonday && d < endOfWeek;
     });
   }
@@ -144,7 +164,7 @@ const filterByPeriod = (completions: CompletionRow[], period: TimePeriod, planSt
   const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
 
   return completions.filter((c) => {
-    const d = isStandaloneSession(c) ? getStandaloneDate(c.day) : getWorkoutCalendarDate(c.week, c.day, planStartDate);
+    const d = getCompletionDate(c, planStartDate);
     if (!d) return false;
     if (period === "year") return d >= startOfYear && d < endOfYear;
     return d >= startOfMonth && d < endOfMonth;
