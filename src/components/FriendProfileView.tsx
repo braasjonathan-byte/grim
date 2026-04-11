@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
+import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -202,7 +203,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date").eq("user_id", friendUserId).single(),
-        supabase.from("workout_plans").select("week, day, details").eq("user_id", friendUserId),
+        supabase.from("workout_plans").select("week, day, details, tempo, created_at").eq("user_id", friendUserId),
         supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
         supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", friendUserId),
       ]);
@@ -237,7 +238,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
       setPlansWithExercises(exerciseSet);
       const detailsMap = new Map<string, string>();
       for (const p of withExercises) {
-        detailsMap.set(`${p.week}-${p.day}`, p.details);
+        detailsMap.set(`${p.week}-${p.day}`, JSON.stringify({ details: p.details, tempo: (p as any).tempo ?? "" }));
       }
       setPlanDetailsMap(detailsMap);
       setAllCompletions((completions || []) as CompletionRow[]);
@@ -290,27 +291,16 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
     let distanceKm = 0;
     for (const c of filtered) {
       if (!c.done) continue;
-      if (c.logged_distance_km) {
-        distanceKm += Number(c.logged_distance_km);
-      }
-      const weights = (c as any).logged_weights as Record<string, any> | null;
-      if (weights && typeof weights === "object") {
-        for (const [key, value] of Object.entries(weights)) {
-          if (key.startsWith("__cond__")) {
-            try {
-              const data = typeof value === "string" ? JSON.parse(value) : value;
-              if (data?.dist && !c.logged_distance_km) {
-                distanceKm += parseFloat(String(data.dist).replace(",", ".")) || 0;
-              }
-            } catch {}
-          }
-        }
-      }
+      distanceKm += getWorkoutDistanceKm({
+        loggedDistanceKm: c.logged_distance_km,
+        loggedWeights: c.logged_weights,
+        planDetails: planDetailsMap.get(`${c.week}-${c.day}`),
+      });
     }
     const liftedKg = calcTotalLiftedKg(filtered);
     const liftedTons = Math.round((liftedKg / 1000) * 10) / 10;
     return { done, skipped, distanceKm: Math.round(distanceKm * 10) / 10, liftedTons };
-  }, [filtered, plansWithExercises]);
+  }, [filtered, planDetailsMap, plansWithExercises]);
 
   const cyclePeriod = () => {
     const order: TimePeriod[] = ["year", "month", "week"];
