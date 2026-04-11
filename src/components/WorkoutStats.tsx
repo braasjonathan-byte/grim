@@ -188,6 +188,34 @@ const getStandaloneDate = (day: string): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+const getUpdatedAtDate = (updatedAt: string | null | undefined): Date | null => {
+  if (!updatedAt) return null;
+  const date = new Date(updatedAt);
+  if (isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const getCompletionStatsDate = (
+  completion: Pick<CompletionRecord, "week" | "day" | "done" | "skipped" | "updated_at">,
+  planStartDate: Date | null
+): Date | null => {
+  if (isStandaloneSession(completion)) {
+    return getStandaloneDate(completion.day) ?? getUpdatedAtDate(completion.updated_at);
+  }
+
+  if (completion.done || completion.skipped) {
+    return getUpdatedAtDate(completion.updated_at)
+      ?? (planStartDate ? getWorkoutCalendarDate(completion.week, completion.day, planStartDate) : null);
+  }
+
+  if (planStartDate) {
+    return getWorkoutCalendarDate(completion.week, completion.day, planStartDate);
+  }
+
+  return getUpdatedAtDate(completion.updated_at);
+};
+
 /** Extract distance from plan details text.
  * Supports:
  * - explicit distance rows like "Löpning — 8 km"
@@ -445,16 +473,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     const buckets = new Map<string, Bucket>();
 
     for (const c of completions) {
-      // Use the workout's actual calendar date for month/year grouping
-      const calendarDate = (() => {
-        if (isStandaloneSession(c)) {
-          return getStandaloneDate(c.day) ?? new Date(c.updated_at);
-        }
-        if (planStartDate) {
-          return getWorkoutCalendarDate(c.week, c.day, planStartDate);
-        }
-        return new Date(c.updated_at);
-      })();
+      const calendarDate = getCompletionStatsDate(c, planStartDate) ?? new Date(c.updated_at);
       let key: string;
       let label: string;
       let sortKey: string;
@@ -578,10 +597,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       result.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     }
     return result;
-  }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap]);
+  }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap, planStartDate, plansWithExercises]);
 
   const filteredCompletions = useMemo(() => {
-    if (!planStartDate) return summaryPeriod === "all" ? completions : [];
     if (summaryPeriod === "all") return completions;
     const now = new Date();
     const currentMonday = getMonday(now);
@@ -590,11 +608,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
     if (summaryPeriod === "week") {
       return completions.filter((c) => {
-        if (isStandaloneSession(c)) {
-          const d = getStandaloneDate(c.day);
-          return d ? d >= currentMonday && d < endOfWeek : false;
-        }
-        const d = getWorkoutCalendarDate(c.week, c.day, planStartDate);
+        const d = getCompletionStatsDate(c, planStartDate);
         return d >= currentMonday && d < endOfWeek;
       });
     }
@@ -605,7 +619,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
 
     return completions.filter((c) => {
-      const d = isStandaloneSession(c) ? getStandaloneDate(c.day) : getWorkoutCalendarDate(c.week, c.day, planStartDate);
+      const d = getCompletionStatsDate(c, planStartDate);
       if (!d) return false;
       if (summaryPeriod === "year") return d >= startOfYear && d < endOfYear;
       return d >= startOfMonth && d < endOfMonth;
@@ -671,7 +685,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
     }
     return Math.round(total * 100) / 100;
-  }, [filteredCompletions, planDetailsMap]);
+  }, [filteredCompletions, planDetailsMap, plansWithExercises]);
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
@@ -702,7 +716,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
     }
     return Math.round(total / 1000 * 10) / 10;
-  }, [filteredCompletions, userWeightKg]);
+  }, [filteredCompletions, userWeightKg, plansWithExercises]);
 
   const cyclePeriod = () => {
     const order: SummaryPeriod[] = ["all", "week", "month", "year"];
