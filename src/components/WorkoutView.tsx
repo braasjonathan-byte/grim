@@ -1542,8 +1542,25 @@ const estimateCalories = (
   // Rename a session
   const renameSession = async (planId: string, newName: string) => {
     if (!newName.trim()) return;
-    await supabase.from("workout_plans").update({ session_name: newName.trim() }).eq("id", planId);
-    setPlans(prev => prev.map(p => p.id === planId ? { ...p, session_name: newName.trim() } : p));
+    const trimmed = newName.trim();
+    // Check if the plan's details is just a suggested distance (e.g. "Löpning 8.5 km")
+    // If the new name is no longer a running session, clear the suggested distance from details
+    const plan = plans.find(p => p.id === planId);
+    const newLower = trimmed.toLowerCase();
+    const isNewRunning = newLower.includes("löpning") || newLower.includes("jogg") || newLower.includes("långpass") || newLower.includes("tröskel");
+    let detailsUpdate: Record<string, string> = {};
+    if (plan && !isNewRunning) {
+      const detMatch = plan.details.trim().match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*km\s*$/i);
+      if (detMatch) {
+        const exName = detMatch[1].trim();
+        const isCondEx = allExercises.some(e => e.name.toLowerCase() === exName.toLowerCase() && e.category === "kondition");
+        if (isCondEx) {
+          detailsUpdate = { details: "" };
+        }
+      }
+    }
+    await supabase.from("workout_plans").update({ session_name: trimmed, ...detailsUpdate }).eq("id", planId);
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, session_name: trimmed, ...(detailsUpdate.details !== undefined ? { details: detailsUpdate.details } : {}) } : p));
     setRenameDialog(null);
     setRenameInput("");
     triggerSave();
@@ -5373,9 +5390,15 @@ const estimateCalories = (
                                     const planSetData = getSetData(key, partName);
                                     const defKg = partKg || "";
                                     const defReps = partReps || repsStr || "10";
-                                    // Detect bodyweight exercises that don't need kg input
-                                    const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "dips", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
+                                     // Detect bodyweight exercises that don't need kg input
+                                    const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
                                     const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
+                                    // Weighted bodyweight exercises: user lifts bodyweight +/- additional weight
+                                    const weightedBwExercises = ["dips"];
+                                    const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw));
+                                    // Read bw mode from logged_weights
+                                    const bwModeKey = `__bw_mode__${partName}`;
+                                    const currentBwMode = (completion?.logged_weights as Record<string, any>)?.[bwModeKey] === "sub" ? "sub" : "add";
                                     return Array.from({ length: setsCountPlan }, (_, si) => {
                                       const isSetDone = setsStrPlan[si] === "1";
                                       const saved = planSetData[si];
@@ -5388,6 +5411,26 @@ const estimateCalories = (
                                           <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : "reps"}</span>
                                           {!isBodyweight && (
                                             <>
+                                              {isWeightedBw && (
+                                                <button
+                                                  onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    const newMode = currentBwMode === "add" ? "sub" : "add";
+                                                    await updateCompletionWeights(plan.week, plan.day, (existing) => ({
+                                                      ...existing,
+                                                      [bwModeKey]: newMode,
+                                                    }));
+                                                  }}
+                                                  className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold border transition-colors ${
+                                                    currentBwMode === "add" 
+                                                      ? "bg-primary/10 border-primary/30 text-primary" 
+                                                      : "bg-destructive/10 border-destructive/30 text-destructive"
+                                                  }`}
+                                                  title={currentBwMode === "add" ? "Addera vikt till kroppsvikt" : "Dra av vikt från kroppsvikt"}
+                                                >
+                                                  {currentBwMode === "add" ? "+" : "−"}
+                                                </button>
+                                              )}
                                               <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defKg} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                               <span className="text-[10px] text-muted-foreground">kg</span>
                                             </>
@@ -5395,6 +5438,14 @@ const estimateCalories = (
                                           </div>
                                           {!isBodyweight && (() => {
                                             const currentKg = parseFloat(saved?.kg || defKg);
+                                            if (isWeightedBw && !isNaN(currentKg) && currentKg !== 0) {
+                                              if (profileWeight) {
+                                                const effective = currentBwMode === "add" ? profileWeight + Math.abs(currentKg) : profileWeight - Math.abs(currentKg);
+                                                return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round(Math.max(0, effective) * 10) / 10} kg effektiv ({profileWeight} {currentBwMode === "add" ? "+" : "−"} {Math.abs(currentKg)} kg)</p>;
+                                              } else {
+                                                return <p className="text-[9px] text-warning pl-8 -mt-0.5">⚠ Ange vikt i profilen</p>;
+                                              }
+                                            }
                                             if (!isNaN(currentKg) && currentKg < 0) {
                                               if (profileWeight) {
                                                 return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round((profileWeight + currentKg) * 10) / 10} kg effektiv</p>;
