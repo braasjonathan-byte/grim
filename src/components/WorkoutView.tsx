@@ -5465,7 +5465,8 @@ const estimateCalories = (
                                     const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
                                     // Weighted bodyweight exercises: user lifts bodyweight +/- additional weight
                                     const weightedBwExercises = ["dips"];
-                                    const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw));
+                                    const matchedExForBw = allExercises.find(e => e.name.toLowerCase() === partName.toLowerCase());
+                                    const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw)) || (matchedExForBw?.isBodyweightExercise === true);
                                      return Array.from({ length: setsCountPlan }, (_, si) => {
                                        // Read bw mode per set, fall back to exercise-level for backward compat
                                        const bwModeKeySet = `__bw_mode__${partName}__${si}`;
