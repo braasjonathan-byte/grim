@@ -178,7 +178,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
   return (
     <div className="bg-background border border-border rounded-lg p-4 space-y-4">
-      <h3 className="text-sm font-bold">⚙️ Inställningar</h3>
+      <h3 className="text-sm font-bold font-sans">⚙️ Inställningar</h3>
 
       {/* Theme picker - replaces old dark mode toggle */}
       {userId && (
