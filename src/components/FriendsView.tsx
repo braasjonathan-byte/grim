@@ -342,16 +342,24 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
   // View friend's workouts
   const viewFriendWorkouts = async (friend: typeof friends[0]) => {
+    // Save current theme and lock it
+    originalThemeRef.current = getStoredThemeId();
+    lockTheme("friend-view");
     setViewingFriend(friend);
     onClearActivitiesForFriend?.(friend.profile.nickname);
     const fid = friend.profile.user_id;
 
-    const [{ data: plans }, { data: completions }, { data: commentsData }, { data: likesData }] = await Promise.all([
+    const [{ data: plans }, { data: completions }, { data: commentsData }, { data: likesData }, { data: friendProfile }] = await Promise.all([
       supabase.from("workout_plans").select("id, week, day, session_name, details, tempo, created_at").eq("user_id", fid).order("week").order("day"),
       supabase.from("workout_completions").select("week, day, done, user_comment, logged_weights, logged_distance_km").eq("user_id", fid),
       supabase.from("workout_comments").select("*").eq("target_user_id", fid),
       supabase.from("workout_likes").select("*").eq("target_user_id", fid),
+      supabase.from("profiles").select("theme").eq("user_id", fid).single(),
     ]);
+
+    // Apply friend's theme
+    const friendTheme = (friendProfile as any)?.theme || "default";
+    applyTheme(friendTheme);
 
     // Build virtual plan entries for standalone completions without matching plans
     const allPlans = [...(plans || [])];
