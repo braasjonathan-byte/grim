@@ -171,21 +171,21 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
           <div className="flex items-center gap-1">
-            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
             <span className="text-[10px] text-muted-foreground font-medium">h</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
             <span className="text-[10px] text-muted-foreground font-medium">m</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => setSeconds(e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => setSeconds(e.target.value)} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
             <span className="text-[10px] text-muted-foreground font-medium">s</span>
           </div>
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-          <input type="text" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <input type="text" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="t.ex. 5:30" className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-success text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
