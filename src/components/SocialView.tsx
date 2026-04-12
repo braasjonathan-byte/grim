@@ -95,11 +95,19 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       // Load nicknames
       const userIds = [...new Set(postsData.map(p => p.user_id))];
       if (userIds.length > 0) {
-        const { data: nicks } = await supabase.rpc("get_suggestion_nicknames", { user_ids: userIds });
+        const [{ data: nicks }, { data: profilesData }] = await Promise.all([
+          supabase.rpc("get_suggestion_nicknames", { user_ids: userIds }),
+          supabase.from("profiles").select("user_id, avatar_url").in("user_id", userIds),
+        ]);
         if (nicks) {
           const map: Record<string, string> = {};
           nicks.forEach((n: { user_id: string; nickname: string }) => { map[n.user_id] = n.nickname; });
           setNicknames(map);
+        }
+        if (profilesData) {
+          const aMap: Record<string, string | null> = {};
+          profilesData.forEach((p: { user_id: string; avatar_url: string | null }) => { aMap[p.user_id] = p.avatar_url; });
+          setAvatarUrls(aMap);
         }
       }
       // Load likes
