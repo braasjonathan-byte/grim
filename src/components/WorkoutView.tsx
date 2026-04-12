@@ -3355,6 +3355,7 @@ const estimateCalories = (
           onClose={() => setExerciseInfoState(null)}
           isAdmin={canEditExercises}
           initialEditMode={exerciseInfoState.editMode}
+          onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { if (data) setCustomExercises(data); })}
         />
       )}
       {deleteExerciseConfirm && (
@@ -6033,6 +6034,7 @@ const estimateCalories = (
         onClose={() => setExerciseInfoState(null)}
         isAdmin={canEditExercises}
         initialEditMode={exerciseInfoState.editMode}
+        onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { if (data) setCustomExercises(data); })}
       />
     )}
     {showFireworks && (
