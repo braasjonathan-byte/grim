@@ -52,6 +52,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [groups, setGroups] = useState<EventGroup[]>([]);
   const [myGroups, setMyGroups] = useState<string[]>([]);
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const [likes, setLikes] = useState<Record<string, number>>({});
   const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
