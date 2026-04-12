@@ -50,6 +50,22 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
     }
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: "Grim",
+      text: `Starta din resa med Grim nu\n${referralUrl}`,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        handleCopy();
+      }
+    } catch {
+      // User cancelled share
+    }
+  };
+
   return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
       <div className="flex items-center gap-2">
