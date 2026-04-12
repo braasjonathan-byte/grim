@@ -1742,6 +1742,20 @@ const estimateCalories = (
         }
       }
     }
+    // Fallback: search archived completions for conditioning tempo
+    for (const archComp of archivedCompletions) {
+      const weights = archComp.logged_weights as Record<string, any> | null;
+      if (weights) {
+        for (const [wk, val] of Object.entries(weights)) {
+          if (wk.startsWith('__cond__') && wk.toLowerCase().includes(exerciseName.toLowerCase())) {
+            try {
+              const data = typeof val === 'string' ? JSON.parse(val) : val;
+              if (data.tempo) return data.tempo;
+            } catch {}
+          }
+        }
+      }
+    }
     return null;
   };
 
