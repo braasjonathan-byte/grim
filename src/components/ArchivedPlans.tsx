@@ -61,12 +61,14 @@ const ArchivedPlans = ({ userId }: ArchivedPlansProps) => {
       ]);
       if (currentPlan && currentPlan.length > 0) {
         const planName = `Schema (${currentPlan.filter(p => p.session_name.trim() !== "").length} pass, ${[...new Set(currentPlan.map(p => p.week))].length} veckor)`;
+        const { data: profileData } = await supabase.from("profiles").select("plan_start_date").eq("user_id", userId).single();
         await supabase.from("archived_plans").insert({
           user_id: userId,
           plan_name: planName,
           plan_data: currentPlan as any,
           completion_data: (currentComp || []) as any,
-        });
+          plan_start_date: (profileData as any)?.plan_start_date ?? null,
+        } as any);
       }
 
       // 2. Delete current active data

@@ -1244,7 +1244,8 @@ const estimateCalories = (
           plan_name: planName,
           plan_data: planData as any,
           completion_data: (compData || []) as any,
-        });
+          plan_start_date: planStartDate,
+        } as any);
       }
     } catch (e) {
       console.error("Failed to archive plan:", e);
