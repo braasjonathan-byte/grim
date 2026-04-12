@@ -52,6 +52,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [groups, setGroups] = useState<EventGroup[]>([]);
   const [myGroups, setMyGroups] = useState<string[]>([]);
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const [likes, setLikes] = useState<Record<string, number>>({});
   const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
   const [showCompose, setShowCompose] = useState(false);
@@ -94,11 +95,19 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       // Load nicknames
       const userIds = [...new Set(postsData.map(p => p.user_id))];
       if (userIds.length > 0) {
-        const { data: nicks } = await supabase.rpc("get_suggestion_nicknames", { user_ids: userIds });
+        const [{ data: nicks }, { data: profilesData }] = await Promise.all([
+          supabase.rpc("get_suggestion_nicknames", { user_ids: userIds }),
+          supabase.from("profiles").select("user_id, avatar_url").in("user_id", userIds),
+        ]);
         if (nicks) {
           const map: Record<string, string> = {};
           nicks.forEach((n: { user_id: string; nickname: string }) => { map[n.user_id] = n.nickname; });
           setNicknames(map);
+        }
+        if (profilesData) {
+          const aMap: Record<string, string | null> = {};
+          profilesData.forEach((p: { user_id: string; avatar_url: string | null }) => { aMap[p.user_id] = p.avatar_url; });
+          setAvatarUrls(aMap);
         }
       }
       // Load likes
@@ -438,8 +447,12 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               {/* Post header */}
               <div className="px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
-                    {(nicknames[post.user_id] || "?")[0]?.toUpperCase()}
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold overflow-hidden">
+                    {avatarUrls[post.user_id] ? (
+                      <img src={avatarUrls[post.user_id]!} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      (nicknames[post.user_id] || "?")[0]?.toUpperCase()
+                    )}
                   </div>
                   <div>
                     <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
