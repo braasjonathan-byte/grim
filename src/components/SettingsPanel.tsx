@@ -72,7 +72,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     if (meta) {
       meta.setAttribute("content", dark ? "#000000" : "#ffffff");
     }
-  }, [dark]);
+    // Re-apply color theme when dark/light toggles
+    applyTheme(colorTheme);
+  }, [dark, colorTheme]);
 
   useEffect(() => {
     const requestWakeLock = async () => {
