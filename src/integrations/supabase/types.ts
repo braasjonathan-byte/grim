@@ -45,6 +45,7 @@ export type Database = {
           id: string
           plan_data: Json
           plan_name: string
+          plan_start_date: string | null
           user_id: string
         }
         Insert: {
@@ -53,6 +54,7 @@ export type Database = {
           id?: string
           plan_data?: Json
           plan_name?: string
+          plan_start_date?: string | null
           user_id: string
         }
         Update: {
@@ -61,6 +63,7 @@ export type Database = {
           id?: string
           plan_data?: Json
           plan_name?: string
+          plan_start_date?: string | null
           user_id?: string
         }
         Relationships: []
