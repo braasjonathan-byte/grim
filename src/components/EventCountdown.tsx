@@ -296,7 +296,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Target className="w-5 h-5 text-muted-foreground" />
-          <h3 className="font-bold text-sm">Nedräkning till event</h3>
+          <h3 className="font-bold text-sm font-sans">Nedräkning till event</h3>
           {events.length > 0 && (
             <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full font-semibold">{events.length}</span>
           )}

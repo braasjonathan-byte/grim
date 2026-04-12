@@ -75,7 +75,7 @@ const AnnouncementInbox = ({ userId, isAdmin }: AnnouncementInboxProps) => {
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 font-sans">
         <Megaphone className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-bold">📢 Inkorg</h3>
       </div>
