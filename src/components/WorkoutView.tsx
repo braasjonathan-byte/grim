@@ -4350,11 +4350,10 @@ const estimateCalories = (
                   const comp = completions[key];
                   const savedWeights = (comp?.logged_weights || {}) as Record<string, number>;
 
-                  // Helper: find previously logged weight for an exercise from earlier weeks
+                  // Helper: find previously logged weight for an exercise from earlier weeks + archived
                   const findPreviousWeight = (exerciseName: string): number | null => {
                     // Look through completions from previous weeks for this exercise
                     for (let w = plan.week - 1; w >= 1; w--) {
-                      // Check all days in that week
                       for (const p of plans.filter((pp) => pp.week === w)) {
                         const compKey = `${w}-${p.day}`;
                         const comp = completions[compKey];
@@ -4362,6 +4361,13 @@ const estimateCalories = (
                         if (weights && weights[exerciseName]) {
                           return weights[exerciseName];
                         }
+                      }
+                    }
+                    // Fallback: search archived completions
+                    for (const archComp of archivedCompletions) {
+                      const weights = archComp.logged_weights as Record<string, number> | null;
+                      if (weights && weights[exerciseName]) {
+                        return weights[exerciseName];
                       }
                     }
                     return null;
