@@ -237,6 +237,10 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         spotify_anthem_name: pd?.spotify_anthem_name || null,
       });
 
+      // Apply friend's color theme
+      const friendTheme = pd?.theme || "default";
+      applyTheme(friendTheme);
+
       // Use calibrated plan_start_date from profile (consistent with leaderboard)
       if (profileData?.plan_start_date) {
         setPlanStartDate(getMonday(new Date(profileData.plan_start_date + "T00:00:00")));
