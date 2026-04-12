@@ -3540,10 +3540,10 @@ const estimateCalories = (
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
                       ? done
-                        ? "bg-success text-success-foreground shadow-sm"
+                        ? "bg-success text-success-foreground"
                         : isToday
-                        ? "bg-warning/10 text-warning border border-warning/30 shadow-sm"
-                        : "bg-primary text-primary-foreground shadow-sm"
+                        ? "bg-warning/10 text-warning border border-warning/30"
+                        : "bg-primary text-primary-foreground"
                       : done
                       ? "bg-success/20 text-success"
                       : skipped
