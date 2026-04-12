@@ -5411,6 +5411,26 @@ const estimateCalories = (
                                           <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : "reps"}</span>
                                           {!isBodyweight && (
                                             <>
+                                              {isWeightedBw && (
+                                                <button
+                                                  onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    const newMode = currentBwMode === "add" ? "sub" : "add";
+                                                    await updateCompletionWeights(plan.week, plan.day, (existing) => ({
+                                                      ...existing,
+                                                      [bwModeKey]: newMode,
+                                                    }));
+                                                  }}
+                                                  className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold border transition-colors ${
+                                                    currentBwMode === "add" 
+                                                      ? "bg-primary/10 border-primary/30 text-primary" 
+                                                      : "bg-destructive/10 border-destructive/30 text-destructive"
+                                                  }`}
+                                                  title={currentBwMode === "add" ? "Addera vikt till kroppsvikt" : "Dra av vikt från kroppsvikt"}
+                                                >
+                                                  {currentBwMode === "add" ? "+" : "−"}
+                                                </button>
+                                              )}
                                               <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defKg} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, defKg, defReps)} placeholder="—" className="w-14 bg-secondary text-foreground text-xs px-1 py-0.5 rounded border border-border/50 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                               <span className="text-[10px] text-muted-foreground">kg</span>
                                             </>
@@ -5418,6 +5438,14 @@ const estimateCalories = (
                                           </div>
                                           {!isBodyweight && (() => {
                                             const currentKg = parseFloat(saved?.kg || defKg);
+                                            if (isWeightedBw && !isNaN(currentKg) && currentKg !== 0) {
+                                              if (profileWeight) {
+                                                const effective = currentBwMode === "add" ? profileWeight + Math.abs(currentKg) : profileWeight - Math.abs(currentKg);
+                                                return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round(Math.max(0, effective) * 10) / 10} kg effektiv ({profileWeight} {currentBwMode === "add" ? "+" : "−"} {Math.abs(currentKg)} kg)</p>;
+                                              } else {
+                                                return <p className="text-[9px] text-warning pl-8 -mt-0.5">⚠ Ange vikt i profilen</p>;
+                                              }
+                                            }
                                             if (!isNaN(currentKg) && currentKg < 0) {
                                               if (profileWeight) {
                                                 return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round((profileWeight + currentKg) * 10) / 10} kg effektiv</p>;
