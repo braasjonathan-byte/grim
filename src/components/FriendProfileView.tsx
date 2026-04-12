@@ -197,6 +197,21 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const originalThemeRef = useRef<string>(getStoredThemeId());
+
+  // Restore user's own theme when component unmounts or onClose
+  useEffect(() => {
+    const savedTheme = getStoredThemeId();
+    originalThemeRef.current = savedTheme;
+    return () => {
+      applyTheme(originalThemeRef.current);
+    };
+  }, []);
+
+  const handleClose = () => {
+    applyTheme(originalThemeRef.current);
+    onClose();
+  };
 
   useEffect(() => {
     const load = async () => {
