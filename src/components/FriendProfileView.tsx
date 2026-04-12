@@ -339,7 +339,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] bg-black/60" onClick={onClose} />
+      <div className="fixed inset-0 z-[60] bg-black/60" onClick={handleClose} />
       <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
          <div className="flex items-center justify-between p-4 border-b border-border">
            <div className="flex items-center gap-3">
@@ -368,7 +368,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                 )}
               </div>
             </div>
-           <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+           <button onClick={handleClose} className="p-1 text-muted-foreground hover:text-foreground">
              <X className="w-4 h-4" />
            </button>
          </div>
