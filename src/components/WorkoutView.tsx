@@ -5390,9 +5390,15 @@ const estimateCalories = (
                                     const planSetData = getSetData(key, partName);
                                     const defKg = partKg || "";
                                     const defReps = partReps || repsStr || "10";
-                                    // Detect bodyweight exercises that don't need kg input
-                                    const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "dips", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
+                                     // Detect bodyweight exercises that don't need kg input
+                                    const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
                                     const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
+                                    // Weighted bodyweight exercises: user lifts bodyweight +/- additional weight
+                                    const weightedBwExercises = ["dips"];
+                                    const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw));
+                                    // Read bw mode from logged_weights
+                                    const bwModeKey = `__bw_mode__${partName}`;
+                                    const currentBwMode = (completion?.logged_weights as Record<string, any>)?.[bwModeKey] === "sub" ? "sub" : "add";
                                     return Array.from({ length: setsCountPlan }, (_, si) => {
                                       const isSetDone = setsStrPlan[si] === "1";
                                       const saved = planSetData[si];
