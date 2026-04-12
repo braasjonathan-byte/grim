@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, Calculator, HelpCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
-import { applyTheme, getStoredThemeId, storeThemeId } from "@/lib/themes";
+import { applyTheme, getStoredThemeId, storeThemeId, isThemeLocked } from "@/lib/themes";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sparkles, Download } from "lucide-react";
