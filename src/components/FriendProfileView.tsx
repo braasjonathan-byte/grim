@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from "react";
-import { applyTheme, getStoredThemeId } from "@/lib/themes";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
@@ -197,12 +197,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const originalThemeRef = useRef<string>(getStoredThemeId());
 
-  // Theme is now managed by FriendsView — no lock/unlock needed here
-  useEffect(() => {
-    return () => {};
-  }, []);
+  // Theme is now managed by FriendsView
 
   const handleClose = () => {
     onClose();
@@ -232,9 +228,6 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         spotify_anthem_name: pd?.spotify_anthem_name || null,
       });
 
-      // Apply friend's color theme
-      const friendTheme = pd?.theme || "default";
-      applyTheme(friendTheme);
 
       // Use calibrated plan_start_date from profile (consistent with leaderboard)
       if (profileData?.plan_start_date) {
