@@ -7,6 +7,7 @@ interface ExerciseInfoDialogProps {
   onClose: () => void;
   isAdmin?: boolean;
   initialEditMode?: boolean;
+  onCategoryChanged?: () => void;
 }
 
 interface ExerciseData {
@@ -20,13 +21,15 @@ interface ExerciseData {
   hasCustomInstructions?: boolean;
 }
 
-const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEditMode = false }: ExerciseInfoDialogProps) => {
+const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEditMode = false, onCategoryChanged }: ExerciseInfoDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExerciseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<string>("styrka");
+  const [savingCategory, setSavingCategory] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
