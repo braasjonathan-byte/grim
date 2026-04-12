@@ -282,6 +282,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [initialWeekSet, setInitialWeekSet] = useState(false);
   const [weeks, setWeeks] = useState<number[]>([]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+
+  // Archived completions for weight history lookup
+  const [archivedCompletions, setArchivedCompletions] = useState<Record<string, any>[]>([]);
   const [comments, setComments] = useState<Record<string, string>>({});
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<"loading" | "choose" | "plan" | "single">("loading");
