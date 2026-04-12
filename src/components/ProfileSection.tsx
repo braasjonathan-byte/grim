@@ -220,7 +220,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40"
           >
             {uploading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
