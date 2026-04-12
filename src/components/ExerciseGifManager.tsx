@@ -26,6 +26,7 @@ interface CustomExercise {
   name: string;
   category: string;
   muscle_group: string;
+  is_bodyweight_exercise?: boolean;
 }
 
 const ExerciseGifManager = () => {
@@ -77,7 +78,7 @@ const ExerciseGifManager = () => {
   const fetchCustomExercises = async () => {
     const { data } = await supabase
       .from("custom_exercises")
-      .select("id, name, category, muscle_group")
+      .select("id, name, category, muscle_group, is_bodyweight_exercise")
       .order("name");
     setCustomExercises((data as CustomExercise[]) || []);
   };
