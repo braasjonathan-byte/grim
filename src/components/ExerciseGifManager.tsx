@@ -373,6 +373,7 @@ const ExerciseGifManager = () => {
         name: ex.name,
         category: ex.category,
         muscleGroup: ex.muscleGroup,
+        isBodyweight: ex.isBodyweight,
         mapping: mappingsByName.get(ex.name.toLowerCase()) || null,
       }))
       .filter((item) => {
