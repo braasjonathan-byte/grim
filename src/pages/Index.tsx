@@ -531,6 +531,19 @@ const Index = () => {
             </h1>
           </button>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
+            <button
+              onClick={() => {
+                setTab("calc");
+                setTimeout(() => {
+                  document.getElementById("help-section")?.scrollIntoView({ behavior: "smooth" });
+                }, 300);
+              }}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+              aria-label="Hjälp & tips"
+              title="Hjälp & tips"
+            >
+              <HelpCircle className="w-4 h-4 text-primary" />
+            </button>
             {!isAppInstalled && (
               <button
                 onClick={() => navigate("/install")}
