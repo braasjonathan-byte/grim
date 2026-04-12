@@ -9,6 +9,7 @@ interface CustomExercise {
   name: string;
   category: string;
   muscle_group: string;
+  is_bodyweight_exercise?: boolean;
 }
 
 interface ExercisePickerDialogProps {
@@ -46,6 +47,7 @@ const ExercisePickerDialog = ({
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("styrka");
   const [newMuscle, setNewMuscle] = useState("Helkropp");
+  const [newIsBodyweight, setNewIsBodyweight] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
