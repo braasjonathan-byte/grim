@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Link, Copy, Check, QrCode, X } from "lucide-react";
+import { Link, Copy, Check, QrCode, X, Share2 } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { QRCodeSVG } from "qrcode.react";
 
