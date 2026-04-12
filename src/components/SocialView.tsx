@@ -447,8 +447,12 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               {/* Post header */}
               <div className="px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold">
-                    {(nicknames[post.user_id] || "?")[0]?.toUpperCase()}
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold overflow-hidden">
+                    {avatarUrls[post.user_id] ? (
+                      <img src={avatarUrls[post.user_id]!} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      (nicknames[post.user_id] || "?")[0]?.toUpperCase()
+                    )}
                   </div>
                   <div>
                     <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
