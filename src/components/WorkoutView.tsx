@@ -5519,14 +5519,14 @@ const estimateCalories = (
                                                 const effective = currentBwMode === "add" ? profileWeight + Math.abs(currentKg) : profileWeight - Math.abs(currentKg);
                                                 return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round(Math.max(0, effective) * 10) / 10} kg effektiv ({profileWeight} {currentBwMode === "add" ? "+" : "−"} {Math.abs(currentKg)} kg)</p>;
                                               } else {
-                                                return <p className="text-[9px] text-warning pl-8 -mt-0.5">⚠ Ange vikt i profilen</p>;
+                                                return <button onClick={() => setShowWeightPrompt(true)} className="text-[9px] text-primary pl-8 -mt-0.5 underline text-left">⚠ Ange din kroppsvikt</button>;
                                               }
                                             }
                                             if (!isNaN(currentKg) && currentKg < 0) {
                                               if (profileWeight) {
                                                 return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round((profileWeight + currentKg) * 10) / 10} kg effektiv</p>;
                                               } else {
-                                                return <p className="text-[9px] text-warning pl-8 -mt-0.5">⚠ Ange vikt i profilen</p>;
+                                                return <button onClick={() => setShowWeightPrompt(true)} className="text-[9px] text-primary pl-8 -mt-0.5 underline text-left">⚠ Ange din kroppsvikt</button>;
                                               }
                                             }
                                             return null;
