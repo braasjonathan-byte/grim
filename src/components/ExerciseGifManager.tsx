@@ -26,6 +26,7 @@ interface CustomExercise {
   name: string;
   category: string;
   muscle_group: string;
+  is_bodyweight_exercise?: boolean;
 }
 
 const ExerciseGifManager = () => {
@@ -66,6 +67,11 @@ const ExerciseGifManager = () => {
   const [editMuscleGroup, setEditMuscleGroup] = useState("");
   const [savingMuscle, setSavingMuscle] = useState(false);
 
+  // Multi-select for mass editing
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
+  const [savingBulk, setSavingBulk] = useState(false);
+
   const fetchMappings = async () => {
     const { data } = await supabase
       .from("exercise_gif_mappings")
@@ -77,7 +83,7 @@ const ExerciseGifManager = () => {
   const fetchCustomExercises = async () => {
     const { data } = await supabase
       .from("custom_exercises")
-      .select("id, name, category, muscle_group")
+      .select("id, name, category, muscle_group, is_bodyweight_exercise")
       .order("name");
     setCustomExercises((data as CustomExercise[]) || []);
   };
@@ -265,27 +271,93 @@ const ExerciseGifManager = () => {
 
   // All exercises: library + custom, deduplicated, sorted alphabetically
   const allExercises = useMemo(() => {
-    const nameSet = new Map<string, { name: string; category: string; muscleGroup: string }>();
+    const nameSet = new Map<string, { name: string; category: string; muscleGroup: string; isBodyweight: boolean }>();
     
-    // Add library exercises
     for (const e of exerciseLibrary) {
-      nameSet.set(e.name.toLowerCase(), { name: e.name, category: e.category, muscleGroup: e.muscleGroup });
+      nameSet.set(e.name.toLowerCase(), { name: e.name, category: e.category, muscleGroup: e.muscleGroup, isBodyweight: false });
     }
     
-    // Add/override with custom exercises
     for (const c of customExercises) {
       const key = c.name.toLowerCase();
       if (nameSet.has(key)) {
-        // Custom exercise overrides muscle group
         const existing = nameSet.get(key)!;
-        nameSet.set(key, { ...existing, muscleGroup: c.muscle_group });
+        nameSet.set(key, { ...existing, muscleGroup: c.muscle_group, category: c.category, isBodyweight: !!c.is_bodyweight_exercise });
       } else {
-        nameSet.set(key, { name: c.name, category: c.category, muscleGroup: c.muscle_group });
+        nameSet.set(key, { name: c.name, category: c.category, muscleGroup: c.muscle_group, isBodyweight: !!c.is_bodyweight_exercise });
       }
     }
     
     return Array.from(nameSet.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
   }, [customExercises]);
+
+  const toggleSelected = (name: string) => {
+    setSelectedExercises(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
+  const bulkSetBodyweight = async (isBodyweight: boolean) => {
+    if (selectedExercises.size === 0) return;
+    setSavingBulk(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      for (const name of selectedExercises) {
+        const custom = customExercises.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (custom) {
+          await supabase.from("custom_exercises").update({ is_bodyweight_exercise: isBodyweight }).eq("id", custom.id);
+        } else {
+          const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === name.toLowerCase());
+          await supabase.from("custom_exercises").insert({
+            name,
+            category: libEntry?.category || "styrka",
+            muscle_group: libEntry?.muscleGroup || "Helkropp",
+            created_by: user.id,
+            is_bodyweight_exercise: isBodyweight,
+          });
+        }
+      }
+      await fetchCustomExercises();
+      setSelectedExercises(new Set());
+      toast.success(`${selectedExercises.size} övningar uppdaterade`);
+    } catch (e) {
+      console.error("Bulk update failed:", e);
+      toast.error("Kunde inte uppdatera");
+    }
+    setSavingBulk(false);
+  };
+
+  const bulkSetCategory = async (category: string) => {
+    if (selectedExercises.size === 0) return;
+    setSavingBulk(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      for (const name of selectedExercises) {
+        const custom = customExercises.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (custom) {
+          await supabase.from("custom_exercises").update({ category }).eq("id", custom.id);
+        } else {
+          const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === name.toLowerCase());
+          await supabase.from("custom_exercises").insert({
+            name,
+            category,
+            muscle_group: libEntry?.muscleGroup || "Helkropp",
+            created_by: user.id,
+          });
+        }
+      }
+      await fetchCustomExercises();
+      setSelectedExercises(new Set());
+      toast.success(`${selectedExercises.size} övningar uppdaterade`);
+    } catch (e) {
+      console.error("Bulk category update failed:", e);
+      toast.error("Kunde inte uppdatera");
+    }
+    setSavingBulk(false);
+  };
 
   const mappingsByName = useMemo(() => {
     const map = new Map<string, Mapping>();
@@ -301,6 +373,7 @@ const ExerciseGifManager = () => {
         name: ex.name,
         category: ex.category,
         muscleGroup: ex.muscleGroup,
+        isBodyweight: ex.isBodyweight,
         mapping: mappingsByName.get(ex.name.toLowerCase()) || null,
       }))
       .filter((item) => {
@@ -405,7 +478,53 @@ const ExerciseGifManager = () => {
             ))}
           </div>
 
-          <p className="text-[11px] text-muted-foreground">{exerciseList.length} övningar visas</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">{exerciseList.length} övningar visas</p>
+            <button
+              onClick={() => { setSelectMode(!selectMode); setSelectedExercises(new Set()); }}
+              className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                selectMode ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {selectMode ? "Avbryt markering" : "Markera"}
+            </button>
+          </div>
+
+          {/* Bulk action bar */}
+          {selectMode && selectedExercises.size > 0 && (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 space-y-2">
+              <p className="text-[11px] font-semibold text-foreground">{selectedExercises.size} markerade</p>
+              <div className="flex gap-1.5 flex-wrap">
+                <button
+                  onClick={() => bulkSetBodyweight(true)}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
+                >
+                  {savingBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  ✅ Kroppsvikt
+                </button>
+                <button
+                  onClick={() => bulkSetBodyweight(false)}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2.5 py-1.5 bg-secondary text-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
+                >
+                  ❌ Ej kroppsvikt
+                </button>
+                <select
+                  onChange={(e) => { if (e.target.value) bulkSetCategory(e.target.value); e.target.value = ""; }}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2 py-1.5 bg-secondary text-foreground rounded-lg border-none outline-none disabled:opacity-40"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Ändra kategori…</option>
+                  <option value="styrka">Styrka</option>
+                  <option value="kondition">Kondition</option>
+                  <option value="rörlighet">Rörlighet</option>
+                  <option value="core">Core</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Exercise list */}
           {loading ? (
@@ -426,9 +545,17 @@ const ExerciseGifManager = () => {
                     <div
                       className={`flex items-center gap-2 p-2.5 cursor-pointer transition-colors ${
                         m ? "bg-secondary/50 hover:bg-secondary/70" : "bg-card hover:bg-secondary/30"
-                      }`}
-                      onClick={() => setExpandedId(isExpanded ? null : (m?.id || item.name))}
+                      } ${selectedExercises.has(item.name) ? "ring-2 ring-primary" : ""}`}
+                      onClick={() => selectMode ? toggleSelected(item.name) : setExpandedId(isExpanded ? null : (m?.id || item.name))}
                     >
+                      {/* Select checkbox in select mode */}
+                      {selectMode && (
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          selectedExercises.has(item.name) ? "bg-primary border-primary" : "border-border"
+                        }`}>
+                          {selectedExercises.has(item.name) && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                      )}
                       {/* GIF thumbnail */}
                       <div className="w-10 h-10 rounded bg-secondary border border-border flex items-center justify-center shrink-0 overflow-hidden">
                         {m?.gif_url ? (
@@ -456,6 +583,11 @@ const ExerciseGifManager = () => {
                         {m?.custom_instructions && m.custom_instructions.length > 0 && (
                           <span className="text-[10px] bg-accent/50 text-accent-foreground px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5">
                             <FileText className="w-2.5 h-2.5" /> Instr.
+                          </span>
+                        )}
+                        {item.isBodyweight && (
+                          <span className="text-[10px] bg-orange-500/10 text-orange-600 px-1.5 py-0.5 rounded-full font-medium">
+                            BW
                           </span>
                         )}
                       </div>

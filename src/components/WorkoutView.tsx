@@ -450,6 +450,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [profileWeight, setProfileWeight] = useState<number | null>(null);
   const [profileGender, setProfileGender] = useState<string | null>(null);
   const [profileAge, setProfileAge] = useState<number | null>(null);
+  const [showWeightPrompt, setShowWeightPrompt] = useState(false);
+  const [weightPromptValue, setWeightPromptValue] = useState("");
 
   // Users allowed to edit exercise descriptions (admin or specific users)
   const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
@@ -2803,7 +2805,7 @@ const estimateCalories = (
                                       <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
                                     )}
                                     {isNegative && !profileWeight && (
-                                      <p className="text-[10px] text-warning pl-4">⚠ Ange din vikt i profilen för korrekt statistik</p>
+                                       <button onClick={() => setShowWeightPrompt(true)} className="text-[10px] text-primary pl-4 underline text-left">⚠ Ange din kroppsvikt</button>
                                     )}
                                     <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
                                   </div>
@@ -5450,7 +5452,7 @@ const estimateCalories = (
                                       <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
                                     )}
                                     {isNegative && !profileWeight && (
-                                      <p className="text-[10px] text-warning pl-4">⚠ Ange din vikt i profilen för korrekt statistik</p>
+                                      <button onClick={() => setShowWeightPrompt(true)} className="text-[10px] text-primary pl-4 underline text-left">⚠ Ange din kroppsvikt</button>
                                     )}
                                     <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
                                   </div>
@@ -5517,14 +5519,14 @@ const estimateCalories = (
                                                 const effective = currentBwMode === "add" ? profileWeight + Math.abs(currentKg) : profileWeight - Math.abs(currentKg);
                                                 return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round(Math.max(0, effective) * 10) / 10} kg effektiv ({profileWeight} {currentBwMode === "add" ? "+" : "−"} {Math.abs(currentKg)} kg)</p>;
                                               } else {
-                                                return <p className="text-[9px] text-warning pl-8 -mt-0.5">⚠ Ange vikt i profilen</p>;
+                                                return <button onClick={() => setShowWeightPrompt(true)} className="text-[9px] text-primary pl-8 -mt-0.5 underline text-left">⚠ Ange din kroppsvikt</button>;
                                               }
                                             }
                                             if (!isNaN(currentKg) && currentKg < 0) {
                                               if (profileWeight) {
                                                 return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round((profileWeight + currentKg) * 10) / 10} kg effektiv</p>;
                                               } else {
-                                                return <p className="text-[9px] text-warning pl-8 -mt-0.5">⚠ Ange vikt i profilen</p>;
+                                                return <button onClick={() => setShowWeightPrompt(true)} className="text-[9px] text-primary pl-8 -mt-0.5 underline text-left">⚠ Ange din kroppsvikt</button>;
                                               }
                                             }
                                             return null;
@@ -6039,6 +6041,52 @@ const estimateCalories = (
     )}
     {showFireworks && (
       <FireworksOverlay onComplete={() => setShowFireworks(false)} />
+    )}
+    {/* Weight prompt dialog */}
+    {showWeightPrompt && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setShowWeightPrompt(false)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-base">Ange din kroppsvikt</h3>
+          <p className="text-sm text-muted-foreground">
+            Din kroppsvikt behövs för att beräkna effektiv vikt på kroppsviktsövningar.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={weightPromptValue}
+              onChange={(e) => setWeightPromptValue(e.target.value)}
+              placeholder="kg"
+              className="flex-1 bg-secondary text-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              autoFocus
+            />
+            <span className="text-sm text-muted-foreground">kg</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowWeightPrompt(false)}
+              className="flex-1 py-2.5 bg-secondary text-muted-foreground text-sm font-semibold rounded-lg"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={async () => {
+                const w = parseFloat(weightPromptValue);
+                if (isNaN(w) || w <= 0) return;
+                await supabase.from("profiles").update({ weight_kg: w }).eq("user_id", userId);
+                setProfileWeight(w);
+                setShowWeightPrompt(false);
+                setWeightPromptValue("");
+              }}
+              disabled={!weightPromptValue || isNaN(parseFloat(weightPromptValue)) || parseFloat(weightPromptValue) <= 0}
+              className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-lg disabled:opacity-40"
+            >
+              Spara
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     {uncheckedSetsDialog && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
