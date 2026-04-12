@@ -658,6 +658,7 @@ export type Database = {
           snapchat: string | null
           spotify_anthem_name: string | null
           spotify_anthem_url: string | null
+          theme: string
           tiktok: string | null
           time_10km_min: number | null
           training_days_per_week: number | null
@@ -684,6 +685,7 @@ export type Database = {
           snapchat?: string | null
           spotify_anthem_name?: string | null
           spotify_anthem_url?: string | null
+          theme?: string
           tiktok?: string | null
           time_10km_min?: number | null
           training_days_per_week?: number | null
@@ -710,6 +712,7 @@ export type Database = {
           snapchat?: string | null
           spotify_anthem_name?: string | null
           spotify_anthem_url?: string | null
+          theme?: string
           tiktok?: string | null
           time_10km_min?: number | null
           training_days_per_week?: number | null

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music } from "lucide-react";
+import ThemePicker from "@/components/ThemePicker";
+import { applyTheme, getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
@@ -21,9 +23,11 @@ export const SECURITY_QUESTIONS = [
 interface SettingsPanelProps {
   userId?: string;
   isAdmin?: boolean;
+  isHonorary?: boolean;
 }
 
-const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
+const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelProps) => {
+  const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark");
@@ -68,7 +72,9 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
     if (meta) {
       meta.setAttribute("content", dark ? "#000000" : "#ffffff");
     }
-  }, [dark]);
+    // Re-apply color theme when dark/light toggles
+    applyTheme(colorTheme);
+  }, [dark, colorTheme]);
 
   useEffect(() => {
     const requestWakeLock = async () => {
@@ -242,6 +248,16 @@ const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${spotifyWidget ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
         </button>
       </div>
+
+      {/* Color theme picker */}
+      {userId && (
+        <ThemePicker
+          userId={userId}
+          isHonorary={isHonorary}
+          currentTheme={colorTheme}
+          onThemeChange={setColorTheme}
+        />
+      )}
 
       {userId && (
         <div className="border-t border-border pt-2">

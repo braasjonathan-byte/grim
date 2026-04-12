@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { applyTheme, getStoredThemeId } from "./lib/themes";
 
 // Initialize theme from localStorage before render
 const storedTheme = localStorage.getItem("gymberget_theme");
@@ -14,6 +15,9 @@ if (shouldBeDark) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", "#ffffff");
 }
+
+// Apply stored color theme immediately
+applyTheme(getStoredThemeId());
 
 // Clear app icon badge when app is opened — try both main thread and SW
 const clearBadge = () => {

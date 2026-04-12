@@ -61,7 +61,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
     { key: "announcements", label: "Meddelanden", render: () => <AnnouncementInbox userId={userId} isAdmin={isAdmin} /> },
     { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} /> },
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
-    { key: "settings", label: "Inställningar", render: () => <SettingsPanel userId={userId} isAdmin={isAdmin} /> },
+    { key: "settings", label: "Inställningar", render: () => <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} /> },
     { key: "notifications", label: "Notiser", render: () => <NotificationSettings userId={userId} /> },
     { key: "referral", label: "Bjud in vän", render: () => <ReferralLink userId={userId} /> },
     { key: "events", label: "Nedräkning", render: () => <EventCountdown userId={userId} /> },

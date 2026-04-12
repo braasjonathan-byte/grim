@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, Calculator, HelpCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
+import { applyTheme, getStoredThemeId, storeThemeId } from "@/lib/themes";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sparkles, Download } from "lucide-react";
@@ -184,7 +185,7 @@ const Index = () => {
   // Shared helper to load profile + role (called once per session)
   const loadUserData = useCallback(async (uid: string) => {
     const [{ data }, { data: roleData }] = await Promise.all([
-      supabase.from("profiles").select("nickname, must_change_password, is_honorary").eq("user_id", uid).single(),
+      supabase.from("profiles").select("nickname, must_change_password, is_honorary, theme").eq("user_id", uid).single(),
       supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
     ]);
     if (data) {
@@ -194,6 +195,10 @@ const Index = () => {
         setForceChangePassword(true);
         setShowChangePassword(true);
       }
+      // Apply saved color theme
+      const savedTheme = (data as any).theme || "default";
+      storeThemeId(savedTheme);
+      applyTheme(savedTheme);
     }
     if (roleData) setUserRole(roleData.role);
   }, []);
