@@ -529,15 +529,18 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           } else if (Array.isArray(value)) {
             sets = value;
           }
-          // Check if this exercise has a bodyweight add mode
-          const bwMode = weights[`__bw_mode__${exerciseName}`];
-          for (const s of sets) {
-            let kg = Number(s.kg) || 0;
-            const reps = Number(s.reps) || 0;
-            // Weighted bodyweight exercise: effective = bodyweight ± entered kg
-            if (bwMode && userWeightKg) {
-              const absKg = Math.abs(kg);
-              kg = bwMode === "sub" ? Math.max(0, userWeightKg - absKg) : userWeightKg + absKg;
+           // Check if this exercise has a bodyweight mode (per-set or exercise-level fallback)
+           const bwModeExercise = weights[`__bw_mode__${exerciseName}`];
+           for (let si = 0; si < sets.length; si++) {
+             const s = sets[si];
+             let kg = Number(s.kg) || 0;
+             const reps = Number(s.reps) || 0;
+             // Per-set bw mode, falling back to exercise-level
+             const bwMode = weights[`__bw_mode__${exerciseName}__${si}`] ?? bwModeExercise;
+             // Weighted bodyweight exercise: effective = bodyweight ± entered kg
+             if (bwMode && userWeightKg) {
+               const absKg = Math.abs(kg);
+               kg = bwMode === "sub" ? Math.max(0, userWeightKg - absKg) : userWeightKg + absKg;
             } else if (bwMode && !userWeightKg) {
               // Can't compute without body weight, just use entered kg
             } else if (kg < 0 && userWeightKg) {
