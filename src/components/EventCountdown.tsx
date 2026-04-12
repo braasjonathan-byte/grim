@@ -158,6 +158,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       .from("event_countdowns")
       .select("*")
       .eq("user_id", userId)
+      .gte("event_date", new Date().toISOString().split("T")[0])
       .order("event_date", { ascending: true });
     if (data) setEvents(data as EventData[]);
     setLoading(false);
