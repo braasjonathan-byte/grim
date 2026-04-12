@@ -141,7 +141,7 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Dumbbell className="w-5 h-5 text-primary" />
-              <h3 className="text-sm font-bold">Ej tränade muskler (7 dagar)</h3>
+              <h3 className="text-sm font-bold font-sans">Ej tränade muskler (7 dagar)</h3>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
           </div>
