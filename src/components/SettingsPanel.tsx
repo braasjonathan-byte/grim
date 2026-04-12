@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music } from "lucide-react";
+import ThemePicker from "@/components/ThemePicker";
+import { applyTheme, getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
@@ -21,9 +23,11 @@ export const SECURITY_QUESTIONS = [
 interface SettingsPanelProps {
   userId?: string;
   isAdmin?: boolean;
+  isHonorary?: boolean;
 }
 
-const SettingsPanel = ({ userId, isAdmin }: SettingsPanelProps) => {
+const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelProps) => {
+  const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark");
