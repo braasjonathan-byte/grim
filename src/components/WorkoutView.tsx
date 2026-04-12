@@ -3604,7 +3604,7 @@ const estimateCalories = (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setRenameDialog({ planId: plan.id, currentName: plan.session_name });
+                  setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                   setRenameInput(plan.session_name);
                 }}
                 className="absolute top-1 right-1 p-1 text-muted-foreground/30 hover:text-primary transition-colors z-10"
@@ -3625,22 +3625,6 @@ const estimateCalories = (
                     title="Genomfört">
                       <Check className={`w-4 h-4 transition-all ${isDone ? "text-success-foreground opacity-100" : "text-muted-foreground/30 opacity-100"}`} />
                     </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setReplacementTarget({
-                        planId: plan.id,
-                        sessionName: plan.session_name,
-                        week: plan.week,
-                        day: plan.day
-                      });
-                    }}
-                    className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                    isSkipped ? "bg-destructive text-destructive-foreground" : "text-muted-foreground/40 hover:text-destructive"}`
-                    }
-                    title="Markera som missat">
-                    <XCircle className="w-4 h-4" />
-                  </button>
                 </div>
                 <div className={`flex-shrink-0 ${colorClass}`}>
                   <Icon className="w-5 h-5" />
