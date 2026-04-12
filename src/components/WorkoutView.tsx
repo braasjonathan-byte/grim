@@ -282,6 +282,9 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [initialWeekSet, setInitialWeekSet] = useState(false);
   const [weeks, setWeeks] = useState<number[]>([]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+
+  // Archived completions for weight history lookup
+  const [archivedCompletions, setArchivedCompletions] = useState<Record<string, any>[]>([]);
   const [comments, setComments] = useState<Record<string, string>>({});
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<"loading" | "choose" | "plan" | "single">("loading");
@@ -460,6 +463,29 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
+
+  // Fetch archived completion data for weight history
+  useEffect(() => {
+    supabase.from("archived_plans").select("completion_data, plan_data").eq("user_id", userId).then(({ data }) => {
+      if (data) {
+        const allComps: Record<string, any>[] = [];
+        for (const archive of data) {
+          const completionData = archive.completion_data as any[];
+          const planData = archive.plan_data as any[];
+          if (completionData) {
+            for (const c of completionData) {
+              if (c.done && c.logged_weights && Object.keys(c.logged_weights).length > 0) {
+                // Attach plan details for fallback text search
+                const matchingPlan = planData?.find((p: any) => p.week === c.week && p.day === c.day);
+                allComps.push({ ...c, _plan_details: matchingPlan?.details || "", _plan_session_name: matchingPlan?.session_name || "" });
+              }
+            }
+          }
+        }
+        setArchivedCompletions(allComps);
+      }
+    });
+  }, [userId]);
 
   // Plan start date from profile (timezone-safe)
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
@@ -1572,7 +1598,7 @@ const estimateCalories = (
     return { name: line.trim(), weight: null };
   };
 
-  // Find last weight used for an exercise across ALL workouts (single + plan),
+  // Find last weight used for an exercise across ALL workouts (single + plan + archived),
   // preferring matching rep count. Returns e.g. "3×10 @ 80 kg" or "80 kg (8 reps)"
   const findLastWeight = (exerciseName: string, targetReps?: number): string | null => {
     const exLower = exerciseName.toLowerCase();
@@ -1581,11 +1607,8 @@ const estimateCalories = (
     type SetInfo = { kg: number; reps: number; label: string };
     const allSets: SetInfo[] = [];
 
-    // Search all completions for logged set data
-    for (const [k, comp] of Object.entries(completions)) {
-      if (!comp?.done) continue;
-      const weights = comp.logged_weights as Record<string, any> | null;
-      if (!weights) continue;
+    // Helper to extract sets from a weights record
+    const extractSets = (weights: Record<string, any>) => {
       const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
       if (setDataRaw) {
         try {
@@ -1601,6 +1624,21 @@ const estimateCalories = (
           }
         } catch {}
       }
+    };
+
+    // Search active completions
+    for (const [k, comp] of Object.entries(completions)) {
+      if (!comp?.done) continue;
+      const weights = comp.logged_weights as Record<string, any> | null;
+      if (!weights) continue;
+      extractSets(weights);
+    }
+
+    // Search archived completions
+    for (const archComp of archivedCompletions) {
+      const weights = archComp.logged_weights as Record<string, any> | null;
+      if (!weights) continue;
+      extractSets(weights);
     }
 
     // If we found logged sets, prefer matching rep count
@@ -1617,7 +1655,7 @@ const estimateCalories = (
       return `${last.kg} kg (${last.reps || '?'} reps)`;
     }
 
-    // Fallback: search plan details text for weight info
+    // Fallback: search plan details text for weight info (active plans)
     const allPlans = [...plans].sort((a, b) => {
       if (a.week !== b.week) return b.week - a.week;
       return b.day.localeCompare(a.day);
@@ -1625,6 +1663,17 @@ const estimateCalories = (
     for (const plan of allPlans) {
       if (!plan.details) continue;
       for (const line of plan.details.split("\n")) {
+        const { name, weight } = parseExerciseWeight(line);
+        if (name.toLowerCase() === exLower && weight) {
+          return weight;
+        }
+      }
+    }
+
+    // Fallback: search archived plan details text
+    for (const archComp of archivedCompletions) {
+      if (!archComp._plan_details) continue;
+      for (const line of (archComp._plan_details as string).split("\n")) {
         const { name, weight } = parseExerciseWeight(line);
         if (name.toLowerCase() === exLower && weight) {
           return weight;
@@ -1689,6 +1738,20 @@ const estimateCalories = (
           const { name } = parseExerciseWeight(line);
           if (name.toLowerCase() === exerciseName.toLowerCase()) {
             return comp.logged_tempo;
+          }
+        }
+      }
+    }
+    // Fallback: search archived completions for conditioning tempo
+    for (const archComp of archivedCompletions) {
+      const weights = archComp.logged_weights as Record<string, any> | null;
+      if (weights) {
+        for (const [wk, val] of Object.entries(weights)) {
+          if (wk.startsWith('__cond__') && wk.toLowerCase().includes(exerciseName.toLowerCase())) {
+            try {
+              const data = typeof val === 'string' ? JSON.parse(val) : val;
+              if (data.tempo) return data.tempo;
+            } catch {}
           }
         }
       }
@@ -4301,11 +4364,10 @@ const estimateCalories = (
                   const comp = completions[key];
                   const savedWeights = (comp?.logged_weights || {}) as Record<string, number>;
 
-                  // Helper: find previously logged weight for an exercise from earlier weeks
+                  // Helper: find previously logged weight for an exercise from earlier weeks + archived
                   const findPreviousWeight = (exerciseName: string): number | null => {
                     // Look through completions from previous weeks for this exercise
                     for (let w = plan.week - 1; w >= 1; w--) {
-                      // Check all days in that week
                       for (const p of plans.filter((pp) => pp.week === w)) {
                         const compKey = `${w}-${p.day}`;
                         const comp = completions[compKey];
@@ -4313,6 +4375,13 @@ const estimateCalories = (
                         if (weights && weights[exerciseName]) {
                           return weights[exerciseName];
                         }
+                      }
+                    }
+                    // Fallback: search archived completions
+                    for (const archComp of archivedCompletions) {
+                      const weights = archComp.logged_weights as Record<string, number> | null;
+                      if (weights && weights[exerciseName]) {
+                        return weights[exerciseName];
                       }
                     }
                     return null;
