@@ -522,18 +522,27 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const weights = row.logged_weights as Record<string, any>;
       for (const [key, value] of Object.entries(weights)) {
         if (key.startsWith("__setdata__")) {
+          const exerciseName = key.replace("__setdata__", "");
           let sets: {kg?: string | number;reps?: string | number;}[] = [];
           if (typeof value === "string") {
             try {sets = JSON.parse(value);} catch {continue;}
           } else if (Array.isArray(value)) {
             sets = value;
           }
+          // Check if this exercise has a bodyweight add mode
+          const bwMode = weights[`__bw_mode__${exerciseName}`];
           for (const s of sets) {
             let kg = Number(s.kg) || 0;
             const reps = Number(s.reps) || 0;
-            // Negative kg = assisted exercise: effective weight = bodyweight + kg (which subtracts)
-            if (kg < 0 && userWeightKg) {
-              kg = userWeightKg + kg; // e.g. -20 + 102 = 82
+            // Weighted bodyweight exercise: effective = bodyweight ± entered kg
+            if (bwMode && userWeightKg) {
+              const absKg = Math.abs(kg);
+              kg = bwMode === "sub" ? Math.max(0, userWeightKg - absKg) : userWeightKg + absKg;
+            } else if (bwMode && !userWeightKg) {
+              // Can't compute without body weight, just use entered kg
+            } else if (kg < 0 && userWeightKg) {
+              // Negative kg = assisted exercise: effective weight = bodyweight + kg (which subtracts)
+              kg = userWeightKg + kg;
               if (kg < 0) kg = 0;
             } else if (kg < 0) {
               kg = 0; // Can't compute without body weight
