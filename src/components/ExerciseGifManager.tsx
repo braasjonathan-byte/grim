@@ -271,27 +271,93 @@ const ExerciseGifManager = () => {
 
   // All exercises: library + custom, deduplicated, sorted alphabetically
   const allExercises = useMemo(() => {
-    const nameSet = new Map<string, { name: string; category: string; muscleGroup: string }>();
+    const nameSet = new Map<string, { name: string; category: string; muscleGroup: string; isBodyweight: boolean }>();
     
-    // Add library exercises
     for (const e of exerciseLibrary) {
-      nameSet.set(e.name.toLowerCase(), { name: e.name, category: e.category, muscleGroup: e.muscleGroup });
+      nameSet.set(e.name.toLowerCase(), { name: e.name, category: e.category, muscleGroup: e.muscleGroup, isBodyweight: false });
     }
     
-    // Add/override with custom exercises
     for (const c of customExercises) {
       const key = c.name.toLowerCase();
       if (nameSet.has(key)) {
-        // Custom exercise overrides muscle group
         const existing = nameSet.get(key)!;
-        nameSet.set(key, { ...existing, muscleGroup: c.muscle_group });
+        nameSet.set(key, { ...existing, muscleGroup: c.muscle_group, category: c.category, isBodyweight: !!c.is_bodyweight_exercise });
       } else {
-        nameSet.set(key, { name: c.name, category: c.category, muscleGroup: c.muscle_group });
+        nameSet.set(key, { name: c.name, category: c.category, muscleGroup: c.muscle_group, isBodyweight: !!c.is_bodyweight_exercise });
       }
     }
     
     return Array.from(nameSet.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
   }, [customExercises]);
+
+  const toggleSelected = (name: string) => {
+    setSelectedExercises(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
+  const bulkSetBodyweight = async (isBodyweight: boolean) => {
+    if (selectedExercises.size === 0) return;
+    setSavingBulk(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      for (const name of selectedExercises) {
+        const custom = customExercises.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (custom) {
+          await supabase.from("custom_exercises").update({ is_bodyweight_exercise: isBodyweight }).eq("id", custom.id);
+        } else {
+          const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === name.toLowerCase());
+          await supabase.from("custom_exercises").insert({
+            name,
+            category: libEntry?.category || "styrka",
+            muscle_group: libEntry?.muscleGroup || "Helkropp",
+            created_by: user.id,
+            is_bodyweight_exercise: isBodyweight,
+          });
+        }
+      }
+      await fetchCustomExercises();
+      setSelectedExercises(new Set());
+      toast.success(`${selectedExercises.size} övningar uppdaterade`);
+    } catch (e) {
+      console.error("Bulk update failed:", e);
+      toast.error("Kunde inte uppdatera");
+    }
+    setSavingBulk(false);
+  };
+
+  const bulkSetCategory = async (category: string) => {
+    if (selectedExercises.size === 0) return;
+    setSavingBulk(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      for (const name of selectedExercises) {
+        const custom = customExercises.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (custom) {
+          await supabase.from("custom_exercises").update({ category }).eq("id", custom.id);
+        } else {
+          const libEntry = exerciseLibrary.find(e => e.name.toLowerCase() === name.toLowerCase());
+          await supabase.from("custom_exercises").insert({
+            name,
+            category,
+            muscle_group: libEntry?.muscleGroup || "Helkropp",
+            created_by: user.id,
+          });
+        }
+      }
+      await fetchCustomExercises();
+      setSelectedExercises(new Set());
+      toast.success(`${selectedExercises.size} övningar uppdaterade`);
+    } catch (e) {
+      console.error("Bulk category update failed:", e);
+      toast.error("Kunde inte uppdatera");
+    }
+    setSavingBulk(false);
+  };
 
   const mappingsByName = useMemo(() => {
     const map = new Map<string, Mapping>();
