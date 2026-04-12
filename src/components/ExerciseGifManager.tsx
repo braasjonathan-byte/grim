@@ -585,6 +585,11 @@ const ExerciseGifManager = () => {
                             <FileText className="w-2.5 h-2.5" /> Instr.
                           </span>
                         )}
+                        {item.isBodyweight && (
+                          <span className="text-[10px] bg-orange-500/10 text-orange-600 px-1.5 py-0.5 rounded-full font-medium">
+                            BW
+                          </span>
+                        )}
                       </div>
 
                       <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform shrink-0 ${isExpanded ? "rotate-180" : ""}`} />
