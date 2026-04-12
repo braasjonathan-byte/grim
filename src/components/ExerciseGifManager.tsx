@@ -67,6 +67,11 @@ const ExerciseGifManager = () => {
   const [editMuscleGroup, setEditMuscleGroup] = useState("");
   const [savingMuscle, setSavingMuscle] = useState(false);
 
+  // Multi-select for mass editing
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
+  const [savingBulk, setSavingBulk] = useState(false);
+
   const fetchMappings = async () => {
     const { data } = await supabase
       .from("exercise_gif_mappings")
