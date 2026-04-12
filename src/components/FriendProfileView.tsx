@@ -199,20 +199,12 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [isAdmin, setIsAdmin] = useState(false);
   const originalThemeRef = useRef<string>(getStoredThemeId());
 
-  // Restore user's own theme when component unmounts or onClose
+  // Theme is now managed by FriendsView — no lock/unlock needed here
   useEffect(() => {
-    const savedTheme = getStoredThemeId();
-    originalThemeRef.current = savedTheme;
-    lockTheme("friend-profile");
-    return () => {
-      unlockTheme("friend-profile");
-      applyTheme(originalThemeRef.current);
-    };
+    return () => {};
   }, []);
 
   const handleClose = () => {
-    unlockTheme("friend-profile");
-    applyTheme(originalThemeRef.current);
     onClose();
   };
 
