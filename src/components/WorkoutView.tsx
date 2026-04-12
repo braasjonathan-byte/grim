@@ -805,7 +805,7 @@ const estimateCalories = (
         // Skip daily challenge exercises
         if (part.startsWith("⚔️")) continue;
         // Check if conditioning exercise — skip set tracking for those
-        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
         if (isCondExercise) continue;
         // Skip rest/rest day markers
         if (/^(vila|vilodag)/i.test(part)) continue;
@@ -6066,7 +6066,7 @@ const estimateCalories = (
                   const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
                   for (const part of parts) {
                     if (part.startsWith("⚔️")) continue;
-                    const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+                    const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
                     if (isCondExercise) continue;
                     if (/^(vila|vilodag)/i.test(part)) continue;
                     const { clean: cleanPart } = extractRpe(part);
