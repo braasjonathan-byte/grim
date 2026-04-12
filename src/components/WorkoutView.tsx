@@ -450,6 +450,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   const [profileWeight, setProfileWeight] = useState<number | null>(null);
   const [profileGender, setProfileGender] = useState<string | null>(null);
   const [profileAge, setProfileAge] = useState<number | null>(null);
+  const [showWeightPrompt, setShowWeightPrompt] = useState(false);
+  const [weightPromptValue, setWeightPromptValue] = useState("");
 
   // Users allowed to edit exercise descriptions (admin or specific users)
   const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
