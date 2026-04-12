@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { applyTheme, getStoredThemeId } from "@/lib/themes";
+import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
@@ -203,12 +203,15 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   useEffect(() => {
     const savedTheme = getStoredThemeId();
     originalThemeRef.current = savedTheme;
+    lockTheme("friend-profile");
     return () => {
+      unlockTheme("friend-profile");
       applyTheme(originalThemeRef.current);
     };
   }, []);
 
   const handleClose = () => {
+    unlockTheme("friend-profile");
     applyTheme(originalThemeRef.current);
     onClose();
   };
