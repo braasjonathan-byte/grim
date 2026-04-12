@@ -145,6 +145,14 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [friendCurrentWeek, setFriendCurrentWeek] = useState(1);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
+  // Restore theme on unmount if viewing a friend
+  useEffect(() => {
+    return () => {
+      unlockTheme("friend-view");
+      applyTheme(getStoredThemeId());
+    };
+  }, []);
+
   // Comments
   const [comments, setComments] = useState<WorkoutComment[]>([]);
   const [newComment, setNewComment] = useState<Record<string, string>>({});
