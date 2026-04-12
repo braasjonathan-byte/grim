@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, Calculator } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, Calculator, HelpCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -531,6 +531,19 @@ const Index = () => {
             </h1>
           </button>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
+            <button
+              onClick={() => {
+                setTab("calc");
+                setTimeout(() => {
+                  document.getElementById("help-section")?.scrollIntoView({ behavior: "smooth" });
+                }, 300);
+              }}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+              aria-label="Hjälp & tips"
+              title="Hjälp & tips"
+            >
+              <HelpCircle className="w-4 h-4 text-primary" />
+            </button>
             {!isAppInstalled && (
               <button
                 onClick={() => navigate("/install")}

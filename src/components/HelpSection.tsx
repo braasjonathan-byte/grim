@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle, Share2, Repeat, Weight } from "lucide-react";
 
 interface HelpCategory {
   title: string;
@@ -15,12 +15,13 @@ const categories: HelpCategory[] = [
       "Välj en färdig mall eller skapa en egen plan när du börjar.",
       "Planen delas upp i veckor – bläddra mellan veckor med pilarna.",
       "Appen räknar ut vilken vecka du är på baserat på när planen skapades.",
-      "Tryck på kugghjulet (⚙️) i övre vänstra hörnet på ett pass för att byta namn.",
+      "Tryck på kugghjulet (⚙️) på ett pass för att byta namn eller markera det som missat.",
       "Tryck på dagförkortningen (t.ex. 'TIS') för att flytta passet till en annan veckodag.",
       "Om måldagen redan är upptagen byter passen plats med varandra automatiskt.",
-      "Markera ett pass som klart med bocken – eller hoppa över det med X-knappen.",
+      "Markera ett pass som klart med bocken – du tjänar en proteinbar per dag du tränar.",
       "All träningsdata (vikter, kommentarer, puls m.m.) följer med om du byter dag.",
-      "Du kan arkivera hela planen och börja om med en ny.",
+      "Du kan arkivera hela planen och börja om med en ny – all historik bevaras.",
+      "Träningskalendern visar alla genomförda pass, även från arkiverade planer.",
     ],
   },
   {
@@ -29,12 +30,24 @@ const categories: HelpCategory[] = [
     tips: [
       "Tryck på '+' för att lägga till övningar från biblioteket eller skapa egna.",
       "Välj antal set, reps och vikt när du lägger till en styrkeövning.",
+      "Du kan markera en ny övning som 'kroppsviktsövning' – då visas en +/− vikt-toggle per set.",
       "Bocka av varje set under passet genom att trycka på setknapparna.",
       "Konditionsövningar loggas med tid, distans, tempo och puls.",
       "Tryck på info-knappen (ℹ️) bredvid en övning för att se instruktioner och GIF.",
-      "Redigera en befintlig övning genom att trycka på den – ändra vikt, set eller reps.",
-      "Ta bort en övning genom att svepa eller trycka på papperskorgen.",
+      "Lägg till eller ta bort set med '+ Set' och '− Set'-knapparna.",
       "Vikter loggas automatiskt som personbästa (PR) och visas i statistiken.",
+      "Data från förra passet hämtas automatiskt – justera själv för progression.",
+      "Rader med flera övningar (separerade med '/' eller ';') delas upp automatiskt.",
+    ],
+  },
+  {
+    title: "Kroppsviktsövningar",
+    icon: Weight,
+    tips: [
+      "Övningar som Chins, Dips m.fl. kan markeras som kroppsviktsövningar.",
+      "Kroppsviktsövningar visar en toggle för att logga extra vikt (+/−).",
+      "Om du inte har angett din kroppsvikt visas en prompt direkt i träningsvyn.",
+      "Admins kan massredigera kroppsviktsflaggan i övningsbiblioteket.",
     ],
   },
   {
@@ -56,6 +69,7 @@ const categories: HelpCategory[] = [
       "Gilla och kommentera dina vänners pass för att peppa varandra.",
       "Dela ett pass direkt till en vän via chatten med dela-knappen.",
       "Appen föreslår vänner baserat på gemensamma kontakter.",
+      "Bjud in vänner med din personliga länk – använd dela-knappen (📤) för att skicka via SMS, chatt eller sociala medier.",
     ],
   },
   {
@@ -64,7 +78,7 @@ const categories: HelpCategory[] = [
     tips: [
       "Chatta med dina vänner direkt i appen.",
       "Du får push-notiser när du får ett nytt meddelande.",
-      "Du kan dela träningspass i chatten – mottagaren ser alla övningar.",
+      "Du kan dela träningspass i chatten – mottagaren kan importera passet till sin egen plan.",
     ],
   },
   {
@@ -77,6 +91,7 @@ const categories: HelpCategory[] = [
       "Markera favoritövningar med en stjärna för att lyfta fram dem.",
       "Sätt upp PR-mål med målvikt och datum för att följa din progression.",
       "Viktprogressionsgrafen visar din utveckling över tid per övning.",
+      "Statistiken inkluderar data från arkiverade planer – inget försvinner.",
     ],
   },
   {
@@ -90,6 +105,15 @@ const categories: HelpCategory[] = [
     ],
   },
   {
+    title: "Event & nedräkning",
+    icon: Calendar,
+    tips: [
+      "Lägg till event (tävlingar, lopp etc.) med datum för att se en nedräkning.",
+      "Passerade event försvinner automatiskt från nedräkningslistan.",
+      "Gå med i eventgrupper för att träna mot samma mål som andra.",
+    ],
+  },
+  {
     title: "Verktyg",
     icon: Calculator,
     tips: [
@@ -97,6 +121,17 @@ const categories: HelpCategory[] = [
       "Pulszonskalkylator – beräkna dina träningszoner med Karvonens formel.",
       "Kalorikalkylatorn uppskattar ditt dagliga energibehov (BMR/TDEE) och föreslår makron.",
       "Tidtagaruret kan användas som vilotimer mellan set.",
+    ],
+  },
+  {
+    title: "Övningsbiblioteket",
+    icon: Dumbbell,
+    tips: [
+      "Biblioteket innehåller 100+ maskiner och övningar med instruktioner.",
+      "Sök och filtrera på muskelgrupp, kategori (Styrka, Kondition, Rörlighet, Core).",
+      "Admins kan redigera kategori, muskelgrupp och instruktioner för alla övningar.",
+      "Admins kan massmarkera övningar via 'Markera'-läget för att uppdatera kroppsviktsflaggan.",
+      "Du kan skapa egna övningar med valfri kategori och muskelgrupp.",
     ],
   },
   {
@@ -108,10 +143,11 @@ const categories: HelpCategory[] = [
       "Länka dina sociala medier (Instagram, TikTok, Snapchat).",
       "Aktivera push-notiser för att bli påmind om träning.",
       "Ställ in påminnelsetid och tidszon under notifikationsinställningar.",
-      "Bjud in vänner med din unika referrallänk – ni får båda belöning!",
+      "Bjud in vänner med din unika referrallänk – du blir hedersmedlem!",
       "Byt lösenord och ställ in säkerhetsfrågor under inställningar.",
       "Mörkt läge kan aktiveras under inställningar.",
       "Skicka feedback och förslag via förslagslådan.",
+      "Ange din kroppsvikt under Verktyg för att möjliggöra loggning av kroppsviktsövningar.",
     ],
   },
 ];
@@ -120,7 +156,7 @@ const HelpSection = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div id="help-section" className="border border-border bg-card overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <HelpCircle className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-bold">Hjälp & tips</h3>
