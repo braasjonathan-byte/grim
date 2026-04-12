@@ -464,6 +464,29 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
 
+  // Fetch archived completion data for weight history
+  useEffect(() => {
+    supabase.from("archived_plans").select("completion_data, plan_data").eq("user_id", userId).then(({ data }) => {
+      if (data) {
+        const allComps: Record<string, any>[] = [];
+        for (const archive of data) {
+          const completionData = archive.completion_data as any[];
+          const planData = archive.plan_data as any[];
+          if (completionData) {
+            for (const c of completionData) {
+              if (c.done && c.logged_weights && Object.keys(c.logged_weights).length > 0) {
+                // Attach plan details for fallback text search
+                const matchingPlan = planData?.find((p: any) => p.week === c.week && p.day === c.day);
+                allComps.push({ ...c, _plan_details: matchingPlan?.details || "", _plan_session_name: matchingPlan?.session_name || "" });
+              }
+            }
+          }
+        }
+        setArchivedCompletions(allComps);
+      }
+    });
+  }, [userId]);
+
   // Plan start date from profile (timezone-safe)
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
 
