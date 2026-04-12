@@ -226,6 +226,20 @@ export const THEMES: ThemeDefinition[] = [
 
 const THEME_STORAGE_KEY = "gymberget_color_theme";
 
+let themeLockOwner: string | null = null;
+
+export function lockTheme(owner: string) {
+  themeLockOwner = owner;
+}
+
+export function unlockTheme(owner: string) {
+  if (themeLockOwner === owner) themeLockOwner = null;
+}
+
+export function isThemeLocked(): boolean {
+  return themeLockOwner !== null;
+}
+
 export function getStoredThemeId(): string {
   return localStorage.getItem(THEME_STORAGE_KEY) || "default";
 }
