@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Link, Copy, Check, QrCode, X } from "lucide-react";
+import { Link, Copy, Check, QrCode, X, Share2 } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -50,6 +50,22 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
     }
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: "Grim",
+      text: `Starta din resa med Grim nu\n${referralUrl}`,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        handleCopy();
+      }
+    } catch {
+      // User cancelled share
+    }
+  };
+
   return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -73,16 +89,23 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
         </button>
         <button
           onClick={() => setShowQR(!showQR)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity border border-border"
+          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
           title="Visa QR-kod"
         >
           {showQR ? <X className="w-3.5 h-3.5" /> : <QrCode className="w-3.5 h-3.5" />}
+        </button>
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
+          title="Dela"
+        >
+          <Share2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {showQR && (
         <div className="flex flex-col items-center gap-3 pt-2">
-          <div className="bg-white p-4 rounded-xl">
+          <div className="bg-white p-4">
             <QRCodeSVG
               value={referralUrl}
               size={200}
