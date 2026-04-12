@@ -593,11 +593,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-[10px] text-muted-foreground">Genomförda</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <XCircle className="w-5 h-5 text-destructive mx-auto mb-1" />
-          <p className="text-2xl font-black">{totalSkipped}</p>
-          <p className="text-[10px] text-muted-foreground">Missade</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
           <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
           <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
@@ -618,8 +613,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
-        <DailyQuoteCard />
       </div>
+      <DailyQuoteCard />
 
       {/* View toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">
