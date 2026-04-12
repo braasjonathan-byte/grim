@@ -538,7 +538,7 @@ const Index = () => {
                   document.getElementById("help-section")?.scrollIntoView({ behavior: "smooth" });
                 }, 300);
               }}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-primary/10 transition-colors"
               aria-label="Hjälp & tips"
               title="Hjälp & tips"
             >
@@ -547,7 +547,7 @@ const Index = () => {
             {!isAppInstalled && (
               <button
                 onClick={() => navigate("/install")}
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-primary/10 transition-colors"
                 aria-label="Installera appen"
                 title="Installera appen"
               >
