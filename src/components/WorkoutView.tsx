@@ -5488,8 +5488,8 @@ const estimateCalories = (
                                                   }}
                                                   className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold border transition-colors ${
                                                     currentBwMode === "add" 
-                                                      ? "bg-primary/10 border-primary/30 text-primary dark:text-foreground" 
-                                                      : "bg-destructive/10 border-destructive/30 text-destructive dark:text-foreground"
+                                                      ? "bg-primary/10 border-primary/30 text-primary" 
+                                                      : "bg-primary/5 border-primary/20 text-primary opacity-70"
                                                   }`}
                                                   title={currentBwMode === "add" ? "Addera vikt till kroppsvikt" : "Dra av vikt från kroppsvikt"}
                                                 >
