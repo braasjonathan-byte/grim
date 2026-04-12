@@ -702,9 +702,14 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
     }
   }, [activeDayIndex, currentWeek, plans, isMobile]);
 
-  const allExercises = [
-  ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false, isBodyweightExercise: false })),
-  ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true, isBodyweightExercise: !!e.is_bodyweight_exercise }))];
+  const allExercises = useMemo(() => {
+    const customMap = new Map(customExercises.map(e => [e.name.toLowerCase(), e]));
+    const merged = exerciseLibrary
+      .filter(e => !customMap.has(e.name.toLowerCase()))
+      .map(e => ({ ...e, id: "", isCustom: false, isBodyweightExercise: false }));
+    const custom = customExercises.map(e => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true, isBodyweightExercise: !!e.is_bodyweight_exercise }));
+    return [...merged, ...custom];
+  }, [customExercises]);
 
 // Compute date for a plan week/day given a plan start date
 const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string): string | null => {
