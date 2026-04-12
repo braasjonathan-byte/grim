@@ -5550,7 +5550,7 @@ const estimateCalories = (
                   {/* Reps/sets/weight dialog for plan exercises */}
                   {weightDialog && weightDialog.planId === plan.id &&
                 <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30">
-                      <h4 className="text-sm font-bold flex items-center gap-1.5">
+                      <h4 className="text-sm font-bold font-sans flex items-center gap-1.5">
                         <Dumbbell className="w-4 h-4 text-primary" />
                         {weightDialog.exerciseName}
                       </h4>
