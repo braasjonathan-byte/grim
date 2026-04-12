@@ -118,7 +118,7 @@ const ExercisePickerDialog = ({
     if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
     const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
     if (customDupe) { alert("Övningen finns redan."); return; }
-    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId });
+    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId, is_bodyweight_exercise: newIsBodyweight });
     const { data } = await supabase.from("custom_exercises").select("*").order("name");
     if (data) setCustomExercises(data);
     setNewName("");
