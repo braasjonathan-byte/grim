@@ -1542,8 +1542,25 @@ const estimateCalories = (
   // Rename a session
   const renameSession = async (planId: string, newName: string) => {
     if (!newName.trim()) return;
-    await supabase.from("workout_plans").update({ session_name: newName.trim() }).eq("id", planId);
-    setPlans(prev => prev.map(p => p.id === planId ? { ...p, session_name: newName.trim() } : p));
+    const trimmed = newName.trim();
+    // Check if the plan's details is just a suggested distance (e.g. "Löpning 8.5 km")
+    // If the new name is no longer a running session, clear the suggested distance from details
+    const plan = plans.find(p => p.id === planId);
+    const newLower = trimmed.toLowerCase();
+    const isNewRunning = newLower.includes("löpning") || newLower.includes("jogg") || newLower.includes("långpass") || newLower.includes("tröskel");
+    let detailsUpdate: Record<string, string> = {};
+    if (plan && !isNewRunning) {
+      const detMatch = plan.details.trim().match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*km\s*$/i);
+      if (detMatch) {
+        const exName = detMatch[1].trim();
+        const isCondEx = allExercises.some(e => e.name.toLowerCase() === exName.toLowerCase() && e.category === "kondition");
+        if (isCondEx) {
+          detailsUpdate = { details: "" };
+        }
+      }
+    }
+    await supabase.from("workout_plans").update({ session_name: trimmed, ...detailsUpdate }).eq("id", planId);
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, session_name: trimmed, ...(detailsUpdate.details !== undefined ? { details: detailsUpdate.details } : {}) } : p));
     setRenameDialog(null);
     setRenameInput("");
     triggerSave();
