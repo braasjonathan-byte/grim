@@ -73,6 +73,7 @@ interface CustomExercise {
   category: string;
   muscle_group: string;
   created_by: string;
+  is_bodyweight_exercise?: boolean;
 }
 
 // Inline conditioning editing card (green, open by default)
@@ -700,8 +701,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   }, [activeDayIndex, currentWeek, plans, isMobile]);
 
   const allExercises = [
-  ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false })),
-  ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true }))];
+  ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false, isBodyweightExercise: false })),
+  ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true, isBodyweightExercise: !!e.is_bodyweight_exercise }))];
 
 // Compute date for a plan week/day given a plan start date
 const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string): string | null => {
@@ -4506,7 +4507,7 @@ const estimateCalories = (
                         // Check if this is a conditioning exercise
                         const { name: partCondCheckName } = parseExerciseWeight(part);
                         const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
-                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
+                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
                         
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
