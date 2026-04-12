@@ -5396,10 +5396,12 @@ const estimateCalories = (
                                     // Weighted bodyweight exercises: user lifts bodyweight +/- additional weight
                                     const weightedBwExercises = ["dips"];
                                     const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw));
-                                    // Read bw mode from logged_weights
-                                    const bwModeKey = `__bw_mode__${partName}`;
-                                    const currentBwMode = (completion?.logged_weights as Record<string, any>)?.[bwModeKey] === "sub" ? "sub" : "add";
-                                    return Array.from({ length: setsCountPlan }, (_, si) => {
+                                     return Array.from({ length: setsCountPlan }, (_, si) => {
+                                       // Read bw mode per set, fall back to exercise-level for backward compat
+                                       const bwModeKeySet = `__bw_mode__${partName}__${si}`;
+                                       const bwModeKeyExercise = `__bw_mode__${partName}`;
+                                       const loggedWeights = (completion?.logged_weights as Record<string, any>) || {};
+                                       const currentBwMode = (loggedWeights[bwModeKeySet] ?? loggedWeights[bwModeKeyExercise]) === "sub" ? "sub" : "add";
                                       const isSetDone = setsStrPlan[si] === "1";
                                       const saved = planSetData[si];
                                       return (
