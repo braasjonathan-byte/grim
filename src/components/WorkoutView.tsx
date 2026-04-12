@@ -6337,44 +6337,71 @@ const estimateCalories = (
       </div>
     )}
 
-    {/* Rename session dialog */}
+    {/* Session settings dialog */}
     {renameDialog && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/60" onClick={() => setRenameDialog(null)} />
         <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm flex items-center gap-2">
-              <Pencil className="w-4 h-4 text-primary" />
-              Byt namn på pass
+              <Settings className="w-4 h-4 text-primary" />
+              Passinställningar
             </h3>
             <button onClick={() => setRenameDialog(null)} className="p-1 text-muted-foreground hover:text-foreground">
               <X className="w-4 h-4" />
             </button>
           </div>
-          <input
-            type="text"
-            value={renameInput}
-            onChange={(e) => setRenameInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && renameSession(renameDialog.planId, renameInput)}
-            placeholder="Nytt namn..."
-            className="w-full bg-secondary text-foreground text-sm p-2.5 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-            autoFocus
-          />
-          <div className="flex gap-2">
+
+          {/* Rename section */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-muted-foreground">Byt namn</label>
+            <input
+              type="text"
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && renameSession(renameDialog.planId, renameInput)}
+              placeholder="Nytt namn..."
+              className="w-full bg-secondary text-foreground text-sm p-2.5 border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              autoFocus
+            />
             <button
               onClick={() => renameSession(renameDialog.planId, renameInput)}
               disabled={!renameInput.trim() || renameInput.trim() === renameDialog.currentName}
-              className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
+              className="w-full py-2 bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
             >
-              Spara
-            </button>
-            <button
-              onClick={() => setRenameDialog(null)}
-              className="px-4 py-2.5 bg-secondary text-muted-foreground text-sm rounded-lg hover:text-foreground transition-colors"
-            >
-              Avbryt
+              Spara namn
             </button>
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-border" />
+
+          {/* Skip/miss section */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-muted-foreground">Markera pass</label>
+            <button
+              onClick={() => {
+                setReplacementTarget({
+                  planId: renameDialog.planId,
+                  sessionName: renameDialog.sessionName,
+                  week: renameDialog.week,
+                  day: renameDialog.day
+                });
+                setRenameDialog(null);
+              }}
+              className="w-full py-2.5 bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
+            >
+              <XCircle className="w-4 h-4" />
+              Markera som missat
+            </button>
+          </div>
+
+          <button
+            onClick={() => setRenameDialog(null)}
+            className="w-full py-2.5 bg-secondary text-muted-foreground text-sm hover:text-foreground transition-colors"
+          >
+            Stäng
+          </button>
         </div>
       </div>
     )}
