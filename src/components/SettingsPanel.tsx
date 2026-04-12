@@ -249,6 +249,16 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         </button>
       </div>
 
+      {/* Color theme picker */}
+      {userId && (
+        <ThemePicker
+          userId={userId}
+          isHonorary={isHonorary}
+          currentTheme={colorTheme}
+          onThemeChange={setColorTheme}
+        />
+      )}
+
       {userId && (
         <div className="border-t border-border pt-2">
           <button
