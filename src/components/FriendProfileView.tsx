@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { applyTheme, getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
@@ -202,7 +203,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
       const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }, { count: challengeTotal }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
-        supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date").eq("user_id", friendUserId).single(),
+        supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date, theme").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details, tempo, created_at").eq("user_id", friendUserId),
         supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
         supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", friendUserId),
