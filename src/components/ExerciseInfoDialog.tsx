@@ -77,6 +77,42 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
     fetchData();
   }, [exerciseName, initialEditMode, isAdmin]);
 
+  // Fetch current category from custom_exercises or exercise library
+  useEffect(() => {
+    const fetchCategory = async () => {
+      const { data: custom } = await supabase.from("custom_exercises").select("category").eq("name", exerciseName).maybeSingle();
+      if (custom) {
+        setCurrentCategory(custom.category);
+      } else {
+        const { exerciseLibrary } = await import("@/data/exerciseLibrary");
+        const found = exerciseLibrary.find(e => e.name.toLowerCase() === exerciseName.toLowerCase());
+        setCurrentCategory(found?.category || "styrka");
+      }
+    };
+    fetchCategory();
+  }, [exerciseName]);
+
+  const saveCategory = async (newCategory: string) => {
+    setSavingCategory(true);
+    setCurrentCategory(newCategory);
+    try {
+      const { data: existing } = await supabase.from("custom_exercises").select("id").eq("name", exerciseName).maybeSingle();
+      if (existing) {
+        await supabase.from("custom_exercises").update({ category: newCategory }).eq("id", existing.id);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("custom_exercises").insert({ name: exerciseName, category: newCategory, muscle_group: "Helkropp", created_by: user.id });
+        }
+      }
+      onCategoryChanged?.();
+    } catch (e) {
+      console.error("Failed to save category:", e);
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
   const startEditing = () => {
     const lines = data?.instructions || [];
     setEditText(lines.join("\n"));
