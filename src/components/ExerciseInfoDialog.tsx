@@ -150,6 +150,25 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
           </button>
         </div>
 
+        {/* Admin category selector */}
+        {isAdmin && (
+          <div className="px-4 pb-2 flex items-center gap-2 border-b border-border">
+            <span className="text-xs text-muted-foreground">Kategori:</span>
+            <select
+              value={currentCategory}
+              onChange={e => saveCategory(e.target.value)}
+              disabled={savingCategory}
+              className="bg-secondary text-foreground text-xs p-1.5 rounded-lg border-none outline-none disabled:opacity-50"
+            >
+              <option value="styrka">Styrka</option>
+              <option value="kondition">Kondition</option>
+              <option value="rörlighet">Rörlighet</option>
+              <option value="core">Core</option>
+            </select>
+            {savingCategory && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+          </div>
+        )}
+
         <div className="overflow-y-auto p-4 space-y-4">
           {loading && (
             <div className="flex items-center justify-center py-12">
