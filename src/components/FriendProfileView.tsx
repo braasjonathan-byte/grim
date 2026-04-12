@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { applyTheme, getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
@@ -196,13 +197,28 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const originalThemeRef = useRef<string>(getStoredThemeId());
+
+  // Restore user's own theme when component unmounts or onClose
+  useEffect(() => {
+    const savedTheme = getStoredThemeId();
+    originalThemeRef.current = savedTheme;
+    return () => {
+      applyTheme(originalThemeRef.current);
+    };
+  }, []);
+
+  const handleClose = () => {
+    applyTheme(originalThemeRef.current);
+    onClose();
+  };
 
   useEffect(() => {
     const load = async () => {
       const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }, { count: challengeTotal }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
-        supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date").eq("user_id", friendUserId).single(),
+        supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date, theme").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details, tempo, created_at").eq("user_id", friendUserId),
         supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
         supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", friendUserId),
@@ -220,6 +236,10 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         spotify_anthem_url: pd?.spotify_anthem_url || null,
         spotify_anthem_name: pd?.spotify_anthem_name || null,
       });
+
+      // Apply friend's color theme
+      const friendTheme = pd?.theme || "default";
+      applyTheme(friendTheme);
 
       // Use calibrated plan_start_date from profile (consistent with leaderboard)
       if (profileData?.plan_start_date) {
@@ -319,7 +339,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] bg-black/60" onClick={onClose} />
+      <div className="fixed inset-0 z-[60] bg-black/60" onClick={handleClose} />
       <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[70] max-w-sm mx-auto bg-card border border-border rounded-2xl overflow-hidden flex flex-col max-h-[85vh]">
          <div className="flex items-center justify-between p-4 border-b border-border">
            <div className="flex items-center gap-3">
@@ -348,7 +368,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                 )}
               </div>
             </div>
-           <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+           <button onClick={handleClose} className="p-1 text-muted-foreground hover:text-foreground">
              <X className="w-4 h-4" />
            </button>
          </div>
