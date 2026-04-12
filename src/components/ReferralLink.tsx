@@ -89,16 +89,23 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
         </button>
         <button
           onClick={() => setShowQR(!showQR)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity border border-border"
+          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
           title="Visa QR-kod"
         >
           {showQR ? <X className="w-3.5 h-3.5" /> : <QrCode className="w-3.5 h-3.5" />}
+        </button>
+        <button
+          onClick={handleShare}
+          className="flex items-center gap-1.5 px-3 py-2 bg-secondary text-foreground text-xs font-semibold hover:opacity-90 transition-opacity border border-border"
+          title="Dela"
+        >
+          <Share2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {showQR && (
         <div className="flex flex-col items-center gap-3 pt-2">
-          <div className="bg-white p-4 rounded-xl">
+          <div className="bg-white p-4">
             <QRCodeSVG
               value={referralUrl}
               size={200}
