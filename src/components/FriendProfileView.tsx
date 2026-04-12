@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/themes";
+import { applyTheme, getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";

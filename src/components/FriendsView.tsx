@@ -750,7 +750,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     return (
       <div className="space-y-4 animate-fade-in">
         <button
-          onClick={() => { setViewingFriend(null); setExpandedDay(null); }}
+          onClick={() => { unlockTheme("friend-view"); applyTheme(originalThemeRef.current); setViewingFriend(null); setExpandedDay(null); }}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-4 h-4" /> Tillbaka till vänner
