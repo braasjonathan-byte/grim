@@ -73,6 +73,7 @@ interface CustomExercise {
   category: string;
   muscle_group: string;
   created_by: string;
+  is_bodyweight_exercise?: boolean;
 }
 
 // Inline conditioning editing card (green, open by default)
@@ -700,8 +701,8 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
   }, [activeDayIndex, currentWeek, plans, isMobile]);
 
   const allExercises = [
-  ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false })),
-  ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true }))];
+  ...exerciseLibrary.map((e) => ({ ...e, id: "", isCustom: false, isBodyweightExercise: false })),
+  ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true, isBodyweightExercise: !!e.is_bodyweight_exercise }))];
 
 // Compute date for a plan week/day given a plan start date
 const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string): string | null => {
@@ -804,7 +805,7 @@ const estimateCalories = (
         // Skip daily challenge exercises
         if (part.startsWith("⚔️")) continue;
         // Check if conditioning exercise — skip set tracking for those
-        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
         if (isCondExercise) continue;
         // Skip rest/rest day markers
         if (/^(vila|vilodag)/i.test(part)) continue;
@@ -3354,6 +3355,7 @@ const estimateCalories = (
           onClose={() => setExerciseInfoState(null)}
           isAdmin={canEditExercises}
           initialEditMode={exerciseInfoState.editMode}
+          onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { if (data) setCustomExercises(data); })}
         />
       )}
       {deleteExerciseConfirm && (
@@ -4506,7 +4508,7 @@ const estimateCalories = (
                         // Check if this is a conditioning exercise
                         const { name: partCondCheckName } = parseExerciseWeight(part);
                         const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
-                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
+                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
                         
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
@@ -5464,7 +5466,8 @@ const estimateCalories = (
                                     const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
                                     // Weighted bodyweight exercises: user lifts bodyweight +/- additional weight
                                     const weightedBwExercises = ["dips"];
-                                    const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw));
+                                    const matchedExForBw = allExercises.find(e => e.name.toLowerCase() === partName.toLowerCase());
+                                    const isWeightedBw = weightedBwExercises.some(bw => partName.toLowerCase().includes(bw)) || (matchedExForBw?.isBodyweightExercise === true);
                                      return Array.from({ length: setsCountPlan }, (_, si) => {
                                        // Read bw mode per set, fall back to exercise-level for backward compat
                                        const bwModeKeySet = `__bw_mode__${partName}__${si}`;
@@ -6031,6 +6034,7 @@ const estimateCalories = (
         onClose={() => setExerciseInfoState(null)}
         isAdmin={canEditExercises}
         initialEditMode={exerciseInfoState.editMode}
+        onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { if (data) setCustomExercises(data); })}
       />
     )}
     {showFireworks && (
@@ -6062,7 +6066,7 @@ const estimateCalories = (
                   const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
                   for (const part of parts) {
                     if (part.startsWith("⚔️")) continue;
-                    const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|gång|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+                    const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
                     if (isCondExercise) continue;
                     if (/^(vila|vilodag)/i.test(part)) continue;
                     const { clean: cleanPart } = extractRpe(part);

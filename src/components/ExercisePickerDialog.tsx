@@ -9,6 +9,7 @@ interface CustomExercise {
   name: string;
   category: string;
   muscle_group: string;
+  is_bodyweight_exercise?: boolean;
 }
 
 interface ExercisePickerDialogProps {
@@ -46,6 +47,7 @@ const ExercisePickerDialog = ({
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("styrka");
   const [newMuscle, setNewMuscle] = useState("Helkropp");
+  const [newIsBodyweight, setNewIsBodyweight] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -116,7 +118,7 @@ const ExercisePickerDialog = ({
     if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
     const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
     if (customDupe) { alert("Övningen finns redan."); return; }
-    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId });
+    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId, is_bodyweight_exercise: newIsBodyweight });
     const { data } = await supabase.from("custom_exercises").select("*").order("name");
     if (data) setCustomExercises(data);
     setNewName("");
@@ -276,6 +278,15 @@ const ExercisePickerDialog = ({
                     {muscleGroups.map(mg => <option key={mg} value={mg}>{mg}</option>)}
                   </select>
                 </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newIsBodyweight}
+                    onChange={e => setNewIsBodyweight(e.target.checked)}
+                    className="rounded border-border accent-primary w-4 h-4"
+                  />
+                  <span className="text-xs text-muted-foreground">Kroppsviktsövning (+/− vikt)</span>
+                </label>
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreateExercise}

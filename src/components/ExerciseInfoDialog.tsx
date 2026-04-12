@@ -7,6 +7,7 @@ interface ExerciseInfoDialogProps {
   onClose: () => void;
   isAdmin?: boolean;
   initialEditMode?: boolean;
+  onCategoryChanged?: () => void;
 }
 
 interface ExerciseData {
@@ -20,13 +21,15 @@ interface ExerciseData {
   hasCustomInstructions?: boolean;
 }
 
-const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEditMode = false }: ExerciseInfoDialogProps) => {
+const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEditMode = false, onCategoryChanged }: ExerciseInfoDialogProps) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ExerciseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<string>("styrka");
+  const [savingCategory, setSavingCategory] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -74,6 +77,42 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
     fetchData();
   }, [exerciseName, initialEditMode, isAdmin]);
 
+  // Fetch current category from custom_exercises or exercise library
+  useEffect(() => {
+    const fetchCategory = async () => {
+      const { data: custom } = await supabase.from("custom_exercises").select("category").eq("name", exerciseName).maybeSingle();
+      if (custom) {
+        setCurrentCategory(custom.category);
+      } else {
+        const { exerciseLibrary } = await import("@/data/exerciseLibrary");
+        const found = exerciseLibrary.find(e => e.name.toLowerCase() === exerciseName.toLowerCase());
+        setCurrentCategory(found?.category || "styrka");
+      }
+    };
+    fetchCategory();
+  }, [exerciseName]);
+
+  const saveCategory = async (newCategory: string) => {
+    setSavingCategory(true);
+    setCurrentCategory(newCategory);
+    try {
+      const { data: existing } = await supabase.from("custom_exercises").select("id").eq("name", exerciseName).maybeSingle();
+      if (existing) {
+        await supabase.from("custom_exercises").update({ category: newCategory }).eq("id", existing.id);
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from("custom_exercises").insert({ name: exerciseName, category: newCategory, muscle_group: "Helkropp", created_by: user.id });
+        }
+      }
+      onCategoryChanged?.();
+    } catch (e) {
+      console.error("Failed to save category:", e);
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
   const startEditing = () => {
     const lines = data?.instructions || [];
     setEditText(lines.join("\n"));
@@ -110,6 +149,25 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Admin category selector */}
+        {isAdmin && (
+          <div className="px-4 pb-2 flex items-center gap-2 border-b border-border">
+            <span className="text-xs text-muted-foreground">Kategori:</span>
+            <select
+              value={currentCategory}
+              onChange={e => saveCategory(e.target.value)}
+              disabled={savingCategory}
+              className="bg-secondary text-foreground text-xs p-1.5 rounded-lg border-none outline-none disabled:opacity-50"
+            >
+              <option value="styrka">Styrka</option>
+              <option value="kondition">Kondition</option>
+              <option value="rörlighet">Rörlighet</option>
+              <option value="core">Core</option>
+            </select>
+            {savingCategory && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+          </div>
+        )}
 
         <div className="overflow-y-auto p-4 space-y-4">
           {loading && (

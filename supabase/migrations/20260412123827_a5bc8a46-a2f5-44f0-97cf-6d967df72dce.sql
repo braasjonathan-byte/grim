@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_exercises ADD COLUMN IF NOT EXISTS is_bodyweight_exercise boolean NOT NULL DEFAULT false;

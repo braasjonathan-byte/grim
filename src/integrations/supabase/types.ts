@@ -240,6 +240,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_bodyweight_exercise: boolean
           muscle_group: string
           name: string
         }
@@ -248,6 +249,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          is_bodyweight_exercise?: boolean
           muscle_group?: string
           name: string
         }
@@ -256,6 +258,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_bodyweight_exercise?: boolean
           muscle_group?: string
           name?: string
         }
