@@ -478,7 +478,53 @@ const ExerciseGifManager = () => {
             ))}
           </div>
 
-          <p className="text-[11px] text-muted-foreground">{exerciseList.length} övningar visas</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">{exerciseList.length} övningar visas</p>
+            <button
+              onClick={() => { setSelectMode(!selectMode); setSelectedExercises(new Set()); }}
+              className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                selectMode ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {selectMode ? "Avbryt markering" : "Markera"}
+            </button>
+          </div>
+
+          {/* Bulk action bar */}
+          {selectMode && selectedExercises.size > 0 && (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 space-y-2">
+              <p className="text-[11px] font-semibold text-foreground">{selectedExercises.size} markerade</p>
+              <div className="flex gap-1.5 flex-wrap">
+                <button
+                  onClick={() => bulkSetBodyweight(true)}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
+                >
+                  {savingBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  ✅ Kroppsvikt
+                </button>
+                <button
+                  onClick={() => bulkSetBodyweight(false)}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2.5 py-1.5 bg-secondary text-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
+                >
+                  ❌ Ej kroppsvikt
+                </button>
+                <select
+                  onChange={(e) => { if (e.target.value) bulkSetCategory(e.target.value); e.target.value = ""; }}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2 py-1.5 bg-secondary text-foreground rounded-lg border-none outline-none disabled:opacity-40"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Ändra kategori…</option>
+                  <option value="styrka">Styrka</option>
+                  <option value="kondition">Kondition</option>
+                  <option value="rörlighet">Rörlighet</option>
+                  <option value="core">Core</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* Exercise list */}
           {loading ? (
