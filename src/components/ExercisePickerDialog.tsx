@@ -278,6 +278,15 @@ const ExercisePickerDialog = ({
                     {muscleGroups.map(mg => <option key={mg} value={mg}>{mg}</option>)}
                   </select>
                 </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newIsBodyweight}
+                    onChange={e => setNewIsBodyweight(e.target.checked)}
+                    className="rounded border-border accent-primary w-4 h-4"
+                  />
+                  <span className="text-xs text-muted-foreground">Kroppsviktsövning (+/− vikt)</span>
+                </label>
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreateExercise}
