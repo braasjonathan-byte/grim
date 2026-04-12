@@ -136,6 +136,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [suggestedFriends, setSuggestedFriends] = useState<{ user_id: string; nickname: string; mutual_count: number }[]>([]);
 
   // Viewing a friend's workouts
+  const originalThemeRef = useRef<string>(getStoredThemeId());
   const [viewingFriend, setViewingFriend] = useState<(Friendship & { profile: FriendProfile }) | null>(null);
   const [showFriendProfile, setShowFriendProfile] = useState(true);
   const [friendPlans, setFriendPlans] = useState<FriendPlanDay[]>([]);
