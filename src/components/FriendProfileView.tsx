@@ -203,12 +203,15 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   useEffect(() => {
     const savedTheme = getStoredThemeId();
     originalThemeRef.current = savedTheme;
+    lockTheme("friend-profile");
     return () => {
+      unlockTheme("friend-profile");
       applyTheme(originalThemeRef.current);
     };
   }, []);
 
   const handleClose = () => {
+    unlockTheme("friend-profile");
     applyTheme(originalThemeRef.current);
     onClose();
   };

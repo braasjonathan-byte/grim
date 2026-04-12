@@ -195,10 +195,12 @@ const Index = () => {
         setForceChangePassword(true);
         setShowChangePassword(true);
       }
-      // Apply saved color theme
+      // Apply saved color theme (only if not locked by friend profile view)
       const savedTheme = (data as any).theme || "default";
       storeThemeId(savedTheme);
-      applyTheme(savedTheme);
+      if (!isThemeLocked()) {
+        applyTheme(savedTheme);
+      }
     }
     if (roleData) setUserRole(roleData.role);
   }, []);
