@@ -615,7 +615,7 @@ const Index = () => {
                                 {new Date(a.created_at).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
                               </span>
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{a.message}</p>
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap">{a.message}</p>
                           </div>
                     )
                     }
