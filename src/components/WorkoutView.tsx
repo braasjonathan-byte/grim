@@ -417,7 +417,7 @@ const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
 
   // Change day / rename session dialogs
   const [changeDayDialog, setChangeDayDialog] = useState<{planId: string; currentDay: string; week: number; sessionName: string} | null>(null);
-  const [renameDialog, setRenameDialog] = useState<{planId: string; currentName: string} | null>(null);
+  const [renameDialog, setRenameDialog] = useState<{planId: string; currentName: string; week: number; day: string; sessionName: string} | null>(null);
   const [renameInput, setRenameInput] = useState("");
 
   // Share to chat
