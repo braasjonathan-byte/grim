@@ -2805,7 +2805,7 @@ const estimateCalories = (
                                       <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
                                     )}
                                     {isNegative && !profileWeight && (
-                                      <p className="text-[10px] text-warning pl-4">⚠ Ange din vikt i profilen för korrekt statistik</p>
+                                       <button onClick={() => setShowWeightPrompt(true)} className="text-[10px] text-primary pl-4 underline text-left">⚠ Ange din kroppsvikt</button>
                                     )}
                                     <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
                                   </div>
@@ -5452,7 +5452,7 @@ const estimateCalories = (
                                       <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
                                     )}
                                     {isNegative && !profileWeight && (
-                                      <p className="text-[10px] text-warning pl-4">⚠ Ange din vikt i profilen för korrekt statistik</p>
+                                      <button onClick={() => setShowWeightPrompt(true)} className="text-[10px] text-primary pl-4 underline text-left">⚠ Ange din kroppsvikt</button>
                                     )}
                                     <p className="text-[10px] text-muted-foreground pl-4">— öka vikten själv för progression</p>
                                   </div>
