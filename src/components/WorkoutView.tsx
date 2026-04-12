@@ -5418,9 +5418,9 @@ const estimateCalories = (
                                                   onClick={async (e) => {
                                                     e.stopPropagation();
                                                     const newMode = currentBwMode === "add" ? "sub" : "add";
-                                                    await updateCompletionWeights(plan.week, plan.day, (existing) => ({
-                                                      ...existing,
-                                                      [bwModeKey]: newMode,
+                                                     await updateCompletionWeights(plan.week, plan.day, (existing) => ({
+                                                       ...existing,
+                                                       [bwModeKeySet]: newMode,
                                                     }));
                                                   }}
                                                   className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold border transition-colors ${
