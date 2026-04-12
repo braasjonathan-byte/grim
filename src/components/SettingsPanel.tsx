@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Moon, Sun, Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
-import { applyTheme, getStoredThemeId } from "@/lib/themes";
+import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
 
-const THEME_KEY = "gymberget_theme";
+
 
 export const SECURITY_QUESTIONS = [
   "Vad hette ditt första husdjur?",
@@ -28,12 +28,6 @@ interface SettingsPanelProps {
 
 const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelProps) => {
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
-  const [dark, setDark] = useState(() => {
-    if (typeof window !== "undefined") {
-      return document.documentElement.classList.contains("dark");
-    }
-    return false;
-  });
 
   const [wakeLock, setWakeLock] = useState(() => {
     return localStorage.getItem("gymberget_wakelock") === "true";
@@ -59,22 +53,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const [emailDirty, setEmailDirty] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
 
-  useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
-    } else {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-    }
-    localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      meta.setAttribute("content", dark ? "#000000" : "#ffffff");
-    }
-    // Re-apply color theme when dark/light toggles
-    applyTheme(colorTheme);
-  }, [dark, colorTheme]);
+  // Dark/light mode is now handled by the theme system via applyTheme()
 
   useEffect(() => {
     const requestWakeLock = async () => {
@@ -201,19 +180,15 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     <div className="bg-background border border-border rounded-lg p-4 space-y-4">
       <h3 className="text-sm font-bold">⚙️ Inställningar</h3>
 
-      {/* Theme toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {dark ? <Moon className="w-4 h-4 text-primary" /> : <Sun className="w-4 h-4 text-primary" />}
-          <span className="text-sm">Mörkt läge</span>
-        </div>
-        <button
-          onClick={() => setDark(!dark)}
-          className={`relative w-11 h-6 rounded-full transition-colors ${dark ? "bg-primary" : "bg-secondary border border-border"}`}
-        >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${dark ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
-        </button>
-      </div>
+      {/* Theme picker - replaces old dark mode toggle */}
+      {userId && (
+        <ThemePicker
+          userId={userId}
+          isHonorary={isHonorary}
+          currentTheme={colorTheme}
+          onThemeChange={setColorTheme}
+        />
+      )}
 
       {/* Wake lock toggle */}
       {"wakeLock" in navigator && (
@@ -249,15 +224,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         </button>
       </div>
 
-      {/* Color theme picker */}
-      {userId && (
-        <ThemePicker
-          userId={userId}
-          isHonorary={isHonorary}
-          currentTheme={colorTheme}
-          onThemeChange={setColorTheme}
-        />
-      )}
 
       {userId && (
         <div className="border-t border-border pt-2">

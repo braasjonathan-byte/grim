@@ -6,6 +6,16 @@ const WHATS_NEW_KEY = "gymberget_last_seen_changelog";
 
 const changelog = [
   {
+    version: "1.4.0",
+    date: "2026-04-12",
+    items: [
+      "🎨 Temaväljare – byt utseende på hela appen under Inställningar",
+      "👑 9 exklusiva färgteman för Supporters (Neon, Ocean, Blod, Guld, Lila, Frost, Glöd, Sakura)",
+      "☀️ Ljust och mörkt standardtema tillgängligt för alla",
+      "🖌️ Teman ändrar bakgrund, kort och accentfärger i hela appen",
+    ],
+  },
+  {
     version: "1.3.0",
     date: "2026-02-13",
     items: [
