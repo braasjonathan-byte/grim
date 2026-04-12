@@ -545,9 +545,17 @@ const ExerciseGifManager = () => {
                     <div
                       className={`flex items-center gap-2 p-2.5 cursor-pointer transition-colors ${
                         m ? "bg-secondary/50 hover:bg-secondary/70" : "bg-card hover:bg-secondary/30"
-                      }`}
-                      onClick={() => setExpandedId(isExpanded ? null : (m?.id || item.name))}
+                      } ${selectedExercises.has(item.name) ? "ring-2 ring-primary" : ""}`}
+                      onClick={() => selectMode ? toggleSelected(item.name) : setExpandedId(isExpanded ? null : (m?.id || item.name))}
                     >
+                      {/* Select checkbox in select mode */}
+                      {selectMode && (
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          selectedExercises.has(item.name) ? "bg-primary border-primary" : "border-border"
+                        }`}>
+                          {selectedExercises.has(item.name) && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                      )}
                       {/* GIF thumbnail */}
                       <div className="w-10 h-10 rounded bg-secondary border border-border flex items-center justify-center shrink-0 overflow-hidden">
                         {m?.gif_url ? (
