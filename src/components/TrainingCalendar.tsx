@@ -6,20 +6,6 @@ interface TrainingCalendarProps {
   userId: string;
 }
 
-interface CompletionRow {
-  week: number;
-  day: string;
-  done: boolean;
-  skipped: boolean;
-}
-
-interface PlanRow {
-  week: number;
-  day: string;
-  details: string;
-  created_at: string;
-}
-
 const MONTH_NAMES = ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"];
 const DAY_HEADERS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const DAY_NAME_TO_OFFSET: Record<string, number> = {
@@ -43,85 +29,130 @@ const getISOWeekNumber = (d: Date) => {
   return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 };
 
+/** Resolve a completion to a calendar date string (YYYY-MM-DD) */
+const resolveCompletionDate = (
+  week: number,
+  day: string,
+  updatedAt: string | null,
+  planStartDate: string | null,
+): string | null => {
+  // Standalone sessions: day field is a date
+  if (week === 0 && /^\d{4}-\d{2}-\d{2}/.test(day)) {
+    return day.substring(0, 10);
+  }
+
+  // Plan-based: calculate from plan_start_date
+  if (planStartDate && week > 0) {
+    const start = new Date(planStartDate + "T12:00:00Z");
+    const startMonday = getISOWeekStart(start);
+    const dayOffset = DAY_NAME_TO_OFFSET[day];
+    if (dayOffset === undefined) return updatedAt ? updatedAt.substring(0, 10) : null;
+    const date = new Date(startMonday.getTime() + (week - 1) * 7 * 86400000 + dayOffset * 86400000);
+    return date.toISOString().split("T")[0];
+  }
+
+  // Fallback: use updated_at
+  if (updatedAt) return updatedAt.substring(0, 10);
+  return null;
+};
+
 const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
-  const [completions, setCompletions] = useState<CompletionRow[]>([]);
-  const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [doneDates, setDoneDates] = useState<Set<string>>(new Set());
+  const [skippedDates, setSkippedDates] = useState<Set<string>>(new Set());
+  const [pendingDates, setPendingDates] = useState<Set<string>>(new Set());
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [year, setYear] = useState(() => new Date().getFullYear());
 
   useEffect(() => {
-    Promise.all([
-      supabase
-        .from("workout_completions")
-        .select("week, day, done, skipped")
-        .eq("user_id", userId),
-      supabase
-        .from("workout_plans")
-        .select("week, day, details, created_at")
-        .eq("user_id", userId),
-    ]).then(([{ data: compData }, { data: planData }]) => {
-      if (compData) setCompletions(compData);
-      if (planData) setPlans(planData);
-    });
-  }, [userId]);
+    const load = async () => {
+      const [
+        { data: completions },
+        { data: plans },
+        { data: profile },
+        { data: archives },
+      ] = await Promise.all([
+        supabase
+          .from("workout_completions")
+          .select("week, day, done, skipped, updated_at")
+          .eq("user_id", userId),
+        supabase
+          .from("workout_plans")
+          .select("week, day, details, created_at")
+          .eq("user_id", userId),
+        supabase
+          .from("profiles")
+          .select("plan_start_date")
+          .eq("user_id", userId)
+          .single(),
+        supabase
+          .from("archived_plans")
+          .select("plan_start_date, completion_data")
+          .eq("user_id", userId),
+      ]);
 
-  // Build a map of dateStr -> status for all plan sessions
-  const dayStatusMap = useMemo(() => {
-    if (plans.length === 0) return new Map<string, "done" | "skipped" | "pending">();
+      const planStartDate = profile?.plan_start_date || null;
+      const done = new Set<string>();
+      const skipped = new Set<string>();
+      const pending = new Set<string>();
 
-    // Find earliest plan to anchor week 1 to a calendar week
-    const earliest = plans.reduce((min, p) => p.created_at < min.created_at ? p : min);
-    const startDate = new Date(earliest.created_at);
-    const startISOWeek = getISOWeekNumber(startDate);
-    const startYear = startDate.getFullYear();
-    const planWeekOfEarliest = earliest.week;
-    const calendarWeekForPlanWeek1 = startISOWeek - (planWeekOfEarliest - 1);
+      // --- Active plan completions ---
+      const planHasExercises = new Set(
+        (plans || []).filter(p => p.details && p.details.trim() !== "").map(p => `${p.week}-${p.day}`)
+      );
 
-    // Get the Monday of calendar week 1 of that year, then offset to the right week
-    const jan4 = new Date(Date.UTC(startYear, 0, 4));
-    const week1Monday = getISOWeekStart(jan4);
-
-    const planHasExercises = new Set(
-      plans.filter(p => p.details && p.details.trim() !== "").map(p => `${p.week}-${p.day}`)
-    );
-
-    const completionMap = new Map<string, CompletionRow>();
-    for (const c of completions) {
-      completionMap.set(`${c.week}-${c.day}`, c);
-    }
-
-    const map = new Map<string, "done" | "skipped" | "pending">();
-
-    // Get all unique plan weeks
-    const allWeeks = [...new Set(plans.map(p => p.week))];
-
-    for (const planWeek of allWeeks) {
-      const calendarWeek = calendarWeekForPlanWeek1 + (planWeek - 1);
-      const weekMonday = new Date(week1Monday.getTime() + (calendarWeek - 1) * 7 * 86400000);
-
-      const daysInWeek = plans.filter(p => p.week === planWeek);
-      for (const planDay of daysInWeek) {
-        const dayOffset = DAY_NAME_TO_OFFSET[planDay.day];
-        if (dayOffset === undefined) continue;
-
-        const date = new Date(weekMonday.getTime() + dayOffset * 86400000);
-        const dateStr = date.toISOString().split("T")[0];
-
-        const comp = completionMap.get(`${planDay.week}-${planDay.day}`);
-        const hasExercise = planHasExercises.has(`${planDay.week}-${planDay.day}`);
-
-        if (comp?.done && hasExercise) {
-          map.set(dateStr, "done");
-        } else if (comp?.skipped) {
-          map.set(dateStr, "skipped");
-        } else {
-          map.set(dateStr, "pending");
+      // First: map all plan days as pending
+      if (plans && plans.length > 0 && planStartDate) {
+        for (const p of plans) {
+          if (!p.details || p.details.trim() === "") continue;
+          const dateStr = resolveCompletionDate(p.week, p.day, null, planStartDate);
+          if (dateStr) pending.add(dateStr);
         }
       }
-    }
 
-    return map;
-  }, [completions, plans]);
+      // Then: overlay completions
+      if (completions) {
+        for (const c of completions) {
+          const dateStr = resolveCompletionDate(c.week, c.day, c.updated_at, planStartDate);
+          if (!dateStr) continue;
+          const hasExercise = planHasExercises.has(`${c.week}-${c.day}`);
+
+          if (c.done && (hasExercise || c.week === 0)) {
+            done.add(dateStr);
+            pending.delete(dateStr);
+          } else if (c.skipped) {
+            skipped.add(dateStr);
+            pending.delete(dateStr);
+          }
+        }
+      }
+
+      // --- Archived plan completions ---
+      if (archives) {
+        for (const archive of archives) {
+          const archiveStart = archive.plan_start_date || null;
+          const compData = archive.completion_data as any[];
+          if (!compData || !Array.isArray(compData)) continue;
+
+          for (const c of compData) {
+            if (!c.done) continue;
+            const dateStr = resolveCompletionDate(
+              c.week || 0,
+              c.day || "",
+              c.updated_at || null,
+              archiveStart,
+            );
+            if (dateStr) done.add(dateStr);
+          }
+        }
+      }
+
+      setDoneDates(done);
+      setSkippedDates(skipped);
+      setPendingDates(pending);
+    };
+
+    load();
+  }, [userId]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1);
@@ -181,16 +212,17 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           {calendarDays.map((date, i) => {
             if (!date) return <div key={`empty-${i}`} />;
             const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-            const status = dayStatusMap.get(dateStr);
+            const isDone = doneDates.has(dateStr);
+            const isSkipped = skippedDates.has(dateStr);
             const isToday = dateStr === today;
 
             return (
               <div
                 key={dateStr}
                 className={`aspect-square flex items-center justify-center rounded-md text-xs font-medium transition-colors ${
-                  status === "done"
+                  isDone
                     ? "bg-success/20 text-success font-bold"
-                    : status === "skipped"
+                    : isSkipped
                     ? "bg-destructive/20 text-destructive font-bold"
                     : "text-muted-foreground"
                 } ${isToday ? "ring-1 ring-primary" : ""}`}
