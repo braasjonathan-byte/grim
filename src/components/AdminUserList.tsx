@@ -6,6 +6,7 @@ import HonoraryBadge from "./HonoraryBadge";
 
 interface AdminUserListProps {
   userId: string;
+  onViewUserPlan?: (targetUserId: string) => void;
 }
 
 interface UserEntry {
@@ -19,7 +20,7 @@ interface FriendshipStatus {
   [userId: string]: "accepted" | "pending_sent" | "pending_received" | null;
 }
 
-const AdminUserList = ({ userId }: AdminUserListProps) => {
+const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
   const [open, setOpen] = useState(false);
   const [users, setUsers] = useState<UserEntry[]>([]);
   const [friendshipStatuses, setFriendshipStatuses] = useState<FriendshipStatus>({});
