@@ -35,7 +35,7 @@ interface SectionDef {
   render: () => React.ReactNode;
 }
 
-const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
+const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan }: ToolsTabProps) => {
   const [editMode, setEditMode] = useState(false);
   const [savedOrder, setSavedOrder] = useState<string[] | null>(null);
   const [localOrder, setLocalOrder] = useState<string[]>([]);
@@ -60,7 +60,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole }: ToolsTabProps) => {
       </div>
     )},
     { key: "announcements", label: "Meddelanden", render: () => <AnnouncementInbox userId={userId} isAdmin={isAdmin} /> },
-    { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} /> },
+    { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} /> },
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     { key: "settings", label: "Inställningar", render: () => <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} /> },
     { key: "notifications", label: "Notiser", render: () => <NotificationSettings userId={userId} /> },
