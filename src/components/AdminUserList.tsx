@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, UserPlus, Check, Loader2, ChevronDown, Crown, Eye } from "lucide-react";
-import FriendProfileView from "@/components/FriendProfileView";
 import HonoraryBadge from "./HonoraryBadge";
 
 interface AdminUserListProps {
@@ -27,7 +26,6 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
   const [loading, setLoading] = useState(false);
   const [addingFriend, setAddingFriend] = useState<string | null>(null);
   const [togglingHonorary, setTogglingHonorary] = useState<string | null>(null);
-  const [viewingProfile, setViewingProfile] = useState<{ userId: string; nickname: string } | null>(null);
   useEffect(() => {
     if (!open) return;
     fetchData();
