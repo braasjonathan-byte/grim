@@ -25,6 +25,7 @@ interface ToolsTabProps {
   isAdmin: boolean;
   isHonorary: boolean;
   userRole: string;
+  onViewUserPlan?: (targetUserId: string) => void;
 }
 
 interface SectionDef {

@@ -33,6 +33,8 @@ const toTitleCase = (str: string): string =>
 interface WorkoutViewProps {
   userId: string;
   isAdmin?: boolean;
+  onBack?: () => void;
+  adminViewNickname?: string;
 }
 
 interface PlanDay {
