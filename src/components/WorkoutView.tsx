@@ -3922,7 +3922,7 @@ const estimateCalories = (
                                     <li key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2 list-none">
                                       <div className="flex items-center justify-between">
                                         <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                                          <Timer className="w-3.5 h-3.5 text-warning" />
+                                          <Timer className="w-3.5 h-3.5 text-primary" />
                                           {line}
                                         </span>
                                         <div className="flex items-center gap-0.5">
@@ -3938,9 +3938,9 @@ const estimateCalories = (
                                       {/* Per-interval header */}
                                       <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
                                         <span className="w-7" />
-                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-warning" />Tid</span>
+                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-warning" />Distans</span>
+                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans</span>
                                       </div>
                                       {Array.from({ length: activeCount }, (_, ii) => {
                                         const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
@@ -4746,7 +4746,7 @@ const estimateCalories = (
                             <div key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                                  <Footprints className="w-3.5 h-3.5 text-warning" />
+                                  <Footprints className="w-3.5 h-3.5 text-primary" />
                                   {toTitleCase(condName || part)}
                                 </span>
                                 <div className="flex items-center gap-0.5">
@@ -4888,9 +4888,9 @@ const estimateCalories = (
                                   {/* Per-interval header */}
                                   <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
                                     <span className="w-7" />
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-warning" />Tid</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-warning" />Distans</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans</span>
                                   </div>
                                   {/* Per-interval rows - use saved intervals length or plan count */}
                                   {(() => {
@@ -5075,7 +5075,7 @@ const estimateCalories = (
                                 <div className="space-y-2">
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-0.5">
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-primary" />Tid (min)</label>
                                       <AutoSaveInput type="number" inputMode="numeric" initialValue={displayTime} onSave={(v) => saveCondField('time', v)} placeholder="—" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                     </div>
                                     <div className="space-y-0.5">
@@ -5100,11 +5100,11 @@ const estimateCalories = (
                               ) : (
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-warning" />Tid (min)</label>
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-primary" />Tid (min)</label>
                                     <AutoSaveInput type="number" inputMode="numeric" initialValue={displayTime} onSave={(v) => saveCondField('time', v)} placeholder="—" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                   </div>
                                   <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-warning" />Distans (km)</label>
+                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-primary" />Distans (km)</label>
                                     <AutoSaveInput type="text" inputMode="decimal" initialValue={displayDist} onSave={(v) => saveCondField('dist', v)} placeholder="—" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                   </div>
                                   <div className="space-y-0.5">
@@ -5314,7 +5314,7 @@ const estimateCalories = (
                             <div key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                                  <Timer className="w-3.5 h-3.5 text-warning" />
+                                  <Timer className="w-3.5 h-3.5 text-primary" />
                                   {part.trim()}
                                 </span>
                                 <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: part.trim() });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
@@ -5324,9 +5324,9 @@ const estimateCalories = (
                               {/* Per-interval header */}
                               <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
                                 <span className="w-7" />
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-warning" />Tid</span>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-warning" />Distans</span>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans</span>
                               </div>
                               {Array.from({ length: activeCount }, (_, ii) => {
                                 const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
