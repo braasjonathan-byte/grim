@@ -5804,31 +5804,29 @@ const estimateCalories = (
                         </>
                       ) : (
                         <>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-                            <div className="flex items-center gap-1">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
-                            </div>
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                          <input type="text" value={condTempoInput} onChange={(e) => { const v = e.target.value; setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                      <div>
+                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                        <div className="flex items-center gap-1">
+                          <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <span className="text-[10px] text-muted-foreground font-medium">h</span>
+                          <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <span className="text-[10px] text-muted-foreground font-medium">m</span>
+                          <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <span className="text-[10px] text-muted-foreground font-medium">s</span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                          <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo</label>
+                          <input type="text" value={condTempoInput} onChange={(e) => { const v = e.target.value; setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }} placeholder="5:30" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                         <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                          <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans</label>
+                          <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }} placeholder="km" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Puls</label>
+                          <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="bpm" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                         </div>
                       </div>
                         </>
