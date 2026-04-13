@@ -313,7 +313,7 @@ const WorkoutLogDialog = ({
         ) : (
           /* Non-interval mode */
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" /> Tid (min)
@@ -333,9 +333,24 @@ const WorkoutLogDialog = ({
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Route className="w-3 h-3" /> Distans (km)
+                  <Timer className="w-3 h-3" /> Tempo
+                </label>
+                <input
+                  type="text"
+                  value={tempo}
+                  onChange={(e) => {
+                    setTempo(e.target.value);
+                    autoCalcSimple(duration, e.target.value, distance, "tempo");
+                  }}
+                  placeholder="5:30"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Route className="w-3 h-3" /> Distans
                   {distance && duration && (
-                    <Calculator className="w-3 h-3 text-primary ml-1" />
+                    <Calculator className="w-3 h-3 text-primary ml-0.5" />
                   )}
                 </label>
                 <input
@@ -346,25 +361,10 @@ const WorkoutLogDialog = ({
                     setDistance(e.target.value);
                     autoCalcSimple(duration, tempo, e.target.value, "distance");
                   }}
-                  placeholder="t.ex. 10"
+                  placeholder="km"
                   className={distance && duration ? calcClass : inputClass}
                 />
               </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Timer className="w-3 h-3" /> Tempo (min/km)
-              </label>
-              <input
-                type="text"
-                value={tempo}
-                onChange={(e) => {
-                  setTempo(e.target.value);
-                  autoCalcSimple(duration, e.target.value, distance, "tempo");
-                }}
-                placeholder="t.ex. 5:30"
-                className={inputClass}
-              />
             </div>
           </div>
         )}
