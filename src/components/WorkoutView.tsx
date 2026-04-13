@@ -3913,6 +3913,38 @@ const estimateCalories = (
                                           </div>
                                         );
                                       })}
+                                      {/* Total distance sum */}
+                                      {(() => {
+                                        let totalDist = 0;
+                                        for (let ii = 0; ii < activeCount; ii++) {
+                                          const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
+                                          const rowTempo = row.tempo;
+                                          const rowTime = parseFloat(row.time) || 0;
+                                          let rd = parseFloat(row.dist) || 0;
+                                          if (!rd && rowTempo && rowTime > 0) {
+                                            const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
+                                            const tSingle = rowTempo.match(/^(\d+)$/);
+                                            let minPerKm = 0;
+                                            if (tMatch) minPerKm = (parseInt(tMatch[1]) * 60 + parseInt(tMatch[2])) / 60;
+                                            else if (tSingle) minPerKm = parseInt(tSingle[1]);
+                                            if (minPerKm > 0) rd = rowTime / minPerKm;
+                                          }
+                                          totalDist += rd;
+                                        }
+                                        if (totalDist > 0) {
+                                          return (
+                                            <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center pt-1 border-t border-warning/20 mt-1">
+                                              <span className="w-7" />
+                                              <span />
+                                              <span className="text-[10px] text-muted-foreground uppercase tracking-wider text-center font-semibold">Totalt</span>
+                                              <span className="text-xs font-mono text-center px-2 py-1.5 rounded-md bg-primary/20 text-foreground ring-1 ring-primary/40 font-semibold">
+                                                {Math.round(totalDist * 100) / 100} km
+                                              </span>
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
                                     </li>
                                   );
                                 }
