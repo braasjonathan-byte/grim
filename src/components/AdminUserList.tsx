@@ -202,7 +202,6 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
       )}
     </div>
   );
-  );
 };
 
 export default AdminUserList;
