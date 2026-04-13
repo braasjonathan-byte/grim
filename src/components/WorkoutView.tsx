@@ -3919,7 +3919,7 @@ const estimateCalories = (
                                   const activeCount = savedIntervals.length > 0 ? savedIntervals.length : iCount;
 
                                   return (
-                                    <li key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2 list-none">
+                                    <li key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2 list-none">
                                       <div className="flex items-center justify-between">
                                         <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
                                           <Timer className="w-3.5 h-3.5 text-warning" />
@@ -4743,7 +4743,7 @@ const estimateCalories = (
                           };
                           
                           return (
-                            <div key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2">
+                            <div key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
                                   <Footprints className="w-3.5 h-3.5 text-warning" />
@@ -5311,7 +5311,7 @@ const estimateCalories = (
                           const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
 
                           return (
-                            <div key={i} className="bg-warning/5 rounded-lg p-3 border border-warning/20 space-y-2">
+                            <div key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
                                   <Timer className="w-3.5 h-3.5 text-warning" />
