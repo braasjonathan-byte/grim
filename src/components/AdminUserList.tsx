@@ -103,7 +103,6 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
   };
 
   return (
-    <>
     <div className="bg-card border border-border rounded-lg p-4 space-y-3">
       <button
         onClick={() => setOpen(!open)}
@@ -202,15 +201,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
         </div>
       )}
     </div>
-
-    {viewingProfile && (
-      <FriendProfileView
-        friendUserId={viewingProfile.userId}
-        nickname={viewingProfile.nickname}
-        onClose={() => setViewingProfile(null)}
-      />
-    )}
-    </>
+  );
   );
 };
 
