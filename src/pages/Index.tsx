@@ -15,6 +15,7 @@ import { useNativePush } from "@/hooks/useNativePush";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
+import MiniTimer from "@/components/MiniTimer";
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
