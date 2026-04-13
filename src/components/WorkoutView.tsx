@@ -2959,7 +2959,7 @@ const estimateCalories = (
                         }
                       }
 
-                      if (distExerciseCount < 3 || totalDist <= 0) return null;
+                      if (distExerciseCount < 2 || totalDist <= 0) return null;
 
                       return (
                         <div className="bg-primary/10 rounded-lg p-3 border border-primary/30 flex items-center justify-between">
