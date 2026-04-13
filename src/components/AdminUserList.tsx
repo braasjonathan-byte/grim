@@ -153,8 +153,8 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button
-                          onClick={() => setViewingProfile({ userId: u.user_id, nickname: u.nickname })}
-                          title="Visa profil"
+                          onClick={() => onViewUserPlan?.(u.user_id)}
+                          title="Visa träningsplan"
                           className="p-1.5 rounded-md bg-secondary text-muted-foreground hover:text-primary transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" />
