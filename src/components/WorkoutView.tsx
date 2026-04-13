@@ -2287,10 +2287,22 @@ const estimateCalories = (
     triggerSave();
   };
 
+  const adminBanner = onBack ? (
+    <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4 flex items-center justify-between">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-warning hover:text-warning/80 transition-colors">
+        <ArrowLeft className="w-4 h-4" /> Tillbaka till användarlistan
+      </button>
+      <span className="text-xs text-muted-foreground">Visar annan användares plan</span>
+    </div>
+  ) : null;
+
   if (mode === "loading") {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Dumbbell className="w-8 h-8 text-primary animate-pulse" />
+      <div>
+        {adminBanner}
+        <div className="flex items-center justify-center py-16">
+          <Dumbbell className="w-8 h-8 text-primary animate-pulse" />
+        </div>
       </div>);
 
   }
