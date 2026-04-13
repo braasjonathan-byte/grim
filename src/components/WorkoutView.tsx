@@ -2871,6 +2871,109 @@ const estimateCalories = (
                       </div>; })()
                   }
 
+                    {/* Total distance summary across all exercises */}
+                    {(() => {
+                      if (!plan.details) return null;
+                      const allLines = plan.details.split("\n").filter(Boolean);
+                      const comp = completions[key];
+                      const lw = comp?.logged_weights as Record<string, any> | null;
+                      let totalDist = 0;
+                      let distExerciseCount = 0;
+
+                      for (const line of allLines) {
+                        const { name: eName, weight: eWeight } = parseExerciseWeight(line);
+                        const isCondFmt = eWeight && (eWeight.includes("min") || eWeight.includes("/km") || /\d+\s*km/i.test(eWeight));
+                        const isIntervalFmt = /(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min/i.test(line);
+
+                        if (isCondFmt && lw) {
+                          const condKey = `__cond__${eName}`;
+                          const raw = lw[condKey];
+                          if (raw) {
+                            try {
+                              const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+                              if (data && typeof data === "object") {
+                                const intervals = Array.isArray(data.intervals) ? data.intervals : [];
+                                let lineDist = 0;
+                                if (intervals.length > 0) {
+                                  for (const iv of intervals) {
+                                    const d = parseFloat(iv.dist) || 0;
+                                    if (d > 0) { lineDist += d; continue; }
+                                    const t = parseFloat(iv.time) || 0;
+                                    const tp = iv.tempo;
+                                    if (t > 0 && tp) {
+                                      const pair = String(tp).match(/^(\d+)[:\.](\d+)$/);
+                                      const single = String(tp).match(/^(\d+)$/);
+                                      let mpk = 0;
+                                      if (pair) mpk = (parseInt(pair[1]) * 60 + parseInt(pair[2])) / 60;
+                                      else if (single) mpk = parseInt(single[1]);
+                                      if (mpk > 0) lineDist += t / mpk;
+                                    }
+                                  }
+                                } else {
+                                  const dd = parseFloat(data.dist) || 0;
+                                  if (dd > 0) { lineDist = dd; }
+                                  else {
+                                    const tt = parseFloat(data.time) || 0;
+                                    const tpd = data.tempo;
+                                    if (tt > 0 && tpd) {
+                                      const pair = String(tpd).match(/^(\d+)[:\.](\d+)$/);
+                                      const single = String(tpd).match(/^(\d+)$/);
+                                      let mpk = 0;
+                                      if (pair) mpk = (parseInt(pair[1]) * 60 + parseInt(pair[2])) / 60;
+                                      else if (single) mpk = parseInt(single[1]);
+                                      if (mpk > 0) lineDist = tt / mpk;
+                                    }
+                                  }
+                                }
+                                if (lineDist > 0) { totalDist += lineDist; distExerciseCount++; }
+                              }
+                            } catch {}
+                          }
+                        } else if (isIntervalFmt && lw) {
+                          const condKey = `__cond__${line}`;
+                          const raw = lw[condKey];
+                          if (raw) {
+                            try {
+                              const data = typeof raw === "string" ? JSON.parse(raw) : raw;
+                              if (data && typeof data === "object") {
+                                const intervals = Array.isArray(data.intervals) ? data.intervals : [];
+                                let lineDist = 0;
+                                for (const iv of intervals) {
+                                  const d = parseFloat(iv.dist) || 0;
+                                  if (d > 0) { lineDist += d; continue; }
+                                  const t = parseFloat(iv.time) || 0;
+                                  const tp = iv.tempo;
+                                  if (t > 0 && tp) {
+                                    const pair = String(tp).match(/^(\d+)[:\.](\d+)$/);
+                                    const single = String(tp).match(/^(\d+)$/);
+                                    let mpk = 0;
+                                    if (pair) mpk = (parseInt(pair[1]) * 60 + parseInt(pair[2])) / 60;
+                                    else if (single) mpk = parseInt(single[1]);
+                                    if (mpk > 0) lineDist += t / mpk;
+                                  }
+                                }
+                                if (lineDist > 0) { totalDist += lineDist; distExerciseCount++; }
+                              }
+                            } catch {}
+                          }
+                        }
+                      }
+
+                      if (distExerciseCount < 3 || totalDist <= 0) return null;
+
+                      return (
+                        <div className="bg-primary/10 rounded-lg p-3 border border-primary/30 flex items-center justify-between">
+                          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <Route className="w-4 h-4 text-primary" />
+                            Total distans
+                          </span>
+                          <span className="text-sm font-mono font-bold text-primary">
+                            {Math.round(totalDist * 100) / 100} km
+                          </span>
+                        </div>
+                      );
+                    })()}
+
                     {/* Reps/sets/weight dialog */}
                     {weightDialog && weightDialog.planId === plan.id &&
                   <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30">
