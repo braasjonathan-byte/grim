@@ -78,6 +78,7 @@ const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationFriendId, setNotificationFriendId] = useState<string | null>(null);
+  const [adminViewUserId, setAdminViewUserId] = useState<string | null>(null);
   const [tab, setTabState] = useState<Tab>(() => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
@@ -641,7 +642,7 @@ const Index = () => {
       {/* Content */}
       <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4" style={{ paddingBottom: bottomNavOffset }}>
-        {tab === "workout" && <WorkoutView key={workoutRefreshKey} userId={user.id} isAdmin={userRole === "admin"} />}
+        {tab === "workout" && <WorkoutView key={adminViewUserId || workoutRefreshKey} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} adminViewNickname={adminViewUserId ? undefined : undefined} />}
         {tab === "social" &&
           <SocialView
             userId={user.id}
@@ -664,7 +665,7 @@ const Index = () => {
         
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
-          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} />
+          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
         }
       </main>
       </Suspense>
