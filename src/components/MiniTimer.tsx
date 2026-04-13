@@ -49,17 +49,18 @@ const MiniTimer = () => {
   // Expanded
   return (
     <div
-      className="fixed left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-primary/20 px-4 py-3"
+      className="fixed left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-primary/20 px-4 py-3 cursor-pointer"
       style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px))` }}
+      onClick={() => setExpanded(false)}
     >
       <div className="max-w-lg mx-auto flex items-center justify-between">
-        <button onClick={() => setExpanded(false)} className="text-muted-foreground p-1">
+        <div className="text-muted-foreground p-1">
           <ChevronDown className="w-4 h-4" />
-        </button>
+        </div>
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setRunning(!running)}
+            onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
               running ? "bg-primary/20 text-primary" : "bg-primary text-primary-foreground"
             }`}
@@ -72,7 +73,7 @@ const MiniTimer = () => {
           </span>
 
           <button
-            onClick={() => { setRunning(false); setSeconds(0); }}
+            onClick={(e) => { e.stopPropagation(); setRunning(false); setSeconds(0); }}
             className="w-8 h-8 rounded-full bg-secondary text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
