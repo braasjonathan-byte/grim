@@ -270,7 +270,7 @@ const getMonday = (d: Date) => {
   return date;
 };
 
-const WorkoutView = ({ userId, isAdmin = false }: WorkoutViewProps) => {
+const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
