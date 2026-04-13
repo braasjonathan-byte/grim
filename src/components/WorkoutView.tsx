@@ -3521,6 +3521,7 @@ const estimateCalories = (
   return (
     <>
     <div className="space-y-4">
+      {adminBanner}
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
