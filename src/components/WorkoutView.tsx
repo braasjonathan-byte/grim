@@ -3244,7 +3244,7 @@ const estimateCalories = (
                         setSelectedMuscle(null);
                         setIsWarmupMode(true);
                       }}
-                      className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-muted-foreground hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                      className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <Plus className="w-3 h-3" /> Lägg till uppvärmning
                       </button>
                     <button
@@ -3978,7 +3978,7 @@ const estimateCalories = (
                                                 await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
                                               }}
                                               className={`w-7 h-7 rounded-md border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
-                                                isDoneI ? "bg-success border-success text-success-foreground" : "border-warning/30 text-muted-foreground hover:border-warning"
+                                                isDoneI ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"
                                               }`}
                                             >
                                               {isDoneI ? <Check className="w-3.5 h-3.5" /> : ii + 1}
@@ -4936,7 +4936,7 @@ const estimateCalories = (
                                               className={`w-7 h-7 rounded-md border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
                                                 isDone
                                                   ? "bg-success border-success text-success-foreground"
-                                                  : "border-warning/30 text-muted-foreground hover:border-warning"
+                                                  : "border-primary/30 text-muted-foreground hover:border-primary"
                                               }`}
                                             >
                                               {isDone ? <Check className="w-3.5 h-3.5" /> : ii + 1}
@@ -5362,7 +5362,7 @@ const estimateCalories = (
                                         await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
                                       }}
                                       className={`w-7 h-7 rounded-md border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
-                                        isDoneI ? "bg-success border-success text-success-foreground" : "border-warning/30 text-muted-foreground hover:border-warning"
+                                        isDoneI ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"
                                       }`}
                                     >
                                       {isDoneI ? <Check className="w-3.5 h-3.5" /> : ii + 1}
@@ -5877,7 +5877,7 @@ const estimateCalories = (
                     }
                     return null;
                   })()}
-                  <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(true);}} className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-muted-foreground hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                  <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(true);}} className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till uppvärmning
                     </button>
                   <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
