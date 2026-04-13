@@ -2334,6 +2334,7 @@ const estimateCalories = (
   if (mode === "choose") {
     return (
       <div className="space-y-6 animate-fade-in">
+        {adminBanner}
         <div className="text-center space-y-2">
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
           <h2 className="text-2xl font-black tracking-tight">Hur vill du träna?</h2>
@@ -2381,6 +2382,7 @@ const estimateCalories = (
   if (mode === "plan" && weeks.length === 0) {
     return (
       <div className="space-y-4 animate-fade-in">
+        {adminBanner}
         <button
           onClick={() => setMode("choose")}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -2433,6 +2435,7 @@ const estimateCalories = (
     return (
       <>
       <div className="space-y-4 animate-fade-in">
+        {adminBanner}
         {singlePlans.length === 0 && (
           <button
             onClick={() => setMode("choose")}
