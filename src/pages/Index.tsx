@@ -714,6 +714,9 @@ const Index = () => {
                   onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
 
 
+      {/* Mini Timer above footer */}
+      <MiniTimer />
+
       {/* Bottom tab bar */}
       <nav
         className="fixed left-0 right-0 bottom-0 bg-card border-t border-border z-50 will-change-transform"
