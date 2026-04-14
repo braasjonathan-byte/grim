@@ -208,6 +208,32 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   );
 };
 
+// Small HMS input group for inline conditioning cards (AutoSave-compatible)
+const ConditioningHMSInput = ({ initialH, initialM, initialS, onSave }: {
+  initialH: string; initialM: string; initialS: string;
+  onSave: (h: string, m: string, s: string) => void;
+}) => {
+  const [h, setH] = useState(initialH);
+  const [m, setM] = useState(initialM);
+  const [s, setS] = useState(initialS);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const save = (nh: string, nm: string, ns: string) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onSave(nh, nm, ns), 600);
+  };
+  const inputCls = "w-12 bg-primary/10 text-foreground text-xs px-1 py-1.5 rounded-md border border-primary/20 outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal";
+  return (
+    <div className="flex items-center gap-1">
+      <input type="number" inputMode="numeric" min="0" value={h} onChange={(e) => { setH(e.target.value); save(e.target.value, m, s); }} placeholder="0" className={inputCls} />
+      <span className="text-[10px] text-muted-foreground font-medium">h</span>
+      <input type="number" inputMode="numeric" min="0" max="59" value={m} onChange={(e) => { setM(e.target.value); save(h, e.target.value, s); }} placeholder="0" className={inputCls} />
+      <span className="text-[10px] text-muted-foreground font-medium">m</span>
+      <input type="number" inputMode="numeric" min="0" max="59" value={s} onChange={(e) => { setS(e.target.value); save(h, m, e.target.value); }} placeholder="0" className={inputCls} />
+      <span className="text-[10px] text-muted-foreground font-medium">s</span>
+    </div>
+  );
+};
+
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
 const getSessionIcon = (session: string) => {
