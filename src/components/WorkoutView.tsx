@@ -5098,18 +5098,49 @@ const estimateCalories = (
                                   })()}
                                 </div>
                               ) : (
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Timer className="w-3 h-3 text-primary" />Tid (min)</label>
-                                    <AutoSaveInput type="number" inputMode="numeric" initialValue={displayTime} onSave={(v) => saveCondField('time', v)} placeholder="—" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                                    <div>
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
+                                      <div className="flex items-center gap-1">
+                                        {(() => {
+                                          const totalMin = parseFloat(displayTime) || 0;
+                                          const initH = Math.floor(totalMin / 60);
+                                          const initM = Math.floor(totalMin % 60);
+                                          const initS = Math.round((totalMin % 1) * 60);
+                                          const condTimeKey = `__cond_hms__${condName || part}`;
+                                          const saveHMS = (h: string, m: string, s: string) => {
+                                            const hv = parseInt(h) || 0;
+                                            const mv = parseInt(m) || 0;
+                                            const sv = parseInt(s) || 0;
+                                            const total = hv * 60 + mv + sv / 60;
+                                            if (total > 0) saveCondField('time', String(Math.round(total * 100) / 100));
+                                          };
+                                          return (
+                                            <ConditioningHMSInput
+                                              initialH={initH > 0 ? String(initH) : ""}
+                                              initialM={totalMin > 0 ? String(initM) : ""}
+                                              initialS={initS > 0 ? String(initS) : ""}
+                                              onSave={saveHMS}
+                                            />
+                                          );
+                                        })()}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
+                                      <AutoSaveInput type="text" initialValue={displayTempo} onSave={(v) => saveCondField('tempo', v)} placeholder="t.ex. 5:30" className="w-24 bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                    </div>
                                   </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-primary" />Distans (km)</label>
-                                    <AutoSaveInput type="text" inputMode="decimal" initialValue={displayDist} onSave={(v) => saveCondField('dist', v)} placeholder="—" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo (/km)</label>
-                                    <AutoSaveInput type="text" initialValue={displayTempo} onSave={(v) => saveCondField('tempo', v)} placeholder="auto" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-0.5">
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Route className="w-3 h-3 text-primary" />Distans (km)</label>
+                                      <AutoSaveInput type="text" inputMode="decimal" initialValue={displayDist} onSave={(v) => saveCondField('dist', v)} placeholder="—" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Snittspuls (bpm)</label>
+                                      <AutoSaveInput type="number" inputMode="numeric" initialValue={condSaved?.pulse || ""} onSave={(v) => saveCondField('pulse', v)} placeholder="t.ex. 155" className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                    </div>
                                   </div>
                                 </div>
                               )}
