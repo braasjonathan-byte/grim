@@ -101,12 +101,61 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const [tempo, setTempo] = useState(initTempo);
   const [distance, setDistance] = useState(initDist);
   const [pulse, setPulse] = useState(initPulse);
+  const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
 
   const getTotalMin = () => {
     const h = parseInt(hours) || 0;
     const m = parseInt(minutes) || 0;
     const s = parseInt(seconds) || 0;
     return h * 60 + m + s / 60;
+  };
+
+  const parseTempoToMin = (t: string): number | null => {
+    const mm = t.trim().match(/^(\d+)[:\.](\d+)$/);
+    if (mm) return parseInt(mm[1]) + parseInt(mm[2]) / 60;
+    const mm2 = t.trim().match(/^(\d+)$/);
+    if (mm2) return parseInt(mm2[1]);
+    return null;
+  };
+
+  const fmtTempo = (minPerKm: number): string => {
+    const mn = Math.floor(minPerKm);
+    const sc = Math.round((minPerKm - mn) * 60);
+    return `${mn}:${sc.toString().padStart(2, "0")}`;
+  };
+
+  const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
+    const t = totalMin;
+    const p = parseTempoToMin(tempoVal);
+    const d = parseFloat(distVal.replace(",", "."));
+    const filled = {
+      time: t > 0,
+      tempo: tempoVal.trim().length > 0 && p !== null && p > 0,
+      distance: distVal.trim().length > 0 && !isNaN(d) && d > 0,
+    };
+    if (!filled[changed]) { if (autoField === changed) setAutoField(null); return; }
+    const filledCount = Object.values(filled).filter(Boolean).length;
+    if (filledCount < 2) return;
+    const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
+    const calc = (field: "time" | "tempo" | "distance") => {
+      if (field === "distance" && t > 0 && p && p > 0) setDistance(String(Math.round((t / p) * 100) / 100));
+      else if (field === "tempo" && t > 0 && d > 0) setTempo(fmtTempo(t / d));
+      else if (field === "time" && d > 0 && p && p > 0) {
+        const tot = p * d;
+        const hh = Math.floor(tot / 60);
+        const rem = tot - hh * 60;
+        const mm = Math.floor(rem);
+        const ss = Math.round((rem - mm) * 60);
+        setHours(hh > 0 ? String(hh) : "");
+        setMinutes(String(mm));
+        setSeconds(ss > 0 ? String(ss) : "");
+      }
+    };
+    if (filledCount === 2 && missing) { calc(missing); setAutoField(missing); return; }
+    if (filledCount === 3 && autoField) {
+      if (autoField === changed) { setAutoField(null); return; }
+      calc(autoField);
+    }
   };
 
   const handleSave = async () => {
@@ -177,23 +226,23 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
           <div className="flex items-center gap-1">
-            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
             <span className="text-[10px] text-muted-foreground font-medium">h</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => setMinutes(e.target.value)} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
             <span className="text-[10px] text-muted-foreground font-medium">m</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => setSeconds(e.target.value)} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
             <span className="text-[10px] text-muted-foreground font-medium">s</span>
           </div>
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-          <input type="text" value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="t.ex. 5:30" className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <input type="text" value={tempo} onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }} placeholder="t.ex. 5:30" className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-          <input type="number" inputMode="decimal" value={distance} onChange={(e) => setDistance(e.target.value)} placeholder={planCondDist || "—"} className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || "—"} className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
