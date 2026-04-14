@@ -101,12 +101,61 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const [tempo, setTempo] = useState(initTempo);
   const [distance, setDistance] = useState(initDist);
   const [pulse, setPulse] = useState(initPulse);
+  const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
 
   const getTotalMin = () => {
     const h = parseInt(hours) || 0;
     const m = parseInt(minutes) || 0;
     const s = parseInt(seconds) || 0;
     return h * 60 + m + s / 60;
+  };
+
+  const parseTempoToMin = (t: string): number | null => {
+    const mm = t.trim().match(/^(\d+)[:\.](\d+)$/);
+    if (mm) return parseInt(mm[1]) + parseInt(mm[2]) / 60;
+    const mm2 = t.trim().match(/^(\d+)$/);
+    if (mm2) return parseInt(mm2[1]);
+    return null;
+  };
+
+  const fmtTempo = (minPerKm: number): string => {
+    const mn = Math.floor(minPerKm);
+    const sc = Math.round((minPerKm - mn) * 60);
+    return `${mn}:${sc.toString().padStart(2, "0")}`;
+  };
+
+  const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
+    const t = totalMin;
+    const p = parseTempoToMin(tempoVal);
+    const d = parseFloat(distVal.replace(",", "."));
+    const filled = {
+      time: t > 0,
+      tempo: tempoVal.trim().length > 0 && p !== null && p > 0,
+      distance: distVal.trim().length > 0 && !isNaN(d) && d > 0,
+    };
+    if (!filled[changed]) { if (autoField === changed) setAutoField(null); return; }
+    const filledCount = Object.values(filled).filter(Boolean).length;
+    if (filledCount < 2) return;
+    const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
+    const calc = (field: "time" | "tempo" | "distance") => {
+      if (field === "distance" && t > 0 && p && p > 0) setDistance(String(Math.round((t / p) * 100) / 100));
+      else if (field === "tempo" && t > 0 && d > 0) setTempo(fmtTempo(t / d));
+      else if (field === "time" && d > 0 && p && p > 0) {
+        const tot = p * d;
+        const hh = Math.floor(tot / 60);
+        const rem = tot - hh * 60;
+        const mm = Math.floor(rem);
+        const ss = Math.round((rem - mm) * 60);
+        setHours(hh > 0 ? String(hh) : "");
+        setMinutes(String(mm));
+        setSeconds(ss > 0 ? String(ss) : "");
+      }
+    };
+    if (filledCount === 2 && missing) { calc(missing); setAutoField(missing); return; }
+    if (filledCount === 3 && autoField) {
+      if (autoField === changed) { setAutoField(null); return; }
+      calc(autoField);
+    }
   };
 
   const handleSave = async () => {
