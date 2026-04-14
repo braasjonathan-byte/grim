@@ -767,49 +767,81 @@ const estimateCalories = (
 ): number => {
   let totalMinutes = 0;
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-  
-  for (const line of lines) {
-    // Check for conditioning: "30 min", "5 km"
-    const timeMatch = line.match(/(\d+(?:[.,]\d+)?)\s*min/i);
-    if (timeMatch) {
-      totalMinutes += parseFloat(timeMatch[1].replace(",", "."));
-      continue;
-    }
-    // Check for sets×reps format
-    const setsMatch = line.match(/(\d+)\s*[×x]\s*(\d+)/i);
-    if (setsMatch) {
-      const sets = parseInt(setsMatch[1]);
-      // ~2 min per set (including rest)
-      totalMinutes += sets * 2;
-      continue;
-    }
-    // Default: assume ~3 min per exercise line
-    totalMinutes += 3;
-  }
+  const condRegex = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i;
 
-  // Also count logged conditioning data
+  // Collect conditioning time from __cond__ logged data (stored in minutes)
+  const condNamesWithTime = new Set<number>();
   if (loggedWeights) {
     for (const [k, v] of Object.entries(loggedWeights)) {
       if (k.startsWith('__cond__')) {
         try {
           const data = typeof v === 'string' ? JSON.parse(v) : v;
-          if (data.time && parseFloat(data.time) > 0) {
-            // Already counted in details parse, skip duplicates
+          const t = parseFloat(data?.time);
+          if (t > 0) {
+            totalMinutes += t;
+            // Extract line index from key if possible
+            const idxMatch = k.match(/__cond__(\d+)$/);
+            if (idxMatch) condNamesWithTime.add(parseInt(idxMatch[1]));
           }
         } catch {}
       }
     }
   }
 
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Skip conditioning lines — their time is counted from __cond__ data above
+    if (condRegex.test(line)) {
+      // Only add time from details text if no __cond__ data was found for this exercise
+      if (loggedWeights) {
+        // Check if any __cond__ key matches this exercise name
+        const hasCondData = Object.keys(loggedWeights).some(k =>
+          k.startsWith('__cond__') && (() => {
+            try {
+              const data = typeof loggedWeights[k] === 'string' ? JSON.parse(loggedWeights[k]) : loggedWeights[k];
+              return data?.time && parseFloat(data.time) > 0;
+            } catch { return false; }
+          })()
+        );
+        if (hasCondData) continue; // Skip — already counted from __cond__
+      }
+      // Fallback: parse time from details text
+      const timeMatch = line.match(/(\d+(?:[.,]\d+)?)\s*min/i);
+      if (timeMatch) {
+        totalMinutes += parseFloat(timeMatch[1].replace(",", "."));
+      } else {
+        totalMinutes += 10; // Default for conditioning without time info
+      }
+      continue;
+    }
+    // Check for sets×reps format
+    const setsMatch = line.match(/(\d+)\s*[×x]\s*(\d+)/i);
+    if (setsMatch) {
+      const sets = parseInt(setsMatch[1]);
+      // ~1.5 min per set (including rest)
+      totalMinutes += sets * 1.5;
+      continue;
+    }
+    // Default: assume ~2 min per exercise line
+    totalMinutes += 2;
+  }
+
   if (totalMinutes <= 0) return 0;
 
+  // Sanity cap: max 4 hours for a single session
+  totalMinutes = Math.min(totalMinutes, 240);
+
   // Use heart rate based formula if pulse is available (more accurate)
-  if (loggedPulse && loggedPulse > 0 && age) {
-    // Keytel et al. formula
+  if (loggedPulse && loggedPulse > 0 && loggedPulse < 250 && age) {
+    // Keytel et al. formula (kcal/min)
+    let kcalPerMin: number;
     if (gender === 'male') {
-      return Math.round(totalMinutes * ((-55.0969 + 0.6309 * loggedPulse + 0.1988 * weightKg + 0.2017 * age) / 4.184));
+      kcalPerMin = (-55.0969 + 0.6309 * loggedPulse + 0.1988 * weightKg + 0.2017 * age) / 4.184;
     } else {
-      return Math.round(totalMinutes * ((-20.4022 + 0.4472 * loggedPulse - 0.1263 * weightKg + 0.074 * age) / 4.184));
+      kcalPerMin = (-20.4022 + 0.4472 * loggedPulse - 0.1263 * weightKg + 0.074 * age) / 4.184;
+    }
+    if (kcalPerMin > 0) {
+      return Math.round(kcalPerMin * totalMinutes);
     }
   }
 
