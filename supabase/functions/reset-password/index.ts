@@ -106,6 +106,43 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { nickname, action, answers, newPassword } = body;
 
+    // Admin action: fix auth email + password for a user by nickname
+    if (action === "admin-fix-auth") {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const supabaseAdminClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const supabaseUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
+      const { data: { user: caller } } = await supabaseUser.auth.getUser();
+      if (!caller) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Check caller is admin
+      const { data: isAdmin } = await supabaseAdminClient.rpc("has_role", { _user_id: caller.id, _role: "admin" });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (!nickname || !newPassword || newPassword.length < 8) {
+        return new Response(JSON.stringify({ error: "nickname and newPassword (8+ chars) required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: profile } = await supabaseAdminClient.from("profiles").select("user_id").ilike("nickname", nickname.trim()).maybeSingle();
+      if (!profile) {
+        return new Response(JSON.stringify({ error: "Profile not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const newEmail = `${nickname.trim().toLowerCase()}@trainapp.local`;
+      const { error: updateError } = await supabaseAdminClient.auth.admin.updateUserById(profile.user_id, {
+        email: newEmail,
+        password: newPassword.trim(),
+        email_confirm: true,
+      });
+      if (updateError) {
+        return new Response(JSON.stringify({ error: updateError.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      await supabaseAdminClient.from("profiles").update({ must_change_password: false }).eq("user_id", profile.user_id);
+      return new Response(JSON.stringify({ success: true, email: newEmail, userId: profile.user_id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (!nickname || typeof nickname !== "string" || nickname.trim().length < 2 || nickname.trim().length > 50) {
       return new Response(
         JSON.stringify({ error: "Ogiltigt användarnamn" }),
