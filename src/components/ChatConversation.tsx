@@ -115,7 +115,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
     // Send push notification (fire and forget)
     supabase.functions.invoke("notify-chat", {
       body: { receiverId: friend.user_id, messagePreview: msgText },
-    }).catch(() => {});
+    }).then(({ error }) => {
+      if (error) console.error("notify-chat error:", error);
+    }).catch((err) => console.error("notify-chat invoke failed:", err));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
