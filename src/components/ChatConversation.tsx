@@ -238,7 +238,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto py-3 space-y-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto py-3 pb-20 space-y-1">
         {groupedMessages.map(group => (
           <div key={group.date}>
             <div className="text-center my-3">
@@ -437,7 +437,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       )}
 
       {/* Input - sticky above timer */}
-      <div className="sticky bottom-0 z-10 bg-background border-t border-border pt-2 pb-2 flex gap-2 items-end">
+      <div className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto" style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)` }}>
         <input
           ref={inputRef}
           value={newMessage}
