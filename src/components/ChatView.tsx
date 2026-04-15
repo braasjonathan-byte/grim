@@ -6,6 +6,7 @@ import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 
@@ -50,6 +51,8 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [loading, setLoading] = useState(true);
   const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
+
+  useLockBodyScroll(Boolean(selectedFriend));
 
   useEffect(() => {
     fetchFriendsAndMessages();
@@ -680,7 +683,11 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto py-3 space-y-1">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+      >
         {groupedMessages.map(group => (
           <div key={group.date}>
             <div className="text-center my-3">
@@ -757,7 +764,11 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       </div>
 
       {/* Input */}
-      <div className="border-t border-border pt-2 flex gap-2 items-end">
+      <div
+        className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto"
+        style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)`, touchAction: "none" }}
+        onTouchMove={(event) => event.preventDefault()}
+      >
         <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
         {!isAdmin && (
           <button
