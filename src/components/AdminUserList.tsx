@@ -148,8 +148,6 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                         <span className="text-sm font-medium truncate">{u.nickname}</span>
                         {u.is_honorary && <HonoraryBadge size="xs" />}
                       </div>
-                      <div className="flex items-center justify-end gap-1.5">
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button
                           onClick={() => onViewUserPlan?.(u.user_id)}
                           title="Visa träningsplan"
