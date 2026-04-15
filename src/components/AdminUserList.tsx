@@ -192,6 +192,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                           </button>
                         )}
                       </div>
+                    </div>
                   );
                 })}
               </div>
