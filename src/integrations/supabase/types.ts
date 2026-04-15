@@ -1200,6 +1200,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_inactive_users_for_nudge: {
+        Args: { cutoff_date: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_leaderboard: {
         Args: { filter_month?: number; filter_year: number }
         Returns: {
