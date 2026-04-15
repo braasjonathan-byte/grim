@@ -436,8 +436,8 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         </>
       )}
 
-      {/* Input */}
-      <div className="border-t border-border pt-2 flex gap-2 items-end">
+      {/* Input - sticky above timer */}
+      <div className="sticky bottom-0 z-10 bg-background border-t border-border pt-2 pb-2 flex gap-2 items-end">
         <input
           ref={inputRef}
           value={newMessage}
