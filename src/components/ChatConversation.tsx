@@ -437,7 +437,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       )}
 
       {/* Input - sticky above timer */}
-      <div className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto" style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)` }}>
+      <div className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto" style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)`, touchAction: 'none' }}>
         <input
           ref={inputRef}
           value={newMessage}
