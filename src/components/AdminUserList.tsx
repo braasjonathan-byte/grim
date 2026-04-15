@@ -135,9 +135,9 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                   return (
                     <div
                       key={u.user_id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                      className="flex flex-col gap-1 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {u.avatar_url ? (
                             <img src={u.avatar_url} alt={u.nickname} className="w-full h-full object-cover" />
@@ -148,6 +148,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                         <span className="text-sm font-medium truncate">{u.nickname}</span>
                         {u.is_honorary && <HonoraryBadge size="xs" />}
                       </div>
+                      <div className="flex items-center justify-end gap-1.5">
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button
                           onClick={() => onViewUserPlan?.(u.user_id)}
