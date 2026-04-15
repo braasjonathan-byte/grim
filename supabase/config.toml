@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.notify-chat]
 verify_jwt = false
+
+[functions.notify-inactive]
+verify_jwt = false
