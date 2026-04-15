@@ -238,7 +238,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto py-3 space-y-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto py-3 pb-20 space-y-1">
         {groupedMessages.map(group => (
           <div key={group.date}>
             <div className="text-center my-3">
