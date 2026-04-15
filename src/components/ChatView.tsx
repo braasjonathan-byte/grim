@@ -6,7 +6,6 @@ import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 
@@ -51,8 +50,6 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [loading, setLoading] = useState(true);
   const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
-
-  useLockBodyScroll(Boolean(selectedFriend));
 
   useEffect(() => {
     fetchFriendsAndMessages();
@@ -234,28 +231,32 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   if (selectedFriend) {
     if (selectedFriend.isGrimSupport) {
       return (
-        <GrimSupportConversation
-          userId={selectedFriend.user_id === GRIM_SUPPORT_ID ? userId : selectedFriend.user_id}
-          isAdmin={isAdmin}
-          targetNickname={selectedFriend.nickname}
-          targetAvatar={selectedFriend.avatar_url}
-          onBack={() => {
-            setSelectedFriend(null);
-            if (isPremium && !isAdmin) fetchGrimMessages();
-            if (isAdmin) fetchSupportConversations();
-          }}
-        />
+        <div className="h-full min-h-0 overflow-hidden">
+          <GrimSupportConversation
+            userId={selectedFriend.user_id === GRIM_SUPPORT_ID ? userId : selectedFriend.user_id}
+            isAdmin={isAdmin}
+            targetNickname={selectedFriend.nickname}
+            targetAvatar={selectedFriend.avatar_url}
+            onBack={() => {
+              setSelectedFriend(null);
+              if (isPremium && !isAdmin) fetchGrimMessages();
+              if (isAdmin) fetchSupportConversations();
+            }}
+          />
+        </div>
       );
     }
     return (
-      <ChatConversation
-        userId={userId}
-        friend={selectedFriend}
-        onBack={() => {
-          setSelectedFriend(null);
-          fetchFriendsAndMessages();
-        }}
-      />
+      <div className="h-full min-h-0 overflow-hidden">
+        <ChatConversation
+          userId={userId}
+          friend={selectedFriend}
+          onBack={() => {
+            setSelectedFriend(null);
+            fetchFriendsAndMessages();
+          }}
+        />
+      </div>
     );
   }
 
@@ -273,8 +274,8 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
     + (isAdmin ? supportConversations.reduce((s, c) => s + c.unread_count, 0) : 0);
 
   return (
-    <div className="py-2">
-      <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+    <div className="flex h-full min-h-0 flex-col py-2">
+      <h2 className="mb-3 flex shrink-0 items-center gap-2 text-lg font-bold">
         <MessageCircle className="w-5 h-5 text-primary" />
         Chatt
         {totalUnread > 0 && (
@@ -285,9 +286,14 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
       </h2>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground text-center py-8">Laddar...</p>
+        <div className="flex flex-1 items-center justify-center py-8">
+          <p className="text-sm text-muted-foreground text-center">Laddar...</p>
+        </div>
       ) : (
-        <div className="space-y-1">
+        <div
+          className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1"
+          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        >
           {/* Grim support for supporter users */}
           {isPremium && !isAdmin && (
             <button
@@ -663,9 +669,9 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
   const headerTitle = isAdmin ? `${targetNickname} (via Grim)` : "Grim";
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-border">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3">
         <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -685,7 +691,7 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
+        className="min-h-0 flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
         style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
       >
         {groupedMessages.map(group => (

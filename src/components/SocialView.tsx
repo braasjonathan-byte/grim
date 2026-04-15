@@ -7,6 +7,7 @@ import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import { lazy, Suspense } from "react";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -66,6 +67,9 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const isChatTab = subTab === "chat";
+
+  useLockBodyScroll(isChatTab);
 
   useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
 
@@ -283,9 +287,12 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const groupsForPosting = groups.filter(g => myGroups.includes(g.id));
 
   return (
-    <div className="py-2 space-y-4">
+    <div
+      className={isChatTab ? "box-border flex min-h-0 flex-col gap-4 overflow-hidden py-2" : "py-2 space-y-4"}
+      style={isChatTab ? { height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10.5rem)" } : undefined}
+    >
       {/* Sub-tab navigation */}
-      <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
+      <div className="flex shrink-0 gap-1 bg-muted/50 rounded-lg p-1">
         {([
           { key: "feed" as SubTab, label: "Flöde", icon: Globe },
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
@@ -514,9 +521,11 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
       {/* CHAT TAB */}
       {subTab === "chat" && (
-        <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
-          <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
-        </Suspense>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
+            <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
+          </Suspense>
+        </div>
       )}
 
       {/* GROUPS TAB */}

@@ -221,9 +221,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-16rem)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-border">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3">
         <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -238,7 +238,11 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto py-3 pb-20 space-y-1">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+      >
         {groupedMessages.map(group => (
           <div key={group.date}>
             <div className="text-center my-3">
