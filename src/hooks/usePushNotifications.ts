@@ -36,9 +36,27 @@ export function usePushNotifications(userId: string | null) {
 
       const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
 
-      // Always try to get or create subscription
       const mgr = (registration as any).pushManager;
       let subscription = await mgr.getSubscription();
+
+      // On iOS, subscriptions can become stale after app restart.
+      // Re-subscribe if the existing subscription's key doesn't match our VAPID key.
+      if (subscription) {
+        try {
+          const existingKey = subscription.options?.applicationServerKey;
+          if (existingKey) {
+            const existingKeyArr = new Uint8Array(existingKey);
+            const keysMatch = existingKeyArr.length === applicationServerKey.length &&
+              existingKeyArr.every((b: number, i: number) => b === applicationServerKey[i]);
+            if (!keysMatch) {
+              await subscription.unsubscribe();
+              subscription = null;
+            }
+          }
+        } catch {
+          // If we can't check, just keep the existing subscription
+        }
+      }
 
       if (!subscription) {
         try {
@@ -63,7 +81,6 @@ export function usePushNotifications(userId: string | null) {
       }
 
       // Store in database (upsert) - delete old entries for this user+endpoint first, then insert
-      // This avoids issues with upsert requiring unique constraints
       await supabase.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", endpoint);
       await supabase.from("push_subscriptions").insert({
         user_id: userId,

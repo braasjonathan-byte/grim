@@ -36,35 +36,38 @@ precacheAndRoute(self.__WB_MANIFEST);
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
+  let data;
   try {
-    const data = event.data.json();
-    const options = {
-      body: data.body || "",
-      icon: data.icon || "/favicon.ico",
-      badge: "/favicon.ico",
-      vibrate: [100, 50, 100],
-      data: data.data || {},
-      tag: data.tag || "gymberget-notification",
-      renotify: true,
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(data.title || "Grim", options).then(() => {
-        // Set app icon badge
-        if (navigator.setAppBadge) {
-          navigator.setAppBadge().catch(() => {});
-        }
-      })
-    );
+    data = event.data.json();
   } catch (e) {
-    // Fallback for plain text
+    // Fallback for plain text push
     event.waitUntil(
       self.registration.showNotification("Grim", {
         body: event.data.text(),
         icon: "/favicon.ico",
       })
     );
+    return;
   }
+
+  // Build options — avoid unsupported iOS properties
+  const options = {
+    body: data.body || "",
+    icon: data.icon || "/favicon.ico",
+    badge: "/favicon.ico",
+    data: data.data || {},
+    tag: data.tag || "gymberget-notification",
+  };
+
+  // Only add vibrate on platforms that support it (not iOS)
+  if ("vibrate" in navigator) {
+    options.vibrate = [100, 50, 100];
+    options.renotify = true;
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Grim", options)
+  );
 });
 
 // Listen for messages from the client (e.g. clear badge)
