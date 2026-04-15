@@ -219,7 +219,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)]">
+    <div className="flex flex-col h-[calc(100vh-16rem)]">
       {/* Header */}
       <div className="flex items-center gap-3 pb-3 border-b border-border">
         <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
