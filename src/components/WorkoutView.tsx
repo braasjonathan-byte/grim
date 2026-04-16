@@ -3023,6 +3023,26 @@ const estimateCalories = (
                             }}
                           />);
                       }
+
+                      // Vila (rest) rendering for circuit workouts
+                      if (/^vila\b/i.test(name.trim()) && plan.is_circuit) {
+                        const vilaMatch = weight?.match(/\d+[×x](\d+)/i);
+                        const vilaSec = vilaMatch ? vilaMatch[1] : "30";
+                        return (
+                          <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-4 h-4 text-warning" />
+                              <span className="text-sm font-semibold text-warning">Vila</span>
+                              <span className="text-sm font-mono text-foreground">{vilaSec}s</span>
+                            </div>
+                            <button
+                              onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: rawLines.indexOf(line), name: "Vila" })}
+                              className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      }
                       
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
                       const { clean: cleanWeight, rpe: singleRpe } = extractRpe(weight || '');
