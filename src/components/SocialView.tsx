@@ -288,11 +288,11 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   return (
     <div
-      className={isChatTab ? "box-border flex min-h-0 flex-col gap-4 overflow-hidden py-2" : "py-2 space-y-4"}
+      className={isChatTab ? "box-border flex min-h-0 flex-col gap-4 overflow-hidden overscroll-none pt-2 pb-0 touch-none" : "py-2 space-y-4"}
       style={isChatTab ? { height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10.5rem)" } : undefined}
     >
       {/* Sub-tab navigation */}
-      <div className="flex shrink-0 gap-1 bg-muted/50 rounded-lg p-1">
+      <div className="flex shrink-0 gap-1 bg-muted/50 rounded-lg p-1 touch-none">
         {([
           { key: "feed" as SubTab, label: "Flöde", icon: Globe },
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
@@ -521,7 +521,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
       {/* CHAT TAB */}
       {subTab === "chat" && (
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden touch-none">
           <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
             <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
           </Suspense>
