@@ -2899,7 +2899,7 @@ const estimateCalories = (
                 key={plan.id}
                 className={`rounded-lg border bg-card transition-colors ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""}`}>
 
-                <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; setExpandedDay(expanded ? null : key); }}>
+                <div className="flex items-center gap-3 px-4 pt-4 pb-2 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; setExpandedDay(expanded ? null : key); }}>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={(e) => {e.stopPropagation();toggleDone(0, plan.day);}}
@@ -2907,7 +2907,6 @@ const estimateCalories = (
                       isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"}`
                       }
                       title="Genomfört">
-
                       {isDone && <Check className="w-4 h-4 text-success-foreground" />}
                     </button>
                     <button
@@ -2916,7 +2915,6 @@ const estimateCalories = (
                       isSkipped ? "bg-destructive text-destructive-foreground" : "text-muted-foreground/40 hover:text-destructive"}`
                       }
                       title="Markera som missat">
-
                       <XCircle className="w-4 h-4" />
                     </button>
                   </div>
@@ -2946,19 +2944,50 @@ const estimateCalories = (
                         </span> :
                       null;
                     })()}
-                    <button
-                      onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });}}
-                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                      title="Dela pass">
-                      <Share2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
-                      className="p-1 text-muted-foreground hover:text-destructive transition-colors">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
                     {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                   </div>
+                </div>
+                {/* Action buttons row */}
+                <div className="flex items-center gap-1 px-4 pb-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                      setRenameInput(plan.session_name);
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    title="Inställningar">
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Inställningar</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    title="Dela pass">
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Dela</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+                      setSaveWorkoutName(plan.session_name);
+                      setSaveWorkoutVisibility("private");
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    title="Spara pass">
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Spara</span>
+                  </button>
+                  <button
+                    onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                    title="Ta bort">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 {expanded &&
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
