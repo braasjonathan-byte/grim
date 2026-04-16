@@ -3704,6 +3704,94 @@ const estimateCalories = (
           </div>
         </div>
       )}
+      {/* Import workout dialog (single mode) */}
+      {importWorkoutTarget && (
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setImportWorkoutTarget(null)} />
+          <div className="relative bg-card rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto p-4 space-y-3 z-10">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm">Importera färdigt pass</h3>
+              <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+            </div>
+            {/* User's own saved workouts */}
+            {(() => {
+              const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
+              if (myWorkouts.length === 0) return null;
+              return (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-bold text-muted-foreground">⭐ Mina sparade pass</p>
+                  {myWorkouts.map((sw) => (
+                    <button
+                      key={sw.id}
+                      onClick={async () => {
+                        const dateStr = format(singleDate, "yyyy-MM-dd");
+                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null });
+                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        toast.success(`"${sw.name}" importerat!`); fetchData();
+                      }}
+                      className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                    >
+                      <p className="text-xs font-semibold text-foreground">{sw.name}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+            {/* Public saved workouts from other users */}
+            {(() => {
+              const publicWorkouts = savedWorkouts.filter(sw => sw.visibility === "public" && sw.user_id !== userId);
+              if (publicWorkouts.length === 0) return null;
+              return (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-bold text-muted-foreground">👥 Skapat av användare</p>
+                  {publicWorkouts.map((sw) => (
+                    <button
+                      key={sw.id}
+                      onClick={async () => {
+                        const dateStr = format(singleDate, "yyyy-MM-dd");
+                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null });
+                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        toast.success(`"${sw.name}" importerat!`); fetchData();
+                      }}
+                      className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                    >
+                      <p className="text-xs font-semibold text-foreground">{sw.name}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+            {readyWorkoutCategories.map((cat, ci) => (
+              <div key={ci} className="space-y-1.5">
+                <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
+                {cat.workouts.map((w, wi) => (
+                  <button
+                    key={wi}
+                    onClick={async () => {
+                      const dateStr = format(singleDate, "yyyy-MM-dd");
+                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                      await supabase.from("workout_plans").insert({
+                        user_id: userId, week: 0, day: uniqueKey,
+                        session_name: w.name, details: w.details, tempo: w.tempo || null,
+                      });
+                      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`); fetchData();
+                    }}
+                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                  >
+                    <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       </>);
 
   }
