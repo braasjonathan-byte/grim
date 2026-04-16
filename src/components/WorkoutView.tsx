@@ -5676,10 +5676,58 @@ const estimateCalories = (
 
                           return (
                             <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5 space-y-2">
-                              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                                <Timer className="w-3.5 h-3.5 text-primary" />
-                                {headerText}
-                              </p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                                  <Timer className="w-3.5 h-3.5 text-primary" />
+                                  {headerText}
+                                </p>
+                                {(() => {
+                                  // Parse work seconds from header line e.g. "32s arbete"
+                                  const workMatch = part.match(/(\d+)s\s*arbete/i);
+                                  const workSec = workMatch ? parseInt(workMatch[1]) : 0;
+                                  // Count exercises: either inline or from circuit map
+                                  const circuitExInfo = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                  const exerciseNames: string[] = [];
+                                  if (inlineExercises.length > 0) {
+                                    exerciseNames.push(...inlineExercises);
+                                  } else if (circuitExInfo) {
+                                    for (const exIdx of circuitExInfo.exerciseIndices) {
+                                      const exPart = parts[exIdx];
+                                      const { name: eName } = parseExerciseWeight(exPart);
+                                      exerciseNames.push(eName);
+                                    }
+                                  }
+                                  if (workSec > 0 && exerciseNames.length > 0 && showRoundCheckboxes) {
+                                    return (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setCircuitTimer({ exercises: exerciseNames, workSeconds: workSec, roundCount: roundCount, weekDayKey: key, headerIndex: i });
+                                        }}
+                                        className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold flex items-center gap-1 active:scale-95 transition-transform"
+                                      >
+                                        <Play className="w-3 h-3" /> Starta
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                              {/* Info: work time × exercises */}
+                              {(() => {
+                                const workMatch = part.match(/(\d+)s\s*arbete/i);
+                                const restMatch = part.match(/(\d+)s\s*vila/i);
+                                const circuitExInfo2 = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                const exCount = inlineExercises.length > 0 ? inlineExercises.length : (circuitExInfo2?.exerciseIndices.length || 0);
+                                if (workMatch && exCount > 0) {
+                                  return (
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {workMatch[1]}s × {exCount} övningar{restMatch ? ` · ${restMatch[1]}s vila` : ""}
+                                    </p>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {inlineExercises.length > 0 && (
                                 <div className="space-y-1 pl-5">
                                   {inlineExercises.map((ex, ei) => (
