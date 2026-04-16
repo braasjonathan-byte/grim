@@ -3181,8 +3181,10 @@ const estimateCalories = (
                       const exerciseLines = plan.details.split("\n").filter(Boolean);
                       const parsed = exerciseLines.map(l => parseExerciseWeight(l)).filter(p => p.name && !/^vila$/i.test(p.name.trim()));
                       if (parsed.length === 0) return null;
-                      const circuitMatch = plan.tempo?.match(/^circuit:(\d+)$/);
+                      const circuitMatch = plan.tempo?.match(/^circuit:(\d+)(?::(\d+))?(?::(\d+))?$/);
                       const defaultSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
+                      const rounds = circuitMatch?.[2] ? parseInt(circuitMatch[2]) : 3;
+                      const restSec = circuitMatch?.[3] ? parseInt(circuitMatch[3]) : 0;
                       const exerciseNames = parsed.map(p => p.name);
                       // Read per-exercise seconds from the reps value (e.g. "3×40" → 40)
                       const perExSec = parsed.map(p => {
@@ -3194,7 +3196,7 @@ const estimateCalories = (
                       });
                       return (
                         <button
-                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: defaultSec, exerciseSeconds: perExSec, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
+                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: defaultSec, exerciseSeconds: perExSec, roundCount: rounds, restSeconds: restSec, weekDayKey: key, headerIndex: 0 })}
                           className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                         >
                           <Play className="w-4 h-4" /> Starta
