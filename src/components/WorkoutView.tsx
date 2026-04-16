@@ -1154,6 +1154,53 @@ const estimateCalories = (
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
     const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
 
+    // Circuit sync: if this exercise belongs to a circuit, check if all exercises' set at setIndex are done
+    const plan0 = plans.find(p => p.week === week && p.day === day);
+    if (plan0) {
+      const syncParts = plan0.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      // Find which circuit block this exercise belongs to
+      let circuitHeader: { headerIndex: number; roundCount: number; exerciseNames: string[] } | null = null;
+      let currentCirc: { headerIndex: number; roundCount: number; exerciseNames: string[] } | null = null;
+      for (let pi = 0; pi < syncParts.length; pi++) {
+        const p = syncParts[pi].trim();
+        const cm = p.match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
+        const am = !cm ? p.match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
+        if (cm || am) {
+          const inlineExs = ((cm ? cm[2] : am![3]) || "").trim();
+          if (!inlineExs) {
+            currentCirc = { headerIndex: pi, roundCount: parseInt((cm || am)![1]), exerciseNames: [] };
+          } else {
+            currentCirc = null;
+          }
+        } else if (currentCirc) {
+          const { name: eName } = parseExerciseWeight(p);
+          if (!/^vila$/i.test(eName.trim())) {
+            currentCirc.exerciseNames.push(eName);
+            if (eName.toLowerCase() === exerciseName.toLowerCase()) {
+              circuitHeader = currentCirc;
+            }
+          } else {
+            currentCirc = null;
+          }
+        }
+      }
+      if (circuitHeader) {
+        const roundKey = `__wod_rounds_done_${circuitHeader.headerIndex}__`;
+        const currentRoundsStr = (updated[roundKey] as string) || "";
+        // Check if all exercises in this circuit have set setIndex done
+        const allDoneForSet = circuitHeader.exerciseNames.every(en => {
+          const setKey = `__sets__${en}`;
+          const val = en.toLowerCase() === exerciseName.toLowerCase() ? setsStr : ((updated[setKey] as string) || "");
+          return val[setIndex] === "1";
+        });
+        const newRounds = Array.from({ length: circuitHeader.roundCount }, (_, ri) => {
+          if (ri === setIndex) return allDoneForSet ? "1" : "0";
+          return currentRoundsStr[ri] || "0";
+        }).join("");
+        updated[roundKey] = newRounds;
+      }
+    }
+
     // Ensure __setdata__ exists so kg/reps are always persisted for stats
     const setDataKey = `__setdata__${exerciseName}`;
     if (!updated[setDataKey]) {
@@ -4611,6 +4658,38 @@ const estimateCalories = (
                   const comp = completions[key];
                   const savedWeights = (comp?.logged_weights || {}) as Record<string, number>;
 
+                  // Pre-scan: map exercise indices to their parent circuit header (if any)
+                  const circuitMap: Record<number, { roundCount: number; headerIndex: number; exerciseIndices: number[] }> = {};
+                  {
+                    let currentCircuit: { roundCount: number; headerIndex: number; exerciseIndices: number[] } | null = null;
+                    for (let pi = 0; pi < parts.length; pi++) {
+                      const p = parts[pi].trim();
+                      const circuitMatch = p.match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
+                      const amrapMatch = !circuitMatch ? p.match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
+                      if (circuitMatch || amrapMatch) {
+                        const count = parseInt((circuitMatch || amrapMatch)![1]);
+                        const inlineExs = ((circuitMatch ? circuitMatch[2] : amrapMatch![3]) || "").trim();
+                        // If exercises are inline (separated by /), they're listed in the header, not separate parts
+                        if (!inlineExs) {
+                          currentCircuit = { roundCount: count, headerIndex: pi, exerciseIndices: [] };
+                        } else {
+                          currentCircuit = null;
+                        }
+                      } else if (currentCircuit) {
+                        // Check if this part is a regular exercise (not a header/conditioning)
+                        const { name: eName } = parseExerciseWeight(p);
+                        const matchedEx = allExercises.find(e => e.name.toLowerCase() === eName.toLowerCase());
+                        const isCondFormat = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad/i.test(p) && !/^\d+\s*[×x]\s*\d+/i.test(p);
+                        if (!isCondFormat && !/^vila$/i.test(eName.trim())) {
+                          currentCircuit.exerciseIndices.push(pi);
+                          circuitMap[pi] = currentCircuit;
+                        } else {
+                          currentCircuit = null; // End circuit block on non-exercise
+                        }
+                      }
+                    }
+                  }
+
                   // Helper: find previously logged weight for an exercise from earlier weeks + archived
                   const findPreviousWeight = (exerciseName: string): number | null => {
                     // Look through completions from previous weeks for this exercise
@@ -5312,7 +5391,9 @@ const estimateCalories = (
 
                         }
 
-                        const setsCountPlan = partSets ? parseInt(partSets) : 1;
+                        // If this exercise is inside a circuit block, override set count to match circuit rounds
+                        const circuitInfo = circuitMap[i];
+                        const setsCountPlan = circuitInfo ? circuitInfo.roundCount : (partSets ? parseInt(partSets) : 1);
                         const setsStrPlan = getSetsDone(key, partName);
 
                         // Daily challenge exercise - render with distinct style
@@ -5609,6 +5690,24 @@ const estimateCalories = (
                                           }).join("");
                                           const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
                                           const updated = { ...existing, [roundKey]: newStr } as any;
+                                          // Sync: toggle all circuit exercises' set ri
+                                          const circuitExInfo = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                          if (circuitExInfo) {
+                                            const markDone = !isRoundDone;
+                                            for (const exIdx of circuitExInfo.exerciseIndices) {
+                                              const exPart = parts[exIdx];
+                                              const { clean: exClean } = extractRpe(exPart);
+                                              const exMatch = exClean.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)s?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                                              const exName = exMatch ? exMatch[1].trim().replace(/\s*—\s*$/, '') : parseExerciseWeight(exPart).name;
+                                              const setsKey = `__sets__${exName}`;
+                                              const currentSets = (updated[setsKey] as string) || "";
+                                              const newSets = Array.from({ length: roundCount }, (_, si) => {
+                                                if (si === ri) return markDone ? "1" : "0";
+                                                return currentSets[si] || "0";
+                                              }).join("");
+                                              updated[setsKey] = newSets;
+                                            }
+                                          }
                                           setCompletions(prev => ({
                                             ...prev,
                                             [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
