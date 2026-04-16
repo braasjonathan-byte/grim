@@ -6956,14 +6956,21 @@ const estimateCalories = (
                       triggerSave();
                     }
                   }}
-                  className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                  className={`w-full text-left bg-secondary/50 rounded-lg px-3 py-2 transition-colors flex items-center justify-between ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"}`}
                 >
-                  <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                  <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                  </div>
+                  {isLocked && <Lock className="w-3.5 h-3.5 text-warning flex-shrink-0 ml-2" />}
                 </button>
-              ))}
+                );
+              })}
             </div>
           ))}
+          {!isHonorary && !isAdmin && (
+            <p className="text-[10px] text-muted-foreground text-center pt-1">🔒 Hedersmedlemmar har tillgång till alla pass</p>
+          )}
         </div>
       </div>
     )}
