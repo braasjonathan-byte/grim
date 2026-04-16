@@ -6897,7 +6897,82 @@ const estimateCalories = (
       />
     )}
 
-    {/* Change day dialog */}
+    {/* Save workout dialog */}
+    {saveWorkoutSource && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setSaveWorkoutSource(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Save className="w-4 h-4 text-primary" />
+              Spara pass
+            </h3>
+            <button onClick={() => setSaveWorkoutSource(null)} className="p-1 text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Namn på passet</label>
+              <input
+                type="text"
+                value={saveWorkoutName}
+                onChange={(e) => setSaveWorkoutName(e.target.value)}
+                placeholder="T.ex. Mitt favoritpass"
+                className="w-full bg-secondary text-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-2 block">Synlighet</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSaveWorkoutVisibility("private")}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${saveWorkoutVisibility === "private" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                >
+                  🔒 Bara jag
+                </button>
+                <button
+                  onClick={() => setSaveWorkoutVisibility("public")}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${saveWorkoutVisibility === "public" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                >
+                  🌍 Alla användare
+                </button>
+              </div>
+              {saveWorkoutVisibility === "public" && (
+                <p className="text-[10px] text-muted-foreground mt-1">Passet visas under "Skapat av användare" för alla.</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              if (!saveWorkoutName.trim()) return;
+              setSaveWorkoutSaving(true);
+              const { data, error } = await supabase.from("saved_workouts").insert({
+                user_id: userId,
+                name: saveWorkoutName.trim(),
+                details: saveWorkoutSource.details,
+                tempo: saveWorkoutSource.tempo,
+                visibility: saveWorkoutVisibility,
+              } as any).select().single();
+              setSaveWorkoutSaving(false);
+              if (error) {
+                toast.error("Kunde inte spara passet");
+              } else {
+                setSavedWorkouts(prev => [...prev, data as any]);
+                toast.success(`"${saveWorkoutName.trim()}" sparat!`);
+                setSaveWorkoutSource(null);
+              }
+            }}
+            disabled={saveWorkoutSaving || !saveWorkoutName.trim()}
+            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
+          >
+            {saveWorkoutSaving ? "Sparar..." : "Spara"}
+          </button>
+        </div>
+      </div>
+    )}
+
     {changeDayDialog && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/60" onClick={() => setChangeDayDialog(null)} />
