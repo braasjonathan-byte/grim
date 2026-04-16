@@ -8,6 +8,7 @@ interface CircuitTimerDialogProps {
   roundCount: number;
   onClose: () => void;
   onRoundComplete?: (roundIndex: number) => void;
+  onRated?: (rating: number) => void;
 }
 
 type Phase = "ready" | "countdown" | "work" | "done";
@@ -18,6 +19,7 @@ const CircuitTimerDialog = ({
   roundCount,
   onClose,
   onRoundComplete,
+  onRated,
 }: CircuitTimerDialogProps) => {
   const [phase, setPhase] = useState<Phase>("ready");
   const [currentRound, setCurrentRound] = useState(0);
@@ -250,17 +252,41 @@ const CircuitTimerDialog = ({
         )}
 
         {phase === "done" && (
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-5 w-full max-w-sm">
             <p className="text-4xl">🎉</p>
             <p className="text-lg font-bold text-foreground">Passet klart!</p>
             <p className="text-sm text-muted-foreground">
               {roundCount} rundor × {totalExercises} övningar avklarat
             </p>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">Hur svårt var det?</p>
+              <div className="flex gap-1.5 justify-center flex-wrap">
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => {
+                      onRated?.(n);
+                      onClose();
+                    }}
+                    className={`w-9 h-9 rounded-lg text-sm font-bold transition-all active:scale-90 ${
+                      n <= 3
+                        ? "bg-success/20 text-success hover:bg-success/30"
+                        : n <= 6
+                        ? "bg-warning/20 text-warning hover:bg-warning/30"
+                        : "bg-destructive/20 text-destructive hover:bg-destructive/30"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">1 = Lätt &nbsp;·&nbsp; 10 = Extremt svårt</p>
+            </div>
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold text-sm active:scale-95 transition-transform"
+              className="text-xs text-muted-foreground underline"
             >
-              Stäng
+              Hoppa över
             </button>
           </div>
         )}

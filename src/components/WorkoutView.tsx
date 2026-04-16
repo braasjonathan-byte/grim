@@ -5713,7 +5713,18 @@ const estimateCalories = (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setCircuitTimer({ exercises: exerciseNames, workSeconds: workSec, roundCount: roundCount, weekDayKey: key, headerIndex: i });
+                                          let adjustedSec = workSec;
+                                          try {
+                                            const history = JSON.parse(localStorage.getItem("gymberget_circuit_ratings") || "[]");
+                                            if (history.length > 0) {
+                                              const lastRating = history[history.length - 1].rating;
+                                              if (lastRating >= 9) adjustedSec = Math.max(10, workSec - 10);
+                                              else if (lastRating >= 8) adjustedSec = Math.max(10, workSec - 5);
+                                              else if (lastRating <= 2) adjustedSec = workSec + 5;
+                                              else if (lastRating <= 3) adjustedSec = workSec + 3;
+                                            }
+                                          } catch {}
+                                          setCircuitTimer({ exercises: exerciseNames, workSeconds: adjustedSec, roundCount: roundCount, weekDayKey: key, headerIndex: i });
                                         }}
                                         className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold flex items-center gap-1 active:scale-95 transition-transform"
                                       >
@@ -6518,6 +6529,25 @@ const estimateCalories = (
             [circuitTimer.weekDayKey]: { ...prev[circuitTimer.weekDayKey], week: w, day: d, done: prev[circuitTimer.weekDayKey]?.done || false, skipped: prev[circuitTimer.weekDayKey]?.skipped || false, user_comment: prev[circuitTimer.weekDayKey]?.user_comment || "", logged_weights: updated } as Completion
           }));
           safeUpsertCompletion(w, d, { logged_weights: updated });
+        }}
+        onRated={(rating) => {
+          // Store rating and adjust future difficulty
+          const key = `circuit_rating_${circuitTimer.weekDayKey}`;
+          const historyKey = "gymberget_circuit_ratings";
+          try {
+            const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+            history.push({ key, rating, workSeconds: circuitTimer.workSeconds, roundCount: circuitTimer.roundCount, ts: Date.now() });
+            // Keep last 50
+            if (history.length > 50) history.splice(0, history.length - 50);
+            localStorage.setItem(historyKey, JSON.stringify(history));
+          } catch {}
+          if (rating >= 8) {
+            toast("Nästa pass blir lättare — arbetstiden minskas 🔻", { duration: 4000 });
+          } else if (rating <= 2) {
+            toast("Bra jobbat! Nästa pass blir tuffare 🔺", { duration: 4000 });
+          } else {
+            toast(`Betyg ${rating}/10 sparat ✅`, { duration: 2000 });
+          }
         }}
       />
     )}
