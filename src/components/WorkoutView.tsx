@@ -1154,6 +1154,53 @@ const estimateCalories = (
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
     const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
 
+    // Circuit sync: if this exercise belongs to a circuit, check if all exercises' set at setIndex are done
+    const plan0 = plans.find(p => p.week === week && p.day === day);
+    if (plan0) {
+      const syncParts = plan0.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      // Find which circuit block this exercise belongs to
+      let circuitHeader: { headerIndex: number; roundCount: number; exerciseNames: string[] } | null = null;
+      let currentCirc: { headerIndex: number; roundCount: number; exerciseNames: string[] } | null = null;
+      for (let pi = 0; pi < syncParts.length; pi++) {
+        const p = syncParts[pi].trim();
+        const cm = p.match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
+        const am = !cm ? p.match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
+        if (cm || am) {
+          const inlineExs = ((cm ? cm[2] : am![3]) || "").trim();
+          if (!inlineExs) {
+            currentCirc = { headerIndex: pi, roundCount: parseInt((cm || am)![1]), exerciseNames: [] };
+          } else {
+            currentCirc = null;
+          }
+        } else if (currentCirc) {
+          const { name: eName } = parseExerciseWeight(p);
+          if (!/^vila$/i.test(eName.trim())) {
+            currentCirc.exerciseNames.push(eName);
+            if (eName.toLowerCase() === exerciseName.toLowerCase()) {
+              circuitHeader = currentCirc;
+            }
+          } else {
+            currentCirc = null;
+          }
+        }
+      }
+      if (circuitHeader) {
+        const roundKey = `__wod_rounds_done_${circuitHeader.headerIndex}__`;
+        const currentRoundsStr = (updated[roundKey] as string) || "";
+        // Check if all exercises in this circuit have set setIndex done
+        const allDoneForSet = circuitHeader.exerciseNames.every(en => {
+          const setKey = `__sets__${en}`;
+          const val = en.toLowerCase() === exerciseName.toLowerCase() ? setsStr : ((updated[setKey] as string) || "");
+          return val[setIndex] === "1";
+        });
+        const newRounds = Array.from({ length: circuitHeader.roundCount }, (_, ri) => {
+          if (ri === setIndex) return allDoneForSet ? "1" : "0";
+          return currentRoundsStr[ri] || "0";
+        }).join("");
+        updated[roundKey] = newRounds;
+      }
+    }
+
     // Ensure __setdata__ exists so kg/reps are always persisted for stats
     const setDataKey = `__setdata__${exerciseName}`;
     if (!updated[setDataKey]) {
