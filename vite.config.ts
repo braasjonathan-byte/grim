@@ -5,9 +5,8 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-// Auto-increment patch version: days since 2026-02-27 → 1.0.2 on Mar 1, 1.0.3 on Mar 2, etc.
-const patchNumber = Math.floor((Date.now() - new Date("2026-02-27T00:00:00Z").getTime()) / 86_400_000);
-const appVersion = `1.0.${patchNumber}`;
+// Unique app version per build so mobile/PWA clients can detect updates immediately
+const appVersion = new Date().toISOString();
 
 export default defineConfig(({ mode }) => ({
   server: {
