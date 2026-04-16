@@ -1,0 +1,1 @@
+ALTER TABLE public.workout_plans ADD COLUMN is_circuit boolean NOT NULL DEFAULT false;

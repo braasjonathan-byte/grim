@@ -48,6 +48,7 @@ interface PlanDay {
   session_name: string;
   details: string;
   tempo: string | null;
+  is_circuit?: boolean;
 }
 
 interface Completion {
@@ -374,6 +375,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Single workout form
   const [showAddSingle, setShowAddSingle] = useState(false);
   const [singleName, setSingleName] = useState("");
+  const [singleIsCircuit, setSingleIsCircuit] = useState(false);
   const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [showCopyPicker, setShowCopyPicker] = useState(false);
   const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
@@ -1512,8 +1514,10 @@ const estimateCalories = (
       day: uniqueKey,
       session_name: name,
       details,
-      tempo: null
-    });
+      tempo: null,
+      is_circuit: copyFrom ? (copyFrom.is_circuit || false) : singleIsCircuit
+    } as any);
+    setSingleIsCircuit(false);
 
     // Copy logged weights/reps from the source workout's completion
     if (copyFrom) {
@@ -3146,7 +3150,21 @@ const estimateCalories = (
                       </div>; })()
                   }
 
-                    {/* Total distance summary across all exercises */}
+                    {/* Circuit start button for single mode */}
+                    {plan.is_circuit && plan.details && (() => {
+                      const exerciseLines = plan.details.split("\n").filter(Boolean);
+                      const exerciseNames = exerciseLines.map(l => parseExerciseWeight(l).name).filter(n => n && !/^vila$/i.test(n.trim()));
+                      if (exerciseNames.length === 0) return null;
+                      return (
+                        <button
+                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: 40, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
+                          className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        >
+                          <Play className="w-4 h-4" /> Starta
+                        </button>
+                      );
+                    })()}
+
                     {(() => {
                       if (!plan.details) return null;
                       const allLines = plan.details.split("\n").filter(Boolean);
@@ -3727,6 +3745,10 @@ const estimateCalories = (
             <p className="text-[10px] text-muted-foreground">
               Lägg till övningar efter att passet skapats
             </p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={singleIsCircuit} onChange={(e) => setSingleIsCircuit(e.target.checked)} className="accent-primary w-4 h-4" />
+              <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
+            </label>
             <div className="flex gap-2">
               <button onClick={() => addSingleWorkout()} disabled={!singleName.trim()} className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-md text-sm disabled:opacity-40">
                 Skapa pass

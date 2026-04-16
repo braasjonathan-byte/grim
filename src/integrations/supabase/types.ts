@@ -1230,6 +1230,7 @@ export type Database = {
           day: string
           details: string
           id: string
+          is_circuit: boolean
           session_name: string
           tempo: string | null
           updated_at: string
@@ -1241,6 +1242,7 @@ export type Database = {
           day: string
           details?: string
           id?: string
+          is_circuit?: boolean
           session_name?: string
           tempo?: string | null
           updated_at?: string
@@ -1252,6 +1254,7 @@ export type Database = {
           day?: string
           details?: string
           id?: string
+          is_circuit?: boolean
           session_name?: string
           tempo?: string | null
           updated_at?: string
