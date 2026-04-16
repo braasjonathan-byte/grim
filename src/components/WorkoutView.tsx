@@ -81,6 +81,7 @@ interface CustomExercise {
   muscle_group: string;
   created_by: string;
   is_bodyweight_exercise?: boolean;
+  is_time_based?: boolean;
 }
 
 // Inline conditioning editing card (green, open by default)
