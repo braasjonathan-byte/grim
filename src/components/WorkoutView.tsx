@@ -26,6 +26,7 @@ import AutoSaveInput from "@/components/AutoSaveInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
+import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -1151,6 +1152,7 @@ const estimateCalories = (
     const current = getSetsDone(k, exerciseName);
     const arr = Array.from({ length: totalSets }, (_, i) => current[i] === "1");
     arr[setIndex] = !arr[setIndex];
+    if (arr[setIndex]) playSetDone();
     const setsStr = arr.map(b => b ? "1" : "0").join("");
 
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
@@ -1247,7 +1249,8 @@ const estimateCalories = (
     });
 
     // Notify friends and check fireworks if workout was just completed
-    if (allExercisesDone && !completions[k]?.done && plan) {
+    if (allExercisesDone && !completions[k]?.done && plan0) {
+      playWorkoutComplete();
       notifyFriendsOfCompletion(day, week, plan.session_name || day);
 
       // Check if all scheduled workouts in this week are now done
