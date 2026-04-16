@@ -3787,18 +3787,18 @@ const estimateCalories = (
               <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
             </label>
             {singleIsCircuit && (
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground whitespace-nowrap">Sekunder per övning:</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="5"
-                  max="300"
-                  value={singleCircuitSeconds}
-                  onChange={(e) => setSingleCircuitSeconds(e.target.value)}
-                  className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono"
-                />
-                <span className="text-xs text-muted-foreground">sek</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
+                  <input type="number" inputMode="numeric" min="5" max="300" value={singleCircuitSeconds} onChange={(e) => setSingleCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
+                  <input type="number" inputMode="numeric" min="1" max="20" value={singleCircuitRounds} onChange={(e) => setSingleCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
+                  <input type="number" inputMode="numeric" min="0" max="300" value={singleCircuitRest} onChange={(e) => setSingleCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <span className="text-xs text-muted-foreground">sek</span>
+                </div>
               </div>
             )}
             <div className="flex gap-2">
