@@ -3860,6 +3860,47 @@ const estimateCalories = (
           </div>
         </div>
       )}
+      {/* Circuit timer dialog (single mode) */}
+      {circuitTimer && (
+        <CircuitTimerDialog
+          exercises={circuitTimer.exercises}
+          workSeconds={circuitTimer.workSeconds}
+          roundCount={circuitTimer.roundCount}
+          onClose={() => setCircuitTimer(null)}
+          onRoundComplete={(roundIndex) => {
+            const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
+            const existing = completions[circuitTimer.weekDayKey]?.logged_weights as Record<string, any> || {};
+            const current = parseInt(existing[roundKey] || "0");
+            const newVal = Math.max(current, roundIndex + 1);
+            const updated = { ...existing, [roundKey]: String(newVal) };
+            const [wStr, dStr] = circuitTimer.weekDayKey.split("-");
+            const w = parseInt(wStr);
+            const d = dStr;
+            setCompletions(prev => ({
+              ...prev,
+              [circuitTimer.weekDayKey]: { ...prev[circuitTimer.weekDayKey], week: w, day: d, done: prev[circuitTimer.weekDayKey]?.done || false, skipped: prev[circuitTimer.weekDayKey]?.skipped || false, user_comment: prev[circuitTimer.weekDayKey]?.user_comment || "", logged_weights: updated } as Completion
+            }));
+            safeUpsertCompletion(w, d, { logged_weights: updated });
+          }}
+          onRated={(rating) => {
+            const key = `circuit_rating_${circuitTimer.weekDayKey}`;
+            const historyKey = "gymberget_circuit_ratings";
+            try {
+              const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+              history.push({ key, rating, workSeconds: circuitTimer.workSeconds, roundCount: circuitTimer.roundCount, ts: Date.now() });
+              if (history.length > 50) history.splice(0, history.length - 50);
+              localStorage.setItem(historyKey, JSON.stringify(history));
+            } catch {}
+            if (rating >= 8) {
+              toast("Nästa pass blir lättare — arbetstiden minskas 🔻", { duration: 4000 });
+            } else if (rating <= 2) {
+              toast("Bra jobbat! Nästa pass blir tuffare 🔺", { duration: 4000 });
+            } else {
+              toast(`Betyg ${rating}/10 sparat ✅`, { duration: 2000 });
+            }
+          }}
+        />
+      )}
       </>);
 
   }
