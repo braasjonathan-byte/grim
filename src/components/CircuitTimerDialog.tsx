@@ -5,6 +5,8 @@ import { playExerciseSwitch, playCountdownBeep, playGoBeep } from "@/lib/sounds"
 interface CircuitTimerDialogProps {
   exercises: string[];
   workSeconds: number;
+  /** Per-exercise seconds override. If provided, each exercise uses its own duration. */
+  exerciseSeconds?: number[];
   roundCount: number;
   onClose: () => void;
   onRoundComplete?: (roundIndex: number) => void;
@@ -16,15 +18,18 @@ type Phase = "ready" | "countdown" | "work" | "done";
 const CircuitTimerDialog = ({
   exercises,
   workSeconds,
+  exerciseSeconds,
   roundCount,
   onClose,
   onRoundComplete,
   onRated,
 }: CircuitTimerDialogProps) => {
+
+  const getExerciseSec = (idx: number) => exerciseSeconds?.[idx] ?? workSeconds;
   const [phase, setPhase] = useState<Phase>("ready");
   const [currentRound, setCurrentRound] = useState(0);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState(workSeconds);
+  const [secondsLeft, setSecondsLeft] = useState(getExerciseSec(0));
   const [countdownValue, setCountdownValue] = useState(3);
   const [paused, setPaused] = useState(false);
   const intervalRef = useRef<number | null>(null);
@@ -47,7 +52,7 @@ const CircuitTimerDialog = ({
           clearTimer();
           playGoBeep();
           setPhase("work");
-          setSecondsLeft(workSeconds);
+           setSecondsLeft(getExerciseSec(currentExerciseIndex));
           return 0;
         }
         playCountdownBeep();
@@ -55,7 +60,7 @@ const CircuitTimerDialog = ({
       });
     }, 1000);
     return clearTimer;
-  }, [phase, clearTimer, workSeconds]);
+  }, [phase, clearTimer, workSeconds, exerciseSeconds, currentExerciseIndex]);
 
   // Work phase
   useEffect(() => {
@@ -70,7 +75,7 @@ const CircuitTimerDialog = ({
             // Next exercise in same round
             playExerciseSwitch();
             setCurrentExerciseIndex(nextExIdx);
-            return workSeconds;
+             return getExerciseSec(nextExIdx);
           } else {
             // Round complete
             onRoundComplete?.(currentRound);
@@ -79,7 +84,7 @@ const CircuitTimerDialog = ({
               playExerciseSwitch();
               setCurrentRound(nextRound);
               setCurrentExerciseIndex(0);
-              return workSeconds;
+              return getExerciseSec(0);
             } else {
               // All done
               playExerciseSwitch();
@@ -96,7 +101,7 @@ const CircuitTimerDialog = ({
       });
     }, 1000);
     return clearTimer;
-  }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, clearTimer, onRoundComplete]);
+  }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, exerciseSeconds, clearTimer, onRoundComplete]);
 
   const startWorkout = () => {
     setPhase("countdown");
@@ -111,12 +116,12 @@ const CircuitTimerDialog = ({
     setPhase("ready");
     setCurrentRound(0);
     setCurrentExerciseIndex(0);
-    setSecondsLeft(workSeconds);
+    setSecondsLeft(getExerciseSec(0));
     setPaused(false);
   };
 
   const totalExercises = exercises.length;
-  const totalTime = workSeconds * totalExercises * roundCount;
+  const totalTime = (exerciseSeconds ? exerciseSeconds.reduce((a, b) => a + b, 0) : workSeconds * totalExercises) * roundCount;
   const elapsedExercises = currentRound * totalExercises + currentExerciseIndex;
   const elapsed = elapsedExercises * workSeconds + (workSeconds - secondsLeft);
   const progressPct = totalTime > 0 ? Math.round((elapsed / totalTime) * 100) : 0;

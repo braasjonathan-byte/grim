@@ -523,7 +523,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [addWeekSaving, setAddWeekSaving] = useState(false);
 
   // Circuit timer state
-  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
+  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[]; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
 
   // Ready workout circuit config from DB
   const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
@@ -2068,7 +2068,10 @@ const estimateCalories = (
     const lastWeight = findLastWeight(exerciseName);
     setWeightDialog({ planId, exerciseName, lastWeight });
     setWeightInput(lastWeight?.replace(/.*@\s*/, "").replace(/\s*kg.*/, "") || "");
-    setRepsInput("10");
+    // Default reps to circuit seconds for circuit plans
+    const targetPlan = plans.find(p => p.id === planId);
+    const circuitSecsMatch = targetPlan?.is_circuit && targetPlan?.tempo?.match(/^circuit:(\d+)$/);
+    setRepsInput(circuitSecsMatch ? circuitSecsMatch[1] : "10");
     setSetsInput("3");
   };
 
@@ -3112,7 +3115,7 @@ const estimateCalories = (
                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, defaultKg, defaultReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={saved?.reps || defaultReps} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, defaultKg, defaultReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
-                                          <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (/^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
+                                          <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
                                           <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defaultKg} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, defaultKg, defaultReps)} placeholder="—" className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                           </div>
@@ -3156,13 +3159,22 @@ const estimateCalories = (
                     {/* Circuit start button for single mode */}
                     {plan.is_circuit && plan.details && (() => {
                       const exerciseLines = plan.details.split("\n").filter(Boolean);
-                      const exerciseNames = exerciseLines.map(l => parseExerciseWeight(l).name).filter(n => n && !/^vila$/i.test(n.trim()));
-                      if (exerciseNames.length === 0) return null;
+                      const parsed = exerciseLines.map(l => parseExerciseWeight(l)).filter(p => p.name && !/^vila$/i.test(p.name.trim()));
+                      if (parsed.length === 0) return null;
                       const circuitMatch = plan.tempo?.match(/^circuit:(\d+)$/);
-                      const workSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
+                      const defaultSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
+                      const exerciseNames = parsed.map(p => p.name);
+                      // Read per-exercise seconds from the reps value (e.g. "3×40" → 40)
+                      const perExSec = parsed.map(p => {
+                        if (p.weight) {
+                          const repsMatch = p.weight.match(/\d+×(\d+)/);
+                          if (repsMatch) return parseInt(repsMatch[1]) || defaultSec;
+                        }
+                        return defaultSec;
+                      });
                       return (
                         <button
-                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: workSec, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
+                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: defaultSec, exerciseSeconds: perExSec, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
                           className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                         >
                           <Play className="w-4 h-4" /> Starta
@@ -3922,6 +3934,7 @@ const estimateCalories = (
         <CircuitTimerDialog
           exercises={circuitTimer.exercises}
           workSeconds={circuitTimer.workSeconds}
+          exerciseSeconds={circuitTimer.exerciseSeconds}
           roundCount={circuitTimer.roundCount}
           onClose={() => setCircuitTimer(null)}
           onRoundComplete={(roundIndex) => {
@@ -6821,6 +6834,7 @@ const estimateCalories = (
       <CircuitTimerDialog
         exercises={circuitTimer.exercises}
         workSeconds={circuitTimer.workSeconds}
+        exerciseSeconds={circuitTimer.exerciseSeconds}
         roundCount={circuitTimer.roundCount}
         onClose={() => setCircuitTimer(null)}
         onRoundComplete={(roundIndex) => {
