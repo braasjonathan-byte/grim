@@ -2,7 +2,12 @@
 
 let audioCtx: AudioContext | null = null;
 
-function getCtx(): AudioContext {
+function isSoundEnabled(): boolean {
+  return localStorage.getItem("gymberget_sound_enabled") !== "false";
+}
+
+function getCtx(): AudioContext | null {
+  if (!isSoundEnabled()) return null;
   if (!audioCtx) audioCtx = new AudioContext();
   if (audioCtx.state === "suspended") audioCtx.resume();
   return audioCtx;
@@ -12,6 +17,7 @@ function getCtx(): AudioContext {
 export function playSetDone() {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
