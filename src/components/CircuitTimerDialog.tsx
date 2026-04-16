@@ -182,6 +182,7 @@ const CircuitTimerDialog = ({
               <p className="text-lg font-bold text-foreground">Redo att köra?</p>
               <p className="text-sm text-muted-foreground">
                 {roundCount} rundor × {totalExercises} övningar × {workSeconds}s
+                {restSeconds > 0 && ` • ${restSeconds}s vila`}
               </p>
               <div className="space-y-1 max-w-xs mx-auto">
                 {exercises.map((ex, i) => (
