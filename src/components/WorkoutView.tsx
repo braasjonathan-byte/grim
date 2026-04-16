@@ -526,7 +526,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [addWeekSaving, setAddWeekSaving] = useState(false);
 
   // Circuit timer state
-  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
+  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[][]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
 
   // Ready workout circuit config from DB
   const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
@@ -799,6 +799,44 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       });
     }
   }, [mode]);
+
+  // Sync exercises from plans into custom_exercises so they appear in the picker
+  useEffect(() => {
+    if (plans.length === 0 || customExercises.length === 0 && plans.length === 0) return;
+    const libraryNames = new Set(exerciseLibrary.map(e => e.name.toLowerCase()));
+    const customNames = new Set(customExercises.map(e => e.name.toLowerCase()));
+    const missing: string[] = [];
+    for (const plan of plans) {
+      if (!plan.details) continue;
+      const lines = plan.details.split(/[\n;]/).map(s => s.trim()).filter(Boolean);
+      for (const line of lines) {
+        const { name } = parseExerciseWeight(line);
+        if (!name || /^vila$/i.test(name.trim()) || /^\d+\s*rundor/i.test(name.trim())) continue;
+        const lower = name.trim().toLowerCase();
+        if (!libraryNames.has(lower) && !customNames.has(lower) && !missing.includes(lower)) {
+          missing.push(lower);
+          // Insert with proper casing
+          const properName = name.trim();
+          supabase.from("custom_exercises").insert({
+            name: properName,
+            category: "styrka",
+            muscle_group: "Helkropp",
+            created_by: userId,
+          } as any).then(() => {
+            customNames.add(lower);
+          });
+        }
+      }
+    }
+    if (missing.length > 0) {
+      // Refresh custom exercises after inserts
+      setTimeout(() => {
+        supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
+          if (data) setCustomExercises(data);
+        });
+      }, 1000);
+    }
+  }, [plans, customExercises.length, userId]);
 
   // Reset active day index when week changes — navigate to today's day
   useEffect(() => {
@@ -2904,16 +2942,7 @@ const estimateCalories = (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                     {/* Exercises / details */}
                     {plan.details &&
-                  (() => { const rawLines = plan.details.split("\n").filter(Boolean);
-                    // Sort Vila to the end in circuit workouts
-                    const exerciseLines = plan.is_circuit
-                      ? [...rawLines].sort((a, b) => {
-                          const aVila = /^vila\b/i.test(parseExerciseWeight(a).name?.trim() || "");
-                          const bVila = /^vila\b/i.test(parseExerciseWeight(b).name?.trim() || "");
-                          return aVila === bVila ? 0 : aVila ? 1 : -1;
-                        })
-                      : rawLines;
-                    return <div className="space-y-2">
+                  (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
                         {exerciseLines.map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
                       
@@ -3022,26 +3051,6 @@ const estimateCalories = (
                               triggerSave();
                             }}
                           />);
-                      }
-
-                      // Vila (rest) rendering for circuit workouts
-                      if (/^vila\b/i.test(name.trim()) && plan.is_circuit) {
-                        const vilaMatch = weight?.match(/\d+[×x](\d+)/i);
-                        const vilaSec = vilaMatch ? vilaMatch[1] : "30";
-                        return (
-                          <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Timer className="w-4 h-4 text-warning" />
-                              <span className="text-sm font-semibold text-warning">Vila</span>
-                              <span className="text-sm font-mono text-foreground">{vilaSec}s</span>
-                            </div>
-                            <button
-                              onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: rawLines.indexOf(line), name: "Vila" })}
-                              className="p-1 text-muted-foreground hover:text-destructive transition-colors">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        );
                       }
                       
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
@@ -3221,17 +3230,25 @@ const estimateCalories = (
                         if (vilaMatch) restSec = parseInt(vilaMatch[1]) || restSec;
                       }
                       const exerciseNames = parsed.map(p => p.name);
-                      // Read per-exercise seconds: prefer logged set data (user edits), fallback to plan details
-                      const perExSec = parsed.map(p => {
+                      const perExSec: number[][] = parsed.map(p => {
+                        // Get per-round (per-set) values from set data
                         const setData = getSetData(key, p.name);
-                        if (setData.length > 0 && setData[0].reps) {
-                          return parseInt(setData[0].reps) || defaultSec;
-                        }
-                        if (p.weight) {
-                          const repsMatch = p.weight.match(/\d+×(\d+)/);
-                          if (repsMatch) return parseInt(repsMatch[1]) || defaultSec;
-                        }
-                        return defaultSec;
+                        const baseSec = (() => {
+                          if (p.weight) {
+                            const repsMatch = p.weight.match(/\d+×(\d+)/);
+                            if (repsMatch) return parseInt(repsMatch[1]) || defaultSec;
+                          }
+                          return defaultSec;
+                        })();
+                        // Build per-round array
+                        return Array.from({ length: rounds }, (_, ri) => {
+                          const sd = setData[ri];
+                          if (sd?.reps) {
+                            const v = parseInt(sd.reps);
+                            if (v > 0) return v;
+                          }
+                          return baseSec;
+                        });
                       });
                       return (
                         <button
@@ -3240,6 +3257,47 @@ const estimateCalories = (
                         >
                           <Play className="w-4 h-4" /> Starta
                         </button>
+                      );
+                    })()}
+
+                    {/* Round checkboxes for single mode circuit */}
+                    {plan.is_circuit && plan.tempo && (() => {
+                      const circuitMatch = plan.tempo.match(/^circuit:(\d+)(?::(\d+))?(?::(\d+))?$/);
+                      if (!circuitMatch) return null;
+                      const rounds = circuitMatch[2] ? parseInt(circuitMatch[2]) : 3;
+                      if (rounds <= 0) return null;
+                      const roundKey = `__wod_rounds_done_0__`;
+                      const comp = completions[key];
+                      const lw = comp?.logged_weights as Record<string, any> | null;
+                      const roundsDoneStr = (lw?.[roundKey] as string) || "";
+                      return (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {Array.from({ length: rounds }, (_, ri) => {
+                            const isRoundDone = roundsDoneStr[ri] === "1";
+                            return (
+                              <button
+                                key={ri}
+                                onClick={async () => {
+                                  const newStr = Array.from({ length: rounds }, (_, j) => {
+                                    if (j === ri) return isRoundDone ? "0" : "1";
+                                    return (roundsDoneStr[j] || "0");
+                                  }).join("");
+                                  const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                  const updated = { ...existing, [roundKey]: newStr } as any;
+                                  setCompletions(prev => ({
+                                    ...prev,
+                                    [key]: { ...prev[key], week: 0, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
+                                  }));
+                                  safeUpsertCompletion(0, plan.day, { logged_weights: updated } as any);
+                                }}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${isRoundDone ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                              >
+                                <Check className="w-3 h-3" />
+                                R{ri + 1}
+                              </button>
+                            );
+                          })}
+                        </div>
                       );
                     })()}
 
@@ -5234,26 +5292,6 @@ const estimateCalories = (
                         const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
                         const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
                         
-                        // Vila rendering for circuit workouts in plan mode
-                        if (/^vila\b/i.test(partCondCheckName.trim()) && plan.is_circuit) {
-                          const vilaMatch = part.match(/\d+[×x](\d+)/i);
-                          const vilaSec = vilaMatch ? vilaMatch[1] : "30";
-                          return (
-                            <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Timer className="w-4 h-4 text-warning" />
-                                <span className="text-sm font-semibold text-warning">Vila</span>
-                                <span className="text-sm font-mono text-foreground">{vilaSec}s</span>
-                              </div>
-                              <button
-                                onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: "Vila" })}
-                                className="p-1 text-muted-foreground hover:text-destructive transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          );
-                        }
-
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
                           const suggestMatch = part.trim().match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*km\s*$/i);
