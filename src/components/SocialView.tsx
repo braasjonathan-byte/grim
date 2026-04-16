@@ -412,13 +412,40 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             <div className="border border-border rounded-xl p-4 bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold">Nytt inlägg</h4>
-                <button onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); }}>
+                <button onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); setImageFiles([]); }}>
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
 
-              {/* Image preview */}
-              {imagePreview && (
+              {/* Admin multi-image previews */}
+              {isAdmin && imageFiles.length > 0 && (
+                <div className="space-y-2">
+                  {imageFiles.map((img, idx) => (
+                    <div key={idx} className="relative bg-secondary/30 rounded-lg p-2">
+                      <div className="flex gap-2">
+                        <img src={img.preview} alt="" className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <input
+                            type="text"
+                            value={img.caption}
+                            onChange={(e) => setImageFiles(prev => prev.map((f, i) => i === idx ? { ...f, caption: e.target.value } : f))}
+                            placeholder={`Bildtext ${idx + 1} (valfritt)`}
+                            className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-primary/30"
+                          />
+                          <p className="text-[10px] text-muted-foreground">Bild {idx + 1} av {imageFiles.length}</p>
+                        </div>
+                        <button onClick={() => { URL.revokeObjectURL(img.preview); setImageFiles(prev => prev.filter((_, i) => i !== idx)); }}
+                          className="p-1 text-muted-foreground hover:text-destructive self-start">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Non-admin single image preview */}
+              {!isAdmin && imagePreview && (
                 <div className="relative">
                   <img src={imagePreview} alt="" className="w-full rounded-lg max-h-64 object-cover" />
                   <button onClick={() => { setImageFile(null); setImagePreview(null); }}
