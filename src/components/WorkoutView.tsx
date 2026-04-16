@@ -2068,7 +2068,10 @@ const estimateCalories = (
     const lastWeight = findLastWeight(exerciseName);
     setWeightDialog({ planId, exerciseName, lastWeight });
     setWeightInput(lastWeight?.replace(/.*@\s*/, "").replace(/\s*kg.*/, "") || "");
-    setRepsInput("10");
+    // Default reps to circuit seconds for circuit plans
+    const targetPlan = plans.find(p => p.id === planId);
+    const circuitSecsMatch = targetPlan?.is_circuit && targetPlan?.tempo?.match(/^circuit:(\d+)$/);
+    setRepsInput(circuitSecsMatch ? circuitSecsMatch[1] : "10");
     setSetsInput("3");
   };
 
