@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_exercises ADD COLUMN is_time_based boolean NOT NULL DEFAULT false;
