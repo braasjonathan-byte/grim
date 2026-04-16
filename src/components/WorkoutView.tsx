@@ -839,12 +839,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }, [plans, customExercises.length, userId]);
 
   const skipDayResetRef = useRef(false);
+  const prevWeekRef = useRef(currentWeek);
   // Reset active day index when week changes — navigate to today's day
   useEffect(() => {
     if (skipDayResetRef.current) {
       skipDayResetRef.current = false;
       return;
     }
+    // Only reset day index when the week actually changed, not when plans update
+    if (prevWeekRef.current === currentWeek) return;
+    prevWeekRef.current = currentWeek;
     const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
     const todayName = todayDayNames[new Date().getDay()];
     const currentWeekDays = plans
