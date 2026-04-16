@@ -393,7 +393,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8 animate-fade-in">
         <div className="text-center space-y-2 border-none">
-           <img src="/grim-logo-hires.png" alt="Grim" className="w-60 h-60 mx-auto object-contain" fetchPriority="high" width={240} height={240} />
+           <img src="/grim-logo.webp" alt="Grim" className="w-60 h-60 mx-auto object-contain" fetchPriority="high" width={240} height={240} />
           <h1 className="text-3xl font-black tracking-tight">
           </h1>
           <p className="text-xs text-muted-foreground italic">
