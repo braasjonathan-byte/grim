@@ -2904,7 +2904,16 @@ const estimateCalories = (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                     {/* Exercises / details */}
                     {plan.details &&
-                  (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
+                  (() => { const rawLines = plan.details.split("\n").filter(Boolean);
+                    // Sort Vila to the end in circuit workouts
+                    const exerciseLines = plan.is_circuit
+                      ? [...rawLines].sort((a, b) => {
+                          const aVila = /^vila\b/i.test(parseExerciseWeight(a).name?.trim() || "");
+                          const bVila = /^vila\b/i.test(parseExerciseWeight(b).name?.trim() || "");
+                          return aVila === bVila ? 0 : aVila ? 1 : -1;
+                        })
+                      : rawLines;
+                    return <div className="space-y-2">
                         {exerciseLines.map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
                       
