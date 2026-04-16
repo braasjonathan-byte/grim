@@ -9,6 +9,7 @@ const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const AnnouncementInbox = lazy(() => import("@/components/AnnouncementInbox"));
 const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
+const ReadyWorkoutManager = lazy(() => import("@/components/ReadyWorkoutManager"));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
 const ReferralLink = lazy(() => import("@/components/ReferralLink"));
@@ -62,6 +63,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan }: Too
     { key: "announcements", label: "Meddelanden", render: () => <AnnouncementInbox userId={userId} isAdmin={isAdmin} /> },
     { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} /> },
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
+    { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings", label: "Inställningar", render: () => <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} /> },
     { key: "notifications", label: "Notiser", render: () => <NotificationSettings userId={userId} /> },
     { key: "referral", label: "Bjud in vän", render: () => <ReferralLink userId={userId} /> },

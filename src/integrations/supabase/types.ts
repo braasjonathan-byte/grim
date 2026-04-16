@@ -748,6 +748,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ready_workout_config: {
+        Row: {
+          category_label: string
+          created_at: string
+          id: string
+          is_circuit: boolean
+          updated_at: string
+          workout_name: string
+        }
+        Insert: {
+          category_label: string
+          created_at?: string
+          id?: string
+          is_circuit?: boolean
+          updated_at?: string
+          workout_name: string
+        }
+        Update: {
+          category_label?: string
+          created_at?: string
+          id?: string
+          is_circuit?: boolean
+          updated_at?: string
+          workout_name?: string
+        }
+        Relationships: []
+      }
       security_answers: {
         Row: {
           answer_hash: string

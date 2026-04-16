@@ -519,6 +519,18 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   // Circuit timer state
   const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
 
+  // Ready workout circuit config from DB
+  const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    supabase
+      .from("ready_workout_config")
+      .select("workout_name")
+      .eq("is_circuit", true)
+      .then(({ data }) => {
+        if (data) setCircuitConfigs(new Set(data.map((d: any) => d.workout_name)));
+      });
+  }, []);
+
   // Import workout dialog
   const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
 
@@ -5665,7 +5677,8 @@ const estimateCalories = (
                           const isForTime = plan.session_name.toLowerCase().includes("for time") || plan.details.toLowerCase().includes("for time");
                           const isHiit = plan.session_name.toLowerCase().includes("hiit") || plan.session_name.toLowerCase().includes("cirkel") || plan.details.toLowerCase().includes("hiit");
                           const isIntervall = plan.session_name.toLowerCase().includes("intervall");
-                          const showRoundCheckboxes = isForTime || isHiit || isIntervall;
+                          const isDbCircuit = circuitConfigs.has(plan.session_name);
+                          const showRoundCheckboxes = isForTime || isHiit || isIntervall || isDbCircuit;
 
                           // Parse exercises from rest of line (separated by / or ;)
                           // Filter out time specs like "30s arbete", "15s vila", "20s vila"
