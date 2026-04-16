@@ -794,7 +794,7 @@ function generateHIITFatLoss(profile: FitnessProfile): TemplatePlanDay[] {
       { week: w, day: "Tis", session_name: "Styrka – Överkropp", details: `Armhävningar 3×${8 + w}; Rodd med hantlar 3×10; Axelpress 3×10; Planka 3×${30 + w * 5}s; Bicepscurl 2×12`, tempo: "" },
       { week: w, day: "Ons", session_name: "Kondition – Löpintervaller", details: isDeload ? `Löpning — 20 min` : `Uppvärmning — 10 min\n${3 + Math.floor(w / 2)}×${Math.round(work / 60 * 10) / 10} min sprint (${Math.round((rest + 10) / 60 * 10) / 10} min joggvila)\nNedvarvning — 10 min`, tempo: isDeload ? "Lugnt" : "Zon 4–5" },
       { week: w, day: "Tors", session_name: "Vila / Stretching", details: "20 min stretching eller yoga", tempo: "" },
-      { week: w, day: "Fre", session_name: "HIIT – Cirkelträning", details: `${rounds} cirklar:\nKettlebell swings 1×${work}s\nBox Jumps 1×${work}s\nMedicinbollskast 1×${work}s\nPlanka 1×${work}s\nVila ${rest}s mellan övningar, 90s mellan cirklar`, tempo: "Max intensitet" },
+      { week: w, day: "Fre", session_name: "Cirkelträning – Helkropp", details: `${rounds} rundor: ${work}s arbete / ${rest}s vila\nKettlebell swings\nBox jumps\nMedicinbollskast\nPlanka\nVila 90s mellan rundor`, tempo: "Max intensitet" },
       { week: w, day: "Lör", session_name: "Styrka – Underkropp", details: `Knäböj 3×${8 + w}; Utfallssteg 3×10/ben; Hip thrust 3×12; Vadpress 3×15; Hängande benlyft 3×10`, tempo: "" },
     );
   }
