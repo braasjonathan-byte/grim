@@ -2904,7 +2904,16 @@ const estimateCalories = (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                     {/* Exercises / details */}
                     {plan.details &&
-                  (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
+                  (() => { const rawLines = plan.details.split("\n").filter(Boolean);
+                    // Sort Vila to the end in circuit workouts
+                    const exerciseLines = plan.is_circuit
+                      ? [...rawLines].sort((a, b) => {
+                          const aVila = /^vila\b/i.test(parseExerciseWeight(a).name?.trim() || "");
+                          const bVila = /^vila\b/i.test(parseExerciseWeight(b).name?.trim() || "");
+                          return aVila === bVila ? 0 : aVila ? 1 : -1;
+                        })
+                      : rawLines;
+                    return <div className="space-y-2">
                         {exerciseLines.map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
                       
@@ -3013,6 +3022,26 @@ const estimateCalories = (
                               triggerSave();
                             }}
                           />);
+                      }
+
+                      // Vila (rest) rendering for circuit workouts
+                      if (/^vila\b/i.test(name.trim()) && plan.is_circuit) {
+                        const vilaMatch = weight?.match(/\d+[×x](\d+)/i);
+                        const vilaSec = vilaMatch ? vilaMatch[1] : "30";
+                        return (
+                          <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Timer className="w-4 h-4 text-warning" />
+                              <span className="text-sm font-semibold text-warning">Vila</span>
+                              <span className="text-sm font-mono text-foreground">{vilaSec}s</span>
+                            </div>
+                            <button
+                              onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: rawLines.indexOf(line), name: "Vila" })}
+                              className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
                       }
                       
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
@@ -5200,6 +5229,26 @@ const estimateCalories = (
                         const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
                         const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
                         
+                        // Vila rendering for circuit workouts in plan mode
+                        if (/^vila\b/i.test(partCondCheckName.trim()) && plan.is_circuit) {
+                          const vilaMatch = part.match(/\d+[×x](\d+)/i);
+                          const vilaSec = vilaMatch ? vilaMatch[1] : "30";
+                          return (
+                            <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Timer className="w-4 h-4 text-warning" />
+                                <span className="text-sm font-semibold text-warning">Vila</span>
+                                <span className="text-sm font-mono text-foreground">{vilaSec}s</span>
+                              </div>
+                              <button
+                                onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: "Vila" })}
+                                className="p-1 text-muted-foreground hover:text-destructive transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        }
+
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
                           const suggestMatch = part.trim().match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*km\s*$/i);
