@@ -732,7 +732,7 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
         setCommentNicknames(map);
       }
     }
-  }, [userId, initialWeekSet, planStartDate]);
+  }, [userId, initialWeekSet, planStartDate, profileLoaded]);
 
   useEffect(() => {
     fetchData();
