@@ -3769,25 +3769,35 @@ const estimateCalories = (
             {readyWorkoutCategories.map((cat, ci) => (
               <div key={ci} className="space-y-1.5">
                 <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
-                {cat.workouts.map((w, wi) => (
-                  <button
-                    key={wi}
-                    onClick={async () => {
-                      const dateStr = format(singleDate, "yyyy-MM-dd");
-                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                      await supabase.from("workout_plans").insert({
-                        user_id: userId, week: 0, day: uniqueKey,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                      });
-                      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`); fetchData();
-                    }}
-                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
-                  >
-                    <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
-                  </button>
-                ))}
+                {cat.workouts.map((w, wi) => {
+                  const isLocked = wi > 0 && !isHonorary && !isAdmin;
+                  return (
+                    <button
+                      key={wi}
+                      disabled={isLocked}
+                      onClick={async () => {
+                        if (isLocked) return;
+                        const dateStr = format(singleDate, "yyyy-MM-dd");
+                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                        await supabase.from("workout_plans").insert({
+                          user_id: userId, week: 0, day: uniqueKey,
+                          session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        });
+                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        toast.success(`"${w.name}" importerat!`); fetchData();
+                      }}
+                      className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${isLocked ? "bg-secondary/30 opacity-50 cursor-not-allowed" : "bg-secondary/50 hover:bg-secondary"}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                        </div>
+                        {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 ml-2" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             ))}
           </div>
