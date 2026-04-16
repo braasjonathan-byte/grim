@@ -3184,9 +3184,14 @@ const estimateCalories = (
                       const circuitMatch = plan.tempo?.match(/^circuit:(\d+)(?::(\d+))?(?::(\d+))?$/);
                       const defaultSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
                       const rounds = circuitMatch?.[2] ? parseInt(circuitMatch[2]) : 3;
-                      const restSec = circuitMatch?.[3] ? parseInt(circuitMatch[3]) : 0;
+                      // Rest: prefer Vila line from details, fallback to tempo
+                      const vilaLine = exerciseLines.find(l => /^vila\s/i.test(parseExerciseWeight(l).name?.trim() || ""));
+                      let restSec = circuitMatch?.[3] ? parseInt(circuitMatch[3]) : 0;
+                      if (vilaLine) {
+                        const vilaMatch = vilaLine.match(/\d+[×x](\d+)/i);
+                        if (vilaMatch) restSec = parseInt(vilaMatch[1]) || restSec;
+                      }
                       const exerciseNames = parsed.map(p => p.name);
-                      // Read per-exercise seconds from the reps value (e.g. "3×40" → 40)
                       const perExSec = parsed.map(p => {
                         if (p.weight) {
                           const repsMatch = p.weight.match(/\d+×(\d+)/);
