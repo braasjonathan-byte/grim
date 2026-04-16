@@ -2795,7 +2795,7 @@ const estimateCalories = (
         )}
 
         <div className="space-y-2">
-          {weekPlans.map((plan) => {
+          {visiblePlans.map((plan) => {
             const weekdayName = getWeekdayFromDayKey(plan.day);
             const key = `0-${plan.day}`;
             const completion = completions[key];
