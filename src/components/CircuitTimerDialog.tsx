@@ -1,0 +1,270 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Play, Pause, X, RotateCcw } from "lucide-react";
+import { playExerciseSwitch, playCountdownBeep, playGoBeep } from "@/lib/sounds";
+
+interface CircuitTimerDialogProps {
+  exercises: string[];
+  workSeconds: number;
+  roundCount: number;
+  onClose: () => void;
+  onRoundComplete?: (roundIndex: number) => void;
+}
+
+type Phase = "ready" | "countdown" | "work" | "done";
+
+const CircuitTimerDialog = ({
+  exercises,
+  workSeconds,
+  roundCount,
+  onClose,
+  onRoundComplete,
+}: CircuitTimerDialogProps) => {
+  const [phase, setPhase] = useState<Phase>("ready");
+  const [currentRound, setCurrentRound] = useState(0);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(workSeconds);
+  const [countdownValue, setCountdownValue] = useState(3);
+  const [paused, setPaused] = useState(false);
+  const intervalRef = useRef<number | null>(null);
+
+  const clearTimer = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  // Countdown phase
+  useEffect(() => {
+    if (phase !== "countdown") return;
+    setCountdownValue(3);
+    playCountdownBeep();
+    intervalRef.current = window.setInterval(() => {
+      setCountdownValue((prev) => {
+        if (prev <= 1) {
+          clearTimer();
+          playGoBeep();
+          setPhase("work");
+          setSecondsLeft(workSeconds);
+          return 0;
+        }
+        playCountdownBeep();
+        return prev - 1;
+      });
+    }, 1000);
+    return clearTimer;
+  }, [phase, clearTimer, workSeconds]);
+
+  // Work phase
+  useEffect(() => {
+    if (phase !== "work" || paused) return;
+    intervalRef.current = window.setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearTimer();
+          // Move to next exercise or next round
+          const nextExIdx = currentExerciseIndex + 1;
+          if (nextExIdx < exercises.length) {
+            // Next exercise in same round
+            playExerciseSwitch();
+            setCurrentExerciseIndex(nextExIdx);
+            return workSeconds;
+          } else {
+            // Round complete
+            onRoundComplete?.(currentRound);
+            const nextRound = currentRound + 1;
+            if (nextRound < roundCount) {
+              playExerciseSwitch();
+              setCurrentRound(nextRound);
+              setCurrentExerciseIndex(0);
+              return workSeconds;
+            } else {
+              // All done
+              playExerciseSwitch();
+              setPhase("done");
+              return 0;
+            }
+          }
+        }
+        // Beep at 3, 2, 1
+        if (prev <= 4 && prev > 1) {
+          playCountdownBeep();
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return clearTimer;
+  }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, clearTimer, onRoundComplete]);
+
+  const startWorkout = () => {
+    setPhase("countdown");
+  };
+
+  const togglePause = () => {
+    setPaused((p) => !p);
+  };
+
+  const restart = () => {
+    clearTimer();
+    setPhase("ready");
+    setCurrentRound(0);
+    setCurrentExerciseIndex(0);
+    setSecondsLeft(workSeconds);
+    setPaused(false);
+  };
+
+  const totalExercises = exercises.length;
+  const totalTime = workSeconds * totalExercises * roundCount;
+  const elapsedExercises = currentRound * totalExercises + currentExerciseIndex;
+  const elapsed = elapsedExercises * workSeconds + (workSeconds - secondsLeft);
+  const progressPct = totalTime > 0 ? Math.round((elapsed / totalTime) * 100) : 0;
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-background/98 backdrop-blur-sm flex flex-col">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <button onClick={onClose} className="p-2 text-muted-foreground hover:text-foreground">
+          <X className="w-5 h-5" />
+        </button>
+        <span className="text-sm font-bold text-foreground">
+          Runda {currentRound + 1} / {roundCount}
+        </span>
+        <button onClick={restart} className="p-2 text-muted-foreground hover:text-foreground">
+          <RotateCcw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1 bg-secondary">
+        <div
+          className="h-full bg-primary transition-all duration-1000"
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+        {phase === "ready" && (
+          <>
+            <div className="text-center space-y-3">
+              <p className="text-lg font-bold text-foreground">Redo att köra?</p>
+              <p className="text-sm text-muted-foreground">
+                {roundCount} rundor × {totalExercises} övningar × {workSeconds}s
+              </p>
+              <div className="space-y-1 max-w-xs mx-auto">
+                {exercises.map((ex, i) => (
+                  <p key={i} className="text-xs text-foreground flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-secondary text-muted-foreground flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                      {i + 1}
+                    </span>
+                    {ex}
+                  </p>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={startWorkout}
+              className="w-20 h-20 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            >
+              <Play className="w-8 h-8 ml-1" />
+            </button>
+          </>
+        )}
+
+        {phase === "countdown" && (
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-4">Gör dig redo!</p>
+            <span className="text-8xl font-black font-mono text-primary animate-pulse">
+              {countdownValue}
+            </span>
+          </div>
+        )}
+
+        {phase === "work" && (
+          <>
+            {/* Timer */}
+            <div className="text-center">
+              <span className="text-7xl font-black font-mono text-foreground tracking-wider">
+                {secondsLeft}
+              </span>
+              <p className="text-xs text-muted-foreground mt-1">sekunder kvar</p>
+            </div>
+
+            {/* Exercise list with active highlight */}
+            <div className="w-full max-w-sm space-y-1.5">
+              {exercises.map((ex, i) => {
+                const isActive = i === currentExerciseIndex;
+                const isDone = i < currentExerciseIndex;
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${
+                      isActive
+                        ? "bg-primary text-primary-foreground scale-[1.02]"
+                        : isDone
+                        ? "bg-success/20 text-success"
+                        : "bg-secondary/50 text-muted-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : isDone
+                          ? "bg-success/30 text-success"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className={`text-sm font-semibold ${isActive ? "" : ""}`}>
+                      {ex}
+                    </span>
+                    {isActive && (
+                      <span className="ml-auto text-xs font-mono opacity-80">
+                        {workSeconds}s
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Pause button */}
+            <button
+              onClick={togglePause}
+              className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
+                paused
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {paused ? <Play className="w-6 h-6 ml-0.5" /> : <Pause className="w-6 h-6" />}
+            </button>
+            {paused && (
+              <p className="text-xs text-warning font-semibold">PAUSAD</p>
+            )}
+          </>
+        )}
+
+        {phase === "done" && (
+          <div className="text-center space-y-4">
+            <p className="text-4xl">🎉</p>
+            <p className="text-lg font-bold text-foreground">Passet klart!</p>
+            <p className="text-sm text-muted-foreground">
+              {roundCount} rundor × {totalExercises} övningar avklarat
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold text-sm active:scale-95 transition-transform"
+            >
+              Stäng
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default CircuitTimerDialog;

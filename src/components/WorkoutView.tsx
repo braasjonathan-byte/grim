@@ -3,7 +3,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -27,6 +27,8 @@ import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
+import CircuitTimerDialog from "@/components/CircuitTimerDialog";
+import { readyWorkoutCategories } from "@/data/readyWorkouts";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
@@ -514,7 +516,13 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   const [addWeekSourceWeek, setAddWeekSourceWeek] = useState<number | null>(null);
   const [addWeekSaving, setAddWeekSaving] = useState(false);
 
-  // Exercise dropdown menu close on scroll
+  // Circuit timer state
+  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
+
+  // Import workout dialog
+  const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
+
+
   const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -5668,10 +5676,58 @@ const estimateCalories = (
 
                           return (
                             <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5 space-y-2">
-                              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                                <Timer className="w-3.5 h-3.5 text-primary" />
-                                {headerText}
-                              </p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                                  <Timer className="w-3.5 h-3.5 text-primary" />
+                                  {headerText}
+                                </p>
+                                {(() => {
+                                  // Parse work seconds from header line e.g. "32s arbete"
+                                  const workMatch = part.match(/(\d+)s\s*arbete/i);
+                                  const workSec = workMatch ? parseInt(workMatch[1]) : 0;
+                                  // Count exercises: either inline or from circuit map
+                                  const circuitExInfo = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                  const exerciseNames: string[] = [];
+                                  if (inlineExercises.length > 0) {
+                                    exerciseNames.push(...inlineExercises);
+                                  } else if (circuitExInfo) {
+                                    for (const exIdx of circuitExInfo.exerciseIndices) {
+                                      const exPart = parts[exIdx];
+                                      const { name: eName } = parseExerciseWeight(exPart);
+                                      exerciseNames.push(eName);
+                                    }
+                                  }
+                                  if (workSec > 0 && exerciseNames.length > 0 && showRoundCheckboxes) {
+                                    return (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setCircuitTimer({ exercises: exerciseNames, workSeconds: workSec, roundCount: roundCount, weekDayKey: key, headerIndex: i });
+                                        }}
+                                        className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold flex items-center gap-1 active:scale-95 transition-transform"
+                                      >
+                                        <Play className="w-3 h-3" /> Starta
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                              {/* Info: work time × exercises */}
+                              {(() => {
+                                const workMatch = part.match(/(\d+)s\s*arbete/i);
+                                const restMatch = part.match(/(\d+)s\s*vila/i);
+                                const circuitExInfo2 = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                const exCount = inlineExercises.length > 0 ? inlineExercises.length : (circuitExInfo2?.exerciseIndices.length || 0);
+                                if (workMatch && exCount > 0) {
+                                  return (
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {workMatch[1]}s × {exCount} övningar{restMatch ? ` · ${restMatch[1]}s vila` : ""}
+                                    </p>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {inlineExercises.length > 0 && (
                                 <div className="space-y-1 pl-5">
                                   {inlineExercises.map((ex, ei) => (
@@ -6118,6 +6174,14 @@ const estimateCalories = (
                   <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till övning
                     </button>
+                  {(!plan.details || plan.details.trim() === "" || plan.details.trim().toLowerCase() === "vilodag") && (
+                    <button
+                      onClick={() => setImportWorkoutTarget({ planId: plan.id, week: plan.week, day: plan.day })}
+                      className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Download className="w-3 h-3" /> Importera färdigt pass
+                    </button>
+                  )}
                 </div>
                   }
                   <ExercisePickerDialog
@@ -6418,6 +6482,71 @@ const estimateCalories = (
     )}
     {showFireworks && (
       <FireworksOverlay onComplete={() => setShowFireworks(false)} />
+    )}
+    {/* Circuit Timer */}
+    {circuitTimer && (
+      <CircuitTimerDialog
+        exercises={circuitTimer.exercises}
+        workSeconds={circuitTimer.workSeconds}
+        roundCount={circuitTimer.roundCount}
+        onClose={() => setCircuitTimer(null)}
+        onRoundComplete={(roundIndex) => {
+          const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
+          const existing = (completions[circuitTimer.weekDayKey]?.logged_weights || {}) as Record<string, any>;
+          const currentStr = (existing[roundKey] as string) || "";
+          const newStr = Array.from({ length: circuitTimer.roundCount }, (_, j) => {
+            if (j === roundIndex) return "1";
+            return currentStr[j] || "0";
+          }).join("");
+          const updated = { ...existing, [roundKey]: newStr };
+          const [wStr, dStr] = circuitTimer.weekDayKey.split("-");
+          const w = parseInt(wStr);
+          const d = dStr;
+          setCompletions(prev => ({
+            ...prev,
+            [circuitTimer.weekDayKey]: { ...prev[circuitTimer.weekDayKey], week: w, day: d, done: prev[circuitTimer.weekDayKey]?.done || false, skipped: prev[circuitTimer.weekDayKey]?.skipped || false, user_comment: prev[circuitTimer.weekDayKey]?.user_comment || "", logged_weights: updated } as Completion
+          }));
+          safeUpsertCompletion(w, d, { logged_weights: updated });
+        }}
+      />
+    )}
+    {/* Import workout dialog */}
+    {importWorkoutTarget && (
+      <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setImportWorkoutTarget(null)} />
+        <div className="relative bg-card rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto p-4 space-y-3 z-10">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm">Importera färdigt pass</h3>
+            <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+          </div>
+          {readyWorkoutCategories.map((cat, ci) => (
+            <div key={ci} className="space-y-1.5">
+              <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
+              {cat.workouts.map((w, wi) => (
+                <button
+                  key={wi}
+                  onClick={async () => {
+                    const target = importWorkoutTarget;
+                    await supabase.from("workout_plans").update({
+                      session_name: w.name,
+                      details: w.details,
+                      tempo: w.tempo || null,
+                    }).eq("id", target.planId);
+                    setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
+                    setImportWorkoutTarget(null);
+                    toast.success(`"${w.name}" importerat!`);
+                    triggerSave();
+                  }}
+                  className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                >
+                  <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                  <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
     )}
     {/* Weight prompt dialog */}
     {showWeightPrompt && (
