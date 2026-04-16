@@ -8,6 +8,7 @@ interface CircuitTimerDialogProps {
   roundCount: number;
   onClose: () => void;
   onRoundComplete?: (roundIndex: number) => void;
+  onRated?: (rating: number) => void;
 }
 
 type Phase = "ready" | "countdown" | "work" | "done";
