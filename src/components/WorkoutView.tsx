@@ -2587,37 +2587,61 @@ const estimateCalories = (
   // Single workouts mode
   if (mode === "single") {
     const singlePlans = plans.filter((p) => p.week === 0).sort((a, b) => {
-      // Sort by date ascending within week view
       const dateA = a.day.match(/^(\d{4}-\d{2}-\d{2})/) ? a.day : "0000";
       const dateB = b.day.match(/^(\d{4}-\d{2}-\d{2})/) ? b.day : "0000";
       return dateA.localeCompare(dateB);
     });
 
-    // Compute virtual weeks from dates
-    const firstMonday = singlePlans.length > 0 ? (() => {
-      const earliest = singlePlans.reduce((min, p) => {
-        const d = p.day.match(/^(\d{4}-\d{2}-\d{2})/);
-        const md = min.day.match(/^(\d{4}-\d{2}-\d{2})/);
-        return d && md && d[1] < md[1] ? p : min;
-      });
-      const dateMatch = earliest.day.match(/^(\d{4}-\d{2}-\d{2})/);
-      return dateMatch ? getMonday(parseISO(dateMatch[1])) : getMonday(new Date());
-    })() : getMonday(new Date());
+    // Helper: get ISO week number from day key
+    const getIsoWeekFromKey = (dayKey: string): number => {
+      const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
+      return m ? getISOWeek(parseISO(m[1])) : getISOWeek(new Date());
+    };
 
-    // Group plans by virtual week
+    // Helper: get day-of-week name from day key (Mån, Tis, ...)
+    const getDayNameFromKey = (dayKey: string): string => {
+      const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (!m) return "Mån";
+      const d = parseISO(m[1]);
+      const jsDay = getDay(d); // 0=Sun, 1=Mon...
+      return DAYS[jsDay === 0 ? 6 : jsDay - 1];
+    };
+
+    // Group plans by ISO week
     const weekGroups = new Map<number, PlanDay[]>();
     for (const p of singlePlans) {
-      const wk = computeSingleWeek(p.day, firstMonday);
+      const wk = getIsoWeekFromKey(p.day);
       if (!weekGroups.has(wk)) weekGroups.set(wk, []);
       weekGroups.get(wk)!.push(p);
     }
     const singleWeeks = [...weekGroups.keys()].sort((a, b) => a - b);
 
-    // Auto-set to latest week with incomplete workouts on first render
+    // Auto-set to current ISO week or latest with data
+    const currentIsoWeek = getISOWeek(new Date());
     const effectiveWeek = singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
-      (singleWeeks.length > 0 ? singleWeeks[singleWeeks.length - 1] : 1);
+      (singleWeeks.includes(currentIsoWeek) ? currentIsoWeek :
+      (singleWeeks.length > 0 ? singleWeeks[singleWeeks.length - 1] : currentIsoWeek));
 
     const weekPlans = weekGroups.get(effectiveWeek) || [];
+
+    // Group weekPlans by day-of-week for tabs
+    const dayGroupsInWeek: { dayName: string; dayIndex: number; plans: PlanDay[] }[] = [];
+    const dayMap = new Map<string, PlanDay[]>();
+    for (const p of weekPlans) {
+      const dn = getDayNameFromKey(p.day);
+      if (!dayMap.has(dn)) dayMap.set(dn, []);
+      dayMap.get(dn)!.push(p);
+    }
+    for (const dayName of DAYS) {
+      if (dayMap.has(dayName)) {
+        dayGroupsInWeek.push({ dayName, dayIndex: DAYS.indexOf(dayName), plans: dayMap.get(dayName)! });
+      }
+    }
+
+    const safeDayIdx = Math.min(singleActiveDayIdx, Math.max(0, dayGroupsInWeek.length - 1));
+    const activeDayGroup = dayGroupsInWeek[safeDayIdx];
+    const visiblePlans = isMobile && dayGroupsInWeek.length > 1 && activeDayGroup ? activeDayGroup.plans : weekPlans;
+
     const weekDoneCount = weekPlans.filter((p) => completions[`0-${p.day}`]?.done).length;
     const totalDoneCount = singlePlans.filter((p) => completions[`0-${p.day}`]?.done).length;
     const singleWeekIdx = singleWeeks.indexOf(effectiveWeek);
@@ -2647,7 +2671,6 @@ const estimateCalories = (
               onClick={leavePlan}
               className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
               title="Rensa alla pass">
-
                 <LogOut className="w-4 h-4" />
               </button>
               <span className="text-[9px] text-muted-foreground leading-tight">Rensa alla</span>
@@ -2655,72 +2678,119 @@ const estimateCalories = (
           }
         </div>
 
-        {/* Event countdown progress bar */}
         <EventProgressBar userId={userId} />
         <SpotifyWidget userId={userId} />
 
         {/* Week navigation */}
-        {singleWeeks.length > 0 && (
+        {(singleWeeks.length > 0 || singlePlans.length > 0) && (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => singleWeekIdx > 0 && setSingleCurrentWeek(singleWeeks[singleWeekIdx - 1])}
-                disabled={singleWeekIdx <= 0}
-                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="text-center">
-                <h2 className="text-2xl font-black tracking-tight">Vecka {effectiveWeek}</h2>
-                <p className="text-sm text-muted-foreground">
-                  av {singleWeeks.length} {singleWeeks.length === 1 ? "vecka" : "veckor"}
-                </p>
+            <div
+              className="flex items-center justify-center py-2 select-none touch-pan-x"
+              onTouchStart={(e) => { (e.currentTarget as any)._swipeX = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                const startX = (e.currentTarget as any)._swipeX;
+                if (startX == null) return;
+                const dx = e.changedTouches[0].clientX - startX;
+                if (Math.abs(dx) > 40) {
+                  if (dx < 0 && singleWeekIdx < singleWeeks.length - 1) { setSingleCurrentWeek(singleWeeks[singleWeekIdx + 1]); setSingleActiveDayIdx(0); }
+                  else if (dx > 0 && singleWeekIdx > 0) { setSingleCurrentWeek(singleWeeks[singleWeekIdx - 1]); setSingleActiveDayIdx(0); }
+                }
+                (e.currentTarget as any)._swipeX = null;
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { if (singleWeekIdx > 0) { setSingleCurrentWeek(singleWeeks[singleWeekIdx - 1]); setSingleActiveDayIdx(0); } }}
+                  disabled={singleWeekIdx <= 0}
+                  className="p-1 text-muted-foreground disabled:opacity-20"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-1.5 min-w-[120px] justify-center">
+                  {singleWeeks.map((wk) => {
+                    const isCurrent = wk === effectiveWeek;
+                    const isThisWeek = wk === currentIsoWeek;
+                    const distance = Math.abs(singleWeeks.indexOf(wk) - singleWeekIdx);
+                    if (distance > 2) return null;
+                    return (
+                      <button
+                        key={wk}
+                        onClick={() => { setSingleCurrentWeek(wk); setSingleActiveDayIdx(0); }}
+                        className={`flex-shrink-0 rounded-full text-xs font-semibold transition-all ${
+                          isCurrent
+                            ? "px-4 py-1.5 bg-primary text-primary-foreground"
+                            : isThisWeek
+                            ? "px-3 py-1 bg-muted text-foreground border border-primary/30"
+                            : distance === 1
+                            ? "px-3 py-1 text-muted-foreground hover:bg-muted"
+                            : "px-2.5 py-1 text-muted-foreground/50 text-[10px]"
+                        }`}
+                      >
+                        V{wk}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => { if (singleWeekIdx < singleWeeks.length - 1) { setSingleCurrentWeek(singleWeeks[singleWeekIdx + 1]); setSingleActiveDayIdx(0); } }}
+                  disabled={singleWeekIdx >= singleWeeks.length - 1}
+                  className="p-1 text-muted-foreground disabled:opacity-20"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => singleWeekIdx < singleWeeks.length - 1 && setSingleCurrentWeek(singleWeeks[singleWeekIdx + 1])}
-                disabled={singleWeekIdx >= singleWeeks.length - 1}
-                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
-                <ChevronRight className="w-5 h-5" />
-              </button>
             </div>
-
-            {/* Week pills */}
-            {singleWeeks.length > 1 && (
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                {singleWeeks.map((wk) => {
-                  const wPlans = weekGroups.get(wk) || [];
-                  const wDone = wPlans.filter(p => completions[`0-${p.day}`]?.done).length;
-                  const allDone = wPlans.length > 0 && wDone === wPlans.length;
-                  return (
-                    <button
-                      key={wk}
-                      onClick={() => setSingleCurrentWeek(wk)}
-                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                        effectiveWeek === wk
-                          ? "bg-primary text-primary-foreground"
-                          : allDone
-                          ? "bg-success/20 text-success"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
-                      }`}>
-                      V{wk}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
 
             {/* Week progress */}
             {weekPlans.length > 0 && (
               <div>
-                <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
                   <div
                     className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${weekPlans.length > 0 ? Math.round(weekDoneCount / weekPlans.length * 100) : 0}%` }} />
                 </div>
-                <p className="text-xs text-muted-foreground text-center mt-1">
-                  {weekDoneCount} av {weekPlans.length} pass denna vecka
+                <p className="text-[10px] text-muted-foreground text-center mt-1">
+                  {weekDoneCount} av {weekPlans.length} pass · Vecka {effectiveWeek}
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Day tabs */}
+        {isMobile && dayGroupsInWeek.length > 1 && (
+          <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
+            {dayGroupsInWeek.map((dg, idx) => {
+              const dgDone = dg.plans.every(p => completions[`0-${p.day}`]?.done);
+              const dgSkipped = dg.plans.every(p => completions[`0-${p.day}`]?.skipped);
+              const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+              const todayName = todayDayNames[new Date().getDay()];
+              const isToday = dg.dayName === todayName && effectiveWeek === currentIsoWeek;
+              const isActive = idx === safeDayIdx;
+              return (
+                <button
+                  key={dg.dayName}
+                  onClick={() => { setSingleActiveDayIdx(idx); setExpandedDay(null); }}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    isActive
+                      ? dgDone
+                        ? "bg-success text-success-foreground"
+                        : isToday
+                        ? "bg-warning/10 text-warning border border-warning/30"
+                        : "bg-primary text-primary-foreground"
+                      : dgDone
+                      ? "bg-success/20 text-success"
+                      : dgSkipped
+                      ? "bg-destructive/20 text-destructive"
+                      : isToday
+                      ? "bg-warning/20 text-warning"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {dg.dayName}
+                </button>
+              );
+            })}
           </div>
         )}
 
