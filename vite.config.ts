@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => ({
       srcDir: "public",
       filename: "custom-sw.js",
       registerType: "autoUpdate",
-      injectRegister: "auto",
+      injectRegister: "script-defer",
       includeAssets: ["favicon.ico", "robots.txt"],
       injectManifest: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
