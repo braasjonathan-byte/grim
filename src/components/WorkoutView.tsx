@@ -5279,7 +5279,7 @@ const estimateCalories = (
 
                         // Extract RPE first, then parse structured format
                         const { clean: cleanPart, rpe: partRpe } = extractRpe(part);
-                        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)s?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
                         // Fallback: try to extract just sets from "NxM" or "Nx..." pattern
                         const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
                         const partName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
