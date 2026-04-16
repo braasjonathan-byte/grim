@@ -534,6 +534,22 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   // Import workout dialog
   const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
 
+  // Save workout state
+  const [saveWorkoutSource, setSaveWorkoutSource] = useState<{ details: string; tempo: string | null; defaultName: string } | null>(null);
+  const [saveWorkoutName, setSaveWorkoutName] = useState("");
+  const [saveWorkoutVisibility, setSaveWorkoutVisibility] = useState<"private" | "public">("private");
+  const [saveWorkoutSaving, setSaveWorkoutSaving] = useState(false);
+
+  // Saved workouts for import
+  const [savedWorkouts, setSavedWorkouts] = useState<{ id: string; name: string; details: string; tempo: string | null; visibility: string; user_id: string }[]>([]);
+  useEffect(() => {
+    supabase
+      .from("saved_workouts")
+      .select("id, name, details, tempo, visibility, user_id")
+      .then(({ data }) => {
+        if (data) setSavedWorkouts(data as any);
+      });
+  }, []);
 
   const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
 
