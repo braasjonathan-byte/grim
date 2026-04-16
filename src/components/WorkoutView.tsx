@@ -2525,6 +2525,7 @@ const estimateCalories = (
     const { error } = await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     if (error) console.error("[DELETE] Supabase error:", error);
     else console.log("[DELETE] Success");
+    skipDayResetRef.current = true;
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
     setDeleteExerciseConfirm(null);
   };
