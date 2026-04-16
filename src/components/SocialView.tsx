@@ -117,13 +117,13 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           setAvatarUrls(aMap);
         }
       }
-      // Load likes
+      // Load likes + post images
       const postIds = postsData.map(p => p.id);
       if (postIds.length > 0) {
-        const { data: likesData } = await supabase
-          .from("social_post_likes")
-          .select("post_id, user_id")
-          .in("post_id", postIds);
+        const [{ data: likesData }, { data: imgData }] = await Promise.all([
+          supabase.from("social_post_likes").select("post_id, user_id").in("post_id", postIds),
+          supabase.from("social_post_images").select("post_id, image_url, caption, sort_order").in("post_id", postIds).order("sort_order", { ascending: true }),
+        ]);
         if (likesData) {
           const countMap: Record<string, number> = {};
           const mySet = new Set<string>();
@@ -133,6 +133,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           });
           setLikes(countMap);
           setMyLikes(mySet);
+        }
+        if (imgData) {
+          const imgMap: Record<string, { image_url: string; caption: string | null }[]> = {};
+          (imgData as any[]).forEach((row: { post_id: string; image_url: string; caption: string | null }) => {
+            if (!imgMap[row.post_id]) imgMap[row.post_id] = [];
+            imgMap[row.post_id].push({ image_url: row.image_url, caption: row.caption });
+          });
+          setPostImages(imgMap);
         }
       }
     }
