@@ -6221,7 +6221,7 @@ const estimateCalories = (
                                 {(() => {
                                   // Parse work seconds from header line e.g. "32s arbete"
                                   const workMatch = part.match(/(\d+)s\s*arbete/i);
-                                  const workSec = workMatch ? parseInt(workMatch[1]) : 0;
+                                  let workSec = workMatch ? parseInt(workMatch[1]) : 0;
                                   // Count exercises: either inline or from circuit map
                                   const circuitExInfo = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
                                   const exerciseNames: string[] = [];
@@ -6232,6 +6232,17 @@ const estimateCalories = (
                                       const exPart = parts[exIdx];
                                       const { name: eName } = parseExerciseWeight(exPart);
                                       exerciseNames.push(eName);
+                                    }
+                                  }
+                                  // Fallback: if no workSec from header, try to get from first exercise's reps
+                                  if (workSec === 0 && circuitExInfo) {
+                                    for (const exIdx of circuitExInfo.exerciseIndices) {
+                                      const exPart = parts[exIdx];
+                                      const { weight } = parseExerciseWeight(exPart);
+                                      if (weight) {
+                                        const repsMatch = weight.match(/\d+[×x](\d+)/i);
+                                        if (repsMatch) { workSec = parseInt(repsMatch[1]) || 0; break; }
+                                      }
                                     }
                                   }
                                   if (workSec > 0 && exerciseNames.length > 0 && showRoundCheckboxes) {
