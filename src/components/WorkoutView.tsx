@@ -400,6 +400,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [weightDialog, setWeightDialog] = useState<{planId: string;exerciseName: string;lastWeight: string | null;} | null>(null);
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("10");
+  const [repsUnit, setRepsUnit] = useState<"reps" | "sek">("reps");
   const [setsInput, setSetsInput] = useState("3");
 
   // Inline editing of existing exercise
