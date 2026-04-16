@@ -2,6 +2,43 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { applyTheme, getStoredThemeId } from "./lib/themes";
+import { APP_VERSION } from "./lib/version";
+
+const APP_VERSION_STORAGE_KEY = "grim_app_version";
+const APP_VERSION_REFRESH_KEY = `grim_version_refresh_${APP_VERSION}`;
+
+const clearAllCaches = async () => {
+  if (!("caches" in window)) return;
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map((name) => caches.delete(name)));
+};
+
+const syncAppVersion = async () => {
+  const previousVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
+
+  if (!previousVersion) {
+    localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
+    return;
+  }
+
+  if (previousVersion === APP_VERSION || sessionStorage.getItem(APP_VERSION_REFRESH_KEY) === "1") {
+    localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
+    return;
+  }
+
+  sessionStorage.setItem(APP_VERSION_REFRESH_KEY, "1");
+  localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
+
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.update().catch(() => undefined)));
+  }
+
+  await clearAllCaches().catch(() => undefined);
+  window.location.reload();
+};
+
+void syncAppVersion();
 
 // Initialize theme from localStorage before render
 const storedTheme = localStorage.getItem("gymberget_theme");
@@ -24,7 +61,6 @@ const clearBadge = () => {
   if ("clearAppBadge" in navigator) {
     (navigator as any).clearAppBadge().catch(() => {});
   }
-  // Also ask the service worker to clear it (works on more platforms)
   if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({ type: "CLEAR_BADGE" });
   }
@@ -42,18 +78,14 @@ if ("serviceWorker" in navigator) {
     });
   };
 
-  // Check on load
   checkForUpdate();
 
-  // Check every 2 minutes
   setInterval(checkForUpdate, 2 * 60 * 1000);
 
-  // Check when app returns to foreground
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") checkForUpdate();
   });
 
-  // Reload once when a new SW takes control
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
