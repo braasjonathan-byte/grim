@@ -5344,7 +5344,9 @@ const estimateCalories = (
 
                         }
 
-                        const setsCountPlan = partSets ? parseInt(partSets) : 1;
+                        // If this exercise is inside a circuit block, override set count to match circuit rounds
+                        const circuitInfo = circuitMap[i];
+                        const setsCountPlan = circuitInfo ? circuitInfo.roundCount : (partSets ? parseInt(partSets) : 1);
                         const setsStrPlan = getSetsDone(key, partName);
 
                         // Daily challenge exercise - render with distinct style
