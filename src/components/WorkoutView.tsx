@@ -3308,7 +3308,7 @@ const estimateCalories = (
 
                           </div>
                           <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Reps</label>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{plans.find(p => p.id === weightDialog?.planId)?.is_circuit ? "Sek" : "Reps"}</label>
                             <input
                           type="number"
                           min="1"
@@ -6330,7 +6330,7 @@ const estimateCalories = (
                           <input type="number" inputMode="numeric" value={setsInput} onChange={(e) => setSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">{plan.is_circuit ? "Sek" : "Reps"}</label>
                           <input type="number" inputMode="numeric" value={repsInput} onChange={(e) => setRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
