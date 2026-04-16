@@ -21,6 +21,7 @@ const CircuitTimerDialog = ({
   workSeconds,
   exerciseSeconds,
   roundCount,
+  restSeconds = 0,
   onClose,
   onRoundComplete,
   onRated,
