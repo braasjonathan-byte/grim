@@ -1680,7 +1680,8 @@ const estimateCalories = (
             day: planTarget.day,
             session_name: copyToDateSource.session_name,
             details,
-            tempo: copyToDateSource.tempo || null
+            tempo: copyToDateSource.tempo || null,
+            is_circuit: copyToDateSource.is_circuit || false,
           });
         }
       } else {
@@ -1700,7 +1701,8 @@ const estimateCalories = (
             day: planTarget.day,
             session_name: copyToDateSource.session_name,
             details,
-            tempo: copyToDateSource.tempo || null
+            tempo: copyToDateSource.tempo || null,
+            is_circuit: copyToDateSource.is_circuit || false,
           });
         }
       }
@@ -1757,7 +1759,8 @@ const estimateCalories = (
         day: uniqueKey,
         session_name: copyToDateSource.session_name,
         details,
-        tempo: copyToDateSource.tempo || null
+        tempo: copyToDateSource.tempo || null,
+        is_circuit: copyToDateSource.is_circuit || false,
       });
 
       const sourceKey = `${copyToDateSource.week}-${copyToDateSource.day}`;
