@@ -128,6 +128,28 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
             : "Välj ett pass du redan har gjort och ange datumet — så räknar vi ut resten automatiskt."
           }
         </p>
+        <button
+          onClick={async () => {
+            setSaving(true);
+            try {
+              const today = new Date();
+              const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+              await supabase
+                .from("profiles")
+                .update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any)
+                .eq("user_id", userId);
+              onDone();
+            } catch {
+              toast.error("Kunde inte hoppa över");
+            } finally {
+              setSaving(false);
+            }
+          }}
+          disabled={saving}
+          className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+        >
+          Hoppa över
+        </button>
       </div>
 
       {sessions.length > 0 && !manualMode ? (
