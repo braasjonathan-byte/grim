@@ -14,7 +14,7 @@ interface CircuitTimerDialogProps {
   onRated?: (rating: number) => void;
 }
 
-type Phase = "ready" | "countdown" | "work" | "rest" | "done";
+type Phase = "ready" | "countdown" | "work" | "transition" | "rest" | "done";
 
 const CircuitTimerDialog = ({
   exercises,
