@@ -3263,6 +3263,7 @@ const estimateCalories = (
                       );
                     })()}
 
+                    {(() => {
                       if (!plan.details) return null;
                       const allLines = plan.details.split("\n").filter(Boolean);
                       const comp = completions[key];
