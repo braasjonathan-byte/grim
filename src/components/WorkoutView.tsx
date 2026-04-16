@@ -1531,12 +1531,9 @@ const estimateCalories = (
     }
 
     // Navigate to the week of the new workout
-    const allSinglePlans = plans.filter(p => p.week === 0);
-    const allDates = [...allSinglePlans.map(p => p.day), uniqueKey];
-    const sortedDates = allDates.map(d => d.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]).filter(Boolean).sort();
-    if (sortedDates.length > 0) {
-      const fm = getMonday(parseISO(sortedDates[0]!));
-      const newWeek = computeSingleWeek(uniqueKey, fm);
+    const dateMatch = uniqueKey.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      const newWeek = getISOWeek(parseISO(dateMatch[1]));
       setSingleCurrentWeek(newWeek);
     }
 
