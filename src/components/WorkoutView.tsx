@@ -3159,13 +3159,22 @@ const estimateCalories = (
                     {/* Circuit start button for single mode */}
                     {plan.is_circuit && plan.details && (() => {
                       const exerciseLines = plan.details.split("\n").filter(Boolean);
-                      const exerciseNames = exerciseLines.map(l => parseExerciseWeight(l).name).filter(n => n && !/^vila$/i.test(n.trim()));
-                      if (exerciseNames.length === 0) return null;
+                      const parsed = exerciseLines.map(l => parseExerciseWeight(l)).filter(p => p.name && !/^vila$/i.test(p.name.trim()));
+                      if (parsed.length === 0) return null;
                       const circuitMatch = plan.tempo?.match(/^circuit:(\d+)$/);
-                      const workSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
+                      const defaultSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
+                      const exerciseNames = parsed.map(p => p.name);
+                      // Read per-exercise seconds from the reps value (e.g. "3×40" → 40)
+                      const perExSec = parsed.map(p => {
+                        if (p.weight) {
+                          const repsMatch = p.weight.match(/\d+×(\d+)/);
+                          if (repsMatch) return parseInt(repsMatch[1]) || defaultSec;
+                        }
+                        return defaultSec;
+                      });
                       return (
                         <button
-                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: workSec, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
+                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: defaultSec, exerciseSeconds: perExSec, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
                           className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                         >
                           <Play className="w-4 h-4" /> Starta
