@@ -3858,7 +3858,7 @@ const estimateCalories = (
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                      {isLocked ? <p className="text-[10px] text-warning">🔒 Exklusivt för hedersmedlemmar</p> : <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>}
                     </div>
                     {isLocked && <Lock className="w-3.5 h-3.5 text-warning flex-shrink-0 ml-2" />}
                   </button>
@@ -3868,7 +3868,7 @@ const estimateCalories = (
             ))}
             {!isHonorary && !isAdmin && (
               <div className="text-center pt-2 space-y-1">
-                <p className="text-[10px] text-muted-foreground">🔒 Bli <span className="font-semibold text-primary">Supporter</span> för att låsa upp alla pass i varje kategori!</p>
+                <p className="text-[10px] text-muted-foreground">🔒 Exklusivt för hedersmedlemmar</p>
                 <p className="text-[10px] text-muted-foreground">Som vanlig medlem kan du välja 1 pass per kategori.</p>
               </div>
             )}
@@ -6964,7 +6964,7 @@ const estimateCalories = (
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                    {isLocked ? <p className="text-[10px] text-warning">🔒 Exklusivt för hedersmedlemmar</p> : <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>}
                   </div>
                   {isLocked && <Lock className="w-3.5 h-3.5 text-warning flex-shrink-0 ml-2" />}
                 </button>
@@ -6974,7 +6974,7 @@ const estimateCalories = (
           ))}
           {!isHonorary && !isAdmin && (
             <div className="text-center pt-2 space-y-1">
-              <p className="text-[10px] text-muted-foreground">🔒 Bli <span className="font-semibold text-primary">Supporter</span> för att låsa upp alla pass i varje kategori!</p>
+              <p className="text-[10px] text-muted-foreground">🔒 Exklusivt för hedersmedlemmar</p>
               <p className="text-[10px] text-muted-foreground">Som vanlig medlem kan du välja 1 pass per kategori.</p>
             </div>
           )}

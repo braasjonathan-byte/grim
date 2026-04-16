@@ -69,11 +69,11 @@ const ThemePicker = ({ userId, isHonorary, currentTheme, onThemeChange }: ThemeP
             {/* Premium themes */}
             <div>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 font-semibold flex items-center gap-1">
-                <Crown className="w-3 h-3 text-warning" /> Supporter-exklusiva
+                <Crown className="w-3 h-3 text-warning" /> Exklusivt för hedersmedlemmar
               </p>
               {!isHonorary && (
                 <p className="text-xs text-muted-foreground mb-2">
-                  Bli Supporter för att låsa upp dessa teman! 👑
+                  🔒 Exklusivt för hedersmedlemmar
                 </p>
               )}
               <div className="grid grid-cols-3 gap-2">
