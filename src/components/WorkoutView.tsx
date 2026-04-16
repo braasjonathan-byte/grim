@@ -3867,7 +3867,10 @@ const estimateCalories = (
               </div>
             ))}
             {!isHonorary && !isAdmin && (
-              <p className="text-[10px] text-muted-foreground text-center pt-1">🔒 Hedersmedlemmar har tillgång till alla pass</p>
+              <div className="text-center pt-2 space-y-1">
+                <p className="text-[10px] text-muted-foreground">🔒 Bli <span className="font-semibold text-primary">Supporter</span> för att låsa upp alla pass i varje kategori!</p>
+                <p className="text-[10px] text-muted-foreground">Som vanlig medlem kan du välja 1 pass per kategori.</p>
+              </div>
             )}
           </div>
         </div>
@@ -6970,7 +6973,10 @@ const estimateCalories = (
             </div>
           ))}
           {!isHonorary && !isAdmin && (
-            <p className="text-[10px] text-muted-foreground text-center pt-1">🔒 Hedersmedlemmar har tillgång till alla pass</p>
+            <div className="text-center pt-2 space-y-1">
+              <p className="text-[10px] text-muted-foreground">🔒 Bli <span className="font-semibold text-primary">Supporter</span> för att låsa upp alla pass i varje kategori!</p>
+              <p className="text-[10px] text-muted-foreground">Som vanlig medlem kan du välja 1 pass per kategori.</p>
+            </div>
           )}
         </div>
       </div>
