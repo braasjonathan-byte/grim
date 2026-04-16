@@ -3085,6 +3085,25 @@ const estimateCalories = (
                       const rawKg = structMatch && structMatch[3] ? structMatch[3] : !structMatch && !fallbackSetsMatch && cleanWeight ? cleanWeight : null;
                       const kg = rawKg ? rawKg.replace(/\s*kg\s*/i, '').trim() || null : null;
 
+                      // Special Vila row for single mode
+                      if (/^vila$/i.test(name.trim())) {
+                        const vilaSec = reps || "60";
+                        return (
+                          <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
+                            <span
+                              className="font-semibold text-sm text-warning cursor-pointer hover:underline"
+                              onClick={() => editVilaSeconds(plan.id, i, vilaSec)}
+                            >
+                              🛏️ Vila {vilaSec}s mellan rundor
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => editVilaSeconds(plan.id, i, vilaSec)} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Redigera vila"><Pencil className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: "Vila" })} className="p-1 text-muted-foreground hover:text-destructive transition-colors" title="Ta bort vila"><X className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </div>
+                        );
+                      }
+
                       const isEditing = editingExercise?.planId === plan.id && editingExercise?.lineIndex === i;
 
                       if (isEditing) {
