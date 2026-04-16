@@ -4373,18 +4373,7 @@ const estimateCalories = (
             <div
               key={key}
               className={`relative rounded-lg border bg-card transition-colors ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
-                  setRenameInput(plan.session_name);
-                }}
-                className="absolute top-2 right-2 p-1.5 text-muted-foreground/40 hover:text-primary transition-colors z-10"
-                title="Inställningar">
-                <Settings className="w-4 h-4" />
-              </button>
-
-              <div className="flex items-center gap-3 px-4 py-5 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>
+              <div className="flex items-center gap-3 px-4 pt-4 pb-2 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
                     <button
                     onClick={(e) => {
@@ -4424,7 +4413,7 @@ const estimateCalories = (
                     ) : null;
                   })()}
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="flex items-center gap-1 text-muted-foreground">
                     {(() => {
                     const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
                     const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id);
@@ -4435,14 +4424,44 @@ const estimateCalories = (
                         </span> :
                     null;
                   })()}
-                    <button
-                      onClick={(e) => {e.stopPropagation();setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });}}
-                      className="p-1 text-muted-foreground hover:text-primary transition-colors"
-                      title="Dela pass">
-                      <Share2 className="w-3.5 h-3.5" />
-                    </button>
                     {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </div>
+              </div>
+              {/* Action buttons row */}
+              <div className="flex items-center gap-1 px-4 pb-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                    setRenameInput(plan.session_name);
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  title="Inställningar">
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Inställningar</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  title="Dela pass">
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Dela</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+                    setSaveWorkoutName(plan.session_name);
+                    setSaveWorkoutVisibility("private");
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  title="Spara pass">
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Spara</span>
+                </button>
               </div>
               {expanded &&
               <div className="px-4 pb-8 space-y-3 border-t border-border pt-3">
