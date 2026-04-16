@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { X, Download, Share2, Palette, Send, CalendarIcon, Copy, Save } from "lucide-react";
+import { X, Download, Share2, Palette, Send, CalendarIcon, Copy } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
 
@@ -517,7 +517,7 @@ const WorkoutShareCard = ({
           <button
             onClick={onSaveWorkout}
             className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
-            <Save className="w-4 h-4" /> Spara pass
+            <Download className="w-4 h-4" /> Spara pass
           </button>
         )}
       </div>
