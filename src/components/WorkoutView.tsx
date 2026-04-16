@@ -48,6 +48,7 @@ interface PlanDay {
   session_name: string;
   details: string;
   tempo: string | null;
+  is_circuit?: boolean;
 }
 
 interface Completion {
@@ -374,6 +375,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Single workout form
   const [showAddSingle, setShowAddSingle] = useState(false);
   const [singleName, setSingleName] = useState("");
+  const [singleIsCircuit, setSingleIsCircuit] = useState(false);
   const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [showCopyPicker, setShowCopyPicker] = useState(false);
   const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
