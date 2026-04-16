@@ -4445,7 +4445,7 @@ const estimateCalories = (
                   </div>
               </div>
               {expanded &&
-              <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+              <div className="px-4 pb-8 space-y-3 border-t border-border pt-3">
                   {/* Inline weight inputs for strength exercises */}
                   {(() => {
                   const s = (plan.session_name + " " + plan.details).toLowerCase();
