@@ -61,6 +61,28 @@ const categories: HelpCategory[] = [
     ],
   },
   {
+    title: "Färdiga pass",
+    icon: Dumbbell,
+    tips: [
+      "Hämta färdiga träningspass från ett bibliotek med fördefinierade pass.",
+      "Spara dina egna pass som favoriter för att enkelt hämta dem igen senare.",
+      "Perfekt för att återanvända pass du gillar utan att bygga dem från grunden.",
+      "Sparade pass kan hämtas till både planerade och enskilda träningspass.",
+    ],
+  },
+  {
+    title: "Cirkelträning",
+    icon: Repeat,
+    tips: [
+      "Skapa cirkelpass med flera rundor – välj antal rundor när du skapar passet.",
+      "Övningar i cirkelpass har sekunder som standardenhet istället för reps.",
+      "Du kan ändra tid individuellt per övning och runda.",
+      "Lägg till vila mellan rundorna med 'Lägg till vila'-knappen.",
+      "Starta den inbyggda cirkeltimern som räknar ner automatiskt per övning och runda.",
+      "Bocka av genomförda rundor med R1, R2, R3-knapparna.",
+    ],
+  },
+  {
     title: "Vänner & socialt",
     icon: Users,
     tips: [

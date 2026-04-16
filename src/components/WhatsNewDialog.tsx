@@ -6,6 +6,14 @@ const WHATS_NEW_KEY = "gymberget_last_seen_changelog";
 
 const changelog = [
   {
+    version: "1.5.0",
+    date: "2026-04-16",
+    items: [
+      "🏋️ Färdiga pass – hämta träningspass från ett bibliotek med färdiga pass. Du kan även spara egna pass och hämta dem igen senare, perfekt för att återanvända favoritpass.",
+      "🔄 Cirkelträning – skapa cirkelpass med flera rundor, individuella tider per övning och inbyggd vila. Starta timern och följ med runda för runda med automatisk nedräkning.",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2026-04-12",
     items: [
@@ -39,7 +47,6 @@ const changelog = [
     ],
   },
 ];
-
 // Unique fingerprint of all changelog content
 const CURRENT_CHANGELOG_ID = changelog.map((e) => e.version).join(",");
 
