@@ -6194,7 +6194,7 @@ const estimateCalories = (
                           const isHiit = plan.session_name.toLowerCase().includes("hiit") || plan.session_name.toLowerCase().includes("cirkel") || plan.details.toLowerCase().includes("hiit");
                           const isIntervall = plan.session_name.toLowerCase().includes("intervall");
                           const isDbCircuit = circuitConfigs.has(plan.session_name);
-                          const showRoundCheckboxes = isForTime || isHiit || isIntervall || isDbCircuit;
+                          const showRoundCheckboxes = isForTime || isHiit || isIntervall || isDbCircuit || plan.is_circuit;
 
                           // Parse exercises from rest of line (separated by / or ;)
                           // Filter out time specs like "30s arbete", "15s vila", "20s vila"
@@ -6255,15 +6255,15 @@ const estimateCalories = (
                                       if (rawMatch) { workSec = parseInt(rawMatch[2]) || 0; break; }
                                     }
                                   }
-                                  if (workSec > 0 && exerciseNames.length > 0 && showRoundCheckboxes) {
+                                  if (exerciseNames.length > 0 && showRoundCheckboxes) {
                                     return (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          let adjustedSec = workSec;
+                                          let adjustedSec = workSec || 30;
                                           try {
                                             const history = JSON.parse(localStorage.getItem("gymberget_circuit_ratings") || "[]");
-                                            if (history.length > 0) {
+                                            if (history.length > 0 && workSec > 0) {
                                               const lastRating = history[history.length - 1].rating;
                                               if (lastRating >= 9) adjustedSec = Math.max(10, workSec - 10);
                                               else if (lastRating >= 8) adjustedSec = Math.max(10, workSec - 5);
