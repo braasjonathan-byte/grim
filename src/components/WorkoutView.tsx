@@ -4611,6 +4611,38 @@ const estimateCalories = (
                   const comp = completions[key];
                   const savedWeights = (comp?.logged_weights || {}) as Record<string, number>;
 
+                  // Pre-scan: map exercise indices to their parent circuit header (if any)
+                  const circuitMap: Record<number, { roundCount: number; headerIndex: number; exerciseIndices: number[] }> = {};
+                  {
+                    let currentCircuit: { roundCount: number; headerIndex: number; exerciseIndices: number[] } | null = null;
+                    for (let pi = 0; pi < parts.length; pi++) {
+                      const p = parts[pi].trim();
+                      const circuitMatch = p.match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
+                      const amrapMatch = !circuitMatch ? p.match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
+                      if (circuitMatch || amrapMatch) {
+                        const count = parseInt((circuitMatch || amrapMatch)![1]);
+                        const inlineExs = ((circuitMatch ? circuitMatch[2] : amrapMatch![3]) || "").trim();
+                        // If exercises are inline (separated by /), they're listed in the header, not separate parts
+                        if (!inlineExs) {
+                          currentCircuit = { roundCount: count, headerIndex: pi, exerciseIndices: [] };
+                        } else {
+                          currentCircuit = null;
+                        }
+                      } else if (currentCircuit) {
+                        // Check if this part is a regular exercise (not a header/conditioning)
+                        const { name: eName } = parseExerciseWeight(p);
+                        const matchedEx = allExercises.find(e => e.name.toLowerCase() === eName.toLowerCase());
+                        const isCondFormat = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad/i.test(p) && !/^\d+\s*[×x]\s*\d+/i.test(p);
+                        if (!isCondFormat && !/^vila$/i.test(eName.trim())) {
+                          currentCircuit.exerciseIndices.push(pi);
+                          circuitMap[pi] = currentCircuit;
+                        } else {
+                          currentCircuit = null; // End circuit block on non-exercise
+                        }
+                      }
+                    }
+                  }
+
                   // Helper: find previously logged weight for an exercise from earlier weeks + archived
                   const findPreviousWeight = (exerciseName: string): number | null => {
                     // Look through completions from previous weeks for this exercise
