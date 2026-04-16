@@ -517,7 +517,7 @@ const WorkoutShareCard = ({
           <button
             onClick={onSaveWorkout}
             className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
-            <Save className="w-4 h-4" /> Spara pass
+            <Download className="w-4 h-4" /> Spara pass
           </button>
         )}
       </div>

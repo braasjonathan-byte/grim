@@ -4379,9 +4379,9 @@ const estimateCalories = (
                   setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                   setRenameInput(plan.session_name);
                 }}
-                className="absolute top-1 right-1 p-1 text-muted-foreground/30 hover:text-primary transition-colors z-10"
+                className="absolute top-2 right-2 p-1.5 text-muted-foreground/40 hover:text-primary transition-colors z-10"
                 title="Inställningar">
-                <Settings className="w-3 h-3" />
+                <Settings className="w-4 h-4" />
               </button>
 
               <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>
