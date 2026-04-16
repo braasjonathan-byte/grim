@@ -1519,11 +1519,13 @@ const estimateCalories = (
       day: uniqueKey,
       session_name: name,
       details,
-      tempo: (copyFrom ? copyFrom.tempo : (singleIsCircuit ? `circuit:${parseInt(singleCircuitSeconds) || 40}` : null)),
+      tempo: (copyFrom ? copyFrom.tempo : (singleIsCircuit ? `circuit:${parseInt(singleCircuitSeconds) || 40}:${parseInt(singleCircuitRounds) || 3}:${parseInt(singleCircuitRest) || 0}` : null)),
       is_circuit: copyFrom ? (copyFrom.is_circuit || false) : singleIsCircuit
     } as any);
     setSingleIsCircuit(false);
     setSingleCircuitSeconds("40");
+    setSingleCircuitRounds("3");
+    setSingleCircuitRest("30");
 
     // Copy logged weights/reps from the source workout's completion
     if (copyFrom) {
