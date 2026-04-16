@@ -2072,7 +2072,21 @@ const estimateCalories = (
     // Default reps to circuit seconds for circuit plans
     const targetPlan = plans.find(p => p.id === planId);
     const circuitSecsMatch = targetPlan?.is_circuit && targetPlan?.tempo?.match(/^circuit:(\d+)$/);
-    setRepsInput(circuitSecsMatch ? circuitSecsMatch[1] : "10");
+    // Determine default unit: circuit → sek, bodyweight exercises → check context
+    const bodyweightNames = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow", "dips"];
+    const exLower = exerciseName.toLowerCase();
+    const isBodyweightEx = bodyweightNames.some(bw => exLower.includes(bw)) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_bodyweight_exercise;
+    const isTimeBased = /^(sido)?planka$|^vila$/i.test(exerciseName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_time_based;
+    if (targetPlan?.is_circuit) {
+      setRepsUnit("sek");
+      setRepsInput(circuitSecsMatch ? circuitSecsMatch[1] : "40");
+    } else if (isTimeBased) {
+      setRepsUnit("sek");
+      setRepsInput("30");
+    } else {
+      setRepsUnit("reps");
+      setRepsInput("10");
+    }
     setSetsInput("3");
   };
 
