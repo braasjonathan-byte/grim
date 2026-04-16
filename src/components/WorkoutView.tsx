@@ -3729,6 +3729,10 @@ const estimateCalories = (
             <p className="text-[10px] text-muted-foreground">
               Lägg till övningar efter att passet skapats
             </p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={singleIsCircuit} onChange={(e) => setSingleIsCircuit(e.target.checked)} className="accent-primary w-4 h-4" />
+              <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
+            </label>
             <div className="flex gap-2">
               <button onClick={() => addSingleWorkout()} disabled={!singleName.trim()} className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-md text-sm disabled:opacity-40">
                 Skapa pass
