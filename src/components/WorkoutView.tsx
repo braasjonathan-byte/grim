@@ -6519,6 +6519,25 @@ const estimateCalories = (
           }));
           safeUpsertCompletion(w, d, { logged_weights: updated });
         }}
+        onRated={(rating) => {
+          // Store rating and adjust future difficulty
+          const key = `circuit_rating_${circuitTimer.weekDayKey}`;
+          const historyKey = "gymberget_circuit_ratings";
+          try {
+            const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+            history.push({ key, rating, workSeconds: circuitTimer.workSeconds, roundCount: circuitTimer.roundCount, ts: Date.now() });
+            // Keep last 50
+            if (history.length > 50) history.splice(0, history.length - 50);
+            localStorage.setItem(historyKey, JSON.stringify(history));
+          } catch {}
+          if (rating >= 8) {
+            toast("Nästa pass blir lättare — arbetstiden minskas 🔻", { duration: 4000 });
+          } else if (rating <= 2) {
+            toast("Bra jobbat! Nästa pass blir tuffare 🔺", { duration: 4000 });
+          } else {
+            toast(`Betyg ${rating}/10 sparat ✅`, { duration: 2000 });
+          }
+        }}
       />
     )}
     {/* Import workout dialog */}
