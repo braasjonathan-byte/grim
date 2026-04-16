@@ -838,8 +838,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
   }, [plans, customExercises.length, userId]);
 
+  const skipDayResetRef = useRef(false);
   // Reset active day index when week changes — navigate to today's day
   useEffect(() => {
+    if (skipDayResetRef.current) {
+      skipDayResetRef.current = false;
+      return;
+    }
     const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
     const todayName = todayDayNames[new Date().getDay()];
     const currentWeekDays = plans
@@ -2520,8 +2525,25 @@ const estimateCalories = (
     const { error } = await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     if (error) console.error("[DELETE] Supabase error:", error);
     else console.log("[DELETE] Success");
+    skipDayResetRef.current = true;
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
     setDeleteExerciseConfirm(null);
+  };
+
+  const editVilaSeconds = async (planId: string, lineIndex: number, currentSeconds: string) => {
+    const newSec = prompt("Antal sekunder vila:", currentSeconds);
+    if (!newSec) return;
+    const seconds = parseInt(newSec) || parseInt(currentSeconds) || 30;
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    lines[lineIndex] = `Vila — 1×${seconds}`;
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    skipDayResetRef.current = true;
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+    triggerSave();
   };
 
   // Start replace exercise flow: open exercise picker filtered to the exercise's muscle group
@@ -3062,6 +3084,25 @@ const estimateCalories = (
                       const reps = structMatch ? structMatch[2] : null;
                       const rawKg = structMatch && structMatch[3] ? structMatch[3] : !structMatch && !fallbackSetsMatch && cleanWeight ? cleanWeight : null;
                       const kg = rawKg ? rawKg.replace(/\s*kg\s*/i, '').trim() || null : null;
+
+                      // Special Vila row for single mode
+                      if (/^vila$/i.test(name.trim())) {
+                        const vilaSec = reps || "60";
+                        return (
+                          <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
+                            <span
+                              className="font-semibold text-sm text-warning cursor-pointer hover:underline"
+                              onClick={() => editVilaSeconds(plan.id, i, vilaSec)}
+                            >
+                              🛏️ Vila {vilaSec}s mellan rundor
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => editVilaSeconds(plan.id, i, vilaSec)} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Redigera vila"><Pencil className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: "Vila" })} className="p-1 text-muted-foreground hover:text-destructive transition-colors" title="Ta bort vila"><X className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </div>
+                        );
+                      }
 
                       const isEditing = editingExercise?.planId === plan.id && editingExercise?.lineIndex === i;
 
@@ -6246,6 +6287,26 @@ const estimateCalories = (
                                   })}
                                 </div>
                               )}
+                            </div>
+                          );
+                        }
+
+                        // Special Vila row for plan mode
+                        if (/^vila$/i.test(partName.trim())) {
+                          const vilaSecMatch = part.match(/(\d+)\s*[×x]\s*(\d+)/);
+                          const vilaSec = vilaSecMatch ? vilaSecMatch[2] : "60";
+                          return (
+                            <div key={i} className="bg-warning/10 rounded-lg p-2.5 border border-warning/30 flex items-center justify-between">
+                              <span
+                                className="font-semibold text-sm text-warning cursor-pointer hover:underline"
+                                onClick={() => editVilaSeconds(plan.id, i, vilaSec)}
+                              >
+                                🛏️ Vila {vilaSec}s mellan rundor
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => editVilaSeconds(plan.id, i, vilaSec)} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Redigera vila"><Pencil className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: "Vila" })} className="p-1 text-muted-foreground hover:text-destructive transition-colors" title="Ta bort vila"><X className="w-3.5 h-3.5" /></button>
+                              </div>
                             </div>
                           );
                         }
