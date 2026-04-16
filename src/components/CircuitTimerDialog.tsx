@@ -79,9 +79,11 @@ const CircuitTimerDialog = ({
           clearTimer();
           const nextExIdx = currentExerciseIndex + 1;
           if (nextExIdx < exercises.length) {
+            // Transition to next exercise
             playExerciseSwitch();
             setCurrentExerciseIndex(nextExIdx);
-             return getExerciseSec(nextExIdx, currentRound);
+            setPhase("transition");
+            return 3;
           } else {
             onRoundComplete?.(currentRound);
             const nextRound = currentRound + 1;
@@ -94,7 +96,8 @@ const CircuitTimerDialog = ({
               playExerciseSwitch();
               setCurrentRound(nextRound);
               setCurrentExerciseIndex(0);
-              return getExerciseSec(0, nextRound);
+              setPhase("transition");
+              return 3;
             } else {
               playExerciseSwitch();
               setPhase("done");
@@ -110,6 +113,25 @@ const CircuitTimerDialog = ({
     }, 1000);
     return clearTimer;
   }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, exerciseSeconds, restSeconds, clearTimer, onRoundComplete]);
+
+  // Transition phase (3s between exercises)
+  useEffect(() => {
+    if (phase !== "transition" || paused) return;
+    playCountdownBeep();
+    intervalRef.current = window.setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearTimer();
+          playGoBeep();
+          setPhase("work");
+          return getExerciseSec(currentExerciseIndex, currentRound);
+        }
+        playCountdownBeep();
+        return prev - 1;
+      });
+    }, 1000);
+    return clearTimer;
+  }, [phase, paused, currentExerciseIndex, currentRound, clearTimer]);
 
   // Rest phase
   useEffect(() => {
