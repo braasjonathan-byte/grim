@@ -3975,6 +3975,7 @@ const estimateCalories = (
           workSeconds={circuitTimer.workSeconds}
           exerciseSeconds={circuitTimer.exerciseSeconds}
           roundCount={circuitTimer.roundCount}
+          restSeconds={circuitTimer.restSeconds}
           onClose={() => setCircuitTimer(null)}
           onRoundComplete={(roundIndex) => {
             const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
@@ -6892,6 +6893,7 @@ const estimateCalories = (
         workSeconds={circuitTimer.workSeconds}
         exerciseSeconds={circuitTimer.exerciseSeconds}
         roundCount={circuitTimer.roundCount}
+        restSeconds={circuitTimer.restSeconds}
         onClose={() => setCircuitTimer(null)}
         onRoundComplete={(roundIndex) => {
           const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
