@@ -36,6 +36,7 @@ const toTitleCase = (str: string): string =>
 interface WorkoutViewProps {
   userId: string;
   isAdmin?: boolean;
+  isHonorary?: boolean;
   onBack?: () => void;
   adminViewNickname?: string;
 }
@@ -348,7 +349,7 @@ const getMonday = (d: Date) => {
   return date;
 };
 
-const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
+const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
