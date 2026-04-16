@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { X, Download, Share2, Palette, Send, CalendarIcon, Copy } from "lucide-react";
+import { X, Download, Share2, Palette, Send, CalendarIcon, Copy, Save } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
 
@@ -73,6 +73,7 @@ interface WorkoutShareCardProps {
   onClose: () => void;
   onChatShare?: () => void;
   onCopyToDate?: () => void;
+  onSaveWorkout?: () => void;
 }
 
 const WorkoutShareCard = ({
@@ -88,7 +89,8 @@ const WorkoutShareCard = ({
   nickname,
   onClose,
   onChatShare,
-  onCopyToDate
+  onCopyToDate,
+  onSaveWorkout
 }: WorkoutShareCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
