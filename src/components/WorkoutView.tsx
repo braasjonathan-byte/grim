@@ -2530,6 +2530,22 @@ const estimateCalories = (
     setDeleteExerciseConfirm(null);
   };
 
+  const editVilaSeconds = async (planId: string, lineIndex: number, currentSeconds: string) => {
+    const newSec = prompt("Antal sekunder vila:", currentSeconds);
+    if (!newSec) return;
+    const seconds = parseInt(newSec) || parseInt(currentSeconds) || 30;
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    const separator = plan.details.includes("\n") ? "\n" : "; ";
+    const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+    lines[lineIndex] = `Vila — 1×${seconds}`;
+    const newDetails = lines.join(separator);
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    skipDayResetRef.current = true;
+    setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+    triggerSave();
+  };
+
   // Start replace exercise flow: open exercise picker filtered to the exercise's muscle group
   const startReplaceExercise = (planId: string, lineIndex: number, exerciseName: string) => {
     const exercise = allExercises.find((e) => e.name.toLowerCase() === exerciseName.toLowerCase());
