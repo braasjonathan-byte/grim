@@ -3221,7 +3221,12 @@ const estimateCalories = (
                         if (vilaMatch) restSec = parseInt(vilaMatch[1]) || restSec;
                       }
                       const exerciseNames = parsed.map(p => p.name);
+                      // Read per-exercise seconds: prefer logged set data (user edits), fallback to plan details
                       const perExSec = parsed.map(p => {
+                        const setData = getSetData(key, p.name);
+                        if (setData.length > 0 && setData[0].reps) {
+                          return parseInt(setData[0].reps) || defaultSec;
+                        }
                         if (p.weight) {
                           const repsMatch = p.weight.match(/\d+×(\d+)/);
                           if (repsMatch) return parseInt(repsMatch[1]) || defaultSec;
