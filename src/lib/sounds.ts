@@ -35,6 +35,7 @@ export function playSetDone() {
 export function playWorkoutComplete() {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     const notes = [523, 659, 784, 1047]; // C5 E5 G5 C6
     notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
@@ -56,6 +57,7 @@ export function playWorkoutComplete() {
 export function playExerciseSwitch() {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     // Double beep: two short tones
     [0, 0.15].forEach((delay) => {
       const osc = ctx.createOscillator();
@@ -77,6 +79,7 @@ export function playExerciseSwitch() {
 export function playCountdownBeep() {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -94,6 +97,7 @@ export function playCountdownBeep() {
 export function playGoBeep() {
   try {
     const ctx = getCtx();
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
