@@ -3934,6 +3934,7 @@ const estimateCalories = (
         <CircuitTimerDialog
           exercises={circuitTimer.exercises}
           workSeconds={circuitTimer.workSeconds}
+          exerciseSeconds={circuitTimer.exerciseSeconds}
           roundCount={circuitTimer.roundCount}
           onClose={() => setCircuitTimer(null)}
           onRoundComplete={(roundIndex) => {
@@ -6833,6 +6834,7 @@ const estimateCalories = (
       <CircuitTimerDialog
         exercises={circuitTimer.exercises}
         workSeconds={circuitTimer.workSeconds}
+        exerciseSeconds={circuitTimer.exerciseSeconds}
         roundCount={circuitTimer.roundCount}
         onClose={() => setCircuitTimer(null)}
         onRoundComplete={(roundIndex) => {
