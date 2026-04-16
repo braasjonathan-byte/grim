@@ -1514,8 +1514,10 @@ const estimateCalories = (
       day: uniqueKey,
       session_name: name,
       details,
-      tempo: null
-    });
+      tempo: null,
+      is_circuit: copyFrom ? (copyFrom.is_circuit || false) : singleIsCircuit
+    } as any);
+    setSingleIsCircuit(false);
 
     // Copy logged weights/reps from the source workout's completion
     if (copyFrom) {
