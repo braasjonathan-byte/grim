@@ -3222,7 +3222,47 @@ const estimateCalories = (
                       );
                     })()}
 
-                    {(() => {
+                    {/* Round checkboxes for single mode circuit */}
+                    {plan.is_circuit && plan.tempo && (() => {
+                      const circuitMatch = plan.tempo.match(/^circuit:(\d+)(?::(\d+))?(?::(\d+))?$/);
+                      if (!circuitMatch) return null;
+                      const rounds = circuitMatch[2] ? parseInt(circuitMatch[2]) : 3;
+                      if (rounds <= 0) return null;
+                      const roundKey = `__wod_rounds_done_0__`;
+                      const comp = completions[key];
+                      const lw = comp?.logged_weights as Record<string, any> | null;
+                      const roundsDoneStr = (lw?.[roundKey] as string) || "";
+                      return (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {Array.from({ length: rounds }, (_, ri) => {
+                            const isRoundDone = roundsDoneStr[ri] === "1";
+                            return (
+                              <button
+                                key={ri}
+                                onClick={async () => {
+                                  const newStr = Array.from({ length: rounds }, (_, j) => {
+                                    if (j === ri) return isRoundDone ? "0" : "1";
+                                    return (roundsDoneStr[j] || "0");
+                                  }).join("");
+                                  const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                  const updated = { ...existing, [roundKey]: newStr };
+                                  setCompletions(prev => ({
+                                    ...prev,
+                                    [key]: { ...prev[key], week: 0, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
+                                  }));
+                                  safeUpsertCompletion(0, plan.day, { logged_weights: updated });
+                                }}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${isRoundDone ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                              >
+                                <Check className="w-3 h-3" />
+                                R{ri + 1}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+
                       if (!plan.details) return null;
                       const allLines = plan.details.split("\n").filter(Boolean);
                       const comp = completions[key];
