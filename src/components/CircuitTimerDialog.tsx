@@ -5,6 +5,8 @@ import { playExerciseSwitch, playCountdownBeep, playGoBeep } from "@/lib/sounds"
 interface CircuitTimerDialogProps {
   exercises: string[];
   workSeconds: number;
+  /** Per-exercise seconds override. If provided, each exercise uses its own duration. */
+  exerciseSeconds?: number[];
   roundCount: number;
   onClose: () => void;
   onRoundComplete?: (roundIndex: number) => void;
@@ -16,11 +18,14 @@ type Phase = "ready" | "countdown" | "work" | "done";
 const CircuitTimerDialog = ({
   exercises,
   workSeconds,
+  exerciseSeconds,
   roundCount,
   onClose,
   onRoundComplete,
   onRated,
 }: CircuitTimerDialogProps) => {
+
+  const getExerciseSec = (idx: number) => exerciseSeconds?.[idx] ?? workSeconds;
   const [phase, setPhase] = useState<Phase>("ready");
   const [currentRound, setCurrentRound] = useState(0);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
