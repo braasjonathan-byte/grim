@@ -3,8 +3,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save } from "lucide-react";
+import { format, parseISO, getISOWeek, getDay } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
 import PlanCalibrationDialog from "@/components/PlanCalibrationDialog";
@@ -36,7 +36,6 @@ const toTitleCase = (str: string): string =>
 interface WorkoutViewProps {
   userId: string;
   isAdmin?: boolean;
-  isHonorary?: boolean;
   onBack?: () => void;
   adminViewNickname?: string;
 }
@@ -349,7 +348,7 @@ const getMonday = (d: Date) => {
   return date;
 };
 
-const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
+const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
@@ -376,7 +375,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [singleName, setSingleName] = useState("");
   const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [showCopyPicker, setShowCopyPicker] = useState(false);
-  const [singleCurrentWeek, setSingleCurrentWeek] = useState(1);
+  const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
+  const [singleActiveDayIdx, setSingleActiveDayIdx] = useState(0);
 
   // Exercise browser for single workouts
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
@@ -1531,12 +1531,9 @@ const estimateCalories = (
     }
 
     // Navigate to the week of the new workout
-    const allSinglePlans = plans.filter(p => p.week === 0);
-    const allDates = [...allSinglePlans.map(p => p.day), uniqueKey];
-    const sortedDates = allDates.map(d => d.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]).filter(Boolean).sort();
-    if (sortedDates.length > 0) {
-      const fm = getMonday(parseISO(sortedDates[0]!));
-      const newWeek = computeSingleWeek(uniqueKey, fm);
+    const dateMatch = uniqueKey.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      const newWeek = getISOWeek(parseISO(dateMatch[1]));
       setSingleCurrentWeek(newWeek);
     }
 
@@ -2587,37 +2584,61 @@ const estimateCalories = (
   // Single workouts mode
   if (mode === "single") {
     const singlePlans = plans.filter((p) => p.week === 0).sort((a, b) => {
-      // Sort by date ascending within week view
       const dateA = a.day.match(/^(\d{4}-\d{2}-\d{2})/) ? a.day : "0000";
       const dateB = b.day.match(/^(\d{4}-\d{2}-\d{2})/) ? b.day : "0000";
       return dateA.localeCompare(dateB);
     });
 
-    // Compute virtual weeks from dates
-    const firstMonday = singlePlans.length > 0 ? (() => {
-      const earliest = singlePlans.reduce((min, p) => {
-        const d = p.day.match(/^(\d{4}-\d{2}-\d{2})/);
-        const md = min.day.match(/^(\d{4}-\d{2}-\d{2})/);
-        return d && md && d[1] < md[1] ? p : min;
-      });
-      const dateMatch = earliest.day.match(/^(\d{4}-\d{2}-\d{2})/);
-      return dateMatch ? getMonday(parseISO(dateMatch[1])) : getMonday(new Date());
-    })() : getMonday(new Date());
+    // Helper: get ISO week number from day key
+    const getIsoWeekFromKey = (dayKey: string): number => {
+      const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
+      return m ? getISOWeek(parseISO(m[1])) : getISOWeek(new Date());
+    };
 
-    // Group plans by virtual week
+    // Helper: get day-of-week name from day key (Mån, Tis, ...)
+    const getDayNameFromKey = (dayKey: string): string => {
+      const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (!m) return "Mån";
+      const d = parseISO(m[1]);
+      const jsDay = getDay(d); // 0=Sun, 1=Mon...
+      return DAYS[jsDay === 0 ? 6 : jsDay - 1];
+    };
+
+    // Group plans by ISO week
     const weekGroups = new Map<number, PlanDay[]>();
     for (const p of singlePlans) {
-      const wk = computeSingleWeek(p.day, firstMonday);
+      const wk = getIsoWeekFromKey(p.day);
       if (!weekGroups.has(wk)) weekGroups.set(wk, []);
       weekGroups.get(wk)!.push(p);
     }
     const singleWeeks = [...weekGroups.keys()].sort((a, b) => a - b);
 
-    // Auto-set to latest week with incomplete workouts on first render
+    // Auto-set to current ISO week or latest with data
+    const currentIsoWeek = getISOWeek(new Date());
     const effectiveWeek = singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
-      (singleWeeks.length > 0 ? singleWeeks[singleWeeks.length - 1] : 1);
+      (singleWeeks.includes(currentIsoWeek) ? currentIsoWeek :
+      (singleWeeks.length > 0 ? singleWeeks[singleWeeks.length - 1] : currentIsoWeek));
 
     const weekPlans = weekGroups.get(effectiveWeek) || [];
+
+    // Group weekPlans by day-of-week for tabs
+    const dayGroupsInWeek: { dayName: string; dayIndex: number; plans: PlanDay[] }[] = [];
+    const dayMap = new Map<string, PlanDay[]>();
+    for (const p of weekPlans) {
+      const dn = getDayNameFromKey(p.day);
+      if (!dayMap.has(dn)) dayMap.set(dn, []);
+      dayMap.get(dn)!.push(p);
+    }
+    for (const dayName of DAYS) {
+      if (dayMap.has(dayName)) {
+        dayGroupsInWeek.push({ dayName, dayIndex: DAYS.indexOf(dayName), plans: dayMap.get(dayName)! });
+      }
+    }
+
+    const safeDayIdx = Math.min(singleActiveDayIdx, Math.max(0, dayGroupsInWeek.length - 1));
+    const activeDayGroup = dayGroupsInWeek[safeDayIdx];
+    const visiblePlans = isMobile && dayGroupsInWeek.length > 1 && activeDayGroup ? activeDayGroup.plans : weekPlans;
+
     const weekDoneCount = weekPlans.filter((p) => completions[`0-${p.day}`]?.done).length;
     const totalDoneCount = singlePlans.filter((p) => completions[`0-${p.day}`]?.done).length;
     const singleWeekIdx = singleWeeks.indexOf(effectiveWeek);
@@ -2647,7 +2668,6 @@ const estimateCalories = (
               onClick={leavePlan}
               className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
               title="Rensa alla pass">
-
                 <LogOut className="w-4 h-4" />
               </button>
               <span className="text-[9px] text-muted-foreground leading-tight">Rensa alla</span>
@@ -2655,77 +2675,124 @@ const estimateCalories = (
           }
         </div>
 
-        {/* Event countdown progress bar */}
         <EventProgressBar userId={userId} />
         <SpotifyWidget userId={userId} />
 
         {/* Week navigation */}
-        {singleWeeks.length > 0 && (
+        {(singleWeeks.length > 0 || singlePlans.length > 0) && (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => singleWeekIdx > 0 && setSingleCurrentWeek(singleWeeks[singleWeekIdx - 1])}
-                disabled={singleWeekIdx <= 0}
-                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <div className="text-center">
-                <h2 className="text-2xl font-black tracking-tight">Vecka {effectiveWeek}</h2>
-                <p className="text-sm text-muted-foreground">
-                  av {singleWeeks.length} {singleWeeks.length === 1 ? "vecka" : "veckor"}
-                </p>
+            <div
+              className="flex items-center justify-center py-2 select-none touch-pan-x"
+              onTouchStart={(e) => { (e.currentTarget as any)._swipeX = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                const startX = (e.currentTarget as any)._swipeX;
+                if (startX == null) return;
+                const dx = e.changedTouches[0].clientX - startX;
+                if (Math.abs(dx) > 40) {
+                  if (dx < 0 && singleWeekIdx < singleWeeks.length - 1) { setSingleCurrentWeek(singleWeeks[singleWeekIdx + 1]); setSingleActiveDayIdx(0); }
+                  else if (dx > 0 && singleWeekIdx > 0) { setSingleCurrentWeek(singleWeeks[singleWeekIdx - 1]); setSingleActiveDayIdx(0); }
+                }
+                (e.currentTarget as any)._swipeX = null;
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { if (singleWeekIdx > 0) { setSingleCurrentWeek(singleWeeks[singleWeekIdx - 1]); setSingleActiveDayIdx(0); } }}
+                  disabled={singleWeekIdx <= 0}
+                  className="p-1 text-muted-foreground disabled:opacity-20"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-1.5 min-w-[120px] justify-center">
+                  {singleWeeks.map((wk) => {
+                    const isCurrent = wk === effectiveWeek;
+                    const isThisWeek = wk === currentIsoWeek;
+                    const distance = Math.abs(singleWeeks.indexOf(wk) - singleWeekIdx);
+                    if (distance > 2) return null;
+                    return (
+                      <button
+                        key={wk}
+                        onClick={() => { setSingleCurrentWeek(wk); setSingleActiveDayIdx(0); }}
+                        className={`flex-shrink-0 rounded-full text-xs font-semibold transition-all ${
+                          isCurrent
+                            ? "px-4 py-1.5 bg-primary text-primary-foreground"
+                            : isThisWeek
+                            ? "px-3 py-1 bg-muted text-foreground border border-primary/30"
+                            : distance === 1
+                            ? "px-3 py-1 text-muted-foreground hover:bg-muted"
+                            : "px-2.5 py-1 text-muted-foreground/50 text-[10px]"
+                        }`}
+                      >
+                        V{wk}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => { if (singleWeekIdx < singleWeeks.length - 1) { setSingleCurrentWeek(singleWeeks[singleWeekIdx + 1]); setSingleActiveDayIdx(0); } }}
+                  disabled={singleWeekIdx >= singleWeeks.length - 1}
+                  className="p-1 text-muted-foreground disabled:opacity-20"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => singleWeekIdx < singleWeeks.length - 1 && setSingleCurrentWeek(singleWeeks[singleWeekIdx + 1])}
-                disabled={singleWeekIdx >= singleWeeks.length - 1}
-                className="p-2 rounded-lg bg-secondary text-foreground disabled:opacity-30 hover:bg-muted transition-colors">
-                <ChevronRight className="w-5 h-5" />
-              </button>
             </div>
-
-            {/* Week pills */}
-            {singleWeeks.length > 1 && (
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                {singleWeeks.map((wk) => {
-                  const wPlans = weekGroups.get(wk) || [];
-                  const wDone = wPlans.filter(p => completions[`0-${p.day}`]?.done).length;
-                  const allDone = wPlans.length > 0 && wDone === wPlans.length;
-                  return (
-                    <button
-                      key={wk}
-                      onClick={() => setSingleCurrentWeek(wk)}
-                      className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                        effectiveWeek === wk
-                          ? "bg-primary text-primary-foreground"
-                          : allDone
-                          ? "bg-success/20 text-success"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
-                      }`}>
-                      V{wk}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
 
             {/* Week progress */}
             {weekPlans.length > 0 && (
               <div>
-                <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
                   <div
                     className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${weekPlans.length > 0 ? Math.round(weekDoneCount / weekPlans.length * 100) : 0}%` }} />
                 </div>
-                <p className="text-xs text-muted-foreground text-center mt-1">
-                  {weekDoneCount} av {weekPlans.length} pass denna vecka
+                <p className="text-[10px] text-muted-foreground text-center mt-1">
+                  {weekDoneCount} av {weekPlans.length} pass · Vecka {effectiveWeek}
                 </p>
               </div>
             )}
           </div>
         )}
 
+        {/* Day tabs */}
+        {isMobile && dayGroupsInWeek.length > 1 && (
+          <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
+            {dayGroupsInWeek.map((dg, idx) => {
+              const dgDone = dg.plans.every(p => completions[`0-${p.day}`]?.done);
+              const dgSkipped = dg.plans.every(p => completions[`0-${p.day}`]?.skipped);
+              const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+              const todayName = todayDayNames[new Date().getDay()];
+              const isToday = dg.dayName === todayName && effectiveWeek === currentIsoWeek;
+              const isActive = idx === safeDayIdx;
+              return (
+                <button
+                  key={dg.dayName}
+                  onClick={() => { setSingleActiveDayIdx(idx); setExpandedDay(null); }}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    isActive
+                      ? dgDone
+                        ? "bg-success text-success-foreground"
+                        : isToday
+                        ? "bg-warning/10 text-warning border border-warning/30"
+                        : "bg-primary text-primary-foreground"
+                      : dgDone
+                      ? "bg-success/20 text-success"
+                      : dgSkipped
+                      ? "bg-destructive/20 text-destructive"
+                      : isToday
+                      ? "bg-warning/20 text-warning"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {dg.dayName}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="space-y-2">
-          {weekPlans.map((plan) => {
+          {visiblePlans.map((plan) => {
             const weekdayName = getWeekdayFromDayKey(plan.day);
             const key = `0-${plan.day}`;
             const completion = completions[key];
@@ -3714,9 +3781,6 @@ const estimateCalories = (
               <h3 className="font-bold text-sm">Importera färdigt pass</h3>
               <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
             </div>
-            {!isHonorary && !isAdmin && (
-              <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3" /> Hedersmedlemmar har tillgång till alla pass</p>
-            )}
             {/* User's own saved workouts */}
             {(() => {
               const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
@@ -3772,39 +3836,70 @@ const estimateCalories = (
             {readyWorkoutCategories.map((cat, ci) => (
               <div key={ci} className="space-y-1.5">
                 <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
-                {cat.workouts.map((w, wi) => {
-                  const isLocked = wi > 0 && !isHonorary && !isAdmin;
-                  return (
-                    <button
-                      key={wi}
-                      disabled={isLocked}
-                      onClick={async () => {
-                        if (isLocked) return;
-                        const dateStr = format(singleDate, "yyyy-MM-dd");
-                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({
-                          user_id: userId, week: 0, day: uniqueKey,
-                          session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        });
-                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                        toast.success(`"${w.name}" importerat!`); fetchData();
-                      }}
-                      className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${isLocked ? "bg-secondary/30 opacity-50 cursor-not-allowed" : "bg-secondary/50 hover:bg-secondary"}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                          <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
-                        </div>
-                        {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 ml-2" />}
-                      </div>
-                    </button>
-                  );
-                })}
+                {cat.workouts.map((w, wi) => (
+                  <button
+                    key={wi}
+                    onClick={async () => {
+                      const dateStr = format(singleDate, "yyyy-MM-dd");
+                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                      await supabase.from("workout_plans").insert({
+                        user_id: userId, week: 0, day: uniqueKey,
+                        session_name: w.name, details: w.details, tempo: w.tempo || null,
+                      });
+                      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`); fetchData();
+                    }}
+                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                  >
+                    <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                  </button>
+                ))}
               </div>
             ))}
           </div>
         </div>
+      )}
+      {/* Circuit timer dialog (single mode) */}
+      {circuitTimer && (
+        <CircuitTimerDialog
+          exercises={circuitTimer.exercises}
+          workSeconds={circuitTimer.workSeconds}
+          roundCount={circuitTimer.roundCount}
+          onClose={() => setCircuitTimer(null)}
+          onRoundComplete={(roundIndex) => {
+            const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
+            const existing = completions[circuitTimer.weekDayKey]?.logged_weights as Record<string, any> || {};
+            const current = parseInt(existing[roundKey] || "0");
+            const newVal = Math.max(current, roundIndex + 1);
+            const updated = { ...existing, [roundKey]: String(newVal) };
+            const [wStr, dStr] = circuitTimer.weekDayKey.split("-");
+            const w = parseInt(wStr);
+            const d = dStr;
+            setCompletions(prev => ({
+              ...prev,
+              [circuitTimer.weekDayKey]: { ...prev[circuitTimer.weekDayKey], week: w, day: d, done: prev[circuitTimer.weekDayKey]?.done || false, skipped: prev[circuitTimer.weekDayKey]?.skipped || false, user_comment: prev[circuitTimer.weekDayKey]?.user_comment || "", logged_weights: updated } as Completion
+            }));
+            safeUpsertCompletion(w, d, { logged_weights: updated });
+          }}
+          onRated={(rating) => {
+            const key = `circuit_rating_${circuitTimer.weekDayKey}`;
+            const historyKey = "gymberget_circuit_ratings";
+            try {
+              const history = JSON.parse(localStorage.getItem(historyKey) || "[]");
+              history.push({ key, rating, workSeconds: circuitTimer.workSeconds, roundCount: circuitTimer.roundCount, ts: Date.now() });
+              if (history.length > 50) history.splice(0, history.length - 50);
+              localStorage.setItem(historyKey, JSON.stringify(history));
+            } catch {}
+            if (rating >= 8) {
+              toast("Nästa pass blir lättare — arbetstiden minskas 🔻", { duration: 4000 });
+            } else if (rating <= 2) {
+              toast("Bra jobbat! Nästa pass blir tuffare 🔺", { duration: 4000 });
+            } else {
+              toast(`Betyg ${rating}/10 sparat ✅`, { duration: 2000 });
+            }
+          }}
+        />
       )}
       </>);
 
@@ -6719,9 +6814,6 @@ const estimateCalories = (
             <h3 className="font-bold text-sm">Importera färdigt pass</h3>
             <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
-          {!isHonorary && !isAdmin && (
-            <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3" /> Hedersmedlemmar har tillgång till alla pass</p>
-          )}
           {/* User's own saved workouts */}
           {(() => {
             const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
@@ -6799,51 +6891,62 @@ const estimateCalories = (
           {readyWorkoutCategories.map((cat, ci) => (
             <div key={ci} className="space-y-1.5">
               <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
-              {cat.workouts.map((w, wi) => {
-                const isLocked = wi > 0 && !isHonorary && !isAdmin;
-                return (
-                  <button
-                    key={wi}
-                    disabled={isLocked}
-                    onClick={async () => {
-                      if (isLocked) return;
-                      const target = importWorkoutTarget;
-                      if (target.planId === "__single__") {
-                        const dateStr = format(singleDate, "yyyy-MM-dd");
-                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({
-                          user_id: userId, week: 0, day: uniqueKey,
-                          session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        });
-                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                        toast.success(`"${w.name}" importerat!`); fetchData();
-                      } else if (target.planId === "__new__") {
-                        const { data: inserted } = await supabase.from("workout_plans").insert({
-                          user_id: userId, week: target.week, day: target.day,
-                          session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        }).select().single();
-                        if (inserted) setPlans(prev => [...prev, inserted as any]);
-                        setImportWorkoutTarget(null); toast.success(`"${w.name}" importerat!`); fetchData();
-                      } else {
-                        await supabase.from("workout_plans").update({
-                          session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        }).eq("id", target.planId);
-                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
-                        setImportWorkoutTarget(null); toast.success(`"${w.name}" importerat!`); triggerSave();
+              {cat.workouts.map((w, wi) => (
+                <button
+                  key={wi}
+                  onClick={async () => {
+                    const target = importWorkoutTarget;
+                    if (target.planId === "__single__") {
+                      const dateStr = format(singleDate, "yyyy-MM-dd");
+                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                      await supabase.from("workout_plans").insert({
+                        user_id: userId,
+                        week: 0,
+                        day: uniqueKey,
+                        session_name: w.name,
+                        details: w.details,
+                        tempo: w.tempo || null,
+                      });
+                      setSingleName("");
+                      setSingleDate(new Date());
+                      setShowAddSingle(false);
+                      setShowCopyPicker(false);
+                      setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`);
+                      fetchData();
+                    } else if (target.planId === "__new__") {
+                      const { data: inserted } = await supabase.from("workout_plans").insert({
+                        user_id: userId,
+                        week: target.week,
+                        day: target.day,
+                        session_name: w.name,
+                        details: w.details,
+                        tempo: w.tempo || null,
+                      }).select().single();
+                      if (inserted) {
+                        setPlans(prev => [...prev, inserted as any]);
                       }
-                    }}
-                    className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${isLocked ? "bg-secondary/30 opacity-50 cursor-not-allowed" : "bg-secondary/50 hover:bg-secondary"}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
-                      </div>
-                      {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 ml-2" />}
-                    </div>
-                  </button>
-                );
-              })}
+                      setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`);
+                      fetchData();
+                    } else {
+                      await supabase.from("workout_plans").update({
+                        session_name: w.name,
+                        details: w.details,
+                        tempo: w.tempo || null,
+                      }).eq("id", target.planId);
+                      setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
+                      setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`);
+                      triggerSave();
+                    }
+                  }}
+                  className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                >
+                  <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                  <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                </button>
+              ))}
             </div>
           ))}
         </div>

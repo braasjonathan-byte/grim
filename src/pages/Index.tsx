@@ -643,7 +643,7 @@ const Index = () => {
       {/* Content */}
       <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4" style={{ paddingBottom: bottomNavOffset }}>
-        {tab === "workout" && <WorkoutView key={adminViewUserId || workoutRefreshKey} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />}
+        {tab === "workout" && <WorkoutView key={adminViewUserId || workoutRefreshKey} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />}
         {tab === "social" &&
           <SocialView
             userId={user.id}
