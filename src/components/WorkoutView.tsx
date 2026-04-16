@@ -3581,6 +3581,17 @@ const estimateCalories = (
             return null;
           })()}
 
+            {/* Import ready workout */}
+            <button
+              onClick={() => {
+                // Find a matching ready workout and create single workout
+                setImportWorkoutTarget({ planId: "__single__", week: 0, day: "" });
+              }}
+              className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
+            >
+              <Download className="w-3 h-3" /> Importera färdigt pass
+            </button>
+
             {/* Date picker */}
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Datum</label>
@@ -6527,15 +6538,36 @@ const estimateCalories = (
                   key={wi}
                   onClick={async () => {
                     const target = importWorkoutTarget;
-                    await supabase.from("workout_plans").update({
-                      session_name: w.name,
-                      details: w.details,
-                      tempo: w.tempo || null,
-                    }).eq("id", target.planId);
-                    setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
-                    setImportWorkoutTarget(null);
-                    toast.success(`"${w.name}" importerat!`);
-                    triggerSave();
+                    if (target.planId === "__single__") {
+                      // Create a new single workout with the ready workout data
+                      const dateStr = format(singleDate, "yyyy-MM-dd");
+                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                      await supabase.from("workout_plans").insert({
+                        user_id: userId,
+                        week: 0,
+                        day: uniqueKey,
+                        session_name: w.name,
+                        details: w.details,
+                        tempo: w.tempo || null,
+                      });
+                      setSingleName("");
+                      setSingleDate(new Date());
+                      setShowAddSingle(false);
+                      setShowCopyPicker(false);
+                      setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`);
+                      fetchData();
+                    } else {
+                      await supabase.from("workout_plans").update({
+                        session_name: w.name,
+                        details: w.details,
+                        tempo: w.tempo || null,
+                      }).eq("id", target.planId);
+                      setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
+                      setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`);
+                      triggerSave();
+                    }
                   }}
                   className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
                 >
