@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
+import ImageCarousel from "./ImageCarousel";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
