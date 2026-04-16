@@ -61,12 +61,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [caption, setCaption] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<{ file: File; preview: string; caption: string }[]>([]);
   const [postVisibility, setPostVisibility] = useState<string>("public");
   const [postGroupId, setPostGroupId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [postImages, setPostImages] = useState<Record<string, { image_url: string; caption: string | null }[]>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const isChatTab = subTab === "chat";
 
