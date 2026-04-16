@@ -375,7 +375,8 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   const [singleName, setSingleName] = useState("");
   const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [showCopyPicker, setShowCopyPicker] = useState(false);
-  const [singleCurrentWeek, setSingleCurrentWeek] = useState(1);
+  const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
+  const [singleActiveDayIdx, setSingleActiveDayIdx] = useState(0);
 
   // Exercise browser for single workouts
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
