@@ -8,18 +8,20 @@ interface CircuitTimerDialogProps {
   /** Per-exercise seconds override. If provided, each exercise uses its own duration. */
   exerciseSeconds?: number[];
   roundCount: number;
+  restSeconds?: number;
   onClose: () => void;
   onRoundComplete?: (roundIndex: number) => void;
   onRated?: (rating: number) => void;
 }
 
-type Phase = "ready" | "countdown" | "work" | "done";
+type Phase = "ready" | "countdown" | "work" | "rest" | "done";
 
 const CircuitTimerDialog = ({
   exercises,
   workSeconds,
   exerciseSeconds,
   roundCount,
+  restSeconds = 0,
   onClose,
   onRoundComplete,
   onRated,
@@ -69,31 +71,31 @@ const CircuitTimerDialog = ({
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearTimer();
-          // Move to next exercise or next round
           const nextExIdx = currentExerciseIndex + 1;
           if (nextExIdx < exercises.length) {
-            // Next exercise in same round
             playExerciseSwitch();
             setCurrentExerciseIndex(nextExIdx);
              return getExerciseSec(nextExIdx);
           } else {
-            // Round complete
             onRoundComplete?.(currentRound);
             const nextRound = currentRound + 1;
             if (nextRound < roundCount) {
+              if (restSeconds > 0) {
+                playExerciseSwitch();
+                setPhase("rest");
+                return restSeconds;
+              }
               playExerciseSwitch();
               setCurrentRound(nextRound);
               setCurrentExerciseIndex(0);
               return getExerciseSec(0);
             } else {
-              // All done
               playExerciseSwitch();
               setPhase("done");
               return 0;
             }
           }
         }
-        // Beep at 3, 2, 1
         if (prev <= 4 && prev > 1) {
           playCountdownBeep();
         }
@@ -101,7 +103,30 @@ const CircuitTimerDialog = ({
       });
     }, 1000);
     return clearTimer;
-  }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, exerciseSeconds, clearTimer, onRoundComplete]);
+  }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, exerciseSeconds, restSeconds, clearTimer, onRoundComplete]);
+
+  // Rest phase
+  useEffect(() => {
+    if (phase !== "rest" || paused) return;
+    intervalRef.current = window.setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearTimer();
+          playGoBeep();
+          const nextRound = currentRound + 1;
+          setCurrentRound(nextRound);
+          setCurrentExerciseIndex(0);
+          setPhase("work");
+          return getExerciseSec(0);
+        }
+        if (prev <= 4 && prev > 1) {
+          playCountdownBeep();
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return clearTimer;
+  }, [phase, paused, currentRound, clearTimer, restSeconds]);
 
   const startWorkout = () => {
     setPhase("countdown");
@@ -157,6 +182,7 @@ const CircuitTimerDialog = ({
               <p className="text-lg font-bold text-foreground">Redo att köra?</p>
               <p className="text-sm text-muted-foreground">
                 {roundCount} rundor × {totalExercises} övningar × {workSeconds}s
+                {restSeconds > 0 && ` • ${restSeconds}s vila`}
               </p>
               <div className="space-y-1 max-w-xs mx-auto">
                 {exercises.map((ex, i) => (
@@ -253,6 +279,23 @@ const CircuitTimerDialog = ({
             {paused && (
               <p className="text-xs text-warning font-semibold">PAUSAD</p>
             )}
+          </>
+        )}
+
+        {phase === "rest" && (
+          <>
+            <div className="text-center px-4">
+              <p className="text-3xl font-black text-warning leading-tight">VILA</p>
+              <p className="text-sm text-muted-foreground mt-2">Nästa runda: {currentRound + 2} / {roundCount}</p>
+            </div>
+            <div className="text-center">
+              <span className="text-7xl font-black font-mono text-warning tracking-wider">{secondsLeft}</span>
+              <p className="text-xs text-muted-foreground mt-1">sekunder vila</p>
+            </div>
+            <button onClick={togglePause} className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${paused ? "bg-warning text-warning-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+              {paused ? <Play className="w-6 h-6 ml-0.5" /> : <Pause className="w-6 h-6" />}
+            </button>
+            {paused && <p className="text-xs text-warning font-semibold">PAUSAD</p>}
           </>
         )}
 

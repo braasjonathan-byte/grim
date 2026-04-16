@@ -378,6 +378,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [singleName, setSingleName] = useState("");
   const [singleIsCircuit, setSingleIsCircuit] = useState(false);
   const [singleCircuitSeconds, setSingleCircuitSeconds] = useState("40");
+  const [singleCircuitRounds, setSingleCircuitRounds] = useState("3");
+  const [singleCircuitRest, setSingleCircuitRest] = useState("30");
   const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [showCopyPicker, setShowCopyPicker] = useState(false);
   const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
@@ -524,7 +526,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [addWeekSaving, setAddWeekSaving] = useState(false);
 
   // Circuit timer state
-  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[]; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
+  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
 
   // Ready workout circuit config from DB
   const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
@@ -1517,11 +1519,13 @@ const estimateCalories = (
       day: uniqueKey,
       session_name: name,
       details,
-      tempo: (copyFrom ? copyFrom.tempo : (singleIsCircuit ? `circuit:${parseInt(singleCircuitSeconds) || 40}` : null)),
+      tempo: (copyFrom ? copyFrom.tempo : (singleIsCircuit ? `circuit:${parseInt(singleCircuitSeconds) || 40}:${parseInt(singleCircuitRounds) || 3}:${parseInt(singleCircuitRest) || 0}` : null)),
       is_circuit: copyFrom ? (copyFrom.is_circuit || false) : singleIsCircuit
     } as any);
     setSingleIsCircuit(false);
     setSingleCircuitSeconds("40");
+    setSingleCircuitRounds("3");
+    setSingleCircuitRest("30");
 
     // Copy logged weights/reps from the source workout's completion
     if (copyFrom) {
@@ -3177,10 +3181,17 @@ const estimateCalories = (
                       const exerciseLines = plan.details.split("\n").filter(Boolean);
                       const parsed = exerciseLines.map(l => parseExerciseWeight(l)).filter(p => p.name && !/^vila$/i.test(p.name.trim()));
                       if (parsed.length === 0) return null;
-                      const circuitMatch = plan.tempo?.match(/^circuit:(\d+)$/);
+                      const circuitMatch = plan.tempo?.match(/^circuit:(\d+)(?::(\d+))?(?::(\d+))?$/);
                       const defaultSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
+                      const rounds = circuitMatch?.[2] ? parseInt(circuitMatch[2]) : 3;
+                      // Rest: prefer Vila line from details, fallback to tempo
+                      const vilaLine = exerciseLines.find(l => /^vila\s/i.test(parseExerciseWeight(l).name?.trim() || ""));
+                      let restSec = circuitMatch?.[3] ? parseInt(circuitMatch[3]) : 0;
+                      if (vilaLine) {
+                        const vilaMatch = vilaLine.match(/\d+[×x](\d+)/i);
+                        if (vilaMatch) restSec = parseInt(vilaMatch[1]) || restSec;
+                      }
                       const exerciseNames = parsed.map(p => p.name);
-                      // Read per-exercise seconds from the reps value (e.g. "3×40" → 40)
                       const perExSec = parsed.map(p => {
                         if (p.weight) {
                           const repsMatch = p.weight.match(/\d+×(\d+)/);
@@ -3190,7 +3201,7 @@ const estimateCalories = (
                       });
                       return (
                         <button
-                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: defaultSec, exerciseSeconds: perExSec, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
+                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: defaultSec, exerciseSeconds: perExSec, roundCount: rounds, restSeconds: restSec, weekDayKey: key, headerIndex: 0 })}
                           className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
                         >
                           <Play className="w-4 h-4" /> Starta
@@ -3565,6 +3576,23 @@ const estimateCalories = (
                       className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <Plus className="w-3 h-3" /> Lägg till övning
                       </button>
+                    {plan.is_circuit && (
+                      <button
+                        onClick={async () => {
+                          const restSec = prompt("Antal sekunder vila mellan rundor:", "30");
+                          if (!restSec) return;
+                          const seconds = parseInt(restSec) || 30;
+                          const entry = `Vila — 1×${seconds}`;
+                          const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+                          const newDetails = plan.details ? `${plan.details}${joinSep}${entry}` : entry;
+                          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                          setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                          triggerSave();
+                        }}
+                        className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                        <Plus className="w-3 h-3" /> Lägg till vila
+                      </button>
+                    )}
                   </div>
                     }
                     <ExercisePickerDialog
@@ -3783,18 +3811,18 @@ const estimateCalories = (
               <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
             </label>
             {singleIsCircuit && (
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-muted-foreground whitespace-nowrap">Sekunder per övning:</label>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="5"
-                  max="300"
-                  value={singleCircuitSeconds}
-                  onChange={(e) => setSingleCircuitSeconds(e.target.value)}
-                  className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono"
-                />
-                <span className="text-xs text-muted-foreground">sek</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
+                  <input type="number" inputMode="numeric" min="5" max="300" value={singleCircuitSeconds} onChange={(e) => setSingleCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
+                  <input type="number" inputMode="numeric" min="1" max="20" value={singleCircuitRounds} onChange={(e) => setSingleCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
+                  <input type="number" inputMode="numeric" min="0" max="300" value={singleCircuitRest} onChange={(e) => setSingleCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <span className="text-xs text-muted-foreground">sek</span>
+                </div>
               </div>
             )}
             <div className="flex gap-2">
@@ -3952,6 +3980,7 @@ const estimateCalories = (
           workSeconds={circuitTimer.workSeconds}
           exerciseSeconds={circuitTimer.exerciseSeconds}
           roundCount={circuitTimer.roundCount}
+          restSeconds={circuitTimer.restSeconds}
           onClose={() => setCircuitTimer(null)}
           onRoundComplete={(roundIndex) => {
             const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
@@ -6511,6 +6540,23 @@ const estimateCalories = (
                   <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till övning
                     </button>
+                  {plan.is_circuit && (
+                    <button
+                      onClick={async () => {
+                        const restSec = prompt("Antal sekunder vila mellan rundor:", "30");
+                        if (!restSec) return;
+                        const seconds = parseInt(restSec) || 30;
+                        const entry = `Vila — 1×${seconds}`;
+                        const separator = plan.details.includes("\n") ? "\n" : "; ";
+                        const newDetails = plan.details ? `${plan.details}${separator}${entry}` : entry;
+                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                        triggerSave();
+                      }}
+                      className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                      <Plus className="w-3 h-3" /> Lägg till vila
+                    </button>
+                  )}
                   <button
                       onClick={() => setImportWorkoutTarget({ planId: plan.id, week: plan.week, day: plan.day })}
                       className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
@@ -6852,6 +6898,7 @@ const estimateCalories = (
         workSeconds={circuitTimer.workSeconds}
         exerciseSeconds={circuitTimer.exerciseSeconds}
         roundCount={circuitTimer.roundCount}
+        restSeconds={circuitTimer.restSeconds}
         onClose={() => setCircuitTimer(null)}
         onRoundComplete={(roundIndex) => {
           const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
