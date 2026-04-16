@@ -1494,7 +1494,8 @@ const estimateCalories = (
         session_name: p.session_name,
         details: p.details,
         tempo: p.tempo || "",
-      }));
+        is_circuit: p.is_circuit || false,
+      } as any));
 
       const { error } = await supabase.from("workout_plans").insert(inserts);
       if (error) throw error;
@@ -4085,8 +4086,8 @@ const estimateCalories = (
                       onClick={async () => {
                         const dateStr = format(singleDate, "yyyy-MM-dd");
                         const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null });
-                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) });
+                         setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
                         toast.success(`"${sw.name}" importerat!`); fetchData();
                       }}
                       className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
@@ -6583,6 +6584,48 @@ const estimateCalories = (
                 })()}
 
                   {/* Reps/sets/weight dialog for plan exercises */}
+                  {/* Fallback circuit start button for is_circuit plans without a rounds header */}
+                  {plan.is_circuit && plan.details && (() => {
+                    const hasRoundsHeader = plan.details.split(/[;\n]/).some(l => /^\d+\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:/i.test(l.trim()) || /^\d+\s*(min\s+)?amrap\s*:/i.test(l.trim()));
+                    if (hasRoundsHeader) return null;
+                    const exerciseLines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                    const parsed = exerciseLines.map(l => parseExerciseWeight(l)).filter(p => p.name && !/^vila$/i.test(p.name.trim()));
+                    if (parsed.length === 0) return null;
+                    const circuitMatch = plan.tempo?.match(/^circuit:(\d+)(?::(\d+))?(?::(\d+))?$/);
+                    const defaultSec = circuitMatch ? parseInt(circuitMatch[1]) : 40;
+                    const rounds = circuitMatch?.[2] ? parseInt(circuitMatch[2]) : 3;
+                    const vilaLine = exerciseLines.find(l => /^vila\s/i.test(parseExerciseWeight(l).name?.trim() || ""));
+                    let restSec = circuitMatch?.[3] ? parseInt(circuitMatch[3]) : 0;
+                    if (vilaLine) {
+                      const vilaMatch = vilaLine.match(/\d+[×x](\d+)/i);
+                      if (vilaMatch) restSec = parseInt(vilaMatch[1]) || restSec;
+                    }
+                    const exerciseNames = parsed.map(p => p.name);
+                    const perExSec: number[][] = parsed.map(p => {
+                      const setData = getSetData(key, p.name);
+                      const baseSec = (() => {
+                        if (p.weight) {
+                          const rm = p.weight.match(/\d+×(\d+)/);
+                          if (rm) return parseInt(rm[1]) || defaultSec;
+                        }
+                        return defaultSec;
+                      })();
+                      return Array.from({ length: rounds }, (_, ri) => {
+                        const sd = setData[ri];
+                        if (sd?.reps) { const v = parseInt(sd.reps); if (v > 0) return v; }
+                        return baseSec;
+                      });
+                    });
+                    return (
+                      <button
+                        onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: defaultSec, exerciseSeconds: perExSec, roundCount: rounds, restSeconds: restSec, weekDayKey: key, headerIndex: 0 })}
+                        className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                      >
+                        <Play className="w-4 h-4" /> Starta
+                      </button>
+                    );
+                  })()}
+
                   {weightDialog && weightDialog.planId === plan.id &&
                 <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30">
                       <h4 className="text-sm font-bold font-sans flex items-center gap-1.5">
