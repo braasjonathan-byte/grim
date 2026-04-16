@@ -6230,8 +6230,10 @@ const estimateCalories = (
                                   } else if (circuitExInfo) {
                                     for (const exIdx of circuitExInfo.exerciseIndices) {
                                       const exPart = parts[exIdx];
-                                      const { name: eName } = parseExerciseWeight(exPart);
-                                      exerciseNames.push(eName);
+                                      let { name: eName } = parseExerciseWeight(exPart);
+                                      // Strip trailing rep/set specs like "1×32s" from name when no — separator was found
+                                      eName = eName.replace(/\s+\d+\s*[×x]\s*\d+\s*s?\s*$/i, "").trim();
+                                      if (eName && !/^vila/i.test(eName)) exerciseNames.push(eName);
                                     }
                                   }
                                   // Fallback: if no workSec from header, try to get from exercise lines
