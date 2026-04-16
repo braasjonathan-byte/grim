@@ -8,12 +8,13 @@ interface CircuitTimerDialogProps {
   /** Per-exercise seconds override. If provided, each exercise uses its own duration. */
   exerciseSeconds?: number[];
   roundCount: number;
+  restSeconds?: number;
   onClose: () => void;
   onRoundComplete?: (roundIndex: number) => void;
   onRated?: (rating: number) => void;
 }
 
-type Phase = "ready" | "countdown" | "work" | "done";
+type Phase = "ready" | "countdown" | "work" | "rest" | "done";
 
 const CircuitTimerDialog = ({
   exercises,
