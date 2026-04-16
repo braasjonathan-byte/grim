@@ -513,6 +513,13 @@ const WorkoutShareCard = ({
             <Copy className="w-4 h-4" /> Kopiera till datum
           </button>
         )}
+        {onSaveWorkout && (
+          <button
+            onClick={onSaveWorkout}
+            className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
+            <Save className="w-4 h-4" /> Spara pass
+          </button>
+        )}
       </div>
     </div>);
 
