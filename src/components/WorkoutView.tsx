@@ -4026,7 +4026,7 @@ const estimateCalories = (
                       onClick={async () => {
                         const dateStr = format(singleDate, "yyyy-MM-dd");
                         const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null });
+                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) });
                         setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
                         toast.success(`"${sw.name}" importerat!`); fetchData();
                       }}
@@ -4081,6 +4081,7 @@ const estimateCalories = (
                       await supabase.from("workout_plans").insert({
                         user_id: userId, week: 0, day: uniqueKey,
                         session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
                       });
                       setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
                       toast.success(`"${w.name}" importerat!`); fetchData();
