@@ -3323,7 +3323,7 @@ const estimateCalories = (
 
                           </div>
                           <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{plans.find(p => p.id === weightDialog?.planId)?.is_circuit ? "Sek" : "Reps"}</label>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
                             <input
                           type="number"
                           min="1"
@@ -3352,7 +3352,7 @@ const estimateCalories = (
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");}}
+                        onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");setRepsUnit("reps");}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
 
                             Avbryt
@@ -6345,7 +6345,7 @@ const estimateCalories = (
                           <input type="number" inputMode="numeric" value={setsInput} onChange={(e) => setSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">{plan.is_circuit ? "Sek" : "Reps"}</label>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
                           <input type="number" inputMode="numeric" value={repsInput} onChange={(e) => setRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
@@ -6361,7 +6361,7 @@ const estimateCalories = (
                           <Plus className="w-3.5 h-3.5" /> Lägg till
                         </button>
                         <button
-                      onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");}}
+                      onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");setRepsUnit("reps");}}
                       className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
 
                           Avbryt
