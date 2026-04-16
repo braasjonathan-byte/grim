@@ -2141,6 +2141,7 @@ const estimateCalories = (
     setWeightInput("");
     setRepsInput("10");
     setSetsInput("3");
+    setRepsUnit("reps");
     setIsWarmupMode(false);
 
     // Show propagation dialog if this was a replacement in plan mode
