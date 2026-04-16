@@ -3192,12 +3192,25 @@ const estimateCalories = (
                         if (vilaMatch) restSec = parseInt(vilaMatch[1]) || restSec;
                       }
                       const exerciseNames = parsed.map(p => p.name);
-                      const perExSec = parsed.map(p => {
-                        if (p.weight) {
-                          const repsMatch = p.weight.match(/\d+×(\d+)/);
-                          if (repsMatch) return parseInt(repsMatch[1]) || defaultSec;
-                        }
-                        return defaultSec;
+                      const perExSec: number[][] = parsed.map(p => {
+                        // Get per-round (per-set) values from set data
+                        const setData = getSetData(key, p.name);
+                        const baseSec = (() => {
+                          if (p.weight) {
+                            const repsMatch = p.weight.match(/\d+×(\d+)/);
+                            if (repsMatch) return parseInt(repsMatch[1]) || defaultSec;
+                          }
+                          return defaultSec;
+                        })();
+                        // Build per-round array
+                        return Array.from({ length: rounds }, (_, ri) => {
+                          const sd = setData[ri];
+                          if (sd?.reps) {
+                            const v = parseInt(sd.reps);
+                            if (v > 0) return v;
+                          }
+                          return baseSec;
+                        });
                       });
                       return (
                         <button
