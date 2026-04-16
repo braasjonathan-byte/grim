@@ -5690,6 +5690,24 @@ const estimateCalories = (
                                           }).join("");
                                           const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
                                           const updated = { ...existing, [roundKey]: newStr } as any;
+                                          // Sync: toggle all circuit exercises' set ri
+                                          const circuitExInfo = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                          if (circuitExInfo) {
+                                            const markDone = !isRoundDone;
+                                            for (const exIdx of circuitExInfo.exerciseIndices) {
+                                              const exPart = parts[exIdx];
+                                              const { clean: exClean } = extractRpe(exPart);
+                                              const exMatch = exClean.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)s?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                                              const exName = exMatch ? exMatch[1].trim().replace(/\s*—\s*$/, '') : parseExerciseWeight(exPart).name;
+                                              const setsKey = `__sets__${exName}`;
+                                              const currentSets = (updated[setsKey] as string) || "";
+                                              const newSets = Array.from({ length: roundCount }, (_, si) => {
+                                                if (si === ri) return markDone ? "1" : "0";
+                                                return currentSets[si] || "0";
+                                              }).join("");
+                                              updated[setsKey] = newSets;
+                                            }
+                                          }
                                           setCompletions(prev => ({
                                             ...prev,
                                             [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
