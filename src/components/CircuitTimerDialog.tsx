@@ -281,6 +281,23 @@ const CircuitTimerDialog = ({
           </>
         )}
 
+        {phase === "rest" && (
+          <>
+            <div className="text-center px-4">
+              <p className="text-3xl font-black text-warning leading-tight">VILA</p>
+              <p className="text-sm text-muted-foreground mt-2">Nästa runda: {currentRound + 2} / {roundCount}</p>
+            </div>
+            <div className="text-center">
+              <span className="text-7xl font-black font-mono text-warning tracking-wider">{secondsLeft}</span>
+              <p className="text-xs text-muted-foreground mt-1">sekunder vila</p>
+            </div>
+            <button onClick={togglePause} className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${paused ? "bg-warning text-warning-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+              {paused ? <Play className="w-6 h-6 ml-0.5" /> : <Pause className="w-6 h-6" />}
+            </button>
+            {paused && <p className="text-xs text-warning font-semibold">PAUSAD</p>}
+          </>
+        )}
+
         {phase === "done" && (
           <div className="text-center space-y-5 w-full max-w-sm">
             <p className="text-4xl">🎉</p>
