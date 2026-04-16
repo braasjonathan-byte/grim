@@ -3,7 +3,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -36,6 +36,7 @@ const toTitleCase = (str: string): string =>
 interface WorkoutViewProps {
   userId: string;
   isAdmin?: boolean;
+  isHonorary?: boolean;
   onBack?: () => void;
   adminViewNickname?: string;
 }
@@ -348,7 +349,7 @@ const getMonday = (d: Date) => {
   return date;
 };
 
-const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
+const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
@@ -3713,6 +3714,9 @@ const estimateCalories = (
               <h3 className="font-bold text-sm">Importera färdigt pass</h3>
               <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
             </div>
+            {!isHonorary && !isAdmin && (
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3" /> Hedersmedlemmar har tillgång till alla pass</p>
+            )}
             {/* User's own saved workouts */}
             {(() => {
               const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
@@ -3768,25 +3772,35 @@ const estimateCalories = (
             {readyWorkoutCategories.map((cat, ci) => (
               <div key={ci} className="space-y-1.5">
                 <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
-                {cat.workouts.map((w, wi) => (
-                  <button
-                    key={wi}
-                    onClick={async () => {
-                      const dateStr = format(singleDate, "yyyy-MM-dd");
-                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                      await supabase.from("workout_plans").insert({
-                        user_id: userId, week: 0, day: uniqueKey,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                      });
-                      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`); fetchData();
-                    }}
-                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
-                  >
-                    <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
-                  </button>
-                ))}
+                {cat.workouts.map((w, wi) => {
+                  const isLocked = wi > 0 && !isHonorary && !isAdmin;
+                  return (
+                    <button
+                      key={wi}
+                      disabled={isLocked}
+                      onClick={async () => {
+                        if (isLocked) return;
+                        const dateStr = format(singleDate, "yyyy-MM-dd");
+                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                        await supabase.from("workout_plans").insert({
+                          user_id: userId, week: 0, day: uniqueKey,
+                          session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        });
+                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        toast.success(`"${w.name}" importerat!`); fetchData();
+                      }}
+                      className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${isLocked ? "bg-secondary/30 opacity-50 cursor-not-allowed" : "bg-secondary/50 hover:bg-secondary"}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                          <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                        </div>
+                        {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 ml-2" />}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -6705,6 +6719,9 @@ const estimateCalories = (
             <h3 className="font-bold text-sm">Importera färdigt pass</h3>
             <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
+          {!isHonorary && !isAdmin && (
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3" /> Hedersmedlemmar har tillgång till alla pass</p>
+          )}
           {/* User's own saved workouts */}
           {(() => {
             const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
@@ -6782,62 +6799,51 @@ const estimateCalories = (
           {readyWorkoutCategories.map((cat, ci) => (
             <div key={ci} className="space-y-1.5">
               <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
-              {cat.workouts.map((w, wi) => (
-                <button
-                  key={wi}
-                  onClick={async () => {
-                    const target = importWorkoutTarget;
-                    if (target.planId === "__single__") {
-                      const dateStr = format(singleDate, "yyyy-MM-dd");
-                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                      await supabase.from("workout_plans").insert({
-                        user_id: userId,
-                        week: 0,
-                        day: uniqueKey,
-                        session_name: w.name,
-                        details: w.details,
-                        tempo: w.tempo || null,
-                      });
-                      setSingleName("");
-                      setSingleDate(new Date());
-                      setShowAddSingle(false);
-                      setShowCopyPicker(false);
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      fetchData();
-                    } else if (target.planId === "__new__") {
-                      const { data: inserted } = await supabase.from("workout_plans").insert({
-                        user_id: userId,
-                        week: target.week,
-                        day: target.day,
-                        session_name: w.name,
-                        details: w.details,
-                        tempo: w.tempo || null,
-                      }).select().single();
-                      if (inserted) {
-                        setPlans(prev => [...prev, inserted as any]);
+              {cat.workouts.map((w, wi) => {
+                const isLocked = wi > 0 && !isHonorary && !isAdmin;
+                return (
+                  <button
+                    key={wi}
+                    disabled={isLocked}
+                    onClick={async () => {
+                      if (isLocked) return;
+                      const target = importWorkoutTarget;
+                      if (target.planId === "__single__") {
+                        const dateStr = format(singleDate, "yyyy-MM-dd");
+                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                        await supabase.from("workout_plans").insert({
+                          user_id: userId, week: 0, day: uniqueKey,
+                          session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        });
+                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        toast.success(`"${w.name}" importerat!`); fetchData();
+                      } else if (target.planId === "__new__") {
+                        const { data: inserted } = await supabase.from("workout_plans").insert({
+                          user_id: userId, week: target.week, day: target.day,
+                          session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        }).select().single();
+                        if (inserted) setPlans(prev => [...prev, inserted as any]);
+                        setImportWorkoutTarget(null); toast.success(`"${w.name}" importerat!`); fetchData();
+                      } else {
+                        await supabase.from("workout_plans").update({
+                          session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        }).eq("id", target.planId);
+                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
+                        setImportWorkoutTarget(null); toast.success(`"${w.name}" importerat!`); triggerSave();
                       }
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      fetchData();
-                    } else {
-                      await supabase.from("workout_plans").update({
-                        session_name: w.name,
-                        details: w.details,
-                        tempo: w.tempo || null,
-                      }).eq("id", target.planId);
-                      setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      triggerSave();
-                    }
-                  }}
-                  className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
-                >
-                  <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                  <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
-                </button>
-              ))}
+                    }}
+                    className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${isLocked ? "bg-secondary/30 opacity-50 cursor-not-allowed" : "bg-secondary/50 hover:bg-secondary"}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                        <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                      </div>
+                      {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 ml-2" />}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           ))}
         </div>
