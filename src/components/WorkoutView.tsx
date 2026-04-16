@@ -6445,6 +6445,33 @@ const estimateCalories = (
             </div>);
 
         })}
+        {/* Empty days – show import button for days without a plan entry */}
+        {(() => {
+          const occupiedDays = weekDays.map(p => p.day);
+          const emptyDays = DAYS.filter(d => !occupiedDays.includes(d));
+          if (emptyDays.length === 0 || emptyDays.length === 7) return null;
+          // On mobile with swipe, don't show empty days inline
+          if (isMobile && weekDays.length > 1) return null;
+          return emptyDays.map(day => (
+            <div key={`empty-${currentWeek}-${day}`} className="rounded-lg border border-dashed border-border bg-card/50 p-4 space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full border-2 border-border flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-muted-foreground">{day}</p>
+                  <p className="text-xs text-muted-foreground">Ingen träning planerad</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setImportWorkoutTarget({ planId: "__new__", week: currentWeek, day })}
+                className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
+              >
+                <Download className="w-3 h-3" /> Importera färdigt pass
+              </button>
+            </div>
+          ));
+        })()}
       </div>
 
 
@@ -6585,6 +6612,22 @@ const estimateCalories = (
                       setSingleDate(new Date());
                       setShowAddSingle(false);
                       setShowCopyPicker(false);
+                      setImportWorkoutTarget(null);
+                      toast.success(`"${w.name}" importerat!`);
+                      fetchData();
+                    } else if (target.planId === "__new__") {
+                      // Create a brand-new plan entry for an empty day
+                      const { data: inserted } = await supabase.from("workout_plans").insert({
+                        user_id: userId,
+                        week: target.week,
+                        day: target.day,
+                        session_name: w.name,
+                        details: w.details,
+                        tempo: w.tempo || null,
+                      }).select().single();
+                      if (inserted) {
+                        setPlans(prev => [...prev, inserted as any]);
+                      }
                       setImportWorkoutTarget(null);
                       toast.success(`"${w.name}" importerat!`);
                       fetchData();
