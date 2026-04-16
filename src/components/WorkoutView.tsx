@@ -523,7 +523,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [addWeekSaving, setAddWeekSaving] = useState(false);
 
   // Circuit timer state
-  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
+  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[]; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
 
   // Ready workout circuit config from DB
   const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
