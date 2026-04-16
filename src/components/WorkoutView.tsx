@@ -3245,12 +3245,12 @@ const estimateCalories = (
                                     return (roundsDoneStr[j] || "0");
                                   }).join("");
                                   const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
-                                  const updated = { ...existing, [roundKey]: newStr };
+                                  const updated = { ...existing, [roundKey]: newStr } as any;
                                   setCompletions(prev => ({
                                     ...prev,
-                                    [key]: { ...prev[key], week: 0, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
+                                    [key]: { ...prev[key], week: 0, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated }
                                   }));
-                                  safeUpsertCompletion(0, plan.day, { logged_weights: updated });
+                                  safeUpsertCompletion(0, plan.day, { logged_weights: updated } as any);
                                 }}
                                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${isRoundDone ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
                               >
