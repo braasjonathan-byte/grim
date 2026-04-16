@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
+import ImageCarousel from "./ImageCarousel";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
@@ -60,12 +61,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [caption, setCaption] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFiles, setImageFiles] = useState<{ file: File; preview: string; caption: string }[]>([]);
   const [postVisibility, setPostVisibility] = useState<string>("public");
   const [postGroupId, setPostGroupId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [postImages, setPostImages] = useState<Record<string, { image_url: string; caption: string | null }[]>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const isChatTab = subTab === "chat";
 
@@ -114,13 +117,13 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           setAvatarUrls(aMap);
         }
       }
-      // Load likes
+      // Load likes + post images
       const postIds = postsData.map(p => p.id);
       if (postIds.length > 0) {
-        const { data: likesData } = await supabase
-          .from("social_post_likes")
-          .select("post_id, user_id")
-          .in("post_id", postIds);
+        const [{ data: likesData }, { data: imgData }] = await Promise.all([
+          supabase.from("social_post_likes").select("post_id, user_id").in("post_id", postIds),
+          supabase.from("social_post_images").select("post_id, image_url, caption, sort_order").in("post_id", postIds).order("sort_order", { ascending: true }),
+        ]);
         if (likesData) {
           const countMap: Record<string, number> = {};
           const mySet = new Set<string>();
@@ -130,6 +133,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           });
           setLikes(countMap);
           setMyLikes(mySet);
+        }
+        if (imgData) {
+          const imgMap: Record<string, { image_url: string; caption: string | null }[]> = {};
+          (imgData as any[]).forEach((row: { post_id: string; image_url: string; caption: string | null }) => {
+            if (!imgMap[row.post_id]) imgMap[row.post_id] = [];
+            imgMap[row.post_id].push({ image_url: row.image_url, caption: row.caption });
+          });
+          setPostImages(imgMap);
         }
       }
     }
@@ -188,16 +199,27 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) { toast.error("Max 20 MB"); return; }
     const resized = await resizeImage(file);
-    setImageFile(resized);
-    setImagePreview(URL.createObjectURL(resized));
+    if (isAdmin) {
+      // Admin: multi-image mode
+      if (imageFiles.length >= 10) { toast.error("Max 10 bilder per inlägg"); return; }
+      setImageFiles(prev => [...prev, { file: resized, preview: URL.createObjectURL(resized), caption: "" }]);
+    } else {
+      // Non-admin: single image
+      setImageFile(resized);
+      setImagePreview(URL.createObjectURL(resized));
+    }
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const submitPost = async () => {
-    if (!caption.trim() && !imageFile) { toast.error("Skriv något eller välj en bild"); return; }
+    const hasImages = isAdmin ? imageFiles.length > 0 : !!imageFile;
+    if (!caption.trim() && !hasImages) { toast.error("Skriv något eller välj en bild"); return; }
     setUploading(true);
     try {
       let imageUrl: string | null = null;
-      if (imageFile) {
+
+      // For non-admin single image, upload to image_url field
+      if (!isAdmin && imageFile) {
         const ext = imageFile.name.split(".").pop() || "jpg";
         const path = `${userId}/${Date.now()}.${ext}`;
         const { error } = await supabase.storage.from("social-images").upload(path, imageFile);
@@ -206,15 +228,48 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         imageUrl = urlData.publicUrl;
       }
 
+      // For admin with single image and no per-image captions, use legacy field
+      if (isAdmin && imageFiles.length === 1 && !imageFiles[0].caption) {
+        const f = imageFiles[0].file;
+        const ext = f.name.split(".").pop() || "jpg";
+        const path = `${userId}/${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from("social-images").upload(path, f);
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from("social-images").getPublicUrl(path);
+        imageUrl = urlData.publicUrl;
+      }
+
       const resolvedVisibility = postVisibility === "group" ? "group" : postVisibility === "friends" ? "friends" : "public";
 
-      await supabase.from("social_posts").insert({
+      const { data: insertedPost } = await supabase.from("social_posts").insert({
         user_id: userId,
         image_url: imageUrl,
         caption: caption.trim() || null,
         visibility: resolvedVisibility,
         group_id: resolvedVisibility === "group" ? postGroupId : null,
-      });
+      }).select("id").single();
+
+      // For admin multi-image (or single with caption), upload to social_post_images
+      if (isAdmin && insertedPost && (imageFiles.length > 1 || (imageFiles.length === 1 && imageFiles[0].caption))) {
+        const imageRows = [];
+        for (let i = 0; i < imageFiles.length; i++) {
+          const f = imageFiles[i].file;
+          const ext = f.name.split(".").pop() || "jpg";
+          const path = `${userId}/${Date.now()}_${i}.${ext}`;
+          const { error } = await supabase.storage.from("social-images").upload(path, f);
+          if (error) throw error;
+          const { data: urlData } = supabase.storage.from("social-images").getPublicUrl(path);
+          imageRows.push({
+            post_id: insertedPost.id,
+            image_url: urlData.publicUrl,
+            caption: imageFiles[i].caption.trim() || null,
+            sort_order: i,
+          });
+        }
+        if (imageRows.length > 0) {
+          await supabase.from("social_post_images").insert(imageRows);
+        }
+      }
 
       toast.success("Inlägg publicerat!");
 
@@ -226,6 +281,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       setCaption("");
       setImageFile(null);
       setImagePreview(null);
+      setImageFiles([]);
       setPostVisibility("public");
       setPostGroupId(null);
       loadFeed();
@@ -356,13 +412,40 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             <div className="border border-border rounded-xl p-4 bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold">Nytt inlägg</h4>
-                <button onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); }}>
+                <button onClick={() => { setShowCompose(false); setImageFile(null); setImagePreview(null); setImageFiles([]); }}>
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
 
-              {/* Image preview */}
-              {imagePreview && (
+              {/* Admin multi-image previews */}
+              {isAdmin && imageFiles.length > 0 && (
+                <div className="space-y-2">
+                  {imageFiles.map((img, idx) => (
+                    <div key={idx} className="relative bg-secondary/30 rounded-lg p-2">
+                      <div className="flex gap-2">
+                        <img src={img.preview} alt="" className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <input
+                            type="text"
+                            value={img.caption}
+                            onChange={(e) => setImageFiles(prev => prev.map((f, i) => i === idx ? { ...f, caption: e.target.value } : f))}
+                            placeholder={`Bildtext ${idx + 1} (valfritt)`}
+                            className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-primary/30"
+                          />
+                          <p className="text-[10px] text-muted-foreground">Bild {idx + 1} av {imageFiles.length}</p>
+                        </div>
+                        <button onClick={() => { URL.revokeObjectURL(img.preview); setImageFiles(prev => prev.filter((_, i) => i !== idx)); }}
+                          className="p-1 text-muted-foreground hover:text-destructive self-start">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Non-admin single image preview */}
+              {!isAdmin && imagePreview && (
                 <div className="relative">
                   <img src={imagePreview} alt="" className="w-full rounded-lg max-h-64 object-cover" />
                   <button onClick={() => { setImageFile(null); setImagePreview(null); }}
@@ -385,7 +468,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
               <div className="flex gap-2">
                 <Button onClick={() => fileRef.current?.click()} variant="outline" size="sm">
-                  <ImagePlus className="w-4 h-4 mr-1.5" /> Bild
+                  <ImagePlus className="w-4 h-4 mr-1.5" /> {isAdmin && imageFiles.length > 0 ? `Bild (${imageFiles.length})` : "Bild"}
                 </Button>
 
                 {/* Visibility selector */}
@@ -483,10 +566,17 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 </div>
               </div>
 
-              {/* Image */}
-              {post.image_url && (
-                <img src={post.image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
-              )}
+              {/* Images - carousel for multi-image, fallback to legacy image_url */}
+              {(() => {
+                const imgs = postImages[post.id];
+                if (imgs && imgs.length > 0) {
+                  return <ImageCarousel images={imgs} />;
+                }
+                if (post.image_url) {
+                  return <img src={post.image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />;
+                }
+                return null;
+              })()}
 
               {/* Caption */}
               {post.caption && (
