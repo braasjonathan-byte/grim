@@ -7207,12 +7207,9 @@ const estimateCalories = (
                       fetchData();
                     } else if (target.planId === "__new__") {
                       const { data: inserted } = await supabase.from("workout_plans").insert({
-                        user_id: userId,
-                        week: target.week,
-                        day: target.day,
-                        session_name: w.name,
-                        details: w.details,
-                        tempo: w.tempo || null,
+                        user_id: userId, week: target.week, day: target.day,
+                        session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
                       }).select().single();
                       if (inserted) {
                         setPlans(prev => [...prev, inserted as any]);
@@ -7221,12 +7218,12 @@ const estimateCalories = (
                       toast.success(`"${w.name}" importerat!`);
                       fetchData();
                     } else {
+                      const isCirc3 = !!(w.tempo && w.tempo.startsWith("circuit:"));
                       await supabase.from("workout_plans").update({
-                        session_name: w.name,
-                        details: w.details,
-                        tempo: w.tempo || null,
+                        session_name: w.name, details: w.details, tempo: w.tempo || null,
+                        is_circuit: isCirc3,
                       }).eq("id", target.planId);
-                      setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
+                      setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null, is_circuit: isCirc3 } : p));
                       setImportWorkoutTarget(null);
                       toast.success(`"${w.name}" importerat!`);
                       triggerSave();
