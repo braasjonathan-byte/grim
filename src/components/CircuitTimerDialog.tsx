@@ -326,6 +326,27 @@ const CircuitTimerDialog = ({
           </>
         )}
 
+        {phase === "transition" && (
+          <>
+            <div className="text-center px-4">
+              <p className="text-sm text-muted-foreground mb-2">Nästa övning</p>
+              <p className="text-3xl font-black text-primary leading-tight">
+                {exercises[currentExerciseIndex]}
+              </p>
+            </div>
+            <div className="text-center">
+              <span className="text-8xl font-black font-mono text-primary animate-pulse">
+                {secondsLeft}
+              </span>
+              <p className="text-xs text-muted-foreground mt-1">Gör dig redo!</p>
+            </div>
+            <button onClick={togglePause} className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${paused ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}>
+              {paused ? <Play className="w-6 h-6 ml-0.5" /> : <Pause className="w-6 h-6" />}
+            </button>
+            {paused && <p className="text-xs text-warning font-semibold">PAUSAD</p>}
+          </>
+        )}
+
         {phase === "rest" && (
           <>
             <div className="text-center px-4">
