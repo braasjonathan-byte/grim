@@ -3714,6 +3714,9 @@ const estimateCalories = (
               <h3 className="font-bold text-sm">Importera färdigt pass</h3>
               <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
             </div>
+            {!isHonorary && !isAdmin && (
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3" /> Hedersmedlemmar har tillgång till alla pass</p>
+            )}
             {/* User's own saved workouts */}
             {(() => {
               const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
@@ -6716,6 +6719,9 @@ const estimateCalories = (
             <h3 className="font-bold text-sm">Importera färdigt pass</h3>
             <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
+          {!isHonorary && !isAdmin && (
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3" /> Hedersmedlemmar har tillgång till alla pass</p>
+          )}
           {/* User's own saved workouts */}
           {(() => {
             const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
