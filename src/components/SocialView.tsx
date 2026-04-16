@@ -566,10 +566,17 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 </div>
               </div>
 
-              {/* Image */}
-              {post.image_url && (
-                <img src={post.image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
-              )}
+              {/* Images - carousel for multi-image, fallback to legacy image_url */}
+              {(() => {
+                const imgs = postImages[post.id];
+                if (imgs && imgs.length > 0) {
+                  return <ImageCarousel images={imgs} />;
+                }
+                if (post.image_url) {
+                  return <img src={post.image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />;
+                }
+                return null;
+              })()}
 
               {/* Caption */}
               {post.caption && (
