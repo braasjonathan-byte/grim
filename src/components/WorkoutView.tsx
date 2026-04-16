@@ -6174,6 +6174,14 @@ const estimateCalories = (
                   <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                       <Plus className="w-3 h-3" /> Lägg till övning
                     </button>
+                  {(!plan.details || plan.details.trim() === "" || plan.details.trim().toLowerCase() === "vilodag") && (
+                    <button
+                      onClick={() => setImportWorkoutTarget({ planId: plan.id, week: plan.week, day: plan.day })}
+                      className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Download className="w-3 h-3" /> Importera färdigt pass
+                    </button>
+                  )}
                 </div>
                   }
                   <ExercisePickerDialog
