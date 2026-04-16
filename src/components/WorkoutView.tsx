@@ -27,6 +27,8 @@ import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
+import CircuitTimerDialog from "@/components/CircuitTimerDialog";
+import { readyWorkoutCategories } from "@/data/readyWorkouts";
 
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
