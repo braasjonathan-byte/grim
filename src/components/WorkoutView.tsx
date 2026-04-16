@@ -516,7 +516,13 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   const [addWeekSourceWeek, setAddWeekSourceWeek] = useState<number | null>(null);
   const [addWeekSaving, setAddWeekSaving] = useState(false);
 
-  // Exercise dropdown menu close on scroll
+  // Circuit timer state
+  const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
+
+  // Import workout dialog
+  const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
+
+
   const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
 
   useEffect(() => {
