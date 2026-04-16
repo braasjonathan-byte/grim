@@ -291,6 +291,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
         </div>
       ) : (
         <div
+          data-scroll-lock-scroll="y"
           className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1"
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
@@ -691,6 +692,7 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       {/* Messages */}
       <div
         ref={scrollRef}
+        data-scroll-lock-scroll="y"
         className="min-h-0 flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
         style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
       >
