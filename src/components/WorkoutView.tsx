@@ -3,7 +3,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -534,6 +534,22 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   // Import workout dialog
   const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
 
+  // Save workout state
+  const [saveWorkoutSource, setSaveWorkoutSource] = useState<{ details: string; tempo: string | null; defaultName: string } | null>(null);
+  const [saveWorkoutName, setSaveWorkoutName] = useState("");
+  const [saveWorkoutVisibility, setSaveWorkoutVisibility] = useState<"private" | "public">("private");
+  const [saveWorkoutSaving, setSaveWorkoutSaving] = useState(false);
+
+  // Saved workouts for import
+  const [savedWorkouts, setSavedWorkouts] = useState<{ id: string; name: string; details: string; tempo: string | null; visibility: string; user_id: string }[]>([]);
+  useEffect(() => {
+    supabase
+      .from("saved_workouts")
+      .select("id, name, details, tempo, visibility, user_id")
+      .then(({ data }) => {
+        if (data) setSavedWorkouts(data as any);
+      });
+  }, []);
 
   const [openExerciseMenuId, setOpenExerciseMenuId] = useState<string | null>(null);
 
@@ -6601,6 +6617,80 @@ const estimateCalories = (
             <h3 className="font-bold text-sm">Importera färdigt pass</h3>
             <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
+          {/* User's own saved workouts */}
+          {(() => {
+            const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
+            if (myWorkouts.length === 0) return null;
+            return (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-muted-foreground">⭐ Mina sparade pass</p>
+                {myWorkouts.map((sw) => (
+                  <button
+                    key={sw.id}
+                    onClick={async () => {
+                      const target = importWorkoutTarget!;
+                      if (target.planId === "__single__") {
+                        const dateStr = format(singleDate, "yyyy-MM-dd");
+                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null });
+                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        toast.success(`"${sw.name}" importerat!`); fetchData();
+                      } else if (target.planId === "__new__") {
+                        const { data: inserted } = await supabase.from("workout_plans").insert({ user_id: userId, week: target.week, day: target.day, session_name: sw.name, details: sw.details, tempo: sw.tempo || null }).select().single();
+                        if (inserted) setPlans(prev => [...prev, inserted as any]);
+                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); fetchData();
+                      } else {
+                        await supabase.from("workout_plans").update({ session_name: sw.name, details: sw.details, tempo: sw.tempo || null }).eq("id", target.planId);
+                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: sw.name, details: sw.details, tempo: sw.tempo || null } : p));
+                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); triggerSave();
+                      }
+                    }}
+                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                  >
+                    <p className="text-xs font-semibold text-foreground">{sw.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+          {/* Public saved workouts from other users */}
+          {(() => {
+            const publicWorkouts = savedWorkouts.filter(sw => sw.visibility === "public" && sw.user_id !== userId);
+            if (publicWorkouts.length === 0) return null;
+            return (
+              <div className="space-y-1.5">
+                <p className="text-xs font-bold text-muted-foreground">👥 Skapat av användare</p>
+                {publicWorkouts.map((sw) => (
+                  <button
+                    key={sw.id}
+                    onClick={async () => {
+                      const target = importWorkoutTarget!;
+                      if (target.planId === "__single__") {
+                        const dateStr = format(singleDate, "yyyy-MM-dd");
+                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null });
+                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
+                        toast.success(`"${sw.name}" importerat!`); fetchData();
+                      } else if (target.planId === "__new__") {
+                        const { data: inserted } = await supabase.from("workout_plans").insert({ user_id: userId, week: target.week, day: target.day, session_name: sw.name, details: sw.details, tempo: sw.tempo || null }).select().single();
+                        if (inserted) setPlans(prev => [...prev, inserted as any]);
+                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); fetchData();
+                      } else {
+                        await supabase.from("workout_plans").update({ session_name: sw.name, details: sw.details, tempo: sw.tempo || null }).eq("id", target.planId);
+                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: sw.name, details: sw.details, tempo: sw.tempo || null } : p));
+                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); triggerSave();
+                      }
+                    }}
+                    className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                  >
+                    <p className="text-xs font-semibold text-foreground">{sw.name}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{sw.details.replace(/\n/g, " · ")}</p>
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
           {readyWorkoutCategories.map((cat, ci) => (
             <div key={ci} className="space-y-1.5">
               <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
@@ -6610,7 +6700,6 @@ const estimateCalories = (
                   onClick={async () => {
                     const target = importWorkoutTarget;
                     if (target.planId === "__single__") {
-                      // Create a new single workout with the ready workout data
                       const dateStr = format(singleDate, "yyyy-MM-dd");
                       const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
                       await supabase.from("workout_plans").insert({
@@ -6629,7 +6718,6 @@ const estimateCalories = (
                       toast.success(`"${w.name}" importerat!`);
                       fetchData();
                     } else if (target.planId === "__new__") {
-                      // Create a brand-new plan entry for an empty day
                       const { data: inserted } = await supabase.from("workout_plans").insert({
                         user_id: userId,
                         week: target.week,
@@ -6871,10 +6959,92 @@ const estimateCalories = (
           setCopyToDateSelected(new Date());
           setCopyToDateConflict(null);
         }}
+        onSaveWorkout={() => {
+          const plan = shareTarget.plan;
+          setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+          setSaveWorkoutName(plan.session_name);
+          setSaveWorkoutVisibility("private");
+          setShareTarget(null);
+        }}
       />
     )}
 
-    {/* Change day dialog */}
+    {/* Save workout dialog */}
+    {saveWorkoutSource && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setSaveWorkoutSource(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <Save className="w-4 h-4 text-primary" />
+              Spara pass
+            </h3>
+            <button onClick={() => setSaveWorkoutSource(null)} className="p-1 text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Namn på passet</label>
+              <input
+                type="text"
+                value={saveWorkoutName}
+                onChange={(e) => setSaveWorkoutName(e.target.value)}
+                placeholder="T.ex. Mitt favoritpass"
+                className="w-full bg-secondary text-foreground text-sm px-3 py-2.5 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-2 block">Synlighet</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSaveWorkoutVisibility("private")}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${saveWorkoutVisibility === "private" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                >
+                  🔒 Bara jag
+                </button>
+                <button
+                  onClick={() => setSaveWorkoutVisibility("public")}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-colors ${saveWorkoutVisibility === "public" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                >
+                  🌍 Alla användare
+                </button>
+              </div>
+              {saveWorkoutVisibility === "public" && (
+                <p className="text-[10px] text-muted-foreground mt-1">Passet visas under "Skapat av användare" för alla.</p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              if (!saveWorkoutName.trim()) return;
+              setSaveWorkoutSaving(true);
+              const { data, error } = await supabase.from("saved_workouts").insert({
+                user_id: userId,
+                name: saveWorkoutName.trim(),
+                details: saveWorkoutSource.details,
+                tempo: saveWorkoutSource.tempo,
+                visibility: saveWorkoutVisibility,
+              } as any).select().single();
+              setSaveWorkoutSaving(false);
+              if (error) {
+                toast.error("Kunde inte spara passet");
+              } else {
+                setSavedWorkouts(prev => [...prev, data as any]);
+                toast.success(`"${saveWorkoutName.trim()}" sparat!`);
+                setSaveWorkoutSource(null);
+              }
+            }}
+            disabled={saveWorkoutSaving || !saveWorkoutName.trim()}
+            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50"
+          >
+            {saveWorkoutSaving ? "Sparar..." : "Spara"}
+          </button>
+        </div>
+      </div>
+    )}
+
     {changeDayDialog && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/60" onClick={() => setChangeDayDialog(null)} />

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { X, Download, Share2, Palette, Send, CalendarIcon, Copy } from "lucide-react";
+import { X, Download, Share2, Palette, Send, CalendarIcon, Copy, Save } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
 
@@ -73,6 +73,7 @@ interface WorkoutShareCardProps {
   onClose: () => void;
   onChatShare?: () => void;
   onCopyToDate?: () => void;
+  onSaveWorkout?: () => void;
 }
 
 const WorkoutShareCard = ({
@@ -88,7 +89,8 @@ const WorkoutShareCard = ({
   nickname,
   onClose,
   onChatShare,
-  onCopyToDate
+  onCopyToDate,
+  onSaveWorkout
 }: WorkoutShareCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
@@ -509,6 +511,13 @@ const WorkoutShareCard = ({
             onClick={onCopyToDate}
             className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
             <Copy className="w-4 h-4" /> Kopiera till datum
+          </button>
+        )}
+        {onSaveWorkout && (
+          <button
+            onClick={onSaveWorkout}
+            className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
+            <Save className="w-4 h-4" /> Spara pass
           </button>
         )}
       </div>
