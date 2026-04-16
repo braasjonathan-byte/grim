@@ -775,6 +775,39 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_workouts: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          name: string
+          tempo: string | null
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          details: string
+          id?: string
+          name: string
+          tempo?: string | null
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          name?: string
+          tempo?: string | null
+          updated_at?: string
+          user_id?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
       security_answers: {
         Row: {
           answer_hash: string
