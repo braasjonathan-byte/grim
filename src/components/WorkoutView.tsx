@@ -2490,13 +2490,7 @@ const estimateCalories = (
     return (
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
-        <button
-          onClick={() => setMode("choose")}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Tillbaka
-        </button>
-        <PlanPicker userId={userId} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); fetchData(); }} />
+        <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); fetchData(); }} />
       </div>
     );
   }
