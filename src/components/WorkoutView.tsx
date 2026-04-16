@@ -5668,8 +5668,9 @@ const estimateCalories = (
                           const showRoundCheckboxes = isForTime || isHiit || isIntervall;
 
                           // Parse exercises from rest of line (separated by / or ;)
+                          // Filter out time specs like "30s arbete", "15s vila", "20s vila"
                           const inlineExercises = restOfLine
-                            ? restOfLine.split(/[/;]/).map(s => s.replace(/\.\s*$/, "").trim()).filter(Boolean)
+                            ? restOfLine.split(/[/;]/).map(s => s.replace(/\.\s*$/, "").trim()).filter(s => s && !/^\d+s?\s*(arbete|vila|rest|work)/i.test(s))
                             : [];
 
                           // Use unique key per round block to avoid conflicts when multiple blocks exist
