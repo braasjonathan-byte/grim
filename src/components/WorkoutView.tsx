@@ -7117,16 +7117,17 @@ const estimateCalories = (
                       if (target.planId === "__single__") {
                         const dateStr = format(singleDate, "yyyy-MM-dd");
                         const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null });
+                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) });
                         setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
                         toast.success(`"${sw.name}" importerat!`); fetchData();
                       } else if (target.planId === "__new__") {
-                        const { data: inserted } = await supabase.from("workout_plans").insert({ user_id: userId, week: target.week, day: target.day, session_name: sw.name, details: sw.details, tempo: sw.tempo || null }).select().single();
+                        const { data: inserted } = await supabase.from("workout_plans").insert({ user_id: userId, week: target.week, day: target.day, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) }).select().single();
                         if (inserted) setPlans(prev => [...prev, inserted as any]);
                         setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); fetchData();
                       } else {
-                        await supabase.from("workout_plans").update({ session_name: sw.name, details: sw.details, tempo: sw.tempo || null }).eq("id", target.planId);
-                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: sw.name, details: sw.details, tempo: sw.tempo || null } : p));
+                        const isCirc = !!(sw.tempo && sw.tempo.startsWith("circuit:"));
+                        await supabase.from("workout_plans").update({ session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: isCirc }).eq("id", target.planId);
+                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: isCirc } : p));
                         setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); triggerSave();
                       }
                     }}
