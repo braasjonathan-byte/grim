@@ -6230,19 +6230,25 @@ const estimateCalories = (
                                   } else if (circuitExInfo) {
                                     for (const exIdx of circuitExInfo.exerciseIndices) {
                                       const exPart = parts[exIdx];
-                                      const { name: eName } = parseExerciseWeight(exPart);
-                                      exerciseNames.push(eName);
+                                      let { name: eName } = parseExerciseWeight(exPart);
+                                      // Strip trailing rep/set specs like "1×32s" from name when no — separator was found
+                                      eName = eName.replace(/\s+\d+\s*[×x]\s*\d+\s*s?\s*$/i, "").trim();
+                                      if (eName && !/^vila/i.test(eName)) exerciseNames.push(eName);
                                     }
                                   }
-                                  // Fallback: if no workSec from header, try to get from first exercise's reps
+                                  // Fallback: if no workSec from header, try to get from exercise lines
                                   if (workSec === 0 && circuitExInfo) {
                                     for (const exIdx of circuitExInfo.exerciseIndices) {
                                       const exPart = parts[exIdx];
+                                      // Try parseExerciseWeight first
                                       const { weight } = parseExerciseWeight(exPart);
                                       if (weight) {
                                         const repsMatch = weight.match(/\d+[×x](\d+)/i);
                                         if (repsMatch) { workSec = parseInt(repsMatch[1]) || 0; break; }
                                       }
+                                      // Fallback: parse raw line for patterns like "1×32s" or "4×32"
+                                      const rawMatch = exPart.match(/(\d+)\s*[×x]\s*(\d+)\s*s?\b/i);
+                                      if (rawMatch) { workSec = parseInt(rawMatch[2]) || 0; break; }
                                     }
                                   }
                                   if (workSec > 0 && exerciseNames.length > 0 && showRoundCheckboxes) {
