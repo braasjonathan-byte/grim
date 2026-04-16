@@ -569,6 +569,7 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
 
   // Plan start date from profile (timezone-safe)
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Fetch user nickname + calibration status + body data
   useEffect(() => {
@@ -585,6 +586,7 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
         if (data.gender) setProfileGender(data.gender);
         if (data.age) setProfileAge(data.age);
       }
+      setProfileLoaded(true);
     });
   }, [userId]);
 
@@ -638,7 +640,7 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
       }
 
       // Auto-navigate to the active (date-based) week on initial load
-      if (wks.length > 0 && !initialWeekSet) {
+      if (wks.length > 0 && !initialWeekSet && profileLoaded) {
         const compMap: Record<string, boolean> = {};
         if (compData) {
           for (const c of compData) {
@@ -730,7 +732,7 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
         setCommentNicknames(map);
       }
     }
-  }, [userId, initialWeekSet, planStartDate]);
+  }, [userId, initialWeekSet, planStartDate, profileLoaded]);
 
   useEffect(() => {
     fetchData();
