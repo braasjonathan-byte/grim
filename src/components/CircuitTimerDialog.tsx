@@ -71,31 +71,31 @@ const CircuitTimerDialog = ({
       setSecondsLeft((prev) => {
         if (prev <= 1) {
           clearTimer();
-          // Move to next exercise or next round
           const nextExIdx = currentExerciseIndex + 1;
           if (nextExIdx < exercises.length) {
-            // Next exercise in same round
             playExerciseSwitch();
             setCurrentExerciseIndex(nextExIdx);
              return getExerciseSec(nextExIdx);
           } else {
-            // Round complete
             onRoundComplete?.(currentRound);
             const nextRound = currentRound + 1;
             if (nextRound < roundCount) {
+              if (restSeconds > 0) {
+                playExerciseSwitch();
+                setPhase("rest");
+                return restSeconds;
+              }
               playExerciseSwitch();
               setCurrentRound(nextRound);
               setCurrentExerciseIndex(0);
               return getExerciseSec(0);
             } else {
-              // All done
               playExerciseSwitch();
               setPhase("done");
               return 0;
             }
           }
         }
-        // Beep at 3, 2, 1
         if (prev <= 4 && prev > 1) {
           playCountdownBeep();
         }
@@ -103,7 +103,30 @@ const CircuitTimerDialog = ({
       });
     }, 1000);
     return clearTimer;
-  }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, exerciseSeconds, clearTimer, onRoundComplete]);
+  }, [phase, paused, currentExerciseIndex, currentRound, exercises.length, roundCount, workSeconds, exerciseSeconds, restSeconds, clearTimer, onRoundComplete]);
+
+  // Rest phase
+  useEffect(() => {
+    if (phase !== "rest" || paused) return;
+    intervalRef.current = window.setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearTimer();
+          playGoBeep();
+          const nextRound = currentRound + 1;
+          setCurrentRound(nextRound);
+          setCurrentExerciseIndex(0);
+          setPhase("work");
+          return getExerciseSec(0);
+        }
+        if (prev <= 4 && prev > 1) {
+          playCountdownBeep();
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return clearTimer;
+  }, [phase, paused, currentRound, clearTimer, restSeconds]);
 
   const startWorkout = () => {
     setPhase("countdown");
