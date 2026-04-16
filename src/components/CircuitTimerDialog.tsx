@@ -182,6 +182,28 @@ const CircuitTimerDialog = ({
 
         {phase === "work" && (
           <>
+            {/* Current exercise name - large */}
+            <div className="text-center px-4">
+              <p className="text-3xl font-black text-foreground leading-tight">
+                {exercises[currentExerciseIndex]}
+              </p>
+              {currentExerciseIndex < exercises.length - 1 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Nästa: {exercises[currentExerciseIndex + 1]}
+                </p>
+              )}
+              {currentExerciseIndex === exercises.length - 1 && currentRound < roundCount - 1 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Nästa runda: {exercises[0]}
+                </p>
+              )}
+              {currentExerciseIndex === exercises.length - 1 && currentRound === roundCount - 1 && (
+                <p className="text-sm text-success mt-2 font-semibold">
+                  Sista övningen!
+                </p>
+              )}
+            </div>
+
             {/* Timer */}
             <div className="text-center">
               <span className="text-7xl font-black font-mono text-foreground tracking-wider">
@@ -190,42 +212,22 @@ const CircuitTimerDialog = ({
               <p className="text-xs text-muted-foreground mt-1">sekunder kvar</p>
             </div>
 
-            {/* Exercise list with active highlight */}
-            <div className="w-full max-w-sm space-y-1.5">
-              {exercises.map((ex, i) => {
+            {/* Exercise progress dots */}
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              {exercises.map((_, i) => {
                 const isActive = i === currentExerciseIndex;
                 const isDone = i < currentExerciseIndex;
                 return (
                   <div
                     key={i}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all ${
+                    className={`w-3 h-3 rounded-full transition-all ${
                       isActive
-                        ? "bg-primary text-primary-foreground scale-[1.02]"
+                        ? "bg-primary scale-125"
                         : isDone
-                        ? "bg-success/20 text-success"
-                        : "bg-secondary/50 text-muted-foreground"
+                        ? "bg-primary/40"
+                        : "bg-secondary"
                     }`}
-                  >
-                    <span
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        isActive
-                          ? "bg-primary-foreground/20 text-primary-foreground"
-                          : isDone
-                          ? "bg-success/30 text-success"
-                          : "bg-secondary text-muted-foreground"
-                      }`}
-                    >
-                      {i + 1}
-                    </span>
-                    <span className={`text-sm font-semibold ${isActive ? "" : ""}`}>
-                      {ex}
-                    </span>
-                    {isActive && (
-                      <span className="ml-auto text-xs font-mono opacity-80">
-                        {workSeconds}s
-                      </span>
-                    )}
-                  </div>
+                  />
                 );
               })}
             </div>
