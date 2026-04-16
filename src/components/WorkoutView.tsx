@@ -519,6 +519,18 @@ const WorkoutView = ({ userId, isAdmin = false, onBack }: WorkoutViewProps) => {
   // Circuit timer state
   const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; roundCount: number; weekDayKey: string; headerIndex: number } | null>(null);
 
+  // Ready workout circuit config from DB
+  const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    supabase
+      .from("ready_workout_config")
+      .select("workout_name")
+      .eq("is_circuit", true)
+      .then(({ data }) => {
+        if (data) setCircuitConfigs(new Set(data.map((d: any) => d.workout_name)));
+      });
+  }, []);
+
   // Import workout dialog
   const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
 
