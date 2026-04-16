@@ -6260,10 +6260,10 @@ const estimateCalories = (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          let adjustedSec = workSec;
+                                          let adjustedSec = workSec || 30;
                                           try {
                                             const history = JSON.parse(localStorage.getItem("gymberget_circuit_ratings") || "[]");
-                                            if (history.length > 0) {
+                                            if (history.length > 0 && workSec > 0) {
                                               const lastRating = history[history.length - 1].rating;
                                               if (lastRating >= 9) adjustedSec = Math.max(10, workSec - 10);
                                               else if (lastRating >= 8) adjustedSec = Math.max(10, workSec - 5);
