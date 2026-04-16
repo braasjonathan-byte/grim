@@ -6475,6 +6475,71 @@ const estimateCalories = (
     {showFireworks && (
       <FireworksOverlay onComplete={() => setShowFireworks(false)} />
     )}
+    {/* Circuit Timer */}
+    {circuitTimer && (
+      <CircuitTimerDialog
+        exercises={circuitTimer.exercises}
+        workSeconds={circuitTimer.workSeconds}
+        roundCount={circuitTimer.roundCount}
+        onClose={() => setCircuitTimer(null)}
+        onRoundComplete={(roundIndex) => {
+          const roundKey = `__wod_rounds_done_${circuitTimer.headerIndex}__`;
+          const existing = (completions[circuitTimer.weekDayKey]?.logged_weights || {}) as Record<string, any>;
+          const currentStr = (existing[roundKey] as string) || "";
+          const newStr = Array.from({ length: circuitTimer.roundCount }, (_, j) => {
+            if (j === roundIndex) return "1";
+            return currentStr[j] || "0";
+          }).join("");
+          const updated = { ...existing, [roundKey]: newStr };
+          const [wStr, dStr] = circuitTimer.weekDayKey.split("-");
+          const w = parseInt(wStr);
+          const d = dStr;
+          setCompletions(prev => ({
+            ...prev,
+            [circuitTimer.weekDayKey]: { ...prev[circuitTimer.weekDayKey], week: w, day: d, done: prev[circuitTimer.weekDayKey]?.done || false, skipped: prev[circuitTimer.weekDayKey]?.skipped || false, user_comment: prev[circuitTimer.weekDayKey]?.user_comment || "", logged_weights: updated } as Completion
+          }));
+          safeUpsertCompletion(w, d, { logged_weights: updated });
+        }}
+      />
+    )}
+    {/* Import workout dialog */}
+    {importWorkoutTarget && (
+      <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setImportWorkoutTarget(null)} />
+        <div className="relative bg-card rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto p-4 space-y-3 z-10">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm">Importera färdigt pass</h3>
+            <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+          </div>
+          {readyWorkoutCategories.map((cat, ci) => (
+            <div key={ci} className="space-y-1.5">
+              <p className="text-xs font-bold text-muted-foreground">{cat.emoji} {cat.label}</p>
+              {cat.workouts.map((w, wi) => (
+                <button
+                  key={wi}
+                  onClick={async () => {
+                    const target = importWorkoutTarget;
+                    await supabase.from("workout_plans").update({
+                      session_name: w.name,
+                      details: w.details,
+                      tempo: w.tempo || null,
+                    }).eq("id", target.planId);
+                    setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null } : p));
+                    setImportWorkoutTarget(null);
+                    toast.success(`"${w.name}" importerat!`);
+                    triggerSave();
+                  }}
+                  className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
+                >
+                  <p className="text-xs font-semibold text-foreground">{w.name}</p>
+                  <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
     {/* Weight prompt dialog */}
     {showWeightPrompt && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
