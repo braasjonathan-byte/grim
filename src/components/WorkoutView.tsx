@@ -3150,7 +3150,21 @@ const estimateCalories = (
                       </div>; })()
                   }
 
-                    {/* Total distance summary across all exercises */}
+                    {/* Circuit start button for single mode */}
+                    {plan.is_circuit && plan.details && (() => {
+                      const exerciseLines = plan.details.split("\n").filter(Boolean);
+                      const exerciseNames = exerciseLines.map(l => parseExerciseWeight(l).name).filter(n => n && !/^vila$/i.test(n.trim()));
+                      if (exerciseNames.length === 0) return null;
+                      return (
+                        <button
+                          onClick={() => setCircuitTimer({ exercises: exerciseNames, workSeconds: 40, roundCount: 3, weekDayKey: key, headerIndex: 0 })}
+                          className="w-full px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        >
+                          <Play className="w-4 h-4" /> Starta
+                        </button>
+                      );
+                    })()}
+
                     {(() => {
                       if (!plan.details) return null;
                       const allLines = plan.details.split("\n").filter(Boolean);
