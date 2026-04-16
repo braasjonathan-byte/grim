@@ -378,6 +378,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [singleName, setSingleName] = useState("");
   const [singleIsCircuit, setSingleIsCircuit] = useState(false);
   const [singleCircuitSeconds, setSingleCircuitSeconds] = useState("40");
+  const [singleCircuitRounds, setSingleCircuitRounds] = useState("3");
+  const [singleCircuitRest, setSingleCircuitRest] = useState("30");
   const [singleDate, setSingleDate] = useState<Date>(new Date());
   const [showCopyPicker, setShowCopyPicker] = useState(false);
   const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
