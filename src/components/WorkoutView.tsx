@@ -400,6 +400,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [weightDialog, setWeightDialog] = useState<{planId: string;exerciseName: string;lastWeight: string | null;} | null>(null);
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("10");
+  const [repsUnit, setRepsUnit] = useState<"reps" | "sek">("reps");
   const [setsInput, setSetsInput] = useState("3");
 
   // Inline editing of existing exercise
@@ -2071,7 +2072,21 @@ const estimateCalories = (
     // Default reps to circuit seconds for circuit plans
     const targetPlan = plans.find(p => p.id === planId);
     const circuitSecsMatch = targetPlan?.is_circuit && targetPlan?.tempo?.match(/^circuit:(\d+)$/);
-    setRepsInput(circuitSecsMatch ? circuitSecsMatch[1] : "10");
+    // Determine default unit: circuit → sek, bodyweight exercises → check context
+    const bodyweightNames = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow", "dips"];
+    const exLower = exerciseName.toLowerCase();
+    const isBodyweightEx = bodyweightNames.some(bw => exLower.includes(bw)) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_bodyweight_exercise;
+    const isTimeBased = /^(sido)?planka$|^vila$/i.test(exerciseName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_time_based;
+    if (targetPlan?.is_circuit) {
+      setRepsUnit("sek");
+      setRepsInput(circuitSecsMatch ? circuitSecsMatch[1] : "40");
+    } else if (isTimeBased) {
+      setRepsUnit("sek");
+      setRepsInput("30");
+    } else {
+      setRepsUnit("reps");
+      setRepsInput("10");
+    }
     setSetsInput("3");
   };
 
@@ -2126,6 +2141,7 @@ const estimateCalories = (
     setWeightInput("");
     setRepsInput("10");
     setSetsInput("3");
+    setRepsUnit("reps");
     setIsWarmupMode(false);
 
     // Show propagation dialog if this was a replacement in plan mode
@@ -3308,7 +3324,7 @@ const estimateCalories = (
 
                           </div>
                           <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{plans.find(p => p.id === weightDialog?.planId)?.is_circuit ? "Sek" : "Reps"}</label>
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
                             <input
                           type="number"
                           min="1"
@@ -3337,7 +3353,7 @@ const estimateCalories = (
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");}}
+                        onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");setRepsUnit("reps");}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
 
                             Avbryt
@@ -6330,7 +6346,7 @@ const estimateCalories = (
                           <input type="number" inputMode="numeric" value={setsInput} onChange={(e) => setSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider">{plan.is_circuit ? "Sek" : "Reps"}</label>
+                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
                           <input type="number" inputMode="numeric" value={repsInput} onChange={(e) => setRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
@@ -6346,7 +6362,7 @@ const estimateCalories = (
                           <Plus className="w-3.5 h-3.5" /> Lägg till
                         </button>
                         <button
-                      onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");}}
+                      onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");setRepsUnit("reps");}}
                       className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
 
                           Avbryt
