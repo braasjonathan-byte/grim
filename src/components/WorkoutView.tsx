@@ -5713,7 +5713,18 @@ const estimateCalories = (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setCircuitTimer({ exercises: exerciseNames, workSeconds: workSec, roundCount: roundCount, weekDayKey: key, headerIndex: i });
+                                          let adjustedSec = workSec;
+                                          try {
+                                            const history = JSON.parse(localStorage.getItem("gymberget_circuit_ratings") || "[]");
+                                            if (history.length > 0) {
+                                              const lastRating = history[history.length - 1].rating;
+                                              if (lastRating >= 9) adjustedSec = Math.max(10, workSec - 10);
+                                              else if (lastRating >= 8) adjustedSec = Math.max(10, workSec - 5);
+                                              else if (lastRating <= 2) adjustedSec = workSec + 5;
+                                              else if (lastRating <= 3) adjustedSec = workSec + 3;
+                                            }
+                                          } catch {}
+                                          setCircuitTimer({ exercises: exerciseNames, workSeconds: adjustedSec, roundCount: roundCount, weekDayKey: key, headerIndex: i });
                                         }}
                                         className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold flex items-center gap-1 active:scale-95 transition-transform"
                                       >
