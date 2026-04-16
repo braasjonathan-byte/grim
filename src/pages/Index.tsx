@@ -16,6 +16,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
+import WhatsNewDialog from "@/components/WhatsNewDialog";
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
@@ -490,6 +491,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      <WhatsNewDialog />
       {/* Install prompt dialog */}
       <Dialog open={showInstallDialog} onOpenChange={(v) => {
         if (!v) {
