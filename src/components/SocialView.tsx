@@ -199,16 +199,27 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) { toast.error("Max 20 MB"); return; }
     const resized = await resizeImage(file);
-    setImageFile(resized);
-    setImagePreview(URL.createObjectURL(resized));
+    if (isAdmin) {
+      // Admin: multi-image mode
+      if (imageFiles.length >= 10) { toast.error("Max 10 bilder per inlägg"); return; }
+      setImageFiles(prev => [...prev, { file: resized, preview: URL.createObjectURL(resized), caption: "" }]);
+    } else {
+      // Non-admin: single image
+      setImageFile(resized);
+      setImagePreview(URL.createObjectURL(resized));
+    }
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const submitPost = async () => {
-    if (!caption.trim() && !imageFile) { toast.error("Skriv något eller välj en bild"); return; }
+    const hasImages = isAdmin ? imageFiles.length > 0 : !!imageFile;
+    if (!caption.trim() && !hasImages) { toast.error("Skriv något eller välj en bild"); return; }
     setUploading(true);
     try {
       let imageUrl: string | null = null;
-      if (imageFile) {
+
+      // For non-admin single image, upload to image_url field
+      if (!isAdmin && imageFile) {
         const ext = imageFile.name.split(".").pop() || "jpg";
         const path = `${userId}/${Date.now()}.${ext}`;
         const { error } = await supabase.storage.from("social-images").upload(path, imageFile);
@@ -217,15 +228,48 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         imageUrl = urlData.publicUrl;
       }
 
+      // For admin with single image and no per-image captions, use legacy field
+      if (isAdmin && imageFiles.length === 1 && !imageFiles[0].caption) {
+        const f = imageFiles[0].file;
+        const ext = f.name.split(".").pop() || "jpg";
+        const path = `${userId}/${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from("social-images").upload(path, f);
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from("social-images").getPublicUrl(path);
+        imageUrl = urlData.publicUrl;
+      }
+
       const resolvedVisibility = postVisibility === "group" ? "group" : postVisibility === "friends" ? "friends" : "public";
 
-      await supabase.from("social_posts").insert({
+      const { data: insertedPost } = await supabase.from("social_posts").insert({
         user_id: userId,
         image_url: imageUrl,
         caption: caption.trim() || null,
         visibility: resolvedVisibility,
         group_id: resolvedVisibility === "group" ? postGroupId : null,
-      });
+      }).select("id").single();
+
+      // For admin multi-image (or single with caption), upload to social_post_images
+      if (isAdmin && insertedPost && (imageFiles.length > 1 || (imageFiles.length === 1 && imageFiles[0].caption))) {
+        const imageRows = [];
+        for (let i = 0; i < imageFiles.length; i++) {
+          const f = imageFiles[i].file;
+          const ext = f.name.split(".").pop() || "jpg";
+          const path = `${userId}/${Date.now()}_${i}.${ext}`;
+          const { error } = await supabase.storage.from("social-images").upload(path, f);
+          if (error) throw error;
+          const { data: urlData } = supabase.storage.from("social-images").getPublicUrl(path);
+          imageRows.push({
+            post_id: insertedPost.id,
+            image_url: urlData.publicUrl,
+            caption: imageFiles[i].caption.trim() || null,
+            sort_order: i,
+          });
+        }
+        if (imageRows.length > 0) {
+          await supabase.from("social_post_images").insert(imageRows);
+        }
+      }
 
       toast.success("Inlägg publicerat!");
 
@@ -237,6 +281,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       setCaption("");
       setImageFile(null);
       setImagePreview(null);
+      setImageFiles([]);
       setPostVisibility("public");
       setPostGroupId(null);
       loadFeed();
