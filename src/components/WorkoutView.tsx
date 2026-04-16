@@ -4040,7 +4040,8 @@ const estimateCalories = (
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                      {!isLocked && <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>}
+                      {isLocked && <p className="text-[10px] text-warning">🔒 Supporter-exklusivt</p>}
                     </div>
                     {isLocked && <Lock className="w-3.5 h-3.5 text-warning flex-shrink-0 ml-2" />}
                   </button>
@@ -7146,7 +7147,8 @@ const estimateCalories = (
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-foreground">{w.name}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>
+                    {!isLocked && <p className="text-[10px] text-muted-foreground line-clamp-1">{w.details.replace(/\n/g, " · ")}</p>}
+                    {isLocked && <p className="text-[10px] text-warning">🔒 Supporter-exklusivt</p>}
                   </div>
                   {isLocked && <Lock className="w-3.5 h-3.5 text-warning flex-shrink-0 ml-2" />}
                 </button>
