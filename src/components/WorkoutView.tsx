@@ -2874,10 +2874,192 @@ const estimateCalories = (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                     {/* Exercises / details */}
                     {plan.details &&
-                  (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
+                  (() => { const exerciseLines = plan.details.split("\n").filter(Boolean);
+                  
+                  // Pre-scan: build circuit map for round headers
+                  const singleCircuitMap: Record<number, { roundCount: number; headerIndex: number; exerciseIndices: number[] }> = {};
+                  {
+                    let currentCircuit: { roundCount: number; headerIndex: number; exerciseIndices: number[] } | null = null;
+                    for (let pi = 0; pi < exerciseLines.length; pi++) {
+                      const p = exerciseLines[pi].trim();
+                      const circuitMatch = p.match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
+                      const amrapMatch = !circuitMatch ? p.match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
+                      if (circuitMatch || amrapMatch) {
+                        const count = parseInt((circuitMatch || amrapMatch)![1]);
+                        const inlineExs = ((circuitMatch ? circuitMatch[2] : amrapMatch![3]) || "").trim();
+                        const isOnlyTimeSpecs = inlineExs && inlineExs.split(/[/;]/).every(s => !s.trim() || /^\d+s?\s*(arbete|vila|rest|work|mellan)/i.test(s.trim()));
+                        if (!inlineExs || isOnlyTimeSpecs) {
+                          currentCircuit = { roundCount: count, headerIndex: pi, exerciseIndices: [] };
+                        } else {
+                          currentCircuit = null;
+                        }
+                      } else if (currentCircuit) {
+                        const { name: eName } = parseExerciseWeight(p);
+                        const isCondFmt = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad/i.test(p) && !/^\d+\s*[×x]\s*\d+/i.test(p);
+                        if (!isCondFmt && !/^vila$/i.test(eName.trim())) {
+                          currentCircuit.exerciseIndices.push(pi);
+                          singleCircuitMap[pi] = currentCircuit;
+                        } else {
+                          currentCircuit = null;
+                        }
+                      }
+                    }
+                  }
+                  
+                  return <div className="space-y-2">
                         {exerciseLines.map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
                       
+                      // Detect round/circuit headers
+                      const roundsHeaderMatch = line.trim().match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
+                      const amrapHeaderMatch = !roundsHeaderMatch ? line.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
+                      const namedIntervalMatch = !roundsHeaderMatch && !amrapHeaderMatch ? line.trim().match(/^(intervallöpning|intervall)\s*:\s*(.+?)\s+(\d+)\s*[×x]\s*(\d+)\s*min\s*$/i) : null;
+
+                      if (roundsHeaderMatch || amrapHeaderMatch) {
+                        const roundCount = parseInt((roundsHeaderMatch || amrapHeaderMatch)![1]);
+                        const restOfLine = (roundsHeaderMatch ? roundsHeaderMatch[2] : amrapHeaderMatch![3] || "").trim();
+                        const isForTime = plan.session_name.toLowerCase().includes("for time") || plan.details.toLowerCase().includes("for time");
+                        const isHiit = plan.session_name.toLowerCase().includes("hiit") || plan.session_name.toLowerCase().includes("cirkel") || plan.details.toLowerCase().includes("hiit");
+                        const isIntervall = plan.session_name.toLowerCase().includes("intervall");
+                        const isDbCircuit = circuitConfigs.has(plan.session_name);
+                        const showRoundCheckboxes = isForTime || isHiit || isIntervall || isDbCircuit;
+
+                        const inlineExercises = restOfLine
+                          ? restOfLine.split(/[/;]/).map(s => s.replace(/\.\s*$/, "").trim()).filter(s => s && !/^\d+s?\s*(arbete|vila|rest|work)/i.test(s))
+                          : [];
+
+                        const roundKey = `__wod_rounds_done_${i}__`;
+                        const roundWeights = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                        const roundsDoneStr = String(roundWeights[roundKey] || "");
+
+                        const headerText = roundsHeaderMatch
+                          ? `${roundsHeaderMatch[1]} ${line.trim().match(/rundor|cirklar/i)?.[0] || "rundor"}`
+                          : line.trim().split(":")[0];
+
+                        return (
+                          <div key={i} className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                                <Timer className="w-3.5 h-3.5 text-primary" />
+                                {headerText}
+                              </p>
+                              {(() => {
+                                const workMatch = line.match(/(\d+)s\s*arbete/i);
+                                const workSec = workMatch ? parseInt(workMatch[1]) : 0;
+                                const circuitExInfo = singleCircuitMap[Object.keys(singleCircuitMap).find(k => singleCircuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                const exerciseNames: string[] = [];
+                                if (inlineExercises.length > 0) {
+                                  exerciseNames.push(...inlineExercises);
+                                } else if (circuitExInfo) {
+                                  for (const exIdx of circuitExInfo.exerciseIndices) {
+                                    const exPart = exerciseLines[exIdx];
+                                    const { name: eName } = parseExerciseWeight(exPart);
+                                    exerciseNames.push(eName);
+                                  }
+                                }
+                                if (workSec > 0 && exerciseNames.length > 0 && showRoundCheckboxes) {
+                                  return (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        let adjustedSec = workSec;
+                                        try {
+                                          const history = JSON.parse(localStorage.getItem("gymberget_circuit_ratings") || "[]");
+                                          if (history.length > 0) {
+                                            const lastRating = history[history.length - 1].rating;
+                                            if (lastRating >= 9) adjustedSec = Math.max(10, workSec - 10);
+                                            else if (lastRating >= 8) adjustedSec = Math.max(10, workSec - 5);
+                                            else if (lastRating <= 2) adjustedSec = workSec + 5;
+                                            else if (lastRating <= 3) adjustedSec = workSec + 3;
+                                          }
+                                        } catch {}
+                                        setCircuitTimer({ exercises: exerciseNames, workSeconds: adjustedSec, roundCount, weekDayKey: key, headerIndex: i });
+                                      }}
+                                      className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold flex items-center gap-1 active:scale-95 transition-transform"
+                                    >
+                                      <Play className="w-3 h-3" /> Starta
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+                            {/* Work/rest info */}
+                            {(() => {
+                              const workMatch = line.match(/(\d+)s\s*arbete/i);
+                              const restMatch = line.match(/(\d+)s\s*vila/i);
+                              const circuitExInfo2 = singleCircuitMap[Object.keys(singleCircuitMap).find(k => singleCircuitMap[parseInt(k)]?.headerIndex === i) as any];
+                              const exCount = inlineExercises.length > 0 ? inlineExercises.length : (circuitExInfo2?.exerciseIndices.length || 0);
+                              if (workMatch && exCount > 0) {
+                                return (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {workMatch[1]}s × {exCount} övningar{restMatch ? ` · ${restMatch[1]}s vila` : ""}
+                                  </p>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {inlineExercises.length > 0 && (
+                              <div className="space-y-1 pl-5">
+                                {inlineExercises.map((ex, ei) => (
+                                  <p key={ei} className="text-xs text-foreground flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-primary/50 flex-shrink-0" />
+                                    {ex}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {showRoundCheckboxes && roundCount > 0 && (
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                {Array.from({ length: roundCount }, (_, ri) => {
+                                  const isRoundDone = roundsDoneStr[ri] === "1";
+                                  return (
+                                    <button
+                                      key={ri}
+                                      onClick={async () => {
+                                        const newStr = Array.from({ length: roundCount }, (_, j) => {
+                                          if (j === ri) return isRoundDone ? "0" : "1";
+                                          return (roundsDoneStr[j] || "0");
+                                        }).join("");
+                                        const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                                        const updated = { ...existing, [roundKey]: newStr } as any;
+                                        const circuitExInfo = singleCircuitMap[Object.keys(singleCircuitMap).find(k => singleCircuitMap[parseInt(k)]?.headerIndex === i) as any];
+                                        if (circuitExInfo) {
+                                          const markDone = !isRoundDone;
+                                          for (const exIdx of circuitExInfo.exerciseIndices) {
+                                            const exPart = exerciseLines[exIdx];
+                                            const { name: exName } = parseExerciseWeight(exPart);
+                                            const setsKey = `__sets__${exName}`;
+                                            const currentSets = (updated[setsKey] as string) || "";
+                                            const newSets = Array.from({ length: roundCount }, (_, si) => {
+                                              if (si === ri) return markDone ? "1" : "0";
+                                              return currentSets[si] || "0";
+                                            }).join("");
+                                            updated[setsKey] = newSets;
+                                          }
+                                        }
+                                        setCompletions(prev => ({
+                                          ...prev,
+                                          [key]: { ...prev[key], week: plan.week, day: plan.day, done: prev[key]?.done || false, skipped: prev[key]?.skipped || false, user_comment: prev[key]?.user_comment || "", logged_weights: updated } as Completion
+                                        }));
+                                        await safeUpsertCompletion(plan.week, plan.day, { logged_weights: updated });
+                                      }}
+                                      className={`w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                                        isRoundDone
+                                          ? "bg-success border-success text-success-foreground"
+                                          : "border-muted-foreground/30 text-muted-foreground hover:border-primary hover:text-primary"
+                                      }`}
+                                    >
+                                      {isRoundDone ? <Check className="w-4 h-4" /> : ri + 1}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
                       // Check if this is a conditioning exercise (format includes "min", "/km", or "km")
                       const isCondFormat = weight && (weight.includes("min") || weight.includes("/km") || /\d+\s*km/i.test(weight));
                       
