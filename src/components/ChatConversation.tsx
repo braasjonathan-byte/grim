@@ -240,6 +240,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       {/* Messages */}
       <div
         ref={scrollRef}
+        data-scroll-lock-scroll="y"
         className="min-h-0 flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
         style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
       >
@@ -339,7 +340,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                 </div>
 
                 {/* Days grid */}
-                <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
+                <div data-scroll-lock-scroll="y" className="flex-1 overflow-y-auto px-4 pb-4 space-y-2">
                   {daysInWeek.map(({ dayLabel, plans }) => {
                     const hasContent = plans.some(p => p.details && p.details.trim() !== "");
                     const sessionName = plans.length > 0 ? plans[0].session_name : "";
