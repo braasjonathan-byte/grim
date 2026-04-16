@@ -11,6 +11,7 @@ import { sv } from "date-fns/locale";
 interface PlanPickerProps {
   userId: string;
   onDone: () => void;
+  onBack?: () => void;
 }
 
 type Step = "select" | "profile" | "1rm" | "start-date" | "loading" | "builder";
@@ -22,7 +23,7 @@ const defaultProfile: FitnessProfile = {
   training_days_per_week: null,
 };
 
-const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
+const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [step, setStep] = useState<Step>("select");
   const [selected, setSelected] = useState<number | null>(null);
   const [rms, setRms] = useState<Record<string, string>>({});
@@ -431,6 +432,14 @@ const PlanPicker = ({ userId, onDone }: PlanPickerProps) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Tillbaka
+        </button>
+      )}
       <div className="text-center space-y-2">
         <Dumbbell className="w-10 h-10 text-primary mx-auto" />
         <h2 className="text-2xl font-black tracking-tight">Välj träningsplan</h2>
