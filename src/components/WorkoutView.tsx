@@ -3571,6 +3571,23 @@ const estimateCalories = (
                       className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <Plus className="w-3 h-3" /> Lägg till övning
                       </button>
+                    {plan.is_circuit && (
+                      <button
+                        onClick={async () => {
+                          const restSec = prompt("Antal sekunder vila mellan rundor:", "30");
+                          if (!restSec) return;
+                          const seconds = parseInt(restSec) || 30;
+                          const entry = `Vila — 1×${seconds}`;
+                          const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
+                          const newDetails = plan.details ? `${plan.details}${joinSep}${entry}` : entry;
+                          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                          setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                          triggerSave();
+                        }}
+                        className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                        <Plus className="w-3 h-3" /> Lägg till vila
+                      </button>
+                    )}
                   </div>
                     }
                     <ExercisePickerDialog
