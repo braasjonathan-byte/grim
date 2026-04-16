@@ -60,7 +60,7 @@ const CircuitTimerDialog = ({
           clearTimer();
           playGoBeep();
           setPhase("work");
-           setSecondsLeft(getExerciseSec(currentExerciseIndex));
+           setSecondsLeft(getExerciseSec(currentExerciseIndex, currentRound));
           return 0;
         }
         playCountdownBeep();
