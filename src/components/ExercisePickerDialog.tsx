@@ -10,6 +10,7 @@ interface CustomExercise {
   category: string;
   muscle_group: string;
   is_bodyweight_exercise?: boolean;
+  is_time_based?: boolean;
 }
 
 interface ExercisePickerDialogProps {
@@ -48,6 +49,7 @@ const ExercisePickerDialog = ({
   const [newCategory, setNewCategory] = useState("styrka");
   const [newMuscle, setNewMuscle] = useState("Helkropp");
   const [newIsBodyweight, setNewIsBodyweight] = useState(false);
+  const [newIsTimeBased, setNewIsTimeBased] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -118,7 +120,7 @@ const ExercisePickerDialog = ({
     if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
     const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
     if (customDupe) { alert("Övningen finns redan."); return; }
-    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId, is_bodyweight_exercise: newIsBodyweight });
+    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId, is_bodyweight_exercise: newIsBodyweight, is_time_based: newIsTimeBased } as any);
     const { data } = await supabase.from("custom_exercises").select("*").order("name");
     if (data) setCustomExercises(data);
     setNewName("");
@@ -286,6 +288,15 @@ const ExercisePickerDialog = ({
                     className="rounded border-border accent-primary w-4 h-4"
                   />
                   <span className="text-xs text-muted-foreground">Kroppsviktsövning (+/− vikt)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newIsTimeBased}
+                    onChange={e => setNewIsTimeBased(e.target.checked)}
+                    className="rounded border-border accent-primary w-4 h-4"
+                  />
+                  <span className="text-xs text-muted-foreground">Tidsbaserad (sekunder istället för reps)</span>
                 </label>
                 <div className="flex gap-2">
                   <button
