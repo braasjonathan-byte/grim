@@ -6887,6 +6887,13 @@ const estimateCalories = (
           setCopyToDateSelected(new Date());
           setCopyToDateConflict(null);
         }}
+        onSaveWorkout={() => {
+          const plan = shareTarget.plan;
+          setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+          setSaveWorkoutName(plan.session_name);
+          setSaveWorkoutVisibility("private");
+          setShareTarget(null);
+        }}
       />
     )}
 
