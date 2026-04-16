@@ -6291,6 +6291,26 @@ const estimateCalories = (
                           );
                         }
 
+                        // Special Vila row for plan mode
+                        if (/^vila$/i.test(partName.trim())) {
+                          const vilaSecMatch = part.match(/(\d+)\s*[×x]\s*(\d+)/);
+                          const vilaSec = vilaSecMatch ? vilaSecMatch[2] : "60";
+                          return (
+                            <div key={i} className="bg-warning/10 rounded-lg p-2.5 border border-warning/30 flex items-center justify-between">
+                              <span
+                                className="font-semibold text-sm text-warning cursor-pointer hover:underline"
+                                onClick={() => editVilaSeconds(plan.id, i, vilaSec)}
+                              >
+                                🛏️ Vila {vilaSec}s mellan rundor
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => editVilaSeconds(plan.id, i, vilaSec)} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Redigera vila"><Pencil className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: "Vila" })} className="p-1 text-muted-foreground hover:text-destructive transition-colors" title="Ta bort vila"><X className="w-3.5 h-3.5" /></button>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div key={i} className="bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1">
                               <div className="flex items-center justify-between">
