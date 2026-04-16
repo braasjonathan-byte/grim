@@ -4706,7 +4706,9 @@ const estimateCalories = (
                         const count = parseInt((circuitMatch || amrapMatch)![1]);
                         const inlineExs = ((circuitMatch ? circuitMatch[2] : amrapMatch![3]) || "").trim();
                         // If exercises are inline (separated by /), they're listed in the header, not separate parts
-                        if (!inlineExs) {
+                        // But time specs like "40s arbete / 20s vila" are NOT exercise names
+                        const isOnlyTimeSpecs = inlineExs && inlineExs.split(/[/;]/).every(s => !s.trim() || /^\d+s?\s*(arbete|vila|rest|work|mellan)/i.test(s.trim()));
+                        if (!inlineExs || isOnlyTimeSpecs) {
                           currentCircuit = { roundCount: count, headerIndex: pi, exerciseIndices: [] };
                         } else {
                           currentCircuit = null;
