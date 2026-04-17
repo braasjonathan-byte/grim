@@ -1,0 +1,1 @@
+DELETE FROM public.custom_exercises WHERE name ILIKE 'Utmaning%' OR name ILIKE '%rpe%';
