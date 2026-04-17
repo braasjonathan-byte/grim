@@ -7669,6 +7669,9 @@ const estimateCalories = (
                 setUncheckedSetsDialog(null);
                 // Auto-check all unchecked sets before completing
                 const dayPlans = plans.filter(p => p.week === week && p.day === day);
+                const k = `${week}-${day}`;
+                const accumulated: Record<string, any> = { ...((completions[k]?.logged_weights || {}) as Record<string, any>) };
+                let changed = false;
                 for (const plan of dayPlans) {
                   if (!plan.details) continue;
                   const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
@@ -7684,24 +7687,24 @@ const estimateCalories = (
                     const exerciseName = nameMatch ? nameMatch[1].trim() : null;
                     const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
                     const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
-                    const k = `${week}-${day}`;
-                    const currentSets = getSetsDone(k, pName);
                     const allChecked = "1".repeat(sc);
-                    if (currentSets !== allChecked) {
-                      const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
-                      const updated = { ...existing, [`__sets__${pName}`]: allChecked };
-                      // Ensure setdata exists
-                      const setDataKey = `__setdata__${pName}`;
-                      if (!updated[setDataKey]) {
-                        const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
-                        const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
-                        const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
-                        const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
-                        updated[setDataKey] = JSON.stringify(initData);
-                      }
-                      await safeUpsertCompletion(week, day, { logged_weights: updated });
+                    if (accumulated[`__sets__${pName}`] !== allChecked) {
+                      accumulated[`__sets__${pName}`] = allChecked;
+                      changed = true;
+                    }
+                    const setDataKey = `__setdata__${pName}`;
+                    if (!accumulated[setDataKey]) {
+                      const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                      const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
+                      const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
+                      const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
+                      accumulated[setDataKey] = JSON.stringify(initData);
+                      changed = true;
                     }
                   }
+                }
+                if (changed) {
+                  await safeUpsertCompletion(week, day, { logged_weights: accumulated });
                 }
                 await performToggleDone(week, day);
               }}
