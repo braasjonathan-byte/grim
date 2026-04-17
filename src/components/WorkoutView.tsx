@@ -4582,24 +4582,44 @@ const estimateCalories = (
 
 
       {/* Workout cards */}
-      {isMobile && weekDays.length > 1 && (() => {
+      {isMobile && weekDays.length >= 1 && (() => {
         const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
         const todayName = todayDayNames[new Date().getDay()];
         return (
         <div className="flex flex-col gap-2">
-          {/* Day tabs */}
+          {/* Day tabs — show all 7 weekdays, rest days are non-clickable */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
-            {weekDays.map((plan, idx) => {
+            {DAYS.map((dayName) => {
+              const planIdx = weekDays.findIndex((p) => p.day === dayName);
+              const isRest = planIdx === -1;
+              const isToday = dayName === todayName && currentWeek === activePlanWeek;
+
+              if (isRest) {
+                return (
+                  <div
+                    key={dayName}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium select-none ${
+                      isToday
+                        ? "bg-warning/10 text-warning/70 border border-warning/30"
+                        : "bg-secondary/40 text-muted-foreground/60"
+                    }`}
+                    title="Vilodag"
+                  >
+                    {dayName}
+                  </div>
+                );
+              }
+
+              const plan = weekDays[planIdx];
               const k = `${plan.week}-${plan.day}`;
               const comp = completions[k];
               const done = comp?.done || false;
               const skipped = comp?.skipped || false;
-              const isToday = plan.day === todayName && currentWeek === activePlanWeek;
-              const isActive = idx === activeDayIndex;
+              const isActive = planIdx === activeDayIndex;
               return (
                 <button
                   key={k}
-                  onClick={() => { setSwipeDirection(idx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(idx); setExpandedDay(null); }}
+                  onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
                   className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
                       ? done
