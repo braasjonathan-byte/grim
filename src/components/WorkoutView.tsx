@@ -2208,6 +2208,7 @@ const estimateCalories = (
       wasReplace = true;
       oldName = replaceExerciseTarget.name;
       setReplaceExerciseTarget(null);
+      setShowExercisePicker(null);
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
       newDetails = isWarmupMode
@@ -2283,6 +2284,7 @@ const estimateCalories = (
       wasReplace = true;
       oldName = replaceExerciseTarget.name;
       setReplaceExerciseTarget(null);
+      setShowExercisePicker(null);
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
       newDetails = isWarmupMode
