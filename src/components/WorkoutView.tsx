@@ -6475,13 +6475,26 @@ const estimateCalories = (
                               {/* Info: work time × exercises */}
                               {(() => {
                                 const workMatch = part.match(/(\d+)s\s*arbete/i);
-                                const restMatch = part.match(/(\d+)s\s*vila/i);
+                                const headerRestMatch = part.match(/(\d+)s\s*vila/i);
                                 const circuitExInfo2 = circuitMap[Object.keys(circuitMap).find(k => circuitMap[parseInt(k)]?.headerIndex === i) as any];
                                 const exCount = inlineExercises.length > 0 ? inlineExercises.length : (circuitExInfo2?.exerciseIndices.length || 0);
+                                // Prefer actual rest from a "Vila"-line in details, then plan.tempo, then header
+                                let actualRestSec: number | null = null;
+                                const vilaLine = (plan.details || "").split(/[\n;]/).map(l => l.trim()).find(l => /^vila\b/i.test(parseExerciseWeight(l).name?.trim() || ""));
+                                if (vilaLine) {
+                                  const vp = parseExerciseWeight(vilaLine);
+                                  const vm = (vp.weight || "").match(/\d+\s*[×x]\s*(\d+)/i);
+                                  if (vm) actualRestSec = parseInt(vm[1]);
+                                }
+                                if (actualRestSec === null) {
+                                  const tempoMatch = plan.tempo?.match(/^circuit:\d+(?::\d+)?(?::(\d+))?$/);
+                                  if (tempoMatch?.[1]) actualRestSec = parseInt(tempoMatch[1]);
+                                }
+                                if (actualRestSec === null && headerRestMatch) actualRestSec = parseInt(headerRestMatch[1]);
                                 if (workMatch && exCount > 0) {
                                   return (
                                     <p className="text-[10px] text-muted-foreground">
-                                      {workMatch[1]}s × {exCount} övningar{restMatch ? ` · ${restMatch[1]}s vila` : ""}
+                                      {workMatch[1]}s × {exCount} övningar{actualRestSec !== null ? ` · ${actualRestSec}s vila` : ""}
                                     </p>
                                   );
                                 }
