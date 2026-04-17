@@ -241,13 +241,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
       const resolvedVisibility = postVisibility === "group" ? "group" : postVisibility === "friends" ? "friends" : "public";
 
-      const { data: insertedPost } = await supabase.from("social_posts").insert({
+      const { data: insertedPost, error: insertError } = await supabase.from("social_posts").insert({
         user_id: userId,
         image_url: imageUrl,
         caption: caption.trim() || null,
         visibility: resolvedVisibility,
         group_id: resolvedVisibility === "group" ? postGroupId : null,
       }).select("id").single();
+      if (insertError) throw insertError;
+      if (!insertedPost) throw new Error("Inlägget kunde inte sparas");
 
       // For admin multi-image (or single with caption), upload to social_post_images
       if (isAdmin && insertedPost && (imageFiles.length > 1 || (imageFiles.length === 1 && imageFiles[0].caption))) {
