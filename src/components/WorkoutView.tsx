@@ -1039,18 +1039,51 @@ const estimateCalories = (
     return unchecked;
   };
 
+  // Auto-check all sets for a given week/day (used when marking workout as done)
+  const autoCheckAllSets = async (week: number, day: string) => {
+    const dayPlans = plans.filter(p => p.week === week && p.day === day);
+    for (const plan of dayPlans) {
+      if (!plan.details) continue;
+      const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        if (part.startsWith("⚔️")) continue;
+        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+        if (isCondExercise) continue;
+        if (/^(vila|vilodag)/i.test(part)) continue;
+        const { clean: cleanPart } = extractRpe(part);
+        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+        const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
+        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
+        const exerciseName = nameMatch ? nameMatch[1].trim() : null;
+        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+        const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
+        const k = `${week}-${day}`;
+        const currentSets = getSetsDone(k, pName);
+        const allChecked = "1".repeat(sc);
+        if (currentSets !== allChecked) {
+          const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
+          const updated = { ...existing, [`__sets__${pName}`]: allChecked };
+          const setDataKey = `__setdata__${pName}`;
+          if (!updated[setDataKey]) {
+            const defReps = partStructMatch ? partStructMatch[3] : "10";
+            const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
+            const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
+            updated[setDataKey] = JSON.stringify(initData);
+          }
+          await safeUpsertCompletion(week, day, { logged_weights: updated });
+        }
+      }
+    }
+  };
+
   const toggleDone = async (week: number, day: string) => {
     const key = `${week}-${day}`;
     const current = completions[key];
     const newDone = !current?.done;
 
-    // If marking as done, check for unchecked sets first
+    // If marking as done, auto-check all unchecked sets first
     if (newDone) {
-      const unchecked = countUncheckedSets(week, day);
-      if (unchecked > 0) {
-        setUncheckedSetsDialog({ week, day, uncheckedCount: unchecked });
-        return;
-      }
+      await autoCheckAllSets(week, day);
     }
 
     await performToggleDone(week, day);
