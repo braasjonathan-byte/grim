@@ -2310,7 +2310,7 @@ const estimateCalories = (
     setWeightInput(lastWeight?.replace(/.*@\s*/, "").replace(/\s*kg.*/, "") || "");
     // Default reps to circuit seconds for circuit plans
     const targetPlan = plans.find(p => p.id === planId);
-    const circuitSecsMatch = targetPlan?.is_circuit && targetPlan?.tempo?.match(/^circuit:(\d+)$/);
+    const circuitSecsMatch = targetPlan?.is_circuit ? targetPlan?.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
     // Determine default unit: circuit → sek, bodyweight exercises → check context
     const bodyweightNames = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow", "dips"];
     const exLower = exerciseName.toLowerCase();
@@ -7010,6 +7010,18 @@ const estimateCalories = (
                       className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
                     >
                       <Download className="w-3 h-3" /> Importera färdigt pass
+                    </button>
+                  <button
+                      onClick={async () => {
+                        if (!confirm(`Rensa alla övningar i "${plan.session_name}"?`)) return;
+                        await supabase.from("workout_plans").update({ details: "" }).eq("id", plan.id);
+                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: "" } : p));
+                        triggerSave();
+                        toast.success("Passet rensat");
+                      }}
+                      className="w-full py-2 border border-dashed border-destructive/40 rounded-md text-xs text-destructive hover:text-destructive hover:border-destructive transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Rensa pass
                     </button>
                 </div>
                   }
