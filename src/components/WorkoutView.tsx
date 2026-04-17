@@ -555,6 +555,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [saveWorkoutSource, setSaveWorkoutSource] = useState<{ details: string; tempo: string | null; defaultName: string } | null>(null);
   const [saveWorkoutName, setSaveWorkoutName] = useState("");
   const [saveWorkoutVisibility, setSaveWorkoutVisibility] = useState<"private" | "public">("private");
+  const [saveWorkoutIsCircuit, setSaveWorkoutIsCircuit] = useState(false);
   const [saveWorkoutSaving, setSaveWorkoutSaving] = useState(false);
 
   // Saved workouts for import
@@ -7819,6 +7820,7 @@ const estimateCalories = (
           setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
           setSaveWorkoutName(plan.session_name);
           setSaveWorkoutVisibility("private");
+          setSaveWorkoutIsCircuit(!!(plan.is_circuit || (plan.tempo && plan.tempo.startsWith("circuit:"))));
           setShareTarget(null);
         }}
       />
@@ -7870,16 +7872,31 @@ const estimateCalories = (
                 <p className="text-[10px] text-muted-foreground mt-1">Passet visas under "Skapat av användare" för alla.</p>
               )}
             </div>
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveWorkoutIsCircuit}
+                  onChange={(e) => setSaveWorkoutIsCircuit(e.target.checked)}
+                  className="accent-primary w-4 h-4"
+                />
+                <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
+              </label>
+              <p className="text-[10px] text-muted-foreground mt-1 ml-6">Avmarkera om det är ett vanligt styrkepass.</p>
+            </div>
           </div>
           <button
             onClick={async () => {
               if (!saveWorkoutName.trim()) return;
               setSaveWorkoutSaving(true);
+              const tempoToSave = saveWorkoutIsCircuit
+                ? (saveWorkoutSource.tempo && saveWorkoutSource.tempo.startsWith("circuit:") ? saveWorkoutSource.tempo : "circuit:40:3:0")
+                : null;
               const { data, error } = await supabase.from("saved_workouts").insert({
                 user_id: userId,
                 name: saveWorkoutName.trim(),
                 details: saveWorkoutSource.details,
-                tempo: saveWorkoutSource.tempo,
+                tempo: tempoToSave,
                 visibility: saveWorkoutVisibility,
               } as any).select().single();
               setSaveWorkoutSaving(false);

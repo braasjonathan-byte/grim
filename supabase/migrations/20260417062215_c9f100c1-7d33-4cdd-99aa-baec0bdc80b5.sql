@@ -1,0 +1,2 @@
+UPDATE public.saved_workouts SET tempo = NULL WHERE id = 'f8f35904-f4c1-4370-80b7-27597dc5764f';
+UPDATE public.workout_plans SET tempo = NULL, is_circuit = false WHERE session_name = 'Ben Grim special';
