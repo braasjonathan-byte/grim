@@ -4596,17 +4596,18 @@ const estimateCalories = (
 
               if (isRest) {
                 return (
-                  <div
+                  <button
                     key={dayName}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium select-none ${
+                    onClick={() => setImportWorkoutTarget({ planId: "__new__", week: currentWeek, day: dayName })}
+                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                       isToday
-                        ? "bg-warning/10 text-warning/70 border border-warning/30"
-                        : "bg-secondary/40 text-muted-foreground/60"
+                        ? "bg-warning/10 text-warning/80 border border-warning/30 hover:bg-warning/20"
+                        : "bg-secondary/40 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
                     }`}
-                    title="Vilodag"
+                    title="Vilodag — tryck för att lägga till pass"
                   >
                     {dayName}
-                  </div>
+                  </button>
                 );
               }
 
