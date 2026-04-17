@@ -73,7 +73,6 @@ const checkRemoteVersion = async () => {
 };
 
 void checkRemoteVersion();
-setInterval(checkRemoteVersion, 60 * 1000);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") void checkRemoteVersion();
 });
