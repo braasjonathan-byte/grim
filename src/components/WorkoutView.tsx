@@ -2238,6 +2238,52 @@ const estimateCalories = (
 
   // Open weight dialog when selecting an exercise
   const handleExerciseSelect = (planId: string, exerciseName: string) => {
+    // REPLACE MODE: skip dialog, copy sets/reps from original line
+    if (replaceExerciseTarget && replaceExerciseTarget.planId === planId) {
+      const plan = plans.find(p => p.id === planId);
+      if (plan) {
+        const separator = plan.details.includes("\n") ? "\n" : "; ";
+        const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+        const oldLine = lines[replaceExerciseTarget.lineIndex] || "";
+        // Parse "Name — SxR @ W kg" or "Name — SxR sek" etc., keep everything after the em-dash
+        const dashMatch = oldLine.match(/^.*?—\s*(.+)$/);
+        const params = dashMatch ? dashMatch[1].trim() : "3×10";
+        // Strip any old weight (we'll use the new exercise's last weight if available)
+        const paramsNoWeight = params.replace(/\s*@\s*[\d.,]+\s*kg.*$/i, "").trim();
+        const lastWeight = findLastWeight(exerciseName);
+        const newWeight = lastWeight?.replace(/.*@\s*/, "").replace(/\s*kg.*/, "").trim();
+        const entry = newWeight
+          ? `${exerciseName} — ${paramsNoWeight} @ ${newWeight} kg`
+          : `${exerciseName} — ${paramsNoWeight}`;
+        const oldName = replaceExerciseTarget.name;
+        lines[replaceExerciseTarget.lineIndex] = entry;
+        const newDetails = lines.join(separator);
+        const targetPlanId = plan.id;
+        const targetWeek = plan.week;
+        setReplaceExerciseTarget(null);
+        setShowExercisePicker(null);
+        (async () => {
+          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", targetPlanId);
+          setPlans((prev) => prev.map((p) => p.id === targetPlanId ? { ...p, details: newDetails } : p));
+          triggerSave();
+          // Pre-populate per-set weight data
+          if (newWeight) {
+            const setsMatch = paramsNoWeight.match(/^(\d+)\s*[×x]\s*(\d+)/);
+            const sets = setsMatch ? parseInt(setsMatch[1]) : 3;
+            const reps = setsMatch ? parseInt(setsMatch[2]) : 10;
+            const initData = Array.from({ length: sets }, () => ({ kg: newWeight, reps: String(reps) }));
+            await updateCompletionWeights(targetWeek, plan.day, (existing) => ({
+              ...existing,
+              [`__setdata__${exerciseName}`]: JSON.stringify(initData),
+            }));
+          }
+          if (mode === "plan" && targetWeek > 0) {
+            setReplacePropagateDialog({ oldExerciseName: oldName, newEntry: entry, sourcePlanId: targetPlanId });
+          }
+        })();
+      }
+      return;
+    }
     // Check if exercise is conditioning type
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
