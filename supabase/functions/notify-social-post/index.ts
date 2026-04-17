@@ -154,14 +154,14 @@ serve(async (req) => {
       if (friendships) {
         targetUserIds = friendships.map(f => f.user_id === user.id ? f.friend_id : f.user_id);
       }
-    } else if (visibility === "public" && isAdmin) {
-      // Only admin public posts notify all users
+    } else if (visibility === "public") {
+      // All public posts notify all users
       const { data: allProfiles } = await supabaseAdmin.from("profiles").select("user_id");
       if (allProfiles) {
         targetUserIds = allProfiles.map(p => p.user_id).filter(id => id !== user.id);
       }
     }
-    // Regular user public posts and group posts: no push
+    // Group posts: no push
 
     if (targetUserIds.length === 0) {
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
