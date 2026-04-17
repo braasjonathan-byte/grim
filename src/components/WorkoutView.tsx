@@ -4817,7 +4817,7 @@ const estimateCalories = (
                           {!isDone && completion?.logged_weights && Object.entries(completion.logged_weights).some(([k, v]) => {
                             // Ignore internal metadata keys — only count real previous-pass values
                             if (k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__")) return false;
-                            if (v === null || v === undefined || v === "") return false;
+                            if (v === null || v === undefined || (v as any) === "") return false;
                             return true;
                           }) && (
                             <div className="flex items-start gap-2 bg-primary/5 border border-primary/20 rounded-md px-3 py-2">
