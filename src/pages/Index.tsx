@@ -545,9 +545,17 @@ const Index = () => {
             <button
               onClick={() => {
                 setTab("calc");
-                setTimeout(() => {
-                  document.getElementById("help-section")?.scrollIntoView({ behavior: "smooth" });
-                }, 300);
+                // Poll for the help section to appear (lazy-loaded), then scroll to it
+                let attempts = 0;
+                const tryScroll = () => {
+                  const el = document.getElementById("help-section");
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth" });
+                    return;
+                  }
+                  if (attempts++ < 40) setTimeout(tryScroll, 100);
+                };
+                setTimeout(tryScroll, 50);
               }}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-primary/10 transition-colors"
               aria-label="Hjälp & tips"
