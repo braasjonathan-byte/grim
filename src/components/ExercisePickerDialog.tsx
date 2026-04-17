@@ -204,7 +204,14 @@ const ExercisePickerDialog = ({
         </div>
 
         {/* Exercise list */}
-        <div className="flex-1 overflow-y-auto px-4 pb-2 min-h-0">
+        <div
+          className="flex-1 overflow-y-auto px-4 pb-2 min-h-0"
+          onTouchMove={() => {
+            if (document.activeElement === inputRef.current) {
+              inputRef.current?.blur();
+            }
+          }}
+        >
           <div className="space-y-1">
             {filtered.map((e, i) => {
               const lastW = getLastWeight?.(e.name);
