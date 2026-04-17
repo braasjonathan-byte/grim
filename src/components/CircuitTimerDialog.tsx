@@ -241,7 +241,7 @@ const CircuitTimerDialog = ({
             </div>
             <button
               onClick={startWorkout}
-              className="w-20 h-20 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+              className="w-20 h-20 rounded-full bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-transform"
             >
               <Play className="w-8 h-8 ml-1" />
             </button>
