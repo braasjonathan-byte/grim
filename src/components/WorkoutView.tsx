@@ -352,6 +352,53 @@ const getMonday = (d: Date) => {
   return date;
 };
 
+const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: string): Date | null => {
+  if (!planStart || week <= 0) return null;
+
+  const [y, m, d] = planStart.split("-").map(Number);
+  if (!y || !m || !d) return null;
+
+  const startDate = new Date(y, m - 1, d);
+  const startMonday = getMonday(startDate);
+  const dayIndex = DAYS.indexOf(dayAbbr);
+  if (dayIndex < 0) return null;
+
+  const targetDate = new Date(startMonday);
+  targetDate.setDate(targetDate.getDate() + (week - 1) * 7 + dayIndex);
+  targetDate.setHours(0, 0, 0, 0);
+  return targetDate;
+};
+
+const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planStart: string | null) => {
+  if (weekPlans.length === 0) {
+    return { index: 0, matchedToday: false };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (planStart && currentWeek > 0) {
+    const dateMatchedIndex = weekPlans.findIndex((plan) => {
+      const planDate = getPlanDayDateValue(planStart, currentWeek, plan.day);
+      return planDate?.getTime() === today.getTime();
+    });
+
+    if (dateMatchedIndex >= 0) {
+      return { index: dateMatchedIndex, matchedToday: true };
+    }
+  }
+
+  const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
+  const todayName = todayDayNames[today.getDay()];
+  const labelMatchedIndex = weekPlans.findIndex((plan) => plan.day.trim() === todayName);
+
+  if (labelMatchedIndex >= 0) {
+    return { index: labelMatchedIndex, matchedToday: true };
+  }
+
+  return { index: 0, matchedToday: false };
+};
+
 const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
@@ -842,6 +889,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const skipDayResetRef = useRef(false);
   const prevWeekRef = useRef(currentWeek);
   const didInitialDayPickRef = useRef(false);
+  const pendingInitialDateRealignRef = useRef(false);
   // Reset active day index when week changes — navigate to today's day.
   // Also runs once on initial mount after plans load, so the app opens on today.
   useEffect(() => {
@@ -851,19 +899,27 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
     const weekChanged = prevWeekRef.current !== currentWeek;
     const isInitialPick = !didInitialDayPickRef.current && plans.length > 0;
-    if (!weekChanged && !isInitialPick) return;
+    const shouldRetryInitialDateAlignment = pendingInitialDateRealignRef.current && !!planStartDate;
+    if (!weekChanged && !isInitialPick && !shouldRetryInitialDateAlignment) return;
+
     prevWeekRef.current = currentWeek;
-    if (isInitialPick) didInitialDayPickRef.current = true;
-    const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-    const todayName = todayDayNames[new Date().getDay()];
+
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
       .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
-    const todayIdx = currentWeekDays.findIndex(p => p.day === todayName);
-    const newIdx = todayIdx >= 0 ? todayIdx : 0;
-    setActiveDayIndex(newIdx);
+
+    const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
+
+    if (isInitialPick) {
+      didInitialDayPickRef.current = true;
+      pendingInitialDateRealignRef.current = !matchedToday && currentWeek > 0 && !planStartDate;
+    } else if (shouldRetryInitialDateAlignment) {
+      pendingInitialDateRealignRef.current = false;
+    }
+
+    setActiveDayIndex(index);
     setExpandedDay(null);
-  }, [currentWeek, plans]);
+  }, [currentWeek, plans, planStartDate]);
 
 
   // Auto-expand if the currently shown day has only one session
@@ -896,13 +952,8 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
     // Fallback: show week + day abbreviation when no start date is set
     return `v${week} ${dayAbbr}`;
   }
-  const [y, m, d] = planStart.split("-").map(Number);
-  const startDate = new Date(y, m - 1, d);
-  const startMonday = getMonday(startDate);
-  const dayIndex = DAYS.indexOf(dayAbbr);
-  if (dayIndex < 0) return null;
-  const targetDate = new Date(startMonday);
-  targetDate.setDate(targetDate.getDate() + (week - 1) * 7 + dayIndex);
+  const targetDate = getPlanDayDateValue(planStart, week, dayAbbr);
+  if (!targetDate) return null;
   return format(targetDate, "d MMM yyyy", { locale: sv });
 };
 
