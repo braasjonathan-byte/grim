@@ -1078,7 +1078,8 @@ const estimateCalories = (
           const updated = { ...existing, [`__sets__${pName}`]: allChecked };
           const setDataKey = `__setdata__${pName}`;
           if (!updated[setDataKey]) {
-            const defReps = partStructMatch ? partStructMatch[3] : "10";
+            const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+            const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
             const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
             const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
             updated[setDataKey] = JSON.stringify(initData);
@@ -2006,6 +2007,34 @@ const estimateCalories = (
     if (match) return { name: match[1].trim(), weight: match[2].trim() };
     return { name: line.trim(), weight: null };
   };
+
+  // Find the most recent reps logged for an exercise (any kg, including 0/empty).
+  // Used in circuit workouts to show "last time you did X reps" as a placeholder.
+  const findLastReps = useCallback((exerciseName: string, setIndex: number): string | null => {
+    const exLower = exerciseName.toLowerCase();
+    const candidates: Array<{ key: string; reps: string; ts: number }> = [];
+    const collect = (weights: Record<string, any> | null, ts: number) => {
+      if (!weights) return;
+      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
+      if (!setDataRaw) return;
+      try {
+        const setData = typeof setDataRaw === "string" ? JSON.parse(setDataRaw) : setDataRaw;
+        if (Array.isArray(setData) && setData[setIndex]?.reps) {
+          const r = String(setData[setIndex].reps).trim();
+          if (r) candidates.push({ key: "", reps: r, ts });
+        }
+      } catch {}
+    };
+    for (const [k, comp] of Object.entries(completions)) {
+      if (!comp?.done) continue;
+      collect(comp.logged_weights as any, k.localeCompare("") );
+    }
+    for (const archComp of archivedCompletions) {
+      collect(archComp.logged_weights as any, 0);
+    }
+    if (candidates.length === 0) return null;
+    return candidates[candidates.length - 1].reps;
+  }, [completions, archivedCompletions]);
 
   // Find last weight used for an exercise across ALL workouts (single + plan + archived),
   // preferring matching rep count. Returns e.g. "3×10 @ 80 kg" or "80 kg (8 reps)"
@@ -3446,7 +3475,7 @@ const estimateCalories = (
                                           <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, defaultKg, defaultReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                          <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || defaultReps)} placeholder={circuitDefaultSec || undefined} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, defaultKg, defaultReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                          <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || defaultReps)} placeholder={circuitDefaultSec ? (findLastReps(name, si) || circuitDefaultSec) : undefined} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, defaultKg, defaultReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
                                           <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || defaultKg} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, defaultKg, defaultReps)} placeholder="—" className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
@@ -6712,7 +6741,7 @@ const estimateCalories = (
                                           <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, defKg, defReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                          <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || defReps)} placeholder={circuitDefaultSec || undefined} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, defKg, defReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                          <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || defReps)} placeholder={circuitDefaultSec ? (findLastReps(partName, si) || circuitDefaultSec) : undefined} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, defKg, defReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                           <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
                                           {!isBodyweight && (
                                             <>
@@ -7671,7 +7700,8 @@ const estimateCalories = (
                       // Ensure setdata exists
                       const setDataKey = `__setdata__${pName}`;
                       if (!updated[setDataKey]) {
-                        const defReps = partStructMatch ? partStructMatch[3] : "10";
+                        const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                        const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
                         const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
                         const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
                         updated[setDataKey] = JSON.stringify(initData);
