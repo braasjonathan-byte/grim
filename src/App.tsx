@@ -19,6 +19,7 @@ const App = () => (
       <SaveIndicatorProvider>
         <Toaster />
         <Sonner />
+        <InAppBrowserDialog />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
