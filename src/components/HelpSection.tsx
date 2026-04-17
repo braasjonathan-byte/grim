@@ -77,8 +77,9 @@ const categories: HelpCategory[] = [
     title: "Cirkelträning",
     icon: Repeat,
     tips: [
-      "Skapa cirkelpass med flera rundor – välj antal rundor när du skapar passet.",
+      "Skapa cirkelpass med flera rundor – välj antal rundor och sekunder per övning när du skapar passet.",
       "Övningar i cirkelpass har sekunder som standardenhet istället för reps.",
+      "Nya övningar som läggs till i ett cirkelpass ärver automatiskt sekundvärdet från passets inställningar.",
       "Du kan ändra tid individuellt per övning och runda.",
       "Lägg till vila mellan rundorna med 'Lägg till vila'-knappen.",
       "Starta den inbyggda cirkeltimern som räknar ner automatiskt per övning och runda.",
