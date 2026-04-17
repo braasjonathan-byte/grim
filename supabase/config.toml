@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.notify-inactive]
 verify_jwt = false
+
+[functions.notify-latest-post]
+verify_jwt = false
