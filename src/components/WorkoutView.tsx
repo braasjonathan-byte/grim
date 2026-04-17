@@ -2264,6 +2264,7 @@ const estimateCalories = (
         setShowExercisePicker(null);
         (async () => {
           await supabase.from("workout_plans").update({ details: newDetails }).eq("id", targetPlanId);
+          skipDayResetRef.current = true;
           setPlans((prev) => prev.map((p) => p.id === targetPlanId ? { ...p, details: newDetails } : p));
           triggerSave();
           // Pre-populate per-set weight data
@@ -2363,6 +2364,7 @@ const estimateCalories = (
     }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    if (wasReplace) skipDayResetRef.current = true;
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
 
@@ -2439,6 +2441,7 @@ const estimateCalories = (
     }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    if (wasReplace) skipDayResetRef.current = true;
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
     setConditioningDialog(null);
@@ -2697,6 +2700,7 @@ const estimateCalories = (
         }
       }
 
+      skipDayResetRef.current = true;
       setPlans(updatedPlans);
       triggerSave();
     }
