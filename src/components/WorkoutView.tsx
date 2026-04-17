@@ -4237,17 +4237,9 @@ const estimateCalories = (
                   <button
                     key={wi}
                     disabled={isLocked}
-                    onClick={async () => {
+                    onClick={() => {
                       if (isLocked) return;
-                      const dateStr = format(singleDate, "yyyy-MM-dd");
-                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                      await supabase.from("workout_plans").insert({
-                        user_id: userId, week: 0, day: uniqueKey,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
-                      });
-                      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`); fetchData();
+                      handleImportWorkout({ name: w.name, details: w.details, tempo: w.tempo });
                     }}
                     className={`w-full text-left bg-secondary/50 rounded-lg px-3 py-2 transition-colors flex items-center justify-between ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"}`}
                   >
