@@ -542,6 +542,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Import workout dialog
   const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
+  // Pending import that needs user choice (replace vs append, then propagation)
+  const [pendingImport, setPendingImport] = useState<{
+    target: { planId: string; week: number; day: string };
+    workout: { name: string; details: string; tempo: string | null };
+    step: "conflict" | "propagate";
+    mode?: "replace" | "append";
+  } | null>(null);
 
   // Save workout state
   const [saveWorkoutSource, setSaveWorkoutSource] = useState<{ details: string; tempo: string | null; defaultName: string } | null>(null);
