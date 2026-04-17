@@ -66,8 +66,13 @@ export const InAppBrowserDialog = () => {
   const sourceName = source === "instagram" ? "Instagram" : "Snapchat";
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && handleDismiss()}>
-      <DialogContent className="max-w-sm">
+    <Dialog open={open} onOpenChange={() => { /* block dismiss via overlay/esc */ }}>
+      <DialogContent
+        className="max-w-sm [&>button]:hidden"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Öppna i din webbläsare</DialogTitle>
           <DialogDescription>
