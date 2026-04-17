@@ -40,6 +40,44 @@ const syncAppVersion = async () => {
 
 void syncAppVersion();
 
+// Poll server for the latest deployed version. When a new version is detected,
+// clear caches and hard-reload so PWA users always get the freshest build.
+const REMOTE_VERSION_REFRESH_KEY = "grim_remote_refresh_at";
+const checkRemoteVersion = async () => {
+  try {
+    // Bust any intermediate cache (SW, CDN, browser) by adding a timestamp.
+    const res = await fetch(`/version.json?t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "cache-control": "no-cache" },
+    });
+    if (!res.ok) return;
+    const { version } = await res.json();
+    if (!version || version === APP_VERSION) return;
+
+    // Avoid reload loops — only reload at most once every 30s.
+    const lastReload = Number(sessionStorage.getItem(REMOTE_VERSION_REFRESH_KEY) || 0);
+    if (Date.now() - lastReload < 30000) return;
+    sessionStorage.setItem(REMOTE_VERSION_REFRESH_KEY, String(Date.now()));
+
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.update().catch(() => undefined)));
+      await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
+    }
+    await clearAllCaches().catch(() => undefined);
+    localStorage.setItem(APP_VERSION_STORAGE_KEY, version);
+    window.location.reload();
+  } catch {
+    /* offline or transient — try again later */
+  }
+};
+
+void checkRemoteVersion();
+setInterval(checkRemoteVersion, 60 * 1000);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void checkRemoteVersion();
+});
+
 // Initialize theme from localStorage before render
 const storedTheme = localStorage.getItem("gymberget_theme");
 const shouldBeDark = storedTheme === "dark";
