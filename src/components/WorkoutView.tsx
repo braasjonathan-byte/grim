@@ -3681,11 +3681,12 @@ const estimateCalories = (
                         </div>
                       );
                       if (isReplaceMode) {
-                        return (
+                        return createPortal(
                           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
                             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setWeightDialog(null); setWeightInput(""); setRepsInput("10"); setSetsInput("3"); setRepsUnit("reps"); setReplaceExerciseTarget(null); }} />
                             <div className="relative w-full max-w-sm">{dialogContent}</div>
-                          </div>
+                          </div>,
+                          document.body
                         );
                       }
                       return dialogContent;
