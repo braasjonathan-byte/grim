@@ -3435,7 +3435,9 @@ const estimateCalories = (
                                   {(() => {
                                     const setData = getSetData(key, name);
                                     const defaultKg = kg || "";
-                                    const defaultReps = reps || "10";
+                                    const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                                    const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
+                                    const defaultReps = circuitDefaultSec || reps || "10";
                                     return Array.from({ length: setsCountSingle }, (_, si) => {
                                       const isSetDone = setsStrSingle[si] === "1";
                                       const saved = setData[si];
