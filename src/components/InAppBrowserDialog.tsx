@@ -7,8 +7,15 @@ import { toast } from "sonner";
 const detectInAppBrowser = (): "instagram" | "snapchat" | null => {
   if (typeof navigator === "undefined") return null;
   const ua = navigator.userAgent || "";
-  if (/Instagram/i.test(ua)) return "instagram";
-  if (/Snapchat/i.test(ua)) return "snapchat";
+  // Log for debugging in-app browser detection issues
+  if (typeof window !== "undefined") {
+    (window as any).__grim_ua = ua;
+    console.log("[InAppBrowser] UA:", ua);
+  }
+  // Instagram in-app webview signatures
+  if (/Instagram|IGAB|IABMV|FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return "instagram";
+  // Snapchat signatures
+  if (/Snapchat|Snap\//i.test(ua)) return "snapchat";
   return null;
 };
 
