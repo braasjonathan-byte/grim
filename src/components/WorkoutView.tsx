@@ -3435,7 +3435,9 @@ const estimateCalories = (
                                   {(() => {
                                     const setData = getSetData(key, name);
                                     const defaultKg = kg || "";
-                                    const defaultReps = reps || "10";
+                                    const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                                    const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
+                                    const defaultReps = circuitDefaultSec || reps || "10";
                                     return Array.from({ length: setsCountSingle }, (_, si) => {
                                       const isSetDone = setsStrSingle[si] === "1";
                                       const saved = setData[si];
@@ -6674,7 +6676,9 @@ const estimateCalories = (
                                   {(() => {
                                     const planSetData = getSetData(key, partName);
                                     const defKg = partKg || "";
-                                    const defReps = partReps || repsStr || "10";
+                                    const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                                    const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
+                                    const defReps = circuitDefaultSec || partReps || repsStr || "10";
                                      // Detect bodyweight exercises that don't need kg input
                                     const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
                                     const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
@@ -6696,7 +6700,7 @@ const estimateCalories = (
                                           <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, defKg, defReps)} className="h-5 w-5" />
                                           <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={saved?.reps || defReps} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, defKg, defReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none" />
-                                          <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
+                                          <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
                                           {!isBodyweight && (
                                             <>
                                               {isWeightedBw && (
