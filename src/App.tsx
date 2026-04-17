@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SaveIndicatorProvider } from "@/components/SaveIndicator";
+import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
 
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -18,6 +19,7 @@ const App = () => (
       <SaveIndicatorProvider>
         <Toaster />
         <Sonner />
+        <InAppBrowserDialog />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
