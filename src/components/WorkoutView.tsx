@@ -7384,47 +7384,9 @@ const estimateCalories = (
                 <button
                   key={wi}
                   disabled={isLocked}
-                  onClick={async () => {
+                  onClick={() => {
                     if (isLocked) return;
-                    const target = importWorkoutTarget;
-                    if (target.planId === "__single__") {
-                      const dateStr = format(singleDate, "yyyy-MM-dd");
-                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                      await supabase.from("workout_plans").insert({
-                        user_id: userId, week: 0, day: uniqueKey,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
-                      });
-                      setSingleName("");
-                      setSingleDate(new Date());
-                      setShowAddSingle(false);
-                      setShowCopyPicker(false);
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      fetchData();
-                    } else if (target.planId === "__new__") {
-                      const { data: inserted } = await supabase.from("workout_plans").insert({
-                        user_id: userId, week: target.week, day: target.day,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
-                      }).select().single();
-                      if (inserted) {
-                        setPlans(prev => [...prev, inserted as any]);
-                      }
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      fetchData();
-                    } else {
-                      const isCirc3 = !!(w.tempo && w.tempo.startsWith("circuit:"));
-                      await supabase.from("workout_plans").update({
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: isCirc3,
-                      }).eq("id", target.planId);
-                      setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null, is_circuit: isCirc3 } : p));
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      triggerSave();
-                    }
+                    handleImportWorkout({ name: w.name, details: w.details, tempo: w.tempo });
                   }}
                   className={`w-full text-left bg-secondary/50 rounded-lg px-3 py-2 transition-colors flex items-center justify-between ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"}`}
                 >
