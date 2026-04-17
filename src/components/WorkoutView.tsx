@@ -1829,6 +1829,98 @@ const estimateCalories = (
     fetchData();
   };
 
+  // Handle import of a workout into a plan slot. If existing exercises and target is a real plan,
+  // ask whether to replace or append. Then if it's a recurring plan (week>0), ask about propagation.
+  const handleImportWorkout = (workout: { name: string; details: string; tempo: string | null }) => {
+    const target = importWorkoutTarget;
+    if (!target) return;
+
+    if (target.planId === "__single__" || target.planId === "__new__") {
+      void executeImport(target, workout, "replace", false);
+      return;
+    }
+
+    const existingPlan = plans.find(p => p.id === target.planId);
+    const hasExisting = !!(existingPlan && existingPlan.details && existingPlan.details.trim() !== "");
+
+    if (!hasExisting) {
+      if (target.week > 0) {
+        setImportWorkoutTarget(null);
+        setPendingImport({ target, workout, step: "propagate", mode: "replace" });
+      } else {
+        void executeImport(target, workout, "replace", false);
+      }
+      return;
+    }
+
+    setImportWorkoutTarget(null);
+    setPendingImport({ target, workout, step: "conflict" });
+  };
+
+  const executeImport = async (
+    target: { planId: string; week: number; day: string },
+    workout: { name: string; details: string; tempo: string | null },
+    mode: "replace" | "append",
+    propagate: boolean,
+  ) => {
+    const isCirc = !!(workout.tempo && workout.tempo.startsWith("circuit:"));
+
+    if (target.planId === "__single__") {
+      const dateStr = format(singleDate, "yyyy-MM-dd");
+      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+      await supabase.from("workout_plans").insert({
+        user_id: userId, week: 0, day: uniqueKey,
+        session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
+      });
+      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false);
+      setImportWorkoutTarget(null); setPendingImport(null);
+      toast.success(`"${workout.name}" importerat!`);
+      fetchData();
+      return;
+    }
+
+    if (target.planId === "__new__") {
+      const { data: inserted } = await supabase.from("workout_plans").insert({
+        user_id: userId, week: target.week, day: target.day,
+        session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
+      }).select().single();
+      if (inserted) setPlans(prev => [...prev, inserted as any]);
+      setImportWorkoutTarget(null); setPendingImport(null);
+      toast.success(`"${workout.name}" importerat!`);
+      fetchData();
+      return;
+    }
+
+    const currentPlan = plans.find(p => p.id === target.planId);
+    const targetPlans: typeof plans = [];
+    if (currentPlan) targetPlans.push(currentPlan);
+    if (propagate && currentPlan && target.week > 0) {
+      const matchingFuture = plans.filter(p => p.week > target.week && p.day === target.day);
+      targetPlans.push(...matchingFuture);
+    }
+
+    for (const p of targetPlans) {
+      const newDetails = mode === "append" && p.details.trim()
+        ? `${p.details}\n${workout.details}`
+        : workout.details;
+      const newSessionName = mode === "append" && p.session_name.trim()
+        ? p.session_name
+        : workout.name;
+      await supabase.from("workout_plans").update({
+        session_name: newSessionName,
+        details: newDetails,
+        tempo: workout.tempo || null,
+        is_circuit: isCirc,
+      }).eq("id", p.id);
+      setPlans(prev => prev.map(pp => pp.id === p.id ? { ...pp, session_name: newSessionName, details: newDetails, tempo: workout.tempo || null, is_circuit: isCirc } : pp));
+    }
+
+    setImportWorkoutTarget(null);
+    setPendingImport(null);
+    toast.success(propagate ? `"${workout.name}" importerat på ${targetPlans.length} pass!` : `"${workout.name}" importerat!`);
+    triggerSave();
+  };
+
   const deleteSingleWorkout = async (plan: PlanDay) => {
     if (!confirm("Ta bort detta pass?")) return;
     if (plan.id) {
