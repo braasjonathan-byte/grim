@@ -6676,7 +6676,9 @@ const estimateCalories = (
                                   {(() => {
                                     const planSetData = getSetData(key, partName);
                                     const defKg = partKg || "";
-                                    const defReps = partReps || repsStr || "10";
+                                    const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                                    const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
+                                    const defReps = circuitDefaultSec || partReps || repsStr || "10";
                                      // Detect bodyweight exercises that don't need kg input
                                     const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
                                     const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
