@@ -1081,9 +1081,13 @@ const estimateCalories = (
     const current = completions[key];
     const newDone = !current?.done;
 
-    // If marking as done, auto-check all unchecked sets first
+    // If marking as done, check for unchecked sets first and show dialog
     if (newDone) {
-      await autoCheckAllSets(week, day);
+      const unchecked = countUncheckedSets(week, day);
+      if (unchecked > 0) {
+        setUncheckedSetsDialog({ week, day, uncheckedCount: unchecked });
+        return;
+      }
     }
 
     await performToggleDone(week, day);
