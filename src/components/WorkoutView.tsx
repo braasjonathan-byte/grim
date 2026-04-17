@@ -2008,6 +2008,34 @@ const estimateCalories = (
     return { name: line.trim(), weight: null };
   };
 
+  // Find the most recent reps logged for an exercise (any kg, including 0/empty).
+  // Used in circuit workouts to show "last time you did X reps" as a placeholder.
+  const findLastReps = useCallback((exerciseName: string, setIndex: number): string | null => {
+    const exLower = exerciseName.toLowerCase();
+    const candidates: Array<{ key: string; reps: string; ts: number }> = [];
+    const collect = (weights: Record<string, any> | null, ts: number) => {
+      if (!weights) return;
+      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
+      if (!setDataRaw) return;
+      try {
+        const setData = typeof setDataRaw === "string" ? JSON.parse(setDataRaw) : setDataRaw;
+        if (Array.isArray(setData) && setData[setIndex]?.reps) {
+          const r = String(setData[setIndex].reps).trim();
+          if (r) candidates.push({ key: "", reps: r, ts });
+        }
+      } catch {}
+    };
+    for (const [k, comp] of Object.entries(completions)) {
+      if (!comp?.done) continue;
+      collect(comp.logged_weights as any, k.localeCompare("") );
+    }
+    for (const archComp of archivedCompletions) {
+      collect(archComp.logged_weights as any, 0);
+    }
+    if (candidates.length === 0) return null;
+    return candidates[candidates.length - 1].reps;
+  }, [completions, archivedCompletions]);
+
   // Find last weight used for an exercise across ALL workouts (single + plan + archived),
   // preferring matching rep count. Returns e.g. "3×10 @ 80 kg" or "80 kg (8 reps)"
   const findLastWeight = (exerciseName: string, targetReps?: number): string | null => {
