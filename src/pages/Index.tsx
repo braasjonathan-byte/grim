@@ -730,8 +730,13 @@ const Index = () => {
 
       {/* Bottom tab bar */}
       <nav
-        className="fixed left-0 right-0 bottom-0 bg-card border-t border-border z-50 will-change-transform"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        className="fixed left-0 right-0 bottom-0 bg-card border-t border-border z-50"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          transform: "translate3d(0,0,0)",
+          WebkitTransform: "translate3d(0,0,0)",
+          willChange: "transform",
+        }}
       >
         <div className="max-w-lg mx-auto flex">
           {tabs.map(({ key, icon: Icon, label, badge }) =>
