@@ -7409,7 +7409,83 @@ const estimateCalories = (
         </div>
       </div>
     )}
-    {/* Weight prompt dialog */}
+    {/* Pending import: ask Replace vs Append, then propagation */}
+    {pendingImport && pendingImport.step === "conflict" && (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setPendingImport(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-base">Detta pass har redan övningar</h3>
+          <p className="text-sm text-muted-foreground">
+            Vill du <span className="font-semibold text-foreground">ersätta</span> de befintliga övningarna med "{pendingImport.workout.name}", eller <span className="font-semibold text-foreground">lägga till</span> övningarna efter de befintliga?
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => {
+                const next = { ...pendingImport, mode: "replace" as const };
+                if (pendingImport.target.week > 0) {
+                  setPendingImport({ ...next, step: "propagate" });
+                } else {
+                  void executeImport(pendingImport.target, pendingImport.workout, "replace", false);
+                }
+              }}
+              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
+            >
+              Ersätt befintliga övningar
+            </button>
+            <button
+              onClick={() => {
+                const next = { ...pendingImport, mode: "append" as const };
+                if (pendingImport.target.week > 0) {
+                  setPendingImport({ ...next, step: "propagate" });
+                } else {
+                  void executeImport(pendingImport.target, pendingImport.workout, "append", false);
+                }
+              }}
+              className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
+            >
+              Lägg till efter befintliga
+            </button>
+            <button
+              onClick={() => setPendingImport(null)}
+              className="w-full py-2 text-muted-foreground text-xs hover:text-foreground"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {pendingImport && pendingImport.step === "propagate" && pendingImport.mode && (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setPendingImport(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-base">Tillämpa på alla {pendingImport.target.day}-pass?</h3>
+          <p className="text-sm text-muted-foreground">
+            Vill du tillämpa denna ändring på alla framtida {pendingImport.target.day}-pass i planen, eller bara på det aktuella passet?
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => void executeImport(pendingImport.target, pendingImport.workout, pendingImport.mode!, true)}
+              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
+            >
+              Alla framtida {pendingImport.target.day}-pass
+            </button>
+            <button
+              onClick={() => void executeImport(pendingImport.target, pendingImport.workout, pendingImport.mode!, false)}
+              className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
+            >
+              Bara denna vecka
+            </button>
+            <button
+              onClick={() => setPendingImport(null)}
+              className="w-full py-2 text-muted-foreground text-xs hover:text-foreground"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {showWeightPrompt && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/60" onClick={() => setShowWeightPrompt(false)} />
