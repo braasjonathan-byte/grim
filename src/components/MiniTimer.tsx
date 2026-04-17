@@ -29,7 +29,12 @@ const MiniTimer = () => {
     return (
       <div
         className="fixed left-0 right-0 z-50 flex items-center justify-center gap-3 px-4 py-1.5 bg-card/95 backdrop-blur border-t border-primary/20 cursor-pointer"
-        style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px))` }}
+        style={{
+          bottom: `calc(60px + env(safe-area-inset-bottom, 0px))`,
+          transform: "translate3d(0,0,0)",
+          WebkitTransform: "translate3d(0,0,0)",
+          willChange: "transform",
+        }}
         onClick={() => setExpanded(true)}
       >
         <button
