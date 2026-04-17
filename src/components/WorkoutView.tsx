@@ -542,6 +542,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Import workout dialog
   const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
+  // Pending import that needs user choice (replace vs append, then propagation)
+  const [pendingImport, setPendingImport] = useState<{
+    target: { planId: string; week: number; day: string };
+    workout: { name: string; details: string; tempo: string | null };
+    step: "conflict" | "propagate";
+    mode?: "replace" | "append";
+  } | null>(null);
 
   // Save workout state
   const [saveWorkoutSource, setSaveWorkoutSource] = useState<{ details: string; tempo: string | null; defaultName: string } | null>(null);
@@ -1820,6 +1827,98 @@ const estimateCalories = (
     setCopyToDateConflict(null);
     setCopyToDateSaving(false);
     fetchData();
+  };
+
+  // Handle import of a workout into a plan slot. If existing exercises and target is a real plan,
+  // ask whether to replace or append. Then if it's a recurring plan (week>0), ask about propagation.
+  const handleImportWorkout = (workout: { name: string; details: string; tempo: string | null }) => {
+    const target = importWorkoutTarget;
+    if (!target) return;
+
+    if (target.planId === "__single__" || target.planId === "__new__") {
+      void executeImport(target, workout, "replace", false);
+      return;
+    }
+
+    const existingPlan = plans.find(p => p.id === target.planId);
+    const hasExisting = !!(existingPlan && existingPlan.details && existingPlan.details.trim() !== "");
+
+    if (!hasExisting) {
+      if (target.week > 0) {
+        setImportWorkoutTarget(null);
+        setPendingImport({ target, workout, step: "propagate", mode: "replace" });
+      } else {
+        void executeImport(target, workout, "replace", false);
+      }
+      return;
+    }
+
+    setImportWorkoutTarget(null);
+    setPendingImport({ target, workout, step: "conflict" });
+  };
+
+  const executeImport = async (
+    target: { planId: string; week: number; day: string },
+    workout: { name: string; details: string; tempo: string | null },
+    mode: "replace" | "append",
+    propagate: boolean,
+  ) => {
+    const isCirc = !!(workout.tempo && workout.tempo.startsWith("circuit:"));
+
+    if (target.planId === "__single__") {
+      const dateStr = format(singleDate, "yyyy-MM-dd");
+      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+      await supabase.from("workout_plans").insert({
+        user_id: userId, week: 0, day: uniqueKey,
+        session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
+      });
+      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false);
+      setImportWorkoutTarget(null); setPendingImport(null);
+      toast.success(`"${workout.name}" importerat!`);
+      fetchData();
+      return;
+    }
+
+    if (target.planId === "__new__") {
+      const { data: inserted } = await supabase.from("workout_plans").insert({
+        user_id: userId, week: target.week, day: target.day,
+        session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
+      }).select().single();
+      if (inserted) setPlans(prev => [...prev, inserted as any]);
+      setImportWorkoutTarget(null); setPendingImport(null);
+      toast.success(`"${workout.name}" importerat!`);
+      fetchData();
+      return;
+    }
+
+    const currentPlan = plans.find(p => p.id === target.planId);
+    const targetPlans: typeof plans = [];
+    if (currentPlan) targetPlans.push(currentPlan);
+    if (propagate && currentPlan && target.week > 0) {
+      const matchingFuture = plans.filter(p => p.week > target.week && p.day === target.day);
+      targetPlans.push(...matchingFuture);
+    }
+
+    for (const p of targetPlans) {
+      const newDetails = mode === "append" && p.details.trim()
+        ? `${p.details}\n${workout.details}`
+        : workout.details;
+      const newSessionName = mode === "append" && p.session_name.trim()
+        ? p.session_name
+        : workout.name;
+      await supabase.from("workout_plans").update({
+        session_name: newSessionName,
+        details: newDetails,
+        tempo: workout.tempo || null,
+        is_circuit: isCirc,
+      }).eq("id", p.id);
+      setPlans(prev => prev.map(pp => pp.id === p.id ? { ...pp, session_name: newSessionName, details: newDetails, tempo: workout.tempo || null, is_circuit: isCirc } : pp));
+    }
+
+    setImportWorkoutTarget(null);
+    setPendingImport(null);
+    toast.success(propagate ? `"${workout.name}" importerat på ${targetPlans.length} pass!` : `"${workout.name}" importerat!`);
+    triggerSave();
   };
 
   const deleteSingleWorkout = async (plan: PlanDay) => {
@@ -4099,13 +4198,7 @@ const estimateCalories = (
                   {myWorkouts.map((sw) => (
                     <button
                       key={sw.id}
-                      onClick={async () => {
-                        const dateStr = format(singleDate, "yyyy-MM-dd");
-                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) });
-                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                        toast.success(`"${sw.name}" importerat!`); fetchData();
-                      }}
+                      onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
                       className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
                     >
                       <p className="text-xs font-semibold text-foreground">{sw.name}</p>
@@ -4125,13 +4218,7 @@ const estimateCalories = (
                   {publicWorkouts.map((sw) => (
                     <button
                       key={sw.id}
-                      onClick={async () => {
-                        const dateStr = format(singleDate, "yyyy-MM-dd");
-                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) });
-                         setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                        toast.success(`"${sw.name}" importerat!`); fetchData();
-                      }}
+                      onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
                       className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
                     >
                       <p className="text-xs font-semibold text-foreground">{sw.name}</p>
@@ -4150,17 +4237,9 @@ const estimateCalories = (
                   <button
                     key={wi}
                     disabled={isLocked}
-                    onClick={async () => {
+                    onClick={() => {
                       if (isLocked) return;
-                      const dateStr = format(singleDate, "yyyy-MM-dd");
-                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                      await supabase.from("workout_plans").insert({
-                        user_id: userId, week: 0, day: uniqueKey,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
-                      });
-                      setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`); fetchData();
+                      handleImportWorkout({ name: w.name, details: w.details, tempo: w.tempo });
                     }}
                     className={`w-full text-left bg-secondary/50 rounded-lg px-3 py-2 transition-colors flex items-center justify-between ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"}`}
                   >
@@ -7266,25 +7345,7 @@ const estimateCalories = (
                 {myWorkouts.map((sw) => (
                   <button
                     key={sw.id}
-                    onClick={async () => {
-                      const target = importWorkoutTarget!;
-                      if (target.planId === "__single__") {
-                        const dateStr = format(singleDate, "yyyy-MM-dd");
-                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) });
-                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                        toast.success(`"${sw.name}" importerat!`); fetchData();
-                      } else if (target.planId === "__new__") {
-                        const { data: inserted } = await supabase.from("workout_plans").insert({ user_id: userId, week: target.week, day: target.day, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) }).select().single();
-                        if (inserted) setPlans(prev => [...prev, inserted as any]);
-                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); fetchData();
-                      } else {
-                        const isCirc = !!(sw.tempo && sw.tempo.startsWith("circuit:"));
-                        await supabase.from("workout_plans").update({ session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: isCirc }).eq("id", target.planId);
-                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: isCirc } : p));
-                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); triggerSave();
-                      }
-                    }}
+                    onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
                     className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
                   >
                     <p className="text-xs font-semibold text-foreground">{sw.name}</p>
@@ -7304,25 +7365,7 @@ const estimateCalories = (
                 {publicWorkouts.map((sw) => (
                   <button
                     key={sw.id}
-                    onClick={async () => {
-                      const target = importWorkoutTarget!;
-                      if (target.planId === "__single__") {
-                        const dateStr = format(singleDate, "yyyy-MM-dd");
-                        const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                        await supabase.from("workout_plans").insert({ user_id: userId, week: 0, day: uniqueKey, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) });
-                        setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false); setImportWorkoutTarget(null);
-                        toast.success(`"${sw.name}" importerat!`); fetchData();
-                      } else if (target.planId === "__new__") {
-                        const { data: inserted } = await supabase.from("workout_plans").insert({ user_id: userId, week: target.week, day: target.day, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: !!(sw.tempo && sw.tempo.startsWith("circuit:")) }).select().single();
-                        if (inserted) setPlans(prev => [...prev, inserted as any]);
-                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); fetchData();
-                      } else {
-                        const isCirc2 = !!(sw.tempo && sw.tempo.startsWith("circuit:"));
-                        await supabase.from("workout_plans").update({ session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: isCirc2 }).eq("id", target.planId);
-                        setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: sw.name, details: sw.details, tempo: sw.tempo || null, is_circuit: isCirc2 } : p));
-                        setImportWorkoutTarget(null); toast.success(`"${sw.name}" importerat!`); triggerSave();
-                      }
-                    }}
+                    onClick={() => handleImportWorkout({ name: sw.name, details: sw.details, tempo: sw.tempo })}
                     className="w-full text-left bg-secondary/50 hover:bg-secondary rounded-lg px-3 py-2 transition-colors"
                   >
                     <p className="text-xs font-semibold text-foreground">{sw.name}</p>
@@ -7341,47 +7384,9 @@ const estimateCalories = (
                 <button
                   key={wi}
                   disabled={isLocked}
-                  onClick={async () => {
+                  onClick={() => {
                     if (isLocked) return;
-                    const target = importWorkoutTarget;
-                    if (target.planId === "__single__") {
-                      const dateStr = format(singleDate, "yyyy-MM-dd");
-                      const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
-                      await supabase.from("workout_plans").insert({
-                        user_id: userId, week: 0, day: uniqueKey,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
-                      });
-                      setSingleName("");
-                      setSingleDate(new Date());
-                      setShowAddSingle(false);
-                      setShowCopyPicker(false);
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      fetchData();
-                    } else if (target.planId === "__new__") {
-                      const { data: inserted } = await supabase.from("workout_plans").insert({
-                        user_id: userId, week: target.week, day: target.day,
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: !!(w.tempo && w.tempo.startsWith("circuit:")),
-                      }).select().single();
-                      if (inserted) {
-                        setPlans(prev => [...prev, inserted as any]);
-                      }
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      fetchData();
-                    } else {
-                      const isCirc3 = !!(w.tempo && w.tempo.startsWith("circuit:"));
-                      await supabase.from("workout_plans").update({
-                        session_name: w.name, details: w.details, tempo: w.tempo || null,
-                        is_circuit: isCirc3,
-                      }).eq("id", target.planId);
-                      setPlans(prev => prev.map(p => p.id === target.planId ? { ...p, session_name: w.name, details: w.details, tempo: w.tempo || null, is_circuit: isCirc3 } : p));
-                      setImportWorkoutTarget(null);
-                      toast.success(`"${w.name}" importerat!`);
-                      triggerSave();
-                    }
+                    handleImportWorkout({ name: w.name, details: w.details, tempo: w.tempo });
                   }}
                   className={`w-full text-left bg-secondary/50 rounded-lg px-3 py-2 transition-colors flex items-center justify-between ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-secondary"}`}
                 >
@@ -7404,7 +7409,83 @@ const estimateCalories = (
         </div>
       </div>
     )}
-    {/* Weight prompt dialog */}
+    {/* Pending import: ask Replace vs Append, then propagation */}
+    {pendingImport && pendingImport.step === "conflict" && (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setPendingImport(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-base">Detta pass har redan övningar</h3>
+          <p className="text-sm text-muted-foreground">
+            Vill du <span className="font-semibold text-foreground">ersätta</span> de befintliga övningarna med "{pendingImport.workout.name}", eller <span className="font-semibold text-foreground">lägga till</span> övningarna efter de befintliga?
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => {
+                const next = { ...pendingImport, mode: "replace" as const };
+                if (pendingImport.target.week > 0) {
+                  setPendingImport({ ...next, step: "propagate" });
+                } else {
+                  void executeImport(pendingImport.target, pendingImport.workout, "replace", false);
+                }
+              }}
+              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
+            >
+              Ersätt befintliga övningar
+            </button>
+            <button
+              onClick={() => {
+                const next = { ...pendingImport, mode: "append" as const };
+                if (pendingImport.target.week > 0) {
+                  setPendingImport({ ...next, step: "propagate" });
+                } else {
+                  void executeImport(pendingImport.target, pendingImport.workout, "append", false);
+                }
+              }}
+              className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
+            >
+              Lägg till efter befintliga
+            </button>
+            <button
+              onClick={() => setPendingImport(null)}
+              className="w-full py-2 text-muted-foreground text-xs hover:text-foreground"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {pendingImport && pendingImport.step === "propagate" && pendingImport.mode && (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setPendingImport(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-base">Tillämpa på alla {pendingImport.target.day}-pass?</h3>
+          <p className="text-sm text-muted-foreground">
+            Vill du tillämpa denna ändring på alla framtida {pendingImport.target.day}-pass i planen, eller bara på det aktuella passet?
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => void executeImport(pendingImport.target, pendingImport.workout, pendingImport.mode!, true)}
+              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
+            >
+              Alla framtida {pendingImport.target.day}-pass
+            </button>
+            <button
+              onClick={() => void executeImport(pendingImport.target, pendingImport.workout, pendingImport.mode!, false)}
+              className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
+            >
+              Bara denna vecka
+            </button>
+            <button
+              onClick={() => setPendingImport(null)}
+              className="w-full py-2 text-muted-foreground text-xs hover:text-foreground"
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {showWeightPrompt && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/60" onClick={() => setShowWeightPrompt(false)} />
