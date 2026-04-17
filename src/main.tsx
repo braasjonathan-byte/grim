@@ -137,4 +137,23 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// iOS Safari fix: position:fixed elements drift off the bottom after the
+// soft keyboard closes or after viewport resizes. Nudge layout to re-sync.
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+if (isIOS) {
+  const nudgeFixedElements = () => {
+    window.scrollTo(window.scrollX, window.scrollY);
+    document.body.style.minHeight = "";
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    document.body.offsetHeight;
+    document.body.style.minHeight = "100vh";
+  };
+  window.addEventListener("orientationchange", () => setTimeout(nudgeFixedElements, 300));
+  window.addEventListener("resize", () => setTimeout(nudgeFixedElements, 100));
+  window.addEventListener("focusout", () => setTimeout(nudgeFixedElements, 100));
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") setTimeout(nudgeFixedElements, 100);
+  });
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
