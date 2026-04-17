@@ -848,15 +848,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   const skipDayResetRef = useRef(false);
   const prevWeekRef = useRef(currentWeek);
-  // Reset active day index when week changes — navigate to today's day
+  const didInitialDayPickRef = useRef(false);
+  // Reset active day index when week changes — navigate to today's day.
+  // Also runs once on initial mount after plans load, so the app opens on today.
   useEffect(() => {
     if (skipDayResetRef.current) {
       skipDayResetRef.current = false;
       return;
     }
-    // Only reset day index when the week actually changed, not when plans update
-    if (prevWeekRef.current === currentWeek) return;
+    const weekChanged = prevWeekRef.current !== currentWeek;
+    const isInitialPick = !didInitialDayPickRef.current && plans.length > 0;
+    if (!weekChanged && !isInitialPick) return;
     prevWeekRef.current = currentWeek;
+    if (isInitialPick) didInitialDayPickRef.current = true;
     const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
     const todayName = todayDayNames[new Date().getDay()];
     const currentWeekDays = plans
@@ -867,6 +871,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setActiveDayIndex(newIdx);
     setExpandedDay(null);
   }, [currentWeek, plans]);
+
 
   // Auto-expand if the currently shown day has only one session
   useEffect(() => {
