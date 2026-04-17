@@ -3619,67 +3619,76 @@ const estimateCalories = (
                       );
                     })()}
 
-                    {/* Reps/sets/weight dialog */}
-                    {weightDialog && weightDialog.planId === plan.id &&
-                  <div className="bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30">
-                        <h4 className="text-sm font-bold flex items-center gap-1.5">
-                          <Dumbbell className="w-4 h-4 text-primary" />
-                          {weightDialog.exerciseName}
-                        </h4>
-                        {weightDialog.lastWeight &&
-                    <div className="text-xs text-muted-foreground">
-                            Senast: <span className="font-mono text-foreground">{weightDialog.lastWeight}</span>
+                    {/* Reps/sets/weight dialog — modal when replacing, inline when adding */}
+                    {weightDialog && weightDialog.planId === plan.id && (() => {
+                      const isReplaceMode = !!(replaceExerciseTarget && replaceExerciseTarget.planId === plan.id);
+                      const dialogContent = (
+                        <div className={isReplaceMode
+                          ? "bg-background rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30 w-full max-w-sm shadow-2xl"
+                          : "bg-secondary/50 rounded-lg p-4 space-y-3 animate-fade-in border border-primary/30"}>
+                          <h4 className="text-sm font-bold flex items-center gap-1.5">
+                            <Dumbbell className="w-4 h-4 text-primary" />
+                            {weightDialog.exerciseName}
+                          </h4>
+                          {weightDialog.lastWeight &&
+                            <div className="text-xs text-muted-foreground">
+                              Senast: <span className="font-mono text-foreground">{weightDialog.lastWeight}</span>
+                            </div>
+                          }
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Set</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={setsInput}
+                                onChange={(e) => setSetsInput(e.target.value)}
+                                className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={repsInput}
+                                onChange={(e) => setRepsInput(e.target.value)}
+                                className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vikt (kg)</label>
+                              <input
+                                type="text"
+                                value={weightInput}
+                                onChange={(e) => setWeightInput(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && addExerciseWithWeight(weightInput.trim() || null)}
+                                placeholder="—"
+                                className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            </div>
                           </div>
-                    }
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Set</label>
-                            <input
-                          type="number"
-                          min="1"
-                          value={setsInput}
-                          onChange={(e) => setSetsInput(e.target.value)}
-                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold" />
-
-                          </div>
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
-                            <input
-                          type="number"
-                          min="1"
-                          value={repsInput}
-                          onChange={(e) => setRepsInput(e.target.value)}
-                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold" />
-
-                          </div>
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vikt (kg)</label>
-                            <input
-                          type="text"
-                          value={weightInput}
-                          onChange={(e) => setWeightInput(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && addExerciseWithWeight(weightInput.trim() || null)}
-                          placeholder="—"
-                          className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => addExerciseWithWeight(weightInput.trim() || null)}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
+                              <Plus className="w-3.5 h-3.5" /> {isReplaceMode ? "Byt ut" : "Lägg till"}
+                            </button>
+                            <button
+                              onClick={() => { setWeightDialog(null); setWeightInput(""); setRepsInput("10"); setSetsInput("3"); setRepsUnit("reps"); setReplaceExerciseTarget(null); }}
+                              className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                              Avbryt
+                            </button>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                        onClick={() => addExerciseWithWeight(weightInput.trim() || null)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
-
-                            <Plus className="w-3.5 h-3.5" /> Lägg till
-                          </button>
-                          <button
-                        onClick={() => {setWeightDialog(null);setWeightInput("");setRepsInput("10");setSetsInput("3");setRepsUnit("reps");}}
-                        className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
-
-                            Avbryt
-                          </button>
-                        </div>
-                      </div>
-                  }
+                      );
+                      if (isReplaceMode) {
+                        return (
+                          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setWeightDialog(null); setWeightInput(""); setRepsInput("10"); setSetsInput("3"); setRepsUnit("reps"); setReplaceExerciseTarget(null); }} />
+                            <div className="relative w-full max-w-sm">{dialogContent}</div>
+                          </div>
+                        );
+                      }
+                      return dialogContent;
+                    })()}
 
                     {/* Conditioning exercise dialog */}
                     {conditioningDialog && conditioningDialog.planId === plan.id &&
