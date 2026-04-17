@@ -7066,8 +7066,8 @@ const estimateCalories = (
                   <button
                       onClick={async () => {
                         if (!confirm(`Rensa alla övningar i "${plan.session_name}"?`)) return;
-                        await supabase.from("workout_plans").update({ details: "" }).eq("id", plan.id);
-                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: "" } : p));
+                        await supabase.from("workout_plans").update({ details: "", session_name: "" }).eq("id", plan.id);
+                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: "", session_name: "" } : p));
                         triggerSave();
                         toast.success("Passet rensat");
                       }}
