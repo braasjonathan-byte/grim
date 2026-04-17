@@ -7672,7 +7672,8 @@ const estimateCalories = (
                       // Ensure setdata exists
                       const setDataKey = `__setdata__${pName}`;
                       if (!updated[setDataKey]) {
-                        const defReps = partStructMatch ? partStructMatch[3] : "10";
+                        const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                        const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
                         const defKg = partStructMatch && partStructMatch[4] ? partStructMatch[4] : "";
                         const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
                         updated[setDataKey] = JSON.stringify(initData);
