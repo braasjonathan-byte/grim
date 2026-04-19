@@ -1670,18 +1670,28 @@ const estimateCalories = (
     setSingleCircuitRounds("3");
     setSingleCircuitRest("30");
 
-    // Copy logged weights/reps from the source workout's completion
+    // Copy logged weights/reps from the source workout's completion,
+    // but strip per-set "checked" flags so the new pass starts unmarked.
     if (copyFrom) {
       const sourceKey = `${copyFrom.week}-${copyFrom.day}`;
       const sourceCompletion = completions[sourceKey];
       if (sourceCompletion?.logged_weights && Object.keys(sourceCompletion.logged_weights).length > 0) {
+        const cleanedWeights: Record<string, any> = {};
+        for (const [k, v] of Object.entries(sourceCompletion.logged_weights as Record<string, any>)) {
+          if (v && typeof v === "object") {
+            const { checked, done, completed, ...rest } = v as any;
+            cleanedWeights[k] = rest;
+          } else {
+            cleanedWeights[k] = v;
+          }
+        }
         await supabase.from("workout_completions").upsert({
           user_id: userId,
           week: 0,
           day: uniqueKey,
           done: false,
           skipped: false,
-          logged_weights: sourceCompletion.logged_weights,
+          logged_weights: cleanedWeights,
         }, { onConflict: "user_id,week,day" });
       }
     }
