@@ -1840,6 +1840,8 @@ const estimateCalories = (
           const target = existingOnDate[0];
           const combined = [target.details.trim(), details.trim()].filter(Boolean).join("\n");
           await supabase.from("workout_plans").update({ details: combined }).eq("id", target.id);
+          // Clear any completion marker on the merged target
+          await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", 0).eq("day", target.day);
           toast.success("Övningar tillagda!");
           setCopyToDateSource(null);
           setCopyToDateConflict(null);
