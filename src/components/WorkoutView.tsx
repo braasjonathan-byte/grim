@@ -1761,12 +1761,13 @@ const estimateCalories = (
       // --- Plan mode: insert into plan week/day ---
       const existingOnDay = plans.filter(p => p.week === planTarget.week && p.day === planTarget.day);
 
+      // Always clear any existing completion (done/skipped) on the target day when pasting
+      await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", planTarget.week).eq("day", planTarget.day);
+
       if (conflictMode === "replace") {
         // Clear existing details on that day
         for (const p of existingOnDay) {
           await supabase.from("workout_plans").update({ details, session_name: copyToDateSource.session_name }).eq("id", p.id);
-          // Clear completion
-          await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", planTarget.week).eq("day", planTarget.day);
         }
         if (existingOnDay.length === 0) {
           await supabase.from("workout_plans").insert({
@@ -1839,6 +1840,8 @@ const estimateCalories = (
           const target = existingOnDate[0];
           const combined = [target.details.trim(), details.trim()].filter(Boolean).join("\n");
           await supabase.from("workout_plans").update({ details: combined }).eq("id", target.id);
+          // Clear any completion marker on the merged target
+          await supabase.from("workout_completions").delete().eq("user_id", userId).eq("week", 0).eq("day", target.day);
           toast.success("Övningar tillagda!");
           setCopyToDateSource(null);
           setCopyToDateConflict(null);
