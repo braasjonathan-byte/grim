@@ -1428,29 +1428,12 @@ const estimateCalories = (
       updated[setDataKey] = JSON.stringify(initData);
     }
 
-    // Check if all sets across all exercises in this workout are now done
+    // Do NOT auto-complete the whole workout when all sets are checked.
+    // The user must explicitly mark the workout as done.
     const plan = plans.find(p => p.week === week && p.day === day);
-    let allExercisesDone = false;
-    if (plan && plan.details) {
-      const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-      allExercisesDone = parts.every(part => {
-        // Skip conditioning exercises
-        const { name: pName, weight: pWeight } = parseExerciseWeight(part);
-        const isCondFormat = pWeight && (pWeight.includes("min") || pWeight.includes("/km") || /\d+\s*km/i.test(pWeight));
-        if (isCondFormat) return true; // conditioning doesn't need set tracking
-        
-        const { clean: cp } = extractRpe(pWeight || '');
-        const sm = cp?.match(/^(\d+)[×x](\d+)/i);
-        const fbm = !sm && cp ? cp.match(/(\d+)\s*[×x]\s*\S+/) : null;
-        const sc = sm ? parseInt(sm[1]) : fbm ? parseInt(fbm[1]) : 1;
-        
-        const setsKey = `__sets__${pName}`;
-        const setsVal = setsKey === `__sets__${exerciseName}` ? setsStr : (updated[setsKey] as string || "");
-        return setsVal.length >= sc && !setsVal.includes("0") && setsVal.split("").filter(c => c === "1").length >= sc;
-      });
-    }
+    const allExercisesDone = false;
 
-    const newDone = allExercisesDone || (completions[k]?.done || false);
+    const newDone = completions[k]?.done || false;
 
     setCompletions(prev => ({
       ...prev,
