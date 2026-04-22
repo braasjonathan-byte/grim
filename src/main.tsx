@@ -156,4 +156,14 @@ if (isIOS) {
   });
 }
 
+// Lock screen orientation to portrait when supported (PWA / installed apps)
+try {
+  const orientation = (screen as any).orientation;
+  if (orientation && typeof orientation.lock === "function") {
+    orientation.lock("portrait").catch(() => {});
+  }
+} catch {
+  /* unsupported */
+}
+
 createRoot(document.getElementById("root")!).render(<App />);

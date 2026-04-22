@@ -4,6 +4,15 @@ const config: CapacitorConfig = {
   appId: 'se.grim.app',
   appName: 'Grim',
   webDir: 'dist',
+  ios: {
+    // Lock to portrait on iOS
+    contentInset: 'always',
+  },
+  plugins: {
+    ScreenOrientation: {
+      lockOrientation: 'portrait',
+    },
+  },
 };
 
 export default config;
