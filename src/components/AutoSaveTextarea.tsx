@@ -14,7 +14,13 @@ const AutoSaveTextarea = ({ initialValue, onSave, debounceMs = 800, ...props }: 
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
+  // Only sync from external initialValue when it's a genuinely new external value.
+  // Avoid overwriting what the user is currently typing or pending debounced saves.
   useEffect(() => {
+    if (initialValue === valueRef.current) return;
+    if (initialValue === lastSaved.current) return;
+    const hasPendingEdit = valueRef.current !== lastSaved.current;
+    if (hasPendingEdit) return;
     setValue(initialValue);
     valueRef.current = initialValue;
     lastSaved.current = initialValue;

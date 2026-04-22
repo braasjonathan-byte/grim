@@ -18,7 +18,15 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, ...props }: Aut
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
+  // Sync from external initialValue ONLY when it represents a genuinely new value
+  // (not a stale echo of what we already saved or what the user is currently typing).
+  // This prevents the input from "jumping back" when a parent re-render happens
+  // mid-typing or while a debounced save is still pending.
   useEffect(() => {
+    if (initialValue === valueRef.current) return;        // already in sync
+    if (initialValue === lastSaved.current) return;       // echo of our own last save
+    const hasPendingEdit = valueRef.current !== lastSaved.current;
+    if (hasPendingEdit) return;                            // user is typing – do not clobber
     setValue(initialValue);
     valueRef.current = initialValue;
     lastSaved.current = initialValue;
