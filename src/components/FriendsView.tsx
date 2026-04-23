@@ -260,6 +260,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       }
     }
 
+    accepted.sort((a, b) =>
+      (a.profile.nickname || "").localeCompare(b.profile.nickname || "", "sv", { sensitivity: "base" })
+    );
+
     setFriends(accepted);
     setPendingRequests(pending);
   };
