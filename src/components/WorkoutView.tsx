@@ -994,8 +994,10 @@ const estimateCalories = (
   age: number | null
 ): number => {
   let totalMinutes = 0;
+  let runDistanceKm = 0; // accumulated running/jogging distance from logged cond data
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
   const condRegex = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i;
+  const runRegex = /löpning|jogg|spring|run/i;
 
   // Collect conditioning time from __cond__ logged data (stored in minutes)
   const condNamesWithTime = new Set<number>();
@@ -1010,6 +1012,11 @@ const estimateCalories = (
             // Extract line index from key if possible
             const idxMatch = k.match(/__cond__(\d+)$/);
             if (idxMatch) condNamesWithTime.add(parseInt(idxMatch[1]));
+          }
+          // Capture distance for running activities (Strava-aligned kcal calc)
+          const dist = parseFloat(data?.dist);
+          if (dist > 0 && runRegex.test(k)) {
+            runDistanceKm += dist;
           }
         } catch {}
       }
