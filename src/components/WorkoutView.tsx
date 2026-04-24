@@ -329,15 +329,22 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
   if (!loggedWeights) return null;
 
   const cleanedWeights: Record<string, any> = {};
+  const copiedExerciseNames: string[] = [];
 
   for (const [key, value] of Object.entries(loggedWeights)) {
     if (
       key.startsWith("__sets__") ||
       key.startsWith("__wod_rounds_done_") ||
       key.startsWith("__timer_started_") ||
-      key.startsWith("__timer_elapsed_")
+      key.startsWith("__timer_elapsed_") ||
+      key.startsWith("__copied_ex__")
     ) {
       continue;
+    }
+
+    if (key.startsWith("__setdata__")) {
+      const exName = key.substring("__setdata__".length);
+      if (exName) copiedExerciseNames.push(exName);
     }
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -347,6 +354,11 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
     }
 
     cleanedWeights[key] = value;
+  }
+
+  // Mark each copied exercise so UI can show a progression-reminder note
+  for (const exName of copiedExerciseNames) {
+    cleanedWeights[`__copied_ex__${exName}`] = "1";
   }
 
   return Object.keys(cleanedWeights).length > 0 ? cleanedWeights : null;
@@ -1529,16 +1541,19 @@ const estimateCalories = (
       const newSetsStr = currentSetsStr + "0";
       const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
       const updated = { ...existing, [`__sets__${partName}`]: newSetsStr };
+      delete updated[`__copied_ex__${partName}`];
       setCompletions(prev => ({
         ...prev,
         [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
       }));
+      await safeUpsertCompletion(week, day, { logged_weights: updated });
     } else if (delta < 0 && currentSetsStr.length > 1) {
       // Remove last set
       const newSetsStr = currentSetsStr.slice(0, -1);
       const newSetData = currentSetData.slice(0, -1);
       const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
       const updated = { ...existing, [`__sets__${partName}`]: newSetsStr, [`__setdata__${partName}`]: JSON.stringify(newSetData) };
+      delete updated[`__copied_ex__${partName}`];
       setCompletions(prev => ({
         ...prev,
         [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
@@ -1567,10 +1582,22 @@ const estimateCalories = (
     const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: defaultKg, reps: defaultReps });
     data[setIndex] = { ...data[setIndex], [field]: value };
 
-    await updateCompletionWeights(week, day, (existing) => ({
-      ...existing,
-      [`__setdata__${exerciseName}`]: JSON.stringify(data),
-    }));
+    await updateCompletionWeights(week, day, (existing) => {
+      const next = {
+        ...existing,
+        [`__setdata__${exerciseName}`]: JSON.stringify(data),
+      };
+      // User adjusted kg/reps -> clear progression reminder for this exercise
+      delete next[`__copied_ex__${exerciseName}`];
+      return next;
+    });
+  };
+
+  // Check if exercise was copied from a previous workout and not yet adjusted
+  const isCopiedExercise = (weekDayKey: string, exerciseName: string): boolean => {
+    const comp = completions[weekDayKey];
+    const weights = comp?.logged_weights as Record<string, any> | null;
+    return weights?.[`__copied_ex__${exerciseName}`] === "1";
   };
 
   // Extract RPE from exercise text
@@ -3518,6 +3545,15 @@ const estimateCalories = (
                                    </button>
                                 </div>
                               </div>
+                              {/* Copied-from-previous progression reminder */}
+                              {isCopiedExercise(key, name) && (
+                                <div className="pl-1 mb-1 border-l-2 border-primary/40 bg-primary/5 px-2 py-1.5 rounded-r">
+                                  <p className="text-[10px] text-foreground flex items-start gap-1">
+                                    <span className="text-primary">💡</span>
+                                    <span>Vikt/reps kopierade från förra passet. <span className="font-semibold">Justera själv</span> för att säkerställa progression.</span>
+                                  </p>
+                                </div>
+                              )}
                               {/* Last logged weight note for single workouts */}
                               {(() => {
                                 const lastW = findLastWeight(name);
@@ -6914,6 +6950,15 @@ const estimateCalories = (
                                     </DropdownMenu>
                                 </div>
                               </div>
+                              {/* Copied-from-previous progression reminder */}
+                              {isCopiedExercise(key, partName) && (
+                                <div className="pl-1 border-l-2 border-primary/40 bg-primary/5 px-2 py-1.5 rounded-r">
+                                  <p className="text-[10px] text-foreground flex items-start gap-1">
+                                    <span className="text-primary">💡</span>
+                                    <span>Vikt/reps kopierade från förra passet. <span className="font-semibold">Justera själv</span> för att säkerställa progression.</span>
+                                  </p>
+                                </div>
+                              )}
                               {/* Last logged weight note */}
                               {(() => {
                                 const targetReps = partReps ? parseInt(partReps) : undefined;
