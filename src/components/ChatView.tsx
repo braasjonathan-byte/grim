@@ -342,6 +342,47 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
           className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1"
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
+          {/* Grim — official announcements (always pinned at top, for everyone) */}
+          <button
+            onClick={() => {
+              setSelectedFriend({ user_id: GRIM_ANNOUNCEMENT_ID, nickname: "Grim", avatar_url: grimIcon, isGrimAnnouncement: true });
+              if (announcementPreview) {
+                localStorage.setItem(ANNOUNCEMENTS_LAST_READ_KEY, announcementPreview.created_at);
+              }
+              setAnnouncementUnread(0);
+            }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left border border-primary/20 bg-primary/5 mb-2"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src={grimIcon} alt="Grim" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm font-semibold truncate">Grim</span>
+                  <Megaphone className="w-3 h-3 text-primary flex-shrink-0" />
+                </div>
+                {announcementPreview && (
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                    {formatTime(announcementPreview.created_at)}
+                  </span>
+                )}
+              </div>
+              {announcementPreview ? (
+                <p className={`text-xs truncate ${announcementUnread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                  📣 {announcementPreview.title}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Officiella meddelanden från Grim-teamet</p>
+              )}
+            </div>
+            {announcementUnread > 0 && (
+              <span className="w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
+                {announcementUnread > 9 ? '9+' : announcementUnread}
+              </span>
+            )}
+          </button>
+
           {/* Grim support for supporter users */}
           {isPremium && !isAdmin && (
             <button
