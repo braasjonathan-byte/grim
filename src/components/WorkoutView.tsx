@@ -1541,16 +1541,19 @@ const estimateCalories = (
       const newSetsStr = currentSetsStr + "0";
       const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
       const updated = { ...existing, [`__sets__${partName}`]: newSetsStr };
+      delete updated[`__copied_ex__${partName}`];
       setCompletions(prev => ({
         ...prev,
         [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
       }));
+      await safeUpsertCompletion(week, day, { logged_weights: updated });
     } else if (delta < 0 && currentSetsStr.length > 1) {
       // Remove last set
       const newSetsStr = currentSetsStr.slice(0, -1);
       const newSetData = currentSetData.slice(0, -1);
       const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
       const updated = { ...existing, [`__sets__${partName}`]: newSetsStr, [`__setdata__${partName}`]: JSON.stringify(newSetData) };
+      delete updated[`__copied_ex__${partName}`];
       setCompletions(prev => ({
         ...prev,
         [k]: { ...prev[k], week, day, done: prev[k]?.done || false, skipped: prev[k]?.skipped || false, user_comment: prev[k]?.user_comment || "", logged_weights: updated }
