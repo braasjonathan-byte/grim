@@ -7666,6 +7666,17 @@ const estimateCalories = (
                 <div className="bg-card border border-primary/30 rounded-lg p-4 mt-2 space-y-3 animate-fade-in">
                   <h3 className="text-sm font-semibold">Nytt pass samma dag</h3>
 
+                  <button
+                    onClick={() => {
+                      setAddExtraDay(null);
+                      setShowExtraCopyPicker(false);
+                      setImportWorkoutTarget({ planId: "__new__", week: plan.week, day: plan.day });
+                    }}
+                    className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Download className="w-3 h-3" /> Importera färdigt pass
+                  </button>
+
                   {previousSessions.length > 0 && (
                     <div className="space-y-2">
                       <button
