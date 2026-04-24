@@ -226,6 +226,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
   const [planDetailsMap, setPlanDetailsMap] = useState<Map<string, string>>(new Map());
+  const [plansPerDay, setPlansPerDay] = useState<Map<string, number>>(new Map());
   const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
   const [challengeCount, setChallengeCount] = useState(0);
   const [challengeCounts, setChallengeCounts] = useState<Record<SummaryPeriod, number>>({ week: 0, month: 0, year: 0, all: 0 });
