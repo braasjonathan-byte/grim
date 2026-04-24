@@ -994,8 +994,10 @@ const estimateCalories = (
   age: number | null
 ): number => {
   let totalMinutes = 0;
+  let runDistanceKm = 0; // accumulated running/jogging distance from logged cond data
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
   const condRegex = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i;
+  const runRegex = /löpning|jogg|spring|run/i;
 
   // Collect conditioning time from __cond__ logged data (stored in minutes)
   const condNamesWithTime = new Set<number>();
@@ -1010,6 +1012,11 @@ const estimateCalories = (
             // Extract line index from key if possible
             const idxMatch = k.match(/__cond__(\d+)$/);
             if (idxMatch) condNamesWithTime.add(parseInt(idxMatch[1]));
+          }
+          // Capture distance for running activities (Strava-aligned kcal calc)
+          const dist = parseFloat(data?.dist);
+          if (dist > 0 && runRegex.test(k)) {
+            runDistanceKm += dist;
           }
         } catch {}
       }
@@ -1059,6 +1066,13 @@ const estimateCalories = (
   // Sanity cap: max 4 hours for a single session
   totalMinutes = Math.min(totalMinutes, 240);
 
+  // Distance-based calc for running (matches Strava: ~1.036 kcal/kg/km gross).
+  // This is the most accurate for outdoor running and is what Strava uses when
+  // GPS distance is available. Use it as the primary signal when distance exists.
+  const runKcalFromDistance = runDistanceKm > 0
+    ? Math.round(1.036 * weightKg * runDistanceKm)
+    : 0;
+
   // Use heart rate based formula if pulse is available (more accurate)
   if (loggedPulse && loggedPulse > 0 && loggedPulse < 250 && age) {
     // Keytel et al. formula (kcal/min)
@@ -1069,8 +1083,15 @@ const estimateCalories = (
       kcalPerMin = (-20.4022 + 0.4472 * loggedPulse - 0.1263 * weightKg + 0.074 * age) / 4.184;
     }
     if (kcalPerMin > 0) {
-      return Math.round(kcalPerMin * totalMinutes);
+      const hrKcal = Math.round(kcalPerMin * totalMinutes);
+      // For running, prefer the higher of HR-based and distance-based to align with Strava
+      return Math.max(hrKcal, runKcalFromDistance);
     }
+  }
+
+  // If we have running distance but no usable pulse, use distance-based estimate
+  if (runKcalFromDistance > 0) {
+    return runKcalFromDistance;
   }
 
   // Fallback: MET-based estimate
