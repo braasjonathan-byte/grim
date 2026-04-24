@@ -16,6 +16,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   const [checking, setChecking] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
+  const [nickname, setNickname] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [emailInput, setEmailInput] = useState("");
@@ -35,11 +36,12 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
     try {
       const [subResult, profileResult] = await Promise.all([
         supabase.functions.invoke("check-subscription"),
-        supabase.from("profiles").select("is_honorary").eq("user_id", userId).single(),
+        supabase.from("profiles").select("is_honorary, nickname").eq("user_id", userId).single(),
       ]);
       if (subResult.error) throw subResult.error;
       setSubscribed(subResult.data?.subscribed ?? false);
       setIsHonorary(profileResult.data?.is_honorary ?? false);
+      setNickname(profileResult.data?.nickname ?? null);
     } catch {
       // silently fail
     } finally {
@@ -118,7 +120,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   if (isHonorary) {
     return (
       <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-        <HonoraryBadge size="md" />
+        <HonoraryBadge size="md" nickname={nickname} />
         <p className="text-xs text-muted-foreground">
           Tack för att du supportar Grim! 💪
         </p>

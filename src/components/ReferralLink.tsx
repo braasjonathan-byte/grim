@@ -12,18 +12,20 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
+  const [nickname, setNickname] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     supabase
       .from("profiles")
-      .select("referral_code, is_honorary")
+      .select("referral_code, is_honorary, nickname")
       .eq("user_id", userId)
       .single()
       .then(({ data }) => {
         if (data) {
           setReferralCode((data as any).referral_code);
           setIsHonorary((data as any).is_honorary);
+          setNickname((data as any).nickname ?? null);
         }
       });
   }, [userId]);
@@ -71,7 +73,7 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
       <div className="flex items-center gap-2">
         <Link className="w-5 h-5 text-primary" />
         <h3 className="text-sm font-bold font-sans">Bjud in en vän</h3>
-        {isHonorary && <HonoraryBadge size="sm" />}
+        {isHonorary && <HonoraryBadge size="sm" nickname={nickname} />}
       </div>
       <p className="text-xs text-muted-foreground">
         Dela din personliga länk eller QR-kod. När någon registrerar sig via den blir du hedersmedlem!
