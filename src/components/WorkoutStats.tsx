@@ -226,6 +226,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
   const [planDetailsMap, setPlanDetailsMap] = useState<Map<string, string>>(new Map());
+  const [plansPerDay, setPlansPerDay] = useState<Map<string, number>>(new Map());
   const [scheduledPerWeek, setScheduledPerWeek] = useState<Map<number, number>>(new Map());
   const [challengeCount, setChallengeCount] = useState(0);
   const [challengeCounts, setChallengeCounts] = useState<Record<SummaryPeriod, number>>({ week: 0, month: 0, year: 0, all: 0 });
@@ -319,14 +320,18 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const detailsMap = new Map<string, string>();
       const exerciseKeys = new Set<string>();
       const perWeek = new Map<number, number>();
+      const perDay = new Map<string, number>();
 
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
         for (const p of withExercises) {
           const key = `${p.week}-${p.day}`;
           exerciseKeys.add(key);
-          detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
+          if (!detailsMap.has(key)) {
+            detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
+          }
           perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
+          perDay.set(key, (perDay.get(key) || 0) + 1);
         }
       }
 
@@ -334,6 +339,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         for (const archive of archivedData) {
           const plans = archive.plan_data as any[];
           if (!Array.isArray(plans)) continue;
+          // Track per-day plan counts within this archive separately so we don't
+          // double-count the same archived plan's days across active+archive.
+          const archiveDayCounts = new Map<string, number>();
           for (const p of plans) {
             if (!p.details || !p.details.trim()) continue;
             const key = `${p.week}-${p.day}`;
@@ -343,12 +351,20 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
             if (!exerciseKeys.has(key)) {
               exerciseKeys.add(key);
             }
+            archiveDayCounts.set(key, (archiveDayCounts.get(key) || 0) + 1);
+          }
+          // Merge: only fill perDay for archive days not already counted from active plans
+          for (const [key, count] of archiveDayCounts) {
+            if (!perDay.has(key)) {
+              perDay.set(key, count);
+            }
           }
         }
       }
 
       setPlansWithExercises(exerciseKeys);
       setPlanDetailsMap(detailsMap);
+      setPlansPerDay(perDay);
       setScheduledPerWeek(perWeek);
 
       if (userPlanStartDate) {
@@ -380,6 +396,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return false;
   };
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || plansWithExercises.has(`${c.week}-${c.day}`);
+  // How many separate workouts a user has on a given (week, day). At least 1 if there's exercise data.
+  const passCountForDay = (c: CompletionRecord) => {
+    const key = `${c.week}-${c.day}`;
+    return Math.max(1, plansPerDay.get(key) || 0);
+  };
 
   const stats = useMemo(() => {
     type Bucket = {label: string;done: number;doneWithExercise: number;skipped: number;total: number;totalWithExercise: number;distanceKm: number;sortKey: string;};
@@ -420,11 +441,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: 0, distanceKm: 0, sortKey });
       }
       const b = buckets.get(key)!;
+      const dayCount = passCountForDay(c);
       b.total++;
-      if (hasExercise(c)) b.totalWithExercise++;
+      if (hasExercise(c)) b.totalWithExercise += dayCount;
       if (c.done && hasExercise(c)) {
-        b.done++;
-        b.doneWithExercise++;
+        b.done += dayCount;
+        b.doneWithExercise += dayCount;
       }
       if (c.skipped) b.skipped++;
       if (c.done && hasExercise(c)) {
@@ -500,7 +522,10 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     });
   }, [completions, summaryPeriod, planStartDate]);
 
-  const totalDone = filteredCompletions.filter((c) => c.done && hasExercise(c)).length;
+  const totalDone = filteredCompletions.reduce(
+    (sum, c) => (c.done && hasExercise(c) ? sum + passCountForDay(c) : sum),
+    0,
+  );
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
   const totalDistanceKm = useMemo(() => {
     let total = 0;
