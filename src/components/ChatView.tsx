@@ -73,6 +73,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
   useEffect(() => {
     fetchFriendsAndMessages();
+    fetchAnnouncementPreview();
     if (isPremium && !isAdmin) fetchGrimMessages();
     if (isAdmin) fetchSupportConversations();
 
@@ -107,9 +108,18 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
       })
       .subscribe();
 
+    // Realtime for announcements (Grim)
+    const announceChannel = supabase
+      .channel("announcements-list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => {
+        fetchAnnouncementPreview();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(supportChannel);
+      supabase.removeChannel(announceChannel);
     };
   }, [userId, isPremium, isAdmin]);
 
