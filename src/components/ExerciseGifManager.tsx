@@ -1,8 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Link2, Trash2, Loader2, ChevronDown, Check, FileText, Image, X, Pencil, Save, Eye, BookOpen } from "lucide-react";
-import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { Search, Link2, Trash2, Loader2, ChevronDown, Check, FileText, Image, X, Pencil, Save, Eye, BookOpen, AlertCircle } from "lucide-react";
+import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
 import { toast } from "sonner";
+
+interface SecondaryMuscle { muscle: string; submuscles: string[]; }
+
+interface MuscleOverride {
+  id: string;
+  exercise_name: string;
+  muscle_group: string | null;
+  submuscles: string[];
+  secondary_muscles: SecondaryMuscle[];
+}
 
 interface Mapping {
   id: string;
@@ -27,16 +37,20 @@ interface CustomExercise {
   category: string;
   muscle_group: string;
   is_bodyweight_exercise?: boolean;
+  submuscles?: string[];
+  secondary_muscles?: SecondaryMuscle[];
 }
 
 const ExerciseGifManager = () => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+  const [overrides, setOverrides] = useState<MuscleOverride[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const [showOnlyMapped, setShowOnlyMapped] = useState(false);
   const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false);
+  const [showOnlyMissingSubmuscle, setShowOnlyMissingSubmuscle] = useState(false);
   const [muscleGroupFilter, setMuscleGroupFilter] = useState<string | null>(null);
 
   // Linking state
@@ -72,6 +86,18 @@ const ExerciseGifManager = () => {
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const [savingBulk, setSavingBulk] = useState(false);
 
+  // Submuscle / secondary editing
+  const [editingMusclesFor, setEditingMusclesFor] = useState<string | null>(null);
+  const [editPrimaryGroup, setEditPrimaryGroup] = useState<string>("");
+  const [editSubmuscles, setEditSubmuscles] = useState<string[]>([]);
+  const [editSecondary, setEditSecondary] = useState<SecondaryMuscle[]>([]);
+  const [savingMuscles, setSavingMuscles] = useState(false);
+
+  // Bulk muscles dialog
+  const [showBulkMuscle, setShowBulkMuscle] = useState(false);
+  const [bulkPrimaryGroup, setBulkPrimaryGroup] = useState<string>("");
+  const [bulkSubmuscles, setBulkSubmuscles] = useState<string[]>([]);
+
   const fetchMappings = async () => {
     const { data } = await supabase
       .from("exercise_gif_mappings")
@@ -83,14 +109,21 @@ const ExerciseGifManager = () => {
   const fetchCustomExercises = async () => {
     const { data } = await supabase
       .from("custom_exercises")
-      .select("id, name, category, muscle_group, is_bodyweight_exercise")
+      .select("id, name, category, muscle_group, is_bodyweight_exercise, submuscles, secondary_muscles")
       .order("name");
-    setCustomExercises((data as CustomExercise[]) || []);
+    setCustomExercises((data as any) || []);
+  };
+
+  const fetchOverrides = async () => {
+    const { data } = await supabase
+      .from("exercise_muscle_overrides" as any)
+      .select("id, exercise_name, muscle_group, submuscles, secondary_muscles");
+    setOverrides((data as any) || []);
   };
 
   useEffect(() => {
     if (open) {
-      Promise.all([fetchMappings(), fetchCustomExercises()]).then(() => setLoading(false));
+      Promise.all([fetchMappings(), fetchCustomExercises(), fetchOverrides()]).then(() => setLoading(false));
     }
   }, [open]);
 
@@ -269,26 +302,59 @@ const ExerciseGifManager = () => {
     setSavingMuscle(false);
   };
 
-  // All exercises: library + custom, deduplicated, sorted alphabetically
+  // Build override lookup map
+  const overridesByName = useMemo(() => {
+    const m = new Map<string, MuscleOverride>();
+    for (const o of overrides) m.set(o.exercise_name.toLowerCase(), o);
+    return m;
+  }, [overrides]);
+
+  // All exercises: library + custom + overrides, deduplicated, sorted alphabetically
   const allExercises = useMemo(() => {
-    const nameSet = new Map<string, { name: string; category: string; muscleGroup: string; isBodyweight: boolean }>();
-    
+    const nameSet = new Map<string, {
+      name: string;
+      category: string;
+      muscleGroup: string;
+      submuscles: string[];
+      secondaryMuscles: SecondaryMuscle[];
+      isBodyweight: boolean;
+    }>();
+
     for (const e of exerciseLibrary) {
-      nameSet.set(e.name.toLowerCase(), { name: e.name, category: e.category, muscleGroup: e.muscleGroup, isBodyweight: false });
+      nameSet.set(e.name.toLowerCase(), {
+        name: e.name, category: e.category, muscleGroup: e.muscleGroup,
+        submuscles: [], secondaryMuscles: [], isBodyweight: false,
+      });
     }
-    
+
     for (const c of customExercises) {
       const key = c.name.toLowerCase();
-      if (nameSet.has(key)) {
-        const existing = nameSet.get(key)!;
-        nameSet.set(key, { ...existing, muscleGroup: c.muscle_group, category: c.category, isBodyweight: !!c.is_bodyweight_exercise });
-      } else {
-        nameSet.set(key, { name: c.name, category: c.category, muscleGroup: c.muscle_group, isBodyweight: !!c.is_bodyweight_exercise });
-      }
+      const existing = nameSet.get(key);
+      nameSet.set(key, {
+        name: existing?.name ?? c.name,
+        category: c.category,
+        muscleGroup: c.muscle_group,
+        submuscles: c.submuscles ?? [],
+        secondaryMuscles: c.secondary_muscles ?? [],
+        isBodyweight: !!c.is_bodyweight_exercise,
+      });
     }
-    
+
+    // Apply admin overrides last (overrides custom + lib)
+    for (const o of overrides) {
+      const key = o.exercise_name.toLowerCase();
+      const existing = nameSet.get(key);
+      if (!existing) continue;
+      nameSet.set(key, {
+        ...existing,
+        muscleGroup: o.muscle_group ?? existing.muscleGroup,
+        submuscles: o.submuscles ?? existing.submuscles,
+        secondaryMuscles: o.secondary_muscles ?? existing.secondaryMuscles,
+      });
+    }
+
     return Array.from(nameSet.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
-  }, [customExercises]);
+  }, [customExercises, overrides]);
 
   const toggleSelected = (name: string) => {
     setSelectedExercises(prev => {
@@ -359,6 +425,79 @@ const ExerciseGifManager = () => {
     setSavingBulk(false);
   };
 
+  /** Upsert muscle override for an exercise (works for built-in & custom). */
+  const upsertOverride = async (
+    exerciseName: string,
+    payload: { muscle_group?: string; submuscles?: string[]; secondary_muscles?: SecondaryMuscle[] }
+  ) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Try update by name; if 0 rows, insert
+    const { data: updated, error: updateErr } = await supabase
+      .from("exercise_muscle_overrides" as any)
+      .update({ ...payload, updated_by: user.id, updated_at: new Date().toISOString() } as any)
+      .ilike("exercise_name", exerciseName)
+      .select("id");
+    if (updateErr) throw updateErr;
+    if (!updated || updated.length === 0) {
+      const { error: insertErr } = await supabase
+        .from("exercise_muscle_overrides" as any)
+        .insert({ exercise_name: exerciseName, updated_by: user.id, ...payload } as any);
+      if (insertErr) throw insertErr;
+    }
+  };
+
+  const saveMuscleData = async (exerciseName: string) => {
+    setSavingMuscles(true);
+    try {
+      await upsertOverride(exerciseName, {
+        muscle_group: editPrimaryGroup,
+        submuscles: editSubmuscles,
+        secondary_muscles: editSecondary,
+      });
+      await fetchOverrides();
+      // Also bump custom_exercises if it's a custom one (so picker sees it)
+      const custom = customExercises.find(c => c.name.toLowerCase() === exerciseName.toLowerCase());
+      if (custom) {
+        await supabase.from("custom_exercises").update({
+          muscle_group: editPrimaryGroup,
+          submuscles: editSubmuscles,
+          secondary_muscles: editSecondary as any,
+        } as any).eq("id", custom.id);
+        await fetchCustomExercises();
+      }
+      setEditingMusclesFor(null);
+      toast.success("Muskel-data sparad");
+    } catch (e) {
+      console.error("Failed to save muscle data:", e);
+      toast.error("Kunde inte spara");
+    }
+    setSavingMuscles(false);
+  };
+
+  const bulkSetMuscles = async () => {
+    if (selectedExercises.size === 0 || !bulkPrimaryGroup) return;
+    setSavingBulk(true);
+    try {
+      for (const name of selectedExercises) {
+        await upsertOverride(name, {
+          muscle_group: bulkPrimaryGroup,
+          submuscles: bulkSubmuscles,
+        });
+      }
+      await fetchOverrides();
+      setSelectedExercises(new Set());
+      setShowBulkMuscle(false);
+      setBulkPrimaryGroup("");
+      setBulkSubmuscles([]);
+      toast.success(`${selectedExercises.size} övningar uppdaterade`);
+    } catch (e) {
+      console.error("Bulk muscle update failed:", e);
+      toast.error("Kunde inte uppdatera");
+    }
+    setSavingBulk(false);
+  };
+
   const mappingsByName = useMemo(() => {
     const map = new Map<string, Mapping>();
     for (const m of mappings) map.set(m.exercise_name.toLowerCase(), m);
@@ -373,6 +512,8 @@ const ExerciseGifManager = () => {
         name: ex.name,
         category: ex.category,
         muscleGroup: ex.muscleGroup,
+        submuscles: ex.submuscles,
+        secondaryMuscles: ex.secondaryMuscles,
         isBodyweight: ex.isBodyweight,
         mapping: mappingsByName.get(ex.name.toLowerCase()) || null,
       }))
@@ -381,9 +522,19 @@ const ExerciseGifManager = () => {
         if (showOnlyMapped && !item.mapping) return false;
         if (showOnlyUnmapped && item.mapping) return false;
         if (muscleGroupFilter && item.muscleGroup !== muscleGroupFilter) return false;
+        if (showOnlyMissingSubmuscle) {
+          const hasSubmusclesAvailable = (submusclesByGroup[item.muscleGroup]?.length ?? 0) > 0;
+          if (!hasSubmusclesAvailable) return false; // ignore groups with no submuscle options
+          if (item.submuscles && item.submuscles.length > 0) return false;
+        }
         return true;
       });
-  }, [allExercises, mappingsByName, filter, showOnlyMapped, showOnlyUnmapped, muscleGroupFilter]);
+  }, [allExercises, mappingsByName, filter, showOnlyMapped, showOnlyUnmapped, muscleGroupFilter, showOnlyMissingSubmuscle]);
+
+  const missingSubmuscleCount = useMemo(() =>
+    allExercises.filter(e => (submusclesByGroup[e.muscleGroup]?.length ?? 0) > 0 && (!e.submuscles || e.submuscles.length === 0)).length,
+    [allExercises]
+  );
 
   const mappedCount = allExercises.filter((e) => mappingsByName.has(e.name.toLowerCase())).length;
   const totalCount = allExercises.length;
@@ -452,6 +603,14 @@ const ExerciseGifManager = () => {
               }`}
             >
               ❌ Utan GIF ({totalCount - mappedCount})
+            </button>
+            <button
+              onClick={() => setShowOnlyMissingSubmuscle(!showOnlyMissingSubmuscle)}
+              className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors flex items-center gap-1 ${
+                showOnlyMissingSubmuscle ? "bg-destructive text-destructive-foreground" : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              <AlertCircle className="w-3 h-3" /> Saknar undergrupp ({missingSubmuscleCount})
             </button>
           </div>
 
@@ -522,7 +681,43 @@ const ExerciseGifManager = () => {
                   <option value="rörlighet">Rörlighet</option>
                   <option value="core">Core</option>
                 </select>
+                <button
+                  onClick={() => { setShowBulkMuscle(true); setBulkPrimaryGroup(""); setBulkSubmuscles([]); }}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2.5 py-1.5 bg-accent text-accent-foreground rounded-lg font-semibold disabled:opacity-40"
+                >
+                  Sätt muskelgrupp…
+                </button>
               </div>
+
+              {showBulkMuscle && (
+                <div className="mt-2 bg-card border border-border rounded-lg p-2 space-y-2">
+                  <p className="text-[11px] font-semibold">Muskelgrupp för {selectedExercises.size} övningar</p>
+                  <div className="flex flex-wrap gap-1">
+                    {muscleGroups.map(mg => (
+                      <button key={mg} type="button"
+                        onClick={() => { setBulkPrimaryGroup(mg); setBulkSubmuscles([]); }}
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${bulkPrimaryGroup === mg ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                      >{mg}</button>
+                    ))}
+                  </div>
+                  {bulkPrimaryGroup && (submusclesByGroup[bulkPrimaryGroup]?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {submusclesByGroup[bulkPrimaryGroup].map(sm => (
+                        <button key={sm} type="button"
+                          onClick={() => setBulkSubmuscles(p => p.includes(sm) ? p.filter(x => x !== sm) : [...p, sm])}
+                          className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${bulkSubmuscles.includes(sm) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                        >{sm}</button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowBulkMuscle(false)} className="flex-1 py-1.5 bg-secondary text-muted-foreground text-[11px] rounded-lg">Avbryt</button>
+                    <button onClick={bulkSetMuscles} disabled={!bulkPrimaryGroup || savingBulk}
+                      className="flex-1 py-1.5 bg-primary text-primary-foreground text-[11px] font-bold rounded-lg disabled:opacity-40">Spara</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -590,6 +785,29 @@ const ExerciseGifManager = () => {
                             BW
                           </span>
                         )}
+                        {(submusclesByGroup[item.muscleGroup]?.length ?? 0) > 0 && (!item.submuscles || item.submuscles.length === 0) && (
+                          <span className="text-[10px] bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5" title="Saknar undergrupp">
+                            <AlertCircle className="w-2.5 h-2.5" />
+                          </span>
+                        )}
+                        {item.submuscles && item.submuscles.length > 0 && (
+                          <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium" title={item.submuscles.join(", ")}>
+                            {item.submuscles.length} sub
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingMusclesFor(item.name);
+                            setEditPrimaryGroup(item.muscleGroup);
+                            setEditSubmuscles(item.submuscles || []);
+                            setEditSecondary(item.secondaryMuscles || []);
+                          }}
+                          className="text-[10px] bg-secondary text-foreground px-1.5 py-0.5 rounded-full font-medium hover:bg-muted"
+                          title="Redigera muskler"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
                       </div>
 
                       <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform shrink-0 ${isExpanded ? "rotate-180" : ""}`} />
@@ -829,6 +1047,88 @@ const ExerciseGifManager = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Muscle editor dialog */}
+      {editingMusclesFor && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/60" onClick={() => setEditingMusclesFor(null)} />
+          <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[90] max-w-md mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Redigera muskler</p>
+                <p className="text-sm font-bold truncate">{editingMusclesFor}</p>
+              </div>
+              <button onClick={() => setEditingMusclesFor(null)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Primär muskelgrupp</p>
+                <div className="flex flex-wrap gap-1">
+                  {muscleGroups.map(mg => (
+                    <button key={mg} type="button"
+                      onClick={() => { setEditPrimaryGroup(mg); setEditSubmuscles([]); }}
+                      className={`text-[11px] px-2 py-1 rounded-md font-medium ${editPrimaryGroup === mg ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                    >{mg}</button>
+                  ))}
+                </div>
+              </div>
+              {(submusclesByGroup[editPrimaryGroup]?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Undergrupper (valfritt)</p>
+                  <div className="flex flex-wrap gap-1">
+                    {submusclesByGroup[editPrimaryGroup].map(sm => (
+                      <button key={sm} type="button"
+                        onClick={() => setEditSubmuscles(p => p.includes(sm) ? p.filter(x => x !== sm) : [...p, sm])}
+                        className={`text-[11px] px-2 py-1 rounded-md font-medium ${editSubmuscles.includes(sm) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                      >{sm}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Övriga muskler (valfritt)</p>
+                {editSecondary.map(sec => (
+                  <div key={sec.muscle} className="bg-secondary/40 rounded-lg p-2 space-y-1 mb-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold">{sec.muscle}</span>
+                      <button type="button" onClick={() => setEditSecondary(p => p.filter(s => s.muscle !== sec.muscle))} className="text-[10px] text-muted-foreground hover:text-destructive">Ta bort</button>
+                    </div>
+                    {(submusclesByGroup[sec.muscle]?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {submusclesByGroup[sec.muscle].map(sm => (
+                          <button key={sm} type="button"
+                            onClick={() => setEditSecondary(p => p.map(s => s.muscle === sec.muscle ? { ...s, submuscles: s.submuscles.includes(sm) ? s.submuscles.filter(x => x !== sm) : [...s.submuscles, sm] } : s))}
+                            className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${sec.submuscles.includes(sm) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                          >{sm}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <select
+                  value=""
+                  onChange={e => { if (e.target.value && !editSecondary.some(s => s.muscle === e.target.value) && e.target.value !== editPrimaryGroup) { setEditSecondary(p => [...p, { muscle: e.target.value, submuscles: [] }]); } e.currentTarget.value = ""; }}
+                  className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                >
+                  <option value="">+ Lägg till muskel...</option>
+                  {muscleGroups.filter(mg => mg !== editPrimaryGroup && !editSecondary.some(s => s.muscle === mg)).map(mg => (
+                    <option key={mg} value={mg}>{mg}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 p-4 border-t border-border">
+              <button onClick={() => setEditingMusclesFor(null)} className="flex-1 py-2 bg-secondary text-muted-foreground text-xs font-semibold rounded-lg">Avbryt</button>
+              <button onClick={() => saveMuscleData(editingMusclesFor)} disabled={savingMuscles || !editPrimaryGroup}
+                className="flex-1 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg disabled:opacity-40 flex items-center justify-center gap-1">
+                {savingMuscles ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Spara
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Linking dialog overlay */}

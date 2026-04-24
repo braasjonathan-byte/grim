@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, X, Plus, Dumbbell, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +49,8 @@ const ExercisePickerDialog = ({
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("styrka");
   const [newMuscle, setNewMuscle] = useState("Helkropp");
+  const [newSubmuscles, setNewSubmuscles] = useState<string[]>([]);
+  const [newSecondary, setNewSecondary] = useState<{ muscle: string; submuscles: string[] }[]>([]);
   const [newIsBodyweight, setNewIsBodyweight] = useState(false);
   const [newIsTimeBased, setNewIsTimeBased] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,6 +62,8 @@ const ExercisePickerDialog = ({
       setSelectedMuscle(initialMuscleGroup);
       setShowCreate(false);
       setNewName("");
+      setNewSubmuscles([]);
+      setNewSecondary([]);
       supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
         if (data) setCustomExercises(data);
       });
@@ -122,13 +126,40 @@ const ExercisePickerDialog = ({
     if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
     const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
     if (customDupe) { alert("Övningen finns redan."); return; }
-    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId, is_bodyweight_exercise: newIsBodyweight, is_time_based: newIsTimeBased } as any);
+    await supabase.from("custom_exercises").insert({
+      name: trimmed,
+      category: newCategory,
+      muscle_group: newMuscle,
+      submuscles: newSubmuscles,
+      secondary_muscles: newSecondary,
+      created_by: userId,
+      is_bodyweight_exercise: newIsBodyweight,
+      is_time_based: newIsTimeBased,
+    } as any);
     const { data } = await supabase.from("custom_exercises").select("*").order("name");
     if (data) setCustomExercises(data);
     setNewName("");
+    setNewSubmuscles([]);
+    setNewSecondary([]);
     setShowCreate(false);
     // Auto-select the newly created exercise
     handleSelect(trimmed);
+  };
+
+  const toggleNewSubmuscle = (sm: string) => {
+    setNewSubmuscles(prev => prev.includes(sm) ? prev.filter(x => x !== sm) : [...prev, sm]);
+  };
+  const addSecondaryMuscle = (mg: string) => {
+    if (mg === newMuscle || newSecondary.some(s => s.muscle === mg)) return;
+    setNewSecondary(prev => [...prev, { muscle: mg, submuscles: [] }]);
+  };
+  const removeSecondaryMuscle = (mg: string) => {
+    setNewSecondary(prev => prev.filter(s => s.muscle !== mg));
+  };
+  const toggleSecondarySubmuscle = (mg: string, sm: string) => {
+    setNewSecondary(prev => prev.map(s => s.muscle === mg
+      ? { ...s, submuscles: s.submuscles.includes(sm) ? s.submuscles.filter(x => x !== sm) : [...s.submuscles, sm] }
+      : s));
   };
 
   return (
@@ -283,10 +314,76 @@ const ExercisePickerDialog = ({
                   </select>
                   <select
                     value={newMuscle}
-                    onChange={e => setNewMuscle(e.target.value)}
+                    onChange={e => { setNewMuscle(e.target.value); setNewSubmuscles([]); }}
                     className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
                   >
                     {muscleGroups.map(mg => <option key={mg} value={mg}>{mg}</option>)}
+                  </select>
+                </div>
+
+                {/* Submuscles for primary */}
+                {(submusclesByGroup[newMuscle]?.length ?? 0) > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Undergrupper (valfritt)</p>
+                    <div className="flex flex-wrap gap-1">
+                      {submusclesByGroup[newMuscle].map(sm => (
+                        <button
+                          key={sm}
+                          type="button"
+                          onClick={() => toggleNewSubmuscle(sm)}
+                          className={cn(
+                            "text-[11px] px-2 py-1 rounded-md font-medium transition-colors",
+                            newSubmuscles.includes(sm)
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {sm}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Secondary muscles */}
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Övriga muskler (valfritt)</p>
+                  {newSecondary.map(sec => (
+                    <div key={sec.muscle} className="bg-secondary/40 rounded-lg p-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold">{sec.muscle}</span>
+                        <button type="button" onClick={() => removeSecondaryMuscle(sec.muscle)} className="text-[10px] text-muted-foreground hover:text-destructive">Ta bort</button>
+                      </div>
+                      {(submusclesByGroup[sec.muscle]?.length ?? 0) > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {submusclesByGroup[sec.muscle].map(sm => (
+                            <button
+                              key={sm}
+                              type="button"
+                              onClick={() => toggleSecondarySubmuscle(sec.muscle, sm)}
+                              className={cn(
+                                "text-[11px] px-2 py-0.5 rounded-md font-medium transition-colors",
+                                sec.submuscles.includes(sm)
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              {sm}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <select
+                    value=""
+                    onChange={e => { if (e.target.value) addSecondaryMuscle(e.target.value); e.currentTarget.value = ""; }}
+                    className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                  >
+                    <option value="">+ Lägg till muskel...</option>
+                    {muscleGroups.filter(mg => mg !== newMuscle && !newSecondary.some(s => s.muscle === mg)).map(mg => (
+                      <option key={mg} value={mg}>{mg}</option>
+                    ))}
                   </select>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">

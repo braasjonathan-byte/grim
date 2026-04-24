@@ -257,4 +257,17 @@ export const muscleGroups = [
   "Bröst", "Rygg", "Ben", "Rumpa", "Axlar", "Armar", "Underarmar", "Core", "Helkropp"
 ];
 
+/** Submuscle / sub-region options per main muscle group. Empty array = no submuscles. */
+export const submusclesByGroup: Record<string, string[]> = {
+  "Bröst": ["Övre", "Mellan", "Nedre"],
+  "Rygg": ["Lats", "Övre rygg", "Nedre rygg", "Trapezius"],
+  "Ben": ["Quadriceps", "Hamstrings", "Vader", "Adduktorer"],
+  "Rumpa": ["Gluteus Maximus", "Gluteus Medius"],
+  "Axlar": ["Främre delt", "Sidodelt", "Bakre delt"],
+  "Armar": ["Biceps", "Triceps"],
+  "Underarmar": [],
+  "Core": ["Magmuskler", "Sneda magmuskler", "Nedre rygg"],
+  "Helkropp": [],
+};
+
 export const categories = ["styrka", "kondition", "rörlighet", "core"] as const;

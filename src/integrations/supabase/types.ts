@@ -244,6 +244,8 @@ export type Database = {
           is_time_based: boolean
           muscle_group: string
           name: string
+          secondary_muscles: Json
+          submuscles: string[]
         }
         Insert: {
           category?: string
@@ -254,6 +256,8 @@ export type Database = {
           is_time_based?: boolean
           muscle_group?: string
           name: string
+          secondary_muscles?: Json
+          submuscles?: string[]
         }
         Update: {
           category?: string
@@ -264,6 +268,8 @@ export type Database = {
           is_time_based?: boolean
           muscle_group?: string
           name?: string
+          secondary_muscles?: Json
+          submuscles?: string[]
         }
         Relationships: []
       }
@@ -454,6 +460,42 @@ export type Database = {
           gif_url?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      exercise_muscle_overrides: {
+        Row: {
+          created_at: string
+          exercise_name: string
+          exercise_name_lower: string | null
+          id: string
+          muscle_group: string | null
+          secondary_muscles: Json
+          submuscles: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          exercise_name: string
+          exercise_name_lower?: string | null
+          id?: string
+          muscle_group?: string | null
+          secondary_muscles?: Json
+          submuscles?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          exercise_name?: string
+          exercise_name_lower?: string | null
+          id?: string
+          muscle_group?: string | null
+          secondary_muscles?: Json
+          submuscles?: string[]
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
