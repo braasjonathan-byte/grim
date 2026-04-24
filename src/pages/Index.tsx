@@ -265,7 +265,6 @@ const Index = () => {
       order("created_at", { ascending: false }).
       limit(20);
       if (data) {
-        setHeaderAnnouncements(data.slice(0, 5));
         const unreadCount = data.filter(a => a.created_at > lastRead).length;
 
         let suggestionCount = 0;
