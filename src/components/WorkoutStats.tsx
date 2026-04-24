@@ -320,14 +320,18 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const detailsMap = new Map<string, string>();
       const exerciseKeys = new Set<string>();
       const perWeek = new Map<number, number>();
+      const perDay = new Map<string, number>();
 
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
         for (const p of withExercises) {
           const key = `${p.week}-${p.day}`;
           exerciseKeys.add(key);
-          detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
+          if (!detailsMap.has(key)) {
+            detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
+          }
           perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
+          perDay.set(key, (perDay.get(key) || 0) + 1);
         }
       }
 
@@ -335,6 +339,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         for (const archive of archivedData) {
           const plans = archive.plan_data as any[];
           if (!Array.isArray(plans)) continue;
+          // Track per-day plan counts within this archive separately so we don't
+          // double-count the same archived plan's days across active+archive.
+          const archiveDayCounts = new Map<string, number>();
           for (const p of plans) {
             if (!p.details || !p.details.trim()) continue;
             const key = `${p.week}-${p.day}`;
@@ -344,12 +351,20 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
             if (!exerciseKeys.has(key)) {
               exerciseKeys.add(key);
             }
+            archiveDayCounts.set(key, (archiveDayCounts.get(key) || 0) + 1);
+          }
+          // Merge: only fill perDay for archive days not already counted from active plans
+          for (const [key, count] of archiveDayCounts) {
+            if (!perDay.has(key)) {
+              perDay.set(key, count);
+            }
           }
         }
       }
 
       setPlansWithExercises(exerciseKeys);
       setPlanDetailsMap(detailsMap);
+      setPlansPerDay(perDay);
       setScheduledPerWeek(perWeek);
 
       if (userPlanStartDate) {
