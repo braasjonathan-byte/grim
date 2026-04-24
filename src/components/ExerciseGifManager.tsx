@@ -490,6 +490,7 @@ const ExerciseGifManager = () => {
         await upsertOverride(name, {
           muscle_group: bulkPrimaryGroup,
           submuscles: bulkSubmuscles,
+          secondary_muscles: bulkSecondary,
         });
       }
       await fetchOverrides();
@@ -497,6 +498,7 @@ const ExerciseGifManager = () => {
       setShowBulkMuscle(false);
       setBulkPrimaryGroup("");
       setBulkSubmuscles([]);
+      setBulkSecondary([]);
       toast.success(`${selectedExercises.size} övningar uppdaterade`);
     } catch (e) {
       console.error("Bulk muscle update failed:", e);
