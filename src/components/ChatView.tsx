@@ -52,6 +52,24 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [loading, setLoading] = useState(true);
   const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
+  const [announcementPreview, setAnnouncementPreview] = useState<{ title: string; created_at: string } | null>(null);
+  const [announcementUnread, setAnnouncementUnread] = useState(0);
+
+  const fetchAnnouncementPreview = async () => {
+    const { data } = await supabase
+      .from("announcements")
+      .select("title, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (data && data.length > 0) {
+      setAnnouncementPreview({ title: data[0].title, created_at: data[0].created_at });
+      const lastRead = localStorage.getItem(ANNOUNCEMENTS_LAST_READ_KEY) || "1970-01-01T00:00:00Z";
+      setAnnouncementUnread(data.filter(a => a.created_at > lastRead).length);
+    } else {
+      setAnnouncementPreview(null);
+      setAnnouncementUnread(0);
+    }
+  };
 
   useEffect(() => {
     fetchFriendsAndMessages();
