@@ -522,7 +522,10 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     });
   }, [completions, summaryPeriod, planStartDate]);
 
-  const totalDone = filteredCompletions.filter((c) => c.done && hasExercise(c)).length;
+  const totalDone = filteredCompletions.reduce(
+    (sum, c) => (c.done && hasExercise(c) ? sum + passCountForDay(c) : sum),
+    0,
+  );
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
   const totalDistanceKm = useMemo(() => {
     let total = 0;
