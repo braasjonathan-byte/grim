@@ -221,7 +221,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [userWeightKg, setUserWeightKg] = useState<number | null>(null);
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
-  const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("all");
+  const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("week");
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{week: number;year: number;} | null>(null);
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
@@ -573,7 +573,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Period toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">
-        {(["all", "week", "month", "year"] as SummaryPeriod[]).map((p) =>
+        {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
         <button
           key={p}
           onClick={() => setSummaryPeriod(p)}
