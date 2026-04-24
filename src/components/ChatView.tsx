@@ -26,6 +26,7 @@ interface Friend {
   avatar_url: string | null;
   is_honorary?: boolean;
   isGrimSupport?: boolean;
+  isGrimAnnouncement?: boolean;
 }
 
 interface LastMessage {
