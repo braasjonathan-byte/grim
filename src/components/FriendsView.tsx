@@ -3,6 +3,7 @@ import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/them
 import { supabase } from "@/integrations/supabase/client";
 import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { format, parseISO } from "date-fns";
 import { sv } from "date-fns/locale";
 import FriendProfileView from "@/components/FriendProfileView";
@@ -202,10 +203,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     }
   }, [isAdmin]);
 
-  const allExercises = [
+  const allExercises = dedupeExerciseList([
     ...exerciseLibrary.map((e) => ({ ...e, isCustom: false })),
     ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, isCustom: true })),
-  ];
+  ]);
 
   const filteredAdminExercises = allExercises.filter((e) => {
     const matchesSearch = !adminExerciseSearch || e.name.toLowerCase().includes(adminExerciseSearch.toLowerCase());

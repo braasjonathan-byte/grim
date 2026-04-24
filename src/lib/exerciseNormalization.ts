@@ -17,3 +17,54 @@ export function normalizeExerciseName(name: string): string {
   // Title case the trimmed name as fallback
   return trimmed;
 }
+
+/**
+ * Strip trailing set/rep/weight notation from an exercise name so that
+ * "Bänkpress 4x8", "Bänkpress 3 x 10", "Bänkpress 5×5 80kg", etc. all
+ * collapse to just "Bänkpress". Also strips trailing numbers like
+ * "Bänkpress 4". Returns the trimmed base name.
+ */
+export function stripSetRepSuffix(name: string): string {
+  let result = name.trim();
+  // Remove trailing weight like "80kg", "80 kg", "80lb"
+  result = result.replace(/\s+\d+(?:[.,]\d+)?\s*(?:kg|lb|lbs)\b\.?$/i, "").trim();
+  // Remove trailing set x rep notation: "4x8", "3 x 10", "5×5", "4*8", optionally followed by extra
+  result = result.replace(/\s+\d+\s*[x×*]\s*\d+(?:\s*[-–]\s*\d+)?\s*$/i, "").trim();
+  // Remove trailing "@RPE 8" style
+  result = result.replace(/\s+@\s*\S+$/i, "").trim();
+  // Remove trailing parenthetical sets info, e.g. "(4x8)"
+  result = result.replace(/\s*\(\s*\d+\s*[x×*]\s*\d+[^)]*\)\s*$/i, "").trim();
+  // Remove a single trailing standalone number (e.g. "Bänkpress 4")
+  result = result.replace(/\s+\d+(?:[.,]\d+)?$/u, "").trim();
+  return result;
+}
+
+/**
+ * Deduplicate a list of exercises by their base name (set/rep suffixes stripped).
+ * When a duplicate is found, the variant WITHOUT a set/rep suffix wins.
+ * Custom (non-built-in) entries are preferred over built-in only when no
+ * clean built-in exists, so admin overrides keep working.
+ */
+export function dedupeExerciseList<T extends { name: string; isCustom?: boolean }>(
+  list: T[]
+): T[] {
+  const byBase = new Map<string, T>();
+  for (const item of list) {
+    const base = stripSetRepSuffix(item.name);
+    const baseKey = base.toLowerCase();
+    const isClean = item.name.trim().toLowerCase() === baseKey;
+    const existing = byBase.get(baseKey);
+    if (!existing) {
+      byBase.set(baseKey, { ...item, name: base });
+      continue;
+    }
+    const existingIsClean = existing.name.trim().toLowerCase() === baseKey;
+    // Prefer the clean (no set/rep suffix) entry
+    if (isClean && !existingIsClean) {
+      byBase.set(baseKey, { ...item, name: base });
+    }
+    // Otherwise keep existing
+  }
+  return Array.from(byBase.values());
+}
+

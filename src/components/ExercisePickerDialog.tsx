@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, X, Plus, Dumbbell, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { cn } from "@/lib/utils";
 
 interface CustomExercise {
@@ -84,6 +85,7 @@ const ExercisePickerDialog = ({
   if (!open) return null;
 
   // Deduplicate: custom exercises override library entries (e.g. muscle group edits by admin)
+  // and entries with set/rep suffixes (e.g. "Bänkpress 4x8") collapse into the base name.
   const allExercises = (() => {
     const nameMap = new Map<string, { name: string; muscleGroup: string; category: string; isCustom: boolean }>();
     for (const e of exerciseLibrary) {
@@ -92,14 +94,14 @@ const ExercisePickerDialog = ({
     for (const e of customExercises) {
       const key = e.name.toLowerCase();
       if (nameMap.has(key)) {
-        // Override muscle group from custom/admin edit
         const existing = nameMap.get(key)!;
         nameMap.set(key, { ...existing, muscleGroup: e.muscle_group, isCustom: false });
       } else {
         nameMap.set(key, { name: e.name, muscleGroup: e.muscle_group, category: e.category, isCustom: true });
       }
     }
-    return Array.from(nameMap.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+    const merged = Array.from(nameMap.values());
+    return dedupeExerciseList(merged).sort((a, b) => a.name.localeCompare(b.name, "sv"));
   })();
 
   const filtered = allExercises.filter(e => {
