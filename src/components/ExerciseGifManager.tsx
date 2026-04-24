@@ -765,7 +765,7 @@ const ExerciseGifManager = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    <button onClick={() => setShowBulkMuscle(false)} className="flex-1 py-1.5 bg-secondary text-muted-foreground text-[11px] rounded-lg">Avbryt</button>
+                    <button onClick={() => { setShowBulkMuscle(false); setBulkSecondary([]); }} className="flex-1 py-1.5 bg-secondary text-muted-foreground text-[11px] rounded-lg">Avbryt</button>
                     <button onClick={bulkSetMuscles} disabled={!bulkPrimaryGroup || savingBulk}
                       className="flex-1 py-1.5 bg-primary text-primary-foreground text-[11px] font-bold rounded-lg disabled:opacity-40">Spara</button>
                   </div>
