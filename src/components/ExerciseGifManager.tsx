@@ -37,7 +37,21 @@ interface CustomExercise {
   category: string;
   muscle_group: string;
   is_bodyweight_exercise?: boolean;
+  submuscles?: string[];
+  secondary_muscles?: SecondaryMuscle[];
 }
+
+const ExerciseGifManager = () => {
+  const [mappings, setMappings] = useState<Mapping[]>([]);
+  const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+  const [overrides, setOverrides] = useState<MuscleOverride[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const [showOnlyMapped, setShowOnlyMapped] = useState(false);
+  const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false);
+  const [showOnlyMissingSubmuscle, setShowOnlyMissingSubmuscle] = useState(false);
+  const [muscleGroupFilter, setMuscleGroupFilter] = useState<string | null>(null);
 
 const ExerciseGifManager = () => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
