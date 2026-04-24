@@ -673,7 +673,7 @@ const Index = () => {
             key={key}
             onClick={async () => {
               setTab(key);
-              if (key === "calc" && unreadAnnouncements > 0) {
+              if (key === "social" && unreadAnnouncements > 0) {
                 const { data: latestAnn } = await supabase.
                 from("announcements").
                 select("created_at").
@@ -681,16 +681,16 @@ const Index = () => {
                 limit(1).
                 maybeSingle();
                 localStorage.setItem("gymberget_last_read_announcements", latestAnn?.created_at || new Date().toISOString());
-                if (userRole === "admin") {
-                  const { data: latestSug } = await supabase.
-                  from("suggestions").
-                  select("created_at").
-                  order("created_at", { ascending: false }).
-                  limit(1).
-                  maybeSingle();
-                  localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
-                }
                 setUnreadAnnouncements(0);
+              }
+              if (key === "calc" && userRole === "admin") {
+                const { data: latestSug } = await supabase.
+                from("suggestions").
+                select("created_at").
+                order("created_at", { ascending: false }).
+                limit(1).
+                maybeSingle();
+                localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
               }
             }}
             className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors relative ${
