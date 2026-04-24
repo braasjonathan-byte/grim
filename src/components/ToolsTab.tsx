@@ -3,6 +3,16 @@ import { GripVertical, Pencil, Save, X, Loader2, Check, LogOut } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SupporterButton = lazy(() => import("@/components/SupporterButton"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
@@ -43,6 +53,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [localOrder, setLocalOrder] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const autoScrollRef = useRef<number | null>(null);
@@ -259,13 +270,33 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
 
       {onLogout && (
         <button
-          onClick={onLogout}
+          onClick={() => setConfirmLogout(true)}
           className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-lg hover:opacity-90 transition-opacity"
         >
           <LogOut className="w-4 h-4" />
           Logga ut
         </button>
       )}
+
+      <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Logga ut?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Är du säker på att du vill logga ut?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setConfirmLogout(false); onLogout?.(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Logga ut
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
     </div>
