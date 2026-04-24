@@ -3,6 +3,16 @@ import { GripVertical, Pencil, Save, X, Loader2, Check, LogOut } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SupporterButton = lazy(() => import("@/components/SupporterButton"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
