@@ -97,6 +97,7 @@ const ExerciseGifManager = () => {
   const [showBulkMuscle, setShowBulkMuscle] = useState(false);
   const [bulkPrimaryGroup, setBulkPrimaryGroup] = useState<string>("");
   const [bulkSubmuscles, setBulkSubmuscles] = useState<string[]>([]);
+  const [bulkSecondary, setBulkSecondary] = useState<SecondaryMuscle[]>([]);
 
   const fetchMappings = async () => {
     const { data } = await supabase
