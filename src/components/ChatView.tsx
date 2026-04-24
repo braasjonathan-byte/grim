@@ -446,7 +446,6 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 };
 
 // Grim Support Conversation component
-import { useRef } from "react";
 import { ArrowLeft, Send, Crown as CrownIcon, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 
