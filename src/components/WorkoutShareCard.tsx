@@ -362,29 +362,35 @@ const WorkoutShareCard = ({
           }}>
 
           {/* Header with logo */}
-          <div style={{ marginBottom: "16px", display: "table", width: "100%" }}>
-            <div style={{ display: "table-cell", width: "64px", verticalAlign: "top" }}>
+          <div style={{ marginBottom: "18px", display: "table", width: "100%" }}>
+            <div style={{ display: "table-cell", width: "60px", verticalAlign: "middle" }}>
               <img
                 src={grimIcon}
                 alt="Grim"
-                style={{ width: 64, height: 64, borderRadius: 14 }}
+                style={{ width: 56, height: 56, borderRadius: 14 }}
                 crossOrigin="anonymous" />
-
             </div>
             <div style={{ display: "table-cell", verticalAlign: "middle", paddingLeft: "12px" }}>
               <div
-                style={{ color: t.text, fontWeight: 700, fontSize: "16px", lineHeight: "1.25", margin: 0 }}>
-
+                style={{
+                  color: t.text,
+                  fontFamily: "'Permanent Marker', cursive",
+                  fontWeight: 400,
+                  fontSize: "24px",
+                  lineHeight: "1.1",
+                  margin: 0,
+                  letterSpacing: "0.01em"
+                }}>
                 {sessionName}
               </div>
-              <div style={{ color: t.subtext, fontSize: "12px", marginTop: "2px" }}>
+              <div style={{ color: t.subtext, fontSize: "12px", marginTop: "4px" }}>
                 {week > 0 ? `Vecka ${week} · ` : ""}{formatDay(day)} · {nickname}
               </div>
             </div>
           </div>
 
           {/* Stats row */}
-          <div style={{ marginTop: "8px", marginBottom: "16px", display: "table", width: "100%", tableLayout: "fixed", borderSpacing: "8px 0" }}>
+          <div style={{ marginBottom: "16px", display: "table", width: "100%", tableLayout: "fixed", borderSpacing: "8px 0" }}>
             {(() => {
               const stats: {label: string;value: string;}[] = [];
               if (isRunning && loggedDistanceKm) stats.push({ label: "km", value: String(loggedDistanceKm) });
@@ -394,50 +400,64 @@ const WorkoutShareCard = ({
               if (!isRunning && totalVolume > 0) stats.push({ label: "kg volym", value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(totalVolume) });
               if (!isRunning && exercises.length > 0) stats.push({ label: "övningar", value: String(exercises.length) });
               return stats.map((s, i) =>
-              <div key={i} style={{ display: "table-cell", borderRadius: "12px", padding: "14px 4px", textAlign: "center", background: t.statBg, verticalAlign: "middle" }}>
-                  <div style={{ fontSize: "24px", fontWeight: 700, color: t.text, lineHeight: "1.2", textAlign: "center" }}>{s.value}</div>
-                  <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.1em", color: t.muted, marginTop: "4px", textAlign: "center" }}>{s.label}</div>
+              <div key={i} style={{ display: "table-cell", borderRadius: "12px", padding: "12px 4px", textAlign: "center", background: t.statBg, verticalAlign: "middle" }}>
+                  <div style={{ fontSize: "22px", fontWeight: 700, color: t.text, lineHeight: "1.2", textAlign: "center", fontFamily: "'Permanent Marker', cursive" }}>{s.value}</div>
+                  <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: t.muted, marginTop: "4px", textAlign: "center" }}>{s.label}</div>
                 </div>
               );
             })()}
           </div>
 
-          {/* Exercise details */}
+          {/* Exercise details — bigger text, more space, weights shown */}
           {exerciseSummaries.length > 0 &&
           <div
             style={{
               background: t.exerciseBg,
               border: `1px solid ${t.border}`,
-              borderRadius: "12px",
-              padding: "12px",
+              borderRadius: "14px",
+              padding: "16px 14px",
               marginBottom: "16px"
             }}>
-
-              <div style={{ color: t.muted, fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>
+              <div style={{
+                color: t.muted,
+                fontSize: "11px",
+                fontWeight: 400,
+                textTransform: "uppercase",
+                letterSpacing: "0.15em",
+                marginBottom: "12px",
+                fontFamily: "'Permanent Marker', cursive"
+              }}>
                 {isRunning ? "Kondition" : "Övningar"}
               </div>
               {exerciseSummaries.map((ex, i) =>
-            <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "10px" : "0" }}>
+            <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "14px" : "0" }}>
                   {ex!.type === "cardio" ?
-              <div style={{ display: "table", width: "100%" }}>
-                      <div style={{ display: "table-cell", color: t.text, fontSize: "12px", fontWeight: 600 }}>
+              <div>
+                      <div style={{ color: t.text, fontSize: "15px", fontWeight: 600, lineHeight: "1.25" }}>
                         {ex!.name}
                       </div>
-                      <div style={{ display: "table-cell", color: t.subtext, fontSize: "10px", fontFamily: "monospace", textAlign: "right", whiteSpace: "nowrap" }}>
+                      <div style={{ color: t.subtext, fontSize: "12px", fontFamily: "monospace", marginTop: "3px" }}>
                         {ex!.info}
                       </div>
                     </div> :
 
               <div>
-                      <div style={{ color: t.text, fontSize: "12px", fontWeight: 600 }}>
+                      <div style={{
+                        color: t.text,
+                        fontSize: "15px",
+                        fontWeight: 700,
+                        lineHeight: "1.25",
+                        fontFamily: "'Permanent Marker', cursive",
+                        letterSpacing: "0.01em"
+                      }}>
                         {ex!.name}
                       </div>
                       {ex!.sets.length > 0 ?
-                <div style={{ color: t.subtext, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                <div style={{ color: t.subtext, fontSize: "12px", fontFamily: "'Space Mono', monospace", marginTop: "4px", lineHeight: "1.4" }}>
                           {formatSets(ex!.sets)}
                         </div> :
 
-                <div style={{ color: t.muted, fontSize: "10px", fontFamily: "monospace", marginTop: "2px" }}>
+                <div style={{ color: t.muted, fontSize: "12px", fontFamily: "'Space Mono', monospace", marginTop: "4px" }}>
                           {ex!.info}
                         </div>
                 }
@@ -448,33 +468,42 @@ const WorkoutShareCard = ({
             </div>
           }
 
-          {/* Avklarat badge - using table for reliable centering in html2canvas */}
+          {/* #BeGrim badge */}
           <div style={{ display: "table", width: "100%", marginBottom: "16px" }}>
-            <div style={{ display: "table-cell", textAlign: "center" }} className="text-primary-foreground bg-transparent mx-[10px]">
+            <div style={{ display: "table-cell", textAlign: "center" }}>
               <div
                 style={{
                   display: "inline-block",
                   background: "transparent",
                   color: t.text,
-                  fontSize: "13px",
-                  fontWeight: 700,
+                  fontSize: "16px",
+                  fontWeight: 400,
                   padding: "8px 20px",
                   borderRadius: "9999px",
-                  lineHeight: "1.4"
+                  lineHeight: "1.4",
+                  fontFamily: "'Permanent Marker', cursive",
+                  letterSpacing: "0.02em"
                 }}>
-
                 #BeGrim
               </div>
             </div>
           </div>
 
           {/* Footer / branding */}
-          <div style={{ position: "absolute", bottom: "24px", left: "24px", right: "24px", display: "table", width: "calc(100% - 48px)" }}>
-            <div style={{ display: "table-cell", color: t.muted, fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textAlign: "left" }}>
-              🔥 GRIM
+          <div style={{ position: "absolute", bottom: "20px", left: "24px", right: "24px", display: "table", width: "calc(100% - 48px)" }}>
+            <div style={{
+              display: "table-cell",
+              color: t.muted,
+              fontSize: "14px",
+              fontWeight: 400,
+              letterSpacing: "0.05em",
+              textAlign: "left",
+              fontFamily: "'Permanent Marker', cursive"
+            }}>
+              Grim
             </div>
-            <div style={{ display: "table-cell", color: t.muted, fontSize: "12px", fontWeight: 500, textAlign: "right" }}>
-              Ladda ner → grim.lovable.app
+            <div style={{ display: "table-cell", color: t.muted, fontSize: "11px", fontWeight: 500, textAlign: "right", verticalAlign: "middle" }}>
+              grim.lovable.app
             </div>
           </div>
         </div>
