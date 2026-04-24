@@ -556,7 +556,7 @@ const ExerciseGifManager = () => {
   }, [allExercises]);
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden bg-secondary">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-4"
