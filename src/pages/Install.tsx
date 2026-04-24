@@ -330,7 +330,7 @@ const Install = () => {
       )}
 
       {/* ── Android Guide ── */}
-      {platform === "android" && !deferredPrompt && (
+      {!installed && platform === "android" && !deferredPrompt && !inAppBrowser && (
         <div className="w-full max-w-sm space-y-5">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">🤖</span>
@@ -343,14 +343,38 @@ const Install = () => {
             <StepCard
               stepNumber={1}
               icon={<AndroidMenuIcon />}
-              title="Tryck på ⋮ menyn"
-              description="De tre prickarna uppe till höger i Chrome."
+              title={
+                androidBrowser === "samsung"
+                  ? "Tryck på ☰ menyn"
+                  : androidBrowser === "firefox"
+                  ? "Tryck på ⋮ menyn"
+                  : "Tryck på ⋮ menyn"
+              }
+              description={
+                androidBrowser === "samsung"
+                  ? "Linjerna nere till höger i Samsung Internet."
+                  : androidBrowser === "firefox"
+                  ? "De tre prickarna nere till höger i Firefox."
+                  : androidBrowser === "edge"
+                  ? "De tre prickarna nere i mitten i Edge."
+                  : androidBrowser === "opera"
+                  ? "Opera-loggan eller ⋮ nere till höger."
+                  : "De tre prickarna uppe till höger i Chrome."
+              }
             />
             <StepCard
               stepNumber={2}
               icon={<InstallIcon />}
-              title={`Välj "Installera app"`}
-              description={`Alternativt "Lägg till på startskärmen" om du inte ser "Installera app".`}
+              title={
+                androidBrowser === "samsung"
+                  ? `Välj "Lägg till sida på" → "Startskärm"`
+                  : `Välj "Installera app"`
+              }
+              description={
+                androidBrowser === "samsung"
+                  ? "Samsung Internet kallar det inte alltid 'installera' – men resultatet blir samma."
+                  : `Alternativt "Lägg till på startskärmen" om du inte ser "Installera app".`
+              }
             />
             <StepCard
               stepNumber={3}
@@ -364,8 +388,22 @@ const Install = () => {
             />
           </div>
 
+          {androidBrowser !== "chrome" && androidBrowser !== "samsung" && androidBrowser !== "edge" && (
+            <div className="bg-muted/40 border border-border rounded-lg p-3 text-left">
+              <p className="text-[11px] text-muted-foreground">
+                💡 Din webbläsare har begränsat stöd för installation. Om det inte fungerar – öppna sidan i <span className="font-semibold text-foreground">Chrome</span>.
+              </p>
+              <button
+                onClick={openInChrome}
+                className="mt-2 text-xs text-primary font-semibold underline"
+              >
+                Öppna i Chrome
+              </button>
+            </div>
+          )}
+
           <p className="text-muted-foreground text-[11px]">
-            💡 Använd <span className="font-semibold text-foreground">Chrome</span> för bästa resultat.
+            💡 Använd <span className="font-semibold text-foreground">Chrome</span> eller <span className="font-semibold text-foreground">Samsung Internet</span> för bästa resultat.
           </p>
         </div>
       )}
