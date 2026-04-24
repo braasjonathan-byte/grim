@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, X, Plus, Dumbbell, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { cn } from "@/lib/utils";
 
