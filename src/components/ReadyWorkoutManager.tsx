@@ -56,7 +56,7 @@ const ReadyWorkoutManager = () => {
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-lg border border-border bg-secondary">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-3 text-sm font-bold"

@@ -159,7 +159,7 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const isDenied = permission === "denied";
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+    <div className="border border-border rounded-lg p-4 space-y-4 bg-secondary">
       <div className="flex items-center gap-2">
         {isEnabled ? (
           <Bell className="w-4 h-4 text-primary" />

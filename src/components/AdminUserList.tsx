@@ -103,7 +103,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+    <div className="border border-border rounded-lg p-4 space-y-3 bg-secondary">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between"
