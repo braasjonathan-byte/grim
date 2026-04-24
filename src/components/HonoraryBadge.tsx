@@ -1,9 +1,11 @@
-import { Crown } from "lucide-react";
+import { Crown, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HonoraryBadgeProps {
   size?: "xs" | "sm" | "md";
   className?: string;
+  /** When provided, special users (e.g. "Jonne") render as "Admin" instead of "Hedersmedlem". */
+  nickname?: string | null;
 }
 
 const sizeStyles = {
@@ -18,17 +20,28 @@ const iconSizes = {
   md: "w-3.5 h-3.5",
 };
 
-const HonoraryBadge = ({ size = "sm", className }: HonoraryBadgeProps) => (
-  <span
-    className={cn(
-      "inline-flex items-center rounded-full bg-warning/15 text-warning font-bold whitespace-nowrap flex-shrink-0",
-      sizeStyles[size],
-      className
-    )}
-  >
-    <Crown className={iconSizes[size]} />
-    Hedersmedlem
-  </span>
-);
+const ADMIN_NICKNAMES = new Set(["jonne"]);
+
+const HonoraryBadge = ({ size = "sm", className, nickname }: HonoraryBadgeProps) => {
+  const isAdmin = nickname ? ADMIN_NICKNAMES.has(nickname.trim().toLowerCase()) : false;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full font-bold whitespace-nowrap flex-shrink-0",
+        isAdmin ? "bg-primary/15 text-primary" : "bg-warning/15 text-warning",
+        sizeStyles[size],
+        className
+      )}
+    >
+      {isAdmin ? (
+        <Shield className={iconSizes[size]} />
+      ) : (
+        <Crown className={iconSizes[size]} />
+      )}
+      {isAdmin ? "Admin" : "Hedersmedlem"}
+    </span>
+  );
+};
 
 export default HonoraryBadge;
