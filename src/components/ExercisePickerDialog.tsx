@@ -105,7 +105,11 @@ const ExercisePickerDialog = ({
       }
     }
     const merged = Array.from(nameMap.values());
-    return dedupeExerciseList(merged).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+    // Hide entries whose name still contains set/rep notation (e.g. "Axelpress 2×10")
+    const setRepRe = /\s+\d+\s*[x×*]\s*\d+/i;
+    return dedupeExerciseList(merged)
+      .filter(e => !setRepRe.test(e.name))
+      .sort((a, b) => a.name.localeCompare(b.name, "sv"));
   })();
 
   const filtered = allExercises.filter(e => {
