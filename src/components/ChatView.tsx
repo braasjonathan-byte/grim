@@ -317,6 +317,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
   const totalUnread = Array.from(lastMessages.values()).reduce((sum, m) => sum + m.unread_count, 0)
     + (grimLastMessage?.unread_count || 0)
+    + announcementUnread
     + (isAdmin ? supportConversations.reduce((s, c) => s + c.unread_count, 0) : 0);
 
   return (
