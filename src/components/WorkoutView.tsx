@@ -329,15 +329,22 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
   if (!loggedWeights) return null;
 
   const cleanedWeights: Record<string, any> = {};
+  const copiedExerciseNames: string[] = [];
 
   for (const [key, value] of Object.entries(loggedWeights)) {
     if (
       key.startsWith("__sets__") ||
       key.startsWith("__wod_rounds_done_") ||
       key.startsWith("__timer_started_") ||
-      key.startsWith("__timer_elapsed_")
+      key.startsWith("__timer_elapsed_") ||
+      key.startsWith("__copied_ex__")
     ) {
       continue;
+    }
+
+    if (key.startsWith("__setdata__")) {
+      const exName = key.substring("__setdata__".length);
+      if (exName) copiedExerciseNames.push(exName);
     }
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -347,6 +354,11 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
     }
 
     cleanedWeights[key] = value;
+  }
+
+  // Mark each copied exercise so UI can show a progression-reminder note
+  for (const exName of copiedExerciseNames) {
+    cleanedWeights[`__copied_ex__${exName}`] = "1";
   }
 
   return Object.keys(cleanedWeights).length > 0 ? cleanedWeights : null;
