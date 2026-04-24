@@ -49,7 +49,15 @@ interface EventGroup {
 type SubTab = "feed" | "friends" | "chat" | "groups";
 
 const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
-  const [subTab, setSubTab] = useState<SubTab>(initialFriendId ? "friends" : "feed");
+  const [subTab, setSubTabState] = useState<SubTab>(() => {
+    if (initialFriendId) return "friends";
+    const saved = localStorage.getItem("grim_social_subtab");
+    return (saved === "feed" || saved === "friends" || saved === "chat" || saved === "groups") ? saved : "feed";
+  });
+  const setSubTab = (t: SubTab) => {
+    setSubTabState(t);
+    try { localStorage.setItem("grim_social_subtab", t); } catch {}
+  };
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [groups, setGroups] = useState<EventGroup[]>([]);
   const [myGroups, setMyGroups] = useState<string[]>([]);
