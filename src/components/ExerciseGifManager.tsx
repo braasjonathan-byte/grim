@@ -1,8 +1,18 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Link2, Trash2, Loader2, ChevronDown, Check, FileText, Image, X, Pencil, Save, Eye, BookOpen } from "lucide-react";
-import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
+import { Search, Link2, Trash2, Loader2, ChevronDown, Check, FileText, Image, X, Pencil, Save, Eye, BookOpen, AlertCircle } from "lucide-react";
+import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
 import { toast } from "sonner";
+
+interface SecondaryMuscle { muscle: string; submuscles: string[]; }
+
+interface MuscleOverride {
+  id: string;
+  exercise_name: string;
+  muscle_group: string | null;
+  submuscles: string[];
+  secondary_muscles: SecondaryMuscle[];
+}
 
 interface Mapping {
   id: string;
