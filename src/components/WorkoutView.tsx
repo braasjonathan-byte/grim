@@ -7629,7 +7629,122 @@ const estimateCalories = (
                     )}
                 </div>
               }
-            </div>);
+            </div>
+            {/* Add another workout to the same day (shown under last completed plan of the day) */}
+            {isDone && (() => {
+              const dayPlansAll = plans.filter(p => p.week === plan.week && p.day === plan.day);
+              const isLastOfDay = dayPlansAll[dayPlansAll.length - 1]?.id === plan.id;
+              if (!isLastOfDay) return null;
+              const isOpen = addExtraDay?.week === plan.week && addExtraDay?.day === plan.day;
+              if (!isOpen) {
+                return (
+                  <button
+                    onClick={() => {
+                      setAddExtraDay({ week: plan.week, day: plan.day });
+                      setExtraName("");
+                      setShowExtraCopyPicker(false);
+                    }}
+                    className="w-full mt-2 py-3 border border-dashed border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Lägg till ett pass till denna dag
+                  </button>
+                );
+              }
+              // Inline "Nytt pass" form
+              const previousSessions = (() => {
+                const uniq = new Map<string, PlanDay>();
+                for (const p of plans) {
+                  if (!p.session_name?.trim()) continue;
+                  const existing = uniq.get(p.session_name);
+                  if (!existing || (p.week > existing.week) || (p.week === existing.week && p.day > existing.day)) {
+                    uniq.set(p.session_name, p);
+                  }
+                }
+                return Array.from(uniq.values());
+              })();
+              return (
+                <div className="bg-card border border-primary/30 rounded-lg p-4 mt-2 space-y-3 animate-fade-in">
+                  <h3 className="text-sm font-semibold">Nytt pass samma dag</h3>
+
+                  {previousSessions.length > 0 && (
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setShowExtraCopyPicker(!showExtraCopyPicker)}
+                        className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-primary hover:bg-primary/5 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <TrendingUp className="w-3 h-3" /> Kopiera tidigare pass
+                      </button>
+                      <p className="text-[10px] text-muted-foreground text-center">Övningar, vikter och reps kopieras — justera själv för progression</p>
+                      {showExtraCopyPicker && (
+                        <div className="space-y-1 max-h-40 overflow-y-auto animate-fade-in">
+                          {previousSessions.map((p) => (
+                            <button
+                              key={p.id}
+                              onClick={() => addExtraWorkoutToDay(plan.week, plan.day, p)}
+                              className="w-full text-left p-2.5 bg-secondary rounded-md text-xs hover:bg-primary/10 transition-colors"
+                            >
+                              <span className="font-semibold block">{p.session_name}</span>
+                              {p.details && (
+                                <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
+                                  {p.details.split("\n").slice(0, 2).join(", ")}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <input
+                    type="text"
+                    value={extraName}
+                    onChange={(e) => setExtraName(e.target.value)}
+                    placeholder="Passnamn (t.ex. Kondition)"
+                    className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+                    autoFocus
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Lägg till övningar efter att passet skapats
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={extraIsCircuit} onChange={(e) => setExtraIsCircuit(e.target.checked)} className="accent-primary w-4 h-4" />
+                    <span className="text-xs text-foreground">Cirkelpass (visar Starta-knapp)</span>
+                  </label>
+                  {extraIsCircuit && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
+                        <input type="number" inputMode="numeric" min="5" max="300" value={extraCircuitSeconds} onChange={(e) => setExtraCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
+                        <input type="number" inputMode="numeric" min="1" max="20" value={extraCircuitRounds} onChange={(e) => setExtraCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
+                        <input type="number" inputMode="numeric" min="0" max="300" value={extraCircuitRest} onChange={(e) => setExtraCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <span className="text-xs text-muted-foreground">sek</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => addExtraWorkoutToDay(plan.week, plan.day)}
+                      disabled={!extraName.trim()}
+                      className="flex-1 py-2 bg-primary text-primary-foreground font-semibold rounded-md text-sm disabled:opacity-40"
+                    >
+                      Skapa pass
+                    </button>
+                    <button
+                      onClick={() => { setAddExtraDay(null); setShowExtraCopyPicker(false); }}
+                      className="px-4 py-2 bg-secondary text-muted-foreground rounded-md text-sm"
+                    >
+                      Avbryt
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </React.Fragment>);
 
         })}
         {/* Empty days – show import button for days without a plan entry */}
