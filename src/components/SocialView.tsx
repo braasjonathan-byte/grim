@@ -622,10 +622,17 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
       {/* CHAT TAB */}
       {subTab === "chat" && (
-        <div className="min-h-0 flex-1 overflow-hidden touch-none">
-          <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
-            <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
-          </Suspense>
+        <div className="min-h-0 flex-1 flex flex-col overflow-hidden touch-none">
+          <div className="shrink-0 mb-3 max-h-[40vh] overflow-y-auto">
+            <Suspense fallback={null}>
+              <AnnouncementInbox userId={userId} isAdmin={isAdmin} />
+            </Suspense>
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
+              <ChatView userId={userId} isAdmin={isAdmin} isPremium={isHonorary} />
+            </Suspense>
+          </div>
         </div>
       )}
 
