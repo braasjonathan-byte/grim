@@ -396,6 +396,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return false;
   };
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || plansWithExercises.has(`${c.week}-${c.day}`);
+  // How many separate workouts a user has on a given (week, day). At least 1 if there's exercise data.
+  const passCountForDay = (c: CompletionRecord) => {
+    const key = `${c.week}-${c.day}`;
+    return Math.max(1, plansPerDay.get(key) || 0);
+  };
 
   const stats = useMemo(() => {
     type Bucket = {label: string;done: number;doneWithExercise: number;skipped: number;total: number;totalWithExercise: number;distanceKm: number;sortKey: string;};
