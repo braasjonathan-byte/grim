@@ -23,7 +23,7 @@ const PulseZoneCalculator = () => {
     <div className="border border-border rounded-lg bg-card overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 p-4 hover:bg-secondary transition-colors"
+        className="w-full flex items-center gap-3 p-4 transition-colors bg-secondary"
       >
         <Heart className="w-5 h-5 text-destructive" />
         <span className="font-semibold text-sm">Pulszonskalkylator</span>
