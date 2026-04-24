@@ -895,6 +895,203 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
   );
 };
 
+// =====================================================================
+// Grim Announcement Conversation — shows announcements as chat bubbles
+// =====================================================================
+
+interface GrimAnnouncementConversationProps {
+  currentUserId: string;
+  isAdmin: boolean;
+  onBack: () => void;
+}
+
+interface AnnouncementRow {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+}
+
+const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAnnouncementConversationProps) => {
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const fetchAnnouncements = async () => {
+    const { data } = await supabase
+      .from("announcements")
+      .select("id, title, message, created_at")
+      .order("created_at", { ascending: true });
+    if (data) setAnnouncements(data);
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+    const channel = supabase
+      .channel("grim-announcement-conv")
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => {
+        fetchAnnouncements();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [announcements]);
+
+  const handlePublish = async () => {
+    const t = title.trim();
+    const m = message.trim();
+    if (!t || !m) return;
+    setSending(true);
+    const { error } = await supabase
+      .from("announcements")
+      .insert({ author_id: currentUserId, title: t, message: m });
+    if (!error) {
+      try {
+        await supabase.functions.invoke("notify-announcement", { body: { title: t } });
+      } catch (e) {
+        console.error("Failed to send push notifications:", e);
+      }
+      setTitle("");
+      setMessage("");
+      setSent(true);
+      fetchAnnouncements();
+      setTimeout(() => setSent(false), 3000);
+    }
+    setSending(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("announcements").delete().eq("id", id);
+    fetchAnnouncements();
+  };
+
+  const grouped: { date: string; items: AnnouncementRow[] }[] = [];
+  let lastDate = "";
+  for (const a of announcements) {
+    const d = new Date(a.created_at).toLocaleDateString("sv-SE");
+    if (d !== lastDate) {
+      grouped.push({ date: d, items: [a] });
+      lastDate = d;
+    } else {
+      grouped[grouped.length - 1].items.push(a);
+    }
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3">
+        <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+          <img src={grimIcon} alt="Grim" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm">Grim</span>
+            <Megaphone className="w-3 h-3 text-primary" />
+          </div>
+          <span className="text-[10px] text-muted-foreground">Officiella meddelanden</span>
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        data-scroll-lock-scroll="y"
+        className={`min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain ${isAdmin ? 'pb-40' : 'pb-4'}`}
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+      >
+        {announcements.length === 0 ? (
+          <div className="text-center py-8 space-y-3">
+            <img src={grimIcon} alt="Grim" className="w-16 h-16 rounded-full mx-auto opacity-60" />
+            <p className="text-sm text-muted-foreground">Inga meddelanden ännu 📭</p>
+          </div>
+        ) : (
+          grouped.map(group => (
+            <div key={group.date}>
+              <div className="text-center my-3">
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {group.date}
+                </span>
+              </div>
+              {group.items.map(a => (
+                <div key={a.id} className="flex justify-start mb-1 group">
+                  <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-muted text-foreground px-3 py-2">
+                    <p className="text-[10px] font-semibold text-primary mb-0.5">Grim</p>
+                    <h4 className="text-sm font-bold mb-0.5">{a.title}</h4>
+                    <p className="text-sm whitespace-pre-wrap break-words">{a.message}</p>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(a.created_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDelete(a.id)}
+                          className="p-0.5 text-destructive hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100"
+                          title="Ta bort"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
+
+      {isAdmin && (
+        <div
+          className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 max-w-lg mx-auto space-y-2"
+          style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)`, touchAction: "none" }}
+          onTouchMove={(event) => event.preventDefault()}
+        >
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Rubrik..."
+            maxLength={100}
+            className="w-full bg-muted text-foreground text-sm px-4 py-2 rounded-full outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="flex items-end gap-2">
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Skriv meddelande till alla användare..."
+              maxLength={1000}
+              rows={2}
+              className="flex-1 bg-muted text-foreground text-sm px-4 py-2 rounded-2xl outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+            />
+            <button
+              onClick={handlePublish}
+              disabled={!title.trim() || !message.trim() || sending}
+              className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 transition-colors hover:bg-primary/90 flex-shrink-0"
+              title="Publicera"
+            >
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : sent ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function formatTime(dateStr: string): string {
   const d = new Date(dateStr);
   const now = new Date();
