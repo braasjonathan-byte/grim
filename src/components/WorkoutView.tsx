@@ -1579,10 +1579,22 @@ const estimateCalories = (
     const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: defaultKg, reps: defaultReps });
     data[setIndex] = { ...data[setIndex], [field]: value };
 
-    await updateCompletionWeights(week, day, (existing) => ({
-      ...existing,
-      [`__setdata__${exerciseName}`]: JSON.stringify(data),
-    }));
+    await updateCompletionWeights(week, day, (existing) => {
+      const next = {
+        ...existing,
+        [`__setdata__${exerciseName}`]: JSON.stringify(data),
+      };
+      // User adjusted kg/reps -> clear progression reminder for this exercise
+      delete next[`__copied_ex__${exerciseName}`];
+      return next;
+    });
+  };
+
+  // Check if exercise was copied from a previous workout and not yet adjusted
+  const isCopiedExercise = (weekDayKey: string, exerciseName: string): boolean => {
+    const comp = completions[weekDayKey];
+    const weights = comp?.logged_weights as Record<string, any> | null;
+    return weights?.[`__copied_ex__${exerciseName}`] === "1";
   };
 
   // Extract RPE from exercise text
