@@ -302,26 +302,59 @@ const ExerciseGifManager = () => {
     setSavingMuscle(false);
   };
 
-  // All exercises: library + custom, deduplicated, sorted alphabetically
+  // Build override lookup map
+  const overridesByName = useMemo(() => {
+    const m = new Map<string, MuscleOverride>();
+    for (const o of overrides) m.set(o.exercise_name.toLowerCase(), o);
+    return m;
+  }, [overrides]);
+
+  // All exercises: library + custom + overrides, deduplicated, sorted alphabetically
   const allExercises = useMemo(() => {
-    const nameSet = new Map<string, { name: string; category: string; muscleGroup: string; isBodyweight: boolean }>();
-    
+    const nameSet = new Map<string, {
+      name: string;
+      category: string;
+      muscleGroup: string;
+      submuscles: string[];
+      secondaryMuscles: SecondaryMuscle[];
+      isBodyweight: boolean;
+    }>();
+
     for (const e of exerciseLibrary) {
-      nameSet.set(e.name.toLowerCase(), { name: e.name, category: e.category, muscleGroup: e.muscleGroup, isBodyweight: false });
+      nameSet.set(e.name.toLowerCase(), {
+        name: e.name, category: e.category, muscleGroup: e.muscleGroup,
+        submuscles: [], secondaryMuscles: [], isBodyweight: false,
+      });
     }
-    
+
     for (const c of customExercises) {
       const key = c.name.toLowerCase();
-      if (nameSet.has(key)) {
-        const existing = nameSet.get(key)!;
-        nameSet.set(key, { ...existing, muscleGroup: c.muscle_group, category: c.category, isBodyweight: !!c.is_bodyweight_exercise });
-      } else {
-        nameSet.set(key, { name: c.name, category: c.category, muscleGroup: c.muscle_group, isBodyweight: !!c.is_bodyweight_exercise });
-      }
+      const existing = nameSet.get(key);
+      nameSet.set(key, {
+        name: existing?.name ?? c.name,
+        category: c.category,
+        muscleGroup: c.muscle_group,
+        submuscles: c.submuscles ?? [],
+        secondaryMuscles: c.secondary_muscles ?? [],
+        isBodyweight: !!c.is_bodyweight_exercise,
+      });
     }
-    
+
+    // Apply admin overrides last (overrides custom + lib)
+    for (const o of overrides) {
+      const key = o.exercise_name.toLowerCase();
+      const existing = nameSet.get(key);
+      if (!existing) continue;
+      nameSet.set(key, {
+        ...existing,
+        muscleGroup: o.muscle_group ?? existing.muscleGroup,
+        submuscles: o.submuscles ?? existing.submuscles,
+        secondaryMuscles: o.secondary_muscles ?? existing.secondaryMuscles,
+      });
+    }
+
     return Array.from(nameSet.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
-  }, [customExercises]);
+  }, [customExercises, overrides]);
 
   const toggleSelected = (name: string) => {
     setSelectedExercises(prev => {
