@@ -27,6 +27,7 @@ interface ToolsTabProps {
   isHonorary: boolean;
   userRole: string;
   onViewUserPlan?: (targetUserId: string) => void;
+  onLogout?: () => void;
 }
 
 interface SectionDef {
@@ -36,7 +37,7 @@ interface SectionDef {
   render: () => React.ReactNode;
 }
 
-const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan }: ToolsTabProps) => {
+const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout }: ToolsTabProps) => {
   const [editMode, setEditMode] = useState(false);
   const [savedOrder, setSavedOrder] = useState<string[] | null>(null);
   const [localOrder, setLocalOrder] = useState<string[]>([]);
