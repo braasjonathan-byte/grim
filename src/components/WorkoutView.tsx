@@ -3202,7 +3202,7 @@ const estimateCalories = (
             const completion = completions[key];
             const isDone = completion?.done || false;
             const isSkipped = completion?.skipped || false;
-            const expanded = expandedDay === key;
+            const expanded = true;
             const Icon = getSessionIcon(plan.session_name);
             const colorClass = getSessionColor(plan.session_name);
             const isExercisePickerOpen = showExercisePicker === plan.id;
