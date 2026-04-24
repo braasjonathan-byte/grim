@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+import legacy from "@vitejs/plugin-legacy";
 
 // https://vitejs.dev/config/
 // Unique app version per build so mobile/PWA clients can detect updates immediately
@@ -35,10 +36,30 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
+  build: {
+    target: ["es2017", "safari11", "chrome64", "firefox60", "edge79"],
+    cssTarget: ["safari11", "chrome64"],
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
     versionJsonPlugin(),
+    // Generate a legacy bundle (ES5 + polyfills) for older phones
+    // Covers iOS 11+, Android 5+ Chrome, Samsung Internet 7+, etc.
+    legacy({
+      targets: [
+        "defaults",
+        "iOS >= 11",
+        "Safari >= 11",
+        "Android >= 5",
+        "Chrome >= 64",
+        "Firefox >= 60",
+        "Samsung >= 7",
+        "not dead",
+      ],
+      modernPolyfills: true,
+      renderLegacyChunks: true,
+    }),
     VitePWA({
       strategies: "injectManifest",
       srcDir: "public",
