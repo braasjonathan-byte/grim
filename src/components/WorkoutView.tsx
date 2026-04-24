@@ -1921,7 +1921,8 @@ const estimateCalories = (
 
   // Handle import of a workout into a plan slot. If existing exercises and target is a real plan,
   // ask whether to replace or append. Then if it's a recurring plan (week>0), ask about propagation.
-  const handleImportWorkout = (workout: { name: string; details: string; tempo: string | null }) => {
+  const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
+    const workout = { ...rawWorkout, details: normalizeImportedDetails(rawWorkout.details) };
     const target = importWorkoutTarget;
     if (!target) return;
 
