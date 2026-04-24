@@ -13,6 +13,7 @@ import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
 const EventGroupPage = lazy(() => import("./EventGroupPage"));
+const AnnouncementInbox = lazy(() => import("./AnnouncementInbox"));
 
 interface SocialViewProps {
   userId: string;
