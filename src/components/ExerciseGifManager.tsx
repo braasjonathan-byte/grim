@@ -604,6 +604,14 @@ const ExerciseGifManager = () => {
             >
               ❌ Utan GIF ({totalCount - mappedCount})
             </button>
+            <button
+              onClick={() => setShowOnlyMissingSubmuscle(!showOnlyMissingSubmuscle)}
+              className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors flex items-center gap-1 ${
+                showOnlyMissingSubmuscle ? "bg-destructive text-destructive-foreground" : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              <AlertCircle className="w-3 h-3" /> Saknar undergrupp ({missingSubmuscleCount})
+            </button>
           </div>
 
           {/* Muscle group filter */}
