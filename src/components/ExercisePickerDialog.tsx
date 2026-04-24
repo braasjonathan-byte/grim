@@ -62,6 +62,8 @@ const ExercisePickerDialog = ({
       setSelectedMuscle(initialMuscleGroup);
       setShowCreate(false);
       setNewName("");
+      setNewSubmuscles([]);
+      setNewSecondary([]);
       supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
         if (data) setCustomExercises(data);
       });
