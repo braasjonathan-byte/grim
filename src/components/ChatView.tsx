@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, Crown, Sparkles } from "lucide-react";
+import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 
 const GRIM_SUPPORT_ID = "grim-support";
+const GRIM_ANNOUNCEMENT_ID = "grim-announcement";
+const ANNOUNCEMENTS_LAST_READ_KEY = "gymberget_last_read_announcements";
 
 interface ChatViewProps {
   userId: string;
