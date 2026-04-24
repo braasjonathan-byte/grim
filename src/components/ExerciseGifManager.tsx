@@ -681,7 +681,43 @@ const ExerciseGifManager = () => {
                   <option value="rörlighet">Rörlighet</option>
                   <option value="core">Core</option>
                 </select>
+                <button
+                  onClick={() => { setShowBulkMuscle(true); setBulkPrimaryGroup(""); setBulkSubmuscles([]); }}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2.5 py-1.5 bg-accent text-accent-foreground rounded-lg font-semibold disabled:opacity-40"
+                >
+                  Sätt muskelgrupp…
+                </button>
               </div>
+
+              {showBulkMuscle && (
+                <div className="mt-2 bg-card border border-border rounded-lg p-2 space-y-2">
+                  <p className="text-[11px] font-semibold">Muskelgrupp för {selectedExercises.size} övningar</p>
+                  <div className="flex flex-wrap gap-1">
+                    {muscleGroups.map(mg => (
+                      <button key={mg} type="button"
+                        onClick={() => { setBulkPrimaryGroup(mg); setBulkSubmuscles([]); }}
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${bulkPrimaryGroup === mg ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                      >{mg}</button>
+                    ))}
+                  </div>
+                  {bulkPrimaryGroup && (submusclesByGroup[bulkPrimaryGroup]?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {submusclesByGroup[bulkPrimaryGroup].map(sm => (
+                        <button key={sm} type="button"
+                          onClick={() => setBulkSubmuscles(p => p.includes(sm) ? p.filter(x => x !== sm) : [...p, sm])}
+                          className={`text-[10px] px-2 py-0.5 rounded-md font-medium ${bulkSubmuscles.includes(sm) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                        >{sm}</button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowBulkMuscle(false)} className="flex-1 py-1.5 bg-secondary text-muted-foreground text-[11px] rounded-lg">Avbryt</button>
+                    <button onClick={bulkSetMuscles} disabled={!bulkPrimaryGroup || savingBulk}
+                      className="flex-1 py-1.5 bg-primary text-primary-foreground text-[11px] font-bold rounded-lg disabled:opacity-40">Spara</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
