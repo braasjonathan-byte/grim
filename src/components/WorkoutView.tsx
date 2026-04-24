@@ -3478,7 +3478,7 @@ const estimateCalories = (
                       const setsStrSingle = getSetsDone(key, name);
 
                       return (
-                        <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-border/50">
+                        <div key={i} className="bg-secondary/60 rounded-none p-3 border-y border-border/50 -mx-4">
                               <div className="flex items-center justify-between mb-1.5">
                                 <span className="font-semibold text-sm text-foreground">
                                   {toTitleCase(name)}
