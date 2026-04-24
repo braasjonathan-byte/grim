@@ -1773,7 +1773,45 @@ const estimateCalories = (
     fetchData();
   };
 
-  // Helper: map a calendar date to plan week number and day abbreviation
+  // Add an EXTRA workout to an already-existing plan day (week>0 plan view)
+  const addExtraWorkoutToDay = async (week: number, day: string, copyFrom?: PlanDay) => {
+    const name = copyFrom ? copyFrom.session_name : extraName.trim();
+    if (!name) return;
+
+    let details = "";
+    if (copyFrom && copyFrom.details) {
+      details = copyFrom.details;
+    }
+
+    await supabase.from("workout_plans").insert({
+      user_id: userId,
+      week,
+      day,
+      session_name: name,
+      details,
+      tempo: copyFrom
+        ? copyFrom.tempo
+        : (extraIsCircuit
+            ? `circuit:${parseInt(extraCircuitSeconds) || 40}:${parseInt(extraCircuitRounds) || 3}:${parseInt(extraCircuitRest) || 0}`
+            : null),
+      is_circuit: copyFrom ? (copyFrom.is_circuit || false) : extraIsCircuit,
+    } as any);
+
+    setExtraName("");
+    setExtraIsCircuit(false);
+    setExtraCircuitSeconds("40");
+    setExtraCircuitRounds("3");
+    setExtraCircuitRest("30");
+    setShowExtraCopyPicker(false);
+    setAddExtraDay(null);
+    if (copyFrom) {
+      toast.success("Pass tillagt på samma dag 💪");
+    } else {
+      toast.success("Nytt pass tillagt – lägg till övningar nedan");
+    }
+    fetchData();
+  };
+
   const mapDateToPlanWeekDay = (date: Date): { week: number; day: string } | null => {
     if (mode !== "plan" || !planStartDate) return null;
     const [y, m, d] = planStartDate.split("-").map(Number);
