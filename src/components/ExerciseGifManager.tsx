@@ -529,7 +529,12 @@ const ExerciseGifManager = () => {
         }
         return true;
       });
-  }, [allExercises, mappingsByName, filter, showOnlyMapped, showOnlyUnmapped, muscleGroupFilter]);
+  }, [allExercises, mappingsByName, filter, showOnlyMapped, showOnlyUnmapped, muscleGroupFilter, showOnlyMissingSubmuscle]);
+
+  const missingSubmuscleCount = useMemo(() =>
+    allExercises.filter(e => (submusclesByGroup[e.muscleGroup]?.length ?? 0) > 0 && (!e.submuscles || e.submuscles.length === 0)).length,
+    [allExercises]
+  );
 
   const mappedCount = allExercises.filter((e) => mappingsByName.has(e.name.toLowerCase())).length;
   const totalCount = allExercises.length;
