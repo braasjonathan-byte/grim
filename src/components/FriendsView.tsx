@@ -1375,7 +1375,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                     )}
                   </div>
                   <span className="font-semibold text-sm">{friend.profile.nickname}</span>
-                  {friend.profile.is_honorary && <HonoraryBadge size="xs" />}
+                  {friend.profile.is_honorary && <HonoraryBadge size="xs" nickname={friend.profile.nickname} />}
                   {recentCount > 0 && (
                     <span className="px-1.5 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full">
                       🔥 {recentCount} pass

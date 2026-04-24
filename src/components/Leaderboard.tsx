@@ -155,7 +155,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
               {/* Name */}
               <div className="flex-1 min-w-0 flex items-center gap-1.5">
                 <span className="font-semibold text-sm truncate">{entry.nickname}</span>
-                {entry.is_honorary && <HonoraryBadge size="sm" />}
+                {entry.is_honorary && <HonoraryBadge size="sm" nickname={entry.nickname} />}
               </div>
 
               {/* Count */}

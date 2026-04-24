@@ -347,7 +347,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                     <Shield className="w-3 h-3" /> Admin
                   </span>
                 ) : isHonorary ? (
-                  <HonoraryBadge size="sm" className="mt-0.5" />
+                  <HonoraryBadge size="sm" className="mt-0.5" nickname={nickname} />
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full mt-0.5 bg-secondary text-muted-foreground">
                     Medlem

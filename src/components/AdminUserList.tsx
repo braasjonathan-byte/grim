@@ -146,7 +146,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                           )}
                         </div>
                         <span className="text-sm font-medium truncate">{u.nickname}</span>
-                        {u.is_honorary && <HonoraryBadge size="xs" />}
+                        {u.is_honorary && <HonoraryBadge size="xs" nickname={u.nickname} />}
                       </div>
                       <div className="flex items-center justify-end gap-1.5 flex-wrap">
                         <button
@@ -169,7 +169,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                           {togglingHonorary === u.user_id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
                           ) : (
-                            <>{u.is_honorary ? "👑 Hedersmedlem" : "Medlem"}</>
+                            <>{u.nickname?.trim().toLowerCase() === "jonne" ? "🛡️ Admin" : u.is_honorary ? "👑 Hedersmedlem" : "Medlem"}</>
                           )}
                         </button>
                         {isFriend ? (
