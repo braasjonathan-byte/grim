@@ -1049,6 +1049,88 @@ const ExerciseGifManager = () => {
         </div>
       )}
 
+      {/* Muscle editor dialog */}
+      {editingMusclesFor && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/60" onClick={() => setEditingMusclesFor(null)} />
+          <div className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-[90] max-w-md mx-auto bg-card border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Redigera muskler</p>
+                <p className="text-sm font-bold truncate">{editingMusclesFor}</p>
+              </div>
+              <button onClick={() => setEditingMusclesFor(null)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Primär muskelgrupp</p>
+                <div className="flex flex-wrap gap-1">
+                  {muscleGroups.map(mg => (
+                    <button key={mg} type="button"
+                      onClick={() => { setEditPrimaryGroup(mg); setEditSubmuscles([]); }}
+                      className={`text-[11px] px-2 py-1 rounded-md font-medium ${editPrimaryGroup === mg ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                    >{mg}</button>
+                  ))}
+                </div>
+              </div>
+              {(submusclesByGroup[editPrimaryGroup]?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Undergrupper (valfritt)</p>
+                  <div className="flex flex-wrap gap-1">
+                    {submusclesByGroup[editPrimaryGroup].map(sm => (
+                      <button key={sm} type="button"
+                        onClick={() => setEditSubmuscles(p => p.includes(sm) ? p.filter(x => x !== sm) : [...p, sm])}
+                        className={`text-[11px] px-2 py-1 rounded-md font-medium ${editSubmuscles.includes(sm) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                      >{sm}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Övriga muskler (valfritt)</p>
+                {editSecondary.map(sec => (
+                  <div key={sec.muscle} className="bg-secondary/40 rounded-lg p-2 space-y-1 mb-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold">{sec.muscle}</span>
+                      <button type="button" onClick={() => setEditSecondary(p => p.filter(s => s.muscle !== sec.muscle))} className="text-[10px] text-muted-foreground hover:text-destructive">Ta bort</button>
+                    </div>
+                    {(submusclesByGroup[sec.muscle]?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {submusclesByGroup[sec.muscle].map(sm => (
+                          <button key={sm} type="button"
+                            onClick={() => setEditSecondary(p => p.map(s => s.muscle === sec.muscle ? { ...s, submuscles: s.submuscles.includes(sm) ? s.submuscles.filter(x => x !== sm) : [...s.submuscles, sm] } : s))}
+                            className={`text-[11px] px-2 py-0.5 rounded-md font-medium ${sec.submuscles.includes(sm) ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                          >{sm}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <select
+                  value=""
+                  onChange={e => { if (e.target.value && !editSecondary.some(s => s.muscle === e.target.value) && e.target.value !== editPrimaryGroup) { setEditSecondary(p => [...p, { muscle: e.target.value, submuscles: [] }]); } e.currentTarget.value = ""; }}
+                  className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                >
+                  <option value="">+ Lägg till muskel...</option>
+                  {muscleGroups.filter(mg => mg !== editPrimaryGroup && !editSecondary.some(s => s.muscle === mg)).map(mg => (
+                    <option key={mg} value={mg}>{mg}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 p-4 border-t border-border">
+              <button onClick={() => setEditingMusclesFor(null)} className="flex-1 py-2 bg-secondary text-muted-foreground text-xs font-semibold rounded-lg">Avbryt</button>
+              <button onClick={() => saveMuscleData(editingMusclesFor)} disabled={savingMuscles || !editPrimaryGroup}
+                className="flex-1 py-2 bg-primary text-primary-foreground text-xs font-bold rounded-lg disabled:opacity-40 flex items-center justify-center gap-1">
+                {savingMuscles ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Spara
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Linking dialog overlay */}
       {linkingExercise && (
         <>
