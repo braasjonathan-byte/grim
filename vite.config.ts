@@ -67,11 +67,13 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       injectRegister: "script-defer",
       includeAssets: ["favicon.ico", "robots.txt"],
+      // Build SW as a classic script (not ES module) so it works in older
+      // WebViews / Safari < 15.4 when the app is installed to home screen.
       injectManifest: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
-        // Never precache version.json — it must always be fetched fresh.
         globIgnores: ["**/version.json"],
+        rollupFormat: "iife",
       },
       manifest: {
         name: "Grim – Träningsapp",
