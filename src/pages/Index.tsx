@@ -152,8 +152,7 @@ const Index = () => {
   const [userRole, setUserRole] = useState<string>("member");
   const [isHonorary, setIsHonorary] = useState(false);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
-  const [showInboxDropdown, setShowInboxDropdown] = useState(false);
-  const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
+  
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
   const [isAppInstalled, setIsAppInstalled] = useState(() => {
