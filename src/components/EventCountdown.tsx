@@ -292,7 +292,7 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
   if (loading) return null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-secondary p-4 space-y-3">
       <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Target className="w-5 h-5 text-muted-foreground" />

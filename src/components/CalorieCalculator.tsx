@@ -71,7 +71,7 @@ const CalorieCalculator = () => {
   };
 
   return (
-    <div className="border border-border rounded-lg bg-card overflow-hidden">
+    <div className="border border-border rounded-lg bg-secondary overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-3 p-4 hover:bg-secondary transition-colors"

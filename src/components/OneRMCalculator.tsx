@@ -16,7 +16,7 @@ const OneRMCalculator = () => {
   const oneRM = reps === 1 ? weight : Math.round(weight * (1 + reps / 30));
 
   return (
-    <div className="border border-border rounded-lg bg-card overflow-hidden">
+    <div className="border border-border rounded-lg bg-secondary overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 p-4 hover:bg-secondary transition-colors"
