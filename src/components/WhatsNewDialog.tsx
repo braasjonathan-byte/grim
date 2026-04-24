@@ -6,16 +6,6 @@ const WHATS_NEW_KEY = "gymberget_last_seen_changelog";
 
 const changelog = [
   {
-    version: "1.6.0",
-    date: "2026-04-24",
-    items: [
-      "➕ Flera pass samma dag – när ett pass är klarmarkerat kan du lägga till ytterligare ett pass på samma dag, antingen tomt, kopierat från ett tidigare pass eller importerat från biblioteket med färdiga pass",
-      "📊 Statistik räknar alla pass – två separata pass samma dag räknas nu som två pass i statistik och topplista, inte som en enda dag",
-      "💬 Grim som chatt – meddelanden från admin visas nu som en chatt från användaren \"Grim\", alltid högst upp i chattlistan istället för i en separat inkorg",
-      "🛡️ Admin-märke – Jonne visas nu med ett \"Admin\"-märke och sköld-ikon överallt i appen istället för \"Hedersmedlem\"",
-    ],
-  },
-  {
     version: "1.5.0",
     date: "2026-04-16",
     items: [
