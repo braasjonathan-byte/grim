@@ -353,7 +353,13 @@ const ExerciseGifManager = () => {
       });
     }
 
-    return Array.from(nameSet.values()).sort((a, b) => a.name.localeCompare(b.name, "sv"));
+    // Hide duplicates: any entry whose name contains set/rep notation
+    // (e.g. "Axelpress 2×10", "Bänkpress 3x10 @ RPE 7") is treated as a
+    // dupe and hidden from the admin library entirely.
+    const setRepRe = /\s+\d+\s*[x×*]\s*\d+/i;
+    return Array.from(nameSet.values())
+      .filter(e => !setRepRe.test(e.name))
+      .sort((a, b) => a.name.localeCompare(b.name, "sv"));
   }, [customExercises, overrides]);
 
   const toggleSelected = (name: string) => {
