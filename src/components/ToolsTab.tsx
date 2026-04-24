@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { GripVertical, Pencil, Save, X, Loader2, Check } from "lucide-react";
+import { GripVertical, Pencil, Save, X, Loader2, Check, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
