@@ -501,7 +501,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-semibold truncate">{friend.nickname}</span>
-                      {friend.is_honorary && <HonoraryBadge size="xs" />}
+                      {friend.is_honorary && <HonoraryBadge size="xs" nickname={friend.nickname} />}
                       {lastMsg && (
                         <span className="text-[10px] text-muted-foreground flex-shrink-0">
                           {formatTime(lastMsg.created_at)}

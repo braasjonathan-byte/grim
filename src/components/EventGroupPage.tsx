@@ -470,7 +470,7 @@ const EventGroupPage = ({ groupId, userId, isAdmin, onBack, onDeleted }: EventGr
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-semibold truncate">{m.nickname}</span>
-                  {m.is_honorary && <HonoraryBadge />}
+                  {m.is_honorary && <HonoraryBadge nickname={m.nickname} />}
                   {m.user_id === userId && (
                     <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">du</span>
                   )}
