@@ -260,6 +260,21 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   };
 
   if (selectedFriend) {
+    if (selectedFriend.isGrimAnnouncement) {
+      return (
+        <div className="h-full min-h-0 overflow-hidden">
+          <GrimAnnouncementConversation
+            currentUserId={userId}
+            isAdmin={isAdmin}
+            onBack={() => {
+              setSelectedFriend(null);
+              fetchAnnouncementPreview();
+              setAnnouncementUnread(0);
+            }}
+          />
+        </div>
+      );
+    }
     if (selectedFriend.isGrimSupport) {
       return (
         <div className="h-full min-h-0 overflow-hidden">
