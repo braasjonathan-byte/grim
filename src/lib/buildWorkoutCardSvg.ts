@@ -89,11 +89,17 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const P = 24;
   const t = input.theme;
 
+  // Permanent Marker via Google Fonts (loaded inside SVG via <style>)
+  const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;600;700&family=Space+Mono&display=swap');`;
+  const MARKER = `'Permanent Marker', cursive`;
+  const SANS = `'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`;
+  const MONO = `'Space Mono', monospace`;
+
   // ── Gradient defs ──
   const defs = [
     parseGradient(t.bg, "bg-grad"),
     parseGradient(t.badgeBg, "badge-grad"),
-    `<clipPath id="logo-clip"><rect x="${P}" y="${P}" width="64" height="64" rx="14"/></clipPath>`,
+    `<clipPath id="logo-clip"><rect x="${P}" y="${P}" width="56" height="56" rx="14"/></clipPath>`,
   ].join("\n");
 
   const els: string[] = [];
@@ -103,16 +109,16 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
 
   // ── Logo ──
   els.push(
-    `<image href="${input.logoBase64}" x="${P}" y="${P}" width="64" height="64" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid slice"/>`
+    `<image href="${input.logoBase64}" x="${P}" y="${P}" width="56" height="56" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid slice"/>`
   );
 
   // ── Title & subtitle ──
-  const txX = P + 76;
+  const txX = P + 68;
   els.push(
-    `<text x="${txX}" y="${P + 28}" fill="${t.text}" font-size="16" font-weight="700">${esc(input.sessionName)}</text>`
+    `<text x="${txX}" y="${P + 28}" fill="${t.text}" font-size="22" font-family="${MARKER}">${esc(input.sessionName)}</text>`
   );
   els.push(
-    `<text x="${txX}" y="${P + 48}" fill="${t.subtext}" font-size="12">${esc(input.subtitle)}</text>`
+    `<text x="${txX}" y="${P + 48}" fill="${t.subtext}" font-size="12" font-family="${SANS}">${esc(input.subtitle)}</text>`
   );
 
   let y = P + 80;
@@ -132,10 +138,10 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
         `<rect x="${cx}" y="${y}" width="${cw}" height="${ch}" rx="12" fill="${sf}" fill-opacity="${so}"/>`
       );
       els.push(
-        `<text x="${cx + cw / 2}" y="${y + 22}" fill="${t.text}" font-size="24" font-weight="700" text-anchor="middle" dy="0.35em">${esc(s.value)}</text>`
+        `<text x="${cx + cw / 2}" y="${y + 22}" fill="${t.text}" font-size="22" font-family="${MARKER}" text-anchor="middle" dy="0.35em">${esc(s.value)}</text>`
       );
       els.push(
-        `<text x="${cx + cw / 2}" y="${y + 44}" fill="${t.muted}" font-size="9" text-anchor="middle" dy="0.35em" letter-spacing="1">${esc(s.label.toUpperCase())}</text>`
+        `<text x="${cx + cw / 2}" y="${y + 44}" fill="${t.muted}" font-size="9" font-family="${SANS}" text-anchor="middle" dy="0.35em" letter-spacing="1">${esc(s.label.toUpperCase())}</text>`
       );
     });
 
@@ -143,20 +149,22 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   }
 
   // ── Exercises ──
-  const maxEx = 8;
+  const maxEx = 7;
   const visibleExercises = input.exercises.slice(0, maxEx);
   const hiddenCount = input.exercises.length - visibleExercises.length;
 
   if (visibleExercises.length > 0) {
-    const ep = 12;
-    const headerH = 22;
-    const nameH = 18;
-    const detailH = 15;
+    const ep = 14;
+    const headerH = 24;
+    const nameH = 22;
+    const detailH = 18;
+    const exGap = 8;
 
     let contentH = ep + headerH;
-    visibleExercises.forEach((ex) => {
+    visibleExercises.forEach((ex, idx) => {
       contentH += nameH;
       if (ex.detail) contentH += detailH;
+      if (idx < visibleExercises.length - 1) contentH += exGap;
     });
     if (hiddenCount > 0) contentH += nameH;
     contentH += ep;
@@ -167,57 +175,58 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
     const { fill: bf, opacity: bo } = rgbaToSvg(t.border);
 
     els.push(
-      `<rect x="${bx}" y="${y}" width="${bw}" height="${contentH}" rx="12" fill="${ef}" fill-opacity="${eo}" stroke="${bf}" stroke-opacity="${bo}" stroke-width="1"/>`
+      `<rect x="${bx}" y="${y}" width="${bw}" height="${contentH}" rx="14" fill="${ef}" fill-opacity="${eo}" stroke="${bf}" stroke-opacity="${bo}" stroke-width="1"/>`
     );
 
     let ty = y + ep + 12;
     els.push(
-      `<text x="${bx + ep}" y="${ty}" fill="${t.muted}" font-size="10" font-weight="700" letter-spacing="1">${input.isRunning ? "KONDITION" : "ÖVNINGAR"}</text>`
+      `<text x="${bx + ep}" y="${ty}" fill="${t.muted}" font-size="11" font-family="${MARKER}" letter-spacing="1.5">${input.isRunning ? "KONDITION" : "ÖVNINGAR"}</text>`
     );
     ty += headerH;
 
-    visibleExercises.forEach((ex) => {
+    visibleExercises.forEach((ex, idx) => {
       els.push(
-        `<text x="${bx + ep}" y="${ty}" fill="${t.text}" font-size="12" font-weight="600">${esc(ex.name)}</text>`
+        `<text x="${bx + ep}" y="${ty}" fill="${t.text}" font-size="15" font-family="${MARKER}" letter-spacing="0.02em">${esc(ex.name)}</text>`
       );
-      ty += nameH;
+      ty += nameH - 6;
       if (ex.detail) {
         els.push(
-          `<text x="${bx + ep}" y="${ty}" fill="${t.subtext}" font-size="10" font-family="'Permanent Marker',Georgia,serif" letter-spacing="0.02em">${esc(ex.detail)}</text>`
+          `<text x="${bx + ep}" y="${ty}" fill="${t.subtext}" font-size="12" font-family="${MONO}">${esc(ex.detail)}</text>`
         );
         ty += detailH;
+      } else {
+        ty += 6;
       }
+      if (idx < visibleExercises.length - 1) ty += exGap;
     });
 
     if (hiddenCount > 0) {
       els.push(
-        `<text x="${bx + ep}" y="${ty}" fill="${t.muted}" font-size="11" font-style="italic">+ ${hiddenCount} till</text>`
+        `<text x="${bx + ep}" y="${ty + 4}" fill="${t.muted}" font-size="12" font-family="${SANS}" font-style="italic">+ ${hiddenCount} till</text>`
       );
     }
 
-    y += contentH + 12;
+    y += contentH + 14;
   }
 
   // ── #BeGrim badge ──
-  const bw = 120;
   const bh = 32;
   els.push(
-    `<text x="${W / 2}" y="${y + bh / 2}" fill="${t.text}" font-size="14" font-weight="700" font-family="'Permanent Marker',Georgia,serif" letter-spacing="0.05em" text-anchor="middle" dy="0.35em">#BeGrim</text>`
+    `<text x="${W / 2}" y="${y + bh / 2}" fill="${t.text}" font-size="18" font-family="${MARKER}" letter-spacing="0.05em" text-anchor="middle" dy="0.35em">#BeGrim</text>`
   );
   y += bh + 12;
 
-
   // ── Footer ──
   els.push(
-    `<text x="${P}" y="${H - P}" fill="${t.muted}" font-size="11" font-weight="700" letter-spacing="1">🔥 GRIM</text>`
+    `<text x="${P}" y="${H - P}" fill="${t.muted}" font-size="16" font-family="${MARKER}" letter-spacing="0.05em">Grim</text>`
   );
   els.push(
-    `<text x="${W - P}" y="${H - P}" fill="${t.muted}" font-size="12" font-weight="500" text-anchor="end">Ladda ner → grim.lovable.app</text>`
+    `<text x="${W - P}" y="${H - P}" fill="${t.muted}" font-size="11" font-family="${SANS}" font-weight="500" text-anchor="end">grim.lovable.app</text>`
   );
 
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
 <defs>${defs}</defs>
-<style>text{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;}</style>
+<style>${FONT_IMPORT} text{font-family:${SANS};}</style>
 ${els.join("\n")}
 </svg>`;
 }
