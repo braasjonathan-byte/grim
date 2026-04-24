@@ -257,7 +257,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 bg-secondary">
       {/* Clickable header */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -281,7 +281,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           return (
             <div
               key={pr.exercise}
-              className="bg-card border border-border rounded-lg p-3 space-y-1 relative">
+              className="border border-border rounded-lg p-3 space-y-1 relative bg-secondary">
 
               {/* Star button */}
               <button
