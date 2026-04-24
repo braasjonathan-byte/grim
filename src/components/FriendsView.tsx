@@ -203,10 +203,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     }
   }, [isAdmin]);
 
-  const allExercises = [
+  const allExercises = dedupeExerciseList([
     ...exerciseLibrary.map((e) => ({ ...e, isCustom: false })),
     ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, isCustom: true })),
-  ];
+  ]);
 
   const filteredAdminExercises = allExercises.filter((e) => {
     const matchesSearch = !adminExerciseSearch || e.name.toLowerCase().includes(adminExerciseSearch.toLowerCase());
