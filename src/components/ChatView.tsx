@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, Crown, Sparkles } from "lucide-react";
+import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import ChatConversation from "./ChatConversation";
 import EmptyState from "@/components/EmptyState";
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 
 const GRIM_SUPPORT_ID = "grim-support";
+const GRIM_ANNOUNCEMENT_ID = "grim-announcement";
+const ANNOUNCEMENTS_LAST_READ_KEY = "gymberget_last_read_announcements";
 
 interface ChatViewProps {
   userId: string;
@@ -24,6 +26,7 @@ interface Friend {
   avatar_url: string | null;
   is_honorary?: boolean;
   isGrimSupport?: boolean;
+  isGrimAnnouncement?: boolean;
 }
 
 interface LastMessage {
@@ -50,9 +53,28 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [loading, setLoading] = useState(true);
   const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
+  const [announcementPreview, setAnnouncementPreview] = useState<{ title: string; created_at: string } | null>(null);
+  const [announcementUnread, setAnnouncementUnread] = useState(0);
+
+  const fetchAnnouncementPreview = async () => {
+    const { data } = await supabase
+      .from("announcements")
+      .select("title, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (data && data.length > 0) {
+      setAnnouncementPreview({ title: data[0].title, created_at: data[0].created_at });
+      const lastRead = localStorage.getItem(ANNOUNCEMENTS_LAST_READ_KEY) || "1970-01-01T00:00:00Z";
+      setAnnouncementUnread(data.filter(a => a.created_at > lastRead).length);
+    } else {
+      setAnnouncementPreview(null);
+      setAnnouncementUnread(0);
+    }
+  };
 
   useEffect(() => {
     fetchFriendsAndMessages();
+    fetchAnnouncementPreview();
     if (isPremium && !isAdmin) fetchGrimMessages();
     if (isAdmin) fetchSupportConversations();
 
@@ -87,9 +109,18 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
       })
       .subscribe();
 
+    // Realtime for announcements (Grim)
+    const announceChannel = supabase
+      .channel("announcements-list")
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => {
+        fetchAnnouncementPreview();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(supportChannel);
+      supabase.removeChannel(announceChannel);
     };
   }, [userId, isPremium, isAdmin]);
 
@@ -229,6 +260,21 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   };
 
   if (selectedFriend) {
+    if (selectedFriend.isGrimAnnouncement) {
+      return (
+        <div className="h-full min-h-0 overflow-hidden">
+          <GrimAnnouncementConversation
+            currentUserId={userId}
+            isAdmin={isAdmin}
+            onBack={() => {
+              setSelectedFriend(null);
+              fetchAnnouncementPreview();
+              setAnnouncementUnread(0);
+            }}
+          />
+        </div>
+      );
+    }
     if (selectedFriend.isGrimSupport) {
       return (
         <div className="h-full min-h-0 overflow-hidden">
@@ -271,6 +317,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
   const totalUnread = Array.from(lastMessages.values()).reduce((sum, m) => sum + m.unread_count, 0)
     + (grimLastMessage?.unread_count || 0)
+    + announcementUnread
     + (isAdmin ? supportConversations.reduce((s, c) => s + c.unread_count, 0) : 0);
 
   return (
@@ -295,6 +342,47 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
           className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1"
           style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
         >
+          {/* Grim — official announcements (always pinned at top, for everyone) */}
+          <button
+            onClick={() => {
+              setSelectedFriend({ user_id: GRIM_ANNOUNCEMENT_ID, nickname: "Grim", avatar_url: grimIcon, isGrimAnnouncement: true });
+              if (announcementPreview) {
+                localStorage.setItem(ANNOUNCEMENTS_LAST_READ_KEY, announcementPreview.created_at);
+              }
+              setAnnouncementUnread(0);
+            }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left border border-primary/20 bg-primary/5 mb-2"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src={grimIcon} alt="Grim" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm font-semibold truncate">Grim</span>
+                  <Megaphone className="w-3 h-3 text-primary flex-shrink-0" />
+                </div>
+                {announcementPreview && (
+                  <span className="text-[10px] text-muted-foreground flex-shrink-0 ml-2">
+                    {formatTime(announcementPreview.created_at)}
+                  </span>
+                )}
+              </div>
+              {announcementPreview ? (
+                <p className={`text-xs truncate ${announcementUnread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                  📣 {announcementPreview.title}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">Officiella meddelanden från Grim-teamet</p>
+              )}
+            </div>
+            {announcementUnread > 0 && (
+              <span className="w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
+                {announcementUnread > 9 ? '9+' : announcementUnread}
+              </span>
+            )}
+          </button>
+
           {/* Grim support for supporter users */}
           {isPremium && !isAdmin && (
             <button
@@ -444,7 +532,6 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 };
 
 // Grim Support Conversation component
-import { useRef } from "react";
 import { ArrowLeft, Send, Crown as CrownIcon, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -804,6 +891,203 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
           <Send className="w-4 h-4" />
         </button>
       </div>
+    </div>
+  );
+};
+
+// =====================================================================
+// Grim Announcement Conversation — shows announcements as chat bubbles
+// =====================================================================
+
+interface GrimAnnouncementConversationProps {
+  currentUserId: string;
+  isAdmin: boolean;
+  onBack: () => void;
+}
+
+interface AnnouncementRow {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+}
+
+const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAnnouncementConversationProps) => {
+  const [announcements, setAnnouncements] = useState<AnnouncementRow[]>([]);
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const fetchAnnouncements = async () => {
+    const { data } = await supabase
+      .from("announcements")
+      .select("id, title, message, created_at")
+      .order("created_at", { ascending: true });
+    if (data) setAnnouncements(data);
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+    const channel = supabase
+      .channel("grim-announcement-conv")
+      .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, () => {
+        fetchAnnouncements();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [announcements]);
+
+  const handlePublish = async () => {
+    const t = title.trim();
+    const m = message.trim();
+    if (!t || !m) return;
+    setSending(true);
+    const { error } = await supabase
+      .from("announcements")
+      .insert({ author_id: currentUserId, title: t, message: m });
+    if (!error) {
+      try {
+        await supabase.functions.invoke("notify-announcement", { body: { title: t } });
+      } catch (e) {
+        console.error("Failed to send push notifications:", e);
+      }
+      setTitle("");
+      setMessage("");
+      setSent(true);
+      fetchAnnouncements();
+      setTimeout(() => setSent(false), 3000);
+    }
+    setSending(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("announcements").delete().eq("id", id);
+    fetchAnnouncements();
+  };
+
+  const grouped: { date: string; items: AnnouncementRow[] }[] = [];
+  let lastDate = "";
+  for (const a of announcements) {
+    const d = new Date(a.created_at).toLocaleDateString("sv-SE");
+    if (d !== lastDate) {
+      grouped.push({ date: d, items: [a] });
+      lastDate = d;
+    } else {
+      grouped[grouped.length - 1].items.push(a);
+    }
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3">
+        <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+          <img src={grimIcon} alt="Grim" className="w-full h-full object-cover" />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-sm">Grim</span>
+            <Megaphone className="w-3 h-3 text-primary" />
+          </div>
+          <span className="text-[10px] text-muted-foreground">Officiella meddelanden</span>
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        data-scroll-lock-scroll="y"
+        className={`min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain ${isAdmin ? 'pb-40' : 'pb-4'}`}
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+      >
+        {announcements.length === 0 ? (
+          <div className="text-center py-8 space-y-3">
+            <img src={grimIcon} alt="Grim" className="w-16 h-16 rounded-full mx-auto opacity-60" />
+            <p className="text-sm text-muted-foreground">Inga meddelanden ännu 📭</p>
+          </div>
+        ) : (
+          grouped.map(group => (
+            <div key={group.date}>
+              <div className="text-center my-3">
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {group.date}
+                </span>
+              </div>
+              {group.items.map(a => (
+                <div key={a.id} className="flex justify-start mb-1 group">
+                  <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-muted text-foreground px-3 py-2">
+                    <p className="text-[10px] font-semibold text-primary mb-0.5">Grim</p>
+                    <h4 className="text-sm font-bold mb-0.5">{a.title}</h4>
+                    <p className="text-sm whitespace-pre-wrap break-words">{a.message}</p>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(a.created_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDelete(a.id)}
+                          className="p-0.5 text-destructive hover:opacity-70 transition-opacity opacity-60 group-hover:opacity-100"
+                          title="Ta bort"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
+
+      {isAdmin && (
+        <div
+          className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 max-w-lg mx-auto space-y-2"
+          style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)`, touchAction: "none" }}
+          onTouchMove={(event) => event.preventDefault()}
+        >
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Rubrik..."
+            maxLength={100}
+            className="w-full bg-muted text-foreground text-sm px-4 py-2 rounded-full outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="flex items-end gap-2">
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Skriv meddelande till alla användare..."
+              maxLength={1000}
+              rows={2}
+              className="flex-1 bg-muted text-foreground text-sm px-4 py-2 rounded-2xl outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+            />
+            <button
+              onClick={handlePublish}
+              disabled={!title.trim() || !message.trim() || sending}
+              className="p-2.5 bg-primary text-primary-foreground rounded-full disabled:opacity-50 transition-colors hover:bg-primary/90 flex-shrink-0"
+              title="Publicera"
+            >
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : sent ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
