@@ -124,7 +124,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
               className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                 entry.user_id === userId
                   ? "bg-primary/5 border-primary/30"
-                  : "bg-card border-border"
+                  : "border-border bg-secondary"
               }`}
             >
               {/* Rank */}
