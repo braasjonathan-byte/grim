@@ -3545,6 +3545,15 @@ const estimateCalories = (
                                    </button>
                                 </div>
                               </div>
+                              {/* Copied-from-previous progression reminder */}
+                              {isCopiedExercise(key, name) && (
+                                <div className="pl-1 mb-1 border-l-2 border-primary/40 bg-primary/5 px-2 py-1.5 rounded-r">
+                                  <p className="text-[10px] text-foreground flex items-start gap-1">
+                                    <span className="text-primary">💡</span>
+                                    <span>Vikt/reps kopierade från förra passet. <span className="font-semibold">Justera själv</span> för att säkerställa progression.</span>
+                                  </p>
+                                </div>
+                              )}
                               {/* Last logged weight note for single workouts */}
                               {(() => {
                                 const lastW = findLastWeight(name);
