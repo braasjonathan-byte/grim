@@ -4484,6 +4484,52 @@ const estimateCalories = (
           }}
         />
       )}
+      {shareTarget && (
+        <WorkoutShareCard
+          sessionName={shareTarget.plan.session_name}
+          day={shareTarget.plan.day}
+          week={shareTarget.plan.week}
+          details={shareTarget.plan.details}
+          tempo={shareTarget.plan.tempo}
+          loggedTempo={shareTarget.completion.logged_tempo}
+          loggedPulse={shareTarget.completion.logged_pulse}
+          loggedDistanceKm={shareTarget.completion.logged_distance_km}
+          loggedWeights={shareTarget.completion.logged_weights}
+          nickname={userNickname}
+          onClose={() => setShareTarget(null)}
+          onChatShare={async () => {
+            const plan = shareTarget.plan;
+            setShareTarget(null);
+            const { data: friendships } = await supabase.from("friendships").select("user_id, friend_id").eq("status", "accepted").or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+            if (!friendships || friendships.length === 0) return;
+            const fIds = friendships.map(f => f.user_id === userId ? f.friend_id : f.user_id);
+            const { data: profiles } = await supabase.from("profiles").select("user_id, nickname").in("user_id", fIds);
+            setChatFriends(profiles || []);
+            setChatShareTarget(plan);
+          }}
+          onCopyToDate={() => {
+            const plan = shareTarget.plan;
+            const allDayPlans = plans.filter(p => p.week === plan.week && p.day === plan.day);
+            const combinedDetails = allDayPlans.map(p => p.details.trim()).filter(Boolean).join("\n");
+            const combinedSource: PlanDay = {
+              ...plan,
+              details: combinedDetails || plan.details,
+            };
+            setShareTarget(null);
+            setCopyToDateSource(combinedSource);
+            setCopyToDateSelected(new Date());
+            setCopyToDateConflict(null);
+          }}
+          onSaveWorkout={() => {
+            const plan = shareTarget.plan;
+            setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+            setSaveWorkoutName(plan.session_name);
+            setSaveWorkoutVisibility("private");
+            setSaveWorkoutIsCircuit(!!(plan.is_circuit || (plan.tempo && plan.tempo.startsWith("circuit:"))));
+            setShareTarget(null);
+          }}
+        />
+      )}
       </>);
 
   }
