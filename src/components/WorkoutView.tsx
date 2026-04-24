@@ -4717,7 +4717,7 @@ const estimateCalories = (
           const completion = completions[key];
           const isDone = completion?.done || false;
           const isSkipped = completion?.skipped || false;
-          const expanded = expandedDay === key;
+          const expanded = true;
           const Icon = getSessionIcon(plan.session_name);
           const colorClass = getSessionColor(plan.session_name);
           const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
@@ -4779,7 +4779,7 @@ const estimateCalories = (
                         </span> :
                     null;
                   })()}
-                    {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    
                   </div>
               </div>
               {/* Action buttons row */}
