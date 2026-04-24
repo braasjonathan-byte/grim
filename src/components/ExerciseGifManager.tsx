@@ -53,16 +53,6 @@ const ExerciseGifManager = () => {
   const [showOnlyMissingSubmuscle, setShowOnlyMissingSubmuscle] = useState(false);
   const [muscleGroupFilter, setMuscleGroupFilter] = useState<string | null>(null);
 
-const ExerciseGifManager = () => {
-  const [mappings, setMappings] = useState<Mapping[]>([]);
-  const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState("");
-  const [showOnlyMapped, setShowOnlyMapped] = useState(false);
-  const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false);
-  const [muscleGroupFilter, setMuscleGroupFilter] = useState<string | null>(null);
-
   // Linking state
   const [linkingExercise, setLinkingExercise] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
