@@ -639,13 +639,6 @@ const Index = () => {
               }
             </div>
             <span className="text-sm font-semibold text-primary text-center font-sans">{nickname}</span>
-            <button
-              onClick={handleLogout}
-              className="p-1.5 transition-colors text-destructive"
-              title="Logga ut">
-
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </header>
@@ -676,7 +669,7 @@ const Index = () => {
         
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
-          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
+          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
         }
       </main>
       </Suspense>

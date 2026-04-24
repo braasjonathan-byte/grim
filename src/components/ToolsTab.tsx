@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { GripVertical, Pencil, Save, X, Loader2, Check } from "lucide-react";
+import { GripVertical, Pencil, Save, X, Loader2, Check, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
@@ -27,6 +27,7 @@ interface ToolsTabProps {
   isHonorary: boolean;
   userRole: string;
   onViewUserPlan?: (targetUserId: string) => void;
+  onLogout?: () => void;
 }
 
 interface SectionDef {
@@ -36,7 +37,7 @@ interface SectionDef {
   render: () => React.ReactNode;
 }
 
-const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan }: ToolsTabProps) => {
+const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout }: ToolsTabProps) => {
   const [editMode, setEditMode] = useState(false);
   const [savedOrder, setSavedOrder] = useState<string[] | null>(null);
   const [localOrder, setLocalOrder] = useState<string[]>([]);
@@ -255,6 +256,16 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan }: Too
           </div>
         ))}
       </Suspense>
+
+      {onLogout && (
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-lg hover:opacity-90 transition-opacity"
+        >
+          <LogOut className="w-4 h-4" />
+          Logga ut
+        </button>
+      )}
 
       <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
     </div>
