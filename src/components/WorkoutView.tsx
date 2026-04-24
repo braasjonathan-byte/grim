@@ -473,6 +473,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [singleCurrentWeek, setSingleCurrentWeek] = useState(getISOWeek(new Date()));
   const [singleActiveDayIdx, setSingleActiveDayIdx] = useState(0);
 
+  // Add extra workout to an already-completed day in plan-week view
+  const [addExtraDay, setAddExtraDay] = useState<{ week: number; day: string } | null>(null);
+  const [extraName, setExtraName] = useState("");
+  const [extraIsCircuit, setExtraIsCircuit] = useState(false);
+  const [extraCircuitSeconds, setExtraCircuitSeconds] = useState("40");
+  const [extraCircuitRounds, setExtraCircuitRounds] = useState("3");
+  const [extraCircuitRest, setExtraCircuitRest] = useState("30");
+  const [showExtraCopyPicker, setShowExtraCopyPicker] = useState(false);
+
   // Exercise browser for single workouts
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
   const [isWarmupMode, setIsWarmupMode] = useState(false);
