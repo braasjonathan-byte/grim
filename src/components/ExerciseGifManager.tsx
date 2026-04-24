@@ -86,6 +86,18 @@ const ExerciseGifManager = () => {
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const [savingBulk, setSavingBulk] = useState(false);
 
+  // Submuscle / secondary editing
+  const [editingMusclesFor, setEditingMusclesFor] = useState<string | null>(null);
+  const [editPrimaryGroup, setEditPrimaryGroup] = useState<string>("");
+  const [editSubmuscles, setEditSubmuscles] = useState<string[]>([]);
+  const [editSecondary, setEditSecondary] = useState<SecondaryMuscle[]>([]);
+  const [savingMuscles, setSavingMuscles] = useState(false);
+
+  // Bulk muscles dialog
+  const [showBulkMuscle, setShowBulkMuscle] = useState(false);
+  const [bulkPrimaryGroup, setBulkPrimaryGroup] = useState<string>("");
+  const [bulkSubmuscles, setBulkSubmuscles] = useState<string[]>([]);
+
   const fetchMappings = async () => {
     const { data } = await supabase
       .from("exercise_gif_mappings")
@@ -97,14 +109,21 @@ const ExerciseGifManager = () => {
   const fetchCustomExercises = async () => {
     const { data } = await supabase
       .from("custom_exercises")
-      .select("id, name, category, muscle_group, is_bodyweight_exercise")
+      .select("id, name, category, muscle_group, is_bodyweight_exercise, submuscles, secondary_muscles")
       .order("name");
-    setCustomExercises((data as CustomExercise[]) || []);
+    setCustomExercises((data as any) || []);
+  };
+
+  const fetchOverrides = async () => {
+    const { data } = await supabase
+      .from("exercise_muscle_overrides" as any)
+      .select("id, exercise_name, muscle_group, submuscles, secondary_muscles");
+    setOverrides((data as any) || []);
   };
 
   useEffect(() => {
     if (open) {
-      Promise.all([fetchMappings(), fetchCustomExercises()]).then(() => setLoading(false));
+      Promise.all([fetchMappings(), fetchCustomExercises(), fetchOverrides()]).then(() => setLoading(false));
     }
   }, [open]);
 
