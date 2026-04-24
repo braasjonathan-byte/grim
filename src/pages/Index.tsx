@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Bell, BarChart3, Megaphone, X, MessageCircle, Dumbbell, Calculator, HelpCircle } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { applyTheme, getStoredThemeId, storeThemeId, isThemeLocked } from "@/lib/themes";
 import grimIcon from "@/assets/grim-icon.webp";
@@ -152,8 +152,7 @@ const Index = () => {
   const [userRole, setUserRole] = useState<string>("member");
   const [isHonorary, setIsHonorary] = useState(false);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
-  const [showInboxDropdown, setShowInboxDropdown] = useState(false);
-  const [headerAnnouncements, setHeaderAnnouncements] = useState<{id: string;title: string;message: string;created_at: string;}[]>([]);
+  
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
   const [isAppInstalled, setIsAppInstalled] = useState(() => {
@@ -266,7 +265,6 @@ const Index = () => {
       order("created_at", { ascending: false }).
       limit(20);
       if (data) {
-        setHeaderAnnouncements(data.slice(0, 5));
         const unreadCount = data.filter(a => a.created_at > lastRead).length;
 
         let suggestionCount = 0;
@@ -482,11 +480,12 @@ const Index = () => {
 
   const friendActivityCount = friendActivities.length;
 
+  const socialBadge = friendActivityCount + unreadChats + unreadPosts + unreadAnnouncements;
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "social", icon: Users, label: "Social", badge: (friendActivityCount + unreadChats + unreadPosts) > 0 ? (friendActivityCount + unreadChats + unreadPosts) : undefined },
-  { key: "calc", icon: Calculator, label: "Verktyg", badge: unreadAnnouncements > 0 ? unreadAnnouncements : undefined }];
+  { key: "social", icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined },
+  { key: "calc", icon: Calculator, label: "Verktyg" }];
 
 
   return (
@@ -573,71 +572,6 @@ const Index = () => {
                 <Download className="w-4 h-4 text-primary" />
               </button>
             )}
-            <div className="relative">
-              <button
-                onClick={async () => {
-                  setShowInboxDropdown((prev) => !prev);
-                  // Always mark as read when opening inbox
-                  const { data: latestAnn } = await supabase.
-                  from("announcements").
-                  select("created_at").
-                  order("created_at", { ascending: false }).
-                  limit(1).
-                  maybeSingle();
-                  if (latestAnn?.created_at) {
-                    localStorage.setItem("gymberget_last_read_announcements", latestAnn.created_at);
-                  }
-                  if (userRole === "admin") {
-                    const { data: latestSug } = await supabase.
-                    from("suggestions").
-                    select("created_at").
-                    order("created_at", { ascending: false }).
-                    limit(1).
-                    maybeSingle();
-                    if (latestSug?.created_at) {
-                      localStorage.setItem("grim_last_read_suggestions", latestSug.created_at);
-                    }
-                  }
-                  setUnreadAnnouncements(0);
-                }}
-                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors relative"
-                title="Inkorg">
-
-                <Megaphone className="h-[20px] w-[20px]" />
-                {unreadAnnouncements > 0 &&
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {unreadAnnouncements > 9 ? "9+" : unreadAnnouncements}
-                  </span>
-                }
-              </button>
-              {showInboxDropdown &&
-              <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowInboxDropdown(false)} />
-                  <div className="fixed left-1/2 -translate-x-1/2 top-14 w-[calc(100vw-1rem)] max-w-sm bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-                    <div className="p-3 border-b border-border">
-                      <h4 className="text-sm font-bold">📢 Inkorg</h4>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {headerAnnouncements.length === 0 ?
-                    <p className="text-xs text-muted-foreground text-center py-4">Inga meddelanden.</p> :
-
-                    headerAnnouncements.map((a) =>
-                    <div key={a.id} className="p-3 border-b border-border last:border-b-0 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <h5 className="text-xs font-bold text-foreground">{a.title}</h5>
-                              <span className="text-[10px] text-muted-foreground">
-                                {new Date(a.created_at).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground whitespace-pre-wrap">{a.message}</p>
-                          </div>
-                    )
-                    }
-                    </div>
-                  </div>
-                </>
-              }
-            </div>
             <span className="text-sm font-semibold text-primary text-center font-sans">{nickname}</span>
           </div>
         </div>
@@ -737,7 +671,7 @@ const Index = () => {
             key={key}
             onClick={async () => {
               setTab(key);
-              if (key === "calc" && unreadAnnouncements > 0) {
+              if (key === "social" && unreadAnnouncements > 0) {
                 const { data: latestAnn } = await supabase.
                 from("announcements").
                 select("created_at").
@@ -745,16 +679,16 @@ const Index = () => {
                 limit(1).
                 maybeSingle();
                 localStorage.setItem("gymberget_last_read_announcements", latestAnn?.created_at || new Date().toISOString());
-                if (userRole === "admin") {
-                  const { data: latestSug } = await supabase.
-                  from("suggestions").
-                  select("created_at").
-                  order("created_at", { ascending: false }).
-                  limit(1).
-                  maybeSingle();
-                  localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
-                }
                 setUnreadAnnouncements(0);
+              }
+              if (key === "calc" && userRole === "admin") {
+                const { data: latestSug } = await supabase.
+                from("suggestions").
+                select("created_at").
+                order("created_at", { ascending: false }).
+                limit(1).
+                maybeSingle();
+                localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
               }
             }}
             className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors relative ${
