@@ -314,10 +314,76 @@ const ExercisePickerDialog = ({
                   </select>
                   <select
                     value={newMuscle}
-                    onChange={e => setNewMuscle(e.target.value)}
+                    onChange={e => { setNewMuscle(e.target.value); setNewSubmuscles([]); }}
                     className="flex-1 bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
                   >
                     {muscleGroups.map(mg => <option key={mg} value={mg}>{mg}</option>)}
+                  </select>
+                </div>
+
+                {/* Submuscles for primary */}
+                {(submusclesByGroup[newMuscle]?.length ?? 0) > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Undergrupper (valfritt)</p>
+                    <div className="flex flex-wrap gap-1">
+                      {submusclesByGroup[newMuscle].map(sm => (
+                        <button
+                          key={sm}
+                          type="button"
+                          onClick={() => toggleNewSubmuscle(sm)}
+                          className={cn(
+                            "text-[11px] px-2 py-1 rounded-md font-medium transition-colors",
+                            newSubmuscles.includes(sm)
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {sm}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Secondary muscles */}
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Övriga muskler (valfritt)</p>
+                  {newSecondary.map(sec => (
+                    <div key={sec.muscle} className="bg-secondary/40 rounded-lg p-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold">{sec.muscle}</span>
+                        <button type="button" onClick={() => removeSecondaryMuscle(sec.muscle)} className="text-[10px] text-muted-foreground hover:text-destructive">Ta bort</button>
+                      </div>
+                      {(submusclesByGroup[sec.muscle]?.length ?? 0) > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {submusclesByGroup[sec.muscle].map(sm => (
+                            <button
+                              key={sm}
+                              type="button"
+                              onClick={() => toggleSecondarySubmuscle(sec.muscle, sm)}
+                              className={cn(
+                                "text-[11px] px-2 py-0.5 rounded-md font-medium transition-colors",
+                                sec.submuscles.includes(sm)
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              {sm}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <select
+                    value=""
+                    onChange={e => { if (e.target.value) addSecondaryMuscle(e.target.value); e.currentTarget.value = ""; }}
+                    className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                  >
+                    <option value="">+ Lägg till muskel...</option>
+                    {muscleGroups.filter(mg => mg !== newMuscle && !newSecondary.some(s => s.muscle === mg)).map(mg => (
+                      <option key={mg} value={mg}>{mg}</option>
+                    ))}
                   </select>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
