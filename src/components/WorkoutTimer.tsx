@@ -28,7 +28,7 @@ const WorkoutTimer = () => {
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+    <div className="border border-border rounded-lg p-4 space-y-3 bg-secondary">
       <div className="flex items-center gap-2">
         <Timer className="w-5 h-5 text-primary" />
         <h3 className="text-sm font-bold">Timer</h3>
