@@ -7744,7 +7744,7 @@ const estimateCalories = (
                 </div>
               );
             })()}
-          </React.Fragment>);
+          </div>);
 
         })}
         {/* Empty days – show import button for days without a plan entry */}
