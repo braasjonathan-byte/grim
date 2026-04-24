@@ -1,6 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
 import grimIcon from "@/assets/grim-icon.webp";
-import { Download, Monitor, Share, MoreVertical, Plus, ChevronRight, ArrowUp } from "lucide-react";
+import { Download, Monitor, Share, MoreVertical, Plus, ChevronRight, ArrowUp, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type Platform = "ios" | "android" | "desktop";
@@ -10,6 +10,38 @@ const detectPlatform = (): Platform => {
   if (/iphone|ipad|ipod/.test(ua)) return "ios";
   if (/android/.test(ua)) return "android";
   return "desktop";
+};
+
+// Detects in-app browsers where beforeinstallprompt never fires
+const detectInAppBrowser = (): string | null => {
+  const ua = navigator.userAgent || "";
+  if (/Instagram|IGAB|IABMV/i.test(ua)) return "Instagram";
+  if (/FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return "Facebook";
+  if (/Snapchat|Snap\//i.test(ua)) return "Snapchat";
+  if (/TikTok|musical_ly|BytedanceWebview/i.test(ua)) return "TikTok";
+  if (/Line\//i.test(ua)) return "Line";
+  if (/Twitter|TwitterAndroid/i.test(ua)) return "Twitter/X";
+  if (/; wv\)/i.test(ua)) return "in-app browser";
+  return null;
+};
+
+// Detects Android browser brand for tailored guide
+const detectAndroidBrowser = (): "chrome" | "samsung" | "firefox" | "opera" | "edge" | "other" => {
+  const ua = navigator.userAgent || "";
+  if (/SamsungBrowser/i.test(ua)) return "samsung";
+  if (/EdgA|Edg\//i.test(ua)) return "edge";
+  if (/OPR\/|Opera/i.test(ua)) return "opera";
+  if (/Firefox|FxiOS/i.test(ua)) return "firefox";
+  if (/Chrome\//i.test(ua) && !/wv/i.test(ua)) return "chrome";
+  return "other";
+};
+
+const isStandalone = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    (window.navigator as any).standalone === true
+  );
 };
 
 /* ── iOS share icon (box with arrow) ── */
