@@ -785,6 +785,29 @@ const ExerciseGifManager = () => {
                             BW
                           </span>
                         )}
+                        {(submusclesByGroup[item.muscleGroup]?.length ?? 0) > 0 && (!item.submuscles || item.submuscles.length === 0) && (
+                          <span className="text-[10px] bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5" title="Saknar undergrupp">
+                            <AlertCircle className="w-2.5 h-2.5" />
+                          </span>
+                        )}
+                        {item.submuscles && item.submuscles.length > 0 && (
+                          <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium" title={item.submuscles.join(", ")}>
+                            {item.submuscles.length} sub
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingMusclesFor(item.name);
+                            setEditPrimaryGroup(item.muscleGroup);
+                            setEditSubmuscles(item.submuscles || []);
+                            setEditSecondary(item.secondaryMuscles || []);
+                          }}
+                          className="text-[10px] bg-secondary text-foreground px-1.5 py-0.5 rounded-full font-medium hover:bg-muted"
+                          title="Redigera muskler"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
                       </div>
 
                       <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform shrink-0 ${isExpanded ? "rotate-180" : ""}`} />
