@@ -669,7 +669,7 @@ const Index = () => {
         
         {tab === "stats" && <WorkoutStats userId={user.id} />}
         {tab === "calc" &&
-          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
+          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
         }
       </main>
       </Suspense>
