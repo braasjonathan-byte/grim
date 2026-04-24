@@ -425,6 +425,79 @@ const ExerciseGifManager = () => {
     setSavingBulk(false);
   };
 
+  /** Upsert muscle override for an exercise (works for built-in & custom). */
+  const upsertOverride = async (
+    exerciseName: string,
+    payload: { muscle_group?: string; submuscles?: string[]; secondary_muscles?: SecondaryMuscle[] }
+  ) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    // Try update by name; if 0 rows, insert
+    const { data: updated, error: updateErr } = await supabase
+      .from("exercise_muscle_overrides" as any)
+      .update({ ...payload, updated_by: user.id, updated_at: new Date().toISOString() } as any)
+      .ilike("exercise_name", exerciseName)
+      .select("id");
+    if (updateErr) throw updateErr;
+    if (!updated || updated.length === 0) {
+      const { error: insertErr } = await supabase
+        .from("exercise_muscle_overrides" as any)
+        .insert({ exercise_name: exerciseName, updated_by: user.id, ...payload } as any);
+      if (insertErr) throw insertErr;
+    }
+  };
+
+  const saveMuscleData = async (exerciseName: string) => {
+    setSavingMuscles(true);
+    try {
+      await upsertOverride(exerciseName, {
+        muscle_group: editPrimaryGroup,
+        submuscles: editSubmuscles,
+        secondary_muscles: editSecondary,
+      });
+      await fetchOverrides();
+      // Also bump custom_exercises if it's a custom one (so picker sees it)
+      const custom = customExercises.find(c => c.name.toLowerCase() === exerciseName.toLowerCase());
+      if (custom) {
+        await supabase.from("custom_exercises").update({
+          muscle_group: editPrimaryGroup,
+          submuscles: editSubmuscles,
+          secondary_muscles: editSecondary as any,
+        } as any).eq("id", custom.id);
+        await fetchCustomExercises();
+      }
+      setEditingMusclesFor(null);
+      toast.success("Muskel-data sparad");
+    } catch (e) {
+      console.error("Failed to save muscle data:", e);
+      toast.error("Kunde inte spara");
+    }
+    setSavingMuscles(false);
+  };
+
+  const bulkSetMuscles = async () => {
+    if (selectedExercises.size === 0 || !bulkPrimaryGroup) return;
+    setSavingBulk(true);
+    try {
+      for (const name of selectedExercises) {
+        await upsertOverride(name, {
+          muscle_group: bulkPrimaryGroup,
+          submuscles: bulkSubmuscles,
+        });
+      }
+      await fetchOverrides();
+      setSelectedExercises(new Set());
+      setShowBulkMuscle(false);
+      setBulkPrimaryGroup("");
+      setBulkSubmuscles([]);
+      toast.success(`${selectedExercises.size} övningar uppdaterade`);
+    } catch (e) {
+      console.error("Bulk muscle update failed:", e);
+      toast.error("Kunde inte uppdatera");
+    }
+    setSavingBulk(false);
+  };
+
   const mappingsByName = useMemo(() => {
     const map = new Map<string, Mapping>();
     for (const m of mappings) map.set(m.exercise_name.toLowerCase(), m);
@@ -439,6 +512,8 @@ const ExerciseGifManager = () => {
         name: ex.name,
         category: ex.category,
         muscleGroup: ex.muscleGroup,
+        submuscles: ex.submuscles,
+        secondaryMuscles: ex.secondaryMuscles,
         isBodyweight: ex.isBodyweight,
         mapping: mappingsByName.get(ex.name.toLowerCase()) || null,
       }))
@@ -447,6 +522,11 @@ const ExerciseGifManager = () => {
         if (showOnlyMapped && !item.mapping) return false;
         if (showOnlyUnmapped && item.mapping) return false;
         if (muscleGroupFilter && item.muscleGroup !== muscleGroupFilter) return false;
+        if (showOnlyMissingSubmuscle) {
+          const hasSubmusclesAvailable = (submusclesByGroup[item.muscleGroup]?.length ?? 0) > 0;
+          if (!hasSubmusclesAvailable) return false; // ignore groups with no submuscle options
+          if (item.submuscles && item.submuscles.length > 0) return false;
+        }
         return true;
       });
   }, [allExercises, mappingsByName, filter, showOnlyMapped, showOnlyUnmapped, muscleGroupFilter]);
