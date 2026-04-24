@@ -126,13 +126,40 @@ const ExercisePickerDialog = ({
     if (builtInDupe) { alert("Övningen finns redan i biblioteket."); return; }
     const customDupe = customExercises.find(e => e.name.toLowerCase() === trimmed.toLowerCase());
     if (customDupe) { alert("Övningen finns redan."); return; }
-    await supabase.from("custom_exercises").insert({ name: trimmed, category: newCategory, muscle_group: newMuscle, created_by: userId, is_bodyweight_exercise: newIsBodyweight, is_time_based: newIsTimeBased } as any);
+    await supabase.from("custom_exercises").insert({
+      name: trimmed,
+      category: newCategory,
+      muscle_group: newMuscle,
+      submuscles: newSubmuscles,
+      secondary_muscles: newSecondary,
+      created_by: userId,
+      is_bodyweight_exercise: newIsBodyweight,
+      is_time_based: newIsTimeBased,
+    } as any);
     const { data } = await supabase.from("custom_exercises").select("*").order("name");
     if (data) setCustomExercises(data);
     setNewName("");
+    setNewSubmuscles([]);
+    setNewSecondary([]);
     setShowCreate(false);
     // Auto-select the newly created exercise
     handleSelect(trimmed);
+  };
+
+  const toggleNewSubmuscle = (sm: string) => {
+    setNewSubmuscles(prev => prev.includes(sm) ? prev.filter(x => x !== sm) : [...prev, sm]);
+  };
+  const addSecondaryMuscle = (mg: string) => {
+    if (mg === newMuscle || newSecondary.some(s => s.muscle === mg)) return;
+    setNewSecondary(prev => [...prev, { muscle: mg, submuscles: [] }]);
+  };
+  const removeSecondaryMuscle = (mg: string) => {
+    setNewSecondary(prev => prev.filter(s => s.muscle !== mg));
+  };
+  const toggleSecondarySubmuscle = (mg: string, sm: string) => {
+    setNewSecondary(prev => prev.map(s => s.muscle === mg
+      ? { ...s, submuscles: s.submuscles.includes(sm) ? s.submuscles.filter(x => x !== sm) : [...s.submuscles, sm] }
+      : s));
   };
 
   return (
