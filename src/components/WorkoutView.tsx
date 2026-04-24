@@ -4532,6 +4532,76 @@ const estimateCalories = (
           }}
         />
       )}
+      {uncheckedSetsDialog && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
+          <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+            <h3 className="font-bold text-base">Obockade set</h3>
+            <p className="text-sm text-muted-foreground">
+              Du har {uncheckedSetsDialog.uncheckedCount} set som inte är avbockade. Vill du klarmarkera passet ändå?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setUncheckedSetsDialog(null)}
+                className="flex-1 py-2 bg-secondary text-secondary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  const { week, day } = uncheckedSetsDialog;
+                  setUncheckedSetsDialog(null);
+                  const dayPlans = plans.filter(p => p.week === week && p.day === day);
+                  const k = `${week}-${day}`;
+                  const accumulated: Record<string, any> = await new Promise((resolve) => {
+                    setCompletions((prev) => {
+                      const prevComp = prev[k] || ({} as any);
+                      const acc: Record<string, any> = { ...((prevComp.logged_weights || {}) as Record<string, any>) };
+                      for (const plan of dayPlans) {
+                        if (!plan.details) continue;
+                        const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                        for (const part of parts) {
+                          if (part.startsWith("⚔️")) continue;
+                          const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+                          if (isCondExercise) continue;
+                          if (/^(vila|vilodag)/i.test(part)) continue;
+                          const { clean: cleanPart } = extractRpe(part);
+                          const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                          const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
+                          const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
+                          const exerciseName = nameMatch ? nameMatch[1].trim() : null;
+                          const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+                          const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
+                          const allChecked = "1".repeat(sc);
+                          acc[`__sets__${pName}`] = allChecked;
+                          const setDataKey = `__setdata__${pName}`;
+                          if (!acc[setDataKey]) {
+                            const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+                            const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
+                            const defKg = partStructMatch && partStructMatch[5] ? partStructMatch[5] : "";
+                            const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
+                            acc[setDataKey] = JSON.stringify(initData);
+                          }
+                        }
+                      }
+                      resolve(acc);
+                      return {
+                        ...prev,
+                        [k]: { ...(prevComp as any), week, day, logged_weights: acc },
+                      };
+                    });
+                  });
+                  await safeUpsertCompletion(week, day, { logged_weights: accumulated });
+                  await performToggleDone(week, day);
+                }}
+                className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
+              >
+                Klarmarkera
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </>);
 
   }
