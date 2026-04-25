@@ -16,7 +16,6 @@ import {
 
 const SupporterButton = lazy(() => import("@/components/SupporterButton"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
-const AnnouncementInbox = lazy(() => import("@/components/AnnouncementInbox"));
 const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
 const ReadyWorkoutManager = lazy(() => import("@/components/ReadyWorkoutManager"));
@@ -76,7 +75,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         )}
       </div>
     )},
-    { key: "announcements", label: "Meddelanden", render: () => <AnnouncementInbox userId={userId} isAdmin={isAdmin} /> },
     { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} /> },
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
