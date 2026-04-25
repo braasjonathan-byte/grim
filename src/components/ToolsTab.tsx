@@ -81,21 +81,29 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings-group", label: "Inställningar", render: () => (
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card shadow-sm overflow-hidden">
         <button
           type="button"
           onClick={() => setSettingsOpen((open) => !open)}
-          className="w-full flex items-center justify-between gap-3 p-4 text-left"
+          className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-secondary/60 transition-colors"
           aria-expanded={settingsOpen}
         >
-          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <SlidersHorizontal className="h-4 w-4 text-primary" />
-            Inställningar
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <SlidersHorizontal className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-foreground">Inställningar</span>
+              <span className="block truncate text-xs text-muted-foreground">Profil, app, notiser och inbjudningar</span>
+            </span>
           </span>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+          <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
+            {settingsOpen ? "Stäng" : "Öppna"}
+            <ChevronDown className={`h-4 w-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+          </span>
         </button>
         {settingsOpen && (
-          <div className="space-y-3 border-t border-border p-3">
+          <div className="space-y-3 border-t border-border bg-background/50 p-3">
             <ProfileTab userId={userId} isAdmin={isAdmin} />
             <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
             <NotificationSettings userId={userId} />
