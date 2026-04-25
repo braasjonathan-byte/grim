@@ -3496,7 +3496,7 @@ const estimateCalories = (
                       setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                       setRenameInput(plan.session_name);
                     }}
-                    className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    className="relative z-20 flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                     title="Inställningar">
                     <Settings className="w-3.5 h-3.5" />
                     <span>Inställningar</span>
@@ -5151,7 +5151,7 @@ const estimateCalories = (
                     setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                     setRenameInput(plan.session_name);
                   }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  className="relative z-20 flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                   title="Inställningar">
                   <Settings className="w-3.5 h-3.5" />
                   <span>Inställningar</span>
