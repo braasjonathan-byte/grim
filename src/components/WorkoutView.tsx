@@ -2015,7 +2015,7 @@ const estimateCalories = (
       const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
       const lastWeight = findLastWeight(exerciseName, parseInt(match[4]));
       const lastKg = lastWeight?.match(/(-?\d+(?:[.,]\d+)?)\s*kg/i)?.[1];
-      if (!lastKg) return line;
+      if (!lastKg) return `${exerciseName} — ${match[2]}`;
       return `${exerciseName} — ${match[2]} @ ${Math.abs(parseFloat(lastKg.replace(",", ".")))} kg`;
     }).join("\n");
   };
