@@ -329,7 +329,12 @@ const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
 const sameWorkoutDay = (a: string, b: string) => getBaseDay(a) === getBaseDay(b);
 
-const normalizeExerciseKey = (name: string) => name.trim().toLowerCase();
+const normalizeExerciseKey = (name: string) =>
+  name
+    .trim()
+    .replace(/\s*—\s*.*$/u, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 
 const isAssistedBodyweightExercise = (name: string) => /assisterad|assisted/i.test(name) && /pull\s*-?\s*ups?|pullups?|chins?|dips/i.test(name);
 
@@ -2013,11 +2018,42 @@ const estimateCalories = (
       const match = line.trim().match(/^(.+?)(?:\s+|\s*—\s*)((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
       if (!match) return line;
       const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
-      const lastWeight = findLastWeight(exerciseName, parseInt(match[4]));
-      const lastKg = lastWeight?.match(/(-?\d+(?:[.,]\d+)?)\s*kg/i)?.[1];
-      if (!lastKg) return `${exerciseName} — ${match[2]}`;
-      return `${exerciseName} — ${match[2]} @ ${Math.abs(parseFloat(lastKg.replace(",", ".")))} kg`;
+      const setCount = parseInt(match[3]) || 1;
+      const templateReps = parseInt(match[4]) || 10;
+      const lastSetData = findLastSetData(exerciseName);
+      if (lastSetData.length === 0) return `${exerciseName} — ${setCount}×${templateReps}`;
+
+      const repsForPlan = lastSetData[0]?.reps || String(templateReps);
+      const firstKg = lastSetData[0]?.kg;
+      const kgSuffix = firstKg ? ` @ ${Math.abs(parseFloat(firstKg.replace(",", ".")))} kg` : "";
+      return `${exerciseName} — ${setCount}×${repsForPlan}${kgSuffix}`;
     }).join("\n");
+  };
+
+  const buildImportedSetWeights = (details: string, existing: Record<string, any> = {}) => {
+    const next = { ...existing };
+    for (const line of details.split("\n")) {
+      const match = line.trim().match(/^(.+?)(?:\s+|\s*—\s*)((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
+      if (!match) continue;
+      const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
+      const setCount = parseInt(match[3]) || 1;
+      const templateReps = match[4] || "10";
+      const lastSetData = findLastSetData(exerciseName);
+      if (lastSetData.length === 0) continue;
+
+      const importedSetData = Array.from({ length: setCount }, (_, si) => {
+        const source = lastSetData[si] ?? lastSetData[lastSetData.length - 1];
+        return { kg: source?.kg || "", reps: source?.reps || templateReps };
+      });
+
+      next[`__setdata__${exerciseName}`] = JSON.stringify(importedSetData);
+      delete next[`__copied_ex__${exerciseName}`];
+      importedSetData.forEach((_, si) => {
+        const mode = (lastSetData[si] ?? lastSetData[lastSetData.length - 1])?.mode;
+        if (mode) next[`__bw_mode__${exerciseName}__${si}`] = mode;
+      });
+    }
+    return next;
   };
 
   const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
@@ -2059,10 +2095,14 @@ const estimateCalories = (
     if (target.planId === "__single__") {
       const dateStr = format(singleDate, "yyyy-MM-dd");
       const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+      const importedWeights = buildImportedSetWeights(workout.details);
       await supabase.from("workout_plans").insert({
         user_id: userId, week: 0, day: uniqueKey,
         session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
       });
+      if (Object.keys(importedWeights).length > 0) {
+        await safeUpsertCompletion(0, uniqueKey, { done: false, logged_weights: importedWeights });
+      }
       setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false);
       setImportWorkoutTarget(null); setPendingImport(null);
       toast.success(`"${workout.name}" importerat!`);
@@ -2071,11 +2111,15 @@ const estimateCalories = (
     }
 
     if (target.planId === "__new__") {
+      const importedWeights = buildImportedSetWeights(workout.details);
       const { data: inserted } = await supabase.from("workout_plans").insert({
         user_id: userId, week: target.week, day: target.day,
         session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
       }).select().single();
       if (inserted) setPlans(prev => [...prev, inserted as any]);
+      if (Object.keys(importedWeights).length > 0) {
+        await safeUpsertCompletion(target.week, target.day, { done: false, logged_weights: importedWeights });
+      }
       setImportWorkoutTarget(null); setPendingImport(null);
       toast.success(`"${workout.name}" importerat!`);
       fetchData();
@@ -2103,6 +2147,12 @@ const estimateCalories = (
         tempo: workout.tempo || null,
         is_circuit: isCirc,
       }).eq("id", p.id);
+      if (mode === "replace") {
+        const importedWeights = buildImportedSetWeights(workout.details);
+        await safeUpsertCompletion(p.week, p.day, { done: false, logged_weights: Object.keys(importedWeights).length > 0 ? importedWeights : null });
+      } else {
+        await updateCompletionWeights(p.week, p.day, (existing) => buildImportedSetWeights(workout.details, existing));
+      }
       setPlans(prev => prev.map(pp => pp.id === p.id ? { ...pp, session_name: newSessionName, details: newDetails, tempo: workout.tempo || null, is_circuit: isCirc } : pp));
     }
 
@@ -2222,6 +2272,79 @@ const estimateCalories = (
 
   // Find last weight used for an exercise across ALL workouts (single + plan + archived),
   // preferring matching rep count. Returns e.g. "3×10 @ 80 kg" or "80 kg (8 reps)"
+  type LoggedSetInfo = { kg: string; reps: string; mode?: "add" | "sub" };
+
+  const getExerciseSetDataFromWeights = (weights: Record<string, any> | null | undefined, exerciseName: string): LoggedSetInfo[] => {
+    if (!weights) return [];
+    const wantedKey = normalizeExerciseKey(exerciseName);
+    let storedName = exerciseName;
+    let raw: any = null;
+
+    for (const [key, value] of Object.entries(weights)) {
+      if (!key.startsWith("__setdata__")) continue;
+      const candidateName = key.substring("__setdata__".length);
+      if (normalizeExerciseKey(candidateName) === wantedKey) {
+        storedName = candidateName;
+        raw = value;
+        break;
+      }
+    }
+
+    if (!raw) return [];
+    try {
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!Array.isArray(parsed)) return [];
+
+      const storedKey = normalizeExerciseKey(storedName);
+      return parsed.map((set, si) => {
+        const kgRaw = set?.kg !== undefined && set?.kg !== null ? String(set.kg).trim() : "";
+        const reps = set?.reps !== undefined && set?.reps !== null ? String(set.reps).trim() : "";
+        const kgNum = parseFloat(kgRaw.replace(",", "."));
+        const modeRaw = weights[`__bw_mode__${storedName}__${si}`] ?? weights[`__bw_mode__${storedKey}__${si}`] ?? weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${wantedKey}__${si}`] ?? weights[`__bw_mode__${storedName}`] ?? weights[`__bw_mode__${storedKey}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${wantedKey}`];
+        const mode: LoggedSetInfo["mode"] = modeRaw === "sub" || (!isNaN(kgNum) && kgNum < 0) ? "sub" : modeRaw === "add" ? "add" : undefined;
+        const kg = kgRaw && !isNaN(kgNum) ? String(Math.abs(kgNum)) : kgRaw;
+        return { kg, reps, mode };
+      }).filter((set) => set.kg || set.reps);
+    } catch {
+      return [];
+    }
+  };
+
+  const getCompletionSortValue = (week: number, day: string, fallbackIndex: number) => {
+    if (week === 0) {
+      const dateMatch = getBaseDay(day).match(/^\d{4}-\d{2}-\d{2}/);
+      if (dateMatch) return new Date(`${dateMatch[0]}T00:00:00`).getTime() + fallbackIndex;
+    }
+
+    const planDate = getPlanDayDateValue(planStartDate, week, day);
+    if (planDate) return planDate.getTime() + fallbackIndex;
+
+    const dayIndex = DAYS.indexOf(getBaseDay(day));
+    return week * 10 + (dayIndex >= 0 ? dayIndex : fallbackIndex / 1000);
+  };
+
+  const findLastSetData = (exerciseName: string): LoggedSetInfo[] => {
+    const candidates: Array<{ sort: number; data: LoggedSetInfo[] }> = [];
+
+    archivedCompletions.forEach((archComp, index) => {
+      const data = getExerciseSetDataFromWeights(archComp.logged_weights as Record<string, any> | null, exerciseName);
+      if (data.length > 0) candidates.push({ sort: -1000000 + index, data });
+    });
+
+    Object.entries(completions).forEach(([key, comp], index) => {
+      if (!comp?.done) return;
+      const data = getExerciseSetDataFromWeights(comp.logged_weights as Record<string, any> | null, exerciseName);
+      if (data.length === 0) return;
+      const [weekRaw, ...dayParts] = key.split("-");
+      const week = Number(comp.week ?? weekRaw);
+      const day = comp.day ?? dayParts.join("-");
+      candidates.push({ sort: getCompletionSortValue(week, day, index), data });
+    });
+
+    candidates.sort((a, b) => a.sort - b.sort);
+    return candidates[candidates.length - 1]?.data ?? [];
+  };
+
   const findLastWeight = (exerciseName: string, targetReps?: number): string | null => {
     const exLower = exerciseName.toLowerCase();
 
