@@ -329,7 +329,12 @@ const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
 const sameWorkoutDay = (a: string, b: string) => getBaseDay(a) === getBaseDay(b);
 
-const normalizeExerciseKey = (name: string) => name.trim().toLowerCase();
+const normalizeExerciseKey = (name: string) =>
+  name
+    .trim()
+    .replace(/\s*—\s*.*$/u, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
 
 const isAssistedBodyweightExercise = (name: string) => /assisterad|assisted/i.test(name) && /pull\s*-?\s*ups?|pullups?|chins?|dips/i.test(name);
 
