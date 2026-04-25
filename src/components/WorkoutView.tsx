@@ -4911,6 +4911,39 @@ const estimateCalories = (
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary px-3 py-2">
+        <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
+          <Timer className="w-3.5 h-3.5 text-primary" />
+          Vilotimer efter set
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            value={setRestTimerSeconds}
+            onChange={(e) => {
+              setSetRestTimerSeconds(e.target.value);
+              localStorage.setItem("grim_set_rest_timer_seconds", e.target.value);
+            }}
+            disabled={!setRestTimerEnabled}
+            className="w-16 bg-background text-foreground text-xs px-2 py-1 rounded-md border border-border text-center font-mono disabled:opacity-40 outline-none focus:ring-1 focus:ring-primary"
+          />
+          <span className="text-xs text-muted-foreground">sek</span>
+          <button
+            onClick={() => {
+              const next = !setRestTimerEnabled;
+              setSetRestTimerEnabled(next);
+              localStorage.setItem("grim_set_rest_timer_enabled", String(next));
+            }}
+            className={`w-10 h-5 rounded-full p-0.5 transition-colors ${setRestTimerEnabled ? "bg-primary" : "bg-muted"}`}
+            aria-pressed={setRestTimerEnabled}
+          >
+            <span className={`block w-4 h-4 rounded-full bg-background transition-transform ${setRestTimerEnabled ? "translate-x-5" : "translate-x-0"}`} />
+          </button>
+        </div>
+      </div>
+
       {/* Week navigation - swipe to change week */}
       <div className="flex flex-col gap-2">
         <div
