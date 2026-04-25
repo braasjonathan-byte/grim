@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { GripVertical, Pencil, Save, X, Loader2, Check, LogOut } from "lucide-react";
+import { ChevronDown, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
@@ -54,9 +54,12 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const autoScrollRef = useRef<number | null>(null);
+
+  const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
 
   const allSections: SectionDef[] = [
     { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
@@ -79,11 +82,31 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "settings", label: "Inställningar", render: () => <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} /> },
     { key: "notifications", label: "Notiser", render: () => <NotificationSettings userId={userId} /> },
     { key: "referral", label: "Bjud in vän", render: () => <ReferralLink userId={userId} /> },
-    { key: "events", label: "Nedräkning", render: () => <EventCountdown userId={userId} /> },
-    { key: "timer", label: "Timer", render: () => <WorkoutTimer /> },
-    { key: "1rm", label: "1RM-kalkylator", render: () => <OneRMCalculator /> },
-    { key: "pulse", label: "Pulszoner", render: () => <PulseZoneCalculator /> },
-    { key: "calories", label: "Kalorier", render: () => <CalorieCalculator /> },
+    { key: "helpers", label: "Hjälpmedel", render: () => (
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setToolsOpen((open) => !open)}
+          className="w-full flex items-center justify-between gap-3 p-4 text-left"
+          aria-expanded={toolsOpen}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Wrench className="h-4 w-4 text-primary" />
+            Hjälpmedel
+          </span>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toolsOpen ? "rotate-180" : ""}`} />
+        </button>
+        {toolsOpen && (
+          <div className="space-y-3 border-t border-border p-3">
+            <EventCountdown userId={userId} />
+            <CalorieCalculator />
+            <OneRMCalculator />
+            <PulseZoneCalculator />
+            <WorkoutTimer />
+          </div>
+        )}
+      </div>
+    )},
     { key: "suggestions", label: "Förslag", render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
     { key: "help", label: "Hjälp", render: () => <HelpSection /> },
   ];
@@ -116,8 +139,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     // Order by saved order, then append any new sections not in saved order
     const ordered: SectionDef[] = [];
     for (const key of order) {
-      if (!availableKeys.has(key)) continue;
-      const section = available.find(s => s.key === key);
+      const normalizedKey = helperToolKeys.has(key) ? "helpers" : key;
+      if (ordered.find(s => s.key === normalizedKey)) continue;
+      if (!availableKeys.has(normalizedKey)) continue;
+      const section = available.find(s => s.key === normalizedKey);
       if (section) ordered.push(section);
     }
     // Append any missing sections
