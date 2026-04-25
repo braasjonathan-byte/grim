@@ -35,6 +35,8 @@ interface CompletionRecord {
 
 type View = "week" | "month" | "year";
 
+const isAssistedBodyweightExercise = (name: string) => /assisterad|assisted/i.test(name) && /pull\s*-?\s*ups?|pullups?|chins?|dips/i.test(name);
+
 const motivationalQuotes = [
 "Framgång kommer till den som aldrig ger upp 💪",
 "En dag i taget – du blir starkare varje pass 🔥",
@@ -515,7 +517,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
              let kg = Number(s.kg) || 0;
              const reps = Number(s.reps) || 0;
              // Per-set bw mode, falling back to exercise-level
-             const bwMode = weights[`__bw_mode__${exerciseName}__${si}`] ?? bwModeExercise;
+              const bwMode = weights[`__bw_mode__${exerciseName}__${si}`] ?? bwModeExercise ?? (isAssistedBodyweightExercise(exerciseName) ? "sub" : undefined);
              // Weighted bodyweight exercise: effective = bodyweight ± entered kg
              if (bwMode && userWeightKg) {
                const absKg = Math.abs(kg);

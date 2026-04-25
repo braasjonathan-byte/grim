@@ -329,6 +329,10 @@ const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
 const sameWorkoutDay = (a: string, b: string) => getBaseDay(a) === getBaseDay(b);
 
+const normalizeExerciseKey = (name: string) => name.trim().toLowerCase();
+
+const isAssistedBodyweightExercise = (name: string) => /assisterad|assisted/i.test(name) && /pull\s*-?\s*ups?|pullups?|chins?|dips/i.test(name);
+
 const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null | undefined) => {
   if (!loggedWeights) return null;
 
@@ -1473,6 +1477,7 @@ const estimateCalories = (
       const dreps = defaultReps || "10";
       const initData = Array.from({ length: totalSets }, () => ({ kg: dkg, reps: dreps }));
       updated[setDataKey] = JSON.stringify(initData);
+      if (isAssistedBodyweightExercise(exerciseName)) updated[`__bw_mode__${exerciseName}`] = "sub";
     }
 
     // Do NOT auto-complete the whole workout when all sets are checked.
@@ -1579,7 +1584,7 @@ const estimateCalories = (
   const getSetData = (weekDayKey: string, exerciseName: string): Array<{kg: string; reps: string}> => {
     const comp = completions[weekDayKey];
     const weights = comp?.logged_weights as Record<string, any> | null;
-    const raw = weights?.[`__setdata__${exerciseName}`];
+    const raw = weights?.[`__setdata__${exerciseName}`] ?? weights?.[`__setdata__${normalizeExerciseKey(exerciseName)}`];
     if (raw) {
       if (typeof raw === 'string') {
         try { return JSON.parse(raw); } catch { return []; }
@@ -1602,6 +1607,7 @@ const estimateCalories = (
       };
       // User adjusted kg/reps -> clear progression reminder for this exercise
       delete next[`__copied_ex__${exerciseName}`];
+      if (field === 'kg' && isAssistedBodyweightExercise(exerciseName)) next[`__bw_mode__${exerciseName}__${setIndex}`] = "sub";
       return next;
     });
   };
@@ -1610,7 +1616,7 @@ const estimateCalories = (
   const isCopiedExercise = (weekDayKey: string, exerciseName: string): boolean => {
     const comp = completions[weekDayKey];
     const weights = comp?.logged_weights as Record<string, any> | null;
-    return weights?.[`__copied_ex__${exerciseName}`] === "1";
+    return weights?.[`__copied_ex__${exerciseName}`] === "1" || weights?.[`__copied_ex__${normalizeExerciseKey(exerciseName)}`] === "1";
   };
 
   // Extract RPE from exercise text
@@ -2002,8 +2008,21 @@ const estimateCalories = (
 
   // Handle import of a workout into a plan slot. If existing exercises and target is a real plan,
   // ask whether to replace or append. Then if it's a recurring plan (week>0), ask about propagation.
+  const applyLastLoggedWeightsToImportedDetails = (details: string): string => {
+    return details.split("\n").map((line) => {
+      const match = line.trim().match(/^(.+?)\s+((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
+      if (!match) return line;
+      const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
+      const lastWeight = findLastWeight(exerciseName, parseInt(match[4]));
+      const lastKg = lastWeight?.match(/(-?\d+(?:[.,]\d+)?)\s*kg/i)?.[1];
+      if (!lastKg) return line;
+      return `${exerciseName} — ${match[2]} @ ${Math.abs(parseFloat(lastKg.replace(",", ".")))} kg`;
+    }).join("\n");
+  };
+
   const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
-    const workout = { ...rawWorkout, details: normalizeImportedDetails(rawWorkout.details) };
+    const normalizedDetails = normalizeImportedDetails(rawWorkout.details);
+    const workout = { ...rawWorkout, details: applyLastLoggedWeightsToImportedDetails(normalizedDetails) };
     const target = importWorkoutTarget;
     if (!target) return;
 
@@ -2217,8 +2236,11 @@ const estimateCalories = (
         try {
           const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
           if (Array.isArray(setData) && setData.length > 0) {
-            for (const s of setData) {
-              const kg = parseFloat(s.kg);
+            for (let si = 0; si < setData.length; si++) {
+              const s = setData[si];
+              const rawKg = parseFloat(s.kg);
+              const mode = weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${exLower}__${si}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${exLower}`];
+              const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
               const reps = parseInt(s.reps);
               if (kg !== 0 && !isNaN(kg)) {
                 allSets.push({ kg, reps: reps || 0, label: `${kg} kg (${reps || '?'} reps)` });
@@ -5861,13 +5883,17 @@ const estimateCalories = (
                     type SetInfo = { kg: number; reps: number };
                     const allSets: SetInfo[] = [];
                     const collectSets = (weights: Record<string, any>) => {
-                      const setDataRaw = weights[`__setdata__${exerciseName}`];
+                      const exLower = normalizeExerciseKey(exerciseName);
+                      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
                       if (setDataRaw) {
                         try {
                           const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
                           if (Array.isArray(setData)) {
-                            for (const s of setData) {
-                              const kg = parseFloat(s.kg);
+                            for (let si = 0; si < setData.length; si++) {
+                              const s = setData[si];
+                              const rawKg = parseFloat(s.kg);
+                              const mode = weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${exLower}__${si}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${exLower}`];
+                              const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
                               if (kg !== 0 && !isNaN(kg)) allSets.push({ kg, reps: parseInt(s.reps) || 0 });
                             }
                           }
@@ -7066,7 +7092,7 @@ const estimateCalories = (
                                        const bwModeKeySet = `__bw_mode__${partName}__${si}`;
                                        const bwModeKeyExercise = `__bw_mode__${partName}`;
                                        const loggedWeights = (completion?.logged_weights as Record<string, any>) || {};
-                                       const currentBwMode = (loggedWeights[bwModeKeySet] ?? loggedWeights[bwModeKeyExercise]) === "sub" ? "sub" : "add";
+                                        const currentBwMode = (loggedWeights[bwModeKeySet] ?? loggedWeights[bwModeKeyExercise]) === "sub" || isAssistedBodyweightExercise(partName) ? "sub" : "add";
                                       const isSetDone = setsStrPlan[si] === "1";
                                       const saved = planSetData[si];
                                       return (
