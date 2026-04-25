@@ -38,11 +38,11 @@ const RestTimerSettings = () => {
         <button
           type="button"
           onClick={updateEnabled}
-          className={`h-5 w-10 rounded-full p-0.5 transition-colors ${enabled ? "bg-primary" : "bg-muted"}`}
+          className={`h-5 w-10 rounded-full border p-0.5 transition-colors ${enabled ? "border-primary bg-primary" : "border-border bg-muted"}`}
           aria-pressed={enabled}
           aria-label={enabled ? "Avaktivera vilotimer" : "Aktivera vilotimer"}
         >
-          <span className={`block h-4 w-4 rounded-full bg-background transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
+          <span className={`block h-4 w-4 rounded-full bg-foreground shadow-sm transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
         </button>
       </div>
     </div>
