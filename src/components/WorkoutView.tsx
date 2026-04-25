@@ -4938,7 +4938,7 @@ const estimateCalories = (
           const colorClass = getSessionColor(plan.session_name);
           const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
           const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-          const isCardToday = plan.day === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
+          const isCardToday = getBaseDay(plan.day) === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
 
           return (
             <div key={key + "-wrap"} className="contents">
@@ -7647,10 +7647,10 @@ const estimateCalories = (
             </div>
             {/* Add another workout to the same day (shown under last completed plan of the day) */}
             {isDone && (() => {
-              const dayPlansAll = plans.filter(p => p.week === plan.week && p.day === plan.day);
+              const dayPlansAll = plans.filter(p => p.week === plan.week && sameWorkoutDay(p.day, plan.day));
               const isLastOfDay = dayPlansAll[dayPlansAll.length - 1]?.id === plan.id;
               if (!isLastOfDay) return null;
-              const isOpen = addExtraDay?.week === plan.week && addExtraDay?.day === plan.day;
+              const isOpen = addExtraDay?.week === plan.week && addExtraDay?.day === getBaseDay(plan.day);
               if (!isOpen) {
                 return (
                   <button
