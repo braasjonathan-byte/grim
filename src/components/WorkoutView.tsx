@@ -2261,7 +2261,7 @@ const estimateCalories = (
         const reps = set?.reps !== undefined && set?.reps !== null ? String(set.reps).trim() : "";
         const kgNum = parseFloat(kgRaw.replace(",", "."));
         const modeRaw = weights[`__bw_mode__${storedName}__${si}`] ?? weights[`__bw_mode__${storedKey}__${si}`] ?? weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${wantedKey}__${si}`] ?? weights[`__bw_mode__${storedName}`] ?? weights[`__bw_mode__${storedKey}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${wantedKey}`];
-        const mode = modeRaw === "sub" || (!isNaN(kgNum) && kgNum < 0) ? "sub" : modeRaw === "add" ? "add" : undefined;
+        const mode: LoggedSetInfo["mode"] = modeRaw === "sub" || (!isNaN(kgNum) && kgNum < 0) ? "sub" : modeRaw === "add" ? "add" : undefined;
         const kg = kgRaw && !isNaN(kgNum) ? String(Math.abs(kgNum)) : kgRaw;
         return { kg, reps, mode };
       }).filter((set) => set.kg || set.reps);
