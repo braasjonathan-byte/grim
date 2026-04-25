@@ -822,13 +822,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
       // Auto-navigate to the active (date-based) week on initial load
       if (wks.length > 0 && !initialWeekSet && profileLoaded) {
-        const compMap: Record<string, boolean> = {};
-        if (compData) {
-          for (const c of compData) {
-            if (c.done) compMap[`${c.week}-${c.day}`] = true;
-          }
-        }
-
         // Prefer the date-based active week
         const planWeeks = wks.filter(w => w > 0);
         const dateBasedWeek = computeWeekFromStart(planWeeks);
@@ -839,11 +832,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           // Always use the date-based active week so today's day is shown
           targetWeek = dateBasedWeek;
         } else {
-          // Fallback: first incomplete week forward from dateBasedWeek (or from start if no dateBasedWeek)
+          // Fallback: first week with scheduled workouts forward from dateBasedWeek (or from start if no dateBasedWeek)
           const startFrom = dateBasedWeek ?? 0;
           targetWeek = wks.filter(w => w >= startFrom).find(w => {
             const weekPlans = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
-            return weekPlans.length > 0 && !weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
+            return weekPlans.length > 0;
           });
         }
 
