@@ -140,7 +140,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "help", label: "Hjälp", render: () => <HelpSection /> },
   ];
 
-  const defaultOrder = allSections.map(s => s.key);
+  const pinnedSectionKeys = new Set(["role-badge"]);
+  const defaultOrder = ["role-badge", ...allSections.map(s => s.key).filter(key => !pinnedSectionKeys.has(key))];
 
   // Fetch global layout
   useEffect(() => {
@@ -163,7 +164,9 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     const order = editMode ? localOrder : (savedOrder || defaultOrder);
     // Filter admin-only for non-admins
     const available = allSections.filter(s => !s.adminOnly || isAdmin);
-    const availableKeys = new Set(available.map(s => s.key));
+    const pinnedSections = available.filter(s => pinnedSectionKeys.has(s.key));
+    const unpinnedAvailable = available.filter(s => !pinnedSectionKeys.has(s.key));
+    const availableKeys = new Set(unpinnedAvailable.map(s => s.key));
     
     // Order by saved order, then append any new sections not in saved order
     const ordered: SectionDef[] = [];
@@ -171,14 +174,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       const normalizedKey = helperToolKeys.has(key) ? "helpers" : settingsToolKeys.has(key) ? "settings-group" : key;
       if (ordered.find(s => s.key === normalizedKey)) continue;
       if (!availableKeys.has(normalizedKey)) continue;
-      const section = available.find(s => s.key === normalizedKey);
+      const section = unpinnedAvailable.find(s => s.key === normalizedKey);
       if (section) ordered.push(section);
     }
     // Append any missing sections
-    for (const s of available) {
+    for (const s of unpinnedAvailable) {
       if (!ordered.find(o => o.key === s.key)) ordered.push(s);
     }
-    return ordered;
+    return [...pinnedSections, ...ordered];
   }, [editMode, localOrder, savedOrder, isAdmin, userId, userRole, isHonorary, toolsOpen, settingsOpen]);
 
   const handleStartEdit = () => {
