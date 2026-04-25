@@ -246,6 +246,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       )}
 
       <Suspense fallback={null}>
+        <div className="grid grid-cols-2 gap-2">
         {orderedSections.map((section, index) => (
           <div
             key={section.key}
@@ -266,6 +267,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             </div>
           </div>
         ))}
+        </div>
       </Suspense>
 
       {onLogout && (
