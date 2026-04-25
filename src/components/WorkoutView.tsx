@@ -293,6 +293,17 @@ const ConditioningHMSInput = ({ initialH, initialM, initialS, onSave }: {
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
+const getTodayInfo = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return {
+    date,
+    dateKey: format(date, "yyyy-MM-dd"),
+    dayName: DAYS[(date.getDay() + 6) % 7],
+    isoWeek: getISOWeek(date),
+  };
+};
+
 const getSessionIcon = (session: string) => {
   const s = session.toLowerCase();
   if (s.includes("styrka") || s.includes("tung")) return Dumbbell;
@@ -427,13 +438,12 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
     return { index: 0, matchedToday: false };
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getTodayInfo();
 
   if (planStart && currentWeek > 0) {
     const dateMatchedIndex = weekPlans.findIndex((plan) => {
       const planDate = getPlanDayDateValue(planStart, currentWeek, plan.day);
-      return planDate?.getTime() === today.getTime();
+      return planDate?.getTime() === today.date.getTime();
     });
 
     if (dateMatchedIndex >= 0) {
@@ -441,9 +451,7 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
     }
   }
 
-  const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-  const todayName = todayDayNames[today.getDay()];
-  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === todayName);
+  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === today.dayName);
 
   if (labelMatchedIndex >= 0) {
     return { index: labelMatchedIndex, matchedToday: true };
