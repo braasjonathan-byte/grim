@@ -126,8 +126,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         </button>
         {toolsOpen && (
           <div className="space-y-3 border-t border-border p-3">
-            <EventCountdown userId={userId} />
             <RestTimerSettings />
+            <EventCountdown userId={userId} />
             <CalorieCalculator />
             <OneRMCalculator />
             <PulseZoneCalculator />
