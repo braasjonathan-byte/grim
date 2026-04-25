@@ -32,7 +32,8 @@ const MiniTimer = () => {
   useEffect(() => {
     const startRestTimer = (event: Event) => {
       const detail = (event as CustomEvent<{ seconds?: number; label?: string }>).detail;
-      const startSeconds = Math.max(1, Math.round(Number(detail?.seconds) || 0));
+      const configuredSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || "90";
+      const startSeconds = Math.max(1, Math.round(Number(detail?.seconds ?? configuredSeconds) || 0));
       if (!startSeconds) return;
       setMode("countdown");
       setLabel(detail?.label || "Vila");
