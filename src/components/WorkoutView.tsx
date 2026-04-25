@@ -2030,6 +2030,32 @@ const estimateCalories = (
     }).join("\n");
   };
 
+  const buildImportedSetWeights = (details: string, existing: Record<string, any> = {}) => {
+    const next = { ...existing };
+    for (const line of details.split("\n")) {
+      const match = line.trim().match(/^(.+?)(?:\s+|\s*—\s*)((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
+      if (!match) continue;
+      const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
+      const setCount = parseInt(match[3]) || 1;
+      const templateReps = match[4] || "10";
+      const lastSetData = findLastSetData(exerciseName);
+      if (lastSetData.length === 0) continue;
+
+      const importedSetData = Array.from({ length: setCount }, (_, si) => {
+        const source = lastSetData[si] ?? lastSetData[lastSetData.length - 1];
+        return { kg: source?.kg || "", reps: source?.reps || templateReps };
+      });
+
+      next[`__setdata__${exerciseName}`] = JSON.stringify(importedSetData);
+      delete next[`__copied_ex__${exerciseName}`];
+      importedSetData.forEach((_, si) => {
+        const mode = (lastSetData[si] ?? lastSetData[lastSetData.length - 1])?.mode;
+        if (mode) next[`__bw_mode__${exerciseName}__${si}`] = mode;
+      });
+    }
+    return next;
+  };
+
   const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
     const normalizedDetails = normalizeImportedDetails(rawWorkout.details);
     const workout = { ...rawWorkout, details: applyLastLoggedWeightsToImportedDetails(normalizedDetails) };
