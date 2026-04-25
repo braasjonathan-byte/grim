@@ -434,7 +434,7 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
 
   const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
   const todayName = todayDayNames[today.getDay()];
-  const labelMatchedIndex = weekPlans.findIndex((plan) => plan.day.trim() === todayName);
+  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === todayName);
 
   if (labelMatchedIndex >= 0) {
     return { index: labelMatchedIndex, matchedToday: true };
@@ -959,7 +959,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
 
     const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
 
@@ -983,7 +983,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
     const activePlan = currentWeekDays[activeDayIndex];
     if (!activePlan) return;
-    const sameDayPlans = currentWeekDays.filter(p => p.day === activePlan.day);
+    const sameDayPlans = currentWeekDays.filter(p => sameWorkoutDay(p.day, activePlan.day));
     if (sameDayPlans.length === 1) {
       setExpandedDay(`${activePlan.week}-${activePlan.day}`);
     }
