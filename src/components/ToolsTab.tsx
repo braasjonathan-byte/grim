@@ -61,11 +61,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const autoScrollRef = useRef<number | null>(null);
 
   const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
-  const settingsToolKeys = new Set(["settings", "notifications", "referral"]);
+  const settingsToolKeys = new Set(["profile", "settings", "notifications", "referral"]);
 
   const allSections: SectionDef[] = [
     { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
-    { key: "profile", label: "Profil", render: () => <ProfileTab userId={userId} isAdmin={isAdmin} /> },
     { key: "role-badge", label: "Roll", render: () => (
       <div className="flex items-center gap-2">
         {userRole === "admin" ? (
@@ -97,6 +96,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         </button>
         {settingsOpen && (
           <div className="space-y-3 border-t border-border p-3">
+            <ProfileTab userId={userId} isAdmin={isAdmin} />
             <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
             <NotificationSettings userId={userId} />
             <ReferralLink userId={userId} />
