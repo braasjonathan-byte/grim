@@ -1431,7 +1431,10 @@ const estimateCalories = (
     const current = getSetsDone(k, exerciseName);
     const arr = Array.from({ length: totalSets }, (_, i) => current[i] === "1");
     arr[setIndex] = !arr[setIndex];
-    if (arr[setIndex]) playSetDone();
+    if (arr[setIndex]) {
+      playSetDone();
+      triggerSetRestTimer(true);
+    }
     const setsStr = arr.map(b => b ? "1" : "0").join("");
 
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
