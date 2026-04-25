@@ -140,8 +140,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "help", label: "Hjälp", render: () => <HelpSection /> },
   ];
 
-  const pinnedSectionKeys = new Set(["role-badge"]);
-  const defaultOrder = ["role-badge", ...allSections.map(s => s.key).filter(key => !pinnedSectionKeys.has(key))];
+  const hiddenSectionKeys = new Set(["role-badge"]);
+  const defaultOrder = allSections.map(s => s.key).filter(key => !hiddenSectionKeys.has(key));
 
   // Fetch global layout
   useEffect(() => {
@@ -164,8 +164,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     const order = editMode ? localOrder : (savedOrder || defaultOrder);
     // Filter admin-only for non-admins
     const available = allSections.filter(s => !s.adminOnly || isAdmin);
-    const pinnedSections = available.filter(s => pinnedSectionKeys.has(s.key));
-    const unpinnedAvailable = available.filter(s => !pinnedSectionKeys.has(s.key));
+    const unpinnedAvailable = available.filter(s => !hiddenSectionKeys.has(s.key));
     const availableKeys = new Set(unpinnedAvailable.map(s => s.key));
     
     // Order by saved order, then append any new sections not in saved order
@@ -181,7 +180,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     for (const s of unpinnedAvailable) {
       if (!ordered.find(o => o.key === s.key)) ordered.push(s);
     }
-    return [...pinnedSections, ...ordered];
+    return ordered;
   }, [editMode, localOrder, savedOrder, isAdmin, userId, userRole, isHonorary, toolsOpen, settingsOpen]);
 
   const handleStartEdit = () => {
