@@ -975,9 +975,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     prevWeekRef.current = currentWeek;
 
-    const currentWeekDays = plans
-      .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
+    const weekPlans = plans.filter((p) => p.week === currentWeek);
+    const currentWeekDays = DAYS
+      .map((dayName) => weekPlans.find((p) => getBaseDay(p.day) === dayName))
+      .filter(Boolean) as PlanDay[];
 
     const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
 
@@ -3268,6 +3269,9 @@ const estimateCalories = (
     // Group weekPlans by day-of-week for tabs
     const dayGroupsInWeek: { dayName: string; dayIndex: number; plans: PlanDay[] }[] = [];
     const dayMap = new Map<string, PlanDay[]>();
+    const today = new Date();
+    const todayDateKey = format(today, "yyyy-MM-dd");
+    const todayDayName = DAYS[(today.getDay() + 6) % 7];
     for (const p of weekPlans) {
       const dn = getDayNameFromKey(p.day);
       if (!dayMap.has(dn)) dayMap.set(dn, []);
@@ -3282,6 +3286,14 @@ const estimateCalories = (
     const safeDayIdx = Math.min(singleActiveDayIdx, Math.max(0, dayGroupsInWeek.length - 1));
     const activeDayGroup = dayGroupsInWeek[safeDayIdx];
     const visiblePlans = isMobile && dayGroupsInWeek.length > 1 && activeDayGroup ? activeDayGroup.plans : weekPlans;
+    const todayGroupIndex = dayGroupsInWeek.findIndex((dg) =>
+      dg.plans.some((p) => p.day.startsWith(todayDateKey)) ||
+      (dg.dayName === todayDayName && effectiveWeek === currentIsoWeek)
+    );
+
+    if (todayGroupIndex >= 0 && singleActiveDayIdx !== todayGroupIndex) {
+      setSingleActiveDayIdx(todayGroupIndex);
+    }
 
     const weekDoneCount = weekPlans.filter((p) => completions[`0-${p.day}`]?.done).length;
     const totalDoneCount = singlePlans.filter((p) => completions[`0-${p.day}`]?.done).length;
