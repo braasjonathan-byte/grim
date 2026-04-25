@@ -100,29 +100,31 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
             <NotificationSettings userId={userId} />
             <ReferralLink userId={userId} />
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setToolsOpen((open) => !open)}
-                className="w-full flex items-center justify-between gap-3 p-4 text-left"
-                aria-expanded={toolsOpen}
-              >
-                <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Wrench className="h-4 w-4 text-primary" />
-                  Hjälpmedel
-                </span>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toolsOpen ? "rotate-180" : ""}`} />
-              </button>
-              {toolsOpen && (
-                <div className="space-y-3 border-t border-border p-3">
-                  <EventCountdown userId={userId} />
-                  <CalorieCalculator />
-                  <OneRMCalculator />
-                  <PulseZoneCalculator />
-                  <WorkoutTimer />
-                </div>
-              )}
-            </div>
+          </div>
+        )}
+      </div>
+    )},
+    { key: "helpers", label: "Hjälpmedel", render: () => (
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setToolsOpen((open) => !open)}
+          className="w-full flex items-center justify-between gap-3 p-4 text-left"
+          aria-expanded={toolsOpen}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Wrench className="h-4 w-4 text-primary" />
+            Hjälpmedel
+          </span>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toolsOpen ? "rotate-180" : ""}`} />
+        </button>
+        {toolsOpen && (
+          <div className="space-y-3 border-t border-border p-3">
+            <EventCountdown userId={userId} />
+            <CalorieCalculator />
+            <OneRMCalculator />
+            <PulseZoneCalculator />
+            <WorkoutTimer />
           </div>
         )}
       </div>
@@ -159,7 +161,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     // Order by saved order, then append any new sections not in saved order
     const ordered: SectionDef[] = [];
     for (const key of order) {
-      const normalizedKey = helperToolKeys.has(key) || settingsToolKeys.has(key) ? "settings-group" : key;
+      const normalizedKey = helperToolKeys.has(key) ? "helpers" : settingsToolKeys.has(key) ? "settings-group" : key;
       if (ordered.find(s => s.key === normalizedKey)) continue;
       if (!availableKeys.has(normalizedKey)) continue;
       const section = available.find(s => s.key === normalizedKey);
