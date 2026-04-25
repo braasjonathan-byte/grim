@@ -2018,10 +2018,15 @@ const estimateCalories = (
       const match = line.trim().match(/^(.+?)(?:\s+|\s*—\s*)((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
       if (!match) return line;
       const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
-      const lastWeight = findLastWeight(exerciseName, parseInt(match[4]));
-      const lastKg = lastWeight?.match(/(-?\d+(?:[.,]\d+)?)\s*kg/i)?.[1];
-      if (!lastKg) return `${exerciseName} — ${match[2]}`;
-      return `${exerciseName} — ${match[2]} @ ${Math.abs(parseFloat(lastKg.replace(",", ".")))} kg`;
+      const setCount = parseInt(match[3]) || 1;
+      const templateReps = parseInt(match[4]) || 10;
+      const lastSetData = findLastSetData(exerciseName);
+      if (lastSetData.length === 0) return `${exerciseName} — ${setCount}×${templateReps}`;
+
+      const repsForPlan = lastSetData[0]?.reps || String(templateReps);
+      const firstKg = lastSetData[0]?.kg;
+      const kgSuffix = firstKg ? ` @ ${Math.abs(parseFloat(firstKg.replace(",", ".")))} kg` : "";
+      return `${exerciseName} — ${setCount}×${repsForPlan}${kgSuffix}`;
     }).join("\n");
   };
 
