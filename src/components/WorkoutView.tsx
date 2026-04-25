@@ -1583,7 +1583,7 @@ const estimateCalories = (
   const getSetData = (weekDayKey: string, exerciseName: string): Array<{kg: string; reps: string}> => {
     const comp = completions[weekDayKey];
     const weights = comp?.logged_weights as Record<string, any> | null;
-    const raw = weights?.[`__setdata__${exerciseName}`];
+    const raw = weights?.[`__setdata__${exerciseName}`] ?? weights?.[`__setdata__${normalizeExerciseKey(exerciseName)}`];
     if (raw) {
       if (typeof raw === 'string') {
         try { return JSON.parse(raw); } catch { return []; }
@@ -1614,7 +1614,7 @@ const estimateCalories = (
   const isCopiedExercise = (weekDayKey: string, exerciseName: string): boolean => {
     const comp = completions[weekDayKey];
     const weights = comp?.logged_weights as Record<string, any> | null;
-    return weights?.[`__copied_ex__${exerciseName}`] === "1";
+    return weights?.[`__copied_ex__${exerciseName}`] === "1" || weights?.[`__copied_ex__${normalizeExerciseKey(exerciseName)}`] === "1";
   };
 
   // Extract RPE from exercise text
