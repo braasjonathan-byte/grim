@@ -24,6 +24,7 @@ const NotificationSettings = lazy(() => import("@/components/NotificationSetting
 const ReferralLink = lazy(() => import("@/components/ReferralLink"));
 const EventCountdown = lazy(() => import("@/components/EventCountdown"));
 const WorkoutTimer = lazy(() => import("@/components/WorkoutTimer"));
+const RestTimerSettings = lazy(() => import("@/components/RestTimerSettings"));
 const OneRMCalculator = lazy(() => import("@/components/OneRMCalculator"));
 const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"));
 const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
@@ -126,6 +127,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         {toolsOpen && (
           <div className="space-y-3 border-t border-border p-3">
             <EventCountdown userId={userId} />
+            <RestTimerSettings />
             <CalorieCalculator />
             <OneRMCalculator />
             <PulseZoneCalculator />
