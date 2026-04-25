@@ -254,10 +254,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       supabase.from("daily_challenge_completions")
         .select("completed_at, challenge_text, challenge_date")
         .eq("user_id", userId).order("completed_at", { ascending: false }),
-      supabase.from("archived_plans")
-        .select("plan_data, completion_data")
-        .eq("user_id", userId),
-    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archivedData }]) => {
+    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
@@ -267,26 +264,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         }
       }
 
-      // Merge completions from workout_completions + archived completion_data
-      const mergedCompletions = new Map<string, CompletionRecord>();
-      if (compData) {
-        for (const c of compData as any[]) {
-          mergedCompletions.set(c.id || `${c.week}-${c.day}`, c as CompletionRecord);
-        }
-      }
-      if (archivedData) {
-        for (const archive of archivedData) {
-          const archiveCompletions = archive.completion_data as any[];
-          if (!Array.isArray(archiveCompletions)) continue;
-          for (const c of archiveCompletions) {
-            const key = c.id || `archived-${c.week}-${c.day}`;
-            if (!mergedCompletions.has(key)) {
-              mergedCompletions.set(key, c as CompletionRecord);
-            }
-          }
-        }
-      }
-      setCompletions(Array.from(mergedCompletions.values()));
+      const activePlanKeys = new Set((planData || []).map((p) => `${p.week}-${p.day}`));
+      setCompletions(((compData || []) as any[]).filter((c) => activePlanKeys.has(`${c.week}-${c.day}`)) as CompletionRecord[]);
 
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
@@ -332,33 +311,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           }
           perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
           perDay.set(key, (perDay.get(key) || 0) + 1);
-        }
-      }
-
-      if (archivedData) {
-        for (const archive of archivedData) {
-          const plans = archive.plan_data as any[];
-          if (!Array.isArray(plans)) continue;
-          // Track per-day plan counts within this archive separately so we don't
-          // double-count the same archived plan's days across active+archive.
-          const archiveDayCounts = new Map<string, number>();
-          for (const p of plans) {
-            if (!p.details || !p.details.trim()) continue;
-            const key = `${p.week}-${p.day}`;
-            if (!detailsMap.has(key)) {
-              detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
-            }
-            if (!exerciseKeys.has(key)) {
-              exerciseKeys.add(key);
-            }
-            archiveDayCounts.set(key, (archiveDayCounts.get(key) || 0) + 1);
-          }
-          // Merge: only fill perDay for archive days not already counted from active plans
-          for (const [key, count] of archiveDayCounts) {
-            if (!perDay.has(key)) {
-              perDay.set(key, count);
-            }
-          }
         }
       }
 
