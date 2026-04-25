@@ -113,6 +113,9 @@ const Index = () => {
 
   // Wrap setTab to push browser history for Android back button support
   const setTab = useCallback((newTab: Tab) => {
+    if (newTab === "workout") {
+      setWorkoutRefreshKey((key) => key + 1);
+    }
     setTabState(newTab);
     localStorage.setItem("grim_active_tab", newTab);
     window.history.pushState({ tab: newTab }, "", "");
