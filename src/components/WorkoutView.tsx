@@ -962,6 +962,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const prevWeekRef = useRef(currentWeek);
   const didInitialDayPickRef = useRef(false);
   const pendingInitialDateRealignRef = useRef(false);
+  const autoSelectedSingleTodayRef = useRef(false);
   // Reset active day index when week changes — navigate to today's day.
   // Also runs once on initial mount after plans load, so the app opens on today.
   useEffect(() => {
@@ -1000,7 +1001,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!isMobile) return;
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
     const activePlan = currentWeekDays[activeDayIndex];
     if (!activePlan) return;
     const sameDayPlans = currentWeekDays.filter(p => sameWorkoutDay(p.day, activePlan.day));
