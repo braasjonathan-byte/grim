@@ -4694,6 +4694,14 @@ const estimateCalories = (
   filter((p) => p.week === currentWeek).
   sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
 
+  const mobileDayTabs = DAYS
+    .map((dayName) => weekDays.find((p) => p.day === dayName))
+    .filter(Boolean) as PlanDay[];
+  const activeMobileDay = mobileDayTabs[Math.min(activeDayIndex, Math.max(0, mobileDayTabs.length - 1))];
+  const visibleWeekDays = isMobile && weekDays.length > 1 && activeMobileDay
+    ? weekDays.filter((p) => p.day === activeMobileDay.day)
+    : weekDays;
+
   const weekIdx = weeks.indexOf(currentWeek);
   const scheduledDays = weekDays.filter(d => d.session_name.trim() !== "" && d.details.trim() !== "");
   const doneCount = scheduledDays.filter((d) => completions[`${d.week}-${d.day}`]?.done).length;
