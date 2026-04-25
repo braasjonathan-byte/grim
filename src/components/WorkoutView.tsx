@@ -3291,37 +3291,6 @@ const estimateCalories = (
       <>
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
-        {singlePlans.length === 0 && (
-          <button
-            onClick={() => setMode("choose")}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Tillbaka
-          </button>
-        )}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-black tracking-tight">Mina pass</h2>
-            <p className="text-xs text-muted-foreground">
-              {totalDoneCount} av {singlePlans.length} avklarade totalt
-            </p>
-          </div>
-          {singlePlans.length > 0 &&
-          <div className="flex flex-col items-center gap-0.5">
-              <button
-              onClick={leavePlan}
-              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-              title="Rensa alla pass">
-                <LogOut className="w-4 h-4" />
-              </button>
-              <span className="text-[9px] text-muted-foreground leading-tight">Rensa alla</span>
-            </div>
-          }
-        </div>
-
-        <EventProgressBar userId={userId} />
-        <SpotifyWidget userId={userId} />
-
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary px-3 py-2">
           <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
             <Timer className="w-3.5 h-3.5 text-primary" />
@@ -3354,6 +3323,36 @@ const estimateCalories = (
             </button>
           </div>
         </div>
+        {singlePlans.length === 0 && (
+          <button
+            onClick={() => setMode("choose")}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Tillbaka
+          </button>
+        )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black tracking-tight">Mina pass</h2>
+            <p className="text-xs text-muted-foreground">
+              {totalDoneCount} av {singlePlans.length} avklarade totalt
+            </p>
+          </div>
+          {singlePlans.length > 0 &&
+          <div className="flex flex-col items-center gap-0.5">
+              <button
+              onClick={leavePlan}
+              className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+              title="Rensa alla pass">
+                <LogOut className="w-4 h-4" />
+              </button>
+              <span className="text-[9px] text-muted-foreground leading-tight">Rensa alla</span>
+            </div>
+          }
+        </div>
+
+        <EventProgressBar userId={userId} />
+        <SpotifyWidget userId={userId} />
 
         {/* Week navigation */}
         {(singleWeeks.length > 0 || singlePlans.length > 0) && (
