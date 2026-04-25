@@ -1782,6 +1782,9 @@ const estimateCalories = (
     const name = copyFrom ? copyFrom.session_name : extraName.trim();
     if (!name) return;
 
+    const baseDay = getBaseDay(day);
+    const uniqueDay = `${baseDay}_${Date.now().toString(36)}`;
+
     let details = "";
     if (copyFrom && copyFrom.details) {
       details = copyFrom.details;
@@ -1790,7 +1793,7 @@ const estimateCalories = (
     await supabase.from("workout_plans").insert({
       user_id: userId,
       week,
-      day,
+      day: uniqueDay,
       session_name: name,
       details,
       tempo: copyFrom
