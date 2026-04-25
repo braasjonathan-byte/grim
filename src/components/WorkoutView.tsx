@@ -2095,10 +2095,14 @@ const estimateCalories = (
     if (target.planId === "__single__") {
       const dateStr = format(singleDate, "yyyy-MM-dd");
       const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
+      const importedWeights = buildImportedSetWeights(workout.details);
       await supabase.from("workout_plans").insert({
         user_id: userId, week: 0, day: uniqueKey,
         session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
       });
+      if (Object.keys(importedWeights).length > 0) {
+        await safeUpsertCompletion(0, uniqueKey, { done: false, logged_weights: importedWeights });
+      }
       setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false);
       setImportWorkoutTarget(null); setPendingImport(null);
       toast.success(`"${workout.name}" importerat!`);
@@ -2107,11 +2111,15 @@ const estimateCalories = (
     }
 
     if (target.planId === "__new__") {
+      const importedWeights = buildImportedSetWeights(workout.details);
       const { data: inserted } = await supabase.from("workout_plans").insert({
         user_id: userId, week: target.week, day: target.day,
         session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
       }).select().single();
       if (inserted) setPlans(prev => [...prev, inserted as any]);
+      if (Object.keys(importedWeights).length > 0) {
+        await safeUpsertCompletion(target.week, target.day, { done: false, logged_weights: importedWeights });
+      }
       setImportWorkoutTarget(null); setPendingImport(null);
       toast.success(`"${workout.name}" importerat!`);
       fetchData();
