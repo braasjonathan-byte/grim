@@ -80,7 +80,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings-group", label: "Inställningar", render: () => (
-      <div className="rounded-lg border border-border bg-card overflow-hidden shadow-none">
+      <div className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
         <button
           type="button"
           onClick={() => setSettingsOpen((open) => !open)}
@@ -111,7 +111,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       </div>
     )},
     { key: "helpers", label: "Hjälpmedel", render: () => (
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border overflow-hidden bg-secondary">
         <button
           type="button"
           onClick={() => setToolsOpen((open) => !open)}
