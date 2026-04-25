@@ -4,17 +4,45 @@ import { Play, Pause, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
 const MiniTimer = () => {
   const [seconds, setSeconds] = useState(0);
   const [running, setRunning] = useState(false);
+  const [mode, setMode] = useState<"stopwatch" | "countdown">("stopwatch");
+  const [label, setLabel] = useState("Timer");
   const [expanded, setExpanded] = useState(false);
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (running) {
-      intervalRef.current = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+      intervalRef.current = window.setInterval(() => {
+        setSeconds((s) => {
+          if (mode === "countdown") {
+            if (s <= 1) {
+              setRunning(false);
+              return 0;
+            }
+            return s - 1;
+          }
+          return s + 1;
+        });
+      }, 1000);
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [running]);
+  }, [running, mode]);
+
+  useEffect(() => {
+    const startRestTimer = (event: Event) => {
+      const detail = (event as CustomEvent<{ seconds?: number; label?: string }>).detail;
+      const startSeconds = Math.max(1, Math.round(Number(detail?.seconds) || 0));
+      if (!startSeconds) return;
+      setMode("countdown");
+      setLabel(detail?.label || "Vila");
+      setSeconds(startSeconds);
+      setRunning(true);
+      setExpanded(false);
+    };
+    window.addEventListener("grim:start-rest-timer", startRestTimer);
+    return () => window.removeEventListener("grim:start-rest-timer", startRestTimer);
+  }, []);
 
   const fmt = (t: number) => {
     const h = Math.floor(t / 3600);
@@ -46,6 +74,7 @@ const MiniTimer = () => {
         <span className={`font-mono text-sm font-bold tracking-wider ${running ? "text-primary" : "text-foreground"}`}>
           {fmt(seconds)}
         </span>
+        {mode === "countdown" && <span className="text-[10px] font-semibold uppercase text-muted-foreground">{label}</span>}
         <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
     );
@@ -78,12 +107,15 @@ const MiniTimer = () => {
             {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
           </button>
 
-          <span className={`font-mono text-2xl font-black tracking-wider ${running ? "text-primary" : "text-foreground"}`}>
-            {fmt(seconds)}
-          </span>
+          <div className="text-center">
+            {mode === "countdown" && <div className="text-[10px] font-semibold uppercase text-muted-foreground">{label}</div>}
+            <span className={`font-mono text-2xl font-black tracking-wider ${running ? "text-primary" : "text-foreground"}`}>
+              {fmt(seconds)}
+            </span>
+          </div>
 
           <button
-            onClick={(e) => { e.stopPropagation(); setRunning(false); setSeconds(0); }}
+            onClick={(e) => { e.stopPropagation(); setRunning(false); setSeconds(0); setMode("stopwatch"); setLabel("Timer"); }}
             className="w-8 h-8 rounded-full bg-secondary text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
