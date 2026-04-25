@@ -2010,7 +2010,7 @@ const estimateCalories = (
   // ask whether to replace or append. Then if it's a recurring plan (week>0), ask about propagation.
   const applyLastLoggedWeightsToImportedDetails = (details: string): string => {
     return details.split("\n").map((line) => {
-      const match = line.trim().match(/^(.+?)\s+((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
+      const match = line.trim().match(/^(.+?)(?:\s+|\s*—\s*)((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
       if (!match) return line;
       const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
       const lastWeight = findLastWeight(exerciseName, parseInt(match[4]));
