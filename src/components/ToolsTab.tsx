@@ -56,8 +56,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const dragItem = useRef<number | null>(null);
-  const dragOverItem = useRef<number | null>(null);
+  const dragItem = useRef<string | null>(null);
+  const dragOverItem = useRef<string | null>(null);
   const autoScrollRef = useRef<number | null>(null);
 
   const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
@@ -190,12 +190,12 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     setEditMode(true);
   };
 
-  const handleDragStart = (index: number) => {
-    dragItem.current = index;
+  const handleDragStart = (key: string) => {
+    dragItem.current = key;
   };
 
-  const handleDragEnter = (index: number) => {
-    dragOverItem.current = index;
+  const handleDragEnter = (key: string) => {
+    dragOverItem.current = key;
   };
 
   const stopAutoScroll = () => {
@@ -234,8 +234,11 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     stopAutoScroll();
     if (dragItem.current === null || dragOverItem.current === null) return;
     const newOrder = [...localOrder];
-    const draggedItem = newOrder.splice(dragItem.current, 1)[0];
-    newOrder.splice(dragOverItem.current, 0, draggedItem);
+    const draggedIndex = newOrder.indexOf(dragItem.current);
+    const targetIndex = newOrder.indexOf(dragOverItem.current);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+    const draggedItem = newOrder.splice(draggedIndex, 1)[0];
+    newOrder.splice(targetIndex, 0, draggedItem);
     setLocalOrder(newOrder);
     dragItem.current = null;
     dragOverItem.current = null;
