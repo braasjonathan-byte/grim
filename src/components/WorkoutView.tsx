@@ -2006,8 +2006,21 @@ const estimateCalories = (
 
   // Handle import of a workout into a plan slot. If existing exercises and target is a real plan,
   // ask whether to replace or append. Then if it's a recurring plan (week>0), ask about propagation.
+  const applyLastLoggedWeightsToImportedDetails = (details: string): string => {
+    return details.split("\n").map((line) => {
+      const match = line.trim().match(/^(.+?)\s+((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
+      if (!match) return line;
+      const exerciseName = match[1].trim().replace(/\s*—\s*$/, "");
+      const lastWeight = findLastWeight(exerciseName, parseInt(match[4]));
+      const lastKg = lastWeight?.match(/(-?\d+(?:[.,]\d+)?)\s*kg/i)?.[1];
+      if (!lastKg) return line;
+      return `${exerciseName} — ${match[2]} @ ${Math.abs(parseFloat(lastKg.replace(",", ".")))} kg`;
+    }).join("\n");
+  };
+
   const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
-    const workout = { ...rawWorkout, details: normalizeImportedDetails(rawWorkout.details) };
+    const normalizedDetails = normalizeImportedDetails(rawWorkout.details);
+    const workout = { ...rawWorkout, details: applyLastLoggedWeightsToImportedDetails(normalizedDetails) };
     const target = importWorkoutTarget;
     if (!target) return;
 
