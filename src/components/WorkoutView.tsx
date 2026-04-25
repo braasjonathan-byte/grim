@@ -4907,9 +4907,6 @@ const estimateCalories = (
     <>
     <div className="space-y-4">
       {adminBanner}
-      {/* Event countdown progress bar */}
-      <EventProgressBar userId={userId} />
-
       <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary px-3 py-2">
         <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
           <Timer className="w-3.5 h-3.5 text-primary" />
@@ -4942,6 +4939,9 @@ const estimateCalories = (
           </button>
         </div>
       </div>
+
+      {/* Event countdown progress bar */}
+      <EventProgressBar userId={userId} />
 
       {/* Week navigation - swipe to change week */}
       <div className="flex flex-col gap-2">
