@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronDown, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, Wrench } from "lucide-react";
+import { ChevronDown, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
@@ -55,11 +55,13 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const autoScrollRef = useRef<number | null>(null);
 
   const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
+  const settingsToolKeys = new Set(["settings", "notifications", "referral"]);
 
   const allSections: SectionDef[] = [
     { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
@@ -79,9 +81,29 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} /> },
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
-    { key: "settings", label: "Inställningar", render: () => <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} /> },
-    { key: "notifications", label: "Notiser", render: () => <NotificationSettings userId={userId} /> },
-    { key: "referral", label: "Bjud in vän", render: () => <ReferralLink userId={userId} /> },
+    { key: "settings-group", label: "Inställningar", render: () => (
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setSettingsOpen((open) => !open)}
+          className="w-full flex items-center justify-between gap-3 p-4 text-left"
+          aria-expanded={settingsOpen}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <SlidersHorizontal className="h-4 w-4 text-primary" />
+            Inställningar
+          </span>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+        </button>
+        {settingsOpen && (
+          <div className="space-y-3 border-t border-border p-3">
+            <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
+            <NotificationSettings userId={userId} />
+            <ReferralLink userId={userId} />
+          </div>
+        )}
+      </div>
+    )},
     { key: "helpers", label: "Hjälpmedel", render: () => (
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <button
@@ -139,7 +161,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     // Order by saved order, then append any new sections not in saved order
     const ordered: SectionDef[] = [];
     for (const key of order) {
-      const normalizedKey = helperToolKeys.has(key) ? "helpers" : key;
+      const normalizedKey = helperToolKeys.has(key) ? "helpers" : settingsToolKeys.has(key) ? "settings-group" : key;
       if (ordered.find(s => s.key === normalizedKey)) continue;
       if (!availableKeys.has(normalizedKey)) continue;
       const section = available.find(s => s.key === normalizedKey);
