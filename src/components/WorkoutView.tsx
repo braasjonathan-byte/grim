@@ -8403,8 +8403,8 @@ const estimateCalories = (
           </p>
           <div className="grid grid-cols-4 gap-2">
             {DAYS.map((d) => {
-              const isCurrentDay = d === changeDayDialog.currentDay;
-              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && p.day === d);
+              const isCurrentDay = d === getBaseDay(changeDayDialog.currentDay);
+              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d);
               return (
                 <button
                   key={d}
@@ -8412,7 +8412,7 @@ const estimateCalories = (
                     if (!isCurrentDay) {
                       if (isOccupied) {
                         // Swap: move target to current day and current to target day
-                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && p.day === d);
+                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d);
                         if (targetPlan) {
                           const week = changeDayDialog.week;
                           const oldDay = changeDayDialog.currentDay;
@@ -8475,7 +8475,7 @@ const estimateCalories = (
                         ? "bg-secondary text-muted-foreground cursor-pointer border border-border hover:border-primary"
                         : "bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground"
                   }`}
-                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && p.day === d)?.session_name}` : undefined}
+                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d)?.session_name}` : undefined}
                 >
                   {d}
                   {isOccupied && <span className="block text-[8px] text-muted-foreground/70 mt-0.5">upptagen</span>}
