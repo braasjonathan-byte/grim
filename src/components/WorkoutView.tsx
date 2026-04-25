@@ -4891,7 +4891,7 @@ const estimateCalories = (
                       : "bg-secondary text-muted-foreground"
                   }`}
                 >
-                  {plan.day}
+                  {getBaseDay(plan.day)}
                 </button>
               );
             })}
@@ -4967,7 +4967,7 @@ const estimateCalories = (
                       onClick={(e) => {e.stopPropagation(); setChangeDayDialog({ planId: plan.id, currentDay: plan.day, week: plan.week, sessionName: plan.session_name });}}
                       className="text-xs font-mono text-muted-foreground uppercase hover:text-primary transition-colors"
                       title="Byt veckodag">
-                      {plan.day}
+                      {getBaseDay(plan.day)}
                     </button>
                     <span
                       className={`font-semibold text-sm break-words text-left ${isDone ? "line-through text-muted-foreground" : ""}`}>
@@ -8399,7 +8399,7 @@ const estimateCalories = (
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">{changeDayDialog.sessionName}</span> — nuvarande dag: <span className="font-mono font-semibold text-foreground">{changeDayDialog.currentDay}</span>
+            <span className="font-semibold text-foreground">{changeDayDialog.sessionName}</span> — nuvarande dag: <span className="font-mono font-semibold text-foreground">{getBaseDay(changeDayDialog.currentDay)}</span>
           </p>
           <div className="grid grid-cols-4 gap-2">
             {DAYS.map((d) => {
