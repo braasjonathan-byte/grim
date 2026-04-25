@@ -60,7 +60,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const autoScrollRef = useRef<number | null>(null);
 
   const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
-  const settingsToolKeys = new Set(["profile", "settings", "notifications", "referral"]);
+  const settingsToolKeys = new Set(["profile", "settings", "notifications"]);
 
   const allSections: SectionDef[] = [
     { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
@@ -105,7 +105,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             <ProfileTab userId={userId} isAdmin={isAdmin} />
             <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
             <NotificationSettings userId={userId} />
-            <ReferralLink userId={userId} />
           </div>
         )}
       </div>
@@ -263,6 +262,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
 
   return (
     <div className="py-2 space-y-4">
+      <Suspense fallback={null}>
+        <ReferralLink userId={userId} />
+      </Suspense>
+
       {/* Admin edit mode toggle */}
       {isAdmin && !editMode && (
         <button
