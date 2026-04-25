@@ -2147,6 +2147,12 @@ const estimateCalories = (
         tempo: workout.tempo || null,
         is_circuit: isCirc,
       }).eq("id", p.id);
+      if (mode === "replace") {
+        const importedWeights = buildImportedSetWeights(workout.details);
+        await safeUpsertCompletion(p.week, p.day, { done: false, logged_weights: Object.keys(importedWeights).length > 0 ? importedWeights : null });
+      } else {
+        await updateCompletionWeights(p.week, p.day, (existing) => buildImportedSetWeights(workout.details, existing));
+      }
       setPlans(prev => prev.map(pp => pp.id === p.id ? { ...pp, session_name: newSessionName, details: newDetails, tempo: workout.tempo || null, is_circuit: isCirc } : pp));
     }
 
