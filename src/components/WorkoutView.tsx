@@ -3533,14 +3533,14 @@ const estimateCalories = (
                   </div>
                 </div>
                 {/* Action buttons row */}
-                <div className="grid grid-cols-2 gap-2 px-4 pb-3">
+                <div className="grid grid-cols-2 gap-1.5 px-4 pb-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                       setRenameInput(plan.session_name);
                     }}
-                    className="relative z-20 min-h-14 flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    className="relative z-20 min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                     title="Inställningar">
                     <Settings className="w-3.5 h-3.5" />
                     <span>Inställningar</span>
@@ -3550,7 +3550,7 @@ const estimateCalories = (
                       e.stopPropagation();
                       setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
                     }}
-                    className="min-h-14 flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                     title="Dela pass">
                     <Share2 className="w-3.5 h-3.5" />
                     <span>Dela</span>
@@ -3562,14 +3562,14 @@ const estimateCalories = (
                       setSaveWorkoutName(plan.session_name);
                       setSaveWorkoutVisibility("private");
                     }}
-                    className="min-h-14 flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                     title="Spara pass">
                     <Download className="w-3.5 h-3.5" />
                     <span>Spara</span>
                   </button>
                   <button
                     onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
-                    className="min-h-14 flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                    className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
                     title="Ta bort">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -5221,14 +5221,14 @@ const estimateCalories = (
                   </div>
               </div>
               {/* Action buttons row */}
-              <div className="grid grid-cols-2 gap-2 px-4 pb-3">
+              <div className="grid grid-cols-2 gap-1.5 px-4 pb-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                     setRenameInput(plan.session_name);
                   }}
-                  className="relative z-20 min-h-14 flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  className="relative z-20 min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                   title="Inställningar">
                   <Settings className="w-3.5 h-3.5" />
                   <span>Inställningar</span>
@@ -5238,7 +5238,7 @@ const estimateCalories = (
                     e.stopPropagation();
                     setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
                   }}
-                  className="min-h-14 flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                   title="Dela pass">
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Dela</span>
@@ -5250,7 +5250,7 @@ const estimateCalories = (
                     setSaveWorkoutName(plan.session_name);
                     setSaveWorkoutVisibility("private");
                   }}
-                  className="min-h-14 flex flex-col items-center justify-center gap-1 px-2 py-2 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
                   title="Spara pass">
                   <Download className="w-3.5 h-3.5" />
                   <span>Spara</span>
