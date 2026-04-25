@@ -637,6 +637,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Circuit timer state
   const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[][]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
+  const [setRestTimerEnabled, setSetRestTimerEnabled] = useState(() => localStorage.getItem("grim_set_rest_timer_enabled") === "true");
+  const [setRestTimerSeconds, setSetRestTimerSeconds] = useState(() => localStorage.getItem("grim_set_rest_timer_seconds") || "90");
+
+  const triggerSetRestTimer = useCallback((wasChecked: boolean) => {
+    if (!wasChecked || !setRestTimerEnabled) return;
+    const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
+    if (!seconds) return;
+    window.dispatchEvent(new CustomEvent("grim:start-rest-timer", { detail: { seconds, label: "Vila" } }));
+  }, [setRestTimerEnabled, setRestTimerSeconds]);
 
   // Ready workout circuit config from DB
   const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
