@@ -1,6 +1,46 @@
 import { useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getMonday(date: Date): Date {
+  const monday = new Date(date);
+  const day = monday.getDay() || 7;
+  monday.setDate(monday.getDate() - day + 1);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function isWorkoutScheduledToday(day: string, week: number, planStartDate?: string | null): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) return dateMatch[1] === localDateKey(today);
+
+  if (planStartDate && week > 0) {
+    const [year, month, date] = planStartDate.split("-").map(Number);
+    const dayIndex = DAYS.indexOf(day.trim());
+    if (year && month && date && dayIndex >= 0) {
+      const startMonday = getMonday(new Date(year, month - 1, date));
+      const workoutDate = new Date(startMonday);
+      workoutDate.setDate(workoutDate.getDate() + (week - 1) * 7 + dayIndex);
+      workoutDate.setHours(0, 0, 0, 0);
+      return workoutDate.getTime() === today.getTime();
+    }
+  }
+
+  const todayDay = DAYS[(today.getDay() + 6) % 7];
+  return day.trim() === todayDay;
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -102,8 +142,11 @@ export function usePushNotifications(userId: string | null) {
   }, [userId, subscribe]);
 }
 
-export async function notifyFriendsOfCompletion(day: string, week: number, sessionName: string) {
+export async function notifyFriendsOfCompletion(day: string, week: number, sessionName: string, planStartDate?: string | null) {
   try {
+    // Only notify friends for workouts scheduled for today, not retroactive logging.
+    if (!isWorkoutScheduledToday(day, week, planStartDate)) return;
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 

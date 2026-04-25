@@ -9,6 +9,7 @@ interface WorkoutLogDialogProps {
   day: string;
   sessionName: string;
   details: string;
+  planStartDate?: string | null;
   existingLog?: {
     logged_tempo: string | null;
     logged_pulse: number | null;
@@ -84,6 +85,7 @@ const WorkoutLogDialog = ({
   day,
   sessionName,
   details,
+  planStartDate,
   existingLog,
   onClose,
   onSaved,
@@ -219,7 +221,7 @@ const WorkoutLogDialog = ({
       { onConflict: "user_id,week,day" }
     );
 
-    notifyFriendsOfCompletion(day, week, sessionName);
+    notifyFriendsOfCompletion(day, week, sessionName, planStartDate);
     setSaving(false);
     onSaved();
   };
@@ -406,7 +408,7 @@ const WorkoutLogDialog = ({
                 } as any,
                 { onConflict: "user_id,week,day" }
               );
-              notifyFriendsOfCompletion(day, week, sessionName);
+              notifyFriendsOfCompletion(day, week, sessionName, planStartDate);
               onSaved();
             }}
             className="flex-1 py-3 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"

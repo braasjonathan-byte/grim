@@ -1239,7 +1239,7 @@ const estimateCalories = (
 
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
-      notifyFriendsOfCompletion(day, week, plan?.session_name || day);
+      notifyFriendsOfCompletion(day, week, plan?.session_name || day, planStartDate);
 
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
@@ -1491,7 +1491,7 @@ const estimateCalories = (
     // Notify friends and check fireworks if workout was just completed
     if (allExercisesDone && !completions[k]?.done && plan0) {
       playWorkoutComplete();
-      notifyFriendsOfCompletion(day, week, plan.session_name || day);
+      notifyFriendsOfCompletion(day, week, plan.session_name || day, planStartDate);
 
       // Check if all scheduled workouts in this week are now done
       if (week > 0) {
@@ -7815,6 +7815,7 @@ const estimateCalories = (
         day={runLogTarget.day}
         sessionName={runLogTarget.sessionName}
         details={runLogTarget.details}
+        planStartDate={planStartDate}
         existingLog={(() => {
           const comp = completions[`${runLogTarget.week}-${runLogTarget.day}`];
           if (!comp) return undefined;
