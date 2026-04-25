@@ -3260,20 +3260,25 @@ const estimateCalories = (
     }
     const singleWeeks = [...weekGroups.keys()].sort((a, b) => a - b);
 
-    // Auto-set to current ISO week or latest with data
-    const currentIsoWeek = getISOWeek(new Date());
-    const effectiveWeek = singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
-      (singleWeeks.includes(currentIsoWeek) ? currentIsoWeek :
-      (singleWeeks.length > 0 ? singleWeeks[singleWeeks.length - 1] : currentIsoWeek));
+    // Auto-set to today's ISO week when possible, otherwise keep the selected week or fall back to the current week
+    const today = getTodayInfo();
+    const currentIsoWeek = today.isoWeek;
+    const todayPlan = singlePlans.find((p) => p.day.startsWith(today.dateKey));
+    const todayWeek = todayPlan ? getIsoWeekFromKey(todayPlan.day) : currentIsoWeek;
+    const effectiveWeek = singleWeeks.includes(todayWeek) ? todayWeek :
+      (singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
+      (singleWeeks.includes(currentIsoWeek) ? currentIsoWeek : currentIsoWeek));
+
+    if (!autoSelectedSingleTodayRef.current && singleCurrentWeek !== effectiveWeek) {
+      autoSelectedSingleTodayRef.current = true;
+      setSingleCurrentWeek(effectiveWeek);
+    }
 
     const weekPlans = weekGroups.get(effectiveWeek) || [];
 
     // Group weekPlans by day-of-week for tabs
     const dayGroupsInWeek: { dayName: string; dayIndex: number; plans: PlanDay[] }[] = [];
     const dayMap = new Map<string, PlanDay[]>();
-    const today = new Date();
-    const todayDateKey = format(today, "yyyy-MM-dd");
-    const todayDayName = DAYS[(today.getDay() + 6) % 7];
     for (const p of weekPlans) {
       const dn = getDayNameFromKey(p.day);
       if (!dayMap.has(dn)) dayMap.set(dn, []);
@@ -3289,8 +3294,8 @@ const estimateCalories = (
     const activeDayGroup = dayGroupsInWeek[safeDayIdx];
     const visiblePlans = isMobile && dayGroupsInWeek.length > 1 && activeDayGroup ? activeDayGroup.plans : weekPlans;
     const todayGroupIndex = dayGroupsInWeek.findIndex((dg) =>
-      dg.plans.some((p) => p.day.startsWith(todayDateKey)) ||
-      (dg.dayName === todayDayName && effectiveWeek === currentIsoWeek)
+      dg.plans.some((p) => p.day.startsWith(today.dateKey)) ||
+      (dg.dayName === today.dayName && effectiveWeek === currentIsoWeek)
     );
 
     if (todayGroupIndex >= 0 && singleActiveDayIdx !== todayGroupIndex) {
