@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
+const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
+
 function localDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -27,7 +29,7 @@ function isWorkoutScheduledToday(day: string, week: number, planStartDate?: stri
 
   if (planStartDate && week > 0) {
     const [year, month, date] = planStartDate.split("-").map(Number);
-    const dayIndex = DAYS.indexOf(day.trim());
+    const dayIndex = DAYS.indexOf(getBaseDay(day.trim()));
     if (year && month && date && dayIndex >= 0) {
       const startMonday = getMonday(new Date(year, month - 1, date));
       const workoutDate = new Date(startMonday);
@@ -38,7 +40,7 @@ function isWorkoutScheduledToday(day: string, week: number, planStartDate?: stri
   }
 
   const todayDay = DAYS[(today.getDay() + 6) % 7];
-  return day.trim() === todayDay;
+  return getBaseDay(day.trim()) === todayDay;
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {

@@ -161,10 +161,12 @@ const getStartOfYear = (d: Date) => {
 
 const DAY_OFFSETS: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
 
+const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
+
 const getWorkoutCalendarDate = (planWeek: number, dayName: string, planStartDate: Date): Date => {
   // Anchor to Monday of the plan start week so day names map to actual weekdays
   const monday = getMonday(planStartDate);
-  const dayOffset = DAY_OFFSETS[dayName] ?? 0;
+  const dayOffset = DAY_OFFSETS[getBaseDay(dayName)] ?? 0;
   const date = new Date(monday);
   date.setDate(date.getDate() + (planWeek - 1) * 7 + dayOffset);
   date.setHours(0, 0, 0, 0);
