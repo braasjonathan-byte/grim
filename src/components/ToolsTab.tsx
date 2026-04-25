@@ -270,6 +270,16 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
 
   return (
     <div className="py-2 space-y-4">
+      <div className="flex items-center gap-2">
+        {userRole === "admin" ? (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
+        ) : isHonorary ? (
+          <HonoraryBadge size="md" />
+        ) : (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">👤 Medlem</span>
+        )}
+      </div>
+
       <Suspense fallback={null}>
         <ReferralLink userId={userId} />
       </Suspense>
@@ -310,12 +320,12 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       )}
 
       <Suspense fallback={null}>
-        {orderedSections.map((section, index) => (
+        {orderedSections.map((section) => (
           <div
             key={section.key}
             draggable={editMode}
-            onDragStart={() => handleDragStart(index)}
-            onDragEnter={() => handleDragEnter(index)}
+            onDragStart={() => handleDragStart(section.key)}
+            onDragEnter={() => handleDragEnter(section.key)}
             onDragEnd={handleDragEnd}
             onDragOver={handleDragOver}
             className={editMode ? "relative cursor-grab active:cursor-grabbing" : ""}
