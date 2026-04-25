@@ -7077,7 +7077,7 @@ const estimateCalories = (
                                        const bwModeKeySet = `__bw_mode__${partName}__${si}`;
                                        const bwModeKeyExercise = `__bw_mode__${partName}`;
                                        const loggedWeights = (completion?.logged_weights as Record<string, any>) || {};
-                                       const currentBwMode = (loggedWeights[bwModeKeySet] ?? loggedWeights[bwModeKeyExercise]) === "sub" ? "sub" : "add";
+                                        const currentBwMode = (loggedWeights[bwModeKeySet] ?? loggedWeights[bwModeKeyExercise]) === "sub" || isAssistedBodyweightExercise(partName) ? "sub" : "add";
                                       const isSetDone = setsStrPlan[si] === "1";
                                       const saved = planSetData[si];
                                       return (
