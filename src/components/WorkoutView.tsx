@@ -5123,7 +5123,7 @@ const estimateCalories = (
       })()}
       <div
         key={isMobile && weekDays.length > 1 ? `swipe-${swipeKey.current}` : undefined}
-        className={`${isMobile && weekDays.length > 1 ? (swipeDirection === "left" ? "swipe-left" : swipeDirection === "right" ? "swipe-right" : "") : ""} grid grid-cols-2 gap-2`}
+        className={`${isMobile && weekDays.length > 1 ? (swipeDirection === "left" ? "swipe-left" : swipeDirection === "right" ? "swipe-right" : "") : ""} grid grid-cols-1 gap-2`}
         onTouchStart={(e) => {
           if (!isMobile || weekDays.length <= 1) return;
           touchStartX.current = e.touches[0].clientX;
