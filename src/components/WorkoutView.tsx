@@ -3467,7 +3467,7 @@ const estimateCalories = (
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
           {visiblePlans.map((plan) => {
             const weekdayName = getWeekdayFromDayKey(plan.day);
             const key = `0-${plan.day}`;
@@ -5123,7 +5123,7 @@ const estimateCalories = (
       })()}
       <div
         key={isMobile && weekDays.length > 1 ? `swipe-${swipeKey.current}` : undefined}
-        className={`${isMobile && weekDays.length > 1 ? (swipeDirection === "left" ? "swipe-left" : swipeDirection === "right" ? "swipe-right" : "") : ""} grid grid-cols-2 gap-2`}
+        className={`${isMobile && weekDays.length > 1 ? (swipeDirection === "left" ? "swipe-left" : swipeDirection === "right" ? "swipe-right" : "") : "space-y-2"}`}
         onTouchStart={(e) => {
           if (!isMobile || weekDays.length <= 1) return;
           touchStartX.current = e.touches[0].clientX;
