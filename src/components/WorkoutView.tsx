@@ -3435,7 +3435,7 @@ const estimateCalories = (
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           {visiblePlans.map((plan) => {
             const weekdayName = getWeekdayFromDayKey(plan.day);
             const key = `0-${plan.day}`;
@@ -5098,9 +5098,9 @@ const estimateCalories = (
           const isCardToday = getBaseDay(plan.day) === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
 
           return (
-            <div key={key + "-wrap"} className="contents">
+            <div key={key + "-wrap"} className="w-full">
             <div
-              className={`relative rounded-lg border transition-colors bg-secondary ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
+              className={`relative w-full rounded-lg border transition-colors bg-secondary ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
               <div className="flex items-center gap-3 px-4 pt-4 pb-2 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>
                 <div className="flex flex-col items-center gap-1 flex-shrink-0">
                     <button
