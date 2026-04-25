@@ -445,7 +445,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       result.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     }
     return result;
-  }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap, planStartDate, plansWithExercises]);
+  }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap, planStartDate, plansWithExercises, plansPerDay]);
 
   const filteredCompletions = useMemo(() => {
     if (summaryPeriod === "all") return completions;
