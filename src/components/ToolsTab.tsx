@@ -180,7 +180,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       if (!ordered.find(o => o.key === s.key)) ordered.push(s);
     }
     return ordered;
-  }, [editMode, localOrder, savedOrder, isAdmin, userId, userRole, isHonorary]);
+  }, [editMode, localOrder, savedOrder, isAdmin, userId, userRole, isHonorary, toolsOpen, settingsOpen]);
 
   const handleStartEdit = () => {
     const current = savedOrder || defaultOrder;
