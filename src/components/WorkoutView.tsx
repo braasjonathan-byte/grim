@@ -1477,6 +1477,7 @@ const estimateCalories = (
       const dreps = defaultReps || "10";
       const initData = Array.from({ length: totalSets }, () => ({ kg: dkg, reps: dreps }));
       updated[setDataKey] = JSON.stringify(initData);
+      if (isAssistedBodyweightExercise(exerciseName)) updated[`__bw_mode__${exerciseName}`] = "sub";
     }
 
     // Do NOT auto-complete the whole workout when all sets are checked.
@@ -1606,6 +1607,7 @@ const estimateCalories = (
       };
       // User adjusted kg/reps -> clear progression reminder for this exercise
       delete next[`__copied_ex__${exerciseName}`];
+      if (field === 'kg' && isAssistedBodyweightExercise(exerciseName)) next[`__bw_mode__${exerciseName}__${setIndex}`] = "sub";
       return next;
     });
   };
