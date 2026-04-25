@@ -38,7 +38,7 @@ const RestTimerSettings = () => {
         <button
           type="button"
           onClick={updateEnabled}
-          className={`h-5 w-10 rounded-full border p-0.5 transition-colors ${enabled ? "border-primary bg-primary" : "border-border bg-muted"}`}
+          className={`h-5 w-10 p-0.5 transition-colors rounded-sm border-0 ${enabled ? "bg-primary" : "bg-muted"}`}
           aria-pressed={enabled}
           aria-label={enabled ? "Avaktivera vilotimer" : "Aktivera vilotimer"}
         >
