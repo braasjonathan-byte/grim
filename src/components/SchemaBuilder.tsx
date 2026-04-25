@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Copy, Trash2, ArrowLeft, Save, ChevronDown, ChevronUp, Search, X, Dumbbell } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import ExercisePickerDialog from "@/components/ExercisePickerDialog";
+import { startsWithTimeNotation } from "@/lib/exerciseNormalization";
 
 interface SchemaBuilderProps {
   userId: string;
@@ -69,7 +70,7 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
   const filteredExercises = allExercises.filter(e => {
     const matchSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
     const matchMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
-    return matchSearch && matchMuscle;
+    return !startsWithTimeNotation(e.name) && matchSearch && matchMuscle;
   });
 
   // Build details string from exercises
