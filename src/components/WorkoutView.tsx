@@ -5432,6 +5432,7 @@ const estimateCalories = (
                                                 e.stopPropagation();
                                                 const arr = Array.from({ length: activeCount }, (_, j) => setsStr[j] === "1");
                                                 arr[ii] = !arr[ii];
+                                                triggerSetRestTimer(arr[ii]);
                                                 const newStr = arr.map(b => b ? "1" : "0").join("");
                                                 const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
                                                 const updated = { ...existing, [intervalSetsKey]: newStr };
@@ -6426,6 +6427,7 @@ const estimateCalories = (
                                                 e.stopPropagation();
                                                 const arr = Array.from({ length: activeCount }, (_, j) => setsStr[j] === "1");
                                                 arr[ii] = !arr[ii];
+                                                triggerSetRestTimer(arr[ii]);
                                                 const newStr = arr.map(b => b ? "1" : "0").join("");
                                                 const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
                                                 const updated = { ...existing, [intervalSetsKey]: newStr };
@@ -6888,6 +6890,7 @@ const estimateCalories = (
                                         e.stopPropagation();
                                         const arr = Array.from({ length: activeCount }, (_, j) => setsStr[j] === "1");
                                         arr[ii] = !arr[ii];
+                                        triggerSetRestTimer(arr[ii]);
                                         const newStr = arr.map(b => b ? "1" : "0").join("");
                                         const existing = (completions[key]?.logged_weights || {}) as Record<string, any>;
                                         const updated = { ...existing, [intervalSetsKey]: newStr };
