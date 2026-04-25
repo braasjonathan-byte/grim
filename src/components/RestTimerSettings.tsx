@@ -42,7 +42,7 @@ const RestTimerSettings = () => {
           aria-pressed={enabled}
           aria-label={enabled ? "Avaktivera vilotimer" : "Aktivera vilotimer"}
         >
-          <span className={`block h-4 w-4 rounded-full bg-foreground shadow-sm transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
+          <span className={`block h-4 w-4 rounded-full bg-foreground transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`} />
         </button>
       </div>
     </div>
