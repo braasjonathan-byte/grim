@@ -28,7 +28,7 @@ import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
-import { normalizeImportedDetails } from "@/lib/exerciseNormalization";
+import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import CircuitTimerDialog from "@/components/CircuitTimerDialog";
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 
@@ -1016,7 +1016,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       .filter(e => !customMap.has(e.name.toLowerCase()))
       .map(e => ({ ...e, id: "", isCustom: false, isBodyweightExercise: false }));
     const custom = customExercises.map(e => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true, isBodyweightExercise: !!e.is_bodyweight_exercise }));
-    return [...merged, ...custom];
+    return [...merged, ...custom].filter(e => !startsWithTimeNotation(e.name));
   }, [customExercises]);
 
 // Compute date for a plan week/day given a plan start date
