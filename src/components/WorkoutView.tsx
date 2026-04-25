@@ -8681,6 +8681,12 @@ const estimateCalories = (
             <label className="text-xs font-semibold text-muted-foreground">Markera pass</label>
             <button
               onClick={() => {
+                if (renameDialog.week === 0) {
+                  const { week, day } = renameDialog;
+                  setRenameDialog(null);
+                  void toggleSkipped(week, day);
+                  return;
+                }
                 setReplacementTarget({
                   planId: renameDialog.planId,
                   sessionName: renameDialog.sessionName,
@@ -8692,7 +8698,7 @@ const estimateCalories = (
               className="w-full py-2.5 bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors flex items-center justify-center gap-2"
             >
               <XCircle className="w-4 h-4" />
-              Markera som missat
+              {renameDialog.week === 0 ? "Markera som missat" : "Markera som missat"}
             </button>
           </div>
 
