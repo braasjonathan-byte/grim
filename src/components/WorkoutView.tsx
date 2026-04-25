@@ -4694,6 +4694,14 @@ const estimateCalories = (
   filter((p) => p.week === currentWeek).
   sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
 
+  const mobileDayTabs = DAYS
+    .map((dayName) => weekDays.find((p) => p.day === dayName))
+    .filter(Boolean) as PlanDay[];
+  const activeMobileDay = mobileDayTabs[Math.min(activeDayIndex, Math.max(0, mobileDayTabs.length - 1))];
+  const visibleWeekDays = isMobile && weekDays.length > 1 && activeMobileDay
+    ? weekDays.filter((p) => p.day === activeMobileDay.day)
+    : weekDays;
+
   const weekIdx = weeks.indexOf(currentWeek);
   const scheduledDays = weekDays.filter(d => d.session_name.trim() !== "" && d.details.trim() !== "");
   const doneCount = scheduledDays.filter((d) => completions[`${d.week}-${d.day}`]?.done).length;
@@ -4829,7 +4837,7 @@ const estimateCalories = (
           {/* Day tabs — show all 7 weekdays, rest days are non-clickable */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
             {DAYS.map((dayName) => {
-              const planIdx = weekDays.findIndex((p) => p.day === dayName);
+              const planIdx = mobileDayTabs.findIndex((p) => p.day === dayName);
               const isRest = planIdx === -1;
               const isToday = dayName === todayName && currentWeek === activePlanWeek;
 
@@ -4850,7 +4858,7 @@ const estimateCalories = (
                 );
               }
 
-              const plan = weekDays[planIdx];
+              const plan = mobileDayTabs[planIdx];
               const k = `${plan.week}-${plan.day}`;
               const comp = completions[k];
               const done = comp?.done || false;
@@ -4899,7 +4907,7 @@ const estimateCalories = (
           touchStartX.current = null;
           touchStartY.current = null;
           if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-            if (dx < 0 && activeDayIndex < weekDays.length - 1) {
+            if (dx < 0 && activeDayIndex < mobileDayTabs.length - 1) {
               setSwipeDirection("left");
               swipeKey.current++;
               setActiveDayIndex(activeDayIndex + 1);
@@ -4913,7 +4921,7 @@ const estimateCalories = (
           }
         }}
       >
-        {(isMobile && weekDays.length > 1 ? [weekDays[activeDayIndex]] : weekDays).filter(Boolean).map((plan) => {
+        {visibleWeekDays.filter(Boolean).map((plan) => {
           const key = `${plan.week}-${plan.day}`;
           const completion = completions[key];
           const isDone = completion?.done || false;
