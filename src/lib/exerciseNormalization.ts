@@ -39,6 +39,11 @@ export function stripSetRepSuffix(name: string): string {
   return result;
 }
 
+/** True when an exercise name starts with a duration, e.g. "22–32 min cykel" or "3×10 min". */
+export function startsWithTimeNotation(name: string): boolean {
+  return /^\s*(?:\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?|\d+\s*[x×*]\s*\d+(?:[.,]\d+)?)\s*(?:min|sek|sec|s)\b/i.test(name);
+}
+
 /**
  * Deduplicate a list of exercises by their base name (set/rep suffixes stripped).
  * When a duplicate is found, the variant WITHOUT a set/rep suffix wins.
@@ -50,6 +55,7 @@ export function dedupeExerciseList<T extends { name: string; isCustom?: boolean 
 ): T[] {
   const byBase = new Map<string, T>();
   for (const item of list) {
+    if (startsWithTimeNotation(item.name)) continue;
     const base = stripSetRepSuffix(item.name);
     const baseKey = base.toLowerCase();
     const isClean = item.name.trim().toLowerCase() === baseKey;
