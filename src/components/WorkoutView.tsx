@@ -2222,7 +2222,9 @@ const estimateCalories = (
           const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
           if (Array.isArray(setData) && setData.length > 0) {
             for (const s of setData) {
-              const kg = parseFloat(s.kg);
+              const rawKg = parseFloat(s.kg);
+              const mode = weights[`__bw_mode__${exerciseName}__${setData.indexOf(s)}`] ?? weights[`__bw_mode__${exLower}__${setData.indexOf(s)}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${exLower}`];
+              const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
               const reps = parseInt(s.reps);
               if (kg !== 0 && !isNaN(kg)) {
                 allSets.push({ kg, reps: reps || 0, label: `${kg} kg (${reps || '?'} reps)` });
