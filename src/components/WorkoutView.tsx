@@ -975,9 +975,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     prevWeekRef.current = currentWeek;
 
-    const currentWeekDays = plans
-      .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
+    const weekPlans = plans.filter((p) => p.week === currentWeek);
+    const currentWeekDays = DAYS
+      .map((dayName) => weekPlans.find((p) => getBaseDay(p.day) === dayName))
+      .filter(Boolean) as PlanDay[];
 
     const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
 
