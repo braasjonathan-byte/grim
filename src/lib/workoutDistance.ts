@@ -4,6 +4,26 @@ const CYCLING_KEYWORDS = /cykel|motioncykel|spinning|crosstrainer/i;
 const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|långpass|distanslöpning|promenad|gång|tröskel/i;
 const RUN_SEGMENT_KEYWORDS = /uppvärmning|nedvarvning|avjogg|joggvila|jogg|promenad|gång/i;
 
+const getPlanText = (rawInput: string): string => {
+  if (!rawInput.trim().startsWith("{")) return rawInput;
+  try {
+    const parsed = JSON.parse(rawInput);
+    if (parsed && typeof parsed === "object") {
+      return [parsed.sessionName, parsed.details, parsed.tempo].filter(Boolean).join("\n");
+    }
+  } catch {
+    
+  }
+  return rawInput;
+};
+
+const isRunningPlan = (planDetails?: string | null): boolean => {
+  if (!planDetails) return true;
+  const text = getPlanText(planDetails);
+  if (CYCLING_KEYWORDS.test(text)) return false;
+  return RUNNING_KEYWORDS.test(text) || RUN_SEGMENT_KEYWORDS.test(text);
+};
+
 const toNumber = (value: unknown): number => {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : 0;
@@ -181,6 +201,8 @@ export const getWorkoutDistanceKm = ({
   loggedWeights: LoggedWeights;
   planDetails?: string | null;
 }): number => {
+  if (!isRunningPlan(planDetails)) return 0;
+
   const directDistance = toNumber(loggedDistanceKm);
   if (directDistance > 0) return directDistance;
 
