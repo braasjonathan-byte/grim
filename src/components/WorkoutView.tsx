@@ -293,6 +293,17 @@ const ConditioningHMSInput = ({ initialH, initialM, initialS, onSave }: {
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
+const getTodayInfo = () => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return {
+    date,
+    dateKey: format(date, "yyyy-MM-dd"),
+    dayName: DAYS[(date.getDay() + 6) % 7],
+    isoWeek: getISOWeek(date),
+  };
+};
+
 const getSessionIcon = (session: string) => {
   const s = session.toLowerCase();
   if (s.includes("styrka") || s.includes("tung")) return Dumbbell;
@@ -427,13 +438,12 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
     return { index: 0, matchedToday: false };
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getTodayInfo();
 
   if (planStart && currentWeek > 0) {
     const dateMatchedIndex = weekPlans.findIndex((plan) => {
       const planDate = getPlanDayDateValue(planStart, currentWeek, plan.day);
-      return planDate?.getTime() === today.getTime();
+      return planDate?.getTime() === today.date.getTime();
     });
 
     if (dateMatchedIndex >= 0) {
@@ -441,9 +451,7 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
     }
   }
 
-  const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-  const todayName = todayDayNames[today.getDay()];
-  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === todayName);
+  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === today.dayName);
 
   if (labelMatchedIndex >= 0) {
     return { index: labelMatchedIndex, matchedToday: true };
@@ -814,13 +822,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
       // Auto-navigate to the active (date-based) week on initial load
       if (wks.length > 0 && !initialWeekSet && profileLoaded) {
-        const compMap: Record<string, boolean> = {};
-        if (compData) {
-          for (const c of compData) {
-            if (c.done) compMap[`${c.week}-${c.day}`] = true;
-          }
-        }
-
         // Prefer the date-based active week
         const planWeeks = wks.filter(w => w > 0);
         const dateBasedWeek = computeWeekFromStart(planWeeks);
@@ -831,11 +832,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           // Always use the date-based active week so today's day is shown
           targetWeek = dateBasedWeek;
         } else {
-          // Fallback: first incomplete week forward from dateBasedWeek (or from start if no dateBasedWeek)
+          // Fallback: first week with scheduled workouts forward from dateBasedWeek (or from start if no dateBasedWeek)
           const startFrom = dateBasedWeek ?? 0;
           targetWeek = wks.filter(w => w >= startFrom).find(w => {
             const weekPlans = planData.filter(p => p.week === w && p.session_name.trim() !== "" && p.details.trim() !== "");
-            return weekPlans.length > 0 && !weekPlans.every(p => compMap[`${p.week}-${p.day}`]);
+            return weekPlans.length > 0;
           });
         }
 
@@ -961,6 +962,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const prevWeekRef = useRef(currentWeek);
   const didInitialDayPickRef = useRef(false);
   const pendingInitialDateRealignRef = useRef(false);
+  const autoSelectedSingleTodayRef = useRef(false);
   // Reset active day index when week changes — navigate to today's day.
   // Also runs once on initial mount after plans load, so the app opens on today.
   useEffect(() => {
@@ -999,7 +1001,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!isMobile) return;
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
     const activePlan = currentWeekDays[activeDayIndex];
     if (!activePlan) return;
     const sameDayPlans = currentWeekDays.filter(p => sameWorkoutDay(p.day, activePlan.day));
@@ -3258,20 +3260,25 @@ const estimateCalories = (
     }
     const singleWeeks = [...weekGroups.keys()].sort((a, b) => a - b);
 
-    // Auto-set to current ISO week or latest with data
-    const currentIsoWeek = getISOWeek(new Date());
-    const effectiveWeek = singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
-      (singleWeeks.includes(currentIsoWeek) ? currentIsoWeek :
-      (singleWeeks.length > 0 ? singleWeeks[singleWeeks.length - 1] : currentIsoWeek));
+    // Auto-set to today's ISO week when possible, otherwise keep the selected week or fall back to the current week
+    const today = getTodayInfo();
+    const currentIsoWeek = today.isoWeek;
+    const todayPlan = singlePlans.find((p) => p.day.startsWith(today.dateKey));
+    const todayWeek = todayPlan ? getIsoWeekFromKey(todayPlan.day) : currentIsoWeek;
+    const effectiveWeek = singleWeeks.includes(todayWeek) ? todayWeek :
+      (singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
+      (singleWeeks.includes(currentIsoWeek) ? currentIsoWeek : currentIsoWeek));
+
+    if (!autoSelectedSingleTodayRef.current && singleCurrentWeek !== effectiveWeek) {
+      autoSelectedSingleTodayRef.current = true;
+      setSingleCurrentWeek(effectiveWeek);
+    }
 
     const weekPlans = weekGroups.get(effectiveWeek) || [];
 
     // Group weekPlans by day-of-week for tabs
     const dayGroupsInWeek: { dayName: string; dayIndex: number; plans: PlanDay[] }[] = [];
     const dayMap = new Map<string, PlanDay[]>();
-    const today = new Date();
-    const todayDateKey = format(today, "yyyy-MM-dd");
-    const todayDayName = DAYS[(today.getDay() + 6) % 7];
     for (const p of weekPlans) {
       const dn = getDayNameFromKey(p.day);
       if (!dayMap.has(dn)) dayMap.set(dn, []);
@@ -3287,8 +3294,8 @@ const estimateCalories = (
     const activeDayGroup = dayGroupsInWeek[safeDayIdx];
     const visiblePlans = isMobile && dayGroupsInWeek.length > 1 && activeDayGroup ? activeDayGroup.plans : weekPlans;
     const todayGroupIndex = dayGroupsInWeek.findIndex((dg) =>
-      dg.plans.some((p) => p.day.startsWith(todayDateKey)) ||
-      (dg.dayName === todayDayName && effectiveWeek === currentIsoWeek)
+      dg.plans.some((p) => p.day.startsWith(today.dateKey)) ||
+      (dg.dayName === today.dayName && effectiveWeek === currentIsoWeek)
     );
 
     if (todayGroupIndex >= 0 && singleActiveDayIdx !== todayGroupIndex) {
