@@ -92,7 +92,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             </span>
             <span className="min-w-0">
               <span className="block text-sm font-bold text-foreground">Inställningar</span>
-              <span className="block truncate text-xs text-muted-foreground">Profil, app, notiser och inbjudningar</span>
+              <span className="block truncate text-xs text-muted-foreground">Profil, tema och notiser</span>
             </span>
           </span>
           <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
