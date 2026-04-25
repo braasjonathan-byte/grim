@@ -325,6 +325,10 @@ const formatDayDisplay = (day: string) => {
   return day.replace(/_[a-z0-9]+$/i, "");
 };
 
+const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
+
+const sameWorkoutDay = (a: string, b: string) => getBaseDay(a) === getBaseDay(b);
+
 const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null | undefined) => {
   if (!loggedWeights) return null;
 
@@ -400,7 +404,7 @@ const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: st
 
   const startDate = new Date(y, m - 1, d);
   const startMonday = getMonday(startDate);
-  const dayIndex = DAYS.indexOf(dayAbbr);
+  const dayIndex = DAYS.indexOf(getBaseDay(dayAbbr));
   if (dayIndex < 0) return null;
 
   const targetDate = new Date(startMonday);
@@ -430,7 +434,7 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
 
   const todayDayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
   const todayName = todayDayNames[today.getDay()];
-  const labelMatchedIndex = weekPlans.findIndex((plan) => plan.day.trim() === todayName);
+  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === todayName);
 
   if (labelMatchedIndex >= 0) {
     return { index: labelMatchedIndex, matchedToday: true };
@@ -955,7 +959,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
 
     const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
 
@@ -979,7 +983,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       .sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
     const activePlan = currentWeekDays[activeDayIndex];
     if (!activePlan) return;
-    const sameDayPlans = currentWeekDays.filter(p => p.day === activePlan.day);
+    const sameDayPlans = currentWeekDays.filter(p => sameWorkoutDay(p.day, activePlan.day));
     if (sameDayPlans.length === 1) {
       setExpandedDay(`${activePlan.week}-${activePlan.day}`);
     }
@@ -1778,6 +1782,9 @@ const estimateCalories = (
     const name = copyFrom ? copyFrom.session_name : extraName.trim();
     if (!name) return;
 
+    const baseDay = getBaseDay(day);
+    const uniqueDay = `${baseDay}_${Date.now().toString(36)}`;
+
     let details = "";
     if (copyFrom && copyFrom.details) {
       details = copyFrom.details;
@@ -1786,7 +1793,7 @@ const estimateCalories = (
     await supabase.from("workout_plans").insert({
       user_id: userId,
       week,
-      day,
+      day: uniqueDay,
       session_name: name,
       details,
       tempo: copyFrom
@@ -4692,14 +4699,14 @@ const estimateCalories = (
   // Plan mode (existing)
   const weekDays = plans.
   filter((p) => p.week === currentWeek).
-  sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day));
+  sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
 
   const mobileDayTabs = DAYS
-    .map((dayName) => weekDays.find((p) => p.day === dayName))
+    .map((dayName) => weekDays.find((p) => getBaseDay(p.day) === dayName))
     .filter(Boolean) as PlanDay[];
   const activeMobileDay = mobileDayTabs[Math.min(activeDayIndex, Math.max(0, mobileDayTabs.length - 1))];
   const visibleWeekDays = isMobile && weekDays.length > 1 && activeMobileDay
-    ? weekDays.filter((p) => p.day === activeMobileDay.day)
+    ? weekDays.filter((p) => sameWorkoutDay(p.day, activeMobileDay.day))
     : weekDays;
 
   const weekIdx = weeks.indexOf(currentWeek);
@@ -4837,7 +4844,7 @@ const estimateCalories = (
           {/* Day tabs — show all 7 weekdays, rest days are non-clickable */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
             {DAYS.map((dayName) => {
-              const planIdx = mobileDayTabs.findIndex((p) => p.day === dayName);
+              const planIdx = mobileDayTabs.findIndex((p) => getBaseDay(p.day) === dayName);
               const isRest = planIdx === -1;
               const isToday = dayName === todayName && currentWeek === activePlanWeek;
 
@@ -4931,7 +4938,7 @@ const estimateCalories = (
           const colorClass = getSessionColor(plan.session_name);
           const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
           const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-          const isCardToday = plan.day === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
+          const isCardToday = getBaseDay(plan.day) === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
 
           return (
             <div key={key + "-wrap"} className="contents">
@@ -7640,10 +7647,10 @@ const estimateCalories = (
             </div>
             {/* Add another workout to the same day (shown under last completed plan of the day) */}
             {isDone && (() => {
-              const dayPlansAll = plans.filter(p => p.week === plan.week && p.day === plan.day);
+              const dayPlansAll = plans.filter(p => p.week === plan.week && sameWorkoutDay(p.day, plan.day));
               const isLastOfDay = dayPlansAll[dayPlansAll.length - 1]?.id === plan.id;
               if (!isLastOfDay) return null;
-              const isOpen = addExtraDay?.week === plan.week && addExtraDay?.day === plan.day;
+              const isOpen = addExtraDay?.week === plan.week && addExtraDay?.day === getBaseDay(plan.day);
               if (!isOpen) {
                 return (
                   <button
