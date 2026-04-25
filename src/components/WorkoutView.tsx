@@ -325,6 +325,10 @@ const formatDayDisplay = (day: string) => {
   return day.replace(/_[a-z0-9]+$/i, "");
 };
 
+const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
+
+const sameWorkoutDay = (a: string, b: string) => getBaseDay(a) === getBaseDay(b);
+
 const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null | undefined) => {
   if (!loggedWeights) return null;
 
@@ -400,7 +404,7 @@ const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: st
 
   const startDate = new Date(y, m - 1, d);
   const startMonday = getMonday(startDate);
-  const dayIndex = DAYS.indexOf(dayAbbr);
+  const dayIndex = DAYS.indexOf(getBaseDay(dayAbbr));
   if (dayIndex < 0) return null;
 
   const targetDate = new Date(startMonday);
