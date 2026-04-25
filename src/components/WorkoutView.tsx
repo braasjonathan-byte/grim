@@ -637,15 +637,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Circuit timer state
   const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[][]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
-  const [setRestTimerEnabled, setSetRestTimerEnabled] = useState(() => localStorage.getItem("grim_set_rest_timer_enabled") === "true");
-  const [setRestTimerSeconds, setSetRestTimerSeconds] = useState(() => localStorage.getItem("grim_set_rest_timer_seconds") || "90");
 
   const triggerSetRestTimer = useCallback((wasChecked: boolean) => {
+    const setRestTimerEnabled = localStorage.getItem("grim_set_rest_timer_enabled") === "true";
+    const setRestTimerSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || "90";
     if (!wasChecked || !setRestTimerEnabled) return;
     const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
     if (!seconds) return;
     window.dispatchEvent(new CustomEvent("grim:start-rest-timer", { detail: { seconds, label: "Vila" } }));
-  }, [setRestTimerEnabled, setRestTimerSeconds]);
+  }, []);
 
   // Ready workout circuit config from DB
   const [circuitConfigs, setCircuitConfigs] = useState<Set<string>>(new Set());
@@ -3291,38 +3291,6 @@ const estimateCalories = (
       <>
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary px-3 py-2">
-          <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
-            <Timer className="w-3.5 h-3.5 text-primary" />
-            Vilotimer efter set
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              inputMode="numeric"
-              min="1"
-              value={setRestTimerSeconds}
-              onChange={(e) => {
-                setSetRestTimerSeconds(e.target.value);
-                localStorage.setItem("grim_set_rest_timer_seconds", e.target.value);
-              }}
-              disabled={!setRestTimerEnabled}
-              className="w-16 bg-background text-foreground text-xs px-2 py-1 rounded-md border border-border text-center font-mono disabled:opacity-40 outline-none focus:ring-1 focus:ring-primary"
-            />
-            <span className="text-xs text-muted-foreground">sek</span>
-            <button
-              onClick={() => {
-                const next = !setRestTimerEnabled;
-                setSetRestTimerEnabled(next);
-                localStorage.setItem("grim_set_rest_timer_enabled", String(next));
-              }}
-              className={`w-10 h-5 rounded-full p-0.5 transition-colors ${setRestTimerEnabled ? "bg-primary" : "bg-muted"}`}
-              aria-pressed={setRestTimerEnabled}
-            >
-              <span className={`block w-4 h-4 rounded-full bg-background transition-transform ${setRestTimerEnabled ? "translate-x-5" : "translate-x-0"}`} />
-            </button>
-          </div>
-        </div>
         {singlePlans.length === 0 && (
           <button
             onClick={() => setMode("choose")}
@@ -4907,39 +4875,6 @@ const estimateCalories = (
     <>
     <div className="space-y-4">
       {adminBanner}
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary px-3 py-2">
-        <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
-          <Timer className="w-3.5 h-3.5 text-primary" />
-          Vilotimer efter set
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            inputMode="numeric"
-            min="1"
-            value={setRestTimerSeconds}
-            onChange={(e) => {
-              setSetRestTimerSeconds(e.target.value);
-              localStorage.setItem("grim_set_rest_timer_seconds", e.target.value);
-            }}
-            disabled={!setRestTimerEnabled}
-            className="w-16 bg-background text-foreground text-xs px-2 py-1 rounded-md border border-border text-center font-mono disabled:opacity-40 outline-none focus:ring-1 focus:ring-primary"
-          />
-          <span className="text-xs text-muted-foreground">sek</span>
-          <button
-            onClick={() => {
-              const next = !setRestTimerEnabled;
-              setSetRestTimerEnabled(next);
-              localStorage.setItem("grim_set_rest_timer_enabled", String(next));
-            }}
-            className={`w-10 h-5 rounded-full p-0.5 transition-colors ${setRestTimerEnabled ? "bg-primary" : "bg-muted"}`}
-            aria-pressed={setRestTimerEnabled}
-          >
-            <span className={`block w-4 h-4 rounded-full bg-background transition-transform ${setRestTimerEnabled ? "translate-x-5" : "translate-x-0"}`} />
-          </button>
-        </div>
-      </div>
-
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
