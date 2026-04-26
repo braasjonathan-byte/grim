@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +58,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const [stravaConnecting, setStravaConnecting] = useState(false);
   const [stravaConnected, setStravaConnected] = useState(false);
   const [stravaName, setStravaName] = useState("");
+  const [stravaSyncing, setStravaSyncing] = useState(false);
+  const [stravaSyncMessage, setStravaSyncMessage] = useState("");
 
   // Dark/light mode is now handled by the theme system via applyTheme()
 
@@ -203,6 +205,22 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     setStravaConnected(false);
     setStravaName("");
     setStravaLoading(false);
+  };
+
+  const handleSyncStravaNow = async () => {
+    if (!userId || !stravaConnected) return;
+    setStravaSyncing(true);
+    setStravaSyncMessage("");
+    const { data, error } = await supabase.functions.invoke("strava-sync", {
+      body: { mode: "user", limit: 1, source: "settings-sync-now" },
+    });
+    setStravaSyncing(false);
+    if (error || data?.error) {
+      setStravaSyncMessage("Synken misslyckades. Försök igen.");
+      return;
+    }
+    const imported = data?.results?.[0]?.imported ?? 0;
+    setStravaSyncMessage(imported > 0 ? `${imported} nya aktiviteter importerade.` : "Inga nya aktiviteter hittades.");
   };
 
   const getAvailableQuestions = (slotIndex: number) => {
@@ -420,15 +438,26 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
               </div>
             </div>
             {stravaConnected ? (
-              <button
-                type="button"
-                onClick={handleDisconnectStrava}
-                disabled={stravaLoading}
-                className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
-              >
-                {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
-                Koppla bort
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSyncStravaNow}
+                  disabled={stravaSyncing || stravaLoading}
+                  className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  {stravaSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Sync now
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisconnectStrava}
+                  disabled={stravaLoading || stravaSyncing}
+                  className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
+                >
+                  {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
+                  Koppla bort
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -441,6 +470,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
               </button>
             )}
           </div>
+          {stravaSyncMessage && (
+            <p className="pb-2 text-xs text-muted-foreground">{stravaSyncMessage}</p>
+          )}
         </div>
       )}
       {/* Receipts */}
