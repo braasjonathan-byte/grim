@@ -54,6 +54,31 @@ function roundDistanceKm(distanceMeters?: number): number | null {
   return Math.round((distanceMeters / 1000) * 100) / 100;
 }
 
+function isRunningActivity(activity: StravaActivity): boolean {
+  const value = `${activity.sport_type || ""} ${activity.type || ""}`.toLowerCase();
+  return value.includes("run") || value.includes("trailrun") || value.includes("virtualrun");
+}
+
+function formatMovingMinutes(seconds?: number): number | null {
+  if (!seconds || seconds <= 0) return null;
+  return Math.round(seconds / 60);
+}
+
+function buildGrimWorkout(activity: StravaActivity, distanceKm: number | null, pace: string | null, pulse: number | null) {
+  const sessionName = isRunningActivity(activity) ? "Löpning" : (activity.sport_type || activity.type || "Strava");
+  const parts = [
+    formatMovingMinutes(activity.moving_time) ? `${formatMovingMinutes(activity.moving_time)} min` : null,
+    pace ? pace.replace(" min/km", "/km") : null,
+    distanceKm ? `${distanceKm} km` : null,
+    pulse ? `${pulse} bpm` : null,
+  ].filter(Boolean);
+
+  return {
+    sessionName,
+    details: parts.length > 0 ? `${sessionName} — ${parts.join(", ")}` : sessionName,
+  };
+}
+
 async function refreshAccessToken(connection: StravaConnection, clientId: string, clientSecret: string) {
   if (new Date(connection.expires_at).getTime() > Date.now() + 60_000) {
     return {
@@ -154,11 +179,26 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
     const pace = formatPace(activity.average_speed);
     const pulse = activity.average_heartrate ? Math.round(activity.average_heartrate) : null;
     const label = activity.sport_type || activity.type || "Strava";
+    const grimWorkout = buildGrimWorkout(activity, distanceKm, pace, pulse);
     const commentParts = [
       `Strava: ${activity.name || label}`,
       label,
       activity.moving_time ? `${Math.round(activity.moving_time / 60)} min` : null,
     ].filter(Boolean);
+
+    const { error: planError } = await supabaseAdmin
+      .from("workout_plans")
+      .upsert({
+        user_id: connection.user_id,
+        week: 0,
+        day: dayKey,
+        session_name: grimWorkout.sessionName,
+        details: grimWorkout.details,
+        tempo: "",
+        is_circuit: false,
+      }, { onConflict: "user_id,week,day" });
+
+    if (planError) throw planError;
 
     const { data: completion, error: completionError } = await supabaseAdmin
       .from("workout_completions")
