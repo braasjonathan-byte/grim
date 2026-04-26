@@ -503,6 +503,31 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
               </button>
             )}
           </div>
+          {stravaConnected && (
+            <div className="mb-2 grid grid-cols-2 gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-xs">
+              <div>
+                <p className="text-muted-foreground">Senast synkad</p>
+                <p className="font-semibold text-foreground">{formatSyncTime(stravaSyncStatus.lastSyncedAt)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Importerade senast</p>
+                <p className="font-semibold text-foreground">{stravaSyncStatus.lastImportedCount}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Totalt importerade</p>
+                <p className="font-semibold text-foreground">{stravaSyncStatus.totalImported}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Senaste försök</p>
+                <p className="font-semibold text-foreground">{formatSyncTime(stravaSyncStatus.lastAttemptAt)}</p>
+              </div>
+              {stravaSyncStatus.lastError && (
+                <div className="col-span-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-destructive">
+                  {stravaSyncStatus.lastError}
+                </div>
+              )}
+            </div>
+          )}
           {stravaSyncMessage && (
             <p className="pb-2 text-xs text-muted-foreground">{stravaSyncMessage}</p>
           )}
