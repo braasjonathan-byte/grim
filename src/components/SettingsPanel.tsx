@@ -200,11 +200,16 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
   const handleConnectStrava = async () => {
     if (!userId) return;
+    const authWindow = window.open("", "_blank");
+    if (authWindow) {
+      authWindow.document.write("<p style='font-family: system-ui; padding: 24px;'>Öppnar Strava...</p>");
+    }
     setStravaConnecting(true);
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) {
       setStravaConnecting(false);
+      authWindow?.close();
       alert("Du behöver logga in igen innan Strava kan kopplas.");
       return;
     }
@@ -214,11 +219,16 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     });
     setStravaConnecting(false);
     if (error || !data?.authUrl) {
+      authWindow?.close();
       const message = data?.error || error?.message || "Försök igen.";
       alert(`Kunde inte starta Strava-kopplingen. ${message}`);
       return;
     }
-    window.location.href = data.authUrl;
+    if (authWindow) {
+      authWindow.location.href = data.authUrl;
+    } else {
+      window.location.assign(data.authUrl);
+    }
   };
 
   const handleDisconnectStrava = async () => {
