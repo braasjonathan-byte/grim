@@ -1327,10 +1327,15 @@ const estimateCalories = (
     setFriendComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
-  const syncStravaNow = async () => {
+  const syncStravaNow = async (plan: PlanDay) => {
     setStravaSyncing(true);
     const { data, error } = await supabase.functions.invoke("strava-sync", {
-      body: { mode: "user", limit: 1, source: "workout-view" },
+      body: {
+        mode: "user",
+        limit: 1,
+        source: "workout-card",
+        targetWorkout: { week: plan.week, day: plan.day },
+      },
     });
     setStravaSyncing(false);
     if (error || data?.error || data?.results?.[0]?.error) {
@@ -1338,7 +1343,7 @@ const estimateCalories = (
       return;
     }
     const imported = data?.results?.[0]?.imported ?? 0;
-    toast.success(imported > 0 ? `${imported} Strava-pass importerade.` : "Inga nya Strava-pass hittades.");
+    toast.success(imported > 0 ? "Strava-pass importerat till kortet." : "Inget matchande Strava-pass hittades för kortet.");
     fetchData();
   };
 
@@ -4330,7 +4335,7 @@ const estimateCalories = (
                     {!weightDialog && !conditioningDialog &&
                   <div className="space-y-1.5">
                     <button
-                      onClick={syncStravaNow}
+                      onClick={() => syncStravaNow(plan)}
                       disabled={stravaSyncing}
                       className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
@@ -7562,7 +7567,7 @@ const estimateCalories = (
                     }
                     return null;
                   })()}
-                  <button onClick={syncStravaNow} disabled={stravaSyncing} className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
+                  <button onClick={() => syncStravaNow(plan)} disabled={stravaSyncing} className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
                       <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
                     </button>
                   <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
