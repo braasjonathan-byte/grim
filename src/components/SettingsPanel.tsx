@@ -527,7 +527,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
                   className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
                 >
                   {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
-                  Koppla bort
+                  Koppla från Strava
                 </button>
               </div>
             ) : (
