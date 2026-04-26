@@ -124,8 +124,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         const connection = data?.[0];
         setStravaConnected(!!connection?.connected);
         setStravaName([connection?.athlete_firstname, connection?.athlete_lastname].filter(Boolean).join(" ") || connection?.athlete_username || "Strava");
-      })
-      .finally(() => setStravaLoading(false));
+        setStravaLoading(false);
+      });
   }, [userId]);
 
   const handleSaveSecurityQuestions = async () => {
