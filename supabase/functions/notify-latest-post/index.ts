@@ -56,9 +56,9 @@ async function encrypt(plaintext: string, p256dh: Uint8Array, auth: Uint8Array):
   const authKey = await crypto.subtle.importKey("raw", auth, { name: "HKDF" }, false, ["deriveBits"]);
   const ikm = new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: shared, info: ikmInfo }, authKey, 256));
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const prk = await crypto.subtle.importKey("raw", ikm, { name: "HKDF" }, false, ["deriveBits"]);
-  const cekBits = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info: enc.encode("Content-Encoding: aes128gcm\0") }, prk, 128);
-  const nonce = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info: enc.encode("Content-Encoding: nonce\0") }, prk, 96);
+  const prk = await crypto.subtle.importKey("raw", ikm as unknown as BufferSource, { name: "HKDF" }, false, ["deriveBits"]);
+  const cekBits = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: salt as unknown as BufferSource, info: enc.encode("Content-Encoding: aes128gcm\0") }, prk, 128);
+  const nonce = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: salt as unknown as BufferSource, info: enc.encode("Content-Encoding: nonce\0") }, prk, 96);
   const cek = await crypto.subtle.importKey("raw", cekBits, { name: "AES-GCM" }, false, ["encrypt"]);
   const padded = concat(enc.encode(plaintext), new Uint8Array([2]));
   const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, cek, padded));
