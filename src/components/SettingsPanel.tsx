@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2 } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +54,10 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const [emailSaved, setEmailSaved] = useState(false);
   const [emailDirty, setEmailDirty] = useState(false);
   const [hasEmail, setHasEmail] = useState(false);
+  const [stravaLoading, setStravaLoading] = useState(false);
+  const [stravaConnecting, setStravaConnecting] = useState(false);
+  const [stravaConnected, setStravaConnected] = useState(false);
+  const [stravaName, setStravaName] = useState("");
 
   // Dark/light mode is now handled by the theme system via applyTheme()
 
@@ -114,6 +118,14 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
           setHasEmail(true);
         }
       });
+    setStravaLoading(true);
+    supabase.rpc("get_my_strava_connection")
+      .then(({ data }) => {
+        const connection = data?.[0];
+        setStravaConnected(!!connection?.connected);
+        setStravaName([connection?.athlete_firstname, connection?.athlete_lastname].filter(Boolean).join(" ") || connection?.athlete_username || "Strava");
+        setStravaLoading(false);
+      });
   }, [userId]);
 
   const handleSaveSecurityQuestions = async () => {
@@ -169,6 +181,30 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     setTimeout(() => setEmailSaved(false), 2000);
     setEmailSaving(false);
   };
+
+  const handleConnectStrava = async () => {
+    if (!userId) return;
+    setStravaConnecting(true);
+    const { data, error } = await supabase.functions.invoke("strava-oauth-start", {
+      body: { redirectOrigin: window.location.origin },
+    });
+    setStravaConnecting(false);
+    if (error || !data?.authUrl) {
+      alert("Kunde inte starta Strava-kopplingen. Försök igen.");
+      return;
+    }
+    window.location.href = data.authUrl;
+  };
+
+  const handleDisconnectStrava = async () => {
+    if (!userId || !confirm("Koppla bort Strava från ditt konto?")) return;
+    setStravaLoading(true);
+    await supabase.from("strava_connections").delete().eq("user_id", userId);
+    setStravaConnected(false);
+    setStravaName("");
+    setStravaLoading(false);
+  };
+
   const getAvailableQuestions = (slotIndex: number) => {
     const selected = secQuestions.filter((q, i) => i !== slotIndex && q !== null);
     return SECURITY_QUESTIONS.map((q, idx) => ({
@@ -368,6 +404,43 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {userId && (
+        <div className="border-t border-border pt-2">
+          <div className="flex items-center justify-between gap-3 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Link2 className="w-4 h-4 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Strava</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {stravaConnected ? `Kopplad${stravaName ? `: ${stravaName}` : ""}` : "Koppla ditt Strava-konto"}
+                </p>
+              </div>
+            </div>
+            {stravaConnected ? (
+              <button
+                type="button"
+                onClick={handleDisconnectStrava}
+                disabled={stravaLoading}
+                className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
+              >
+                {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
+                Koppla bort
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleConnectStrava}
+                disabled={stravaConnecting || stravaLoading}
+                className="flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              >
+                {stravaConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
+                Connect with Strava
+              </button>
+            )}
+          </div>
         </div>
       )}
       {/* Receipts */}
