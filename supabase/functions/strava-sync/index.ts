@@ -94,9 +94,15 @@ function getPlanDate(week: number, day: string, planStartDate: string | null): s
   const baseDay = day.split("_")[0];
   const offset = dayOffsets[baseDay];
   if (offset === undefined) return null;
-  const date = new Date(`${planStartDate}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + (week - 1) * 7 + offset);
-  return date.toISOString().slice(0, 10);
+  const [year, month, dateOfMonth] = planStartDate.split("-").map(Number);
+  if (!year || !month || !dateOfMonth) return null;
+  const startDate = new Date(Date.UTC(year, month - 1, dateOfMonth));
+  const startDay = startDate.getUTCDay() || 7;
+  const startMonday = new Date(startDate);
+  startMonday.setUTCDate(startDate.getUTCDate() - startDay + 1);
+  startMonday.setUTCHours(0, 0, 0, 0);
+  startMonday.setUTCDate(startMonday.getUTCDate() + (week - 1) * 7 + offset);
+  return startMonday.toISOString().slice(0, 10);
 }
 
 async function refreshAccessToken(connection: StravaConnection, clientId: string, clientSecret: string) {
@@ -224,6 +230,7 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
 
   const existingActivityIds = new Set((existingRows || []).map((row: { strava_activity_id: number }) => row.strava_activity_id));
   let imported = 0;
+  let applied = 0;
 
   for (const activity of activities) {
     if (!activity.id || !activity.start_date) continue;
@@ -299,6 +306,7 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
 
     if (activityError) throw activityError;
     if (!wasAlreadyImported) imported += 1;
+    applied += 1;
   }
 
   await supabaseAdmin
@@ -312,7 +320,7 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
     })
     .eq("id", connection.id);
 
-  return { userId: connection.user_id, imported };
+  return { userId: connection.user_id, imported, applied };
 }
 
 serve(async (req) => {
