@@ -39,7 +39,8 @@ async function vapidJwt(endpoint: string, pub: string, priv: string): Promise<st
   const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(unsigned));
   const sb = new Uint8Array(sig);
   let rLen = sb[3], rStart = 4, sLen = sb[5+rLen], sStart = 6+rLen;
-  let r = sb.slice(rStart, rStart+rLen), s = sb.slice(sStart, sStart+sLen);
+  let r: Uint8Array = sb.slice(rStart, rStart+rLen);
+  let s: Uint8Array = sb.slice(sStart, sStart+sLen);
   if (r.length === 33 && r[0] === 0) r = r.slice(1);
   if (s.length === 33 && s[0] === 0) s = s.slice(1);
   while (r.length < 32) r = concat(new Uint8Array([0]), r);

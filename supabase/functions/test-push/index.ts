@@ -159,7 +159,7 @@ serve(async (req) => {
         results.push({
           user_id: sub.user_id,
           endpoint: sub.endpoint.substring(0, 60),
-          error: e.message,
+          error: e instanceof Error ? e.message : String(e),
         });
       }
     }

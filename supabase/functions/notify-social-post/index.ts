@@ -54,8 +54,8 @@ async function createVapidJwt(endpoint: string, vapidPublicKey: string, vapidPri
   let sLen = sigBytes[5 + rLen];
   let sStart = 6 + rLen;
 
-  let r = sigBytes.slice(rStart, rStart + rLen);
-  let s = sigBytes.slice(sStart, sStart + sLen);
+  let r: Uint8Array = sigBytes.slice(rStart, rStart + rLen);
+  let s: Uint8Array = sigBytes.slice(sStart, sStart + sLen);
   if (r.length === 33 && r[0] === 0) r = r.slice(1);
   if (s.length === 33 && s[0] === 0) s = s.slice(1);
   while (r.length < 32) r = concatUint8Arrays(new Uint8Array([0]), r);
