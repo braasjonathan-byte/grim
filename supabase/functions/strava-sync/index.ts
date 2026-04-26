@@ -29,6 +29,8 @@ type StravaActivity = {
   average_speed?: number;
   average_heartrate?: number;
   max_heartrate?: number;
+  calories?: number;
+  kilojoules?: number;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -69,13 +71,19 @@ function formatMovingMinutes(seconds?: number): number | null {
   return Math.round(seconds / 60);
 }
 
-function buildGrimWorkout(activity: StravaActivity, distanceKm: number | null, pace: string | null, pulse: number | null) {
+function getCalories(activity: StravaActivity): number | null {
+  if (typeof activity.calories === "number" && activity.calories > 0) return Math.round(activity.calories);
+  return null;
+}
+
+function buildGrimWorkout(activity: StravaActivity, distanceKm: number | null, pace: string | null, pulse: number | null, calories: number | null) {
   const sessionName = isRunningActivity(activity) ? "Löpning" : (activity.sport_type || activity.type || "Strava");
   const parts = [
     formatMovingMinutes(activity.moving_time) ? `${formatMovingMinutes(activity.moving_time)} min` : null,
     pace ? pace.replace(" min/km", "/km") : null,
     distanceKm ? `${distanceKm} km` : null,
     pulse ? `${pulse} bpm` : null,
+    calories ? `${calories} kcal` : null,
   ].filter(Boolean);
 
   return {
@@ -241,13 +249,16 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
     const distanceKm = roundDistanceKm(activity.distance);
     const pace = formatPace(activity.average_speed);
     const pulse = activity.average_heartrate ? Math.round(activity.average_heartrate) : null;
+    const calories = getCalories(activity);
     const label = activity.sport_type || activity.type || "Strava";
-    const grimWorkout = buildGrimWorkout(activity, distanceKm, pace, pulse);
+    const grimWorkout = buildGrimWorkout(activity, distanceKm, pace, pulse, calories);
     const commentParts = [
       `Strava: ${activity.name || label}`,
       label,
       activity.moving_time ? `${Math.round(activity.moving_time / 60)} min` : null,
+      calories ? `${calories} kcal` : null,
     ].filter(Boolean);
+    const loggedWeights = calories ? { __strava_calories: calories } : null;
 
     if (!targetWorkout) {
       const { error: planError } = await supabaseAdmin
@@ -276,6 +287,7 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
         logged_distance_km: distanceKm,
         logged_tempo: pace,
         logged_pulse: pulse,
+          ...(loggedWeights ? { logged_weights: loggedWeights } : {}),
         user_comment: commentParts.join(" · "),
         updated_at: activity.start_date,
       }, { onConflict: "user_id,week,day" })

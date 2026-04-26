@@ -1041,6 +1041,11 @@ const estimateCalories = (
   gender: string | null,
   age: number | null
 ): number => {
+  const stravaCalories = Number((loggedWeights as any)?.__strava_calories);
+  if (Number.isFinite(stravaCalories) && stravaCalories > 0) {
+    return Math.round(stravaCalories);
+  }
+
   let totalMinutes = 0;
   let runDistanceKm = 0; // accumulated running/jogging distance from logged cond data
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
@@ -4458,7 +4463,7 @@ const estimateCalories = (
                             <div className="flex-1">
                               <span className="text-xs font-semibold text-primary">~{cal} kcal</span>
                               <span className="text-[10px] ml-1.5 text-primary">
-                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                                {(comp?.logged_weights as any)?.__strava_calories ? "synkat från Strava" : comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
                               </span>
                             </div>
                           </div>
@@ -7830,7 +7835,7 @@ const estimateCalories = (
                             <div className="flex-1">
                               <span className="text-xs font-semibold text-primary">~{cal} kcal</span>
                               <span className="text-[10px] ml-1.5 text-primary">
-                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                                {(comp?.logged_weights as any)?.__strava_calories ? "synkat från Strava" : comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
                               </span>
                             </div>
                           </div>
