@@ -22,6 +22,7 @@ type StravaActivity = {
   type?: string;
   sport_type?: string;
   start_date: string;
+  start_date_local?: string;
   distance?: number;
   moving_time?: number;
   elapsed_time?: number;
@@ -39,6 +40,10 @@ function jsonResponse(body: unknown, status = 200) {
 
 function formatDateKey(value: string): string {
   return value.slice(0, 10);
+}
+
+function getActivityDateKey(activity: StravaActivity): string {
+  return formatDateKey(activity.start_date_local || activity.start_date);
 }
 
 function formatPace(averageSpeedMps?: number): string | null {
@@ -77,6 +82,21 @@ function buildGrimWorkout(activity: StravaActivity, distanceKm: number | null, p
     sessionName,
     details: parts.length > 0 ? `${sessionName} — ${parts.join(", ")}` : sessionName,
   };
+}
+
+function getPlanDate(week: number, day: string, planStartDate: string | null): string | null {
+  if (week === 0) {
+    const match = day.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match?.[1] ?? null;
+  }
+  if (!planStartDate) return null;
+  const dayOffsets: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
+  const baseDay = day.split("_")[0];
+  const offset = dayOffsets[baseDay];
+  if (offset === undefined) return null;
+  const date = new Date(`${planStartDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + (week - 1) * 7 + offset);
+  return date.toISOString().slice(0, 10);
 }
 
 async function refreshAccessToken(connection: StravaConnection, clientId: string, clientSecret: string) {
@@ -136,7 +156,7 @@ async function fetchActivities(accessToken: string, afterUnix: number): Promise<
   return activities;
 }
 
-async function syncConnection(supabaseAdmin: any, connection: StravaConnection, clientId: string, clientSecret: string) {
+async function syncConnection(supabaseAdmin: any, connection: StravaConnection, clientId: string, clientSecret: string, targetWorkout?: { week: number; day: string }) {
   const refreshed = await refreshAccessToken(connection, clientId, clientSecret);
 
   if (refreshed.accessToken !== connection.access_token || refreshed.refreshToken !== connection.refresh_token) {
@@ -150,12 +170,45 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
       .eq("id", connection.id);
   }
 
-  const fallbackAfter = Math.floor((Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000);
+  let targetPlan: { session_name: string; details: string } | null = null;
+  let targetDateKey: string | null = null;
+
+  if (targetWorkout) {
+    const [{ data: plan }, { data: profile }] = await Promise.all([
+      supabaseAdmin
+        .from("workout_plans")
+        .select("session_name, details")
+        .eq("user_id", connection.user_id)
+        .eq("week", targetWorkout.week)
+        .eq("day", targetWorkout.day)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("profiles")
+        .select("plan_start_date")
+        .eq("user_id", connection.user_id)
+        .maybeSingle(),
+    ]);
+    targetPlan = plan ?? null;
+    targetDateKey = getPlanDate(targetWorkout.week, targetWorkout.day, profile?.plan_start_date ?? null);
+    if (!targetDateKey) throw new Error("Kunde inte avgöra datum för träningskortet.");
+  }
+
+  const fallbackAfter = targetDateKey
+    ? Math.floor(new Date(`${targetDateKey}T00:00:00Z`).getTime() / 1000) - 86400
+    : Math.floor((Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000);
   const afterUnix = connection.last_synced_at
     ? Math.max(Math.floor(new Date(connection.last_synced_at).getTime() / 1000) - 3600, fallbackAfter)
     : fallbackAfter;
 
-  const activities = await fetchActivities(refreshed.accessToken, afterUnix);
+  let activities = await fetchActivities(refreshed.accessToken, afterUnix);
+  if (targetWorkout && targetDateKey) {
+    const targetLooksLikeRun = `${targetPlan?.session_name || ""} ${targetPlan?.details || ""}`.toLowerCase().includes("löp");
+    activities = activities
+      .filter((activity) => getActivityDateKey(activity) === targetDateKey)
+      .filter((activity) => !targetLooksLikeRun || isRunningActivity(activity))
+      .sort((a, b) => (b.moving_time || 0) - (a.moving_time || 0))
+      .slice(0, 1);
+  }
   const activityIds = activities.map((activity) => activity.id).filter(Boolean);
   const { data: existingRows, error: existingError } = activityIds.length > 0
     ? await supabaseAdmin
@@ -173,8 +226,9 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
   for (const activity of activities) {
     if (!activity.id || !activity.start_date) continue;
 
-    const dateKey = formatDateKey(activity.start_date);
-    const dayKey = `${dateKey}_strava_${activity.id}`;
+    const dateKey = getActivityDateKey(activity);
+    const dayKey = targetWorkout ? targetWorkout.day : `${dateKey}_strava_${activity.id}`;
+    const week = targetWorkout ? targetWorkout.week : 0;
     const distanceKm = roundDistanceKm(activity.distance);
     const pace = formatPace(activity.average_speed);
     const pulse = activity.average_heartrate ? Math.round(activity.average_heartrate) : null;
@@ -186,25 +240,27 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
       activity.moving_time ? `${Math.round(activity.moving_time / 60)} min` : null,
     ].filter(Boolean);
 
-    const { error: planError } = await supabaseAdmin
-      .from("workout_plans")
-      .upsert({
-        user_id: connection.user_id,
-        week: 0,
-        day: dayKey,
-        session_name: grimWorkout.sessionName,
-        details: grimWorkout.details,
-        tempo: "",
-        is_circuit: false,
-      }, { onConflict: "user_id,week,day" });
+    if (!targetWorkout) {
+      const { error: planError } = await supabaseAdmin
+        .from("workout_plans")
+        .upsert({
+          user_id: connection.user_id,
+          week: 0,
+          day: dayKey,
+          session_name: grimWorkout.sessionName,
+          details: grimWorkout.details,
+          tempo: "",
+          is_circuit: false,
+        }, { onConflict: "user_id,week,day" });
 
-    if (planError) throw planError;
+      if (planError) throw planError;
+    }
 
     const { data: completion, error: completionError } = await supabaseAdmin
       .from("workout_completions")
       .upsert({
         user_id: connection.user_id,
-        week: 0,
+        week,
         day: dayKey,
         done: true,
         skipped: false,
