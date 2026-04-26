@@ -1343,7 +1343,8 @@ const estimateCalories = (
       return;
     }
     const imported = data?.results?.[0]?.imported ?? 0;
-    toast.success(imported > 0 ? "Strava-pass importerat till kortet." : "Inget matchande Strava-pass hittades för kortet.");
+    const applied = data?.results?.[0]?.applied ?? imported;
+    toast.success(applied > 0 ? "Strava-pass synkat till kortet." : "Inget matchande Strava-pass hittades för kortet.");
     fetchData();
   };
 
