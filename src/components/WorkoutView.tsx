@@ -4335,7 +4335,7 @@ const estimateCalories = (
                     {!weightDialog && !conditioningDialog &&
                   <div className="space-y-1.5">
                     <button
-                      onClick={syncStravaNow}
+                      onClick={() => syncStravaNow(plan)}
                       disabled={stravaSyncing}
                       className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
@@ -7567,7 +7567,7 @@ const estimateCalories = (
                     }
                     return null;
                   })()}
-                  <button onClick={syncStravaNow} disabled={stravaSyncing} className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
+                  <button onClick={() => syncStravaNow(plan)} disabled={stravaSyncing} className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
                       <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
                     </button>
                   <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
