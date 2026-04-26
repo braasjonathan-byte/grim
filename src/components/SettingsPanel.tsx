@@ -201,12 +201,21 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const handleConnectStrava = async () => {
     if (!userId) return;
     setStravaConnecting(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      setStravaConnecting(false);
+      alert("Du behöver logga in igen innan Strava kan kopplas.");
+      return;
+    }
     const { data, error } = await supabase.functions.invoke("strava-oauth-start", {
       body: { redirectOrigin: window.location.origin },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
     setStravaConnecting(false);
     if (error || !data?.authUrl) {
-      alert("Kunde inte starta Strava-kopplingen. Försök igen.");
+      const message = data?.error || error?.message || "Försök igen.";
+      alert(`Kunde inte starta Strava-kopplingen. ${message}`);
       return;
     }
     window.location.href = data.authUrl;
