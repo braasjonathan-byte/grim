@@ -25,7 +25,7 @@ function concat(...a: Uint8Array[]): Uint8Array {
   const r = new Uint8Array(t);
   let o = 0;
   for (const x of a) { r.set(x, o); o += x.length; }
-  return r;
+  return r as Uint8Array<ArrayBuffer>;
 }
 async function vapidJwt(endpoint: string, pub: string, priv: string): Promise<string> {
   const aud = new URL(endpoint).origin;
@@ -49,19 +49,19 @@ async function vapidJwt(endpoint: string, pub: string, priv: string): Promise<st
 async function encrypt(plaintext: string, p256dh: Uint8Array, auth: Uint8Array): Promise<Uint8Array> {
   const kp = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
   const localPub = new Uint8Array(await crypto.subtle.exportKey("raw", kp.publicKey));
-  const subKey = await crypto.subtle.importKey("raw", p256dh, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const subKey = await crypto.subtle.importKey("raw", p256dh as unknown as BufferSource, { name: "ECDH", namedCurve: "P-256" }, false, []);
   const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: subKey }, kp.privateKey, 256));
   const enc = new TextEncoder();
   const ikmInfo = concat(enc.encode("WebPush: info\0"), p256dh, localPub);
-  const authKey = await crypto.subtle.importKey("raw", auth, { name: "HKDF" }, false, ["deriveBits"]);
-  const ikm = new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: shared, info: ikmInfo }, authKey, 256));
+  const authKey = await crypto.subtle.importKey("raw", auth as unknown as BufferSource, { name: "HKDF" }, false, ["deriveBits"]);
+  const ikm = new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: shared as unknown as BufferSource, info: ikmInfo as unknown as BufferSource }, authKey, 256));
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const prk = await crypto.subtle.importKey("raw", ikm as unknown as BufferSource, { name: "HKDF" }, false, ["deriveBits"]);
   const cekBits = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: salt as unknown as BufferSource, info: enc.encode("Content-Encoding: aes128gcm\0") }, prk, 128);
   const nonce = await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: salt as unknown as BufferSource, info: enc.encode("Content-Encoding: nonce\0") }, prk, 96);
   const cek = await crypto.subtle.importKey("raw", cekBits, { name: "AES-GCM" }, false, ["encrypt"]);
   const padded = concat(enc.encode(plaintext), new Uint8Array([2]));
-  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, cek, padded));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce as unknown as BufferSource }, cek, padded as unknown as BufferSource));
   const rs = new Uint8Array(4); new DataView(rs.buffer).setUint32(0, 4096, false);
   return concat(salt, rs, new Uint8Array([localPub.length]), localPub, ct);
 }

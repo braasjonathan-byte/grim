@@ -29,7 +29,7 @@ function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
   const result = new Uint8Array(totalLength);
   let offset = 0;
   for (const a of arrays) { result.set(a, offset); offset += a.length; }
-  return result;
+  return result as Uint8Array<ArrayBuffer>;
 }
 
 async function createVapidJwt(endpoint: string, vapidPublicKey: string, vapidPrivateKey: string): Promise<string> {

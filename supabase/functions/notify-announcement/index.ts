@@ -32,7 +32,7 @@ function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
     result.set(a, offset);
     offset += a.length;
   }
-  return result;
+  return result as Uint8Array<ArrayBuffer>;
 }
 
 async function createVapidJwt(
