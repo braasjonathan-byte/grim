@@ -980,6 +980,84 @@ export type Database = {
         }
         Relationships: []
       }
+      strava_connections: {
+        Row: {
+          access_token: string
+          athlete_firstname: string | null
+          athlete_lastname: string | null
+          athlete_profile_url: string | null
+          athlete_username: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          last_synced_at: string | null
+          refresh_token: string
+          scope: string | null
+          strava_athlete_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          athlete_firstname?: string | null
+          athlete_lastname?: string | null
+          athlete_profile_url?: string | null
+          athlete_username?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_synced_at?: string | null
+          refresh_token: string
+          scope?: string | null
+          strava_athlete_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          athlete_firstname?: string | null
+          athlete_lastname?: string | null
+          athlete_profile_url?: string | null
+          athlete_username?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_synced_at?: string | null
+          refresh_token?: string
+          scope?: string | null
+          strava_athlete_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      strava_oauth_states: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          redirect_origin: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          redirect_origin: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redirect_origin?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       suggestion_replies: {
         Row: {
           author_id: string
