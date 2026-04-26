@@ -1443,6 +1443,18 @@ export type Database = {
           question_index: number
         }[]
       }
+      get_my_strava_connection: {
+        Args: never
+        Returns: {
+          athlete_firstname: string
+          athlete_lastname: string
+          athlete_profile_url: string
+          athlete_username: string
+          connected: boolean
+          last_synced_at: string
+          updated_at: string
+        }[]
+      }
       get_suggested_friends: {
         Args: { requesting_user_id: string }
         Returns: {
