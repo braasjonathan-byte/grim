@@ -60,6 +60,13 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const [stravaName, setStravaName] = useState("");
   const [stravaSyncing, setStravaSyncing] = useState(false);
   const [stravaSyncMessage, setStravaSyncMessage] = useState("");
+  const [stravaSyncStatus, setStravaSyncStatus] = useState({
+    lastSyncedAt: "" as string | null,
+    lastAttemptAt: "" as string | null,
+    lastImportedCount: 0,
+    totalImported: 0,
+    lastError: "" as string | null,
+  });
 
   // Dark/light mode is now handled by the theme system via applyTheme()
 
@@ -121,11 +128,18 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         }
       });
     setStravaLoading(true);
-    supabase.rpc("get_my_strava_connection")
+    (supabase as any).rpc("get_my_strava_connection")
       .then(({ data }) => {
         const connection = data?.[0];
         setStravaConnected(!!connection?.connected);
         setStravaName([connection?.athlete_firstname, connection?.athlete_lastname].filter(Boolean).join(" ") || connection?.athlete_username || "Strava");
+        setStravaSyncStatus({
+          lastSyncedAt: connection?.last_synced_at ?? null,
+          lastAttemptAt: connection?.last_sync_attempt_at ?? null,
+          lastImportedCount: connection?.last_sync_imported_count ?? 0,
+          totalImported: connection?.total_imported_activities ?? 0,
+          lastError: connection?.last_sync_error ?? null,
+        });
         setStravaLoading(false);
       });
   }, [userId]);
@@ -220,7 +234,26 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
       return;
     }
     const imported = data?.results?.[0]?.imported ?? 0;
+    const resultError = data?.results?.[0]?.error ?? null;
+    const nowIso = new Date().toISOString();
+    setStravaSyncStatus((status) => ({
+      lastSyncedAt: resultError ? status.lastSyncedAt : nowIso,
+      lastAttemptAt: nowIso,
+      lastImportedCount: imported,
+      totalImported: status.totalImported + imported,
+      lastError: resultError,
+    }));
     setStravaSyncMessage(imported > 0 ? `${imported} nya aktiviteter importerade.` : "Inga nya aktiviteter hittades.");
+  };
+
+  const formatSyncTime = (value?: string | null) => {
+    if (!value) return "Aldrig";
+    return new Intl.DateTimeFormat("sv-SE", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
   };
 
   const getAvailableQuestions = (slotIndex: number) => {
