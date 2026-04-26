@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
 
+const SHOW_STRAVA_INTEGRATION = false;
+
 
 export const SECURITY_QUESTIONS = [
   "Vad hette ditt första husdjur?",
@@ -144,11 +146,11 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
           setHasEmail(true);
         }
       });
-    refreshStravaConnection();
+    if (SHOW_STRAVA_INTEGRATION) refreshStravaConnection();
   }, [userId, refreshStravaConnection]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !SHOW_STRAVA_INTEGRATION) return;
     const handleFocus = () => refreshStravaConnection();
     const handleVisibility = () => {
       if (document.visibilityState === "visible") refreshStravaConnection();
@@ -367,7 +369,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         </button>
       </div>
 
-      {userId && (
+      {userId && SHOW_STRAVA_INTEGRATION && (
         <div className="border-t border-border pt-2">
           <button
             onClick={() => setSecurityOpen(!securityOpen)}
