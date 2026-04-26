@@ -438,15 +438,26 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
               </div>
             </div>
             {stravaConnected ? (
-              <button
-                type="button"
-                onClick={handleDisconnectStrava}
-                disabled={stravaLoading}
-                className="flex shrink-0 items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
-              >
-                {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
-                Koppla bort
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSyncStravaNow}
+                  disabled={stravaSyncing || stravaLoading}
+                  className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  {stravaSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Sync now
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisconnectStrava}
+                  disabled={stravaLoading || stravaSyncing}
+                  className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
+                >
+                  {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
+                  Koppla bort
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -459,6 +470,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
               </button>
             )}
           </div>
+          {stravaSyncMessage && (
+            <p className="pb-2 text-xs text-muted-foreground">{stravaSyncMessage}</p>
+          )}
         </div>
       )}
       {/* Receipts */}
