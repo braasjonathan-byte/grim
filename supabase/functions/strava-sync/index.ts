@@ -13,6 +13,7 @@ type StravaConnection = {
   refresh_token: string;
   expires_at: string;
   last_synced_at: string | null;
+  total_imported_activities?: number | null;
 };
 
 type StravaActivity = {
@@ -130,6 +131,18 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
     : fallbackAfter;
 
   const activities = await fetchActivities(refreshed.accessToken, afterUnix);
+  const activityIds = activities.map((activity) => activity.id).filter(Boolean);
+  const { data: existingRows, error: existingError } = activityIds.length > 0
+    ? await supabaseAdmin
+      .from("strava_activities")
+      .select("strava_activity_id")
+      .eq("user_id", connection.user_id)
+      .in("strava_activity_id", activityIds)
+    : { data: [], error: null };
+
+  if (existingError) throw existingError;
+
+  const existingActivityIds = new Set((existingRows || []).map((row: { strava_activity_id: number }) => row.strava_activity_id));
   let imported = 0;
 
   for (const activity of activities) {
@@ -166,6 +179,7 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
 
     if (completionError) throw completionError;
 
+    const wasAlreadyImported = existingActivityIds.has(activity.id);
     const { error: activityError } = await supabaseAdmin
       .from("strava_activities")
       .upsert({
@@ -186,12 +200,18 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
       }, { onConflict: "user_id,strava_activity_id" });
 
     if (activityError) throw activityError;
-    imported += 1;
+    if (!wasAlreadyImported) imported += 1;
   }
 
   await supabaseAdmin
     .from("strava_connections")
-    .update({ last_synced_at: new Date().toISOString() })
+    .update({
+      last_synced_at: new Date().toISOString(),
+      last_sync_attempt_at: new Date().toISOString(),
+      last_sync_imported_count: imported,
+      last_sync_error: null,
+      total_imported_activities: (connection.total_imported_activities || 0) + imported,
+    })
     .eq("id", connection.id);
 
   return { userId: connection.user_id, imported };
@@ -233,7 +253,7 @@ serve(async (req) => {
 
     let query = supabaseAdmin
       .from("strava_connections")
-      .select("id, user_id, access_token, refresh_token, expires_at, last_synced_at")
+      .select("id, user_id, access_token, refresh_token, expires_at, last_synced_at, total_imported_activities")
       .order("last_synced_at", { ascending: true, nullsFirst: true })
       .limit(limit);
 
@@ -252,10 +272,19 @@ serve(async (req) => {
         results.push(await syncConnection(supabaseAdmin, connection, clientId, clientSecret));
       } catch (connectionError) {
         console.error("Strava sync failed for connection", connection.id, connectionError);
+        const errorMessage = connectionError instanceof Error ? connectionError.message : String(connectionError);
+        await supabaseAdmin
+          .from("strava_connections")
+          .update({
+            last_sync_attempt_at: new Date().toISOString(),
+            last_sync_imported_count: 0,
+            last_sync_error: errorMessage.slice(0, 1000),
+          })
+          .eq("id", connection.id);
         results.push({
           userId: connection.user_id,
           imported: 0,
-          error: connectionError instanceof Error ? connectionError.message : String(connectionError),
+          error: errorMessage,
         });
       }
     }

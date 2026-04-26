@@ -1050,10 +1050,14 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          last_sync_attempt_at: string | null
+          last_sync_error: string | null
+          last_sync_imported_count: number
           last_synced_at: string | null
           refresh_token: string
           scope: string | null
           strava_athlete_id: number
+          total_imported_activities: number
           updated_at: string
           user_id: string
         }
@@ -1066,10 +1070,14 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
+          last_sync_attempt_at?: string | null
+          last_sync_error?: string | null
+          last_sync_imported_count?: number
           last_synced_at?: string | null
           refresh_token: string
           scope?: string | null
           strava_athlete_id: number
+          total_imported_activities?: number
           updated_at?: string
           user_id: string
         }
@@ -1082,10 +1090,14 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          last_sync_attempt_at?: string | null
+          last_sync_error?: string | null
+          last_sync_imported_count?: number
           last_synced_at?: string | null
           refresh_token?: string
           scope?: string | null
           strava_athlete_id?: number
+          total_imported_activities?: number
           updated_at?: string
           user_id?: string
         }
@@ -1511,7 +1523,11 @@ export type Database = {
           athlete_profile_url: string
           athlete_username: string
           connected: boolean
+          last_sync_attempt_at: string
+          last_sync_error: string
+          last_sync_imported_count: number
           last_synced_at: string
+          total_imported_activities: number
           updated_at: string
         }[]
       }
