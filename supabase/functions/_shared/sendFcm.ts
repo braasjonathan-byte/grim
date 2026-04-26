@@ -12,6 +12,18 @@ interface ServiceAccount {
   private_key: string;
 }
 
+interface DevicePushToken {
+  id: string;
+  token: string;
+  platform: string | null;
+}
+
+function asBufferSource(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return copy;
+}
+
 async function getAccessToken(sa: ServiceAccount): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
@@ -42,7 +54,7 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
 
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
-    keyBytes,
+    asBufferSource(keyBytes),
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"]
@@ -89,7 +101,7 @@ async function getCachedAccessToken(sa: ServiceAccount): Promise<string> {
 }
 
 export async function sendNativePush(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   userIds: string[],
   notification: { title: string; body: string; data?: Record<string, string> }
 ): Promise<number> {
@@ -114,6 +126,7 @@ export async function sendNativePush(
     .in("user_id", userIds);
 
   if (!tokens || tokens.length === 0) return 0;
+  const deviceTokens = tokens as DevicePushToken[];
 
   const accessToken = await getCachedAccessToken(sa);
   const fcmUrl = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
@@ -121,7 +134,7 @@ export async function sendNativePush(
   let sent = 0;
   const staleTokenIds: string[] = [];
 
-  for (const tokenRow of tokens) {
+  for (const tokenRow of deviceTokens) {
     try {
       const message: Record<string, unknown> = {
         token: tokenRow.token,
