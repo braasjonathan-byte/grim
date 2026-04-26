@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
@@ -68,6 +68,23 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     lastError: "" as string | null,
   });
 
+  const refreshStravaConnection = useCallback(async () => {
+    if (!userId) return;
+    setStravaLoading(true);
+    const { data } = await (supabase as any).rpc("get_my_strava_connection");
+    const connection = data?.[0];
+    setStravaConnected(!!connection?.connected);
+    setStravaName([connection?.athlete_firstname, connection?.athlete_lastname].filter(Boolean).join(" ") || connection?.athlete_username || "Strava");
+    setStravaSyncStatus({
+      lastSyncedAt: connection?.last_synced_at ?? null,
+      lastAttemptAt: connection?.last_sync_attempt_at ?? null,
+      lastImportedCount: connection?.last_sync_imported_count ?? 0,
+      totalImported: connection?.total_imported_activities ?? 0,
+      lastError: connection?.last_sync_error ?? null,
+    });
+    setStravaLoading(false);
+  }, [userId]);
+
   // Dark/light mode is now handled by the theme system via applyTheme()
 
   useEffect(() => {
@@ -127,22 +144,22 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
           setHasEmail(true);
         }
       });
-    setStravaLoading(true);
-    (supabase as any).rpc("get_my_strava_connection")
-      .then(({ data }) => {
-        const connection = data?.[0];
-        setStravaConnected(!!connection?.connected);
-        setStravaName([connection?.athlete_firstname, connection?.athlete_lastname].filter(Boolean).join(" ") || connection?.athlete_username || "Strava");
-        setStravaSyncStatus({
-          lastSyncedAt: connection?.last_synced_at ?? null,
-          lastAttemptAt: connection?.last_sync_attempt_at ?? null,
-          lastImportedCount: connection?.last_sync_imported_count ?? 0,
-          totalImported: connection?.total_imported_activities ?? 0,
-          lastError: connection?.last_sync_error ?? null,
-        });
-        setStravaLoading(false);
-      });
-  }, [userId]);
+    refreshStravaConnection();
+  }, [userId, refreshStravaConnection]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const handleFocus = () => refreshStravaConnection();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refreshStravaConnection();
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [userId, refreshStravaConnection]);
 
   const handleSaveSecurityQuestions = async () => {
     if (!userId) return;
@@ -491,6 +508,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
             </div>
             {stravaConnected ? (
               <div className="flex shrink-0 items-center gap-2">
+                <span className="flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary">
+                  <Check className="h-3.5 w-3.5" /> Kopplad
+                </span>
                 <button
                   type="button"
                   onClick={handleSyncStravaNow}
@@ -518,7 +538,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
                 className="flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {stravaConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-                Connect with Strava
+                Koppla Strava
               </button>
             )}
           </div>
