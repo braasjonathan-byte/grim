@@ -207,18 +207,16 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const clientId = Deno.env.get("STRAVA_CLIENT_ID");
     const clientSecret = Deno.env.get("STRAVA_CLIENT_SECRET");
 
     if (!supabaseUrl) throw new Error("SUPABASE_URL is not configured");
     if (!serviceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-    if (!anonKey) throw new Error("SUPABASE_ANON_KEY is not configured");
     if (!clientId) throw new Error("STRAVA_CLIENT_ID is not configured");
     if (!clientSecret) throw new Error("STRAVA_CLIENT_SECRET is not configured");
 
     const authHeader = req.headers.get("Authorization") || "";
-    if (authHeader !== `Bearer ${anonKey}`) {
+    if (!authHeader.startsWith("Bearer ")) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
