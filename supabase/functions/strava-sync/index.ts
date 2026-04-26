@@ -253,7 +253,7 @@ serve(async (req) => {
 
     let query = supabaseAdmin
       .from("strava_connections")
-      .select("id, user_id, access_token, refresh_token, expires_at, last_synced_at")
+      .select("id, user_id, access_token, refresh_token, expires_at, last_synced_at, total_imported_activities")
       .order("last_synced_at", { ascending: true, nullsFirst: true })
       .limit(limit);
 
