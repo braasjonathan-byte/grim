@@ -196,9 +196,11 @@ async function syncConnection(supabaseAdmin: any, connection: StravaConnection, 
   const fallbackAfter = targetDateKey
     ? Math.floor(new Date(`${targetDateKey}T00:00:00Z`).getTime() / 1000) - 86400
     : Math.floor((Date.now() - 14 * 24 * 60 * 60 * 1000) / 1000);
-  const afterUnix = connection.last_synced_at
-    ? Math.max(Math.floor(new Date(connection.last_synced_at).getTime() / 1000) - 3600, fallbackAfter)
-    : fallbackAfter;
+  const afterUnix = targetWorkout
+    ? fallbackAfter
+    : connection.last_synced_at
+      ? Math.max(Math.floor(new Date(connection.last_synced_at).getTime() / 1000) - 3600, fallbackAfter)
+      : fallbackAfter;
 
   let activities = await fetchActivities(refreshed.accessToken, afterUnix);
   if (targetWorkout && targetDateKey) {
@@ -358,6 +360,12 @@ serve(async (req) => {
       query = query.eq("user_id", requestedUserId).limit(1);
     }
 
+    const targetWorkout = body.targetWorkout &&
+      typeof body.targetWorkout.week === "number" &&
+      typeof body.targetWorkout.day === "string"
+      ? { week: body.targetWorkout.week, day: body.targetWorkout.day }
+      : undefined;
+
     const { data: connections, error } = await query;
 
     if (error) throw error;
@@ -365,7 +373,7 @@ serve(async (req) => {
     const results = [];
     for (const connection of (connections || []) as StravaConnection[]) {
       try {
-        results.push(await syncConnection(supabaseAdmin, connection, clientId, clientSecret));
+        results.push(await syncConnection(supabaseAdmin, connection, clientId, clientSecret, targetWorkout));
       } catch (connectionError) {
         console.error("Strava sync failed for connection", connection.id, connectionError);
         const errorMessage = connectionError instanceof Error ? connectionError.message : String(connectionError);
