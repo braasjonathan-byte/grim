@@ -1327,6 +1327,21 @@ const estimateCalories = (
     setFriendComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
+  const syncStravaNow = async () => {
+    setStravaSyncing(true);
+    const { data, error } = await supabase.functions.invoke("strava-sync", {
+      body: { mode: "user", limit: 1, source: "workout-view" },
+    });
+    setStravaSyncing(false);
+    if (error || data?.error || data?.results?.[0]?.error) {
+      toast.error("Kunde inte synka från Strava.");
+      return;
+    }
+    const imported = data?.results?.[0]?.imported ?? 0;
+    toast.success(imported > 0 ? `${imported} Strava-pass importerade.` : "Inga nya Strava-pass hittades.");
+    fetchData();
+  };
+
   // Set completion tracking helpers
   const getSetsDone = (weekDayKey: string, exerciseName: string): string => {
     const comp = completions[weekDayKey];
