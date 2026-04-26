@@ -496,38 +496,42 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
       {userId && (
         <div className="border-t border-border pt-2">
-          <div className="flex items-center justify-between gap-3 py-2">
-            <div className="flex min-w-0 items-center gap-2">
+          <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-2">
               <Link2 className="w-4 h-4 shrink-0 text-primary" />
               <div className="min-w-0">
-                <p className="text-sm font-semibold">Strava</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold leading-tight">Strava</p>
+                  {stravaConnected && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold leading-none text-primary">
+                      <Check className="h-3.5 w-3.5" /> Kopplad
+                    </span>
+                  )}
+                </div>
                 <p className="truncate text-xs text-muted-foreground">
                   {stravaConnected ? `Kopplad${stravaName ? `: ${stravaName}` : ""}` : "Koppla ditt Strava-konto"}
                 </p>
               </div>
             </div>
             {stravaConnected ? (
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary">
-                  <Check className="h-3.5 w-3.5" /> Kopplad
-                </span>
+              <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
                 <button
                   type="button"
                   onClick={handleSyncStravaNow}
                   disabled={stravaSyncing || stravaLoading}
-                  className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  className="flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-md bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
                 >
                   {stravaSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  Sync now
+                  Synka
                 </button>
                 <button
                   type="button"
                   onClick={handleDisconnectStrava}
                   disabled={stravaLoading || stravaSyncing}
-                  className="flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
+                  className="flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-md border border-border px-2.5 py-2 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
                 >
                   {stravaLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Unlink className="h-3.5 w-3.5" />}
-                  Koppla från Strava
+                  <span className="truncate">Koppla från</span>
                 </button>
               </div>
             ) : (
@@ -535,7 +539,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
                 type="button"
                 onClick={handleConnectStrava}
                 disabled={stravaConnecting || stravaLoading}
-                className="flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                className="flex min-h-9 w-full items-center justify-center gap-1 rounded-md bg-primary px-2.5 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50 sm:w-auto"
               >
                 {stravaConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                 Koppla Strava
