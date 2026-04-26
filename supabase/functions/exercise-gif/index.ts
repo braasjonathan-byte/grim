@@ -15,11 +15,9 @@ const exerciseTranslations: Record<string, string> = {
   // Ben & Sätesmuskler
   "knäböj": "barbell full squat",
   "böj": "barbell full squat",
-  "knäböj": "barbell full squat",
   "lätta böj": "barbell full squat",
   "pausböj": "barbell full squat",
   "frontböj": "barbell front squat",
-  "pausböj": "barbell full squat",
   "marklyft": "barbell deadlift",
   "mark": "barbell deadlift",
   "stela marklyft": "barbell stiff leg deadlift",
