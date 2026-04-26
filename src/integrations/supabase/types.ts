@@ -980,6 +980,66 @@ export type Database = {
         }
         Relationships: []
       }
+      strava_activities: {
+        Row: {
+          activity_type: string | null
+          average_heartrate: number | null
+          average_speed_mps: number | null
+          created_at: string
+          distance_km: number | null
+          elapsed_time_seconds: number | null
+          id: string
+          max_heartrate: number | null
+          moving_time_seconds: number | null
+          name: string | null
+          raw_activity: Json
+          sport_type: string | null
+          start_date: string
+          strava_activity_id: number
+          updated_at: string
+          user_id: string
+          workout_completion_id: string | null
+        }
+        Insert: {
+          activity_type?: string | null
+          average_heartrate?: number | null
+          average_speed_mps?: number | null
+          created_at?: string
+          distance_km?: number | null
+          elapsed_time_seconds?: number | null
+          id?: string
+          max_heartrate?: number | null
+          moving_time_seconds?: number | null
+          name?: string | null
+          raw_activity?: Json
+          sport_type?: string | null
+          start_date: string
+          strava_activity_id: number
+          updated_at?: string
+          user_id: string
+          workout_completion_id?: string | null
+        }
+        Update: {
+          activity_type?: string | null
+          average_heartrate?: number | null
+          average_speed_mps?: number | null
+          created_at?: string
+          distance_km?: number | null
+          elapsed_time_seconds?: number | null
+          id?: string
+          max_heartrate?: number | null
+          moving_time_seconds?: number | null
+          name?: string | null
+          raw_activity?: Json
+          sport_type?: string | null
+          start_date?: string
+          strava_activity_id?: number
+          updated_at?: string
+          user_id?: string
+          workout_completion_id?: string | null
+        }
+        Relationships: []
+      }
       strava_connections: {
         Row: {
           access_token: string
