@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,6 +58,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const [stravaConnecting, setStravaConnecting] = useState(false);
   const [stravaConnected, setStravaConnected] = useState(false);
   const [stravaName, setStravaName] = useState("");
+  const [stravaSyncing, setStravaSyncing] = useState(false);
+  const [stravaSyncMessage, setStravaSyncMessage] = useState("");
 
   // Dark/light mode is now handled by the theme system via applyTheme()
 
@@ -203,6 +205,22 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     setStravaConnected(false);
     setStravaName("");
     setStravaLoading(false);
+  };
+
+  const handleSyncStravaNow = async () => {
+    if (!userId || !stravaConnected) return;
+    setStravaSyncing(true);
+    setStravaSyncMessage("");
+    const { data, error } = await supabase.functions.invoke("strava-sync", {
+      body: { mode: "user", limit: 1, source: "settings-sync-now" },
+    });
+    setStravaSyncing(false);
+    if (error || data?.error) {
+      setStravaSyncMessage("Synken misslyckades. Försök igen.");
+      return;
+    }
+    const imported = data?.results?.[0]?.imported ?? 0;
+    setStravaSyncMessage(imported > 0 ? `${imported} nya aktiviteter importerade.` : "Inga nya aktiviteter hittades.");
   };
 
   const getAvailableQuestions = (slotIndex: number) => {
