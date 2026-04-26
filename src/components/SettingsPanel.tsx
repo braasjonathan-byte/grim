@@ -508,6 +508,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
             </div>
             {stravaConnected ? (
               <div className="flex shrink-0 items-center gap-2">
+                <span className="flex items-center gap-1 rounded-md bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary">
+                  <Check className="h-3.5 w-3.5" /> Kopplad
+                </span>
                 <button
                   type="button"
                   onClick={handleSyncStravaNow}
@@ -535,7 +538,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
                 className="flex shrink-0 items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {stravaConnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
-                Connect with Strava
+                Koppla Strava
               </button>
             )}
           </div>
