@@ -222,13 +222,27 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const limit = typeof body.limit === "number" ? Math.max(1, Math.min(body.limit, 25)) : 25;
+    let requestedUserId: string | null = null;
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-    const { data: connections, error } = await supabaseAdmin
+    const bearerToken = authHeader.replace("Bearer ", "").trim();
+    if (bearerToken) {
+      const { data: userData } = await supabaseAdmin.auth.getUser(bearerToken);
+      requestedUserId = userData.user?.id ?? null;
+    }
+
+    let query = supabaseAdmin
       .from("strava_connections")
       .select("id, user_id, access_token, refresh_token, expires_at, last_synced_at")
       .order("last_synced_at", { ascending: true, nullsFirst: true })
       .limit(limit);
+
+    if (body.mode === "user") {
+      if (!requestedUserId) return jsonResponse({ error: "Unauthorized" }, 401);
+      query = query.eq("user_id", requestedUserId).limit(1);
+    }
+
+    const { data: connections, error } = await query;
 
     if (error) throw error;
 
