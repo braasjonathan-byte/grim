@@ -2424,7 +2424,7 @@ const estimateCalories = (
     const planDate = getPlanDayDateValue(planStartDate, week, day);
     if (planDate) return planDate.getTime() + fallbackIndex;
 
-    const dayIndex = DAYS.indexOf(getBaseDay(day));
+    const dayIndex = getDayIndex(day);
     return week * 10 + (dayIndex >= 0 ? dayIndex : fallbackIndex / 1000);
   };
 
@@ -8677,8 +8677,8 @@ const estimateCalories = (
           </p>
           <div className="grid grid-cols-4 gap-2">
             {DAYS.map((d) => {
-              const isCurrentDay = d === getBaseDay(changeDayDialog.currentDay);
-              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d);
+              const isCurrentDay = sameWorkoutDay(d, changeDayDialog.currentDay);
+              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d));
               return (
                 <button
                   key={d}
@@ -8686,7 +8686,7 @@ const estimateCalories = (
                     if (!isCurrentDay) {
                       if (isOccupied) {
                         // Swap: move target to current day and current to target day
-                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d);
+                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d));
                         if (targetPlan) {
                           const week = changeDayDialog.week;
                           const oldDay = changeDayDialog.currentDay;
