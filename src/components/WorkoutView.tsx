@@ -1057,7 +1057,7 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
   }
   const targetDate = getPlanDayDateValue(planStart, week, dayAbbr);
   if (!targetDate) return null;
-  return format(targetDate, "d MMM yyyy", { locale: sv });
+  return formatUtcDate(targetDate);
 };
 
 // Estimate calories burned for a workout based on exercises, weight, gender, and pulse
@@ -2279,17 +2279,15 @@ const estimateCalories = (
   const setWorkoutAsCurrentDay = async () => {
     if (!renameDialog || renameDialog.week <= 0) return;
 
-    const targetDate = new Date();
-    targetDate.setHours(0, 0, 0, 0);
+    const targetDate = parseDateKey(toLocalDateKey(new Date()));
+    if (!targetDate) return;
     const targetMonday = getMonday(targetDate);
     const dayIndex = getDayIndex(renameDialog.day);
     if (dayIndex < 0) return;
 
-    const newPlanStartMonday = new Date(targetMonday);
-    newPlanStartMonday.setDate(targetMonday.getDate() - (renameDialog.week - 1) * 7);
-    const newPlanStartDate = new Date(newPlanStartMonday);
-    newPlanStartDate.setDate(newPlanStartMonday.getDate() + dayIndex);
-    const newDateStr = toLocalDateKey(newPlanStartDate);
+    const newPlanStartMonday = addUtcDays(targetMonday, -(renameDialog.week - 1) * 7);
+    const newPlanStartDate = addUtcDays(newPlanStartMonday, dayIndex);
+    const newDateStr = toUtcDateKey(newPlanStartDate);
 
     setSettingCurrentDay(true);
     const { error } = await supabase
@@ -5078,19 +5076,18 @@ const estimateCalories = (
             onClick={async () => {
               if (!planStartDate) return;
               // Recalculate plan_start_date so that currentWeek becomes the active week
-              const [y, m, d] = planStartDate.split("-").map(Number);
-              const oldStart = new Date(y, m - 1, d);
+              const oldStart = parseDateKey(planStartDate);
+              if (!oldStart) return;
               const oldMonday = getMonday(oldStart);
-              const now = new Date();
-              now.setHours(0, 0, 0, 0);
+              const now = parseDateKey(toLocalDateKey(new Date())) ?? new Date();
               const nowMonday = getMonday(now);
               // Current active week = floor((nowMonday - oldMonday) / 7) + 1
               // We want currentWeek to be active, so: newStart = nowMonday - (currentWeek - 1) * 7 days
-              const newStartMonday = new Date(nowMonday.getTime() - (currentWeek - 1) * 7 * 86400000);
+              const newStartMonday = addUtcDays(nowMonday, -(currentWeek - 1) * 7);
               // Preserve day-of-week offset from original start
-              const dayOffset = Math.floor((oldStart.getTime() - oldMonday.getTime()) / 86400000);
-              const newStart = new Date(newStartMonday.getTime() + dayOffset * 86400000);
-              const newDateStr = `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}-${String(newStart.getDate()).padStart(2, "0")}`;
+              const dayOffset = daysBetweenCalendarDates(oldMonday, oldStart);
+              const newStart = addUtcDays(newStartMonday, dayOffset);
+              const newDateStr = toUtcDateKey(newStart);
               await supabase.from("profiles").update({ plan_start_date: newDateStr } as any).eq("user_id", userId);
               setPlanStartDate(newDateStr);
               setActivePlanWeek(currentWeek);
