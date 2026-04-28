@@ -3765,6 +3765,8 @@ const estimateCalories = (
                             savedData={condSavedInline}
                             hasSavedData={hasSavedCondData}
                             exerciseLinesCount={exerciseLines.length}
+                            isCompleted={isConditioningDone(key, name)}
+                            onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, name)}
                             onMoveUp={() => moveExercise(plan.id, i, "up")}
                             onMoveDown={() => moveExercise(plan.id, i, "down")}
                             onShowInfo={() => setExerciseInfoState({ name })}
@@ -5631,6 +5633,8 @@ const estimateCalories = (
                                         savedData={cSaved}
                                         hasSavedData={cHasSaved}
                                         exerciseLinesCount={detailParts.length}
+                                        isCompleted={isConditioningDone(key, condLineName)}
+                                        onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, condLineName)}
                                         onMoveUp={() => moveExercise(plan.id, i, "up")}
                                         onMoveDown={() => moveExercise(plan.id, i, "down")}
                                         onShowInfo={() => setExerciseInfoState({ name: condLineName })}
