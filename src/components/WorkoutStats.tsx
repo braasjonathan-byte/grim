@@ -31,6 +31,7 @@ interface CompletionRecord {
   logged_tempo: string | null;
   logged_pulse: number | null;
   logged_weights: any;
+  archived_plan_start_date?: string | null;
 }
 
 type View = "week" | "month" | "year";
@@ -210,8 +211,13 @@ const getCompletionStatsDate = (
   }
 
   if (completion.done || completion.skipped) {
-    return getUpdatedAtDate(completion.updated_at)
-      ?? (planStartDate ? getWorkoutCalendarDate(completion.week, completion.day, planStartDate) : null);
+    const archivedStart = completion.archived_plan_start_date
+      ? getStandaloneDate(completion.archived_plan_start_date)
+      : null;
+    const resolvedPlanStart = archivedStart ?? planStartDate;
+    return resolvedPlanStart
+      ? getWorkoutCalendarDate(completion.week, completion.day, resolvedPlanStart)
+      : getUpdatedAtDate(completion.updated_at);
   }
 
   if (planStartDate) {
@@ -258,7 +264,10 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       supabase.from("daily_challenge_completions")
         .select("completed_at, challenge_text, challenge_date")
         .eq("user_id", userId).order("completed_at", { ascending: false }),
-    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }]) => {
+      supabase.from("archived_plans")
+        .select("plan_start_date, completion_data, plan_data")
+        .eq("user_id", userId),
+    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
@@ -269,7 +278,38 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       const activePlanKeys = new Set((planData || []).map((p) => `${p.week}-${p.day}`));
-      setCompletions(((compData || []) as any[]).filter((c) => activePlanKeys.has(`${c.week}-${c.day}`)) as CompletionRecord[]);
+      const activeCompletions = ((compData || []) as CompletionRecord[]).filter((c) => c.week === 0 || activePlanKeys.has(`${c.week}-${c.day}`));
+      const archivedCompletions: CompletionRecord[] = [];
+      const archivedDetailsMap = new Map<string, string>();
+
+      for (const archive of (archiveData || []) as any[]) {
+        const archiveStart = archive.plan_start_date || null;
+        const archiveKeyPrefix = `archive-${archiveStart || archive.archived_at || archivedCompletions.length}`;
+        const planRows = Array.isArray(archive.plan_data) ? archive.plan_data : [];
+        for (const p of planRows) {
+          if (!p || !p.details || String(p.details).trim() === "") continue;
+          const key = `${archiveKeyPrefix}-${p.week}-${p.day}`;
+          archivedDetailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
+        }
+
+        const rows = Array.isArray(archive.completion_data) ? archive.completion_data : [];
+        for (const c of rows) {
+          archivedCompletions.push({
+            week: Number(c.week) || 0,
+            day: String(c.day || ""),
+            done: Boolean(c.done),
+            skipped: Boolean(c.skipped),
+            updated_at: c.updated_at || archive.archived_at || new Date(0).toISOString(),
+            logged_distance_km: c.logged_distance_km ?? null,
+            logged_tempo: c.logged_tempo ?? null,
+            logged_pulse: c.logged_pulse ?? null,
+            logged_weights: c.logged_weights ?? null,
+            archived_plan_start_date: archiveStart,
+          });
+        }
+      }
+
+      setCompletions([...activeCompletions, ...archivedCompletions]);
 
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
