@@ -9,10 +9,21 @@ interface TrainingCalendarProps {
 const MONTH_NAMES = ["Januari", "Februari", "Mars", "April", "Maj", "Juni", "Juli", "Augusti", "September", "Oktober", "November", "December"];
 const DAY_HEADERS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const DAY_NAME_TO_OFFSET: Record<string, number> = {
-  "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3,
+  "Mån": 0, "Tis": 1, "Ons": 2, "Tor": 3, "Tors": 3,
   "Fre": 4, "Lör": 5, "Sön": 6,
   "Måndag": 0, "Tisdag": 1, "Onsdag": 2, "Torsdag": 3,
   "Fredag": 4, "Lördag": 5, "Söndag": 6,
+};
+
+const parseDateKey = (value: string | null | undefined): Date | null => {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  return date;
 };
 
 const getISOWeekStart = (d: Date): Date => {
@@ -43,7 +54,8 @@ const resolveCompletionDate = (
 
   // Plan-based: calculate from plan_start_date
   if (planStartDate && week > 0) {
-    const start = new Date(planStartDate + "T12:00:00Z");
+    const start = parseDateKey(planStartDate);
+    if (!start) return updatedAt ? updatedAt.substring(0, 10) : null;
     const startMonday = getISOWeekStart(start);
     const dayOffset = DAY_NAME_TO_OFFSET[day];
     if (dayOffset === undefined) return updatedAt ? updatedAt.substring(0, 10) : null;

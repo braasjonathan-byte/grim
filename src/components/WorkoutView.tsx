@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw } from "lucide-react";
-import { format, parseISO, getISOWeek, getDay } from "date-fns";
+import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
 import PlanCalibrationDialog from "@/components/PlanCalibrationDialog";
@@ -294,14 +294,36 @@ const ConditioningHMSInput = ({ initialH, initialM, initialS, onSave }: {
 };
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+const SWEDISH_MONTHS_SHORT = ["jan.", "feb.", "mars", "apr.", "maj", "juni", "juli", "aug.", "sep.", "okt.", "nov.", "dec."];
+const MS_PER_DAY = 86400000;
+
+const parseDateKey = (value: string | null | undefined): Date | null => {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  return date;
+};
+
+const toUtcDateKey = (date: Date) =>
+  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+
+const addUtcDays = (date: Date, days: number) => new Date(date.getTime() + days * MS_PER_DAY);
+
+const formatUtcDate = (date: Date) =>
+  `${date.getUTCDate()} ${SWEDISH_MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 
 const getTodayInfo = () => {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const dateKey = toLocalDateKey(now);
+  const date = parseDateKey(dateKey) ?? new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   return {
     date,
-    dateKey: format(date, "yyyy-MM-dd"),
-    dayName: DAYS[(date.getDay() + 6) % 7],
+    dateKey,
+    dayName: DAYS[(date.getUTCDay() + 6) % 7],
     isoWeek: getISOWeek(date),
   };
 };
@@ -325,15 +347,8 @@ const getSessionColor = (session: string) => {
 
 // Format a day key for display - if it looks like an ISO date, format it nicely
 const formatDayDisplay = (day: string) => {
-  try {
-    const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (dateMatch) {
-      const date = parseISO(dateMatch[1]);
-      return format(date, "d MMM yyyy", { locale: sv });
-    }
-  } catch {
-    // not a date
-  }
+  const date = parseDateKey(day);
+  if (date) return formatUtcDate(date);
   // Strip any suffix like _abc1 or _1771393847859
   return day.replace(/_[a-z0-9]+$/i, "");
 };
@@ -404,35 +419,30 @@ const WEEKDAY_NAMES_SV = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "
 
 // Extract date from a single workout day key and return weekday name
 const getWeekdayFromDayKey = (day: string): string | null => {
-  const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (!dateMatch) return null;
-  const date = parseISO(dateMatch[1]);
-  return WEEKDAY_NAMES_SV[date.getDay()];
+  const date = parseDateKey(day);
+  return date ? WEEKDAY_NAMES_SV[date.getUTCDay()] : null;
 };
 
 // Compute virtual week number for a single workout based on the earliest workout's Monday
 const computeSingleWeek = (dayKey: string, firstMonday: Date): number => {
-  const dateMatch = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (!dateMatch) return 1;
-  const date = parseISO(dateMatch[1]);
+  const date = parseDateKey(dayKey);
+  if (!date) return 1;
   const monday = getMonday(date);
-  const diffDays = Math.floor((monday.getTime() - firstMonday.getTime()) / 86400000);
+  const diffDays = Math.floor((monday.getTime() - firstMonday.getTime()) / MS_PER_DAY);
   return Math.floor(diffDays / 7) + 1;
 };
 
 const getMonday = (d: Date) => {
-  const date = new Date(d);
-  const day = date.getDay() || 7;
-  date.setDate(date.getDate() - day + 1);
-  date.setHours(0, 0, 0, 0);
-  return date;
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = date.getUTCDay() || 7;
+  return addUtcDays(date, -day + 1);
 };
 
 const toLocalDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 const calendarDayNumber = (date: Date) =>
-  Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+  Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / MS_PER_DAY;
 
 const daysBetweenCalendarDates = (from: Date, to: Date) =>
   calendarDayNumber(to) - calendarDayNumber(from);
@@ -440,18 +450,13 @@ const daysBetweenCalendarDates = (from: Date, to: Date) =>
 const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: string): Date | null => {
   if (!planStart || week <= 0) return null;
 
-  const [y, m, d] = planStart.split("-").map(Number);
-  if (!y || !m || !d) return null;
-
-  const startDate = new Date(y, m - 1, d);
+  const startDate = parseDateKey(planStart);
+  if (!startDate) return null;
   const startMonday = getMonday(startDate);
   const dayIndex = getDayIndex(dayAbbr);
   if (dayIndex < 0) return null;
 
-  const targetDate = new Date(startMonday);
-  targetDate.setDate(targetDate.getDate() + (week - 1) * 7 + dayIndex);
-  targetDate.setHours(0, 0, 0, 0);
-  return targetDate;
+  return addUtcDays(startMonday, (week - 1) * 7 + dayIndex);
 };
 
 const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planStart: string | null) => {
@@ -819,9 +824,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         // Prefer the explicit plan_start_date (timezone-safe, no UTC conversion issues)
         if (planStartDate) {
-          const [y, m, d] = planStartDate.split("-").map(Number);
-          const startLocal = new Date(y, m - 1, d);
-          planStartMonday = getMonday(startLocal);
+          const startDate = parseDateKey(planStartDate);
+          planStartMonday = startDate ? getMonday(startDate) : null;
         } else if (nonSinglePlans.length > 0) {
           // Fallback to created_at (may have timezone issues)
           const earliest = nonSinglePlans.reduce((min, p) =>
@@ -832,8 +836,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         if (!planStartMonday) return null;
 
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
+        const now = parseDateKey(toLocalDateKey(new Date())) ?? new Date();
         const daysSinceStart = daysBetweenCalendarDates(planStartMonday, now);
         const calcWeek = Math.floor(daysSinceStart / 7) + 1;
         const maxWeek = Math.max(...planWeeks);
@@ -1054,7 +1057,7 @@ const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string)
   }
   const targetDate = getPlanDayDateValue(planStart, week, dayAbbr);
   if (!targetDate) return null;
-  return format(targetDate, "d MMM yyyy", { locale: sv });
+  return formatUtcDate(targetDate);
 };
 
 // Estimate calories burned for a workout based on exercises, weight, gender, and pulse
@@ -1841,7 +1844,7 @@ const estimateCalories = (
     // Navigate to the week of the new workout
     const dateMatch = uniqueKey.match(/^(\d{4}-\d{2}-\d{2})/);
     if (dateMatch) {
-      const newWeek = getISOWeek(parseISO(dateMatch[1]));
+      const newWeek = getISOWeek(parseDateKey(dateMatch[1]) ?? new Date());
       setSingleCurrentWeek(newWeek);
     }
 
@@ -1899,17 +1902,17 @@ const estimateCalories = (
 
   const mapDateToPlanWeekDay = (date: Date): { week: number; day: string } | null => {
     if (mode !== "plan" || !planStartDate) return null;
-    const [y, m, d] = planStartDate.split("-").map(Number);
-    const startLocal = new Date(y, m - 1, d);
-    const planStartMonday = getMonday(startLocal);
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
+    const startDate = parseDateKey(planStartDate);
+    if (!startDate) return null;
+    const planStartMonday = getMonday(startDate);
+    const targetDate = parseDateKey(toLocalDateKey(date));
+    if (!targetDate) return null;
 
     const diffDays = daysBetweenCalendarDates(planStartMonday, targetDate);
     if (diffDays < 0) return null;
 
     const weekNum = Math.floor(diffDays / 7) + 1;
-    const dayIndex = ((targetDate.getDay() + 6) % 7); // 0=Mon, 6=Sun
+    const dayIndex = ((targetDate.getUTCDay() + 6) % 7); // 0=Mon, 6=Sun
     const dayName = DAYS[dayIndex];
     if (weekNum < 1) return null;
     return { week: weekNum, day: dayName };
@@ -2276,17 +2279,13 @@ const estimateCalories = (
   const setWorkoutAsCurrentDay = async () => {
     if (!renameDialog || renameDialog.week <= 0) return;
 
-    const targetDate = new Date();
-    targetDate.setHours(0, 0, 0, 0);
-    const targetMonday = getMonday(targetDate);
+    const targetDate = parseDateKey(toLocalDateKey(new Date()));
+    if (!targetDate) return;
     const dayIndex = getDayIndex(renameDialog.day);
     if (dayIndex < 0) return;
 
-    const newPlanStartMonday = new Date(targetMonday);
-    newPlanStartMonday.setDate(targetMonday.getDate() - (renameDialog.week - 1) * 7);
-    const newPlanStartDate = new Date(newPlanStartMonday);
-    newPlanStartDate.setDate(newPlanStartMonday.getDate() + dayIndex);
-    const newDateStr = toLocalDateKey(newPlanStartDate);
+    const newPlanStartDate = addUtcDays(targetDate, -((renameDialog.week - 1) * 7 + dayIndex));
+    const newDateStr = toUtcDateKey(newPlanStartDate);
 
     setSettingCurrentDay(true);
     const { error } = await supabase
@@ -3329,15 +3328,15 @@ const estimateCalories = (
     // Helper: get ISO week number from day key
     const getIsoWeekFromKey = (dayKey: string): number => {
       const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
-      return m ? getISOWeek(parseISO(m[1])) : getISOWeek(new Date());
+      return m ? getISOWeek(parseDateKey(m[1]) ?? new Date()) : getISOWeek(new Date());
     };
 
     // Helper: get day-of-week name from day key (Mån, Tis, ...)
     const getDayNameFromKey = (dayKey: string): string => {
       const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
       if (!m) return "Mån";
-      const d = parseISO(m[1]);
-      const jsDay = getDay(d); // 0=Sun, 1=Mon...
+      const d = parseDateKey(m[1]);
+      const jsDay = d?.getUTCDay() ?? 1; // 0=Sun, 1=Mon...
       return DAYS[jsDay === 0 ? 6 : jsDay - 1];
     };
 
@@ -5075,19 +5074,18 @@ const estimateCalories = (
             onClick={async () => {
               if (!planStartDate) return;
               // Recalculate plan_start_date so that currentWeek becomes the active week
-              const [y, m, d] = planStartDate.split("-").map(Number);
-              const oldStart = new Date(y, m - 1, d);
+              const oldStart = parseDateKey(planStartDate);
+              if (!oldStart) return;
               const oldMonday = getMonday(oldStart);
-              const now = new Date();
-              now.setHours(0, 0, 0, 0);
+              const now = parseDateKey(toLocalDateKey(new Date())) ?? new Date();
               const nowMonday = getMonday(now);
               // Current active week = floor((nowMonday - oldMonday) / 7) + 1
               // We want currentWeek to be active, so: newStart = nowMonday - (currentWeek - 1) * 7 days
-              const newStartMonday = new Date(nowMonday.getTime() - (currentWeek - 1) * 7 * 86400000);
+              const newStartMonday = addUtcDays(nowMonday, -(currentWeek - 1) * 7);
               // Preserve day-of-week offset from original start
-              const dayOffset = Math.floor((oldStart.getTime() - oldMonday.getTime()) / 86400000);
-              const newStart = new Date(newStartMonday.getTime() + dayOffset * 86400000);
-              const newDateStr = `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}-${String(newStart.getDate()).padStart(2, "0")}`;
+              const dayOffset = daysBetweenCalendarDates(oldMonday, oldStart);
+              const newStart = addUtcDays(newStartMonday, dayOffset);
+              const newDateStr = toUtcDateKey(newStart);
               await supabase.from("profiles").update({ plan_start_date: newDateStr } as any).eq("user_id", userId);
               setPlanStartDate(newDateStr);
               setActivePlanWeek(currentWeek);
