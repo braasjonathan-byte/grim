@@ -220,7 +220,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
               {computedStartDate && (
                 <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
                   <p className="text-sm font-medium">
-                    Beräknat startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                    Beräknat startdatum: <span className="text-primary">{formatUtcDate(computedStartDate)}</span>
                   </p>
                 </div>
               )}
@@ -254,7 +254,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
           {computedStartDate && (
             <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
               <p className="text-sm font-medium">
-                Startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                Startdatum: <span className="text-primary">{formatUtcDate(computedStartDate)}</span>
               </p>
             </div>
           )}
