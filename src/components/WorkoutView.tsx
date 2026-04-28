@@ -89,11 +89,12 @@ interface CustomExercise {
 }
 
 // Inline conditioning editing card (green, open by default)
-const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, savedData, hasSavedData, exerciseLinesCount, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
+const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
   savedData: Record<string, any> | null; hasSavedData: boolean;
   exerciseLinesCount: number;
+  isCompleted?: boolean; onToggleCompleted?: () => void;
   onMoveUp: () => void; onMoveDown: () => void; onShowInfo: () => void; onDelete: () => void;
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
@@ -199,12 +200,17 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const displayPulse = savedData?.pulse || initPulse;
     return (
       <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 space-y-1">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
             <Footprints className="w-3.5 h-3.5 text-primary" />
             {toTitleCase(name)}
           </span>
           <div className="flex items-center gap-1">
+            {onToggleCompleted && (
+              <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-8 h-8 border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
+                {isCompleted ? <Check className="w-4 h-4" /> : null}
+              </button>
+            )}
             <button onClick={() => setIsEditing(true)} className="p-1 text-primary hover:text-primary/80"><Pencil className="w-3.5 h-3.5" /></button>
             <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
           </div>
@@ -224,6 +230,11 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-primary flex items-center gap-1">✏️ {toTitleCase(name)}</span>
         <div className="flex items-center gap-0.5">
+          {onToggleCompleted && (
+            <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-8 h-8 border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
+              {isCompleted ? <Check className="w-4 h-4" /> : null}
+            </button>
+          )}
           <div className="flex flex-col">
             <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={lineIndex === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3.5 h-3.5" /></button>
             <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={lineIndex === exerciseLinesCount - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3.5 h-3.5" /></button>
@@ -388,6 +399,7 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
   for (const [key, value] of Object.entries(loggedWeights)) {
     if (
       key.startsWith("__sets__") ||
+        key.startsWith("__cond_done__") ||
       key.startsWith("__wod_rounds_done_") ||
       key.startsWith("__timer_started_") ||
       key.startsWith("__timer_elapsed_") ||
@@ -1388,6 +1400,21 @@ const estimateCalories = (
     const comp = completions[weekDayKey];
     const weights = comp?.logged_weights as Record<string, any> | null;
     return (weights?.[`__sets__${exerciseName}`] as string) || "";
+  };
+
+  const isConditioningDone = (weekDayKey: string, condName: string): boolean => {
+    const weights = completions[weekDayKey]?.logged_weights as Record<string, any> | null;
+    return weights?.[`__cond_done__${condName}`] === "1";
+  };
+
+  const toggleConditioningDone = async (week: number, day: string, condName: string) => {
+    const key = `${week}-${day}`;
+    const currentlyDone = isConditioningDone(key, condName);
+    if (!currentlyDone) playSetDone();
+    await updateCompletionWeights(week, day, (existing) => ({
+      ...existing,
+      [`__cond_done__${condName}`]: currentlyDone ? "0" : "1",
+    }));
   };
 
   // Safe upsert that always preserves ALL existing fields to prevent data loss
@@ -3707,7 +3734,7 @@ const estimateCalories = (
                               } catch {}
                             }
                             const updated = { ...currentData, [field]: value };
-                            if ((field === "time" || field === "dist") && !updated.tempo) {
+                            if (field === "time" || field === "dist") {
                               const t2 = parseFloat(field === "time" ? value : updated.time || "0");
                               const d2 = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
                               if (t2 > 0 && d2 > 0) {
@@ -3739,6 +3766,8 @@ const estimateCalories = (
                             savedData={condSavedInline}
                             hasSavedData={hasSavedCondData}
                             exerciseLinesCount={exerciseLines.length}
+                            isCompleted={isConditioningDone(key, name)}
+                            onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, name)}
                             onMoveUp={() => moveExercise(plan.id, i, "up")}
                             onMoveDown={() => moveExercise(plan.id, i, "down")}
                             onShowInfo={() => setExerciseInfoState({ name })}
@@ -5356,7 +5385,7 @@ const estimateCalories = (
                           {/* Hint: copied weights from previous session */}
                           {!isDone && completion?.logged_weights && Object.entries(completion.logged_weights).some(([k, v]) => {
                             // Ignore internal metadata keys — only count real previous-pass values
-                            if (k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__")) return false;
+                            if (k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__") || k.startsWith("__cond_done__")) return false;
                             if (v === null || v === undefined || (v as any) === "") return false;
                             return true;
                           }) && (
@@ -5605,6 +5634,8 @@ const estimateCalories = (
                                         savedData={cSaved}
                                         hasSavedData={cHasSaved}
                                         exerciseLinesCount={detailParts.length}
+                                        isCompleted={isConditioningDone(key, condLineName)}
+                                        onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, condLineName)}
                                         onMoveUp={() => moveExercise(plan.id, i, "up")}
                                         onMoveDown={() => moveExercise(plan.id, i, "down")}
                                         onShowInfo={() => setExerciseInfoState({ name: condLineName })}
@@ -5706,6 +5737,8 @@ const estimateCalories = (
                                   savedData={scSaved}
                                   hasSavedData={scHasSaved}
                                   exerciseLinesCount={1}
+                                  isCompleted={isConditioningDone(key, sCondName)}
+                                  onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, sCondName)}
                                   onMoveUp={() => {}}
                                   onMoveDown={() => {}}
                                   onShowInfo={() => setExerciseInfoState({ name: sCondName })}
@@ -6272,7 +6305,7 @@ const estimateCalories = (
                               const updated = { ...currentData, [field]: value };
 
                               // Auto-calculate tempo (only for non-interval fields)
-                              if (field !== "intervals" && (field === "time" || field === "dist") && !updated.tempo) {
+                              if (field !== "intervals" && (field === "time" || field === "dist")) {
                                 const t = parseFloat(field === "time" ? value : updated.time || "0");
                                 const d = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
                                 if (t > 0 && d > 0) {
@@ -6295,6 +6328,13 @@ const estimateCalories = (
                                   {toTitleCase(condName || part)}
                                 </span>
                                 <div className="flex items-center gap-0.5">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); toggleConditioningDone(plan.week, plan.day, condName || part); }}
+                                    className={`w-8 h-8 border-2 flex items-center justify-center transition-all ${isConditioningDone(key, condName || part) ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`}
+                                    title="Klarmarkera"
+                                  >
+                                    {isConditioningDone(key, condName || part) ? <Check className="w-4 h-4" /> : null}
+                                  </button>
                                   <div className="flex flex-col">
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, RotateCcw, ChevronUp, ChevronDown } from "lucide-react";
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2 } from "lucide-react";
 
 const MiniTimer = () => {
   const [seconds, setSeconds] = useState(0);
@@ -7,6 +7,7 @@ const MiniTimer = () => {
   const [mode, setMode] = useState<"stopwatch" | "countdown">("stopwatch");
   const [label, setLabel] = useState("Timer");
   const [expanded, setExpanded] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -53,6 +54,49 @@ const MiniTimer = () => {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-[100] flex flex-col bg-background text-foreground">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div>
+            <p className="text-xs font-bold uppercase text-muted-foreground">{mode === "countdown" ? label : "Timer"}</p>
+            <p className="text-sm font-semibold text-primary">{running ? "Aktiv" : "Pausad"}</p>
+          </div>
+          <button
+            onClick={() => setFullscreen(false)}
+            className="flex h-12 w-12 items-center justify-center border border-border bg-secondary text-foreground"
+            aria-label="Minimera timer"
+          >
+            <Minimize2 className="h-6 w-6" />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-10 px-5 pb-[calc(24px+env(safe-area-inset-bottom,0px))]">
+          <span className={`font-mono text-7xl font-black tracking-wider sm:text-8xl ${running ? "text-primary" : "text-foreground"}`}>
+            {fmt(seconds)}
+          </span>
+          <div className="grid w-full max-w-sm grid-cols-2 gap-3">
+            <button
+              onClick={() => setRunning(!running)}
+              className={`flex h-24 flex-col items-center justify-center gap-2 border text-lg font-black ${
+                running ? "border-primary bg-primary/20 text-primary" : "border-primary bg-primary text-primary-foreground"
+              }`}
+            >
+              {running ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
+              {running ? "Pausa" : "Starta"}
+            </button>
+            <button
+              onClick={() => { setRunning(false); setSeconds(0); setMode("stopwatch"); setLabel("Timer"); }}
+              className="flex h-24 flex-col items-center justify-center gap-2 border border-border bg-secondary text-lg font-black text-foreground"
+            >
+              <RotateCcw className="h-8 w-8" />
+              Nollställ
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Collapsed: single thin bar
   if (!expanded) {
     return (
@@ -68,7 +112,7 @@ const MiniTimer = () => {
       >
         <button
           onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-          className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center"
+          className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center"
         >
           {running ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-px" />}
         </button>
@@ -101,7 +145,7 @@ const MiniTimer = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+            className={`w-12 h-12 flex items-center justify-center transition-colors ${
               running ? "bg-primary/20 text-primary" : "bg-primary text-primary-foreground"
             }`}
           >
@@ -117,13 +161,19 @@ const MiniTimer = () => {
 
           <button
             onClick={(e) => { e.stopPropagation(); setRunning(false); setSeconds(0); setMode("stopwatch"); setLabel("Timer"); }}
-            className="w-8 h-8 rounded-full bg-secondary text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
+            className="w-10 h-10 bg-secondary text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="w-6" />
+        <button
+          onClick={(e) => { e.stopPropagation(); setFullscreen(true); }}
+          className="flex h-10 w-10 items-center justify-center bg-secondary text-muted-foreground hover:text-foreground"
+          aria-label="Maximera timer"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
