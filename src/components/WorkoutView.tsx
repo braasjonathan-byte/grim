@@ -294,14 +294,36 @@ const ConditioningHMSInput = ({ initialH, initialM, initialS, onSave }: {
 };
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+const SWEDISH_MONTHS_SHORT = ["jan.", "feb.", "mars", "apr.", "maj", "juni", "juli", "aug.", "sep.", "okt.", "nov.", "dec."];
+const MS_PER_DAY = 86400000;
+
+const parseDateKey = (value: string | null | undefined): Date | null => {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  return date;
+};
+
+const toUtcDateKey = (date: Date) =>
+  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+
+const addUtcDays = (date: Date, days: number) => new Date(date.getTime() + days * MS_PER_DAY);
+
+const formatUtcDate = (date: Date) =>
+  `${date.getUTCDate()} ${SWEDISH_MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 
 const getTodayInfo = () => {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const dateKey = toLocalDateKey(now);
+  const date = parseDateKey(dateKey) ?? new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   return {
     date,
-    dateKey: format(date, "yyyy-MM-dd"),
-    dayName: DAYS[(date.getDay() + 6) % 7],
+    dateKey,
+    dayName: DAYS[(date.getUTCDay() + 6) % 7],
     isoWeek: getISOWeek(date),
   };
 };
@@ -325,15 +347,8 @@ const getSessionColor = (session: string) => {
 
 // Format a day key for display - if it looks like an ISO date, format it nicely
 const formatDayDisplay = (day: string) => {
-  try {
-    const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (dateMatch) {
-      const date = parseISO(dateMatch[1]);
-      return format(date, "d MMM yyyy", { locale: sv });
-    }
-  } catch {
-    // not a date
-  }
+  const date = parseDateKey(day);
+  if (date) return formatUtcDate(date);
   // Strip any suffix like _abc1 or _1771393847859
   return day.replace(/_[a-z0-9]+$/i, "");
 };
@@ -404,35 +419,30 @@ const WEEKDAY_NAMES_SV = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "
 
 // Extract date from a single workout day key and return weekday name
 const getWeekdayFromDayKey = (day: string): string | null => {
-  const dateMatch = day.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (!dateMatch) return null;
-  const date = parseISO(dateMatch[1]);
-  return WEEKDAY_NAMES_SV[date.getDay()];
+  const date = parseDateKey(day);
+  return date ? WEEKDAY_NAMES_SV[date.getUTCDay()] : null;
 };
 
 // Compute virtual week number for a single workout based on the earliest workout's Monday
 const computeSingleWeek = (dayKey: string, firstMonday: Date): number => {
-  const dateMatch = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (!dateMatch) return 1;
-  const date = parseISO(dateMatch[1]);
+  const date = parseDateKey(dayKey);
+  if (!date) return 1;
   const monday = getMonday(date);
-  const diffDays = Math.floor((monday.getTime() - firstMonday.getTime()) / 86400000);
+  const diffDays = Math.floor((monday.getTime() - firstMonday.getTime()) / MS_PER_DAY);
   return Math.floor(diffDays / 7) + 1;
 };
 
 const getMonday = (d: Date) => {
-  const date = new Date(d);
-  const day = date.getDay() || 7;
-  date.setDate(date.getDate() - day + 1);
-  date.setHours(0, 0, 0, 0);
-  return date;
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = date.getUTCDay() || 7;
+  return addUtcDays(date, -day + 1);
 };
 
 const toLocalDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 const calendarDayNumber = (date: Date) =>
-  Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+  Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / MS_PER_DAY;
 
 const daysBetweenCalendarDates = (from: Date, to: Date) =>
   calendarDayNumber(to) - calendarDayNumber(from);
@@ -440,18 +450,13 @@ const daysBetweenCalendarDates = (from: Date, to: Date) =>
 const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: string): Date | null => {
   if (!planStart || week <= 0) return null;
 
-  const [y, m, d] = planStart.split("-").map(Number);
-  if (!y || !m || !d) return null;
-
-  const startDate = new Date(y, m - 1, d);
+  const startDate = parseDateKey(planStart);
+  if (!startDate) return null;
   const startMonday = getMonday(startDate);
   const dayIndex = getDayIndex(dayAbbr);
   if (dayIndex < 0) return null;
 
-  const targetDate = new Date(startMonday);
-  targetDate.setDate(targetDate.getDate() + (week - 1) * 7 + dayIndex);
-  targetDate.setHours(0, 0, 0, 0);
-  return targetDate;
+  return addUtcDays(startMonday, (week - 1) * 7 + dayIndex);
 };
 
 const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planStart: string | null) => {
