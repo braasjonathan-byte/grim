@@ -8749,7 +8749,7 @@ const estimateCalories = (
                         ? "bg-secondary text-muted-foreground cursor-pointer border border-border hover:border-primary"
                         : "bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground"
                   }`}
-                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d)?.session_name}` : undefined}
+                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d))?.session_name}` : undefined}
                 >
                   {d}
                   {isOccupied && <span className="block text-[8px] text-muted-foreground/70 mt-0.5">upptagen</span>}
