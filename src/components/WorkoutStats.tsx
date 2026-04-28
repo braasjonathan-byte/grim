@@ -32,6 +32,7 @@ interface CompletionRecord {
   logged_pulse: number | null;
   logged_weights: any;
   archived_plan_start_date?: string | null;
+  plan_details?: string | null;
 }
 
 type View = "week" | "month" | "year";
@@ -203,7 +204,7 @@ const getUpdatedAtDate = (updatedAt: string | null | undefined): Date | null => 
 };
 
 const getCompletionStatsDate = (
-  completion: Pick<CompletionRecord, "week" | "day" | "done" | "skipped" | "updated_at">,
+  completion: Pick<CompletionRecord, "week" | "day" | "done" | "skipped" | "updated_at" | "archived_plan_start_date">,
   planStartDate: Date | null
 ): Date | null => {
   if (isStandaloneSession(completion)) {
@@ -280,20 +281,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const activePlanKeys = new Set((planData || []).map((p) => `${p.week}-${p.day}`));
       const activeCompletions = ((compData || []) as CompletionRecord[]).filter((c) => c.week === 0 || activePlanKeys.has(`${c.week}-${c.day}`));
       const archivedCompletions: CompletionRecord[] = [];
-      const archivedDetailsMap = new Map<string, string>();
-
       for (const archive of (archiveData || []) as any[]) {
         const archiveStart = archive.plan_start_date || null;
-        const archiveKeyPrefix = `archive-${archiveStart || archive.archived_at || archivedCompletions.length}`;
         const planRows = Array.isArray(archive.plan_data) ? archive.plan_data : [];
-        for (const p of planRows) {
-          if (!p || !p.details || String(p.details).trim() === "") continue;
-          const key = `${archiveKeyPrefix}-${p.week}-${p.day}`;
-          archivedDetailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
-        }
-
         const rows = Array.isArray(archive.completion_data) ? archive.completion_data : [];
         for (const c of rows) {
+          const archivedPlanRow = planRows.find((p: any) => Number(p?.week) === Number(c.week) && String(p?.day) === String(c.day));
           archivedCompletions.push({
             week: Number(c.week) || 0,
             day: String(c.day || ""),
@@ -305,6 +298,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
             logged_pulse: c.logged_pulse ?? null,
             logged_weights: c.logged_weights ?? null,
             archived_plan_start_date: archiveStart,
+            plan_details: archivedPlanRow?.details ? JSON.stringify({ details: archivedPlanRow.details, tempo: archivedPlanRow.tempo ?? "" }) : null,
           });
         }
       }
