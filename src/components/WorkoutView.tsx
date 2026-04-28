@@ -394,6 +394,8 @@ const normalizeExerciseKey = (name: string) =>
 
 const isAssistedBodyweightExercise = (name: string) => /assisterad|assisted/i.test(name) && /pull\s*-?\s*ups?|pullups?|chins?|dips/i.test(name);
 
+const isDailyChallengeLabel = (label: string) => label.trim().startsWith("⚔️") || /utmaning:/i.test(label);
+
 const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null | undefined) => {
   if (!loggedWeights) return null;
 
@@ -414,8 +416,11 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
 
     if (key.startsWith("__setdata__")) {
       const exName = key.substring("__setdata__".length);
+      if (isDailyChallengeLabel(exName)) continue;
       if (exName) copiedExerciseNames.push(exName);
     }
+
+    if (isDailyChallengeLabel(key)) continue;
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const { checked, done, completed, ...rest } = value as Record<string, any>;
@@ -1773,7 +1778,7 @@ const estimateCalories = (
         week: newWeekNum,
         day: p.day,
         session_name: p.session_name,
-        details: p.details,
+        details: stripChallengeLines(p.details || ""),
         tempo: p.tempo || "",
         is_circuit: p.is_circuit || false,
       } as any));
@@ -1836,10 +1841,10 @@ const estimateCalories = (
     const dateStr = format(singleDate, "yyyy-MM-dd");
     const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
 
-    // Copy details as-is (no progression for single sessions)
+    // Copy details without daily challenges (no progression for single sessions)
     let details = "";
     if (copyFrom && copyFrom.details) {
-      details = copyFrom.details;
+      details = stripChallengeLines(copyFrom.details);
     }
 
     await supabase.from("workout_plans").insert({
@@ -1901,7 +1906,7 @@ const estimateCalories = (
 
     let details = "";
     if (copyFrom && copyFrom.details) {
-      details = copyFrom.details;
+      details = stripChallengeLines(copyFrom.details);
     }
 
     await supabase.from("workout_plans").insert({
@@ -2276,7 +2281,7 @@ const estimateCalories = (
 
   // Strip daily challenge lines from workout details
   const stripChallengeLines = (details: string): string => {
-    return details.split("\n").filter(line => !line.trim().startsWith("⚔️ Utmaning:")).join("\n");
+    return details.split("\n").filter(line => !isDailyChallengeLabel(line)).join("\n");
   };
 
   // Change weekday for a workout in a plan week
