@@ -2281,7 +2281,7 @@ const estimateCalories = (
 
   // Strip daily challenge lines from workout details
   const stripChallengeLines = (details: string): string => {
-    return details.split("\n").filter(line => !line.trim().startsWith("⚔️ Utmaning:")).join("\n");
+    return details.split("\n").filter(line => !isDailyChallengeLabel(line)).join("\n");
   };
 
   // Change weekday for a workout in a plan week
