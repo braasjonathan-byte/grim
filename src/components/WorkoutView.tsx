@@ -2276,6 +2276,47 @@ const estimateCalories = (
     fetchData();
   };
 
+  const setWorkoutAsCurrentDay = async () => {
+    if (!renameDialog || renameDialog.week <= 0) return;
+
+    const targetDate = new Date();
+    targetDate.setHours(0, 0, 0, 0);
+    const targetMonday = getMonday(targetDate);
+    const dayIndex = getDayIndex(renameDialog.day);
+    if (dayIndex < 0) return;
+
+    const newPlanStartMonday = new Date(targetMonday);
+    newPlanStartMonday.setDate(targetMonday.getDate() - (renameDialog.week - 1) * 7);
+    const newPlanStartDate = new Date(newPlanStartMonday);
+    newPlanStartDate.setDate(newPlanStartMonday.getDate() + dayIndex);
+    const newDateStr = toLocalDateKey(newPlanStartDate);
+
+    setSettingCurrentDay(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ plan_start_date: newDateStr, plan_start_calibrated: true } as any)
+      .eq("user_id", userId);
+    setSettingCurrentDay(false);
+
+    if (error) {
+      toast.error("Kunde inte uppdatera aktuell träningsdag");
+      return;
+    }
+
+    setPlanStartDate(newDateStr);
+    setActivePlanWeek(renameDialog.week);
+    setCurrentWeek(renameDialog.week);
+    const updatedWeekDays = plans
+      .filter((p) => p.week === renameDialog.week)
+      .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
+    const updatedDayIndex = updatedWeekDays.findIndex((p) => sameWorkoutDay(p.day, renameDialog.day));
+    if (updatedDayIndex >= 0) setActiveDayIndex(updatedDayIndex);
+    setExpandedDay(null);
+    setRenameDialog(null);
+    triggerSave();
+    toast.success("Aktuell träningsdag uppdaterad");
+  };
+
   // Rename a session
   const renameSession = async (planId: string, newName: string) => {
     if (!newName.trim()) return;
