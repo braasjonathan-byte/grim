@@ -394,6 +394,8 @@ const normalizeExerciseKey = (name: string) =>
 
 const isAssistedBodyweightExercise = (name: string) => /assisterad|assisted/i.test(name) && /pull\s*-?\s*ups?|pullups?|chins?|dips/i.test(name);
 
+const isDailyChallengeLabel = (label: string) => label.trim().startsWith("⚔️") || /utmaning:/i.test(label);
+
 const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null | undefined) => {
   if (!loggedWeights) return null;
 
@@ -414,8 +416,11 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
 
     if (key.startsWith("__setdata__")) {
       const exName = key.substring("__setdata__".length);
+      if (isDailyChallengeLabel(exName)) continue;
       if (exName) copiedExerciseNames.push(exName);
     }
+
+    if (isDailyChallengeLabel(key)) continue;
 
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const { checked, done, completed, ...rest } = value as Record<string, any>;
