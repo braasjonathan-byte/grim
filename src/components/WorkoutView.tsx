@@ -311,6 +311,9 @@ const parseDateKey = (value: string | null | undefined): Date | null => {
 const toUtcDateKey = (date: Date) =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 
+const toSafeLocalDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
 const addUtcDays = (date: Date, days: number) => new Date(date.getTime() + days * MS_PER_DAY);
 
 const formatUtcDate = (date: Date) =>
@@ -318,7 +321,7 @@ const formatUtcDate = (date: Date) =>
 
 const getTodayInfo = () => {
   const now = new Date();
-  const dateKey = toLocalDateKey(now);
+  const dateKey = toSafeLocalDateKey(now);
   const date = parseDateKey(dateKey) ?? new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   return {
     date,
@@ -438,8 +441,7 @@ const getMonday = (d: Date) => {
   return addUtcDays(date, -day + 1);
 };
 
-const toLocalDateKey = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const toLocalDateKey = toSafeLocalDateKey;
 
 const calendarDayNumber = (date: Date) =>
   Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / MS_PER_DAY;

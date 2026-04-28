@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, Check } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, subDays } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -12,6 +11,22 @@ interface PlanCalibrationDialogProps {
 }
 
 const DAY_ORDER = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
+const MS_PER_DAY = 86400000;
+const MONTH_NAMES = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+const WEEKDAY_NAMES = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"];
+
+const toDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const parseDateKey = (value: string): Date => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const addUtcDays = (date: Date, days: number) => new Date(date.getTime() + days * MS_PER_DAY);
+
+const formatUtcDate = (date: Date) =>
+  `${WEEKDAY_NAMES[date.getUTCDay()]} ${date.getUTCDate()} ${MONTH_NAMES[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 
 const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) => {
   const [sessions, setSessions] = useState<{ week: number; day: string; session_name: string }[]>([]);
@@ -60,7 +75,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
     // Calculate how many days from plan start this session is
     const dayIndex = DAY_ORDER.indexOf(selectedDay);
     const daysFromStart = (selectedWeek - 1) * 7 + (dayIndex >= 0 ? dayIndex : 0);
-    return subDays(date, daysFromStart);
+    return addUtcDays(parseDateKey(toDateKey(date)), -daysFromStart);
   };
 
   const handleConfirm = async () => {
@@ -74,7 +89,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
         startDate = calculateStartDate(selectedSession.week, selectedSession.day, sessionDate);
       }
 
-      const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+      const startDateStr = toDateKey(startDate);
 
       const { error } = await supabase
         .from("workout_plans")
@@ -133,7 +148,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
             setSaving(true);
             try {
               const today = new Date();
-              const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+              const startDateStr = toDateKey(today);
               await supabase
                 .from("profiles")
                 .update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any)
@@ -205,7 +220,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
               {computedStartDate && (
                 <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
                   <p className="text-sm font-medium">
-                    Beräknat startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                    Beräknat startdatum: <span className="text-primary">{formatUtcDate(computedStartDate)}</span>
                   </p>
                 </div>
               )}
@@ -239,7 +254,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
           {computedStartDate && (
             <div className="bg-secondary/50 border border-border rounded-lg p-3 text-center">
               <p className="text-sm font-medium">
-                Startdatum: <span className="text-primary">{format(computedStartDate, "EEEE d MMMM yyyy", { locale: sv })}</span>
+                Startdatum: <span className="text-primary">{formatUtcDate(computedStartDate)}</span>
               </p>
             </div>
           )}
