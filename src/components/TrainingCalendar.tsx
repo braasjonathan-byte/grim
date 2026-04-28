@@ -129,7 +129,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       // Then: overlay completions
       if (completions) {
         for (const c of completions) {
-          const dateStr = timestampToDateKey(c.updated_at) ?? resolveCompletionDate(c.week, c.day, c.updated_at, planStartDate);
+          const dateStr = resolveCompletionDate(c.week, c.day, c.updated_at, planStartDate) ?? timestampToDateKey(c.updated_at);
           if (!dateStr) continue;
           const hasExercise = planHasExercises.has(`${c.week}-${c.day}`);
 
@@ -152,12 +152,12 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
 
           for (const c of compData) {
             if (!c.done) continue;
-            const dateStr = timestampToDateKey(c.updated_at || null) ?? resolveCompletionDate(
+            const dateStr = resolveCompletionDate(
               c.week || 0,
               c.day || "",
               c.updated_at || null,
               archiveStart,
-            );
+            ) ?? timestampToDateKey(c.updated_at || null);
             if (dateStr) done.add(dateStr);
           }
         }
