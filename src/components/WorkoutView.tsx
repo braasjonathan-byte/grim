@@ -8801,6 +8801,25 @@ const estimateCalories = (
           {/* Divider */}
           <div className="border-t border-border" />
 
+          {renameDialog.week > 0 && (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">Aktuell träningsdag</label>
+              <button
+                onClick={setWorkoutAsCurrentDay}
+                disabled={settingCurrentDay}
+                className="w-full py-2.5 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                {settingCurrentDay ? "Uppdaterar..." : "Gör detta pass till dagens pass"}
+              </button>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Justerar schemats startdatum så att vecka {renameDialog.week}, {getBaseDay(renameDialog.day)} matchar idag.
+              </p>
+            </div>
+          )}
+
+          <div className="border-t border-border" />
+
           {/* Skip/miss section */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-muted-foreground">Markera pass</label>
