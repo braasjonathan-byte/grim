@@ -5736,6 +5736,8 @@ const estimateCalories = (
                                   savedData={scSaved}
                                   hasSavedData={scHasSaved}
                                   exerciseLinesCount={1}
+                                  isCompleted={isConditioningDone(key, sCondName)}
+                                  onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, sCondName)}
                                   onMoveUp={() => {}}
                                   onMoveDown={() => {}}
                                   onShowInfo={() => setExerciseInfoState({ name: sCondName })}
