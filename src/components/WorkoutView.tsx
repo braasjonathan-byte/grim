@@ -1844,7 +1844,7 @@ const estimateCalories = (
     // Navigate to the week of the new workout
     const dateMatch = uniqueKey.match(/^(\d{4}-\d{2}-\d{2})/);
     if (dateMatch) {
-      const newWeek = getISOWeek(parseISO(dateMatch[1]));
+      const newWeek = getISOWeek(parseDateKey(dateMatch[1]) ?? new Date());
       setSingleCurrentWeek(newWeek);
     }
 
@@ -3330,15 +3330,15 @@ const estimateCalories = (
     // Helper: get ISO week number from day key
     const getIsoWeekFromKey = (dayKey: string): number => {
       const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
-      return m ? getISOWeek(parseISO(m[1])) : getISOWeek(new Date());
+      return m ? getISOWeek(parseDateKey(m[1]) ?? new Date()) : getISOWeek(new Date());
     };
 
     // Helper: get day-of-week name from day key (Mån, Tis, ...)
     const getDayNameFromKey = (dayKey: string): string => {
       const m = dayKey.match(/^(\d{4}-\d{2}-\d{2})/);
       if (!m) return "Mån";
-      const d = parseISO(m[1]);
-      const jsDay = getDay(d); // 0=Sun, 1=Mon...
+      const d = parseDateKey(m[1]);
+      const jsDay = d?.getUTCDay() ?? 1; // 0=Sun, 1=Mon...
       return DAYS[jsDay === 0 ? 6 : jsDay - 1];
     };
 
