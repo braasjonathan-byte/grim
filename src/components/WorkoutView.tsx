@@ -2281,12 +2281,10 @@ const estimateCalories = (
 
     const targetDate = parseDateKey(toLocalDateKey(new Date()));
     if (!targetDate) return;
-    const targetMonday = getMonday(targetDate);
     const dayIndex = getDayIndex(renameDialog.day);
     if (dayIndex < 0) return;
 
-    const newPlanStartMonday = addUtcDays(targetMonday, -(renameDialog.week - 1) * 7);
-    const newPlanStartDate = addUtcDays(newPlanStartMonday, dayIndex);
+    const newPlanStartDate = addUtcDays(targetDate, -((renameDialog.week - 1) * 7 + dayIndex));
     const newDateStr = toUtcDateKey(newPlanStartDate);
 
     setSettingCurrentDay(true);
