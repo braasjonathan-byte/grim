@@ -824,9 +824,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         // Prefer the explicit plan_start_date (timezone-safe, no UTC conversion issues)
         if (planStartDate) {
-          const [y, m, d] = planStartDate.split("-").map(Number);
-          const startLocal = new Date(y, m - 1, d);
-          planStartMonday = getMonday(startLocal);
+          const startDate = parseDateKey(planStartDate);
+          planStartMonday = startDate ? getMonday(startDate) : null;
         } else if (nonSinglePlans.length > 0) {
           // Fallback to created_at (may have timezone issues)
           const earliest = nonSinglePlans.reduce((min, p) =>
@@ -837,8 +836,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         if (!planStartMonday) return null;
 
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
+        const now = parseDateKey(toLocalDateKey(new Date())) ?? new Date();
         const daysSinceStart = daysBetweenCalendarDates(planStartMonday, now);
         const calcWeek = Math.floor(daysSinceStart / 7) + 1;
         const maxWeek = Math.max(...planWeeks);
@@ -1904,17 +1902,17 @@ const estimateCalories = (
 
   const mapDateToPlanWeekDay = (date: Date): { week: number; day: string } | null => {
     if (mode !== "plan" || !planStartDate) return null;
-    const [y, m, d] = planStartDate.split("-").map(Number);
-    const startLocal = new Date(y, m - 1, d);
-    const planStartMonday = getMonday(startLocal);
-    const targetDate = new Date(date);
-    targetDate.setHours(0, 0, 0, 0);
+    const startDate = parseDateKey(planStartDate);
+    if (!startDate) return null;
+    const planStartMonday = getMonday(startDate);
+    const targetDate = parseDateKey(toLocalDateKey(date));
+    if (!targetDate) return null;
 
     const diffDays = daysBetweenCalendarDates(planStartMonday, targetDate);
     if (diffDays < 0) return null;
 
     const weekNum = Math.floor(diffDays / 7) + 1;
-    const dayIndex = ((targetDate.getDay() + 6) % 7); // 0=Mon, 6=Sun
+    const dayIndex = ((targetDate.getUTCDay() + 6) % 7); // 0=Mon, 6=Sun
     const dayName = DAYS[dayIndex];
     if (weekNum < 1) return null;
     return { week: weekNum, day: dayName };
