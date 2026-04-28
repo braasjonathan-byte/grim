@@ -19,4 +19,16 @@ describe("workout distance", () => {
   it("tolkar svenskt kommatecken i tempo som minuter och sekunder", () => {
     expect(parseMinPerKm("5,30/km")).toBeCloseTo(5.5, 2);
   });
+
+  it("summerar endast klarmarkerade intervall-set in i statistiken", () => {
+    const distance = getWorkoutDistanceKm({
+      loggedDistanceKm: null,
+      planDetails: JSON.stringify({ details: "Intervallträning 6 x 3 min", tempo: "5:00/km" }),
+      loggedWeights: {
+        "__sets__interval_Intervallträning 6 x 3 min": "101010",
+      },
+    });
+
+    expect(distance).toBeCloseTo(1.8, 2);
+  });
 });
