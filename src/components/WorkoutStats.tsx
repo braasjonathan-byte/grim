@@ -163,7 +163,10 @@ const getStartOfYear = (d: Date) => {
   return date;
 };
 
-const DAY_OFFSETS: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
+const DAY_OFFSETS: Record<string, number> = {
+  "Mån": 0, "Tis": 1, "Ons": 2, "Tor": 3, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6,
+  "Måndag": 0, "Tisdag": 1, "Onsdag": 2, "Torsdag": 3, "Fredag": 4, "Lördag": 5, "Söndag": 6,
+};
 
 const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
@@ -385,7 +388,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     }
     return false;
   };
-  const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || plansWithExercises.has(`${c.week}-${c.day}`);
+  const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
   // How many separate workouts a user has on a given (week, day). At least 1 if there's exercise data.
   const passCountForDay = (c: CompletionRecord) => {
     const key = `${c.week}-${c.day}`;
@@ -443,7 +446,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         const distanceKm = getWorkoutDistanceKm({
           loggedDistanceKm: c.logged_distance_km,
           loggedWeights: c.logged_weights,
-          planDetails: planDetailsMap.get(`${c.week}-${c.day}`),
+          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
         });
 
         if (distanceKm > 0) {
@@ -524,7 +527,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       total += getWorkoutDistanceKm({
         loggedDistanceKm: c.logged_distance_km,
         loggedWeights: c.logged_weights,
-        planDetails: planDetailsMap.get(`${c.week}-${c.day}`),
+          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
       });
     }
     return Math.round(total * 100) / 100;
