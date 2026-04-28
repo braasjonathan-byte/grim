@@ -340,7 +340,17 @@ const formatDayDisplay = (day: string) => {
 
 const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
-const sameWorkoutDay = (a: string, b: string) => getBaseDay(a) === getBaseDay(b);
+const getDayIndex = (day: string) => {
+  const baseDay = getBaseDay(day).trim();
+  if (baseDay === "Tor") return 3;
+  return DAYS.indexOf(baseDay);
+};
+
+const sameWorkoutDay = (a: string, b: string) => {
+  const aIndex = getDayIndex(a);
+  const bIndex = getDayIndex(b);
+  return aIndex >= 0 && bIndex >= 0 ? aIndex === bIndex : getBaseDay(a) === getBaseDay(b);
+};
 
 const normalizeExerciseKey = (name: string) =>
   name
@@ -418,6 +428,15 @@ const getMonday = (d: Date) => {
   return date;
 };
 
+const toLocalDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const calendarDayNumber = (date: Date) =>
+  Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+
+const daysBetweenCalendarDates = (from: Date, to: Date) =>
+  calendarDayNumber(to) - calendarDayNumber(from);
+
 const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: string): Date | null => {
   if (!planStart || week <= 0) return null;
 
@@ -426,7 +445,7 @@ const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: st
 
   const startDate = new Date(y, m - 1, d);
   const startMonday = getMonday(startDate);
-  const dayIndex = DAYS.indexOf(getBaseDay(dayAbbr));
+  const dayIndex = getDayIndex(dayAbbr);
   if (dayIndex < 0) return null;
 
   const targetDate = new Date(startMonday);
@@ -442,12 +461,6 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
 
   const today = getTodayInfo();
 
-  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === today.dayName);
-
-  if (labelMatchedIndex >= 0) {
-    return { index: labelMatchedIndex, matchedToday: true };
-  }
-
   if (planStart && currentWeek > 0) {
     const dateMatchedIndex = weekPlans.findIndex((plan) => {
       const planDate = getPlanDayDateValue(planStart, currentWeek, plan.day);
@@ -456,6 +469,15 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
 
     if (dateMatchedIndex >= 0) {
       return { index: dateMatchedIndex, matchedToday: true };
+    }
+  }
+
+  if (!planStart) {
+    const todayIndex = getDayIndex(today.dayName);
+    const labelMatchedIndex = weekPlans.findIndex((plan) => getDayIndex(plan.day.trim()) === todayIndex);
+
+    if (labelMatchedIndex >= 0) {
+      return { index: labelMatchedIndex, matchedToday: true };
     }
   }
 
