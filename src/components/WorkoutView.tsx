@@ -399,6 +399,7 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
   for (const [key, value] of Object.entries(loggedWeights)) {
     if (
       key.startsWith("__sets__") ||
+        key.startsWith("__cond_done__") ||
       key.startsWith("__wod_rounds_done_") ||
       key.startsWith("__timer_started_") ||
       key.startsWith("__timer_elapsed_") ||
@@ -5384,7 +5385,7 @@ const estimateCalories = (
                           {/* Hint: copied weights from previous session */}
                           {!isDone && completion?.logged_weights && Object.entries(completion.logged_weights).some(([k, v]) => {
                             // Ignore internal metadata keys — only count real previous-pass values
-                            if (k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__")) return false;
+                            if (k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__") || k.startsWith("__cond_done__")) return false;
                             if (v === null || v === undefined || (v as any) === "") return false;
                             return true;
                           }) && (
