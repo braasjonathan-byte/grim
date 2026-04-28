@@ -6326,19 +6326,21 @@ const estimateCalories = (
                           
                           return (
                             <div key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
-                                  <Footprints className="w-3.5 h-3.5 text-primary" />
-                                  {toTitleCase(condName || part)}
-                                </span>
-                                <div className="flex items-center gap-0.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
                                   <button
                                     onClick={(e) => { e.stopPropagation(); toggleConditioningDone(plan.week, plan.day, condName || part); }}
-                                    className={`w-8 h-8 border-2 flex items-center justify-center transition-all ${isConditioningDone(key, condName || part) ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`}
+                                    className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center transition-all ${isConditioningDone(key, condName || part) ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`}
                                     title="Klarmarkera"
                                   >
                                     {isConditioningDone(key, condName || part) ? <Check className="w-4 h-4" /> : null}
                                   </button>
+                                  <span className="font-semibold text-sm text-foreground flex items-center gap-1.5 min-w-0">
+                                    <Footprints className="w-3.5 h-3.5 text-primary shrink-0" />
+                                    <span className="truncate">{toTitleCase(condName || part)}</span>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-0.5 shrink-0">
                                   <div className="flex flex-col">
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
                                     <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
