@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, Check } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { format, subDays } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 
@@ -12,6 +11,22 @@ interface PlanCalibrationDialogProps {
 }
 
 const DAY_ORDER = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
+const MS_PER_DAY = 86400000;
+const MONTH_NAMES = ["januari", "februari", "mars", "april", "maj", "juni", "juli", "augusti", "september", "oktober", "november", "december"];
+const WEEKDAY_NAMES = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"];
+
+const toDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const parseDateKey = (value: string): Date => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const addUtcDays = (date: Date, days: number) => new Date(date.getTime() + days * MS_PER_DAY);
+
+const formatUtcDate = (date: Date) =>
+  `${WEEKDAY_NAMES[date.getUTCDay()]} ${date.getUTCDate()} ${MONTH_NAMES[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 
 const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) => {
   const [sessions, setSessions] = useState<{ week: number; day: string; session_name: string }[]>([]);
