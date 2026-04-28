@@ -1401,6 +1401,21 @@ const estimateCalories = (
     return (weights?.[`__sets__${exerciseName}`] as string) || "";
   };
 
+  const isConditioningDone = (weekDayKey: string, condName: string): boolean => {
+    const weights = completions[weekDayKey]?.logged_weights as Record<string, any> | null;
+    return weights?.[`__cond_done__${condName}`] === "1";
+  };
+
+  const toggleConditioningDone = async (week: number, day: string, condName: string) => {
+    const key = `${week}-${day}`;
+    const currentlyDone = isConditioningDone(key, condName);
+    if (!currentlyDone) playSetDone();
+    await updateCompletionWeights(week, day, (existing) => ({
+      ...existing,
+      [`__cond_done__${condName}`]: currentlyDone ? "0" : "1",
+    }));
+  };
+
   // Safe upsert that always preserves ALL existing fields to prevent data loss
   const safeUpsertCompletion = async (
     week: number,
