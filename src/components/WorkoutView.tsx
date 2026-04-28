@@ -89,11 +89,12 @@ interface CustomExercise {
 }
 
 // Inline conditioning editing card (green, open by default)
-const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, savedData, hasSavedData, exerciseLinesCount, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
+const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
   savedData: Record<string, any> | null; hasSavedData: boolean;
   exerciseLinesCount: number;
+  isCompleted?: boolean; onToggleCompleted?: () => void;
   onMoveUp: () => void; onMoveDown: () => void; onShowInfo: () => void; onDelete: () => void;
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
@@ -199,12 +200,17 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const displayPulse = savedData?.pulse || initPulse;
     return (
       <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 space-y-1">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
             <Footprints className="w-3.5 h-3.5 text-primary" />
             {toTitleCase(name)}
           </span>
           <div className="flex items-center gap-1">
+            {onToggleCompleted && (
+              <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-8 h-8 border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
+                {isCompleted ? <Check className="w-4 h-4" /> : null}
+              </button>
+            )}
             <button onClick={() => setIsEditing(true)} className="p-1 text-primary hover:text-primary/80"><Pencil className="w-3.5 h-3.5" /></button>
             <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
           </div>
@@ -224,6 +230,11 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-primary flex items-center gap-1">✏️ {toTitleCase(name)}</span>
         <div className="flex items-center gap-0.5">
+          {onToggleCompleted && (
+            <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-8 h-8 border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
+              {isCompleted ? <Check className="w-4 h-4" /> : null}
+            </button>
+          )}
           <div className="flex flex-col">
             <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={lineIndex === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3.5 h-3.5" /></button>
             <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={lineIndex === exerciseLinesCount - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3.5 h-3.5" /></button>
