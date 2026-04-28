@@ -1778,7 +1778,7 @@ const estimateCalories = (
         week: newWeekNum,
         day: p.day,
         session_name: p.session_name,
-        details: p.details,
+        details: stripChallengeLines(p.details || ""),
         tempo: p.tempo || "",
         is_circuit: p.is_circuit || false,
       } as any));
@@ -1841,10 +1841,10 @@ const estimateCalories = (
     const dateStr = format(singleDate, "yyyy-MM-dd");
     const uniqueKey = `${dateStr}_${Math.random().toString(36).slice(2, 6)}`;
 
-    // Copy details as-is (no progression for single sessions)
+    // Copy details without daily challenges (no progression for single sessions)
     let details = "";
     if (copyFrom && copyFrom.details) {
-      details = copyFrom.details;
+      details = stripChallengeLines(copyFrom.details);
     }
 
     await supabase.from("workout_plans").insert({
@@ -1906,7 +1906,7 @@ const estimateCalories = (
 
     let details = "";
     if (copyFrom && copyFrom.details) {
-      details = copyFrom.details;
+      details = stripChallengeLines(copyFrom.details);
     }
 
     await supabase.from("workout_plans").insert({
