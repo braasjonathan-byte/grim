@@ -47,11 +47,18 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   useEffect(() => {
     const handleUnload = () => {
       if (localStorage.getItem("grim_remember_me") !== "true") {
-        navigator.sendBeacon && supabase.auth.signOut();
+        void supabase.auth.signOut({ scope: "local" });
       }
     };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") handleUnload();
+    };
     window.addEventListener("beforeunload", handleUnload);
-    return () => window.removeEventListener("beforeunload", handleUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const fakeEmail = (nick: string) => `${nick.toLowerCase().trim()}@trainapp.local`;

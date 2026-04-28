@@ -105,7 +105,9 @@ const formatDayDisplay = (day: string) => {
       const date = parseISO(dateMatch[1]);
       return format(date, "d MMM yyyy", { locale: sv });
     }
-  } catch {}
+  } catch {
+    return day.replace(/_[a-z0-9]+$/i, "");
+  }
   return day.replace(/_[a-z0-9]+$/i, "");
 };
 

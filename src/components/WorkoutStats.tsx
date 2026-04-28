@@ -31,6 +31,8 @@ interface CompletionRecord {
   logged_tempo: string | null;
   logged_pulse: number | null;
   logged_weights: any;
+  archived_plan_start_date?: string | null;
+  plan_details?: string | null;
 }
 
 type View = "week" | "month" | "year";
@@ -161,7 +163,10 @@ const getStartOfYear = (d: Date) => {
   return date;
 };
 
-const DAY_OFFSETS: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
+const DAY_OFFSETS: Record<string, number> = {
+  "Mån": 0, "Tis": 1, "Ons": 2, "Tor": 3, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6,
+  "Måndag": 0, "Tisdag": 1, "Onsdag": 2, "Torsdag": 3, "Fredag": 4, "Lördag": 5, "Söndag": 6,
+};
 
 const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
@@ -202,7 +207,7 @@ const getUpdatedAtDate = (updatedAt: string | null | undefined): Date | null => 
 };
 
 const getCompletionStatsDate = (
-  completion: Pick<CompletionRecord, "week" | "day" | "done" | "skipped" | "updated_at">,
+  completion: Pick<CompletionRecord, "week" | "day" | "done" | "skipped" | "updated_at" | "archived_plan_start_date">,
   planStartDate: Date | null
 ): Date | null => {
   if (isStandaloneSession(completion)) {
@@ -210,8 +215,13 @@ const getCompletionStatsDate = (
   }
 
   if (completion.done || completion.skipped) {
-    return getUpdatedAtDate(completion.updated_at)
-      ?? (planStartDate ? getWorkoutCalendarDate(completion.week, completion.day, planStartDate) : null);
+    const archivedStart = completion.archived_plan_start_date
+      ? getStandaloneDate(completion.archived_plan_start_date)
+      : null;
+    const resolvedPlanStart = archivedStart ?? planStartDate;
+    return resolvedPlanStart
+      ? getWorkoutCalendarDate(completion.week, completion.day, resolvedPlanStart)
+      : getUpdatedAtDate(completion.updated_at);
   }
 
   if (planStartDate) {
@@ -258,7 +268,10 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       supabase.from("daily_challenge_completions")
         .select("completed_at, challenge_text, challenge_date")
         .eq("user_id", userId).order("completed_at", { ascending: false }),
-    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }]) => {
+      supabase.from("archived_plans")
+        .select("plan_start_date, completion_data, plan_data")
+        .eq("user_id", userId),
+    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
@@ -269,7 +282,31 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       const activePlanKeys = new Set((planData || []).map((p) => `${p.week}-${p.day}`));
-      setCompletions(((compData || []) as any[]).filter((c) => activePlanKeys.has(`${c.week}-${c.day}`)) as CompletionRecord[]);
+      const activeCompletions = ((compData || []) as CompletionRecord[]).filter((c) => c.week === 0 || activePlanKeys.has(`${c.week}-${c.day}`));
+      const archivedCompletions: CompletionRecord[] = [];
+      for (const archive of (archiveData || []) as any[]) {
+        const archiveStart = archive.plan_start_date || null;
+        const planRows = Array.isArray(archive.plan_data) ? archive.plan_data : [];
+        const rows = Array.isArray(archive.completion_data) ? archive.completion_data : [];
+        for (const c of rows) {
+          const archivedPlanRow = planRows.find((p: any) => Number(p?.week) === Number(c.week) && String(p?.day) === String(c.day));
+          archivedCompletions.push({
+            week: Number(c.week) || 0,
+            day: String(c.day || ""),
+            done: Boolean(c.done),
+            skipped: Boolean(c.skipped),
+            updated_at: c.updated_at || archive.archived_at || new Date(0).toISOString(),
+            logged_distance_km: c.logged_distance_km ?? null,
+            logged_tempo: c.logged_tempo ?? null,
+            logged_pulse: c.logged_pulse ?? null,
+            logged_weights: c.logged_weights ?? null,
+            archived_plan_start_date: archiveStart,
+            plan_details: archivedPlanRow?.details ? JSON.stringify({ details: archivedPlanRow.details, tempo: archivedPlanRow.tempo ?? "" }) : null,
+          });
+        }
+      }
+
+      setCompletions([...activeCompletions, ...archivedCompletions]);
 
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
@@ -351,7 +388,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     }
     return false;
   };
-  const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || plansWithExercises.has(`${c.week}-${c.day}`);
+  const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
   // How many separate workouts a user has on a given (week, day). At least 1 if there's exercise data.
   const passCountForDay = (c: CompletionRecord) => {
     const key = `${c.week}-${c.day}`;
@@ -409,7 +446,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         const distanceKm = getWorkoutDistanceKm({
           loggedDistanceKm: c.logged_distance_km,
           loggedWeights: c.logged_weights,
-          planDetails: planDetailsMap.get(`${c.week}-${c.day}`),
+          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
         });
 
         if (distanceKm > 0) {
@@ -490,7 +527,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       total += getWorkoutDistanceKm({
         loggedDistanceKm: c.logged_distance_km,
         loggedWeights: c.logged_weights,
-        planDetails: planDetailsMap.get(`${c.week}-${c.day}`),
+          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
       });
     }
     return Math.round(total * 100) / 100;

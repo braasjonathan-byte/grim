@@ -32,7 +32,7 @@ const getPlanParts = (rawInput?: string | null): { details: string; tempo: strin
 };
 
 const isRunningPlan = (planDetails?: string | null): boolean => {
-  if (!planDetails) return true;
+  if (!planDetails) return false;
   const text = getPlanText(planDetails);
   if (CYCLING_KEYWORDS.test(text)) return false;
   return RUNNING_KEYWORDS.test(text) || RUN_SEGMENT_KEYWORDS.test(text);
@@ -236,10 +236,10 @@ export const getWorkoutDistanceKm = ({
   if (!isRunningPlan(planDetails)) return 0;
 
   const directDistance = toNumber(loggedDistanceKm);
-  if (directDistance > 0) return directDistance;
-
   const completedIntervalSetDistance = getCompletedIntervalSetDistanceKm(loggedWeights, planDetails);
   if (completedIntervalSetDistance > 0) return completedIntervalSetDistance;
+
+  if (directDistance > 0) return directDistance;
 
   const conditioningDistance = getConditioningDistanceKm(loggedWeights);
   if (conditioningDistance > 0) return conditioningDistance;

@@ -233,9 +233,11 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
           event_type: resolvedType.startsWith("annat:") ? "annat" : resolvedType,
           city: null,
           country: "Sverige",
-        }).then(() => {});
+        });
       }
-    } catch {}
+    } catch {
+      // Popular events are optional; saving the user's countdown should still succeed.
+    }
 
     // Auto-create/join event group for this event
     try {
@@ -268,7 +270,9 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
       await supabase
         .from("event_group_members")
         .upsert({ group_id: groupId, user_id: userId }, { onConflict: "group_id,user_id" });
-    } catch {}
+    } catch {
+      // Event groups are optional; saving the user's countdown should still succeed.
+    }
 
     toast.success("Event sparat!");
     resetForm();
@@ -319,7 +323,9 @@ const EventCountdown = ({ userId }: EventCountdownProps) => {
             const eventDays: Date[] = [];
             const startD = new Date(ev.event_date);
             if (ev.end_date) {
-              try { eventDays.push(...eachDayOfInterval({ start: startD, end: new Date(ev.end_date) })); } catch {}
+              try { eventDays.push(...eachDayOfInterval({ start: startD, end: new Date(ev.end_date) })); } catch {
+                eventDays.length = 0;
+              }
             }
 
             return (
