@@ -75,7 +75,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
     // Calculate how many days from plan start this session is
     const dayIndex = DAY_ORDER.indexOf(selectedDay);
     const daysFromStart = (selectedWeek - 1) * 7 + (dayIndex >= 0 ? dayIndex : 0);
-    return subDays(date, daysFromStart);
+    return addUtcDays(parseDateKey(toDateKey(date)), -daysFromStart);
   };
 
   const handleConfirm = async () => {
@@ -89,7 +89,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
         startDate = calculateStartDate(selectedSession.week, selectedSession.day, sessionDate);
       }
 
-      const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+      const startDateStr = toDateKey(startDate);
 
       const { error } = await supabase
         .from("workout_plans")
@@ -148,7 +148,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
             setSaving(true);
             try {
               const today = new Date();
-              const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+              const startDateStr = toDateKey(today);
               await supabase
                 .from("profiles")
                 .update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any)
