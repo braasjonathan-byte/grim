@@ -3733,7 +3733,7 @@ const estimateCalories = (
                               } catch {}
                             }
                             const updated = { ...currentData, [field]: value };
-                            if ((field === "time" || field === "dist") && !updated.tempo) {
+                            if (field === "time" || field === "dist") {
                               const t2 = parseFloat(field === "time" ? value : updated.time || "0");
                               const d2 = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
                               if (t2 > 0 && d2 > 0) {
@@ -6304,7 +6304,7 @@ const estimateCalories = (
                               const updated = { ...currentData, [field]: value };
 
                               // Auto-calculate tempo (only for non-interval fields)
-                              if (field !== "intervals" && (field === "time" || field === "dist") && !updated.tempo) {
+                              if (field !== "intervals" && (field === "time" || field === "dist")) {
                                 const t = parseFloat(field === "time" ? value : updated.time || "0");
                                 const d = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
                                 if (t > 0 && d > 0) {
