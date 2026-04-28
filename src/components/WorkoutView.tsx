@@ -340,7 +340,17 @@ const formatDayDisplay = (day: string) => {
 
 const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
-const sameWorkoutDay = (a: string, b: string) => getBaseDay(a) === getBaseDay(b);
+const getDayIndex = (day: string) => {
+  const baseDay = getBaseDay(day).trim();
+  if (baseDay === "Tor") return 3;
+  return DAYS.indexOf(baseDay);
+};
+
+const sameWorkoutDay = (a: string, b: string) => {
+  const aIndex = getDayIndex(a);
+  const bIndex = getDayIndex(b);
+  return aIndex >= 0 && bIndex >= 0 ? aIndex === bIndex : getBaseDay(a) === getBaseDay(b);
+};
 
 const normalizeExerciseKey = (name: string) =>
   name
@@ -418,6 +428,15 @@ const getMonday = (d: Date) => {
   return date;
 };
 
+const toLocalDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const calendarDayNumber = (date: Date) =>
+  Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+
+const daysBetweenCalendarDates = (from: Date, to: Date) =>
+  calendarDayNumber(to) - calendarDayNumber(from);
+
 const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: string): Date | null => {
   if (!planStart || week <= 0) return null;
 
@@ -426,7 +445,7 @@ const getPlanDayDateValue = (planStart: string | null, week: number, dayAbbr: st
 
   const startDate = new Date(y, m - 1, d);
   const startMonday = getMonday(startDate);
-  const dayIndex = DAYS.indexOf(getBaseDay(dayAbbr));
+  const dayIndex = getDayIndex(dayAbbr);
   if (dayIndex < 0) return null;
 
   const targetDate = new Date(startMonday);
@@ -442,12 +461,6 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
 
   const today = getTodayInfo();
 
-  const labelMatchedIndex = weekPlans.findIndex((plan) => getBaseDay(plan.day.trim()) === today.dayName);
-
-  if (labelMatchedIndex >= 0) {
-    return { index: labelMatchedIndex, matchedToday: true };
-  }
-
   if (planStart && currentWeek > 0) {
     const dateMatchedIndex = weekPlans.findIndex((plan) => {
       const planDate = getPlanDayDateValue(planStart, currentWeek, plan.day);
@@ -456,6 +469,15 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
 
     if (dateMatchedIndex >= 0) {
       return { index: dateMatchedIndex, matchedToday: true };
+    }
+  }
+
+  if (!planStart) {
+    const todayIndex = getDayIndex(today.dayName);
+    const labelMatchedIndex = weekPlans.findIndex((plan) => getDayIndex(plan.day.trim()) === todayIndex);
+
+    if (labelMatchedIndex >= 0) {
+      return { index: labelMatchedIndex, matchedToday: true };
     }
   }
 
@@ -629,6 +651,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [changeDayDialog, setChangeDayDialog] = useState<{planId: string; currentDay: string; week: number; sessionName: string} | null>(null);
   const [renameDialog, setRenameDialog] = useState<{planId: string; currentName: string; week: number; day: string; sessionName: string} | null>(null);
   const [renameInput, setRenameInput] = useState("");
+  const [settingCurrentDay, setSettingCurrentDay] = useState(false);
 
   // Share to chat
   const [chatShareTarget, setChatShareTarget] = useState<PlanDay | null>(null);
@@ -811,7 +834,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         const now = new Date();
         now.setHours(0, 0, 0, 0);
-        const daysSinceStart = Math.floor((now.getTime() - planStartMonday.getTime()) / 86400000);
+        const daysSinceStart = daysBetweenCalendarDates(planStartMonday, now);
         const calcWeek = Math.floor(daysSinceStart / 7) + 1;
         const maxWeek = Math.max(...planWeeks);
         return Math.min(Math.max(calcWeek, 1), maxWeek);
@@ -982,7 +1005,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     const weekPlans = plans.filter((p) => p.week === currentWeek);
     const currentWeekDays = DAYS
-      .map((dayName) => weekPlans.find((p) => getBaseDay(p.day) === dayName))
+      .map((dayName) => weekPlans.find((p) => sameWorkoutDay(p.day, dayName)))
       .filter(Boolean) as PlanDay[];
 
     const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
@@ -1004,7 +1027,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!isMobile) return;
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
+      .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
     const activePlan = currentWeekDays[activeDayIndex];
     if (!activePlan) return;
     const sameDayPlans = currentWeekDays.filter(p => sameWorkoutDay(p.day, activePlan.day));
@@ -1882,10 +1905,7 @@ const estimateCalories = (
     const targetDate = new Date(date);
     targetDate.setHours(0, 0, 0, 0);
 
-    const toCalendarDayNumber = (value: Date) =>
-      Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / 86400000;
-
-    const diffDays = toCalendarDayNumber(targetDate) - toCalendarDayNumber(planStartMonday);
+    const diffDays = daysBetweenCalendarDates(planStartMonday, targetDate);
     if (diffDays < 0) return null;
 
     const weekNum = Math.floor(diffDays / 7) + 1;
@@ -2253,6 +2273,47 @@ const estimateCalories = (
     fetchData();
   };
 
+  const setWorkoutAsCurrentDay = async () => {
+    if (!renameDialog || renameDialog.week <= 0) return;
+
+    const targetDate = new Date();
+    targetDate.setHours(0, 0, 0, 0);
+    const targetMonday = getMonday(targetDate);
+    const dayIndex = getDayIndex(renameDialog.day);
+    if (dayIndex < 0) return;
+
+    const newPlanStartMonday = new Date(targetMonday);
+    newPlanStartMonday.setDate(targetMonday.getDate() - (renameDialog.week - 1) * 7);
+    const newPlanStartDate = new Date(newPlanStartMonday);
+    newPlanStartDate.setDate(newPlanStartMonday.getDate() + dayIndex);
+    const newDateStr = toLocalDateKey(newPlanStartDate);
+
+    setSettingCurrentDay(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ plan_start_date: newDateStr, plan_start_calibrated: true } as any)
+      .eq("user_id", userId);
+    setSettingCurrentDay(false);
+
+    if (error) {
+      toast.error("Kunde inte uppdatera aktuell träningsdag");
+      return;
+    }
+
+    setPlanStartDate(newDateStr);
+    setActivePlanWeek(renameDialog.week);
+    setCurrentWeek(renameDialog.week);
+    const updatedWeekDays = plans
+      .filter((p) => p.week === renameDialog.week)
+      .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
+    const updatedDayIndex = updatedWeekDays.findIndex((p) => sameWorkoutDay(p.day, renameDialog.day));
+    if (updatedDayIndex >= 0) setActiveDayIndex(updatedDayIndex);
+    setExpandedDay(null);
+    setRenameDialog(null);
+    triggerSave();
+    toast.success("Aktuell träningsdag uppdaterad");
+  };
+
   // Rename a session
   const renameSession = async (planId: string, newName: string) => {
     if (!newName.trim()) return;
@@ -2363,7 +2424,7 @@ const estimateCalories = (
     const planDate = getPlanDayDateValue(planStartDate, week, day);
     if (planDate) return planDate.getTime() + fallbackIndex;
 
-    const dayIndex = DAYS.indexOf(getBaseDay(day));
+    const dayIndex = getDayIndex(day);
     return week * 10 + (dayIndex >= 0 ? dayIndex : fallbackIndex / 1000);
   };
 
@@ -4903,10 +4964,10 @@ const estimateCalories = (
   // Plan mode (existing)
   const weekDays = plans.
   filter((p) => p.week === currentWeek).
-  sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
+  sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
 
   const mobileDayTabs = DAYS
-    .map((dayName) => weekDays.find((p) => getBaseDay(p.day) === dayName))
+    .map((dayName) => weekDays.find((p) => sameWorkoutDay(p.day, dayName)))
     .filter(Boolean) as PlanDay[];
   const activeMobileDay = mobileDayTabs[Math.min(activeDayIndex, Math.max(0, mobileDayTabs.length - 1))];
   const visibleWeekDays = isMobile && weekDays.length > 1 && activeMobileDay
@@ -5048,7 +5109,7 @@ const estimateCalories = (
           {/* Day tabs — show all 7 weekdays, rest days are non-clickable */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
             {DAYS.map((dayName) => {
-              const planIdx = mobileDayTabs.findIndex((p) => getBaseDay(p.day) === dayName);
+              const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(p.day, dayName));
               const isRest = planIdx === -1;
               const isToday = dayName === todayName && currentWeek === activePlanWeek;
 
@@ -5142,7 +5203,7 @@ const estimateCalories = (
           const colorClass = getSessionColor(plan.session_name);
           const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
           const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-          const isCardToday = getBaseDay(plan.day) === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
+          const isCardToday = sameWorkoutDay(plan.day, cardTodayNames[new Date().getDay()]) && plan.week === activePlanWeek;
 
           return (
             <div key={key + "-wrap"} className="w-full">
@@ -8616,8 +8677,8 @@ const estimateCalories = (
           </p>
           <div className="grid grid-cols-4 gap-2">
             {DAYS.map((d) => {
-              const isCurrentDay = d === getBaseDay(changeDayDialog.currentDay);
-              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d);
+              const isCurrentDay = sameWorkoutDay(d, changeDayDialog.currentDay);
+              const isOccupied = !isCurrentDay && plans.some(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d));
               return (
                 <button
                   key={d}
@@ -8625,7 +8686,7 @@ const estimateCalories = (
                     if (!isCurrentDay) {
                       if (isOccupied) {
                         // Swap: move target to current day and current to target day
-                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d);
+                        const targetPlan = plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d));
                         if (targetPlan) {
                           const week = changeDayDialog.week;
                           const oldDay = changeDayDialog.currentDay;
@@ -8688,7 +8749,7 @@ const estimateCalories = (
                         ? "bg-secondary text-muted-foreground cursor-pointer border border-border hover:border-primary"
                         : "bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground"
                   }`}
-                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && getBaseDay(p.day) === d)?.session_name}` : undefined}
+                  title={isOccupied ? `Byt plats med ${plans.find(p => p.week === changeDayDialog.week && sameWorkoutDay(p.day, d))?.session_name}` : undefined}
                 >
                   {d}
                   {isOccupied && <span className="block text-[8px] text-muted-foreground/70 mt-0.5">upptagen</span>}
@@ -8738,6 +8799,25 @@ const estimateCalories = (
           </div>
 
           {/* Divider */}
+          <div className="border-t border-border" />
+
+          {renameDialog.week > 0 && (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">Aktuell träningsdag</label>
+              <button
+                onClick={setWorkoutAsCurrentDay}
+                disabled={settingCurrentDay}
+                className="w-full py-2.5 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
+              >
+                <CalendarIcon className="w-4 h-4" />
+                {settingCurrentDay ? "Uppdaterar..." : "Gör detta pass till dagens pass"}
+              </button>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Justerar schemats startdatum så att vecka {renameDialog.week}, {getBaseDay(renameDialog.day)} matchar idag.
+              </p>
+            </div>
+          )}
+
           <div className="border-t border-border" />
 
           {/* Skip/miss section */}
