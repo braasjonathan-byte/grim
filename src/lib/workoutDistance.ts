@@ -1,7 +1,7 @@
 type LoggedWeights = Record<string, unknown> | null | undefined;
 
 const CYCLING_KEYWORDS = /cykel|motioncykel|spinning|crosstrainer/i;
-const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|långpass|distanslöpning|promenad|gång|tröskel/i;
+const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|intervall|intervaller|långpass|distanslöpning|promenad|gång|tröskel/i;
 const RUN_SEGMENT_KEYWORDS = /uppvärmning|nedvarvning|avjogg|joggvila|jogg|promenad|gång/i;
 
 const getPlanText = (rawInput: string): string => {
@@ -41,8 +41,8 @@ export const parseMinPerKm = (tempo: string): number => {
   const normalized = String(tempo || "").trim();
   if (!normalized) return 0;
 
-  const tempoMatch = normalized.match(/([\d:.]+)\s*(?:min\/km|\/km)/i);
-  const raw = tempoMatch ? tempoMatch[1] : normalized;
+  const tempoMatch = normalized.match(/([\d:.,]+)\s*(?:min\/km|\/km)/i);
+  const raw = (tempoMatch ? tempoMatch[1] : normalized).replace(",", ":");
 
   if (!tempoMatch && !/^(\d+)[:\.](\d+)$/.test(raw) && !/^(\d+)$/.test(raw)) {
     return 0;
