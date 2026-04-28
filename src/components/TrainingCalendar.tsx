@@ -231,6 +231,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
             const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
             const isDone = doneDates.has(dateStr);
             const isSkipped = skippedDates.has(dateStr);
+            const isPending = pendingDates.has(dateStr);
             const isToday = dateStr === today;
 
             return (
@@ -241,6 +242,8 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
                     ? "bg-success/20 text-success font-bold"
                     : isSkipped
                     ? "bg-destructive/20 text-destructive font-bold"
+                    : isPending
+                    ? "bg-primary/10 text-primary border border-primary/30 font-bold"
                     : "text-muted-foreground"
                 } ${isToday ? "ring-1 ring-primary" : ""}`}
               >
@@ -258,6 +261,10 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 rounded-sm bg-destructive/20 border border-destructive/40" />
             <span className="text-[10px] text-muted-foreground">Missat</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2.5 h-2.5 rounded-sm bg-primary/10 border border-primary/30" />
+            <span className="text-[10px] text-muted-foreground">Planerat</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2.5 h-2.5 rounded-sm border border-border" />
