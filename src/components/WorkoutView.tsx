@@ -1905,10 +1905,7 @@ const estimateCalories = (
     const targetDate = new Date(date);
     targetDate.setHours(0, 0, 0, 0);
 
-    const toCalendarDayNumber = (value: Date) =>
-      Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / 86400000;
-
-    const diffDays = toCalendarDayNumber(targetDate) - toCalendarDayNumber(planStartMonday);
+    const diffDays = daysBetweenCalendarDates(planStartMonday, targetDate);
     if (diffDays < 0) return null;
 
     const weekNum = Math.floor(diffDays / 7) + 1;
@@ -4967,10 +4964,10 @@ const estimateCalories = (
   // Plan mode (existing)
   const weekDays = plans.
   filter((p) => p.week === currentWeek).
-  sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
+  sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
 
   const mobileDayTabs = DAYS
-    .map((dayName) => weekDays.find((p) => getBaseDay(p.day) === dayName))
+    .map((dayName) => weekDays.find((p) => sameWorkoutDay(p.day, dayName)))
     .filter(Boolean) as PlanDay[];
   const activeMobileDay = mobileDayTabs[Math.min(activeDayIndex, Math.max(0, mobileDayTabs.length - 1))];
   const visibleWeekDays = isMobile && weekDays.length > 1 && activeMobileDay
