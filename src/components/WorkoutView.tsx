@@ -834,7 +834,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         const now = new Date();
         now.setHours(0, 0, 0, 0);
-        const daysSinceStart = Math.floor((now.getTime() - planStartMonday.getTime()) / 86400000);
+        const daysSinceStart = daysBetweenCalendarDates(planStartMonday, now);
         const calcWeek = Math.floor(daysSinceStart / 7) + 1;
         const maxWeek = Math.max(...planWeeks);
         return Math.min(Math.max(calcWeek, 1), maxWeek);
@@ -1005,7 +1005,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     const weekPlans = plans.filter((p) => p.week === currentWeek);
     const currentWeekDays = DAYS
-      .map((dayName) => weekPlans.find((p) => getBaseDay(p.day) === dayName))
+      .map((dayName) => weekPlans.find((p) => sameWorkoutDay(p.day, dayName)))
       .filter(Boolean) as PlanDay[];
 
     const { index, matchedToday } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
@@ -1027,7 +1027,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!isMobile) return;
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
-      .sort((a, b) => DAYS.indexOf(getBaseDay(a.day)) - DAYS.indexOf(getBaseDay(b.day)));
+      .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
     const activePlan = currentWeekDays[activeDayIndex];
     if (!activePlan) return;
     const sameDayPlans = currentWeekDays.filter(p => sameWorkoutDay(p.day, activePlan.day));
