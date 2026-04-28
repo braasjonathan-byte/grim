@@ -17,6 +17,20 @@ const getPlanText = (rawInput: string): string => {
   return rawInput;
 };
 
+const getPlanParts = (rawInput?: string | null): { details: string; tempo: string } => {
+  if (!rawInput) return { details: "", tempo: "" };
+  if (!rawInput.trim().startsWith("{")) return { details: rawInput, tempo: "" };
+  try {
+    const parsed = JSON.parse(rawInput);
+    if (parsed && typeof parsed === "object") {
+      return { details: String(parsed.details || ""), tempo: String(parsed.tempo || "") };
+    }
+  } catch {
+    
+  }
+  return { details: rawInput, tempo: "" };
+};
+
 const isRunningPlan = (planDetails?: string | null): boolean => {
   if (!planDetails) return true;
   const text = getPlanText(planDetails);
@@ -126,21 +140,39 @@ const getConditioningDistanceKm = (loggedWeights: LoggedWeights): number => {
   return total;
 };
 
-export const extractDistanceFromDetails = (rawInput: string): number => {
-  let details = rawInput;
-  let fallbackTempo = "";
+const getCompletedIntervalSetDistanceKm = (loggedWeights: LoggedWeights, planDetails?: string | null): number => {
+  if (!loggedWeights || typeof loggedWeights !== "object" || Array.isArray(loggedWeights)) return 0;
 
-  if (rawInput.trim().startsWith("{")) {
-    try {
-      const parsed = JSON.parse(rawInput);
-      if (parsed && typeof parsed === "object") {
-        details = String(parsed.details || "");
-        fallbackTempo = String(parsed.tempo || "");
-      }
-    } catch {
-      
+  const planTempo = getPlanParts(planDetails).tempo;
+  let total = 0;
+
+  for (const [key, value] of Object.entries(loggedWeights)) {
+    if (!key.startsWith("__sets__interval_") || typeof value !== "string" || !value.includes("1")) continue;
+
+    const line = key.replace("__sets__interval_", "");
+    const rawConditioning = (loggedWeights as Record<string, unknown>)[`__cond__${line}`];
+    const conditioningData = parseConditioningPayload(rawConditioning);
+    const intervals = Array.isArray(conditioningData?.intervals) ? conditioningData.intervals : [];
+    const intervalMatch = line.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min/i);
+    const fallbackTime = intervalMatch ? intervalMatch[2] : "";
+    const fallbackTempo = String(conditioningData?.tempo || line.match(/([\d:.,]+)\s*(?:min\/km|\/km)/i)?.[1] || planTempo || "");
+
+    for (let index = 0; index < value.length; index += 1) {
+      if (value[index] !== "1") continue;
+      const interval = parseConditioningPayload(intervals[index]) || {};
+      total += getIntervalDistanceKm({
+        time: interval.time || fallbackTime,
+        tempo: interval.tempo || fallbackTempo,
+        dist: interval.dist ?? interval.distance,
+      });
     }
   }
+
+  return total;
+};
+
+export const extractDistanceFromDetails = (rawInput: string): number => {
+  const { details, tempo: fallbackTempo } = getPlanParts(rawInput);
 
   const fallbackMinPerKm = parseMinPerKm(fallbackTempo);
   let loggedTotal = 0;
@@ -205,6 +237,9 @@ export const getWorkoutDistanceKm = ({
 
   const directDistance = toNumber(loggedDistanceKm);
   if (directDistance > 0) return directDistance;
+
+  const completedIntervalSetDistance = getCompletedIntervalSetDistanceKm(loggedWeights, planDetails);
+  if (completedIntervalSetDistance > 0) return completedIntervalSetDistance;
 
   const conditioningDistance = getConditioningDistanceKm(loggedWeights);
   if (conditioningDistance > 0) return conditioningDistance;
