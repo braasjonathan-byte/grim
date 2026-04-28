@@ -22,7 +22,7 @@ describe("workout distance", () => {
 
   it("summerar endast klarmarkerade intervall-set in i statistiken", () => {
     const distance = getWorkoutDistanceKm({
-      loggedDistanceKm: null,
+      loggedDistanceKm: 10,
       planDetails: JSON.stringify({ details: "Intervallträning 6 x 3 min", tempo: "5:00/km" }),
       loggedWeights: {
         "__sets__interval_Intervallträning 6 x 3 min": "101010",
@@ -30,5 +30,15 @@ describe("workout distance", () => {
     });
 
     expect(distance).toBeCloseTo(1.8, 2);
+  });
+
+  it("räknar inte distans utan löprelaterad plandetalj", () => {
+    const distance = getWorkoutDistanceKm({
+      loggedDistanceKm: 12,
+      planDetails: null,
+      loggedWeights: null,
+    });
+
+    expect(distance).toBe(0);
   });
 });
