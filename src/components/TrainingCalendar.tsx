@@ -27,17 +27,22 @@ const parseDateKey = (value: string | null | undefined): Date | null => {
 };
 
 const getISOWeekStart = (d: Date): Date => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   const day = date.getUTCDay() || 7;
   date.setUTCDate(date.getUTCDate() - day + 1);
   return date;
 };
 
 const getISOWeekNumber = (d: Date) => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
   const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
   return Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+};
+
+const timestampToDateKey = (value: string | null | undefined): string | null => {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
 };
 
 /** Resolve a completion to a calendar date string (YYYY-MM-DD) */
@@ -124,7 +129,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       // Then: overlay completions
       if (completions) {
         for (const c of completions) {
-          const dateStr = resolveCompletionDate(c.week, c.day, c.updated_at, planStartDate);
+          const dateStr = timestampToDateKey(c.updated_at) ?? resolveCompletionDate(c.week, c.day, c.updated_at, planStartDate);
           if (!dateStr) continue;
           const hasExercise = planHasExercises.has(`${c.week}-${c.day}`);
 
@@ -147,7 +152,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
 
           for (const c of compData) {
             if (!c.done) continue;
-            const dateStr = resolveCompletionDate(
+            const dateStr = timestampToDateKey(c.updated_at || null) ?? resolveCompletionDate(
               c.week || 0,
               c.day || "",
               c.updated_at || null,
