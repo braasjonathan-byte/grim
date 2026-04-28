@@ -5109,7 +5109,7 @@ const estimateCalories = (
           {/* Day tabs — show all 7 weekdays, rest days are non-clickable */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
             {DAYS.map((dayName) => {
-              const planIdx = mobileDayTabs.findIndex((p) => getBaseDay(p.day) === dayName);
+              const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(p.day, dayName));
               const isRest = planIdx === -1;
               const isToday = dayName === todayName && currentWeek === activePlanWeek;
 
@@ -5203,7 +5203,7 @@ const estimateCalories = (
           const colorClass = getSessionColor(plan.session_name);
           const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
           const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
-          const isCardToday = getBaseDay(plan.day) === cardTodayNames[new Date().getDay()] && plan.week === activePlanWeek;
+          const isCardToday = sameWorkoutDay(plan.day, cardTodayNames[new Date().getDay()]) && plan.week === activePlanWeek;
 
           return (
             <div key={key + "-wrap"} className="w-full">
