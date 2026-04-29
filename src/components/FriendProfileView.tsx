@@ -412,6 +412,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
             <p className="text-xs text-muted-foreground text-center py-2">Inga stjärnmärkta PB ännu</p>
           )}
 
+          <AchievementsPanel unlockedIds={achievementIds} compact />
+
           {/* Social links & anthem */}
           {(social.instagram || social.tiktok || social.snapchat || social.spotify_anthem_name) && (
             <div className="space-y-2 pt-1">
