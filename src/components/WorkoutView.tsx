@@ -31,6 +31,7 @@ import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
 import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import CircuitTimerDialog from "@/components/CircuitTimerDialog";
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
+import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 
 const SHOW_STRAVA_INTEGRATION = false;
 
@@ -76,6 +77,10 @@ interface FriendComment {
   plan_id: string | null;
   comment: string;
   created_at: string;
+}
+
+interface AchievementToastState {
+  achievements: AchievementDefinition[];
 }
 
 interface CustomExercise {
