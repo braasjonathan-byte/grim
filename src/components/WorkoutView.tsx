@@ -783,6 +783,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
+  const [achievementToast, setAchievementToast] = useState<AchievementToastState | null>(null);
 
   // Fetch archived completion data for weight history
   useEffect(() => {
