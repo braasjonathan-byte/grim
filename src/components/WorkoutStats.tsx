@@ -640,6 +640,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </button>
       </div>
       <DailyQuoteCard />
+      <AchievementsPanel unlockedIds={achievementIds} />
 
       {/* View toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">
