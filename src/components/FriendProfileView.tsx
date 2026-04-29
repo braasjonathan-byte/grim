@@ -4,6 +4,7 @@ import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instag
 import HonoraryBadge from "./HonoraryBadge";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import AchievementsPanel from "@/components/AchievementsPanel";
+import { calculateAchievementMetrics, getEarnedAchievements } from "@/lib/achievements";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -218,8 +219,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
       ]);
 
       setAvatarUrl(profileData?.avatar_url || null);
-      setChallengeCount(challengeTotal || 0);
-      setAchievementIds(((achievementData || []) as any[]).map((row) => row.achievement_id));
+      const totalChallenges = challengeTotal || 0;
+      setChallengeCount(totalChallenges);
       setIsHonorary(profileData?.is_honorary ?? false);
       setIsAdmin(!!roleData);
       const pd = profileData as any;
@@ -252,7 +253,19 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         detailsMap.set(`${p.week}-${p.day}`, JSON.stringify({ details: p.details, tempo: (p as any).tempo ?? "" }));
       }
       setPlanDetailsMap(detailsMap);
-      setAllCompletions((completions || []) as CompletionRow[]);
+      const friendCompletions = (completions || []) as CompletionRow[];
+      setAllCompletions(friendCompletions);
+
+      const storedAchievementIds = ((achievementData || []) as any[]).map((row) => row.achievement_id);
+      const visibleMetrics = calculateAchievementMetrics(
+        friendCompletions.map((completion) => ({
+          ...completion,
+          plan_details: detailsMap.get(`${completion.week}-${completion.day}`) ?? null,
+        })),
+        totalChallenges,
+      );
+      const derivedAchievementIds = getEarnedAchievements(visibleMetrics).map((achievement) => achievement.id);
+      setAchievementIds([...new Set([...storedAchievementIds, ...derivedAchievementIds])]);
 
       const starredExercises = new Set(starsData?.map((s) => s.exercise) || []);
 
