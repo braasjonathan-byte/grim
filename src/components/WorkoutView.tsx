@@ -1346,17 +1346,25 @@ const estimateCalories = (
   };
 
   const checkAchievementUnlocks = async (nextCompletions: Record<string, Completion>) => {
-    const [{ data: challengeData }, { data: planData }] = await Promise.all([
-      supabase.from("daily_challenge_completions").select("id", { count: "exact" }).eq("user_id", userId),
+    const [{ count: challengeCount }, { data: planData }, { data: archiveData }] = await Promise.all([
+      supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", userId),
       supabase.from("workout_plans").select("week, day, details, tempo").eq("user_id", userId),
+      supabase.from("archived_plans").select("completion_data, plan_data").eq("user_id", userId),
     ]);
     const detailMap = new Map((planData || []).map((p: any) => [`${p.week}-${p.day}`, JSON.stringify({ details: p.details || "", tempo: p.tempo || "" })]));
+    const archivedCompletions = ((archiveData || []) as any[]).flatMap((archive) => {
+      const archivePlans = Array.isArray(archive.plan_data) ? archive.plan_data : [];
+      return (Array.isArray(archive.completion_data) ? archive.completion_data : []).map((completion: any) => {
+        const plan = archivePlans.find((p: any) => Number(p.week) === Number(completion.week) && String(p.day) === String(completion.day));
+        return { ...completion, plan_details: plan ? JSON.stringify({ details: plan.details || "", tempo: plan.tempo || "" }) : null };
+      });
+    });
     const metrics = calculateAchievementMetrics(
-      Object.entries(nextCompletions).map(([entryKey, completion]) => ({
+      [...Object.entries(nextCompletions).map(([entryKey, completion]) => ({
         ...completion,
         plan_details: detailMap.get(entryKey) ?? null,
-      })),
-      challengeData?.length || 0,
+      })), ...archivedCompletions],
+      challengeCount || 0,
     );
     const newAchievements = await unlockEarnedAchievements(userId, metrics);
     if (newAchievements.length > 0) {
