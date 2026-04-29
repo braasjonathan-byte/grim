@@ -273,7 +273,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       supabase.from("archived_plans")
         .select("plan_start_date, completion_data, plan_data")
         .eq("user_id", userId),
-    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }]) => {
+      supabase.from("user_achievements" as any)
+        .select("achievement_id")
+        .eq("user_id", userId)
+        .order("unlocked_at", { ascending: false }),
+    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
@@ -309,6 +313,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       setCompletions([...activeCompletions, ...archivedCompletions]);
+      setAchievementIds(((achievementData || []) as any[]).map((row) => row.achievement_id));
 
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
