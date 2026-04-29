@@ -9,6 +9,7 @@ import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
 import AchievementsPanel from "@/components/AchievementsPanel";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
+import { calculateAchievementMetrics, unlockEarnedAchievements } from "@/lib/achievements";
 import {
   Dialog,
   DialogContent,
@@ -277,7 +278,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .select("achievement_id")
         .eq("user_id", userId)
         .order("unlocked_at", { ascending: false }),
-    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
+    ]).then(async ([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
@@ -289,6 +290,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       const activePlanKeys = new Set((planData || []).map((p) => `${p.week}-${p.day}`));
       const activeCompletions = ((compData || []) as CompletionRecord[]).filter((c) => c.week === 0 || activePlanKeys.has(`${c.week}-${c.day}`));
+      const activePlanDetails = new Map((planData || []).map((p) => [`${p.week}-${p.day}`, JSON.stringify({ details: p.details || "", tempo: p.tempo ?? "" })]));
+      const achievementActiveCompletions = ((compData || []) as CompletionRecord[]).map((c) => ({
+        ...c,
+        plan_details: c.plan_details ?? activePlanDetails.get(`${c.week}-${c.day}`) ?? null,
+      }));
       const archivedCompletions: CompletionRecord[] = [];
       for (const archive of (archiveData || []) as any[]) {
         const archiveStart = archive.plan_start_date || null;
@@ -313,7 +319,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       setCompletions([...activeCompletions, ...archivedCompletions]);
-      setAchievementIds(((achievementData || []) as any[]).map((row) => row.achievement_id));
 
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
@@ -343,6 +348,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       setChallengeCounts(cCounts);
       setChallengeCount(cCounts.all);
       if (challengeData) setAllChallenges(challengeData as any);
+
+      const storedAchievementIds = ((achievementData || []) as any[]).map((row) => row.achievement_id);
+      const historicalAchievementMetrics = calculateAchievementMetrics([...achievementActiveCompletions, ...archivedCompletions], cCounts.all);
+      const newlyUnlocked = await unlockEarnedAchievements(userId, historicalAchievementMetrics);
+      setAchievementIds([...new Set([...newlyUnlocked.map((achievement) => achievement.id), ...storedAchievementIds])]);
 
       const detailsMap = new Map<string, string>();
       const exerciseKeys = new Set<string>();
