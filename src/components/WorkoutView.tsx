@@ -31,6 +31,7 @@ import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
 import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import CircuitTimerDialog from "@/components/CircuitTimerDialog";
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
+import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 
 const SHOW_STRAVA_INTEGRATION = false;
 
@@ -76,6 +77,10 @@ interface FriendComment {
   plan_id: string | null;
   comment: string;
   created_at: string;
+}
+
+interface AchievementToastState {
+  achievements: AchievementDefinition[];
 }
 
 interface CustomExercise {
@@ -778,6 +783,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Calibration state
   const [needsCalibration, setNeedsCalibration] = useState(false);
+  const [achievementToast, setAchievementToast] = useState<AchievementToastState | null>(null);
 
   // Fetch archived completion data for weight history
   useEffect(() => {
@@ -1322,6 +1328,7 @@ const estimateCalories = (
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
       notifyFriendsOfCompletion(day, week, plan?.session_name || day, planStartDate);
+      checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
@@ -1335,6 +1342,34 @@ const estimateCalories = (
           setShowFireworks(true);
         }
       }
+    }
+  };
+
+  const checkAchievementUnlocks = async (nextCompletions: Record<string, Completion>) => {
+    const [{ count: challengeCount }, { data: planData }, { data: archiveData }] = await Promise.all([
+      supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("workout_plans").select("week, day, details, tempo").eq("user_id", userId),
+      supabase.from("archived_plans").select("completion_data, plan_data").eq("user_id", userId),
+    ]);
+    const detailMap = new Map((planData || []).map((p: any) => [`${p.week}-${p.day}`, JSON.stringify({ details: p.details || "", tempo: p.tempo || "" })]));
+    const archivedCompletions = ((archiveData || []) as any[]).flatMap((archive) => {
+      const archivePlans = Array.isArray(archive.plan_data) ? archive.plan_data : [];
+      return (Array.isArray(archive.completion_data) ? archive.completion_data : []).map((completion: any) => {
+        const plan = archivePlans.find((p: any) => Number(p.week) === Number(completion.week) && String(p.day) === String(completion.day));
+        return { ...completion, plan_details: plan ? JSON.stringify({ details: plan.details || "", tempo: plan.tempo || "" }) : null };
+      });
+    });
+    const metrics = calculateAchievementMetrics(
+      [...Object.entries(nextCompletions).map(([entryKey, completion]) => ({
+        ...completion,
+        plan_details: detailMap.get(entryKey) ?? null,
+      })), ...archivedCompletions],
+      challengeCount || 0,
+    );
+    const newAchievements = await unlockEarnedAchievements(userId, metrics);
+    if (newAchievements.length > 0) {
+      setAchievementToast({ achievements: newAchievements });
+      toast.success(`Achievement upplåst: ${newAchievements[0].title}`);
     }
   };
 
@@ -9073,6 +9108,22 @@ const estimateCalories = (
             className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg text-sm disabled:opacity-50"
           >
             {addWeekSaving ? "Skapar..." : `Skapa vecka ${(weeks.filter(w => w > 0).length > 0 ? Math.max(...weeks.filter(w => w > 0)) + 1 : 1)}`}
+          </button>
+        </div>
+      </div>
+    )}
+    {achievementToast && (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 p-4" onClick={() => setAchievementToast(null)}>
+        <div className="w-full max-w-sm border border-border bg-card p-5 text-center animate-fade-in" onClick={(e) => e.stopPropagation()}>
+          <div className="text-5xl mb-3">{achievementToast.achievements[0].emoji}</div>
+          <p className="text-xs font-black text-warning uppercase">Achievement upplåst</p>
+          <h3 className="text-xl font-black mt-1">{achievementToast.achievements[0].title}</h3>
+          <p className="text-sm text-muted-foreground mt-2">{achievementToast.achievements[0].description}</p>
+          {achievementToast.achievements.length > 1 && (
+            <p className="text-xs text-muted-foreground mt-2">+{achievementToast.achievements.length - 1} till upplåsta</p>
+          )}
+          <button onClick={() => setAchievementToast(null)} className="mt-4 w-full bg-primary text-primary-foreground py-2.5 text-sm font-bold">
+            Grymt
           </button>
         </div>
       </div>

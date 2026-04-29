@@ -7,6 +7,7 @@ import EmptyState from "@/components/EmptyState";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
+import AchievementsPanel from "@/components/AchievementsPanel";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import {
   Dialog,
@@ -246,6 +247,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [challengeCounts, setChallengeCounts] = useState<Record<SummaryPeriod, number>>({ week: 0, month: 0, year: 0, all: 0 });
   const [allChallenges, setAllChallenges] = useState<{ challenge_text: string; completed_at: string; challenge_date: string }[]>([]);
   const [showChallengeList, setShowChallengeList] = useState(false);
+  const [achievementIds, setAchievementIds] = useState<string[]>([]);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -271,7 +273,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       supabase.from("archived_plans")
         .select("plan_start_date, completion_data, plan_data")
         .eq("user_id", userId),
-    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }]) => {
+      supabase.from("user_achievements" as any)
+        .select("achievement_id")
+        .eq("user_id", userId)
+        .order("unlocked_at", { ascending: false }),
+    ]).then(([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
         if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
@@ -307,6 +313,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
 
       setCompletions([...activeCompletions, ...archivedCompletions]);
+      setAchievementIds(((achievementData || []) as any[]).map((row) => row.achievement_id));
 
       let userPlanStartDate: Date | null = profileStartDate;
       let usedProfileDate = !!profileStartDate;
@@ -633,6 +640,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </button>
       </div>
       <DailyQuoteCard />
+      <AchievementsPanel unlockedIds={achievementIds} />
 
       {/* View toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">

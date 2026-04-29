@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
+import AchievementsPanel from "@/components/AchievementsPanel";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -196,6 +197,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [social, setSocial] = useState<SocialData>({ instagram: null, tiktok: null, snapchat: null, spotify_anthem_url: null, spotify_anthem_name: null });
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [achievementIds, setAchievementIds] = useState<string[]>([]);
 
   // Theme is now managed by FriendsView
 
@@ -205,17 +207,19 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }, { count: challengeTotal }] = await Promise.all([
+      const [{ data: starsData }, { data: completions }, { data: profileData }, { data: plansData }, { data: roleData }, { count: challengeTotal }, { data: achievementData }] = await Promise.all([
         supabase.from("pr_stars").select("exercise").eq("user_id", friendUserId),
         supabase.from("workout_completions").select("logged_weights, done, skipped, logged_distance_km, logged_tempo, logged_pulse, week, day, updated_at").eq("user_id", friendUserId),
         supabase.from("profiles").select("avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, plan_start_date, theme").eq("user_id", friendUserId).single(),
         supabase.from("workout_plans").select("week, day, details, tempo, created_at").eq("user_id", friendUserId),
         supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
         supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", friendUserId),
+        supabase.from("user_achievements" as any).select("achievement_id").eq("user_id", friendUserId).order("unlocked_at", { ascending: false }),
       ]);
 
       setAvatarUrl(profileData?.avatar_url || null);
       setChallengeCount(challengeTotal || 0);
+      setAchievementIds(((achievementData || []) as any[]).map((row) => row.achievement_id));
       setIsHonorary(profileData?.is_honorary ?? false);
       setIsAdmin(!!roleData);
       const pd = profileData as any;
@@ -407,6 +411,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
           {starredPRs.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-2">Inga stjärnmärkta PB ännu</p>
           )}
+
+          <AchievementsPanel unlockedIds={achievementIds} compact />
 
           {/* Social links & anthem */}
           {(social.instagram || social.tiktok || social.snapchat || social.spotify_anthem_name) && (
