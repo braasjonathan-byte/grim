@@ -1328,6 +1328,7 @@ const estimateCalories = (
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
       notifyFriendsOfCompletion(day, week, plan?.session_name || day, planStartDate);
+      checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
@@ -1341,6 +1342,26 @@ const estimateCalories = (
           setShowFireworks(true);
         }
       }
+    }
+  };
+
+  const checkAchievementUnlocks = async (nextCompletions: Record<string, Completion>) => {
+    const [{ data: challengeData }, { data: planData }] = await Promise.all([
+      supabase.from("daily_challenge_completions").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("workout_plans").select("week, day, details, tempo").eq("user_id", userId),
+    ]);
+    const detailMap = new Map((planData || []).map((p: any) => [`${p.week}-${p.day}`, JSON.stringify({ details: p.details || "", tempo: p.tempo || "" })]));
+    const metrics = calculateAchievementMetrics(
+      Object.entries(nextCompletions).map(([entryKey, completion]) => ({
+        ...completion,
+        plan_details: detailMap.get(entryKey) ?? null,
+      })),
+      challengeData?.length || 0,
+    );
+    const newAchievements = await unlockEarnedAchievements(userId, metrics);
+    if (newAchievements.length > 0) {
+      setAchievementToast({ achievements: newAchievements });
+      toast.success(`Achievement upplåst: ${newAchievements[0].title}`);
     }
   };
 
