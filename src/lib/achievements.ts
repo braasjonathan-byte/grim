@@ -64,7 +64,20 @@ export const getAchievementById = (id: string) => ACHIEVEMENTS.find((a) => a.id 
 
 export const getUnlockedAchievements = (ids: string[]) => {
   const unlocked = new Set(ids);
-  return ACHIEVEMENTS.filter((achievement) => unlocked.has(achievement.id));
+  return getHighestAchievementsByMetric(ACHIEVEMENTS.filter((achievement) => unlocked.has(achievement.id)));
+};
+
+const getHighestAchievementsByMetric = (achievements: AchievementDefinition[]) => {
+  const highest = new Map<keyof AchievementMetrics, AchievementDefinition>();
+
+  for (const achievement of achievements) {
+    const current = highest.get(achievement.metric);
+    if (!current || achievement.threshold > current.threshold) {
+      highest.set(achievement.metric, achievement);
+    }
+  }
+
+  return ACHIEVEMENTS.filter((achievement) => highest.get(achievement.metric)?.id === achievement.id);
 };
 
 export const calculateAchievementMetrics = (
@@ -131,7 +144,7 @@ export const unlockEarnedAchievements = async (
     );
   }
 
-  return newAchievements;
+  return getHighestAchievementsByMetric(newAchievements);
 };
 
 const safelyParseSets = (value: string): any[] => {
