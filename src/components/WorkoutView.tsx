@@ -9104,6 +9104,22 @@ const estimateCalories = (
         </div>
       </div>
     )}
+    {achievementToast && (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-background/80 p-4" onClick={() => setAchievementToast(null)}>
+        <div className="w-full max-w-sm border border-border bg-card p-5 text-center animate-fade-in" onClick={(e) => e.stopPropagation()}>
+          <div className="text-5xl mb-3">{achievementToast.achievements[0].emoji}</div>
+          <p className="text-xs font-black text-warning uppercase">Achievement upplåst</p>
+          <h3 className="text-xl font-black mt-1">{achievementToast.achievements[0].title}</h3>
+          <p className="text-sm text-muted-foreground mt-2">{achievementToast.achievements[0].description}</p>
+          {achievementToast.achievements.length > 1 && (
+            <p className="text-xs text-muted-foreground mt-2">+{achievementToast.achievements.length - 1} till upplåsta</p>
+          )}
+          <button onClick={() => setAchievementToast(null)} className="mt-4 w-full bg-primary text-primary-foreground py-2.5 text-sm font-bold">
+            Grymt
+          </button>
+        </div>
+      </div>
+    )}
     </>);
 
 };
