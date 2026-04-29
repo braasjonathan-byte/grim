@@ -7,6 +7,7 @@ import EmptyState from "@/components/EmptyState";
 import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
+import AchievementsPanel from "@/components/AchievementsPanel";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import {
   Dialog,
@@ -246,6 +247,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [challengeCounts, setChallengeCounts] = useState<Record<SummaryPeriod, number>>({ week: 0, month: 0, year: 0, all: 0 });
   const [allChallenges, setAllChallenges] = useState<{ challenge_text: string; completed_at: string; challenge_date: string }[]>([]);
   const [showChallengeList, setShowChallengeList] = useState(false);
+  const [achievementIds, setAchievementIds] = useState<string[]>([]);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
