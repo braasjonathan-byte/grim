@@ -405,4 +405,60 @@ export const readyWorkoutCategories: ReadyWorkoutCategory[] = [
       },
     ],
   },
+  {
+    label: "Hemmaträning",
+    emoji: "🏠",
+    workouts: [
+      {
+        name: "Helkropp hemma – Bas",
+        details: "Pushups 3×15\nAir squats 3×20\nPlanka 3×45s\nLunges 3×12/ben\nBurpees 3×8\nSuperman hold 3×30s",
+        tempo: "",
+      },
+      {
+        name: "Hemma – Överkropp",
+        details: "Pushups 4×15\nDiamond pushups 3×10\nPike pushups 3×10\nTriceps dips (stol) 3×12\nPlank shoulder taps 3×16\nIncline pushups (soffa) 3×12",
+        tempo: "",
+      },
+      {
+        name: "Hemma – Underkropp",
+        details: "Air squats 4×20\nBulgarska utfall (stol) 3×10/ben\nGlute bridges 3×15\nSingle-leg glute bridge 3×10/ben\nWall sit 3×45s\nCalf raises (trappsteg) 3×20",
+        tempo: "",
+      },
+      {
+        name: "Hemma – Core Crusher",
+        details: "Crunches 3×20\nCykelcrunches 3×20\nLeg raises 3×12\nPlanka 3×60s\nMountain climbers 3×30s\nFlutter kicks 3×30s",
+        tempo: "",
+      },
+      {
+        name: "Hemma – HIIT 20 min",
+        details: "4 rundor: 40s arbete / 20s vila\nBurpees\nJump squats\nMountain climbers\nHigh knees\nPlanka\nVila 60s mellan rundor",
+        tempo: "Max intensitet",
+      },
+      {
+        name: "Hemma – Morgonrutin 15 min",
+        details: "Jumping jacks 2×30s\nPushups 2×10\nAir squats 2×15\nPlanka 2×30s\nLunges 2×8/ben\nBurpees 2×5",
+        tempo: "",
+      },
+      {
+        name: "Hemma – Tabata Bodyweight",
+        details: "8 rundor: 20s arbete / 10s vila\nJump squats\nPushups\nBurpees\nMountain climbers\nHigh knees\nPlank jacks\nLunges\nFlutter kicks",
+        tempo: "Max intensitet",
+      },
+      {
+        name: "Hemma – Glutes & Ben",
+        details: "Sumo squats 3×20\nDonkey kicks 3×15/ben\nFire hydrants 3×15/ben\nGlute bridges 4×15\nFrog pumps 3×20\nWall sit 3×45s\nCalf raises 3×20",
+        tempo: "",
+      },
+      {
+        name: "Hemma – Superset Fullbody",
+        details: "Pushups + Air squats 3×15+20\nPlanka + Glute bridges 3×30s+15\nBurpees + Lunges 3×8+10/ben\nDips (stol) + Calf raises 3×12+20\nMountain climbers + Superman 3×30s+30s",
+        tempo: "",
+      },
+      {
+        name: "Hemma – Lugn styrka & stretch",
+        details: "Pushups 2×10\nAir squats 2×15\nGlute bridges 2×12\nPlanka 2×30s\nHamstrings stretch 2×45s/ben\nHöftböjare stretch 2×45s/sida\nBröstöppnare 2×30s\nDjupandning 3 min",
+        tempo: "30 min",
+      },
+    ],
+  },
 ];
