@@ -94,10 +94,10 @@ const getMonday = (date: Date) => {
 const DAY_OFFSETS: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
 
 const getWorkoutCalendarDate = (planWeek: number, dayName: string, planStartDate: Date): Date => {
-  const start = new Date(planStartDate);
-  start.setHours(0, 0, 0, 0);
+  // Anchor to Monday of the plan start week so day names map to the correct calendar day
+  const monday = getMonday(planStartDate);
   const dayOffset = DAY_OFFSETS[dayName] ?? 0;
-  const date = new Date(start);
+  const date = new Date(monday);
   date.setDate(date.getDate() + (planWeek - 1) * 7 + dayOffset);
   date.setHours(0, 0, 0, 0);
   return date;
