@@ -94,10 +94,10 @@ const getMonday = (date: Date) => {
 const DAY_OFFSETS: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
 
 const getWorkoutCalendarDate = (planWeek: number, dayName: string, planStartDate: Date): Date => {
-  const start = new Date(planStartDate);
-  start.setHours(0, 0, 0, 0);
+  // Anchor to Monday of the plan start week so day names map to the correct calendar day
+  const monday = getMonday(planStartDate);
   const dayOffset = DAY_OFFSETS[dayName] ?? 0;
-  const date = new Date(start);
+  const date = new Date(monday);
   date.setDate(date.getDate() + (planWeek - 1) * 7 + dayOffset);
   date.setHours(0, 0, 0, 0);
   return date;
@@ -136,10 +136,8 @@ const getCompletionDate = (
   if (isStandaloneSession(c)) {
     return getStandaloneDate(c.day) ?? getUpdatedAtDate(c.updated_at);
   }
-  if (c.done || c.skipped) {
-    return getUpdatedAtDate(c.updated_at)
-      ?? (planStartDate ? getWorkoutCalendarDate(c.week, c.day, planStartDate) : null);
-  }
+  // Use the planned workout date (week + day) so late-logged workouts are
+  // attributed to the month they were scheduled, not the month they were marked done.
   if (planStartDate) {
     return getWorkoutCalendarDate(c.week, c.day, planStartDate);
   }
