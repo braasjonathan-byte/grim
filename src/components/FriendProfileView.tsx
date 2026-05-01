@@ -136,10 +136,8 @@ const getCompletionDate = (
   if (isStandaloneSession(c)) {
     return getStandaloneDate(c.day) ?? getUpdatedAtDate(c.updated_at);
   }
-  if (c.done || c.skipped) {
-    return getUpdatedAtDate(c.updated_at)
-      ?? (planStartDate ? getWorkoutCalendarDate(c.week, c.day, planStartDate) : null);
-  }
+  // Use the planned workout date (week + day) so late-logged workouts are
+  // attributed to the month they were scheduled, not the month they were marked done.
   if (planStartDate) {
     return getWorkoutCalendarDate(c.week, c.day, planStartDate);
   }
