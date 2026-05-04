@@ -2198,7 +2198,9 @@ const estimateCalories = (
 
   const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
     const normalizedDetails = normalizeImportedDetails(rawWorkout.details);
-    const workout = { ...rawWorkout, details: applyLastLoggedWeightsToImportedDetails(normalizedDetails) };
+    // Keep original details line — per-set kg/reps are populated from history
+    // via buildImportedSetWeights so each set gets its own data, not just set 1
+    const workout = { ...rawWorkout, details: normalizedDetails };
     const target = importWorkoutTarget;
     if (!target) return;
 
