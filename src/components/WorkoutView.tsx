@@ -6331,6 +6331,7 @@ const estimateCalories = (
                           
                           const saveCondField = async (field: string, value: any) => {
                             const condKey = `__cond__${condName || part}`;
+                            let finalData: Record<string, any> = {};
 
                             await updateCompletionWeights(plan.week, plan.day, (existing) => {
                               let currentData: Record<string, any> = { time: planTime, dist: planDist, tempo: planTempo };
@@ -6360,8 +6361,29 @@ const estimateCalories = (
                                 }
                               }
 
+                              finalData = updated;
                               return { ...existing, [condKey]: JSON.stringify(updated) };
                             });
+
+                            // Keep plan.details in sync so other viewers (friends) see the correct values
+                            if (field !== "intervals") {
+                              const infoParts: string[] = [];
+                              if (finalData.time) infoParts.push(`${finalData.time} min`);
+                              if (finalData.tempo) infoParts.push(`${finalData.tempo}/km`);
+                              if (finalData.dist) infoParts.push(`${finalData.dist} km`);
+                              if (finalData.pulse) infoParts.push(`${finalData.pulse} bpm`);
+                              if (finalData.spm) infoParts.push(`${finalData.spm} spm`);
+                              const lineName = condName || (part.match(/^([^—–]+)/)?.[1].trim() || part);
+                              const newLine = infoParts.length > 0 ? `${lineName} — ${infoParts.join(", ")}` : lineName;
+                              const separator = plan.details.includes("\n") ? "\n" : "; ";
+                              const allLines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+                              if (allLines[i] !== newLine) {
+                                allLines[i] = newLine;
+                                const newDetails = allLines.join(separator);
+                                await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                              }
+                            }
                           };
                           
                           return (
