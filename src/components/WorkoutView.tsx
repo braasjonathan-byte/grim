@@ -8030,10 +8030,12 @@ const estimateCalories = (
               }
             </div>
             {/* Add another workout to the same day (shown under last completed plan of the day) */}
-            {isDone && (() => {
+            {isDone && !showExercisePicker && !weightDialog && !conditioningDialog && (() => {
               const dayPlansAll = plans.filter(p => p.week === plan.week && sameWorkoutDay(p.day, plan.day));
               const isLastOfDay = dayPlansAll[dayPlansAll.length - 1]?.id === plan.id;
               if (!isLastOfDay) return null;
+              // Don't show if last plan of day has no exercises yet
+              if (!plan.details?.trim()) return null;
               const isOpen = addExtraDay?.week === plan.week && addExtraDay?.day === getBaseDay(plan.day);
               if (!isOpen) {
                 return (
