@@ -20,7 +20,7 @@ const iconSizes = {
   md: "w-3.5 h-3.5",
 };
 
-const ADMIN_NICKNAMES = new Set(["jonne"]);
+const ADMIN_NICKNAMES = new Set(["grim"]);
 
 const HonoraryBadge = ({ size = "sm", className, nickname }: HonoraryBadgeProps) => {
   const isAdmin = nickname ? ADMIN_NICKNAMES.has(nickname.trim().toLowerCase()) : false;
