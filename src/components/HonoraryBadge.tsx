@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 interface HonoraryBadgeProps {
   size?: "xs" | "sm" | "md";
   className?: string;
-  /** When provided, special users (e.g. "Jonne") render as "Admin" instead of "Hedersmedlem". */
+  /** When provided, special users (e.g. "Grim") render as "Skapare" instead of "Hedersmedlem". */
   nickname?: string | null;
 }
 
@@ -20,7 +20,7 @@ const iconSizes = {
   md: "w-3.5 h-3.5",
 };
 
-const ADMIN_NICKNAMES = new Set(["jonne"]);
+const ADMIN_NICKNAMES = new Set(["grim"]);
 
 const HonoraryBadge = ({ size = "sm", className, nickname }: HonoraryBadgeProps) => {
   const isAdmin = nickname ? ADMIN_NICKNAMES.has(nickname.trim().toLowerCase()) : false;
@@ -39,7 +39,7 @@ const HonoraryBadge = ({ size = "sm", className, nickname }: HonoraryBadgeProps)
       ) : (
         <Crown className={iconSizes[size]} />
       )}
-      {isAdmin ? "Admin" : "Hedersmedlem"}
+      {isAdmin ? "Skapare" : "Hedersmedlem"}
     </span>
   );
 };
