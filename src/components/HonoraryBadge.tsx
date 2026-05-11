@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 interface HonoraryBadgeProps {
   size?: "xs" | "sm" | "md";
   className?: string;
-  /** When provided, special users (e.g. "Jonne") render as "Admin" instead of "Hedersmedlem". */
+  /** When provided, special users (e.g. "Grim") render as "Skapare" instead of "Hedersmedlem". */
   nickname?: string | null;
 }
 
