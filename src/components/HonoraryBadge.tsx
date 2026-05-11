@@ -39,7 +39,7 @@ const HonoraryBadge = ({ size = "sm", className, nickname }: HonoraryBadgeProps)
       ) : (
         <Crown className={iconSizes[size]} />
       )}
-      {isAdmin ? "Admin" : "Hedersmedlem"}
+      {isAdmin ? "Skapare" : "Hedersmedlem"}
     </span>
   );
 };
