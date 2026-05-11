@@ -169,7 +169,7 @@ const AdminUserList = ({ userId, onViewUserPlan }: AdminUserListProps) => {
                           {togglingHonorary === u.user_id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
                           ) : (
-                            <>{u.nickname?.trim().toLowerCase() === "jonne" ? "🛡️ Admin" : u.is_honorary ? "👑 Hedersmedlem" : "Medlem"}</>
+                            <>{u.nickname?.trim().toLowerCase() === "grim" ? "🛡️ Skapare" : u.is_honorary ? "👑 Hedersmedlem" : "Medlem"}</>
                           )}
                         </button>
                         {isFriend ? (
