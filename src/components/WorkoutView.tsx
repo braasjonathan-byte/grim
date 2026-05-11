@@ -1958,6 +1958,24 @@ const estimateCalories = (
       is_circuit: copyFrom ? (copyFrom.is_circuit || false) : extraIsCircuit,
     } as any);
 
+    // Copy logged set data (per-set kg/reps) from the source workout so reps
+    // per set are preserved identically when copying onto the same day.
+    if (copyFrom) {
+      const sourceKey = `${copyFrom.week}-${copyFrom.day}`;
+      const sourceCompletion = completions[sourceKey];
+      const cleanedWeights = sanitizeCopiedLoggedWeights(sourceCompletion?.logged_weights as Record<string, any> | null | undefined);
+      if (cleanedWeights) {
+        await supabase.from("workout_completions").upsert({
+          user_id: userId,
+          week,
+          day: uniqueDay,
+          done: false,
+          skipped: false,
+          logged_weights: cleanedWeights,
+        }, { onConflict: "user_id,week,day" });
+      }
+    }
+
     setExtraName("");
     setExtraIsCircuit(false);
     setExtraCircuitSeconds("40");
