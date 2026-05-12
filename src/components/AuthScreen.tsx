@@ -512,6 +512,17 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
           </button>
         </form>
 
+        {isLogin && bioAvailable && (
+          <button
+            type="button"
+            onClick={handleBiometricLogin}
+            disabled={bioLoading}
+            className="w-full py-3 bg-secondary text-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+            <Fingerprint className="w-5 h-5" />
+            {bioLoading ? "Verifierar..." : "Logga in med biometri"}
+          </button>
+        )}
+
         {isLogin &&
         <button
           onClick={() => {
