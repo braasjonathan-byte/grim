@@ -625,8 +625,7 @@ serve(async (req) => {
 
       if (dbMapping) {
         const hasCustomInstructions = dbMapping.custom_instructions && Array.isArray(dbMapping.custom_instructions) && dbMapping.custom_instructions.length > 0;
-        
-        // Try to enrich with ExerciseDB data (muscles, equipment, fresh gif)
+
         let exercise: any = null;
         try {
           exercise = await searchExerciseDB(dbMapping.exercisedb_name);
@@ -634,34 +633,33 @@ serve(async (req) => {
           console.error("ExerciseDB enrichment failed:", e);
         }
 
-        // Build instructions: custom > from linked exercise (API) > AI for linked exercise
         let instructions: string[] = [];
+        let aiGen = false;
         if (hasCustomInstructions) {
           instructions = dbMapping.custom_instructions as string[];
         } else if (exercise?.instructions?.length > 0) {
-          // Instructions from the same ExerciseDB entry the GIF was taken from
           instructions = await translateToSwedish(exercise.instructions);
         } else {
-          // Try free-exercise-db using the linked exercisedb_name (not the Swedish name)
           const freeResult = await searchFreeExerciseDB(dbMapping.exercisedb_name);
           if (freeResult?.instructions?.length > 0) {
             instructions = await translateToSwedish(freeResult.instructions);
-          } else {
-            // Generate AI instructions specifically for the linked exercise
+          } else if (!isReported) {
             instructions = await generateAIInstructions(dbMapping.exercisedb_name + " (" + cleanName + ")");
+            aiGen = instructions.length > 0;
           }
         }
 
-        // Always return the mapping — never fall through
-        // Prefer the admin-saved gif_url over live ExerciseDB results
         return new Response(JSON.stringify({
           gifUrl: dbMapping.gif_url || exercise?.gifUrl || null,
           name: dbMapping.exercisedb_name || exercise?.name || cleanName,
-          instructions,
+          instructions: aiGen && isReported ? [] : instructions,
           targetMuscles: exercise?.targetMuscles || [],
           equipments: exercise?.equipments || [],
           adminLinked: true,
           hasCustomInstructions: !!hasCustomInstructions,
+          aiGenerated: aiGen,
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
