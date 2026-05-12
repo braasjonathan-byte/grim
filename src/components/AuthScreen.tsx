@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, ArrowLeft, ShieldQuestion } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldQuestion, Fingerprint } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  isBiometricEnabled,
+  hasBiometricLogin,
+  getBiometricLogin,
+  saveBiometricLogin,
+} from "@/lib/biometric";
 
 interface AuthScreenProps {
   onAuth: () => void;
