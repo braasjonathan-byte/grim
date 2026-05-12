@@ -126,6 +126,7 @@ const Index = () => {
     if (newTab === "workout") {
       setWorkoutRefreshKey((key) => key + 1);
     }
+    hapticLight();
     setTabState(newTab);
     localStorage.setItem("grim_active_tab", newTab);
     window.history.pushState({ tab: newTab }, "", "");
