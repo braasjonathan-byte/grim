@@ -1455,7 +1455,8 @@ const estimateCalories = (
   const toggleConditioningDone = async (week: number, day: string, condName: string) => {
     const key = `${week}-${day}`;
     const currentlyDone = isConditioningDone(key, condName);
-    if (!currentlyDone) { playSetDone(); hapticLight(); }
+    hapticLight();
+    if (!currentlyDone) { playSetDone(); }
     await updateCompletionWeights(week, day, (existing) => ({
       ...existing,
       [`__cond_done__${condName}`]: currentlyDone ? "0" : "1",
