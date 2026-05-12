@@ -157,21 +157,53 @@ if (isIOS) {
 }
 
 // Native-app feel: prevent accidental text/image selection in app chrome.
-const isEditableTarget = (target: EventTarget | null) => {
-  const el = target instanceof Element ? target : null;
-  return !!el?.closest('input, textarea, select, [contenteditable="true"], .allow-select');
+// Selection is only allowed when the actual selected text lives inside an editable field.
+const editableSelector = 'input, textarea, select, [contenteditable="true"], .allow-select';
+
+const getElementFromTarget = (target: EventTarget | Node | null) => {
+  if (target instanceof Element) return target;
+  if (target instanceof Node) return target.parentElement;
+  return null;
+};
+
+const isEditableTarget = (target: EventTarget | Node | null) => {
+  return !!getElementFromTarget(target)?.closest(editableSelector);
+};
+
+const selectionIsInsideEditable = (selection: Selection) => {
+  if (selection.isCollapsed || !selection.anchorNode || !selection.focusNode) return true;
+  return isEditableTarget(selection.anchorNode) && isEditableTarget(selection.focusNode);
+};
+
+const clearNonEditableSelection = () => {
+  const selection = window.getSelection();
+  if (!selection || selectionIsInsideEditable(selection)) return;
+  selection.removeAllRanges();
 };
 
 document.addEventListener("selectstart", (event) => {
-  if (!isEditableTarget(event.target)) event.preventDefault();
+  if (!isEditableTarget(event.target)) {
+    event.preventDefault();
+    clearNonEditableSelection();
+  }
 }, { capture: true });
 
-document.addEventListener("selectionchange", () => {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) return;
-  if (isEditableTarget(document.activeElement)) return;
-  selection.removeAllRanges();
-});
+document.addEventListener("selectionchange", clearNonEditableSelection);
+
+document.addEventListener("mousedown", (event) => {
+  if (!isEditableTarget(event.target)) {
+    event.preventDefault();
+    clearNonEditableSelection();
+  }
+}, { capture: true });
+
+document.addEventListener("touchstart", (event) => {
+  if (!isEditableTarget(event.target)) clearNonEditableSelection();
+}, { capture: true, passive: true });
+
+document.addEventListener("contextmenu", (event) => {
+  if (!isEditableTarget(event.target)) event.preventDefault();
+}, { capture: true });
 
 document.addEventListener("dragstart", (event) => {
   if (!isEditableTarget(event.target)) event.preventDefault();
