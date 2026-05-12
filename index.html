@@ -39,13 +39,35 @@
 
   <body>
     <div id="root">
-      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#000">
+      <div id="initial-splash" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#ffffff">
         <div style="text-align:center">
-          <div style="width:60px;height:60px;border:3px solid #333;border-top-color:#fff;border-radius:50%;margin:0 auto;animation:s .8s linear infinite"></div>
+          <div id="initial-spinner" style="width:60px;height:60px;border:3px solid rgba(0,0,0,0.15);border-top-color:#000;border-radius:50%;margin:0 auto;animation:s .8s linear infinite"></div>
           <style>@keyframes s{to{transform:rotate(360deg)}}</style>
         </div>
       </div>
     </div>
+    <script>
+      // Match splash to user's chosen theme to avoid white/black flash
+      (function () {
+        try {
+          var t = localStorage.getItem("gymberget_theme");
+          var dark = t === "dark";
+          var bg = dark ? "#14181f" : "#ffffff";
+          var fg = dark ? "#ffffff" : "#000000";
+          var splash = document.getElementById("initial-splash");
+          var spinner = document.getElementById("initial-spinner");
+          if (splash) splash.style.background = bg;
+          if (spinner) {
+            spinner.style.borderColor = dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
+            spinner.style.borderTopColor = fg;
+          }
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", bg);
+          document.documentElement.style.background = bg;
+          document.body.style.background = bg;
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

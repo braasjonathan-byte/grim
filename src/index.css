@@ -118,6 +118,30 @@
   * {
     @apply border-border;
     border-radius: 0 !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Disable text selection on UI chrome — keep enabled on actual content */
+  button, a, nav, header, [role="button"], [role="tab"], [role="menuitem"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Re-enable selection where users actually need to copy/edit text */
+  input, textarea, [contenteditable="true"], p, span.selectable, .allow-select {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Allow native bounce inside scrollable lists/sheets */
+  [data-scrollable], .overflow-y-auto, .overflow-auto, .overflow-y-scroll {
+    overscroll-behavior: contain;
   }
 
   body {

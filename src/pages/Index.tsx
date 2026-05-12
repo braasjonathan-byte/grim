@@ -17,6 +17,8 @@ import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
+import { hapticLight } from "@/lib/haptics";
+import { ensureUnlocked } from "@/lib/biometric";
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
@@ -124,6 +126,7 @@ const Index = () => {
     if (newTab === "workout") {
       setWorkoutRefreshKey((key) => key + 1);
     }
+    hapticLight();
     setTabState(newTab);
     localStorage.setItem("grim_active_tab", newTab);
     window.history.pushState({ tab: newTab }, "", "");
@@ -246,22 +249,65 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, [loadUserData]);
-  // Clear PWA app icon badge on load/focus
+  // App icon badge — show unread count when away, clear when visible
+  const totalUnread = unreadAnnouncements + unreadChats + unreadPosts + friendActivities.length;
   useEffect(() => {
-    const clearBadge = () => {
-      if ("clearAppBadge" in navigator) {
-        (navigator as any).clearAppBadge().catch(() => {});
+    const nav: any = navigator;
+    const setBadge = () => {
+      if (document.visibilityState === "visible" || totalUnread === 0) {
+        nav.clearAppBadge?.().catch?.(() => {});
+      } else {
+        nav.setAppBadge?.(totalUnread).catch?.(() => {});
       }
     };
-    clearBadge();
-    window.addEventListener("focus", clearBadge);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") clearBadge();
+    setBadge();
+    document.addEventListener("visibilitychange", setBadge);
+    window.addEventListener("focus", setBadge);
+    return () => {
+      document.removeEventListener("visibilitychange", setBadge);
+      window.removeEventListener("focus", setBadge);
+    };
+  }, [totalUnread]);
+
+  // Idle preload — warm up the most likely next tab while user is idle.
+  useEffect(() => {
+    if (!user) return;
+    const ric: any = (window as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1500));
+    const handle = ric(() => {
+      // Preload tabs the user hasn't visited yet
+      if (tab !== "social") import("@/components/SocialView").catch(() => {});
+      if (tab !== "stats") import("@/components/WorkoutStats").catch(() => {});
+      if (tab !== "calc") import("@/components/ToolsTab").catch(() => {});
+      if (tab !== "workout") import("@/components/WorkoutView").catch(() => {});
     });
     return () => {
-      window.removeEventListener("focus", clearBadge);
+      const cic: any = (window as any).cancelIdleCallback;
+      if (cic && typeof handle === "number") cic(handle);
     };
-  }, []);
+  }, [user, tab]);
+
+  // Biometric app-lock gate (opt-in). Re-prompt when app returns to foreground.
+  const [biometricLocked, setBiometricLocked] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const gate = async () => {
+      const ok = await ensureUnlocked();
+      if (!cancelled) setBiometricLocked(!ok);
+    };
+    gate();
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        sessionStorage.removeItem("grim_biometric_unlocked");
+        gate();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [user]);
 
   // Check for unread announcements + suggestions (for admins) — single combined query
   useEffect(() => {
@@ -501,6 +547,25 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {biometricLocked && (
+        <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 px-6">
+          <img src={grimIcon} alt="Grim" className="w-16 h-16" />
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-black font-serif">Lås upp Grim</h2>
+            <p className="text-sm text-muted-foreground">Bekräfta din identitet för att fortsätta.</p>
+          </div>
+          <button
+            onClick={async () => {
+              const { verifyBiometric } = await import("@/lib/biometric");
+              const ok = await verifyBiometric();
+              if (ok) setBiometricLocked(false);
+            }}
+            className="px-6 py-3 bg-primary text-primary-foreground font-bold text-sm active:scale-95 transition-transform"
+          >
+            Lås upp
+          </button>
+        </div>
+      )}
       <WhatsNewDialog />
       {/* Install prompt dialog */}
       <Dialog open={showInstallDialog} onOpenChange={(v) => {
