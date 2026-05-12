@@ -249,22 +249,65 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, [loadUserData]);
-  // Clear PWA app icon badge on load/focus
+  // App icon badge — show unread count when away, clear when visible
+  const totalUnread = unreadAnnouncements + unreadChats + unreadPosts + friendActivities.length;
   useEffect(() => {
-    const clearBadge = () => {
-      if ("clearAppBadge" in navigator) {
-        (navigator as any).clearAppBadge().catch(() => {});
+    const nav: any = navigator;
+    const setBadge = () => {
+      if (document.visibilityState === "visible" || totalUnread === 0) {
+        nav.clearAppBadge?.().catch?.(() => {});
+      } else {
+        nav.setAppBadge?.(totalUnread).catch?.(() => {});
       }
     };
-    clearBadge();
-    window.addEventListener("focus", clearBadge);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") clearBadge();
+    setBadge();
+    document.addEventListener("visibilitychange", setBadge);
+    window.addEventListener("focus", setBadge);
+    return () => {
+      document.removeEventListener("visibilitychange", setBadge);
+      window.removeEventListener("focus", setBadge);
+    };
+  }, [totalUnread]);
+
+  // Idle preload — warm up the most likely next tab while user is idle.
+  useEffect(() => {
+    if (!user) return;
+    const ric: any = (window as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1500));
+    const handle = ric(() => {
+      // Preload tabs the user hasn't visited yet
+      if (tab !== "social") import("@/components/SocialView").catch(() => {});
+      if (tab !== "stats") import("@/components/WorkoutStats").catch(() => {});
+      if (tab !== "calc") import("@/components/ToolsTab").catch(() => {});
+      if (tab !== "workout") import("@/components/WorkoutView").catch(() => {});
     });
     return () => {
-      window.removeEventListener("focus", clearBadge);
+      const cic: any = (window as any).cancelIdleCallback;
+      if (cic && typeof handle === "number") cic(handle);
     };
-  }, []);
+  }, [user, tab]);
+
+  // Biometric app-lock gate (opt-in). Re-prompt when app returns to foreground.
+  const [biometricLocked, setBiometricLocked] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const gate = async () => {
+      const ok = await ensureUnlocked();
+      if (!cancelled) setBiometricLocked(!ok);
+    };
+    gate();
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        sessionStorage.removeItem("grim_biometric_unlocked");
+        gate();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [user]);
 
   // Check for unread announcements + suggestions (for admins) — single combined query
   useEffect(() => {
