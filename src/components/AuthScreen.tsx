@@ -27,6 +27,39 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("grim_remember_me") === "true");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioLoading, setBioLoading] = useState(false);
+
+  useEffect(() => {
+    setBioAvailable(isBiometricEnabled() && hasBiometricLogin());
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setError("");
+    setBioLoading(true);
+    try {
+      const creds = await getBiometricLogin();
+      if (!creds) {
+        setError("Biometrisk inloggning misslyckades");
+        setBioLoading(false);
+        return;
+      }
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: fakeEmail(creds.nickname),
+        password: creds.password,
+      });
+      if (loginError) {
+        setError("Sparade uppgifter ogiltiga – logga in manuellt");
+        setBioLoading(false);
+        return;
+      }
+      setBioLoading(false);
+      onAuth();
+    } catch {
+      setError("Något gick fel med biometrin");
+      setBioLoading(false);
+    }
+  };
 
   // Forgot password state
   const [forgotNickname, setForgotNickname] = useState("");
