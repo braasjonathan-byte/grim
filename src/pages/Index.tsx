@@ -17,6 +17,8 @@ import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
+import OnboardingTutorial from "@/components/OnboardingTutorial";
+import PageTransition from "@/components/PageTransition";
 import { hapticLight } from "@/lib/haptics";
 import { ensureUnlocked } from "@/lib/biometric";
 
@@ -656,31 +658,36 @@ const Index = () => {
       {/* Content */}
       <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4" style={{ paddingBottom: bottomNavOffset }}>
-        {tab === "workout" && <WorkoutView key={adminViewUserId || workoutRefreshKey} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />}
-        {tab === "social" &&
-          <SocialView
-            userId={user.id}
-            isAdmin={userRole === "admin"}
-            isHonorary={isHonorary}
-            friendActivities={friendActivities}
-            unreadChats={unreadChats}
-            onClearActivitiesForFriend={(nickname) => {
-              setFriendActivities((prev) => {
-                const remaining = prev.filter((a) => a.nickname !== nickname);
-                const seenRaw = localStorage.getItem("seenFriendActivities");
-                const seenMap: Record<string, string> = seenRaw ? JSON.parse(seenRaw) : {};
-                seenMap[nickname] = new Date().toISOString();
-                localStorage.setItem("seenFriendActivities", JSON.stringify(seenMap));
-                return remaining;
-              });
-            }}
-            initialFriendId={notificationFriendId} />
+        <PageTransition tabKey={tab}>
+          {tab === "workout" && <>
+            <OnboardingTutorial />
+            <WorkoutView key={adminViewUserId || workoutRefreshKey} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
+          </>}
+          {tab === "social" &&
+            <SocialView
+              userId={user.id}
+              isAdmin={userRole === "admin"}
+              isHonorary={isHonorary}
+              friendActivities={friendActivities}
+              unreadChats={unreadChats}
+              onClearActivitiesForFriend={(nickname) => {
+                setFriendActivities((prev) => {
+                  const remaining = prev.filter((a) => a.nickname !== nickname);
+                  const seenRaw = localStorage.getItem("seenFriendActivities");
+                  const seenMap: Record<string, string> = seenRaw ? JSON.parse(seenRaw) : {};
+                  seenMap[nickname] = new Date().toISOString();
+                  localStorage.setItem("seenFriendActivities", JSON.stringify(seenMap));
+                  return remaining;
+                });
+              }}
+              initialFriendId={notificationFriendId} />
+            }
+          
+          {tab === "stats" && <WorkoutStats userId={user.id} />}
+          {tab === "calc" &&
+            <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
           }
-        
-        {tab === "stats" && <WorkoutStats userId={user.id} />}
-        {tab === "calc" &&
-          <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
-        }
+        </PageTransition>
       </main>
       </Suspense>
 
