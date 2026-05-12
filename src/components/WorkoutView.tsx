@@ -4285,6 +4285,7 @@ const estimateCalories = (
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Set</label>
                               <input
                                 type="number"
+                                inputMode="numeric"
                                 min="1"
                                 value={setsInput}
                                 onChange={(e) => setSetsInput(e.target.value)}
@@ -4294,6 +4295,7 @@ const estimateCalories = (
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
                               <input
                                 type="number"
+                                inputMode="numeric"
                                 min="1"
                                 value={repsInput}
                                 onChange={(e) => setRepsInput(e.target.value)}
