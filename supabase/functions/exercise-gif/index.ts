@@ -479,14 +479,13 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { exerciseName, action, instructions: saveInstructions } = body;
+    const { exerciseName, action, instructions: saveInstructions, reason } = body;
 
-    // Admin save instructions action
+    // Save instructions action — admin, exercise editor, or creator of the custom exercise
     if (action === "save_instructions" && exerciseName && saveInstructions) {
       const authHeader = req.headers.get("authorization") || "";
       const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      
-      // Verify the user is admin
+
       const token = authHeader.replace("Bearer ", "");
       const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
       if (!user) {
@@ -494,12 +493,33 @@ serve(async (req) => {
       }
       const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
       const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
+
+      let cleanNameAuth = cleanExerciseName(exerciseName);
+      if (!cleanNameAuth) cleanNameAuth = exerciseName.trim();
+
+      // Check if user is creator of a matching custom exercise
+      let isCreator = false;
       if (!isAdmin && !EXERCISE_EDITOR_IDS.includes(user.id)) {
+        const { data: customEx } = await sb
+          .from("custom_exercises")
+          .select("created_by")
+          .ilike("name", cleanNameAuth)
+          .maybeSingle();
+        isCreator = !!(customEx && customEx.created_by === user.id);
+      }
+
+      if (!isAdmin && !EXERCISE_EDITOR_IDS.includes(user.id) && !isCreator) {
         return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      let cleanName = cleanExerciseName(exerciseName);
-      if (!cleanName) cleanName = exerciseName.trim();
+      let cleanName = cleanNameAuth;
+
+      // Clear any existing report — once a description is approved/edited the report is resolved
+      await sb
+        .from("exercise_description_reports")
+        .update({ resolved: true })
+        .eq("exercise_name_lower", cleanName.toLowerCase())
+        .eq("resolved", false);
 
       // Upsert into exercise_gif_mappings
       const { data: existing } = await sb
