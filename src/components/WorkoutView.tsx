@@ -1650,6 +1650,7 @@ const estimateCalories = (
     // Notify friends and check fireworks if workout was just completed
     if (allExercisesDone && !completions[k]?.done && plan0) {
       playWorkoutComplete();
+      hapticMedium();
       notifyFriendsOfCompletion(day, week, plan.session_name || day, planStartDate);
 
       // Check if all scheduled workouts in this week are now done
