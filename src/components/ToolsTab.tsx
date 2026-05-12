@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
 const SupporterButton = lazy(() => import("@/components/SupporterButton"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const AdminUserList = lazy(() => import("@/components/AdminUserList"));
@@ -278,6 +279,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">👤 Medlem</span>
         )}
       </div>
+
+      <ProfileCompletenessBanner userId={userId} />
 
       <Suspense fallback={null}>
         <ReferralLink userId={userId} />

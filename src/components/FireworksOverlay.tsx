@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { hapticMedium } from "@/lib/haptics";
 
 interface Particle {
   id: number;
@@ -39,6 +40,8 @@ const FireworksOverlay = ({ onComplete }: { onComplete: () => void }) => {
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
+    // Celebrate with a haptic pulse on PR / weekly completion
+    try { hapticMedium(); } catch { /* ignore */ }
     const canvas = canvasRef.current;
     if (!canvas) return;
 
