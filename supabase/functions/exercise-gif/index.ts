@@ -680,15 +680,15 @@ serve(async (req) => {
         targetMuscles: [],
         equipments: [],
         isCardio: true,
+        creatorId,
+        isReported,
         error: "Konditions- och rörlighetsövningar har ingen GIF-demonstration.",
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if this exercise has no GIF in ExerciseDB — try free-exercise-db first, then AI
     if (searchTerms.length === 1 && searchTerms[0] === "_NO_GIF_") {
-      // Try free-exercise-db as fallback
       const freeResult = await searchFreeExerciseDB(cleanName);
       if (freeResult) {
         const instructions = await translateToSwedish(freeResult.instructions || []);
@@ -700,26 +700,29 @@ serve(async (req) => {
           targetMuscles: freeResult.targetMuscles || [],
           equipments: freeResult.equipments || [],
           source: "free-exercise-db",
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
-      const aiInstructions = await generateAIInstructions(cleanName);
+
+      const aiInstructions = isReported ? [] : await generateAIInstructions(cleanName);
       return new Response(JSON.stringify({
         gifUrl: null,
         name: cleanName,
         instructions: aiInstructions,
         targetMuscles: [],
         equipments: [],
-        aiGenerated: true,
-        error: aiInstructions.length > 0 ? null : "Denna övning saknar GIF-demonstration.",
+        aiGenerated: aiInstructions.length > 0,
+        creatorId,
+        isReported,
+        error: aiInstructions.length > 0 ? null : (isReported ? "Beskrivning rapporterad — väntar på admin." : "Denna övning saknar GIF-demonstration."),
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Filter out any _CARDIO_ / _NO_GIF_ markers from search terms
     const validTerms = searchTerms.filter(t => t !== "_CARDIO_" && t !== "_NO_GIF_");
 
     for (const term of validTerms) {
@@ -733,13 +736,14 @@ serve(async (req) => {
           instructions,
           targetMuscles: exercise.targetMuscles || [],
           equipments: exercise.equipments || [],
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
-    // Fallback: search free-exercise-db (800+ exercises with images & instructions)
     for (const term of validTerms) {
       const freeResult = await searchFreeExerciseDB(term);
       if (freeResult) {
@@ -752,22 +756,25 @@ serve(async (req) => {
           targetMuscles: freeResult.targetMuscles || [],
           equipments: freeResult.equipments || [],
           source: "free-exercise-db",
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
-    // No match in either DB — try AI-generated instructions as last resort
-    const aiInstructions = await generateAIInstructions(cleanName);
+    const aiInstructions = isReported ? [] : await generateAIInstructions(cleanName);
     return new Response(JSON.stringify({
       gifUrl: null,
       name: cleanName,
       instructions: aiInstructions,
       targetMuscles: [],
       equipments: [],
-      aiGenerated: true,
-      error: aiInstructions.length > 0 ? null : "Exercise not found",
+      aiGenerated: aiInstructions.length > 0,
+      creatorId,
+      isReported,
+      error: aiInstructions.length > 0 ? null : (isReported ? "Beskrivning rapporterad — väntar på admin." : "Exercise not found"),
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
