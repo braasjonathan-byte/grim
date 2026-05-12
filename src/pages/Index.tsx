@@ -547,6 +547,25 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {biometricLocked && (
+        <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 px-6">
+          <img src={grimIcon} alt="Grim" className="w-16 h-16" />
+          <div className="text-center space-y-2">
+            <h2 className="text-xl font-black font-serif">Lås upp Grim</h2>
+            <p className="text-sm text-muted-foreground">Bekräfta din identitet för att fortsätta.</p>
+          </div>
+          <button
+            onClick={async () => {
+              const { verifyBiometric } = await import("@/lib/biometric");
+              const ok = await verifyBiometric();
+              if (ok) setBiometricLocked(false);
+            }}
+            className="px-6 py-3 bg-primary text-primary-foreground font-bold text-sm active:scale-95 transition-transform"
+          >
+            Lås upp
+          </button>
+        </div>
+      )}
       <WhatsNewDialog />
       {/* Install prompt dialog */}
       <Dialog open={showInstallDialog} onOpenChange={(v) => {
