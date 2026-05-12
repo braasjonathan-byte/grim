@@ -211,14 +211,20 @@ const MiniTimer = () => {
             <p className="text-[10px] font-bold uppercase text-muted-foreground">Räkna ned från</p>
             <div className="flex items-center gap-2">
               <input
-                type="number" min={0} max={999} value={mins}
-                onChange={(e) => setMins(Math.max(0, Math.min(999, Number(e.target.value) || 0)))}
+                type="text" inputMode="numeric" pattern="[0-9]*" value={String(mins)}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+                  setMins(Math.max(0, Math.min(999, Number(cleaned) || 0)));
+                }}
                 className="w-16 bg-background border border-border px-2 py-1.5 text-center font-mono text-sm"
               />
               <span className="text-xs text-muted-foreground">min</span>
               <input
-                type="number" min={0} max={59} value={secs}
-                onChange={(e) => setSecs(Math.max(0, Math.min(59, Number(e.target.value) || 0)))}
+                type="text" inputMode="numeric" pattern="[0-9]*" value={String(secs)}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+                  setSecs(Math.max(0, Math.min(59, Number(cleaned) || 0)));
+                }}
                 className="w-16 bg-background border border-border px-2 py-1.5 text-center font-mono text-sm"
               />
               <span className="text-xs text-muted-foreground">sek</span>
