@@ -121,17 +121,22 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Disable text selection on UI chrome — keep enabled on actual content */
-  button, a, nav, header, [role="button"], [role="tab"], [role="menuitem"] {
+  /* Disable text selection globally for native feel */
+  html, body, * {
     -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
   }
 
-  /* Re-enable selection where users actually need to copy/edit text */
-  input, textarea, [contenteditable="true"], p, span.selectable, .allow-select {
+  /* Re-enable selection only where users actually need to type/edit */
+  input, textarea, [contenteditable="true"], .allow-select, .allow-select * {
     -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
     user-select: text;
+    -webkit-touch-callout: default;
   }
 
   html, body {
