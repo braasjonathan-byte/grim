@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, ArrowLeft, ShieldQuestion } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldQuestion, Fingerprint } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  isBiometricEnabled,
+  hasBiometricLogin,
+  getBiometricLogin,
+  saveBiometricLogin,
+} from "@/lib/biometric";
 
 interface AuthScreenProps {
   onAuth: () => void;
@@ -21,6 +27,39 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("grim_remember_me") === "true");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioLoading, setBioLoading] = useState(false);
+
+  useEffect(() => {
+    setBioAvailable(isBiometricEnabled() && hasBiometricLogin());
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setError("");
+    setBioLoading(true);
+    try {
+      const creds = await getBiometricLogin();
+      if (!creds) {
+        setError("Biometrisk inloggning misslyckades");
+        setBioLoading(false);
+        return;
+      }
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: fakeEmail(creds.nickname),
+        password: creds.password,
+      });
+      if (loginError) {
+        setError("Sparade uppgifter ogiltiga – logga in manuellt");
+        setBioLoading(false);
+        return;
+      }
+      setBioLoading(false);
+      onAuth();
+    } catch {
+      setError("Något gick fel med biometrin");
+      setBioLoading(false);
+    }
+  };
 
   // Forgot password state
   const [forgotNickname, setForgotNickname] = useState("");
@@ -91,6 +130,10 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         setError("Fel användarnamn eller lösenord");
         setLoading(false);
         return;
+      }
+      // If biometric is enabled, remember credentials for biometric re-login
+      if (isBiometricEnabled()) {
+        saveBiometricLogin(trimmedNick, password);
       }
     } else {
       const { data: signupData, error: signupError } = await supabase.auth.signUp({
@@ -468,6 +511,17 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
             {loading ? "Laddar..." : isLogin ? "Logga in" : "Skapa konto"}
           </button>
         </form>
+
+        {isLogin && bioAvailable && (
+          <button
+            type="button"
+            onClick={handleBiometricLogin}
+            disabled={bioLoading}
+            className="w-full py-3 bg-secondary text-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+            <Fingerprint className="w-5 h-5" />
+            {bioLoading ? "Verifierar..." : "Logga in med biometri"}
+          </button>
+        )}
 
         {isLogin &&
         <button

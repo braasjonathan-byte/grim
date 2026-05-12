@@ -12,6 +12,44 @@
 const ENABLED_KEY = "grim_biometric_enabled";
 const CRED_KEY = "grim_biometric_cred_id";
 const SESSION_KEY = "grim_biometric_unlocked";
+const LOGIN_CREDS_KEY = "grim_biometric_login_creds";
+
+interface StoredLoginCreds {
+  nickname: string;
+  password: string;
+}
+
+/** Save login credentials behind biometric gate so user can re-login after sign-out. */
+export const saveBiometricLogin = (nickname: string, password: string) => {
+  try {
+    const payload: StoredLoginCreds = { nickname, password };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    localStorage.setItem(LOGIN_CREDS_KEY, encoded);
+  } catch {
+    /* ignore */
+  }
+};
+
+export const hasBiometricLogin = () =>
+  typeof localStorage !== "undefined" && !!localStorage.getItem(LOGIN_CREDS_KEY);
+
+export const clearBiometricLogin = () => {
+  localStorage.removeItem(LOGIN_CREDS_KEY);
+};
+
+/** Prompt biometric, then return stored credentials on success. */
+export const getBiometricLogin = async (): Promise<StoredLoginCreds | null> => {
+  if (!hasBiometricLogin()) return null;
+  const ok = await verifyBiometric();
+  if (!ok) return null;
+  try {
+    const raw = localStorage.getItem(LOGIN_CREDS_KEY);
+    if (!raw) return null;
+    return JSON.parse(decodeURIComponent(escape(atob(raw)))) as StoredLoginCreds;
+  } catch {
+    return null;
+  }
+};
 
 const isSupported = () =>
   typeof window !== "undefined" &&
@@ -79,6 +117,7 @@ export const enableBiometric = async (userId: string, displayName: string): Prom
 export const disableBiometric = () => {
   localStorage.removeItem(ENABLED_KEY);
   localStorage.removeItem(CRED_KEY);
+  localStorage.removeItem(LOGIN_CREDS_KEY);
   sessionStorage.removeItem(SESSION_KEY);
 };
 
