@@ -98,6 +98,10 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         setLoading(false);
         return;
       }
+      // If biometric is enabled, remember credentials for biometric re-login
+      if (isBiometricEnabled()) {
+        saveBiometricLogin(trimmedNick, password);
+      }
     } else {
       const { data: signupData, error: signupError } = await supabase.auth.signUp({
         email,
