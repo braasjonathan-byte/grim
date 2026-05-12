@@ -51,6 +51,12 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
     return localStorage.getItem("gymberget_sound_enabled") !== "false";
   });
 
+  // Biometric unlock
+  const [bioSupported, setBioSupported] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(isBiometricEnabled());
+  const [bioBusy, setBioBusy] = useState(false);
+  useEffect(() => { isBiometricSupported().then(setBioSupported); }, []);
+
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
