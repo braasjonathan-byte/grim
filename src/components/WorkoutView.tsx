@@ -506,13 +506,11 @@ const resolveTodayDayIndex = (weekPlans: PlanDay[], currentWeek: number, planSta
     }
   }
 
-  if (!planStart) {
-    const todayIndex = getDayIndex(today.dayName);
-    const labelMatchedIndex = weekPlans.findIndex((plan) => getDayIndex(plan.day.trim()) === todayIndex);
+  const todayIndex = getDayIndex(today.dayName);
+  const labelMatchedIndex = weekPlans.findIndex((plan) => getDayIndex(plan.day.trim()) === todayIndex);
 
-    if (labelMatchedIndex >= 0) {
-      return { index: labelMatchedIndex, matchedToday: true };
-    }
+  if (labelMatchedIndex >= 0) {
+    return { index: labelMatchedIndex, matchedToday: !planStart };
   }
 
   return { index: 0, matchedToday: false };
