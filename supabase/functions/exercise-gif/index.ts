@@ -479,14 +479,13 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { exerciseName, action, instructions: saveInstructions } = body;
+    const { exerciseName, action, instructions: saveInstructions, reason } = body;
 
-    // Admin save instructions action
+    // Save instructions action — admin, exercise editor, or creator of the custom exercise
     if (action === "save_instructions" && exerciseName && saveInstructions) {
       const authHeader = req.headers.get("authorization") || "";
       const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      
-      // Verify the user is admin
+
       const token = authHeader.replace("Bearer ", "");
       const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
       if (!user) {
@@ -494,12 +493,33 @@ serve(async (req) => {
       }
       const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
       const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
+
+      let cleanNameAuth = cleanExerciseName(exerciseName);
+      if (!cleanNameAuth) cleanNameAuth = exerciseName.trim();
+
+      // Check if user is creator of a matching custom exercise
+      let isCreator = false;
       if (!isAdmin && !EXERCISE_EDITOR_IDS.includes(user.id)) {
+        const { data: customEx } = await sb
+          .from("custom_exercises")
+          .select("created_by")
+          .ilike("name", cleanNameAuth)
+          .maybeSingle();
+        isCreator = !!(customEx && customEx.created_by === user.id);
+      }
+
+      if (!isAdmin && !EXERCISE_EDITOR_IDS.includes(user.id) && !isCreator) {
         return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      let cleanName = cleanExerciseName(exerciseName);
-      if (!cleanName) cleanName = exerciseName.trim();
+      let cleanName = cleanNameAuth;
+
+      // Clear any existing report — once a description is approved/edited the report is resolved
+      await sb
+        .from("exercise_description_reports")
+        .update({ resolved: true })
+        .eq("exercise_name_lower", cleanName.toLowerCase())
+        .eq("resolved", false);
 
       // Upsert into exercise_gif_mappings
       const { data: existing } = await sb
@@ -523,6 +543,34 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Report incorrect AI description (any authenticated user)
+    if (action === "report_description" && exerciseName) {
+      const authHeader = req.headers.get("authorization") || "";
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      let cn = cleanExerciseName(exerciseName);
+      if (!cn) cn = exerciseName.trim();
+
+      await sb.from("exercise_description_reports").insert({
+        exercise_name: cn,
+        exercise_name_lower: cn.toLowerCase(),
+        reported_by: user.id,
+        reason: typeof reason === "string" ? reason.slice(0, 500) : null,
+      });
+
+      // Notify admins via the suggestions table so it surfaces in the suggestion box
+      await sb.from("suggestions").insert({
+        user_id: user.id,
+        message: `[Felaktig övningsbeskrivning] "${cn}"${reason ? ` — ${reason}` : ""}`,
+      });
+
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (!exerciseName) {
       return new Response(JSON.stringify({ error: "Missing exerciseName" }), {
         status: 400,
@@ -532,6 +580,29 @@ serve(async (req) => {
 
     let cleanName = cleanExerciseName(exerciseName);
     if (!cleanName) cleanName = exerciseName.trim();
+
+    // Lookup creator + report status (used to gate AI-generated descriptions)
+    let creatorId: string | null = null;
+    let isReported = false;
+    try {
+      const sbMeta = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: customEx } = await sbMeta
+        .from("custom_exercises")
+        .select("created_by")
+        .ilike("name", cleanName)
+        .maybeSingle();
+      creatorId = customEx?.created_by || null;
+      const { data: reportRow } = await sbMeta
+        .from("exercise_description_reports")
+        .select("id")
+        .eq("exercise_name_lower", cleanName.toLowerCase())
+        .eq("resolved", false)
+        .limit(1)
+        .maybeSingle();
+      isReported = !!reportRow;
+    } catch (e) {
+      console.error("creator/report lookup failed:", e);
+    }
 
     // 1. Check database for admin-managed mapping first
     try {
@@ -554,8 +625,7 @@ serve(async (req) => {
 
       if (dbMapping) {
         const hasCustomInstructions = dbMapping.custom_instructions && Array.isArray(dbMapping.custom_instructions) && dbMapping.custom_instructions.length > 0;
-        
-        // Try to enrich with ExerciseDB data (muscles, equipment, fresh gif)
+
         let exercise: any = null;
         try {
           exercise = await searchExerciseDB(dbMapping.exercisedb_name);
@@ -563,34 +633,33 @@ serve(async (req) => {
           console.error("ExerciseDB enrichment failed:", e);
         }
 
-        // Build instructions: custom > from linked exercise (API) > AI for linked exercise
         let instructions: string[] = [];
+        let aiGen = false;
         if (hasCustomInstructions) {
           instructions = dbMapping.custom_instructions as string[];
         } else if (exercise?.instructions?.length > 0) {
-          // Instructions from the same ExerciseDB entry the GIF was taken from
           instructions = await translateToSwedish(exercise.instructions);
         } else {
-          // Try free-exercise-db using the linked exercisedb_name (not the Swedish name)
           const freeResult = await searchFreeExerciseDB(dbMapping.exercisedb_name);
           if (freeResult?.instructions?.length > 0) {
             instructions = await translateToSwedish(freeResult.instructions);
-          } else {
-            // Generate AI instructions specifically for the linked exercise
+          } else if (!isReported) {
             instructions = await generateAIInstructions(dbMapping.exercisedb_name + " (" + cleanName + ")");
+            aiGen = instructions.length > 0;
           }
         }
 
-        // Always return the mapping — never fall through
-        // Prefer the admin-saved gif_url over live ExerciseDB results
         return new Response(JSON.stringify({
           gifUrl: dbMapping.gif_url || exercise?.gifUrl || null,
           name: dbMapping.exercisedb_name || exercise?.name || cleanName,
-          instructions,
+          instructions: aiGen && isReported ? [] : instructions,
           targetMuscles: exercise?.targetMuscles || [],
           equipments: exercise?.equipments || [],
           adminLinked: true,
           hasCustomInstructions: !!hasCustomInstructions,
+          aiGenerated: aiGen,
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -611,15 +680,15 @@ serve(async (req) => {
         targetMuscles: [],
         equipments: [],
         isCardio: true,
+        creatorId,
+        isReported,
         error: "Konditions- och rörlighetsövningar har ingen GIF-demonstration.",
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if this exercise has no GIF in ExerciseDB — try free-exercise-db first, then AI
     if (searchTerms.length === 1 && searchTerms[0] === "_NO_GIF_") {
-      // Try free-exercise-db as fallback
       const freeResult = await searchFreeExerciseDB(cleanName);
       if (freeResult) {
         const instructions = await translateToSwedish(freeResult.instructions || []);
@@ -631,26 +700,29 @@ serve(async (req) => {
           targetMuscles: freeResult.targetMuscles || [],
           equipments: freeResult.equipments || [],
           source: "free-exercise-db",
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
-      const aiInstructions = await generateAIInstructions(cleanName);
+
+      const aiInstructions = isReported ? [] : await generateAIInstructions(cleanName);
       return new Response(JSON.stringify({
         gifUrl: null,
         name: cleanName,
         instructions: aiInstructions,
         targetMuscles: [],
         equipments: [],
-        aiGenerated: true,
-        error: aiInstructions.length > 0 ? null : "Denna övning saknar GIF-demonstration.",
+        aiGenerated: aiInstructions.length > 0,
+        creatorId,
+        isReported,
+        error: aiInstructions.length > 0 ? null : (isReported ? "Beskrivning rapporterad — väntar på admin." : "Denna övning saknar GIF-demonstration."),
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Filter out any _CARDIO_ / _NO_GIF_ markers from search terms
     const validTerms = searchTerms.filter(t => t !== "_CARDIO_" && t !== "_NO_GIF_");
 
     for (const term of validTerms) {
@@ -664,13 +736,14 @@ serve(async (req) => {
           instructions,
           targetMuscles: exercise.targetMuscles || [],
           equipments: exercise.equipments || [],
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
-    // Fallback: search free-exercise-db (800+ exercises with images & instructions)
     for (const term of validTerms) {
       const freeResult = await searchFreeExerciseDB(term);
       if (freeResult) {
@@ -683,22 +756,25 @@ serve(async (req) => {
           targetMuscles: freeResult.targetMuscles || [],
           equipments: freeResult.equipments || [],
           source: "free-exercise-db",
+          creatorId,
+          isReported,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
-    // No match in either DB — try AI-generated instructions as last resort
-    const aiInstructions = await generateAIInstructions(cleanName);
+    const aiInstructions = isReported ? [] : await generateAIInstructions(cleanName);
     return new Response(JSON.stringify({
       gifUrl: null,
       name: cleanName,
       instructions: aiInstructions,
       targetMuscles: [],
       equipments: [],
-      aiGenerated: true,
-      error: aiInstructions.length > 0 ? null : "Exercise not found",
+      aiGenerated: aiInstructions.length > 0,
+      creatorId,
+      isReported,
+      error: aiInstructions.length > 0 ? null : (isReported ? "Beskrivning rapporterad — väntar på admin." : "Exercise not found"),
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
