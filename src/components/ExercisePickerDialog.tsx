@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, X, Plus, Dumbbell, Info } from "lucide-react";
+import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { cn } from "@/lib/utils";
+
+const RECENTS_KEY = "grim_recent_exercises";
+const RECENTS_MAX = 5;
+const getRecents = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]"); } catch { return []; }
+};
+const pushRecent = (name: string) => {
+  try {
+    const list = getRecents().filter(n => n.toLowerCase() !== name.toLowerCase());
+    list.unshift(name);
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(list.slice(0, RECENTS_MAX)));
+  } catch { /* ignore */ }
+};
 
 interface CustomExercise {
   id: string;
@@ -119,6 +132,7 @@ const ExercisePickerDialog = ({
   });
 
   const handleSelect = (name: string) => {
+    pushRecent(name);
     onSelect(name);
     onClose();
   };
@@ -250,6 +264,44 @@ const ExercisePickerDialog = ({
           }}
         >
           <div className="space-y-1">
+            {!search && !selectedMuscle && (() => {
+              const recents = getRecents().filter(r => allExercises.some(e => e.name.toLowerCase() === r.toLowerCase()));
+              if (!recents.length) return null;
+              return (
+                <div className="mb-2">
+                  <div className="flex items-center gap-1.5 px-1 pb-1 pt-0.5">
+                    <Clock className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Senast använda</span>
+                  </div>
+                  <div className="space-y-1">
+                    {recents.map((name) => {
+                      const meta = allExercises.find(e => e.name.toLowerCase() === name.toLowerCase());
+                      if (!meta) return null;
+                      const lastW = getLastWeight?.(meta.name);
+                      return (
+                        <button
+                          key={`recent-${name}`}
+                          onClick={() => handleSelect(meta.name)}
+                          className="w-full flex items-center justify-between p-2.5 bg-primary/5 hover:bg-primary/15 border-l-2 border-primary/60 rounded-r-xl text-sm transition-colors text-left active:scale-[0.98]"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Clock className="w-3 h-3 text-primary/70 flex-shrink-0" />
+                            <span className="truncate font-medium">{meta.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+                            {lastW && (
+                              <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">{lastW}</span>
+                            )}
+                            <span className="text-[10px] text-muted-foreground">{meta.muscleGroup}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="border-t border-border/50 my-2" />
+                </div>
+              );
+            })()}
             {filtered.map((e, i) => {
               const lastW = getLastWeight?.(e.name);
               return (

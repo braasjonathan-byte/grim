@@ -28,6 +28,7 @@ import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
+import { hapticLight, hapticMedium } from "@/lib/haptics";
 import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import CircuitTimerDialog from "@/components/CircuitTimerDialog";
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
@@ -1454,7 +1455,7 @@ const estimateCalories = (
   const toggleConditioningDone = async (week: number, day: string, condName: string) => {
     const key = `${week}-${day}`;
     const currentlyDone = isConditioningDone(key, condName);
-    if (!currentlyDone) playSetDone();
+    if (!currentlyDone) { playSetDone(); hapticLight(); }
     await updateCompletionWeights(week, day, (existing) => ({
       ...existing,
       [`__cond_done__${condName}`]: currentlyDone ? "0" : "1",
@@ -1564,6 +1565,7 @@ const estimateCalories = (
     arr[setIndex] = !arr[setIndex];
     if (arr[setIndex]) {
       playSetDone();
+      hapticLight();
       triggerSetRestTimer(true);
     }
     const setsStr = arr.map(b => b ? "1" : "0").join("");
@@ -1648,6 +1650,7 @@ const estimateCalories = (
     // Notify friends and check fireworks if workout was just completed
     if (allExercisesDone && !completions[k]?.done && plan0) {
       playWorkoutComplete();
+      hapticMedium();
       notifyFriendsOfCompletion(day, week, plan.session_name || day, planStartDate);
 
       // Check if all scheduled workouts in this week are now done

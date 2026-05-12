@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2, Settings, Hourglass, TimerReset } from "lucide-react";
+import { hapticAlarm } from "@/lib/haptics";
 
 type Mode = "stopwatch" | "countdown";
 
@@ -87,6 +88,7 @@ const MiniTimer = () => {
   const handleAlarm = () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
+    hapticAlarm();
     if (document.visibilityState === "visible") {
       playAlarmBeep();
     } else {
@@ -95,6 +97,11 @@ const MiniTimer = () => {
       playAlarmBeep();
     }
   };
+
+  // Broadcast active state for the bottom-nav pulse indicator
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("grim:timer-state", { detail: { running, mode } }));
+  }, [running, mode]);
 
   useEffect(() => {
     if (running) {
