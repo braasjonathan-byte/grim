@@ -132,6 +132,7 @@ const ExercisePickerDialog = ({
   });
 
   const handleSelect = (name: string) => {
+    pushRecent(name);
     onSelect(name);
     onClose();
   };
