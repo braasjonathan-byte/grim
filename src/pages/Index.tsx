@@ -676,6 +676,15 @@ const Index = () => {
           willChange: "transform",
         }}
       >
+        {timerRunning && (
+          <div
+            className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 px-2 py-0.5 bg-primary text-primary-foreground text-[9px] font-bold uppercase tracking-wider"
+            aria-label="Timer aktiv"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />
+            Timer
+          </div>
+        )}
         <div className="max-w-lg mx-auto flex">
           {tabs.map(({ key, icon: Icon, label, badge }) =>
           <button
