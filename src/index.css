@@ -212,3 +212,15 @@
 }
 .swipe-left { animation: slide-in-from-right 0.25s ease-out; }
 .swipe-right { animation: slide-in-from-left 0.25s ease-out; }
+
+@keyframes page-enter {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.page-transition {
+  animation: page-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-transition { animation: none; }
+}
