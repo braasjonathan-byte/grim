@@ -28,6 +28,7 @@ import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
+import { hapticLight, hapticMedium } from "@/lib/haptics";
 import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import CircuitTimerDialog from "@/components/CircuitTimerDialog";
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
