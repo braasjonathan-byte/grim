@@ -1565,6 +1565,7 @@ const estimateCalories = (
     arr[setIndex] = !arr[setIndex];
     if (arr[setIndex]) {
       playSetDone();
+      hapticLight();
       triggerSetRestTimer(true);
     }
     const setsStr = arr.map(b => b ? "1" : "0").join("");
