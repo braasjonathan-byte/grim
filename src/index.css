@@ -122,21 +122,22 @@
   }
 
   /* Disable text selection globally for native feel */
-  html, body, * {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
+  html, body, *, *::before, *::after {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
   }
 
   /* Re-enable selection only where users actually need to type/edit */
-  input, textarea, [contenteditable="true"], .allow-select, .allow-select * {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-    -webkit-touch-callout: default;
+  input, textarea, [contenteditable="true"], [contenteditable="true"] *,
+  .allow-select, .allow-select * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
   }
 
   html, body {
