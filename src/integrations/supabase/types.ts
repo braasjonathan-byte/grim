@@ -427,6 +427,36 @@ export type Database = {
           },
         ]
       }
+      exercise_description_reports: {
+        Row: {
+          created_at: string
+          exercise_name: string
+          exercise_name_lower: string
+          id: string
+          reason: string | null
+          reported_by: string
+          resolved: boolean
+        }
+        Insert: {
+          created_at?: string
+          exercise_name: string
+          exercise_name_lower: string
+          id?: string
+          reason?: string | null
+          reported_by: string
+          resolved?: boolean
+        }
+        Update: {
+          created_at?: string
+          exercise_name?: string
+          exercise_name_lower?: string
+          id?: string
+          reason?: string | null
+          reported_by?: string
+          resolved?: boolean
+        }
+        Relationships: []
+      }
       exercise_gif_mappings: {
         Row: {
           created_at: string
