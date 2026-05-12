@@ -34,20 +34,29 @@ const OneRMCalculator = () => {
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Vikt (kg)</label>
               <input
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={String(weight)}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+                  setWeight(Number(cleaned) || 0);
+                }}
                 className="w-full bg-secondary text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Reps</label>
               <input
-                type="number"
-                value={reps}
-                onChange={(e) => setReps(Number(e.target.value))}
-                min={1}
-                max={30}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={String(reps)}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+                  const n = Number(cleaned) || 0;
+                  setReps(Math.max(1, Math.min(30, n || 1)));
+                }}
                 className="w-full bg-secondary text-foreground text-lg font-mono p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
