@@ -100,6 +100,14 @@ const Index = () => {
     return saved === "workout" || saved === "social" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
   });
 
+  // Listen for timer running state to show pulse on bottom nav
+  const [timerRunning, setTimerRunning] = useState(false);
+  useEffect(() => {
+    const onState = (e: Event) => setTimerRunning(!!(e as CustomEvent).detail?.running);
+    window.addEventListener("grim:timer-state", onState);
+    return () => window.removeEventListener("grim:timer-state", onState);
+  }, []);
+
   // Handle deep link params from push notifications
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
