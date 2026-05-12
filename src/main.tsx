@@ -162,7 +162,8 @@ const editableSelector = 'input, textarea, select, [contenteditable="true"], .al
 
 const getElementFromTarget = (target: EventTarget | Node | null) => {
   if (target instanceof Element) return target;
-  return target?.parentElement ?? null;
+  if (target instanceof Node) return target.parentElement;
+  return null;
 };
 
 const isEditableTarget = (target: EventTarget | Node | null) => {
