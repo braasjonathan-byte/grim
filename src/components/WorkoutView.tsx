@@ -1619,14 +1619,32 @@ const estimateCalories = (
       }
     }
 
-    // Ensure __setdata__ exists so kg/reps are always persisted for stats
+    // Ensure __setdata__ exists so kg/reps are always persisted for stats.
+    // When the user marks a set done without typing, persist the placeholder
+    // (inherited / previous-session) values so they aren't lost.
     const setDataKey = `__setdata__${exerciseName}`;
-    if (!updated[setDataKey]) {
-      const dkg = defaultKg || "";
-      const dreps = defaultReps || "10";
-      const initData = Array.from({ length: totalSets }, () => ({ kg: dkg, reps: dreps }));
-      updated[setDataKey] = JSON.stringify(initData);
-      if (isAssistedBodyweightExercise(exerciseName)) updated[`__bw_mode__${exerciseName}`] = "sub";
+    const dkg = defaultKg || "";
+    const dreps = defaultReps || "10";
+    let parsedSetData: Array<{ kg?: string; reps?: string }> = [];
+    if (updated[setDataKey]) {
+      try {
+        const raw = updated[setDataKey];
+        const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
+        if (Array.isArray(arr)) parsedSetData = arr;
+      } catch {}
+    }
+    while (parsedSetData.length < totalSets) parsedSetData.push({ kg: "", reps: "" });
+
+    if (arr[setIndex]) {
+      // Promote placeholders into actual values for the just-completed set
+      const cur = parsedSetData[setIndex] || {};
+      const repsVal = (cur.reps && String(cur.reps).trim()) ? cur.reps : dreps;
+      const kgVal = (cur.kg && String(cur.kg).trim()) ? cur.kg : dkg;
+      parsedSetData[setIndex] = { ...cur, reps: repsVal, kg: kgVal };
+    }
+    updated[setDataKey] = JSON.stringify(parsedSetData);
+    if (arr[setIndex] && isAssistedBodyweightExercise(exerciseName) && !updated[`__bw_mode__${exerciseName}`]) {
+      updated[`__bw_mode__${exerciseName}`] = "sub";
     }
 
     // Do NOT auto-complete the whole workout when all sets are checked.
