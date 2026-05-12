@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, X, Plus, Dumbbell, Info } from "lucide-react";
+import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { cn } from "@/lib/utils";
+
+const RECENTS_KEY = "grim_recent_exercises";
+const RECENTS_MAX = 5;
+const getRecents = (): string[] => {
+  try { return JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]"); } catch { return []; }
+};
+const pushRecent = (name: string) => {
+  try {
+    const list = getRecents().filter(n => n.toLowerCase() !== name.toLowerCase());
+    list.unshift(name);
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(list.slice(0, RECENTS_MAX)));
+  } catch { /* ignore */ }
+};
 
 interface CustomExercise {
   id: string;
