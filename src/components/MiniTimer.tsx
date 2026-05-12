@@ -88,6 +88,7 @@ const MiniTimer = () => {
   const handleAlarm = () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
+    hapticAlarm();
     if (document.visibilityState === "visible") {
       playAlarmBeep();
     } else {
@@ -96,6 +97,11 @@ const MiniTimer = () => {
       playAlarmBeep();
     }
   };
+
+  // Broadcast active state for the bottom-nav pulse indicator
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("grim:timer-state", { detail: { running, mode } }));
+  }, [running, mode]);
 
   useEffect(() => {
     if (running) {
