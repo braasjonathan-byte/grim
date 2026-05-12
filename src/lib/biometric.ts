@@ -117,6 +117,7 @@ export const enableBiometric = async (userId: string, displayName: string): Prom
 export const disableBiometric = () => {
   localStorage.removeItem(ENABLED_KEY);
   localStorage.removeItem(CRED_KEY);
+  localStorage.removeItem(LOGIN_CREDS_KEY);
   sessionStorage.removeItem(SESSION_KEY);
 };
 
