@@ -1619,14 +1619,32 @@ const estimateCalories = (
       }
     }
 
-    // Ensure __setdata__ exists so kg/reps are always persisted for stats
+    // Ensure __setdata__ exists so kg/reps are always persisted for stats.
+    // When the user marks a set done without typing, persist the placeholder
+    // (inherited / previous-session) values so they aren't lost.
     const setDataKey = `__setdata__${exerciseName}`;
-    if (!updated[setDataKey]) {
-      const dkg = defaultKg || "";
-      const dreps = defaultReps || "10";
-      const initData = Array.from({ length: totalSets }, () => ({ kg: dkg, reps: dreps }));
-      updated[setDataKey] = JSON.stringify(initData);
-      if (isAssistedBodyweightExercise(exerciseName)) updated[`__bw_mode__${exerciseName}`] = "sub";
+    const dkg = defaultKg || "";
+    const dreps = defaultReps || "10";
+    let parsedSetData: Array<{ kg?: string; reps?: string }> = [];
+    if (updated[setDataKey]) {
+      try {
+        const raw = updated[setDataKey];
+        const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
+        if (Array.isArray(arr)) parsedSetData = arr;
+      } catch {}
+    }
+    while (parsedSetData.length < totalSets) parsedSetData.push({ kg: "", reps: "" });
+
+    if (arr[setIndex]) {
+      // Promote placeholders into actual values for the just-completed set
+      const cur = parsedSetData[setIndex] || {};
+      const repsVal = (cur.reps && String(cur.reps).trim()) ? cur.reps : dreps;
+      const kgVal = (cur.kg && String(cur.kg).trim()) ? cur.kg : dkg;
+      parsedSetData[setIndex] = { ...cur, reps: repsVal, kg: kgVal };
+    }
+    updated[setDataKey] = JSON.stringify(parsedSetData);
+    if (arr[setIndex] && isAssistedBodyweightExercise(exerciseName) && !updated[`__bw_mode__${exerciseName}`]) {
+      updated[`__bw_mode__${exerciseName}`] = "sub";
     }
 
     // Do NOT auto-complete the whole workout when all sets are checked.
@@ -4015,9 +4033,9 @@ const estimateCalories = (
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || inheritedReps)} placeholder={circuitDefaultSec ? (findLastReps(name, si) || inheritedReps || circuitDefaultSec) : undefined} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(name, si) || inheritedReps || circuitDefaultSec) : (findLastReps(name, si) || inheritedReps || defaultReps)} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                            <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
-                                           <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || inheritedKg} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder="—" className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                           <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                           </div>
                                           {(() => {
@@ -7484,7 +7502,7 @@ const estimateCalories = (
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || inheritedReps)} placeholder={circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : undefined} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                           <AutoSaveInput type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : (findLastReps(partName, si) || inheritedReps || defReps)} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                            <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
                                           {!isBodyweight && (
                                             <>
@@ -7508,7 +7526,7 @@ const estimateCalories = (
                                                   {currentBwMode === "add" ? "+" : "−"}
                                                 </button>
                                               )}
-                                              <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || inheritedKg} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, inheritedReps)} placeholder="—" className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                              <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                               <span className="text-[10px] text-muted-foreground">kg</span>
                                             </>
                                           )}
