@@ -543,6 +543,34 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Report incorrect AI description (any authenticated user)
+    if (action === "report_description" && exerciseName) {
+      const authHeader = req.headers.get("authorization") || "";
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      let cn = cleanExerciseName(exerciseName);
+      if (!cn) cn = exerciseName.trim();
+
+      await sb.from("exercise_description_reports").insert({
+        exercise_name: cn,
+        exercise_name_lower: cn.toLowerCase(),
+        reported_by: user.id,
+        reason: typeof reason === "string" ? reason.slice(0, 500) : null,
+      });
+
+      // Notify admins via the suggestions table so it surfaces in the suggestion box
+      await sb.from("suggestions").insert({
+        user_id: user.id,
+        message: `[Felaktig övningsbeskrivning] "${cn}"${reason ? ` — ${reason}` : ""}`,
+      });
+
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (!exerciseName) {
       return new Response(JSON.stringify({ error: "Missing exerciseName" }), {
         status: 400,
@@ -552,6 +580,29 @@ serve(async (req) => {
 
     let cleanName = cleanExerciseName(exerciseName);
     if (!cleanName) cleanName = exerciseName.trim();
+
+    // Lookup creator + report status (used to gate AI-generated descriptions)
+    let creatorId: string | null = null;
+    let isReported = false;
+    try {
+      const sbMeta = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { data: customEx } = await sbMeta
+        .from("custom_exercises")
+        .select("created_by")
+        .ilike("name", cleanName)
+        .maybeSingle();
+      creatorId = customEx?.created_by || null;
+      const { data: reportRow } = await sbMeta
+        .from("exercise_description_reports")
+        .select("id")
+        .eq("exercise_name_lower", cleanName.toLowerCase())
+        .eq("resolved", false)
+        .limit(1)
+        .maybeSingle();
+      isReported = !!reportRow;
+    } catch (e) {
+      console.error("creator/report lookup failed:", e);
+    }
 
     // 1. Check database for admin-managed mapping first
     try {
