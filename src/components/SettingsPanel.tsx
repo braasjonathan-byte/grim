@@ -376,6 +376,40 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         </button>
       </div>
 
+      {/* Biometric unlock toggle */}
+      {bioSupported && userId && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Fingerprint className="w-4 h-4 text-primary" />
+            <div>
+              <span className="text-sm block">Biometrisk upplåsning</span>
+              <span className="text-[10px] text-muted-foreground">Kräv Face ID / fingeravtryck för att öppna appen</span>
+            </div>
+          </div>
+          <button
+            disabled={bioBusy}
+            onClick={async () => {
+              setBioBusy(true);
+              try {
+                if (bioEnabled) {
+                  disableBiometric();
+                  setBioEnabled(false);
+                } else {
+                  const ok = await enableBiometric(userId, "Grim user");
+                  setBioEnabled(ok);
+                  if (!ok) alert("Kunde inte aktivera biometrisk upplåsning. Kontrollera att enheten stöder det.");
+                }
+              } finally {
+                setBioBusy(false);
+              }
+            }}
+            className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${bioEnabled ? "bg-primary" : "bg-secondary border border-border"}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${bioEnabled ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
+          </button>
+        </div>
+      )}
+
       {userId && SHOW_STRAVA_INTEGRATION && (
         <div className="border-t border-border pt-2">
           <button
