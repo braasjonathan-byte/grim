@@ -17,6 +17,8 @@ import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
+import { hapticLight } from "@/lib/haptics";
+import { ensureUnlocked } from "@/lib/biometric";
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
