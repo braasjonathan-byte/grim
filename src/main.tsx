@@ -156,6 +156,27 @@ if (isIOS) {
   });
 }
 
+// Native-app feel: prevent accidental text/image selection in app chrome.
+const isEditableTarget = (target: EventTarget | null) => {
+  const el = target instanceof Element ? target : null;
+  return !!el?.closest('input, textarea, select, [contenteditable="true"], .allow-select');
+};
+
+document.addEventListener("selectstart", (event) => {
+  if (!isEditableTarget(event.target)) event.preventDefault();
+}, { capture: true });
+
+document.addEventListener("selectionchange", () => {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return;
+  if (isEditableTarget(document.activeElement)) return;
+  selection.removeAllRanges();
+});
+
+document.addEventListener("dragstart", (event) => {
+  if (!isEditableTarget(event.target)) event.preventDefault();
+}, { capture: true });
+
 // Lock screen orientation to portrait when supported (PWA / installed apps)
 try {
   const orientation = (screen as any).orientation;
