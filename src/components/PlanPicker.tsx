@@ -139,6 +139,10 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
     const paddedDays = padWeeksTo7Days(days);
 
+    // Clear any existing plan rows (week > 0) so the new plan starts fresh at week 1.
+    // Single workouts (week = 0) are preserved.
+    await supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0);
+
     const rows = paddedDays.map((d) => ({
       user_id: userId,
       week: d.week,
