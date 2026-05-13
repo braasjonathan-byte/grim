@@ -7,6 +7,7 @@ import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
 import { sv } from "date-fns/locale";
+import { toNoonUtcIso, toLocalDateKey } from "@/lib/dateUtils";
 
 interface PlanPickerProps {
   userId: string;
@@ -147,6 +148,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     // Single workouts (week = 0) are preserved.
     await supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0);
 
+    const startCreatedAt = toNoonUtcIso(startDate);
     const rows = paddedDays.map((d) => ({
       user_id: userId,
       week: d.week,
@@ -154,7 +156,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       session_name: d.session_name,
       details: d.details,
       tempo: d.tempo,
-      created_at: startDate.toISOString(),
+      created_at: startCreatedAt,
     }));
 
     for (let i = 0; i < rows.length; i += 50) {
@@ -162,12 +164,12 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     }
 
     // Save plan_start_date and mark as calibrated
-    const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+    const startDateStr = toLocalDateKey(startDate);
     await supabase.from("profiles").update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any).eq("user_id", userId);
 
     // Auto-create event countdown for event-prep plans
     if (template.isEventPrep && eventDate && eventName.trim()) {
-      const evDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`;
+      const evDateStr = toLocalDateKey(eventDate);
       await supabase.from("event_countdowns").insert({
         user_id: userId,
         event_name: eventName.trim(),
