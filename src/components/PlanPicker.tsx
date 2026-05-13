@@ -30,6 +30,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [loading, setLoading] = useState(false);
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile>(defaultProfile);
   const [activeFilter, setActiveFilter] = useState<PlanCategory | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [pendingRmValues, setPendingRmValues] = useState<Record<string, number> | undefined>(undefined);
   const [pendingProfile, setPendingProfile] = useState<FitnessProfile | undefined>(undefined);
@@ -37,9 +38,12 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
-  const filteredTemplates = activeFilter
-    ? planTemplates.filter(t => t.category === activeFilter)
-    : planTemplates;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredTemplates = planTemplates.filter(t => {
+    if (activeFilter && t.category !== activeFilter) return false;
+    if (normalizedQuery && !t.name.toLowerCase().includes(normalizedQuery)) return false;
+    return true;
+  });
 
   const selectedTemplate = selected !== null && selected >= 0 ? planTemplates[selected] : null;
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
