@@ -113,7 +113,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Veckans dagar",
         description:
-          "Varje dag visas som ett kort i veckoöversikten. Appen landar på dagens dag.<br><br>• Bläddra mellan veckor med pilarna eller svep åt sidan.<br>• Tryck på dagförkortningen (t.ex. 'TIS') för att flytta passet till en annan dag.<br>• Är dagen upptagen byter passen plats automatiskt.<br>• Bocka i passet som klart med bocken – du tjänar en proteinbar 🥜 per träningsdag.",
+          "Varje dag visas som ett kort i veckoöversikten. Appen landar på dagens dag.<br><br>• Bläddra mellan veckor med pilarna eller svep åt sidan.<br>• Tryck på dagförkortningen (t.ex. 'TIS') för att flytta passet till en annan dag.<br>• Är dagen upptagen byter passen plats automatiskt.<br>• Bocka i passet som klart med bocken när du är färdig.",
       },
     },
   },
