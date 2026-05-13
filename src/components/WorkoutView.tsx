@@ -7385,6 +7385,7 @@ const estimateCalories = (
                                               }
                                             }
                                           }}
+                                          data-tour="exercise-menu"
                                           className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
                                           title="Övningsalternativ">
                                           <Settings className="w-4 h-4" />
