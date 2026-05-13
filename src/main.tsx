@@ -3,6 +3,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { applyTheme, getStoredThemeId } from "./lib/themes";
 import { APP_VERSION } from "./lib/version";
+import { installSelectionGuard } from "./lib/selectionGuard";
 
 const APP_VERSION_STORAGE_KEY = "grim_app_version";
 const APP_VERSION_REFRESH_KEY = `grim_version_refresh_${APP_VERSION}`;
@@ -158,56 +159,7 @@ if (isIOS) {
 
 // Native-app feel: prevent accidental text/image selection in app chrome.
 // Selection is only allowed when the actual selected text lives inside an editable field.
-const editableSelector = 'input, textarea, select, [contenteditable="true"], .allow-select';
-
-const getElementFromTarget = (target: EventTarget | Node | null) => {
-  if (target instanceof Element) return target;
-  if (target instanceof Node) return target.parentElement;
-  return null;
-};
-
-const isEditableTarget = (target: EventTarget | Node | null) => {
-  return !!getElementFromTarget(target)?.closest(editableSelector);
-};
-
-const selectionIsInsideEditable = (selection: Selection) => {
-  if (selection.isCollapsed || !selection.anchorNode || !selection.focusNode) return true;
-  return isEditableTarget(selection.anchorNode) && isEditableTarget(selection.focusNode);
-};
-
-const clearNonEditableSelection = () => {
-  const selection = window.getSelection();
-  if (!selection || selectionIsInsideEditable(selection)) return;
-  selection.removeAllRanges();
-};
-
-document.addEventListener("selectstart", (event) => {
-  if (!isEditableTarget(event.target)) {
-    event.preventDefault();
-    clearNonEditableSelection();
-  }
-}, { capture: true });
-
-document.addEventListener("selectionchange", clearNonEditableSelection);
-
-document.addEventListener("mousedown", (event) => {
-  if (!isEditableTarget(event.target)) {
-    event.preventDefault();
-    clearNonEditableSelection();
-  }
-}, { capture: true });
-
-document.addEventListener("touchstart", (event) => {
-  if (!isEditableTarget(event.target)) clearNonEditableSelection();
-}, { capture: true, passive: true });
-
-document.addEventListener("contextmenu", (event) => {
-  if (!isEditableTarget(event.target)) event.preventDefault();
-}, { capture: true });
-
-document.addEventListener("dragstart", (event) => {
-  if (!isEditableTarget(event.target)) event.preventDefault();
-}, { capture: true });
+installSelectionGuard();
 
 // Lock screen orientation to portrait when supported (PWA / installed apps)
 try {
