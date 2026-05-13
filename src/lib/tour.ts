@@ -113,7 +113,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Veckans dagar",
         description:
-          "Varje dag visas som ett kort i veckoöversikten. Appen landar på dagens dag.\n\n• Bläddra mellan veckor med pilarna eller svep åt sidan.\n• Tryck på dagförkortningen (t.ex. 'TIS') för att flytta passet till en annan dag.\n• Är dagen upptagen byter passen plats automatiskt.\n• Bocka i passet som klart med bocken – du tjänar en proteinbar 🥜 per träningsdag.",
+          "Varje dag visas som ett kort i veckoöversikten. Appen landar på dagens dag.<br><br>• Bläddra mellan veckor med pilarna eller svep åt sidan.<br>• Tryck på dagförkortningen (t.ex. 'TIS') för att flytta passet till en annan dag.<br>• Är dagen upptagen byter passen plats automatiskt.<br>• Bocka i passet som klart med bocken – du tjänar en proteinbar 🥜 per träningsdag.",
       },
     },
   },
@@ -147,7 +147,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "När du lägger till en övning",
         description:
-          "• Välj antal set, reps och vikt direkt i dialogen.\n• Markera 'kroppsviktsövning' om vikten ska räknas från din kroppsvikt – då får du en +/− toggle per set för extra last.\n• Skriver du flera övningar på en rad separerade med '/' eller ';' delas de upp automatiskt.\n• Cirkelpass använder sekunder istället för reps.",
+          "• Välj antal set, reps och vikt direkt i dialogen.<br>• Markera 'kroppsviktsövning' om vikten ska räknas från din kroppsvikt – då får du en +/− toggle per set för extra last.<br>• Skriver du flera övningar på en rad separerade med '/' eller ';' delas de upp automatiskt.<br>• Cirkelpass använder sekunder istället för reps.",
       },
     },
   },
@@ -158,7 +158,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Byta ut, redigera eller ta bort",
         description:
-          "Kugghjulet bredvid varje övning öppnar en meny:\n• Byt ut övningen mot en annan från biblioteket\n• Redigera namn/beskrivning/instruktioner\n• Justera antal set\n• Ta bort övningen från passet",
+          "Kugghjulet bredvid varje övning öppnar en meny:<br>• Byt ut övningen mot en annan från biblioteket<br>• Redigera namn/beskrivning/instruktioner<br>• Justera antal set<br>• Ta bort övningen från passet",
         side: "left",
       },
     },
@@ -227,7 +227,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "PR & mål",
         description:
-          "• Personbästa (PR) sparas automatiskt.\n• Justera ett PR manuellt om det inte stämmer.\n• Sätt PR-mål med målvikt och datum.\n• Markera favoritövningar med en stjärna ⭐.\n• Muskelkartan visar vilka muskelgrupper du tränat – och vilka du missat.",
+          "• Personbästa (PR) sparas automatiskt.<br>• Justera ett PR manuellt om det inte stämmer.<br>• Sätt PR-mål med målvikt och datum.<br>• Markera favoritövningar med en stjärna ⭐.<br>• Muskelkartan visar vilka muskelgrupper du tränat – och vilka du missat.",
       },
     },
   },
@@ -285,7 +285,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Eventgrupper, leaderboard & utmaningar",
         description:
-          "• Leaderboarden visar vem som tränat flest pass – filtrera per månad eller år.\n• Dagliga utmaningar belönar med proteinbars 🥜.\n• Lägg till event (lopp, tävlingar) med datum för en nedräkning – och gå med i eventgrupper för att träna mot samma mål.",
+          "• Leaderboarden visar vem som tränat flest pass – filtrera per månad eller år.<br>• Dagliga utmaningar belönar med proteinbars 🥜.<br>• Lägg till event (lopp, tävlingar) med datum för en nedräkning – och gå med i eventgrupper för att träna mot samma mål.",
       },
     },
   },
@@ -320,7 +320,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Profil & inställningar",
         description:
-          "I 'Inställningar'-sektionen finns Profil, Tema och Notifikationer:\n• Ladda upp avatar och länka sociala medier\n• Ange din kroppsvikt (krävs för kroppsviktsövningar)\n• Aktivera push-notiser och ställ in påminnelsetid + tidszon\n• Byt lösenord och säkerhetsfrågor",
+          "I 'Inställningar'-sektionen finns Profil, Tema och Notifikationer:<br>• Ladda upp avatar och länka sociala medier<br>• Ange din kroppsvikt (krävs för kroppsviktsövningar)<br>• Aktivera push-notiser och ställ in påminnelsetid + tidszon<br>• Byt lösenord och säkerhetsfrågor",
         side: "bottom",
       },
     },
@@ -332,7 +332,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Hjälpmedel & kalkylatorer",
         description:
-          "Sektionen 'Hjälpmedel' innehåller:\n• 1RM-kalkylator (Epleys formel)\n• Pulszonskalkylator (Karvonens formel)\n• Kalorikalkylator (BMR/TDEE + makron)\n• Vilotimer-inställningar\n• Eventnedräkning\n• Tidtagaruret",
+          "Sektionen 'Hjälpmedel' innehåller:<br>• 1RM-kalkylator (Epleys formel)<br>• Pulszonskalkylator (Karvonens formel)<br>• Kalorikalkylator (BMR/TDEE + makron)<br>• Vilotimer-inställningar<br>• Eventnedräkning<br>• Tidtagaruret",
         side: "bottom",
       },
     },
@@ -355,7 +355,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Aktiv plan & arkivering",
         description:
-          "• Välj en mall eller bygg en egen plan.\n• Appen räknar ut vilken vecka du är på baserat på startdatum.\n• Arkivera planen när du är klar och börja om med en ny – all historik bevaras under statistik.",
+          "• Välj en mall eller bygg en egen plan.<br>• Appen räknar ut vilken vecka du är på baserat på startdatum.<br>• Arkivera planen när du är klar och börja om med en ny – all historik bevaras under statistik.",
       },
     },
   },
