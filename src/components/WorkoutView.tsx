@@ -95,9 +95,10 @@ interface CustomExercise {
 }
 
 // Inline conditioning editing card (green, open by default)
-const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
+const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
+  planCondPulse?: string;
   savedData: Record<string, any> | null; hasSavedData: boolean;
   exerciseLinesCount: number;
   isCompleted?: boolean; onToggleCompleted?: () => void;
@@ -108,7 +109,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
   const initTempo = savedData?.tempo || planCondTempo || "";
-  const initPulse = savedData?.pulse || "";
+  const initPulse = savedData?.pulse || planCondPulse || "";
 
   // H:M:S state from total minutes
   const totalMin = parseFloat(initTime) || 0;
