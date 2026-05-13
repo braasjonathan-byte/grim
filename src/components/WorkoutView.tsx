@@ -95,9 +95,10 @@ interface CustomExercise {
 }
 
 // Inline conditioning editing card (green, open by default)
-const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
+const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
+  planCondPulse?: string;
   savedData: Record<string, any> | null; hasSavedData: boolean;
   exerciseLinesCount: number;
   isCompleted?: boolean; onToggleCompleted?: () => void;
@@ -108,7 +109,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
   const initTempo = savedData?.tempo || planCondTempo || "";
-  const initPulse = savedData?.pulse || "";
+  const initPulse = savedData?.pulse || planCondPulse || "";
 
   // H:M:S state from total minutes
   const totalMin = parseFloat(initTime) || 0;
@@ -3743,9 +3744,11 @@ const estimateCalories = (
                         const condTimeM = weight.match(/(\d+)\s*min/);
                         const condTempoM = weight.match(/([\d:.]+)\/km/);
                         const condDistM = weight.match(/([\d.,]+)\s*km(?!\/)/);
+                        const condPulseM = weight.match(/(\d+)\s*bpm/);
                         const planCondTime = condTimeM ? condTimeM[1] : "";
                         const planCondTempo = condTempoM ? condTempoM[1] : "";
                         const planCondDist = condDistM ? condDistM[1] : "";
+                        const planCondPulse = condPulseM ? condPulseM[1] : "";
 
                         // Read saved conditioning data from logged_weights
                         const condKeyInline = `__cond__${name}`;
@@ -3812,8 +3815,9 @@ const estimateCalories = (
                             planCondTime={planCondTime}
                             planCondDist={planCondDist}
                             planCondTempo={planCondTempo}
+                            planCondPulse={planCondPulse}
                             savedData={condSavedInline}
-                            hasSavedData={hasSavedCondData}
+                            hasSavedData={hasSavedCondData || !!planCondPulse}
                             exerciseLinesCount={exerciseLines.length}
                             isCompleted={isConditioningDone(key, name)}
                             onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, name)}
