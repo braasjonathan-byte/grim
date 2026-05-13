@@ -53,16 +53,12 @@ describe("selectionGuard", () => {
     installSelectionGuard(document);
     const text = document.getElementById("text")!;
 
-    text.dispatchEvent(new TouchEvent("touchstart", {
-      bubbles: true,
-      cancelable: true,
-      touches: [new Touch({ identifier: 1, target: text, clientX: 20, clientY: 20 })],
-    }));
-    const moveEvent = new TouchEvent("touchmove", {
-      bubbles: true,
-      cancelable: true,
-      touches: [new Touch({ identifier: 1, target: text, clientX: 80, clientY: 24 })],
-    });
+    const startEvent = new Event("touchstart", { bubbles: true, cancelable: true });
+    Object.defineProperty(startEvent, "touches", { value: [{ clientX: 20, clientY: 20 }] });
+    text.dispatchEvent(startEvent);
+
+    const moveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
+    Object.defineProperty(moveEvent, "touches", { value: [{ clientX: 80, clientY: 24 }] });
     const preventDefault = vi.spyOn(moveEvent, "preventDefault");
     text.dispatchEvent(moveEvent);
 
