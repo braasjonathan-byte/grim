@@ -370,6 +370,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       className={isChatTab ? "box-border flex min-h-0 flex-col gap-4 overflow-hidden overscroll-none pt-2 pb-0 touch-none" : "py-2 space-y-4"}
       style={isChatTab ? { height: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 10.5rem)" } : undefined}
     >
+      <h2 className="sr-only">Socialt – flöde, vänner, chatt och grupper</h2>
       {/* Sub-tab navigation */}
       <div className="flex shrink-0 gap-1 bg-muted/50 rounded-lg p-1 touch-none">
         {([
