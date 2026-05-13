@@ -977,43 +977,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
   }, [mode]);
 
-  // Sync exercises from plans into custom_exercises so they appear in the picker
-  useEffect(() => {
-    if (plans.length === 0 || customExercises.length === 0 && plans.length === 0) return;
-    const libraryNames = new Set(exerciseLibrary.map(e => e.name.toLowerCase()));
-    const customNames = new Set(customExercises.map(e => e.name.toLowerCase()));
-    const missing: string[] = [];
-    for (const plan of plans) {
-      if (!plan.details) continue;
-      const lines = plan.details.split(/[\n;]/).map(s => s.trim()).filter(Boolean);
-      for (const line of lines) {
-        const { name } = parseExerciseWeight(line);
-        if (!name || /^vila$/i.test(name.trim()) || /^\d+\s*rundor/i.test(name.trim())) continue;
-        const lower = name.trim().toLowerCase();
-        if (!libraryNames.has(lower) && !customNames.has(lower) && !missing.includes(lower)) {
-          missing.push(lower);
-          // Insert with proper casing
-          const properName = name.trim();
-          supabase.from("custom_exercises").insert({
-            name: properName,
-            category: "styrka",
-            muscle_group: "Helkropp",
-            created_by: userId,
-          } as any).then(() => {
-            customNames.add(lower);
-          });
-        }
-      }
-    }
-    if (missing.length > 0) {
-      // Refresh custom exercises after inserts
-      setTimeout(() => {
-        supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
-          if (data) setCustomExercises(data);
-        });
-      }, 1000);
-    }
-  }, [plans, customExercises.length, userId]);
+  // Do not auto-insert exercises from plans. The global name constraint can reject
+  // duplicates that are hidden by permissions, creating request loops on mobile.
 
   const skipDayResetRef = useRef(false);
   const prevWeekRef = useRef(currentWeek);
