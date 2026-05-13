@@ -273,9 +273,9 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-8 animate-fade-in">
           <div className="text-center space-y-2">
-          <img src={grimIcon} alt="Grim" className="w-20 h-20 mx-auto" width={80} height={80} />
+          <img src={grimIcon} alt="Grim app logo" className="w-20 h-20 mx-auto" width={80} height={80} />
             <h1 className="text-3xl font-black tracking-tight">
-              Grim<span className="text-primary">.</span>
+              Grim<span className="text-primary">.</span> – Återställ lösenord
             </h1>
             <p className="text-sm text-muted-foreground">Återställ lösenord</p>
           </div>
@@ -443,8 +443,9 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-8 animate-fade-in">
         <div className="text-center space-y-2 border-none">
-           <img src="/grim-logo.webp" alt="Grim" className="w-60 h-60 mx-auto object-contain" fetchPriority="high" width={240} height={240} />
-          <h1 className="text-3xl font-black tracking-tight">
+           <img src="/grim-logo.webp" alt="Grim träningsapp logotyp" className="w-60 h-60 mx-auto object-contain" fetchPriority="high" width={240} height={240} />
+          <h1 className="text-3xl font-black tracking-tight sr-only">
+            {isLogin ? "Logga in på Grim" : "Skapa konto på Grim"}
           </h1>
           <p className="text-xs text-muted-foreground italic">
             lift heavier than runners, run faster than lifters
@@ -479,6 +480,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Dölj lösenord" : "Visa lösenord"}
                 className="absolute right-3 top-3.5 text-muted-foreground">
 
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
