@@ -111,7 +111,8 @@ export const installSelectionGuard = (doc: Document = document) => {
   }, { capture: true });
 
   doc.addEventListener("copy", (event) => {
-    if (!selectionIsInsideEditable(doc.getSelection() as Selection, doc)) event.preventDefault();
+    const selection = doc.getSelection();
+    if (selection && !selectionIsInsideEditable(selection, doc)) event.preventDefault();
   }, { capture: true });
 
   doc.addEventListener("dragstart", (event) => {
