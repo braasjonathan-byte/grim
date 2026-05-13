@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle, Share2, Repeat, Weight } from "lucide-react";
+import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle, Share2, Repeat, Weight, Sparkles } from "lucide-react";
+import { startTour } from "@/lib/tour";
 
 interface HelpCategory {
   title: string;
