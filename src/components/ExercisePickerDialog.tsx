@@ -489,7 +489,7 @@ const ExercisePickerDialog = ({
         )}
       </div>
     </div>
-  );
+  , document.body);
 };
 
 export default ExercisePickerDialog;
