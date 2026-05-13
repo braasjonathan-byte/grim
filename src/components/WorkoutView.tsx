@@ -3743,9 +3743,11 @@ const estimateCalories = (
                         const condTimeM = weight.match(/(\d+)\s*min/);
                         const condTempoM = weight.match(/([\d:.]+)\/km/);
                         const condDistM = weight.match(/([\d.,]+)\s*km(?!\/)/);
+                        const condPulseM = weight.match(/(\d+)\s*bpm/);
                         const planCondTime = condTimeM ? condTimeM[1] : "";
                         const planCondTempo = condTempoM ? condTempoM[1] : "";
                         const planCondDist = condDistM ? condDistM[1] : "";
+                        const planCondPulse = condPulseM ? condPulseM[1] : "";
 
                         // Read saved conditioning data from logged_weights
                         const condKeyInline = `__cond__${name}`;
