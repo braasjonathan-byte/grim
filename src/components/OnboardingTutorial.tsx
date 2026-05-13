@@ -27,6 +27,11 @@ const OnboardingTutorial = () => {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
+    if (import.meta.env.DEV) {
+      localStorage.setItem(SEEN_KEY, "1");
+      return;
+    }
+
     if (!localStorage.getItem(SEEN_KEY)) {
       // Slight delay so the page is rendered first
       const t = setTimeout(() => setOpen(true), 600);
