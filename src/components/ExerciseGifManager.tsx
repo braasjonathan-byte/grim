@@ -482,6 +482,36 @@ const ExerciseGifManager = () => {
     setSavingMuscles(false);
   };
 
+  const bulkDelete = async () => {
+    if (selectedExercises.size === 0) return;
+    const names = Array.from(selectedExercises);
+    const customMatches = names.filter(n => customExercises.some(c => c.name.toLowerCase() === n.toLowerCase()));
+    const builtinCount = names.length - customMatches.length;
+    const msg = builtinCount > 0
+      ? `Ta bort ${customMatches.length} egna övningar?\n\n${builtinCount} inbyggda övningar kan inte tas bort och hoppas över.`
+      : `Ta bort ${customMatches.length} övningar? Detta kan inte ångras.`;
+    if (!confirm(msg)) return;
+    setSavingBulk(true);
+    try {
+      for (const name of customMatches) {
+        const custom = customExercises.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (!custom) continue;
+        await supabase.from("custom_exercises").delete().eq("id", custom.id);
+        await supabase.from("exercise_gif_mappings").delete().ilike("exercise_name", name);
+        await supabase.from("exercise_muscle_overrides" as any).delete().ilike("exercise_name", name);
+      }
+      await fetchCustomExercises();
+      await fetchMappings();
+      await fetchOverrides();
+      setSelectedExercises(new Set());
+      toast.success(`${customMatches.length} övningar borttagna`);
+    } catch (e) {
+      console.error("Bulk delete failed:", e);
+      toast.error("Kunde inte ta bort");
+    }
+    setSavingBulk(false);
+  };
+
   const bulkSetMuscles = async () => {
     if (selectedExercises.size === 0 || !bulkPrimaryGroup) return;
     setSavingBulk(true);
