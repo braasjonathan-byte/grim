@@ -1,0 +1,10 @@
+# Grim
+
+> Träningsapp för att spåra pass, följa vänner, beräkna 1RM och pulszoner.
+
+Grim är en svensk träningsapp (PWA) som hjälper dig logga styrke- och konditionspass, följa vänners aktivitet, beräkna 1RM och pulszoner, samt se din progression över tid.
+
+## Pages
+
+- [Hem](/): Huvudvyn med pass, verktyg, sociala flöden och profil.
+- [Installera Grim](/install): Instruktioner för att installera Grim som app på iPhone och Android.
