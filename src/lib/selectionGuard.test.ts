@@ -19,6 +19,23 @@ describe("selectionGuard", () => {
     expect(selection.toString()).toBe("");
   });
 
+  it("clears collapsed Android selection handles outside editable fields", () => {
+    document.body.innerHTML = `<p id="text">Genomförda Varje rep räknas</p>`;
+    installSelectionGuard(document);
+
+    const textNode = document.getElementById("text")!.firstChild!;
+    const range = document.createRange();
+    range.setStart(textNode, 5);
+    range.collapse(true);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    document.dispatchEvent(new Event("selectionchange"));
+
+    expect(selection.rangeCount).toBe(0);
+  });
+
   it("keeps selection inside editable fields", () => {
     document.body.innerHTML = `<textarea>Redigerbar text</textarea>`;
     installSelectionGuard(document);
