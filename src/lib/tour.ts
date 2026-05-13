@@ -430,15 +430,22 @@ function applyMeta(meta?: StepMeta) {
   }
 }
 
-/** Pick the first matching element that's actually visible on screen. */
+/** Pick the best matching element: prefer in-viewport, then in-layout, else first. */
 function resolveVisible(sel: string): Element | string {
   const els = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
-  const visible = els.find((e) => {
-    if (e.offsetParent === null) return false;
+  if (els.length === 0) return sel;
+  const inLayout = els.filter((e) => {
+    if (e.offsetParent === null && getComputedStyle(e).position !== "fixed") return false;
     const r = e.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   });
-  return visible ?? els[0] ?? sel;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const vw = window.innerWidth || document.documentElement.clientWidth;
+  const inViewport = inLayout.find((e) => {
+    const r = e.getBoundingClientRect();
+    return r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw;
+  });
+  return inViewport ?? inLayout[0] ?? els[0];
 }
 
 function saveProgress(variant: TourVariant, idx: number) {
