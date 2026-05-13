@@ -100,7 +100,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings-group", label: "Inställningar", render: () => (
-      <div className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
+      <div data-tour="tools-profile" className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
         <button
           type="button"
           onClick={() => setSettingsOpen((open) => !open)}
