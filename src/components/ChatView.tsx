@@ -57,6 +57,25 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
   const [announcementPreview, setAnnouncementPreview] = useState<{ title: string; created_at: string } | null>(null);
   const [announcementUnread, setAnnouncementUnread] = useState(0);
+  const [groups, setGroups] = useState<{ id: string; name: string; updated_at: string }[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+
+  const fetchGroups = async () => {
+    const { data: memberRows } = await supabase
+      .from("chat_group_members")
+      .select("group_id")
+      .eq("user_id", userId);
+    const ids = (memberRows || []).map((m: any) => m.group_id);
+    if (ids.length === 0) { setGroups([]); return; }
+    const { data } = await supabase
+      .from("chat_groups")
+      .select("id, name, updated_at")
+      .in("id", ids)
+      .order("updated_at", { ascending: false });
+    setGroups((data || []) as any);
+  };
+
 
   const fetchAnnouncementPreview = async () => {
     const { data } = await supabase
