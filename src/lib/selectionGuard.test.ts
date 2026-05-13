@@ -47,4 +47,25 @@ describe("selectionGuard", () => {
 
     expect(preventDefault).not.toHaveBeenCalled();
   });
+
+  it("prevents horizontal touch drags from starting text selection outside editable fields", () => {
+    document.body.innerHTML = `<p id="text">Genomförda Varje rep räknas</p>`;
+    installSelectionGuard(document);
+    const text = document.getElementById("text")!;
+
+    text.dispatchEvent(new TouchEvent("touchstart", {
+      bubbles: true,
+      cancelable: true,
+      touches: [new Touch({ identifier: 1, target: text, clientX: 20, clientY: 20 })],
+    }));
+    const moveEvent = new TouchEvent("touchmove", {
+      bubbles: true,
+      cancelable: true,
+      touches: [new Touch({ identifier: 1, target: text, clientX: 80, clientY: 24 })],
+    });
+    const preventDefault = vi.spyOn(moveEvent, "preventDefault");
+    text.dispatchEvent(moveEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+  });
 });
