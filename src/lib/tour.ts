@@ -493,7 +493,13 @@ export function startTour(variant: TourVariant, onDone?: () => void, startIdx = 
   const resolveStep = (i: number) => {
     const orig = available[i].step.element as string | undefined;
     if (!orig) return;
-    driveSteps[i].element = resolveVisible(orig);
+    const resolved = resolveVisible(orig);
+    driveSteps[i].element = resolved;
+    if (resolved && typeof resolved !== "string") {
+      try {
+        (resolved as HTMLElement).scrollIntoView({ block: "center", behavior: "auto" });
+      } catch { /* ignore */ }
+    }
   };
 
   const d = driver({
