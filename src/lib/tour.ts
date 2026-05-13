@@ -49,28 +49,74 @@ const SHORT_STEPS: DriveStep[] = [
 ];
 
 const LONG_STEPS: DriveStep[] = [
-  ...SHORT_STEPS.slice(0, 1),
+  // ── Avsnitt 1: Komma igång ──
   {
-    element: '[data-tour="workout-day"]',
+    element: '[data-tour="tab-workout"]',
     popover: {
-      title: "Dagens pass",
-      description: "Tryck på en dag för att öppna passet. Bocka rutorna när du gjort ett set.",
-      side: "bottom",
-    },
-  },
-  {
-    element: '[data-tour="tab-stats"]',
-    popover: {
-      title: "Statistik",
-      description: "Här ser du muskelkartan och alla dina personbästa.",
+      title: "1. Komma igång – Träning",
+      description: "Här bor allt som rör din träning: dagens pass, veckoöversikt och din aktiva plan. Vi börjar här.",
       side: "top",
     },
   },
   {
+    element: '[data-tour="workout-day"]',
+    popover: {
+      title: "Veckoplan & dagens pass",
+      description: "Varje dag i veckan visas som ett kort. Tryck på en dag för att öppna passet och börja logga.",
+      side: "bottom",
+    },
+  },
+
+  // ── Avsnitt 2: Bygga & ändra pass ──
+  {
+    element: '[data-tour="add-exercise"]',
+    popover: {
+      title: "2. Bygga passet – Lägg till övning",
+      description: "Tryck på 'Lägg till övning' för att öppna biblioteket. Du kan filtrera på muskelgrupp, söka, eller skapa en helt egen övning.",
+      side: "top",
+    },
+  },
+  {
+    element: '[data-tour="exercise-menu"]',
+    popover: {
+      title: "Byt ut eller ta bort övning",
+      description: "Kugghjulet bredvid varje övning öppnar en meny där du kan byta ut övningen mot en annan, redigera beskrivningen eller ta bort den helt.",
+      side: "left",
+    },
+  },
+  {
+    element: '[data-tour="import-workout"]',
+    popover: {
+      title: "Importera färdigt pass",
+      description: "Slipp bygga från grunden – importera ett färdigt pass från biblioteket eller dina sparade favoriter direkt in i dagens pass.",
+      side: "top",
+    },
+  },
+  {
+    element: '[data-tour="clear-workout"]',
+    popover: {
+      title: "Rensa pass",
+      description: "Vill du börja om? Rensa passet på alla övningar med ett klick – sen kan du importera ett nytt eller bygga eget.",
+      side: "top",
+    },
+  },
+
+  // ── Avsnitt 3: Statistik & framsteg ──
+  {
+    element: '[data-tour="tab-stats"]',
+    popover: {
+      title: "3. Framsteg – Statistik",
+      description: "Här ser du muskelkartan, dina personbästa (PR), viktprogression och historik – inklusive arkiverade planer.",
+      side: "top",
+    },
+  },
+
+  // ── Avsnitt 4: Socialt ──
+  {
     element: '[data-tour="tab-social"]',
     popover: {
-      title: "Social",
-      description: "Vänner, chatt, gruppchatter, leaderboard och flöde.",
+      title: "4. Socialt – Vänner & flöde",
+      description: "Vänner, leaderboard, gruppchatter och ett flöde där du kan gilla och kommentera dina vänners pass.",
       side: "top",
     },
   },
@@ -78,7 +124,7 @@ const LONG_STEPS: DriveStep[] = [
     element: '[data-tour="social-friends"]',
     popover: {
       title: "Vänner",
-      description: "Lägg till vänner via namn eller din referrallänk.",
+      description: "Sök vänner via namn, eller bjud in nya med din personliga referrallänk.",
       side: "bottom",
     },
   },
@@ -86,15 +132,17 @@ const LONG_STEPS: DriveStep[] = [
     element: '[data-tour="social-chat"]',
     popover: {
       title: "Chatt & gruppchatter",
-      description: "Skicka meddelanden, dela pass eller starta en gruppchatt med dina vänner.",
+      description: "Skicka meddelanden, dela pass eller starta en gruppchatt med flera vänner samtidigt.",
       side: "bottom",
     },
   },
+
+  // ── Avsnitt 5: Verktyg & inställningar ──
   {
     element: '[data-tour="tab-calc"]',
     popover: {
-      title: "Verktyg",
-      description: "Profil, inställningar, kalkylatorer, butik och hjälp.",
+      title: "5. Verktyg",
+      description: "Profil, inställningar, kalkylatorer (1RM, puls, kalorier), butik, kalender och hjälp.",
       side: "top",
     },
   },
@@ -102,7 +150,7 @@ const LONG_STEPS: DriveStep[] = [
     element: '[data-tour="tools-profile"]',
     popover: {
       title: "Profil",
-      description: "Ladda upp avatar, ange kroppsvikt och länka sociala medier.",
+      description: "Ladda upp avatar, ange kroppsvikt (krävs för kroppsviktsövningar) och länka sociala medier.",
       side: "bottom",
     },
   },
@@ -110,15 +158,17 @@ const LONG_STEPS: DriveStep[] = [
     element: '[data-tour="tools-help"]',
     popover: {
       title: "Hjälp & tips",
-      description: "Här finns all hjälp – och du kan starta rundturen igen när som helst.",
+      description: "Här hittar du all dokumentation – och du kan starta rundturen igen när som helst.",
       side: "bottom",
     },
   },
+
+  // ── Avsnitt 6: Hjälp alltid nära ──
   {
     element: '[data-tour="header-help"]',
     popover: {
-      title: "Frågetecknet alltid synligt",
-      description: "Klicka på frågetecknet uppe i högra hörnet för snabb hjälp.",
+      title: "6. Frågetecknet uppe i hörnet",
+      description: "Frågetecknet är alltid synligt – tryck där för snabb hjälp eller för att starta rundturen på nytt.",
       side: "bottom",
       align: "end",
     },
