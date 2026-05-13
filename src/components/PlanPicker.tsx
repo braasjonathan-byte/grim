@@ -7,6 +7,7 @@ import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
 import { sv } from "date-fns/locale";
+import { toNoonUtcIso, toLocalDateKey } from "@/lib/dateUtils";
 
 interface PlanPickerProps {
   userId: string;
