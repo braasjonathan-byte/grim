@@ -134,6 +134,16 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html.selection-locked,
+  html.selection-locked body,
+  html.selection-locked *:not(input):not(textarea):not([contenteditable="true"]):not(.allow-select),
+  html.selection-locked *:not(input):not(textarea):not([contenteditable="true"]):not(.allow-select)::before,
+  html.selection-locked *:not(input):not(textarea):not([contenteditable="true"]):not(.allow-select)::after {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+
   ::selection {
     background: transparent !important;
     color: inherit !important;
