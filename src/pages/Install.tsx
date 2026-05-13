@@ -2,6 +2,7 @@ import { QRCodeSVG } from "qrcode.react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Download, Monitor, Share, MoreVertical, Plus, ChevronRight, ArrowUp, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 
 type Platform = "ios" | "android" | "desktop";
 
@@ -224,8 +225,16 @@ const Install = () => {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-6 text-center">
+      <Helmet>
+        <title>Installera Grim – Träningsapp på iPhone & Android</title>
+        <meta name="description" content="Installera Grim som app på din iPhone eller Android-telefon på under en minut – samma upplevelse som en native app." />
+        <link rel="canonical" href="https://grim.lovable.app/install" />
+        <meta property="og:title" content="Installera Grim" />
+        <meta property="og:description" content="Lägg till Grim på din hemskärm – fungerar precis som en native app." />
+        <meta property="og:url" content="https://grim.lovable.app/install" />
+      </Helmet>
       {/* Header */}
-      <img src={grimIcon} alt="Grim" className="w-16 h-16 rounded-2xl mb-3 shadow-lg" />
+      <img src={grimIcon} alt="Grim app icon" className="w-16 h-16 rounded-2xl mb-3 shadow-lg" />
       <h1 className="text-xl font-bold text-foreground mb-0.5">Installera Grim</h1>
       <p className="text-muted-foreground text-xs mb-6 max-w-xs">
         Lägg till appen på din hemskärm – den fungerar precis som en vanlig app.
