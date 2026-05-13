@@ -10,7 +10,7 @@ const STEPS = [
   },
   {
     title: "Klarmarkera set",
-    body: "Tryck på cirkeln bredvid varje set när du är klar. Om fältet är tomt används den grå förslagssiffran automatiskt.",
+    body: "Tryck på rutan bredvid varje set när du är klar. Om fältet är tomt används den grå förslagssiffran automatiskt.",
   },
   {
     title: "Vilotimer & verktyg",
