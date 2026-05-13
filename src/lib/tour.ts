@@ -497,7 +497,7 @@ export function startTour(variant: TourVariant, onDone?: () => void, startIdx = 
     driveSteps[i].element = resolved;
     if (resolved && typeof resolved !== "string") {
       try {
-        (resolved as HTMLElement).scrollIntoView({ block: "center", behavior: "smooth" });
+        (resolved as HTMLElement).scrollIntoView({ block: "center", behavior: "auto" });
       } catch { /* ignore */ }
     }
   };
