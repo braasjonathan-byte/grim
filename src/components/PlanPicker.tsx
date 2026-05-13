@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy } from "lucide-react";
+import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
