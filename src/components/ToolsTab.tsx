@@ -131,7 +131,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       </div>
     )},
     { key: "helpers", label: "Hjälpmedel", render: () => (
-      <div className="rounded-lg border border-border overflow-hidden bg-secondary">
+      <div data-tour="tools-helpers" className="rounded-lg border border-border overflow-hidden bg-secondary">
         <button
           type="button"
           onClick={() => setToolsOpen((open) => !open)}
