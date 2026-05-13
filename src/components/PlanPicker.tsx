@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy } from "lucide-react";
+import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
@@ -30,6 +30,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [loading, setLoading] = useState(false);
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile>(defaultProfile);
   const [activeFilter, setActiveFilter] = useState<PlanCategory | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [pendingRmValues, setPendingRmValues] = useState<Record<string, number> | undefined>(undefined);
   const [pendingProfile, setPendingProfile] = useState<FitnessProfile | undefined>(undefined);
@@ -37,9 +38,12 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
-  const filteredTemplates = activeFilter
-    ? planTemplates.filter(t => t.category === activeFilter)
-    : planTemplates;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredTemplates = planTemplates.filter(t => {
+    if (activeFilter && t.category !== activeFilter) return false;
+    if (normalizedQuery && !t.name.toLowerCase().includes(normalizedQuery)) return false;
+    return true;
+  });
 
   const selectedTemplate = selected !== null && selected >= 0 ? planTemplates[selected] : null;
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
@@ -452,7 +456,27 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
         </p>
       </div>
 
-      {/* Filter chips */}
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => { setSearchQuery(e.target.value); setSelected(null); }}
+          placeholder="Sök plan..."
+          className="w-full pl-9 pr-9 py-2 text-sm bg-secondary border border-border focus:border-primary outline-none"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Rensa sökning"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => { setActiveFilter(null); setSelected(null); }}
@@ -480,6 +504,11 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       </div>
 
       <div className="space-y-3">
+        {filteredTemplates.length === 0 && (
+          <div className="text-center text-xs text-muted-foreground py-6 border border-dashed border-border">
+            Inga planer matchar "{searchQuery}"
+          </div>
+        )}
         {filteredTemplates.map((template) => {
           const realIdx = planTemplates.indexOf(template);
           return (

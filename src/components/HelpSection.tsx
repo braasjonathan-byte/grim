@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle, Share2, Repeat, Weight } from "lucide-react";
+import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle, Share2, Repeat, Weight, Sparkles } from "lucide-react";
+import { startTour } from "@/lib/tour";
 
 interface HelpCategory {
   title: string;
@@ -187,6 +188,30 @@ const HelpSection = () => {
         <HelpCircle className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-bold">Hjälp & tips</h3>
       </div>
+
+      {/* Tour triggers */}
+      <div className="px-4 py-3 border-b border-border space-y-2 bg-card">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rundtur</span>
+        </div>
+        <p className="text-xs text-muted-foreground">Få en guidad tur med pilar på viktiga knappar.</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => startTour("short")}
+            className="flex-1 bg-primary text-primary-foreground text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
+          >
+            Kort rundtur
+          </button>
+          <button
+            onClick={() => startTour("long")}
+            className="flex-1 bg-secondary text-foreground border border-border text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
+          >
+            Lång rundtur
+          </button>
+        </div>
+      </div>
+
       <div className="divide-y divide-border">
         {categories.map((cat) => {
           const isOpen = expandedCategory === cat.title;

@@ -18,6 +18,7 @@ import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
+import TourPrompt from "@/components/TourPrompt";
 import PageTransition from "@/components/PageTransition";
 import { hapticLight } from "@/lib/haptics";
 import { ensureUnlocked } from "@/lib/biometric";
@@ -646,6 +647,7 @@ const Index = () => {
               className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-primary/10 transition-colors"
               aria-label="Hjälp & tips"
               title="Hjälp & tips"
+              data-tour="header-help"
             >
               <HelpCircle className="w-4 h-4 text-primary" />
             </button>
@@ -699,6 +701,8 @@ const Index = () => {
         </PageTransition>
       </main>
       </Suspense>
+
+      <TourPrompt userId={user.id} />
 
       {/* Notification toast at bottom */}
       {notification &&
@@ -770,6 +774,7 @@ const Index = () => {
           {tabs.map(({ key, icon: Icon, label, badge }) =>
           <button
             key={key}
+            data-tour={`tab-${key}`}
             onClick={async () => {
               setTab(key);
               if (key === "social" && unreadAnnouncements > 0) {

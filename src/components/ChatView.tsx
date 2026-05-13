@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check } from "lucide-react";
+import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check, Users, Plus } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import ChatConversation from "./ChatConversation";
+import GroupChatConversation from "./GroupChatConversation";
+import CreateGroupDialog from "./CreateGroupDialog";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -55,6 +57,25 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   const [grimLastMessage, setGrimLastMessage] = useState<LastMessage | null>(null);
   const [announcementPreview, setAnnouncementPreview] = useState<{ title: string; created_at: string } | null>(null);
   const [announcementUnread, setAnnouncementUnread] = useState(0);
+  const [groups, setGroups] = useState<{ id: string; name: string; updated_at: string }[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+
+  const fetchGroups = async () => {
+    const { data: memberRows } = await supabase
+      .from("chat_group_members")
+      .select("group_id")
+      .eq("user_id", userId);
+    const ids = (memberRows || []).map((m: any) => m.group_id);
+    if (ids.length === 0) { setGroups([]); return; }
+    const { data } = await supabase
+      .from("chat_groups")
+      .select("id, name, updated_at")
+      .in("id", ids)
+      .order("updated_at", { ascending: false });
+    setGroups((data || []) as any);
+  };
+
 
   const fetchAnnouncementPreview = async () => {
     const { data } = await supabase
@@ -75,6 +96,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   useEffect(() => {
     fetchFriendsAndMessages();
     fetchAnnouncementPreview();
+    fetchGroups();
     if (isPremium && !isAdmin) fetchGrimMessages();
     if (isAdmin) fetchSupportConversations();
 
@@ -306,6 +328,19 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
     );
   }
 
+  if (selectedGroup) {
+    return (
+      <div className="h-full min-h-0 overflow-hidden">
+        <GroupChatConversation
+          userId={userId}
+          groupId={selectedGroup.id}
+          groupName={selectedGroup.name}
+          onBack={() => { setSelectedGroup(null); fetchGroups(); }}
+          onLeft={fetchGroups}
+        />
+      </div>
+    );
+  }
   const sortedFriends = [...friends].sort((a, b) => {
     const msgA = lastMessages.get(a.user_id);
     const msgB = lastMessages.get(b.user_id);
@@ -322,15 +357,56 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
 
   return (
     <div className="flex h-full min-h-0 flex-col py-2">
-      <h2 className="mb-3 flex shrink-0 items-center gap-2 text-lg font-bold">
-        <MessageCircle className="w-5 h-5 text-primary" />
-        Chatt
-        {totalUnread > 0 && (
-          <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full">
-            {totalUnread}
-          </span>
-        )}
-      </h2>
+      <div className="flex items-center justify-between mb-3 shrink-0">
+        <h2 className="flex items-center gap-2 text-lg font-bold">
+          <MessageCircle className="w-5 h-5 text-primary" />
+          Chatt
+          {totalUnread > 0 && (
+            <span className="text-xs bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full">
+              {totalUnread}
+            </span>
+          )}
+        </h2>
+        <button
+          onClick={() => setShowCreateGroup(true)}
+          data-tour="social-chat"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary text-primary-foreground text-xs font-bold active:scale-95 transition-transform"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Grupp
+        </button>
+      </div>
+
+      {showCreateGroup && (
+        <CreateGroupDialog
+          userId={userId}
+          onClose={() => setShowCreateGroup(false)}
+          onCreated={(gid) => {
+            setShowCreateGroup(false);
+            fetchGroups();
+            const g = groups.find(x => x.id === gid);
+            setSelectedGroup({ id: gid, name: g?.name || "Grupp" });
+          }}
+        />
+      )}
+
+      {groups.length > 0 && (
+        <div className="mb-2 shrink-0 space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Grupper</p>
+          {groups.map(g => (
+            <button
+              key={g.id}
+              onClick={() => setSelectedGroup({ id: g.id, name: g.name })}
+              className="w-full flex items-center gap-3 p-2 hover:bg-muted/50 transition-colors text-left border border-border"
+            >
+              <div className="w-8 h-8 bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-primary" />
+              </div>
+              <span className="flex-1 text-sm font-semibold truncate">{g.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center py-8">
