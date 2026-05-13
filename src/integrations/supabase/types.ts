@@ -201,38 +201,119 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          last_read_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          last_read_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          last_read_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_groups: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_group_id: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          event_group_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_group_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_groups_event_group_id_fkey"
+            columns: ["event_group_id"]
+            isOneToOne: true
+            referencedRelation: "event_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           created_at: string
+          group_id: string | null
           id: string
           message: string | null
           message_type: string
           read: boolean
-          receiver_id: string
+          receiver_id: string | null
           sender_id: string
           shared_workout: Json | null
         }
         Insert: {
           created_at?: string
+          group_id?: string | null
           id?: string
           message?: string | null
           message_type?: string
           read?: boolean
-          receiver_id: string
+          receiver_id?: string | null
           sender_id: string
           shared_workout?: Json | null
         }
         Update: {
           created_at?: string
+          group_id?: string | null
           id?: string
           message?: string | null
           message_type?: string
           read?: boolean
-          receiver_id?: string
+          receiver_id?: string | null
           sender_id?: string
           shared_workout?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       custom_exercises: {
         Row: {
@@ -736,6 +817,8 @@ export type Database = {
           theme: string
           tiktok: string | null
           time_10km_min: number | null
+          tour_completed: boolean
+          tour_prompted: boolean
           training_days_per_week: number | null
           user_id: string
           weight_kg: number | null
@@ -763,6 +846,8 @@ export type Database = {
           theme?: string
           tiktok?: string | null
           time_10km_min?: number | null
+          tour_completed?: boolean
+          tour_prompted?: boolean
           training_days_per_week?: number | null
           user_id: string
           weight_kg?: number | null
@@ -790,6 +875,8 @@ export type Database = {
           theme?: string
           tiktok?: string | null
           time_10km_min?: number | null
+          tour_completed?: boolean
+          tour_prompted?: boolean
           training_days_per_week?: number | null
           user_id?: string
           weight_kg?: number | null
@@ -1602,6 +1689,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_chat_group_admin: {
+        Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_chat_group_member: {
+        Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
       is_jonne: { Args: never; Returns: boolean }
