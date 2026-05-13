@@ -13,112 +13,40 @@ const isEditableTarget = (target: EventTarget | Node | null, doc: Document = doc
 
 const selectionIsAllowed = (selection: Selection, doc: Document = document) => {
   if (!selection.anchorNode || !selection.focusNode) return true;
-  return isEditableTarget(selection.anchorNode, doc) && isEditableTarget(selection.focusNode, doc);
+  // Selections that originate inside or around an <input>/<textarea> have
+  // their anchor/focus on the parent (the actual text lives in shadow DOM).
+  // Allow any selection that touches an editable region — the browser keeps
+  // the real caret/selection inside the input itself.
+  return isEditableTarget(selection.anchorNode, doc) || isEditableTarget(selection.focusNode, doc);
 };
 
+/**
+ * Lightweight selection guard.
+ *
+ * Strategy: rely on the global `user-select: none` CSS rule (already in
+ * index.css) to prevent text selection on app chrome, and only intercept
+ * `selectstart` to cancel selection attempts that originate outside an
+ * editable field. We deliberately avoid attaching pointer/touch/mouse
+ * listeners on `document` because non-passive listeners (especially
+ * `touchmove`) interfere with the touch→click→focus sequence on Android
+ * Chrome and can prevent the soft keyboard from opening when tapping
+ * inputs.
+ */
 export const installSelectionGuard = (doc: Document = document) => {
-  let lockUntil = 0;
-  let lockTimer: number | undefined;
-  let touchStart: { x: number; y: number; target: EventTarget | null } | null = null;
-
-  const clearNonEditableSelection = () => {
-    const selection = doc.getSelection();
-    if (!selection || selectionIsAllowed(selection, doc)) return;
-    selection.removeAllRanges();
-  };
-
-  const keepClearingWhileLocked = () => {
-    clearNonEditableSelection();
-    if (Date.now() >= lockUntil) return;
-    lockTimer = window.setTimeout(keepClearingWhileLocked, 40);
-  };
-
-  const lockNonEditableSelection = (duration = 1200) => {
-    lockUntil = Math.max(lockUntil, Date.now() + duration);
-    doc.documentElement.classList.add("selection-locked");
-    clearNonEditableSelection();
-    if (lockTimer === undefined) keepClearingWhileLocked();
-    window.setTimeout(() => {
-      if (Date.now() < lockUntil) return;
-      doc.documentElement.classList.remove("selection-locked");
-      lockTimer = undefined;
-      clearNonEditableSelection();
-    }, duration + 80);
-  };
-
-  const clearSoon = () => {
-    clearNonEditableSelection();
-    window.requestAnimationFrame?.(clearNonEditableSelection);
-    window.setTimeout(clearNonEditableSelection, 0);
-    window.setTimeout(clearNonEditableSelection, 120);
-  };
-
   doc.addEventListener("selectstart", (event) => {
     if (isEditableTarget(event.target, doc)) return;
     event.preventDefault();
-    lockNonEditableSelection();
   }, { capture: true });
 
-  doc.addEventListener("selectionchange", clearSoon);
-
-  doc.addEventListener("pointerdown", (event) => {
-    if (isEditableTarget(event.target, doc)) return;
-    lockNonEditableSelection(event.pointerType === "touch" ? 1600 : 900);
-  }, { capture: true });
-
-  doc.addEventListener("pointermove", (event) => {
-    if (!isEditableTarget(event.target, doc)) clearSoon();
-  }, { capture: true });
-
-  doc.addEventListener("pointerup", (event) => {
-    if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(500);
-  }, { capture: true });
-
-  doc.addEventListener("pointercancel", (event) => {
-    if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(500);
-  }, { capture: true });
-
-  doc.addEventListener("mousedown", (event) => {
-    if (isEditableTarget(event.target, doc)) return;
-    lockNonEditableSelection();
-  }, { capture: true });
-
-  doc.addEventListener("mouseup", (event) => {
-    if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(500);
-  }, { capture: true });
-
-  doc.addEventListener("touchstart", (event) => {
-    if (isEditableTarget(event.target, doc)) return;
-    const touch = event.touches[0];
-    touchStart = touch ? { x: touch.clientX, y: touch.clientY, target: event.target } : null;
-    lockNonEditableSelection(1800);
-  }, { capture: true, passive: true });
-
-  doc.addEventListener("touchmove", (event) => {
-    if (isEditableTarget(event.target, doc)) return;
-    const touch = event.touches[0];
-    if (touchStart && touch) {
-      const dx = Math.abs(touch.clientX - touchStart.x);
-      const dy = Math.abs(touch.clientY - touchStart.y);
-      if (dx > 8 && dx > dy * 1.15) event.preventDefault();
-    }
-    clearSoon();
-  }, { capture: true, passive: false });
-
-  doc.addEventListener("touchend", (event) => {
-    touchStart = null;
-    if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(700);
-  }, { capture: true, passive: true });
-
-  doc.addEventListener("touchcancel", (event) => {
-    touchStart = null;
-    if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(700);
-  }, { capture: true, passive: true });
+  doc.addEventListener("selectionchange", () => {
+    const selection = doc.getSelection();
+    if (!selection || selectionIsAllowed(selection, doc)) return;
+    selection.removeAllRanges();
+  });
 
   doc.addEventListener("contextmenu", (event) => {
     if (isEditableTarget(event.target, doc)) return;
     event.preventDefault();
-    lockNonEditableSelection();
   }, { capture: true });
 
   doc.addEventListener("copy", (event) => {
