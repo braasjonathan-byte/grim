@@ -646,6 +646,7 @@ const Index = () => {
               className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-primary/10 transition-colors"
               aria-label="Hjälp & tips"
               title="Hjälp & tips"
+              data-tour="header-help"
             >
               <HelpCircle className="w-4 h-4 text-primary" />
             </button>
