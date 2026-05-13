@@ -702,6 +702,8 @@ const Index = () => {
       </main>
       </Suspense>
 
+      <TourPrompt userId={user.id} />
+
       {/* Notification toast at bottom */}
       {notification &&
       <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[60] animate-fade-in">
