@@ -64,7 +64,6 @@ export const installSelectionGuard = (doc: Document = document) => {
   doc.addEventListener("pointerdown", (event) => {
     if (isEditableTarget(event.target, doc)) return;
     lockNonEditableSelection(event.pointerType === "touch" ? 1600 : 900);
-    if (event.pointerType === "mouse") event.preventDefault();
   }, { capture: true });
 
   doc.addEventListener("pointermove", (event) => {
@@ -81,7 +80,6 @@ export const installSelectionGuard = (doc: Document = document) => {
 
   doc.addEventListener("mousedown", (event) => {
     if (isEditableTarget(event.target, doc)) return;
-    event.preventDefault();
     lockNonEditableSelection();
   }, { capture: true });
 
