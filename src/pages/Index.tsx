@@ -578,9 +578,9 @@ const Index = () => {
     <div className="min-h-screen bg-background pb-20">
       {biometricLocked && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 px-6">
-          <img src={grimIcon} alt="Grim" className="w-16 h-16" />
+          <img src={grimIcon} alt="Grim app icon" className="w-16 h-16" />
           <div className="text-center space-y-2">
-            <h2 className="text-xl font-black font-serif">Lås upp Grim</h2>
+            <p className="text-xl font-black font-serif">Lås upp Grim</p>
             <p className="text-sm text-muted-foreground">Bekräfta din identitet för att fortsätta.</p>
           </div>
           <button
@@ -640,9 +640,10 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background border-primary will-change-transform" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
-          <button onClick={() => setTab("workout")} className="flex items-center gap-2 cursor-pointer">
+          <button onClick={() => setTab("workout")} className="flex items-center gap-2 cursor-pointer" aria-label="Grim – Din personliga träningspartner">
             <h1 className="text-2xl font-black tracking-tight font-serif text-foreground">
-              Grim<span className="text-accent">.</span>
+              <span aria-hidden="true">Grim<span className="text-accent">.</span></span>
+              <span className="sr-only">Grim – Din personliga träningspartner</span>
             </h1>
           </button>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">

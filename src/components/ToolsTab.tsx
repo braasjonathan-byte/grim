@@ -289,6 +289,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
 
   return (
     <div className="py-2 space-y-4">
+      <h2 className="sr-only">Verktyg och inställningar</h2>
       <div className="flex items-center gap-2">
         {userRole === "admin" ? (
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
