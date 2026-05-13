@@ -96,6 +96,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
   useEffect(() => {
     fetchFriendsAndMessages();
     fetchAnnouncementPreview();
+    fetchGroups();
     if (isPremium && !isAdmin) fetchGrimMessages();
     if (isAdmin) fetchSupportConversations();
 
