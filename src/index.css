@@ -121,41 +121,14 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Disable text selection globally for native feel */
-  html, body, *, *::before, *::after {
-    -webkit-touch-callout: none !important;
-    -webkit-user-select: none !important;
-    -khtml-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-    -webkit-user-drag: none !important;
-    user-drag: none !important;
-    -webkit-tap-highlight-color: transparent;
+  /* Keep form controls fully native so mobile focus/keyboard and checkboxes work reliably. */
+  input, textarea, select, button, [role="button"], [contenteditable="true"], [contenteditable="true"] *,
+  .allow-select, .allow-select * {
+    pointer-events: auto;
+    touch-action: manipulation;
   }
 
-  html.selection-locked,
-  html.selection-locked body,
-  html.selection-locked *:not(input):not(textarea):not([contenteditable="true"]):not(.allow-select),
-  html.selection-locked *:not(input):not(textarea):not([contenteditable="true"]):not(.allow-select)::before,
-  html.selection-locked *:not(input):not(textarea):not([contenteditable="true"]):not(.allow-select)::after {
-    -webkit-user-select: none !important;
-    user-select: none !important;
-    -webkit-touch-callout: none !important;
-  }
-
-  ::selection {
-    background: transparent !important;
-    color: inherit !important;
-  }
-
-  ::-moz-selection {
-    background: transparent !important;
-    color: inherit !important;
-  }
-
-  /* Re-enable selection only where users actually need to type/edit */
-  input, textarea, [contenteditable="true"], [contenteditable="true"] *,
+  input, textarea, select, [contenteditable="true"], [contenteditable="true"] *,
   .allow-select, .allow-select * {
     -webkit-touch-callout: default !important;
     -webkit-user-select: text !important;

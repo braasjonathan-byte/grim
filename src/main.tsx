@@ -3,7 +3,6 @@ import App from "./App.tsx";
 import "./index.css";
 import { applyTheme, getStoredThemeId } from "./lib/themes";
 import { APP_VERSION } from "./lib/version";
-import { installSelectionGuard } from "./lib/selectionGuard";
 
 const APP_VERSION_STORAGE_KEY = "grim_app_version";
 const APP_VERSION_REFRESH_KEY = `grim_version_refresh_${APP_VERSION}`;
@@ -156,10 +155,6 @@ if (isIOS) {
     if (document.visibilityState === "visible") setTimeout(nudgeFixedElements, 100);
   });
 }
-
-// Native-app feel: prevent accidental text/image selection in app chrome.
-// Selection is only allowed when the actual selected text lives inside an editable field.
-installSelectionGuard();
 
 // Lock screen orientation to portrait when supported (PWA / installed apps)
 try {
