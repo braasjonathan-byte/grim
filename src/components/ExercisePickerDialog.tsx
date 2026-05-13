@@ -181,7 +181,7 @@ const ExercisePickerDialog = ({
       : s));
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[70] flex items-stretch justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
