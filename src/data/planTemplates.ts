@@ -1222,7 +1222,66 @@ function generatePostpartum(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
+// ─── Upper/Lower – Storlek & Styrka (8v, 4 pass/vecka) ─────────────────────
+// Vetenskapligt baserad: tunga compounds (5-6 reps) för styrka + hypertrofivolym
+// (8-12 reps) per muskelgrupp/vecka enligt Schoenfeld m.fl. (10-20 set/muskel/vecka).
+function generateUpperLower(rms: Record<string, number>): TemplatePlanDay[] {
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= 8; w++) {
+    const isDeload = w === 4 || w === 8;
+    // Linjär progression: tunga 75% → 87.5%, volym 65% → 75%
+    const heavyP = isDeload ? 0.65 : Math.min(0.875, 0.75 + (w - 1) * 0.018);
+    const volP = isDeload ? 0.55 : Math.min(0.75, 0.65 + (w - 1) * 0.014);
+    const heavySets = isDeload ? 3 : Math.min(5, 4 + Math.floor((w - 1) / 4));
+    const heavyReps = isDeload ? 5 : w <= 3 ? 6 : w <= 6 ? 5 : 4;
+
+    const bp = pct(rms["bänk"], heavyP);
+    const sq = pct(rms["knäböj"], heavyP);
+    const dl = pct(rms["marklyft"], heavyP);
+    const pr = pct(rms["press"], heavyP);
+    const bpV = pct(rms["bänk"], volP);
+    const sqV = pct(rms["knäböj"], volP);
+    const dlV = pct(rms["marklyft"], volP);
+    const prV = pct(rms["press"], volP);
+
+    days.push(
+      {
+        week: w, day: "Mån", session_name: isDeload ? "Överkropp Tung – Deload" : "Överkropp Tung",
+        details: `Bänkpress ${heavySets}×${heavyReps} @ ${bp}kg; Stående militärpress 4×${heavyReps + 1} @ ${pr}kg; Pendlay rodd 4×${heavyReps + 1}; Chins 4×${heavyReps + 2}; Sittande hantelaxelpress 3×8; Skivstångscurl 3×8`,
+        tempo: `~${Math.round(heavyP * 100)}% av 1RM, RPE 7–8`,
+      },
+      {
+        week: w, day: "Tis", session_name: isDeload ? "Underkropp Tung – Deload" : "Underkropp Tung",
+        details: `Knäböj ${heavySets}×${heavyReps} @ ${sq}kg; Marklyft 3×${Math.max(3, heavyReps - 1)} @ ${dl}kg; Bulgarska utfall 3×8/ben; Bencurl 3×10; Stående vadpress 4×10; Hängande benlyft 3×12`,
+        tempo: `~${Math.round(heavyP * 100)}% av 1RM, RPE 7–8`,
+      },
+      { week: w, day: "Ons", session_name: "Vila / Aktiv återhämtning", details: "20–30 min lätt promenad eller cykel; rörlighet 10 min", tempo: "" },
+      {
+        week: w, day: "Tors", session_name: isDeload ? "Överkropp Volym – Deload" : "Överkropp Volym",
+        details: `Lutande hantelpress 4×8–10 @ ${bpV}kg ekvivalent; Latsdrag 4×10; Stående skivstångspress 3×8 @ ${prV}kg; Kabelrodd sittande 4×10; Sidolyft 4×12–15; Face pulls 3×15; Hammarcurl 3×10; Triceps pushdown 3×12`,
+        tempo: `~${Math.round(volP * 100)}%, RPE 7, kontrollerad excentrik (2–3s)`,
+      },
+      {
+        week: w, day: "Fre", session_name: isDeload ? "Underkropp Volym – Deload" : "Underkropp Volym",
+        details: `Frontböj 4×8 @ ${pct(rms["knäböj"], volP * 0.85)}kg; Rumänsk marklyft 4×8 @ ${dlV}kg; Benpress 3×12; Hip thrust 3×10; Sittande bencurl 3×12; Sittande vadpress 4×15; Plankor 3×45–60s`,
+        tempo: `~${Math.round(volP * 100)}%, RPE 7–8`,
+      },
+      { week: w, day: "Lör", session_name: "Vila", details: "Vilodag", tempo: "" },
+      { week: w, day: "Sön", session_name: "Vila", details: "Vilodag eller lätt rörlighet 15 min", tempo: "" },
+    );
+  }
+  return days;
+}
+
 export const planTemplates: TemplatePlan[] = [
+  {
+    name: "🔱 Upper/Lower – Storlek & Styrka",
+    description: "8 veckor, 4 pass/vecka. Överkropp/underkropp-split med tunga compounds för styrka och högrepetitiv volym för hypertrofi. Vetenskapligt baserade övningar (bänkpress, knäböj, marklyft, rodd, chins, RDL, hip thrust m.fl.) med deload v.4 och v.8.",
+    weeks: 8,
+    category: "styrka",
+    requiredLifts: ["knäböj", "bänk", "marklyft", "press"],
+    generateDays: generateUpperLower,
+  },
   {
     name: "🏋️ Styrka 1 dag/vecka – Helkropp",
     description: "8 veckor, 1 pass/vecka. Maximalt effektivt helkroppspass med alla stora lyft. Perfekt om du har begränsat med tid.",
