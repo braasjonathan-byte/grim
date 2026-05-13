@@ -412,6 +412,7 @@ const LONG: TourStep[] = [
 // ════════════════════════════════════════════════════════════
 
 const NAV_DELAY = 350;
+const RESUME_KEY = "grim:tour:resume";
 
 function applyMeta(meta?: StepMeta) {
   if (!meta) return;
@@ -429,7 +430,37 @@ function applyMeta(meta?: StepMeta) {
   }
 }
 
-export function startTour(variant: TourVariant, onDone?: () => void) {
+/** Pick the first matching element that's actually visible on screen. */
+function resolveVisible(sel: string): Element | string {
+  const els = Array.from(document.querySelectorAll(sel)) as HTMLElement[];
+  const visible = els.find((e) => {
+    if (e.offsetParent === null) return false;
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  });
+  return visible ?? els[0] ?? sel;
+}
+
+function saveProgress(variant: TourVariant, idx: number) {
+  try { sessionStorage.setItem(RESUME_KEY, JSON.stringify({ variant, idx })); } catch { /* ignore */ }
+}
+function clearProgress() {
+  try { sessionStorage.removeItem(RESUME_KEY); } catch { /* ignore */ }
+}
+
+/** Auto-resume an interrupted tour (e.g. after a page reload). */
+export function resumeTourIfNeeded(onDone?: () => void) {
+  try {
+    const raw = sessionStorage.getItem(RESUME_KEY);
+    if (!raw) return;
+    const { variant, idx } = JSON.parse(raw) as { variant: TourVariant; idx: number };
+    if (!variant || typeof idx !== "number") return;
+    // Small delay so the app shell is mounted
+    setTimeout(() => startTour(variant, onDone, idx), 600);
+  } catch { /* ignore */ }
+}
+
+export function startTour(variant: TourVariant, onDone?: () => void, startIdx = 0) {
   const all = variant === "long" ? LONG : SHORT;
 
   // Drop steps that target a missing element AND have no nav meta to bring it in.
@@ -441,11 +472,22 @@ export function startTour(variant: TourVariant, onDone?: () => void) {
   });
 
   if (available.length === 0) {
+    clearProgress();
     onDone?.();
     return;
   }
 
-  const driveSteps = available.map((s) => s.step);
+  const safeStart = Math.min(Math.max(0, startIdx), available.length - 1);
+
+  // Driver.js takes element as string | Element. Clone steps so we can
+  // swap in a concrete visible Element right before highlighting.
+  const driveSteps: DriveStep[] = available.map((s) => ({ ...s.step }));
+
+  const resolveStep = (i: number) => {
+    const orig = available[i].step.element as string | undefined;
+    if (!orig) return;
+    driveSteps[i].element = resolveVisible(orig);
+  };
 
   const d = driver({
     showProgress: true,
@@ -460,25 +502,39 @@ export function startTour(variant: TourVariant, onDone?: () => void) {
       const idx = d.getActiveIndex() ?? 0;
       const nextIdx = idx + 1;
       if (nextIdx >= available.length) {
+        clearProgress();
         d.destroy();
         return;
       }
       applyMeta(available[nextIdx].meta);
-      setTimeout(() => d.moveNext(), NAV_DELAY);
+      setTimeout(() => {
+        resolveStep(nextIdx);
+        saveProgress(variant, nextIdx);
+        d.moveNext();
+      }, NAV_DELAY);
     },
     onPrevClick: () => {
       const idx = d.getActiveIndex() ?? 0;
       const prevIdx = idx - 1;
       if (prevIdx < 0) return;
       applyMeta(available[prevIdx].meta);
-      setTimeout(() => d.movePrevious(), NAV_DELAY);
+      setTimeout(() => {
+        resolveStep(prevIdx);
+        saveProgress(variant, prevIdx);
+        d.movePrevious();
+      }, NAV_DELAY);
     },
     onDestroyed: () => {
+      clearProgress();
       onDone?.();
     },
   });
 
-  // Apply meta for the first step before starting
-  applyMeta(available[0].meta);
-  setTimeout(() => d.drive(), NAV_DELAY);
+  // Apply meta for the starting step before driving
+  applyMeta(available[safeStart].meta);
+  saveProgress(variant, safeStart);
+  setTimeout(() => {
+    resolveStep(safeStart);
+    d.drive(safeStart);
+  }, NAV_DELAY);
 }
