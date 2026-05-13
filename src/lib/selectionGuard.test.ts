@@ -48,19 +48,14 @@ describe("selectionGuard", () => {
     expect(preventDefault).not.toHaveBeenCalled();
   });
 
-  it("prevents horizontal touch drags from starting text selection outside editable fields", () => {
+  it("blocks selectstart on non-editable elements", () => {
     document.body.innerHTML = `<p id="text">Genomförda Varje rep räknas</p>`;
     installSelectionGuard(document);
     const text = document.getElementById("text")!;
 
-    const startEvent = new Event("touchstart", { bubbles: true, cancelable: true });
-    Object.defineProperty(startEvent, "touches", { value: [{ clientX: 20, clientY: 20 }] });
-    text.dispatchEvent(startEvent);
-
-    const moveEvent = new Event("touchmove", { bubbles: true, cancelable: true });
-    Object.defineProperty(moveEvent, "touches", { value: [{ clientX: 80, clientY: 24 }] });
-    const preventDefault = vi.spyOn(moveEvent, "preventDefault");
-    text.dispatchEvent(moveEvent);
+    const event = new Event("selectstart", { bubbles: true, cancelable: true });
+    const preventDefault = vi.spyOn(event, "preventDefault");
+    text.dispatchEvent(event);
 
     expect(preventDefault).toHaveBeenCalled();
   });
