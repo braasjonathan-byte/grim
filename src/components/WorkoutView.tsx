@@ -4697,6 +4697,7 @@ const estimateCalories = (
                 // Find a matching ready workout and create single workout
                 setImportWorkoutTarget({ planId: "__single__", week: 0, day: "" });
               }}
+              data-tour="import-workout"
               className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
             >
               <Download className="w-3 h-3" /> Importera färdigt pass
