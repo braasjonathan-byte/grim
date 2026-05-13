@@ -328,6 +328,19 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
     );
   }
 
+  if (selectedGroup) {
+    return (
+      <div className="h-full min-h-0 overflow-hidden">
+        <GroupChatConversation
+          userId={userId}
+          groupId={selectedGroup.id}
+          groupName={selectedGroup.name}
+          onBack={() => { setSelectedGroup(null); fetchGroups(); }}
+          onLeft={fetchGroups}
+        />
+      </div>
+    );
+  }
   const sortedFriends = [...friends].sort((a, b) => {
     const msgA = lastMessages.get(a.user_id);
     const msgB = lastMessages.get(b.user_id);
