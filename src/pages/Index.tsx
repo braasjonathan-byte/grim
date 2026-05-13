@@ -155,6 +155,11 @@ const Index = () => {
     return () => window.removeEventListener("grim:set-tab", handler);
   }, [setTab]);
 
+  // Auto-resume an interrupted tour after a page reload
+  useEffect(() => {
+    import("@/lib/tour").then(({ resumeTourIfNeeded }) => resumeTourIfNeeded());
+  }, []);
+
   // Listen for popstate (Android back button / browser back)
   useEffect(() => {
     // Replace current state with initial tab
