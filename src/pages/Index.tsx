@@ -771,6 +771,7 @@ const Index = () => {
           {tabs.map(({ key, icon: Icon, label, badge }) =>
           <button
             key={key}
+            data-tour={`tab-${key}`}
             onClick={async () => {
               setTab(key);
               if (key === "social" && unreadAnnouncements > 0) {
