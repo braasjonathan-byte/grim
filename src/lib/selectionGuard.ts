@@ -11,8 +11,8 @@ const isEditableTarget = (target: EventTarget | Node | null, doc: Document = doc
   return !!getElementFromTarget(target, doc)?.closest(editableSelector);
 };
 
-const selectionIsInsideEditable = (selection: Selection, doc: Document = document) => {
-  if (selection.isCollapsed || !selection.anchorNode || !selection.focusNode) return true;
+const selectionIsAllowed = (selection: Selection, doc: Document = document) => {
+  if (!selection.anchorNode || !selection.focusNode) return true;
   return isEditableTarget(selection.anchorNode, doc) && isEditableTarget(selection.focusNode, doc);
 };
 
@@ -22,7 +22,7 @@ export const installSelectionGuard = (doc: Document = document) => {
 
   const clearNonEditableSelection = () => {
     const selection = doc.getSelection();
-    if (!selection || selectionIsInsideEditable(selection, doc)) return;
+    if (!selection || selectionIsAllowed(selection, doc)) return;
     selection.removeAllRanges();
   };
 
@@ -112,7 +112,7 @@ export const installSelectionGuard = (doc: Document = document) => {
 
   doc.addEventListener("copy", (event) => {
     const selection = doc.getSelection();
-    if (selection && !selectionIsInsideEditable(selection, doc)) event.preventDefault();
+    if (selection && !selectionIsAllowed(selection, doc)) event.preventDefault();
   }, { capture: true });
 
   doc.addEventListener("dragstart", (event) => {
