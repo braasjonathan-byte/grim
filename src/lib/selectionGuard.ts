@@ -19,6 +19,7 @@ const selectionIsAllowed = (selection: Selection, doc: Document = document) => {
 export const installSelectionGuard = (doc: Document = document) => {
   let lockUntil = 0;
   let lockTimer: number | undefined;
+  let touchStart: { x: number; y: number; target: EventTarget | null } | null = null;
 
   const clearNonEditableSelection = () => {
     const selection = doc.getSelection();
@@ -89,18 +90,30 @@ export const installSelectionGuard = (doc: Document = document) => {
   }, { capture: true });
 
   doc.addEventListener("touchstart", (event) => {
-    if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(1800);
+    if (isEditableTarget(event.target, doc)) return;
+    const touch = event.touches[0];
+    touchStart = touch ? { x: touch.clientX, y: touch.clientY, target: event.target } : null;
+    lockNonEditableSelection(1800);
   }, { capture: true, passive: true });
 
   doc.addEventListener("touchmove", (event) => {
-    if (!isEditableTarget(event.target, doc)) clearSoon();
-  }, { capture: true, passive: true });
+    if (isEditableTarget(event.target, doc)) return;
+    const touch = event.touches[0];
+    if (touchStart && touch) {
+      const dx = Math.abs(touch.clientX - touchStart.x);
+      const dy = Math.abs(touch.clientY - touchStart.y);
+      if (dx > 8 && dx > dy * 1.15) event.preventDefault();
+    }
+    clearSoon();
+  }, { capture: true, passive: false });
 
   doc.addEventListener("touchend", (event) => {
+    touchStart = null;
     if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(700);
   }, { capture: true, passive: true });
 
   doc.addEventListener("touchcancel", (event) => {
+    touchStart = null;
     if (!isEditableTarget(event.target, doc)) lockNonEditableSelection(700);
   }, { capture: true, passive: true });
 
