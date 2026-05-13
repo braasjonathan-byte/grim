@@ -40,9 +40,13 @@ interface FriendActivity {
 }
 
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
+const isPreviewEnvironment = () =>
+  window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
+
 const GrimInfoDialog = () => {
   const [open, setOpen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
   const handleClose = () => { localStorage.setItem(GRIM_INFO_KEY, "1"); setOpen(false); };
+  if (isPreviewEnvironment()) return null;
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
@@ -172,7 +176,7 @@ const Index = () => {
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadPosts, setUnreadPosts] = useState(0);
   const [isAppInstalled, setIsAppInstalled] = useState(() => {
-    const isPreview = window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
+    const isPreview = isPreviewEnvironment();
     if (isPreview) return false;
     return window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
   });
@@ -180,11 +184,16 @@ const Index = () => {
 
   // Detect if app is installed (standalone mode)
   useEffect(() => {
-    const isPreview = window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
+    const isPreview = isPreviewEnvironment();
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as any).standalone === true;
     setIsAppInstalled(isStandalone && !isPreview);
+
+    if (isPreview) {
+      setShowInstallDialog(false);
+      return;
+    }
 
     if (!isStandalone && user) {
       const dismissed = sessionStorage.getItem("grim_install_prompt_dismissed");
@@ -570,7 +579,7 @@ const Index = () => {
       )}
       <WhatsNewDialog />
       {/* Install prompt dialog */}
-      <Dialog open={showInstallDialog} onOpenChange={(v) => {
+      <Dialog open={showInstallDialog && !isPreviewEnvironment()} onOpenChange={(v) => {
         if (!v) {
           sessionStorage.setItem("grim_install_prompt_dismissed", "1");
           setShowInstallDialog(false);

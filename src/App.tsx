@@ -23,6 +23,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
+            <Route path="/index" element={<Suspense fallback={null}><Index /></Suspense>} />
             <Route path="/install" element={<Suspense fallback={null}><Install /></Suspense>} />
             <Route path="*" element={<Suspense fallback={null}><NotFound /></Suspense>} />
           </Routes>
