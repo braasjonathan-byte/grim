@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check } from "lucide-react";
+import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check, Users, Plus } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import ChatConversation from "./ChatConversation";
+import GroupChatConversation from "./GroupChatConversation";
+import CreateGroupDialog from "./CreateGroupDialog";
 import EmptyState from "@/components/EmptyState";
 import grimIcon from "@/assets/grim-icon.webp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
