@@ -55,6 +55,11 @@ const WhatsNewDialog = forwardRef<HTMLDivElement>((_, ref) => {
   const [unseenEntries, setUnseenEntries] = useState(changelog);
 
   const checkAndShow = useCallback(() => {
+    if (import.meta.env.DEV) {
+      localStorage.setItem(WHATS_NEW_KEY, CURRENT_CHANGELOG_ID);
+      return;
+    }
+
     const lastSeen = localStorage.getItem(WHATS_NEW_KEY);
     if (lastSeen === CURRENT_CHANGELOG_ID) return; // nothing new
 
