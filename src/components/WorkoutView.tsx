@@ -4506,6 +4506,7 @@ const estimateCalories = (
                         setSelectedMuscle(null);
                         setIsWarmupMode(false);
                       }}
+                      data-tour="add-exercise"
                       className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <Plus className="w-3 h-3" /> Lägg till övning
                       </button>
