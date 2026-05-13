@@ -3390,7 +3390,7 @@ const estimateCalories = (
     return (
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
-        <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); fetchData(); }} />
+        <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); setPlanStartDate(null); setActivePlanWeek(1); fetchData(); }} />
       </div>
     );
   }
