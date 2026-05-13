@@ -285,7 +285,7 @@ const LONG: TourStep[] = [
       popover: {
         title: "Eventgrupper, leaderboard & utmaningar",
         description:
-          "• Leaderboarden visar vem som tränat flest pass – filtrera per månad eller år.<br>• Dagliga utmaningar belönar med proteinbars 🥜.<br>• Lägg till event (lopp, tävlingar) med datum för en nedräkning – och gå med i eventgrupper för att träna mot samma mål.",
+          "• Leaderboarden visar vem som tränat flest pass – filtrera per månad eller år.<br>• Dagliga utmaningar ger dig ett nytt mål varje dag.<br>• Lägg till event (lopp, tävlingar) med datum för en nedräkning – och gå med i eventgrupper för att träna mot samma mål.",
       },
     },
   },
