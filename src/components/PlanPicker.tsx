@@ -273,7 +273,11 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
                     }
                   }}
                   locale={sv}
-                  disabled={(d) => d < new Date()}
+                  disabled={(d) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return d < today;
+                  }}
                   className="p-3 pointer-events-auto bg-card border border-border rounded-lg"
                 />
               </div>
