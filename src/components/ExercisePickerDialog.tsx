@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
