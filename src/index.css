@@ -195,3 +195,65 @@
 }
 .swipe-left { animation: slide-in-from-right 0.25s ease-out; }
 .swipe-right { animation: slide-in-from-left 0.25s ease-out; }
+
+/* ============ Driver.js theme (GRIM: square, primary, no shadows) ============ */
+.driver-popover {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--primary)) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-family: inherit;
+}
+.driver-popover-title {
+  font-family: 'Permanent Marker', cursive;
+  font-weight: 400;
+  color: hsl(var(--primary)) !important;
+  font-size: 1.05rem !important;
+}
+.driver-popover-description {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.45 !important;
+}
+.driver-popover-progress-text {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 0.7rem !important;
+}
+.driver-popover-footer button {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  text-shadow: none !important;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem !important;
+  font-size: 0.8rem !important;
+}
+.driver-popover-footer button.driver-popover-prev-btn {
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+.driver-popover-close-btn {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 1rem !important;
+}
+.driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: hsl(var(--primary)) !important;
+}
+.driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: hsl(var(--primary)) !important;
+}
+.driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: hsl(var(--primary)) !important;
+}
+.driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: hsl(var(--primary)) !important;
+}
+.driver-active-element,
+.driver-active-element *,
+.driver-active-element:focus,
+.driver-active-element:hover {
+  z-index: 10000 !important;
+}
