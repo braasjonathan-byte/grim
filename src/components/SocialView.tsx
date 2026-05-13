@@ -381,6 +381,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           <button
             key={st.key}
             onClick={() => setSubTab(st.key)}
+            data-tour={st.key === "friends" ? "social-friends" : st.key === "groups" ? "social-groups" : undefined}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-colors ${
               subTab === st.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
             }`}
