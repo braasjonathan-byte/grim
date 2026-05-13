@@ -61,6 +61,25 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const dragOverItem = useRef<string | null>(null);
   const autoScrollRef = useRef<number | null>(null);
 
+  // Tour navigation – expand sections + scroll into view when requested
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const target = (e as CustomEvent).detail as "settings" | "helpers" | "help";
+      if (target === "settings") setSettingsOpen(true);
+      if (target === "helpers") setToolsOpen(true);
+      // Scroll the related anchor into view
+      requestAnimationFrame(() => {
+        const sel =
+          target === "settings" ? '[data-tour="tools-profile"]' :
+          target === "helpers" ? '[data-tour="tools-helpers"]' :
+          target === "help" ? '[data-tour="tools-help"]' : null;
+        if (sel) document.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    };
+    window.addEventListener("grim:tools-expand", handler);
+    return () => window.removeEventListener("grim:tools-expand", handler);
+  }, []);
+
   const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
   const settingsToolKeys = new Set(["profile", "settings", "notifications"]);
 
@@ -81,7 +100,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings-group", label: "Inställningar", render: () => (
-      <div className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
+      <div data-tour="tools-profile" className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
         <button
           type="button"
           onClick={() => setSettingsOpen((open) => !open)}
@@ -112,7 +131,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       </div>
     )},
     { key: "helpers", label: "Hjälpmedel", render: () => (
-      <div className="rounded-lg border border-border overflow-hidden bg-secondary">
+      <div data-tour="tools-helpers" className="rounded-lg border border-border overflow-hidden bg-secondary">
         <button
           type="button"
           onClick={() => setToolsOpen((open) => !open)}

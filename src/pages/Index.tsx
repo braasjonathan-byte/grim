@@ -143,6 +143,18 @@ const Index = () => {
     }
   }, []);
 
+  // Listen for tour navigation events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as Tab;
+      if (detail === "workout" || detail === "stats" || detail === "social" || detail === "calc") {
+        setTab(detail);
+      }
+    };
+    window.addEventListener("grim:set-tab", handler);
+    return () => window.removeEventListener("grim:set-tab", handler);
+  }, [setTab]);
+
   // Listen for popstate (Android back button / browser back)
   useEffect(() => {
     // Replace current state with initial tab

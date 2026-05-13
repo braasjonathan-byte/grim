@@ -183,7 +183,7 @@ const HelpSection = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   return (
-    <div id="help-section" className="border border-border bg-secondary overflow-hidden">
+    <div id="help-section" data-tour="tools-help" className="border border-border bg-secondary overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <HelpCircle className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-bold">Hjälp & tips</h3>

@@ -85,6 +85,18 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
 
+  // Tour navigation – switch sub-tab when tour requests it
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as SubTab;
+      if (detail === "feed" || detail === "friends" || detail === "chat" || detail === "groups") {
+        setSubTab(detail);
+      }
+    };
+    window.addEventListener("grim:social-subtab", handler);
+    return () => window.removeEventListener("grim:social-subtab", handler);
+  }, []);
+
   const loadFriendIds = async () => {
     const { data } = await supabase
       .from("friendships")
@@ -369,6 +381,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           <button
             key={st.key}
             onClick={() => setSubTab(st.key)}
+            data-tour={st.key === "friends" ? "social-friends" : st.key === "groups" ? "social-groups" : undefined}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-colors ${
               subTab === st.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
             }`}
