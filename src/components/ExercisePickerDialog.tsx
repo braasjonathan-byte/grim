@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
@@ -180,7 +181,7 @@ const ExercisePickerDialog = ({
       : s));
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[70] flex items-stretch justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -488,7 +489,7 @@ const ExercisePickerDialog = ({
         )}
       </div>
     </div>
-  );
+  , document.body);
 };
 
 export default ExercisePickerDialog;
