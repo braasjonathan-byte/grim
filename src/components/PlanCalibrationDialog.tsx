@@ -4,6 +4,7 @@ import { CalendarDays, Check } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
+import { toNoonUtcIso } from "@/lib/dateUtils";
 
 interface PlanCalibrationDialogProps {
   userId: string;
@@ -93,7 +94,7 @@ const PlanCalibrationDialog = ({ userId, onDone }: PlanCalibrationDialogProps) =
 
       const { error } = await supabase
         .from("workout_plans")
-        .update({ created_at: startDate.toISOString() })
+        .update({ created_at: toNoonUtcIso(startDate) })
         .eq("user_id", userId)
         .gt("week", 0);
 
