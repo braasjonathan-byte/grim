@@ -3814,8 +3814,9 @@ const estimateCalories = (
                             planCondTime={planCondTime}
                             planCondDist={planCondDist}
                             planCondTempo={planCondTempo}
+                            planCondPulse={planCondPulse}
                             savedData={condSavedInline}
-                            hasSavedData={hasSavedCondData}
+                            hasSavedData={hasSavedCondData || !!planCondPulse}
                             exerciseLinesCount={exerciseLines.length}
                             isCompleted={isConditioningDone(key, name)}
                             onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, name)}
