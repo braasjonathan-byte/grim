@@ -727,6 +727,13 @@ const ExerciseGifManager = () => {
                 >
                   Sätt muskelgrupp…
                 </button>
+                <button
+                  onClick={bulkDelete}
+                  disabled={savingBulk}
+                  className="text-[11px] px-2.5 py-1.5 bg-destructive text-destructive-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
+                >
+                  🗑️ Ta bort
+                </button>
               </div>
 
               {showBulkMuscle && (
