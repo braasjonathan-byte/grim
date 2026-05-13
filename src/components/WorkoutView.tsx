@@ -4506,6 +4506,7 @@ const estimateCalories = (
                         setSelectedMuscle(null);
                         setIsWarmupMode(false);
                       }}
+                      data-tour="add-exercise"
                       className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
                         <Plus className="w-3 h-3" /> Lägg till övning
                       </button>
@@ -4696,6 +4697,7 @@ const estimateCalories = (
                 // Find a matching ready workout and create single workout
                 setImportWorkoutTarget({ planId: "__single__", week: 0, day: "" });
               }}
+              data-tour="import-workout"
               className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
             >
               <Download className="w-3 h-3" /> Importera färdigt pass
@@ -7383,6 +7385,7 @@ const estimateCalories = (
                                               }
                                             }
                                           }}
+                                          data-tour="exercise-menu"
                                           className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-primary transition-colors touch-manipulation"
                                           title="Övningsalternativ">
                                           <Settings className="w-4 h-4" />
@@ -7770,44 +7773,46 @@ const estimateCalories = (
                         <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
                       </button>
                   )}
-                  <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
-                      <Plus className="w-3 h-3" /> Lägg till övning
-                    </button>
-                  {plan.is_circuit && (
-                    <button
-                      onClick={async () => {
-                        const restSec = prompt("Antal sekunder vila mellan rundor:", "30");
-                        if (!restSec) return;
-                        const seconds = parseInt(restSec) || 30;
-                        const entry = `Vila — 1×${seconds}`;
-                        const separator = plan.details.includes("\n") ? "\n" : "; ";
-                        const newDetails = plan.details ? `${plan.details}${separator}${entry}` : entry;
-                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
-                        triggerSave();
-                      }}
-                      className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
-                      <Plus className="w-3 h-3" /> Lägg till vila
-                    </button>
-                  )}
-                  <button
-                      onClick={() => setImportWorkoutTarget({ planId: plan.id, week: plan.week, day: plan.day })}
-                      className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
-                    >
-                      <Download className="w-3 h-3" /> Importera färdigt pass
-                    </button>
-                  <button
-                      onClick={async () => {
-                        if (!confirm(`Rensa alla övningar i "${plan.session_name}"?`)) return;
-                        await supabase.from("workout_plans").update({ details: "", session_name: "" }).eq("id", plan.id);
-                        setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: "", session_name: "" } : p));
-                        triggerSave();
-                        toast.success("Passet rensat");
-                      }}
-                      className="w-full py-2 border border-dashed border-destructive/40 rounded-md text-xs text-destructive hover:text-destructive hover:border-destructive transition-colors flex items-center justify-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" /> Rensa pass
-                    </button>
+                   <button onClick={() => {setShowExercisePicker(plan.id);setSelectedMuscle(null);setIsWarmupMode(false);}} data-tour="add-exercise" className="w-full py-2 border border-dashed border-border rounded-md text-xs text-muted-foreground hover:text-foreground hover:border-primary transition-colors flex items-center justify-center gap-1">
+                       <Plus className="w-3 h-3" /> Lägg till övning
+                     </button>
+                   {plan.is_circuit && (
+                     <button
+                       onClick={async () => {
+                         const restSec = prompt("Antal sekunder vila mellan rundor:", "30");
+                         if (!restSec) return;
+                         const seconds = parseInt(restSec) || 30;
+                         const entry = `Vila — 1×${seconds}`;
+                         const separator = plan.details.includes("\n") ? "\n" : "; ";
+                         const newDetails = plan.details ? `${plan.details}${separator}${entry}` : entry;
+                         await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                         setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
+                         triggerSave();
+                       }}
+                       className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1">
+                       <Plus className="w-3 h-3" /> Lägg till vila
+                     </button>
+                   )}
+                   <button
+                       onClick={() => setImportWorkoutTarget({ planId: plan.id, week: plan.week, day: plan.day })}
+                       data-tour="import-workout"
+                       className="w-full py-2 border border-dashed border-warning/40 rounded-md text-xs text-warning hover:text-warning hover:border-warning transition-colors flex items-center justify-center gap-1"
+                     >
+                       <Download className="w-3 h-3" /> Importera färdigt pass
+                     </button>
+                   <button
+                       onClick={async () => {
+                         if (!confirm(`Rensa alla övningar i "${plan.session_name}"?`)) return;
+                         await supabase.from("workout_plans").update({ details: "", session_name: "" }).eq("id", plan.id);
+                         setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: "", session_name: "" } : p));
+                         triggerSave();
+                         toast.success("Passet rensat");
+                       }}
+                       data-tour="clear-workout"
+                       className="w-full py-2 border border-dashed border-destructive/40 rounded-md text-xs text-destructive hover:text-destructive hover:border-destructive transition-colors flex items-center justify-center gap-1"
+                     >
+                       <Trash2 className="w-3 h-3" /> Rensa pass
+                     </button>
                 </div>
                   }
                   <ExercisePickerDialog
