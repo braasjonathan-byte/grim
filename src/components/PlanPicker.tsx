@@ -504,6 +504,11 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       </div>
 
       <div className="space-y-3">
+        {filteredTemplates.length === 0 && (
+          <div className="text-center text-xs text-muted-foreground py-6 border border-dashed border-border">
+            Inga planer matchar "{searchQuery}"
+          </div>
+        )}
         {filteredTemplates.map((template) => {
           const realIdx = planTemplates.indexOf(template);
           return (
