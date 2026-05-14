@@ -78,6 +78,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [postImages, setPostImages] = useState<Record<string, { image_url: string; caption: string | null }[]>>({});
+  const [comments, setComments] = useState<Record<string, { id: string; user_id: string; comment: string; created_at: string }[]>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [openComments, setOpenComments] = useState<Set<string>>(new Set());
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const isChatTab = subTab === "chat";
 
@@ -141,10 +145,16 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       // Load likes + post images
       const postIds = postsData.map(p => p.id);
       if (postIds.length > 0) {
-        const [{ data: likesData }, { data: imgData }] = await Promise.all([
+        const [{ data: likesData }, { data: imgData }, { data: commentsData }] = await Promise.all([
           supabase.from("social_post_likes").select("post_id, user_id").in("post_id", postIds),
           supabase.from("social_post_images").select("post_id, image_url, caption, sort_order").in("post_id", postIds).order("sort_order", { ascending: true }),
+          supabase.from("social_post_comments").select("post_id").in("post_id", postIds),
         ]);
+        if (commentsData) {
+          const cMap: Record<string, number> = {};
+          (commentsData as { post_id: string }[]).forEach(c => { cMap[c.post_id] = (cMap[c.post_id] || 0) + 1; });
+          setCommentCounts(cMap);
+        }
         if (likesData) {
           const countMap: Record<string, number> = {};
           const mySet = new Set<string>();
@@ -325,6 +335,57 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       setMyLikes(prev => new Set(prev).add(postId));
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
     }
+  };
+
+  const loadComments = async (postId: string) => {
+    const { data } = await supabase
+      .from("social_post_comments")
+      .select("id, user_id, comment, created_at")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
+    if (data) {
+      setComments(prev => ({ ...prev, [postId]: data as any }));
+      // Load nicknames/avatars for any new commenters
+      const missing = [...new Set(data.map((c: any) => c.user_id).filter((id: string) => !nicknames[id]))];
+      if (missing.length > 0) {
+        const [{ data: nicks }, { data: profs }] = await Promise.all([
+          supabase.rpc("get_suggestion_nicknames", { user_ids: missing }),
+          supabase.from("profiles").select("user_id, avatar_url").in("user_id", missing),
+        ]);
+        if (nicks) setNicknames(prev => { const m = { ...prev }; (nicks as any[]).forEach(n => { m[n.user_id] = n.nickname; }); return m; });
+        if (profs) setAvatarUrls(prev => { const m = { ...prev }; (profs as any[]).forEach(p => { m[p.user_id] = p.avatar_url; }); return m; });
+      }
+    }
+  };
+
+  const toggleComments = (postId: string) => {
+    setOpenComments(prev => {
+      const s = new Set(prev);
+      if (s.has(postId)) { s.delete(postId); }
+      else { s.add(postId); if (!comments[postId]) loadComments(postId); }
+      return s;
+    });
+  };
+
+  const submitComment = async (postId: string) => {
+    const text = (commentDrafts[postId] || "").trim();
+    if (!text) return;
+    const { data, error } = await supabase
+      .from("social_post_comments")
+      .insert({ post_id: postId, user_id: userId, comment: text })
+      .select("id, user_id, comment, created_at")
+      .single();
+    if (error) { toast.error("Kunde inte kommentera"); return; }
+    setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data as any] }));
+    setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
+    setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
+  };
+
+  const deleteComment = async (postId: string, commentId: string) => {
+    const { error } = await supabase.from("social_post_comments").delete().eq("id", commentId);
+    if (error) { toast.error("Kunde inte ta bort"); return; }
+    setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== commentId) }));
+    setCommentCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 1) - 1) }));
   };
 
   const deletePost = async (postId: string) => {
@@ -608,13 +669,73 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 <p className="px-4 py-2 text-sm whitespace-pre-line">{post.caption}</p>
               )}
 
-              {/* Like button */}
+              {/* Like + comment buttons */}
               <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
                 <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
                   <Heart className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
                   <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
                 </button>
+                <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 text-sm">
+                  <MessageCircle className={`w-4 h-4 transition-colors ${openComments.has(post.id) ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className="text-xs text-muted-foreground">{commentCounts[post.id] || 0}</span>
+                </button>
               </div>
+
+              {/* Comments */}
+              {openComments.has(post.id) && (
+                <div className="px-4 py-3 border-t border-border/50 space-y-3 bg-secondary/20">
+                  {(comments[post.id] || []).length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center">Inga kommentarer än. Var först!</p>
+                  )}
+                  {(comments[post.id] || []).map(c => (
+                    <div key={c.id} className="flex items-start gap-2 group">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold overflow-hidden flex-shrink-0">
+                        {avatarUrls[c.user_id] ? (
+                          <img src={avatarUrls[c.user_id]!} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          (nicknames[c.user_id] || "?")[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-card rounded-2xl px-3 py-1.5">
+                          <p className="text-xs font-semibold">{nicknames[c.user_id] || "Anonym"}</p>
+                          <p className="text-sm whitespace-pre-line break-words">{c.comment}</p>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 px-2">
+                          {format(new Date(c.created_at), "d MMM HH:mm", { locale: sv })}
+                        </p>
+                      </div>
+                      {(c.user_id === userId || isAdmin) && (
+                        <button
+                          onClick={() => deleteComment(post.id, c.id)}
+                          className="p-1 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100"
+                          title="Ta bort"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex items-end gap-2 pt-1">
+                    <textarea
+                      value={commentDrafts[post.id] || ""}
+                      onChange={e => setCommentDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
+                      placeholder="Skriv en kommentar..."
+                      maxLength={500}
+                      rows={1}
+                      className="flex-1 bg-card text-foreground text-sm px-3 py-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground resize-none"
+                    />
+                    <button
+                      onClick={() => submitComment(post.id)}
+                      disabled={!(commentDrafts[post.id] || "").trim()}
+                      className="h-9 w-9 flex items-center justify-center bg-primary text-primary-foreground rounded-full disabled:opacity-40 hover:opacity-90 flex-shrink-0"
+                      title="Skicka"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ));
           })()}
