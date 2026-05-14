@@ -337,6 +337,57 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     }
   };
 
+  const loadComments = async (postId: string) => {
+    const { data } = await supabase
+      .from("social_post_comments")
+      .select("id, user_id, comment, created_at")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true });
+    if (data) {
+      setComments(prev => ({ ...prev, [postId]: data as any }));
+      // Load nicknames/avatars for any new commenters
+      const missing = [...new Set(data.map((c: any) => c.user_id).filter((id: string) => !nicknames[id]))];
+      if (missing.length > 0) {
+        const [{ data: nicks }, { data: profs }] = await Promise.all([
+          supabase.rpc("get_suggestion_nicknames", { user_ids: missing }),
+          supabase.from("profiles").select("user_id, avatar_url").in("user_id", missing),
+        ]);
+        if (nicks) setNicknames(prev => { const m = { ...prev }; (nicks as any[]).forEach(n => { m[n.user_id] = n.nickname; }); return m; });
+        if (profs) setAvatarUrls(prev => { const m = { ...prev }; (profs as any[]).forEach(p => { m[p.user_id] = p.avatar_url; }); return m; });
+      }
+    }
+  };
+
+  const toggleComments = (postId: string) => {
+    setOpenComments(prev => {
+      const s = new Set(prev);
+      if (s.has(postId)) { s.delete(postId); }
+      else { s.add(postId); if (!comments[postId]) loadComments(postId); }
+      return s;
+    });
+  };
+
+  const submitComment = async (postId: string) => {
+    const text = (commentDrafts[postId] || "").trim();
+    if (!text) return;
+    const { data, error } = await supabase
+      .from("social_post_comments")
+      .insert({ post_id: postId, user_id: userId, comment: text })
+      .select("id, user_id, comment, created_at")
+      .single();
+    if (error) { toast.error("Kunde inte kommentera"); return; }
+    setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data as any] }));
+    setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
+    setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
+  };
+
+  const deleteComment = async (postId: string, commentId: string) => {
+    const { error } = await supabase.from("social_post_comments").delete().eq("id", commentId);
+    if (error) { toast.error("Kunde inte ta bort"); return; }
+    setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== commentId) }));
+    setCommentCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 1) - 1) }));
+  };
+
   const deletePost = async (postId: string) => {
     await supabase.from("social_posts").delete().eq("id", postId);
     setPosts(prev => prev.filter(p => p.id !== postId));
