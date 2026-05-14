@@ -119,22 +119,17 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
 
   if (isHonorary) {
     return (
-      <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+      <div className="border border-primary/30 bg-primary/5 px-3 py-2 flex items-center gap-2 flex-wrap">
         <HonoraryBadge size="md" nickname={nickname} />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground flex-1 min-w-0">
           Tack för att du supportar Grim! 💪
         </p>
-        {registeredEmail && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Mail className="w-3 h-3" /> {registeredEmail}
-          </p>
-        )}
         <Button
           variant="outline"
           size="sm"
           onClick={handleManage}
           disabled={portalLoading}
-          className="w-full text-xs"
+          className="text-xs h-7 px-2"
         >
           {portalLoading ? (
             <Loader2 className="w-3 h-3 animate-spin" />
