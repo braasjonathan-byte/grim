@@ -145,10 +145,16 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       // Load likes + post images
       const postIds = postsData.map(p => p.id);
       if (postIds.length > 0) {
-        const [{ data: likesData }, { data: imgData }] = await Promise.all([
+        const [{ data: likesData }, { data: imgData }, { data: commentsData }] = await Promise.all([
           supabase.from("social_post_likes").select("post_id, user_id").in("post_id", postIds),
           supabase.from("social_post_images").select("post_id, image_url, caption, sort_order").in("post_id", postIds).order("sort_order", { ascending: true }),
+          supabase.from("social_post_comments").select("post_id").in("post_id", postIds),
         ]);
+        if (commentsData) {
+          const cMap: Record<string, number> = {};
+          (commentsData as { post_id: string }[]).forEach(c => { cMap[c.post_id] = (cMap[c.post_id] || 0) + 1; });
+          setCommentCounts(cMap);
+        }
         if (likesData) {
           const countMap: Record<string, number> = {};
           const mySet = new Set<string>();
