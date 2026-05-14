@@ -824,7 +824,7 @@ const Index = () => {
               <div className="relative">
                 <Icon className="w-5 h-5" />
                 {badge &&
-              <span style={{ borderRadius: "9999px" }} className="absolute -top-1.5 -right-2.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-2.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center [border-radius:9999px!important]">
                     {badge > 9 ? "9+" : badge}
                   </span>
               }
