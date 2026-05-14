@@ -78,6 +78,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [postImages, setPostImages] = useState<Record<string, { image_url: string; caption: string | null }[]>>({});
+  const [comments, setComments] = useState<Record<string, { id: string; user_id: string; comment: string; created_at: string }[]>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [openComments, setOpenComments] = useState<Set<string>>(new Set());
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
   const isChatTab = subTab === "chat";
 
