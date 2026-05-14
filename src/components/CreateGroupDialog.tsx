@@ -98,7 +98,11 @@ const CreateGroupDialog = ({ userId, onClose, onCreated }: CreateGroupDialogProp
           />
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-4" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+        <div
+          data-scroll-lock-scroll="y"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4"
+          style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        >
           <p className="text-xs font-semibold text-muted-foreground mb-2">
             Välj vänner ({selected.size} valda)
           </p>
