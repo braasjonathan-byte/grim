@@ -669,13 +669,73 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 <p className="px-4 py-2 text-sm whitespace-pre-line">{post.caption}</p>
               )}
 
-              {/* Like button */}
+              {/* Like + comment buttons */}
               <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
                 <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
                   <Heart className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
                   <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
                 </button>
+                <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 text-sm">
+                  <MessageCircle className={`w-4 h-4 transition-colors ${openComments.has(post.id) ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className="text-xs text-muted-foreground">{commentCounts[post.id] || 0}</span>
+                </button>
               </div>
+
+              {/* Comments */}
+              {openComments.has(post.id) && (
+                <div className="px-4 py-3 border-t border-border/50 space-y-3 bg-secondary/20">
+                  {(comments[post.id] || []).length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center">Inga kommentarer än. Var först!</p>
+                  )}
+                  {(comments[post.id] || []).map(c => (
+                    <div key={c.id} className="flex items-start gap-2 group">
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold overflow-hidden flex-shrink-0">
+                        {avatarUrls[c.user_id] ? (
+                          <img src={avatarUrls[c.user_id]!} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          (nicknames[c.user_id] || "?")[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="bg-card rounded-2xl px-3 py-1.5">
+                          <p className="text-xs font-semibold">{nicknames[c.user_id] || "Anonym"}</p>
+                          <p className="text-sm whitespace-pre-line break-words">{c.comment}</p>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 px-2">
+                          {format(new Date(c.created_at), "d MMM HH:mm", { locale: sv })}
+                        </p>
+                      </div>
+                      {(c.user_id === userId || isAdmin) && (
+                        <button
+                          onClick={() => deleteComment(post.id, c.id)}
+                          className="p-1 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100"
+                          title="Ta bort"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex items-end gap-2 pt-1">
+                    <textarea
+                      value={commentDrafts[post.id] || ""}
+                      onChange={e => setCommentDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
+                      placeholder="Skriv en kommentar..."
+                      maxLength={500}
+                      rows={1}
+                      className="flex-1 bg-card text-foreground text-sm px-3 py-2 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground resize-none"
+                    />
+                    <button
+                      onClick={() => submitComment(post.id)}
+                      disabled={!(commentDrafts[post.id] || "").trim()}
+                      className="h-9 w-9 flex items-center justify-center bg-primary text-primary-foreground rounded-full disabled:opacity-40 hover:opacity-90 flex-shrink-0"
+                      title="Skicka"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ));
           })()}
