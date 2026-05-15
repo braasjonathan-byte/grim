@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
+import { autoShareCompletion } from "@/lib/workoutAutoShare";
 
 interface WorkoutLogDialogProps {
   userId: string;
