@@ -217,13 +217,18 @@ const getCompletionStatsDate = (
   }
 
   if (completion.done || completion.skipped) {
+    // Prefer the actual completion timestamp — the plan's start date may have
+    // been recalibrated since this session was completed, which would otherwise
+    // shift historical completions onto the wrong calendar day.
+    const updatedDate = getUpdatedAtDate(completion.updated_at);
+    if (updatedDate) return updatedDate;
     const archivedStart = completion.archived_plan_start_date
       ? getStandaloneDate(completion.archived_plan_start_date)
       : null;
     const resolvedPlanStart = archivedStart ?? planStartDate;
     return resolvedPlanStart
       ? getWorkoutCalendarDate(completion.week, completion.day, resolvedPlanStart)
-      : getUpdatedAtDate(completion.updated_at);
+      : null;
   }
 
   if (planStartDate) {
