@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
 import { onPostInteraction } from "@/lib/postInteractionBus";
+import { fetchSocialWorkoutInteractions, mergeWorkoutComments, mergeWorkoutLikes, isSocialInteractionId, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
