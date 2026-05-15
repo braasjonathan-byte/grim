@@ -58,7 +58,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
   useEffect(() => {
     if (!postId) return;
     const channel = supabase
-      .channel(`post-thread-${postId}`)
+      .channel(`post-thread-${postId}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "social_post_comments", filter: `post_id=eq.${postId}` },
@@ -70,7 +70,11 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
         () => { loadInteractions(postId); }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Backup: in-app event bus (fires immediately, no realtime needed)
+    const off = onPostInteraction((pid) => {
+      if (pid === postId) loadInteractions(postId);
+    });
+    return () => { supabase.removeChannel(channel); off(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
