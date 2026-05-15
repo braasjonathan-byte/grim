@@ -10,6 +10,7 @@ import ImageCarousel from "./ImageCarousel";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
+import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
