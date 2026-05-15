@@ -100,6 +100,12 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
       const { data: p } = await supabase.from("profiles").select("user_id, nickname, avatar_url").eq("user_id", viewerId).maybeSingle();
       if (p) setProfiles((prev) => ({ ...prev, [viewerId]: { nickname: (p as any).nickname, avatar_url: (p as any).avatar_url } }));
     }
+    // Push-notify the workout owner (post author)
+    if (userId && userId !== viewerId) {
+      supabase.functions.invoke("notify-comment", {
+        body: { targetUserId: userId, day, week },
+      }).catch(() => {});
+    }
   };
 
   const removeComment = async (id: string, ownerId: string) => {
