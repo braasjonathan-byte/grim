@@ -347,6 +347,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       await supabase.from("social_post_likes").insert({ post_id: postId, user_id: userId });
       setMyLikes(prev => new Set(prev).add(postId));
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
+      const fresh = await checkInteractionAchievements(userId);
+      if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
   };
 
