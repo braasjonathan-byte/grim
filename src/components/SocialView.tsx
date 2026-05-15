@@ -455,12 +455,22 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const submitComment = async (postId: string) => {
     const text = (commentDrafts[postId] || "").trim();
     if (!text) return;
+    const post = posts.find(p => p.id === postId);
     const { data, error } = await supabase
       .from("social_post_comments")
       .insert({ post_id: postId, user_id: userId, comment: text })
       .select("id, user_id, comment, created_at")
       .single();
     if (error) { toast.error("Kunde inte kommentera"); return; }
+    if (post?.workout_day && post.workout_week !== null) {
+      await supabase.from("workout_comments").insert({
+        target_user_id: post.user_id,
+        week: post.workout_week,
+        day: post.workout_day,
+        author_id: userId,
+        comment: text,
+      } as any);
+    }
     setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data as any] }));
     setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
     setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
@@ -468,7 +478,6 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     const fresh = await checkInteractionAchievements(userId);
     if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     // Push-notify post owner
-    const post = posts.find(p => p.id === postId);
     if (post && post.user_id !== userId) {
       supabase.functions.invoke("notify-comment", {
         body: {
@@ -481,8 +490,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const deleteComment = async (postId: string, commentId: string) => {
-    const { error } = await supabase.from("social_post_comments").delete().eq("id", commentId);
+    const post = posts.find(p => p.id === postId);
+    const comment = (comments[postId] || []).find(c => c.id === commentId);
+    const { error } = isSocialInteractionId(commentId)
+      ? await supabase.from("social_post_comments").delete().eq("id", stripSocialInteractionId(commentId))
+      : await supabase.from("workout_comments").delete().eq("id", commentId);
     if (error) { toast.error("Kunde inte ta bort"); return; }
+    if (post?.workout_day && post.workout_week !== null && comment) {
+      await supabase.from("workout_comments").delete().eq("target_user_id", post.user_id).eq("week", post.workout_week).eq("day", post.workout_day).eq("author_id", comment.user_id).eq("comment", comment.comment);
+    }
     setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== commentId) }));
     setCommentCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 1) - 1) }));
     emitPostInteraction(postId);
