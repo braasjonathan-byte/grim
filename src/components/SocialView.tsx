@@ -356,6 +356,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       const fresh = await checkInteractionAchievements(userId);
       if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
+    emitPostInteraction(postId);
   };
 
   const loadComments = async (postId: string) => {
