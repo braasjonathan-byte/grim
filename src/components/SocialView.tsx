@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin } from "lucide-react";
+import { Users, Flame, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
@@ -9,6 +9,7 @@ import HonoraryBadge from "./HonoraryBadge";
 import ImageCarousel from "./ImageCarousel";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { checkInteractionAchievements } from "@/lib/achievements";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -346,6 +347,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       await supabase.from("social_post_likes").insert({ post_id: postId, user_id: userId });
       setMyLikes(prev => new Set(prev).add(postId));
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
+      const fresh = await checkInteractionAchievements(userId);
+      if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
   };
 
@@ -391,6 +394,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data as any] }));
     setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
     setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
+    const fresh = await checkInteractionAchievements(userId);
+    if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     // Push-notify post owner
     const post = posts.find(p => p.id === postId);
     if (post && post.user_id !== userId) {
@@ -706,7 +711,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               {/* Like + comment buttons */}
               <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
                 <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
-                  <Heart className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+                  <Flame className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
                   <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
                 </button>
                 <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 text-sm">

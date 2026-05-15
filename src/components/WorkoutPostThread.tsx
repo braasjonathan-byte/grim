@@ -4,6 +4,7 @@ import { Flame, MessageCircle, Send, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
+import { checkInteractionAchievements } from "@/lib/achievements";
 
 interface WorkoutPostThreadProps {
   userId: string; // owner of the workout (post owner)
@@ -99,6 +100,8 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
       await supabase.from("social_post_likes").insert({ post_id: postId, user_id: viewerId });
       setILiked(true);
       setLikeCount((n) => n + 1);
+      const fresh = await checkInteractionAchievements(viewerId);
+      if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
   };
 
@@ -116,6 +119,8 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     if (error) { toast.error("Kunde inte kommentera"); return; }
     setComments((prev) => [...prev, data as Comment]);
     setDraft("");
+    const fresh = await checkInteractionAchievements(viewerId);
+    if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     if (!profiles[viewerId]) {
       const { data: p } = await supabase.from("profiles").select("user_id, nickname, avatar_url").eq("user_id", viewerId).maybeSingle();
       if (p) setProfiles((prev) => ({ ...prev, [viewerId]: { nickname: (p as any).nickname, avatar_url: (p as any).avatar_url } }));
