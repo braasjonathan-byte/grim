@@ -70,6 +70,8 @@ interface WorkoutShareCardProps {
   loggedDistanceKm?: number | null;
   loggedWeights?: Record<string, any> | null;
   nickname: string;
+  ownerUserId?: string;
+  viewerUserId?: string;
   onClose: () => void;
   onChatShare?: () => void;
   onCopyToDate?: () => void;
@@ -87,6 +89,8 @@ const WorkoutShareCard = ({
   loggedDistanceKm,
   loggedWeights,
   nickname,
+  ownerUserId,
+  viewerUserId,
   onClose,
   onChatShare,
   onCopyToDate,
