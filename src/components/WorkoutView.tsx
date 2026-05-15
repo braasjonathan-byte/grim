@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
 import { onPostInteraction } from "@/lib/postInteractionBus";
+import { fetchSocialWorkoutInteractions, mergeWorkoutComments, mergeWorkoutLikes, isSocialInteractionId, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -933,19 +934,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setComments((prev) => ({ ...commentMap, ...prev }));
     }
 
-    // Set likes
-    setWorkoutLikes((likesData || []) as any);
+    // Merge in social-post interactions so historical comments/likes from the feed appear here
+    const { comments: socialComments, likes: socialLikes } = await fetchSocialWorkoutInteractions(userId);
+    const mergedLikes = mergeWorkoutLikes((likesData || []) as any, socialLikes);
+    const mergedComments = mergeWorkoutComments((friendCommentsData || []) as any, socialComments);
+
+    setWorkoutLikes(mergedLikes as any);
 
     // Collect all author IDs from comments and likes
     const allAuthorIds = new Set<string>();
-    if (friendCommentsData) friendCommentsData.forEach((c) => allAuthorIds.add(c.author_id));
-    if (likesData) (likesData as any[]).forEach((l) => allAuthorIds.add(l.user_id));
+    mergedComments.forEach((c: any) => allAuthorIds.add(c.author_id));
+    mergedLikes.forEach((l: any) => allAuthorIds.add(l.user_id));
 
-    if (friendCommentsData && friendCommentsData.length > 0) {
-      setFriendComments(friendCommentsData);
-    } else {
-      setFriendComments([]);
-    }
+    setFriendComments(mergedComments as any);
 
     if (allAuthorIds.size > 0) {
       const { data: authorProfiles } = await supabase
@@ -1397,7 +1398,21 @@ const estimateCalories = (
   };
 
   const deleteFriendComment = async (commentId: string) => {
-    await supabase.from("workout_comments").delete().eq("id", commentId);
+    const target = friendComments.find((c) => c.id === commentId);
+    if (isSocialInteractionId(commentId)) {
+      const realId = stripSocialInteractionId(commentId);
+      await supabase.from("social_post_comments").delete().eq("id", realId);
+      if (target) {
+        await supabase.from("workout_comments").delete()
+          .eq("target_user_id", target.target_user_id)
+          .eq("week", target.week)
+          .eq("day", target.day)
+          .eq("author_id", target.author_id)
+          .eq("comment", target.comment);
+      }
+    } else {
+      await supabase.from("workout_comments").delete().eq("id", commentId);
+    }
     setFriendComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
@@ -3695,7 +3710,7 @@ const estimateCalories = (
                   <div className="flex items-center gap-1">
                     {(() => {
                       const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
-                      const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id);
+                      const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
                       const totalComments = ownLines + dayFriendComments.length;
                       return totalComments > 0 ?
                       <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
@@ -4562,7 +4577,7 @@ const estimateCalories = (
 
                     {/* Friend comments */}
                     {(() => {
-                    const dayComments = friendComments.filter((c) => c.plan_id === plan.id);
+                    const dayComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
                     return dayComments.length > 0 ?
                     <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
                           <p className="text-xs font-bold text-primary flex items-center gap-1.5">
@@ -5363,7 +5378,7 @@ const estimateCalories = (
                 <div className="flex items-center gap-1 text-muted-foreground">
                     {(() => {
                     const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
-                    const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id);
+                    const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
                     const totalComments = ownLines + dayFriendComments.length;
                     return totalComments > 0 ?
                     <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full animate-fade-in">
@@ -7863,7 +7878,7 @@ const estimateCalories = (
 
                   {/* Friend comments */}
                   {(() => {
-                  const dayComments = friendComments.filter((c) => c.plan_id === plan.id);
+                  const dayComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
                   return dayComments.length > 0 ?
                   <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
                         <p className="text-xs font-bold text-primary flex items-center gap-1.5">
