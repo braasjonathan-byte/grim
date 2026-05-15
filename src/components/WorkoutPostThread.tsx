@@ -4,6 +4,7 @@ import { Flame, MessageCircle, Send, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
+import { checkInteractionAchievements } from "@/lib/achievements";
 
 interface WorkoutPostThreadProps {
   userId: string; // owner of the workout (post owner)
