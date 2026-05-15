@@ -520,9 +520,8 @@ const WorkoutShareCard = ({
               Vänner · 🔥 & kommentarer
             </div>
             <WorkoutPostThread
-              ownerUserId={ownerUserId as any}
-              viewerId={viewerUserId}
               userId={ownerUserId}
+              viewerId={viewerUserId}
               week={week}
               day={day}
             />
