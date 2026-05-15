@@ -6,7 +6,7 @@ import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import { checkInteractionAchievements } from "@/lib/achievements";
 import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
-import { mergeWorkoutComments, mergeWorkoutLikes, stripSocialInteractionId } from "@/lib/workoutSocialSync";
+import { isSocialInteractionId, mergeWorkoutComments, mergeWorkoutLikes, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 
 interface WorkoutPostThreadProps {
   userId: string; // owner of the workout (post owner)
@@ -228,7 +228,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
               </div>
               {canDelete && (
                 <button
-                  onClick={() => removeComment(c.id, c.user_id)}
+                  onClick={() => removeComment(c)}
                   className="p-1 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100"
                   title="Ta bort"
                 >
