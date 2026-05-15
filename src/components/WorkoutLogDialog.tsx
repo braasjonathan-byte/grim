@@ -411,6 +411,7 @@ const WorkoutLogDialog = ({
                 { onConflict: "user_id,week,day" }
               );
               notifyFriendsOfCompletion(day, week, sessionName, planStartDate);
+              autoShareCompletion(userId, week, day);
               onSaved();
             }}
             className="flex-1 py-3 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
