@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
+
 import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
@@ -1293,7 +1293,7 @@ const estimateCalories = (
 
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
-      notifyFriendsOfCompletion(day, week, plan?.session_name || day, planStartDate);
+      
       autoShareCompletion(userId, week, day);
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
@@ -1638,7 +1638,7 @@ const estimateCalories = (
     if (allExercisesDone && !completions[k]?.done && plan0) {
       playWorkoutComplete();
       hapticMedium();
-      notifyFriendsOfCompletion(day, week, plan.session_name || day, planStartDate);
+      
       autoShareCompletion(userId, week, day);
 
       // Check if all scheduled workouts in this week are now done

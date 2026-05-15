@@ -176,6 +176,12 @@ export async function autoShareCompletion(
         workout_week: week,
         workout_day: day,
       });
+      // Notify friends via the new social-post push channel
+      supabase.functions
+        .invoke("notify-social-post", {
+          body: { caption, visibility: "friends" },
+        })
+        .catch(() => {});
     }
   } catch {
     // best-effort, swallow
