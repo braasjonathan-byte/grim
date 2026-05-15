@@ -1,0 +1,1 @@
+UPDATE social_posts SET caption = E'🏋️ Upper - genomkörare – Vecka 1 · Tors\n💪 24 set  ·  🏋️‍♂️ 8.8k kg volym\n\nElda passet 🔥 eller heja på i kommentarerna!' WHERE user_id='25c48738-eb8e-4180-8755-034d01dc5ccc' AND workout_week=1 AND workout_day='Tors';
