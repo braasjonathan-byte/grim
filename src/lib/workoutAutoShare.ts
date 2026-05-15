@@ -129,9 +129,13 @@ export async function autoShareCompletion(
       .eq("day", day);
 
     if (!planRows || planRows.length === 0) return;
-    const validPlans = (planRows as any[]).filter(
+    let validPlans = (planRows as any[]).filter(
       (p) => (p.details || "").trim() && (p.session_name || "").trim()
     );
+    // Fallback for single workouts: accept rows with just a session name
+    if (validPlans.length === 0) {
+      validPlans = (planRows as any[]).filter((p) => (p.session_name || "").trim());
+    }
     if (validPlans.length === 0) return;
 
     const plan: PlanLike = {
