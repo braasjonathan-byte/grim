@@ -123,7 +123,43 @@ export const calculateAchievementMetrics = (
     tons: Math.floor(kgTotal / 1000),
     distanceKm: Math.floor(distanceKm),
     challenges: challengeCount,
+    firesGiven: interaction.firesGiven ?? 0,
+    commentsGiven: interaction.commentsGiven ?? 0,
   };
+};
+
+/**
+ * Counts the user's outgoing reactions/comments and unlocks any newly
+ * earned interaction achievements. Best-effort, swallows errors.
+ */
+export const checkInteractionAchievements = async (userId: string) => {
+  try {
+    const [{ count: firesGiven }, { count: commentsGiven }] = await Promise.all([
+      supabase.from("social_post_likes").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("social_post_comments").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    ]);
+    const earned = getEarnedAchievements({
+      workouts: 0, reps: 0, tons: 0, distanceKm: 0, challenges: 0,
+      firesGiven: firesGiven || 0,
+      commentsGiven: commentsGiven || 0,
+    }).filter((a) => a.metric === "firesGiven" || a.metric === "commentsGiven");
+    if (earned.length === 0) return [];
+
+    const { data: existing } = await supabase
+      .from("user_achievements" as any)
+      .select("achievement_id")
+      .eq("user_id", userId);
+    const existingIds = new Set((existing || []).map((row: any) => row.achievement_id));
+    const fresh = earned.filter((a) => !existingIds.has(a.id));
+    if (fresh.length > 0) {
+      await supabase.from("user_achievements" as any).insert(
+        fresh.map((a) => ({ user_id: userId, achievement_id: a.id })) as any,
+      );
+    }
+    return fresh;
+  } catch {
+    return [];
+  }
 };
 
 export const getEarnedAchievements = (metrics: AchievementMetrics) =>
