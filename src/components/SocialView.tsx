@@ -11,7 +11,7 @@ import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
 import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
-import { isSocialInteractionId, stripSocialInteractionId } from "@/lib/workoutSocialSync";
+import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -388,12 +388,20 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const toggleLike = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    const isWorkoutPost = !!post?.workout_day && post.workout_week !== null;
     if (myLikes.has(postId)) {
-      await supabase.from("social_post_likes").delete().eq("post_id", postId).eq("user_id", userId);
+      await Promise.all([
+        supabase.from("social_post_likes").delete().eq("post_id", postId).eq("user_id", userId),
+        isWorkoutPost ? supabase.from("workout_likes").delete().eq("target_user_id", post!.user_id).eq("week", post!.workout_week).eq("day", post!.workout_day).eq("user_id", userId) : Promise.resolve(),
+      ]);
       setMyLikes(prev => { const s = new Set(prev); s.delete(postId); return s; });
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 1) - 1 }));
     } else {
-      await supabase.from("social_post_likes").insert({ post_id: postId, user_id: userId });
+      await Promise.all([
+        supabase.from("social_post_likes").insert({ post_id: postId, user_id: userId }),
+        isWorkoutPost ? supabase.from("workout_likes").upsert({ target_user_id: post!.user_id, week: post!.workout_week, day: post!.workout_day, user_id: userId } as any, { onConflict: "user_id,target_user_id,week,day" }) : Promise.resolve(),
+      ]);
       setMyLikes(prev => new Set(prev).add(postId));
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
       const fresh = await checkInteractionAchievements(userId);
@@ -403,15 +411,27 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const loadComments = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
     const { data } = await supabase
       .from("social_post_comments")
       .select("id, user_id, comment, created_at")
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
+    const { data: workoutData } = post?.workout_day && post.workout_week !== null ? await supabase
+      .from("workout_comments")
+      .select("id, target_user_id, week, day, author_id, comment, created_at, plan_id")
+      .eq("target_user_id", post.user_id)
+      .eq("week", post.workout_week)
+      .eq("day", post.workout_day)
+      .order("created_at", { ascending: true }) : { data: [] };
     if (data) {
-      setComments(prev => ({ ...prev, [postId]: data as any }));
+      const merged = mergeWorkoutComments(
+        (workoutData || []).map((c: any) => ({ ...c, user_id: c.author_id })),
+        (data || []).map((c: any) => ({ ...c, id: `social:${c.id}`, target_user_id: post?.user_id || "", week: post?.workout_week || 0, day: post?.workout_day || "", author_id: c.user_id, plan_id: null, user_id: c.user_id })),
+      ).map((c: any) => ({ id: c.id, user_id: c.author_id || c.user_id, comment: c.comment, created_at: c.created_at }));
+      setComments(prev => ({ ...prev, [postId]: merged as any }));
       // Load nicknames/avatars for any new commenters
-      const missing = [...new Set(data.map((c: any) => c.user_id).filter((id: string) => !nicknames[id]))];
+      const missing = [...new Set(merged.map((c: any) => c.user_id).filter((id: string) => !nicknames[id]))];
       if (missing.length > 0) {
         const [{ data: nicks }, { data: profs }] = await Promise.all([
           supabase.rpc("get_suggestion_nicknames", { user_ids: missing }),
