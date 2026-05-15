@@ -121,6 +121,16 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Block text selection on app chrome by default … */
+  html, body {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
   /* Keep form controls fully native so mobile focus/keyboard and checkboxes work reliably. */
   input, textarea, select, button, [role="button"], [contenteditable="true"], [contenteditable="true"] *,
   .allow-select, .allow-select * {
@@ -128,6 +138,7 @@
     touch-action: manipulation;
   }
 
+  /* … but always allow real text input + opt-in selectable regions. */
   input, textarea, select, [contenteditable="true"], [contenteditable="true"] *,
   .allow-select, .allow-select * {
     -webkit-touch-callout: default !important;
