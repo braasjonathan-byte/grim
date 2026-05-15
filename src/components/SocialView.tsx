@@ -90,6 +90,17 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
 
+  // Live-sync comments and likes (e.g. when added from a workout card)
+  useEffect(() => {
+    const channel = supabase
+      .channel("social-feed-interactions")
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_post_comments" }, () => loadFeed())
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_post_likes" }, () => loadFeed())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   // Tour navigation – switch sub-tab when tour requests it
   useEffect(() => {
     const handler = (e: Event) => {
