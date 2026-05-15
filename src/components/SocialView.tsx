@@ -706,7 +706,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               {/* Like + comment buttons */}
               <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
                 <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
-                  <Heart className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
+                  <Flame className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
                   <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
                 </button>
                 <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 text-sm">
