@@ -104,11 +104,6 @@ export function buildWorkoutSummaryCaption(
   }
 
   if (stats.length) lines.push(stats.join("  ·  "));
-  if (setLines.length) {
-    lines.push("");
-    lines.push(...setLines.slice(0, 8));
-    if (setLines.length > 8) lines.push(`…och ${setLines.length - 8} till`);
-  }
 
   lines.push("");
   lines.push("Elda passet 🔥 eller heja på i kommentarerna!");
