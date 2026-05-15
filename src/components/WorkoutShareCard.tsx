@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { X, Download, Share2, Palette, Send, CalendarIcon, Copy } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
+import WorkoutPostThread from "./WorkoutPostThread";
 
 type Theme = "colorful" | "light" | "dark";
 
@@ -70,6 +71,8 @@ interface WorkoutShareCardProps {
   loggedDistanceKm?: number | null;
   loggedWeights?: Record<string, any> | null;
   nickname: string;
+  ownerUserId?: string;
+  viewerUserId?: string;
   onClose: () => void;
   onChatShare?: () => void;
   onCopyToDate?: () => void;
@@ -87,6 +90,8 @@ const WorkoutShareCard = ({
   loggedDistanceKm,
   loggedWeights,
   nickname,
+  ownerUserId,
+  viewerUserId,
   onClose,
   onChatShare,
   onCopyToDate,
@@ -507,6 +512,21 @@ const WorkoutShareCard = ({
             </div>
           </div>
         </div>
+
+        {/* Friend reactions on the auto-shared post */}
+        {ownerUserId && viewerUserId && (
+          <div className="rounded-xl border border-border bg-card p-3 space-y-3">
+            <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wide">
+              Vänner · 🔥 & kommentarer
+            </div>
+            <WorkoutPostThread
+              userId={ownerUserId}
+              viewerId={viewerUserId}
+              week={week}
+              day={day}
+            />
+          </div>
+        )}
 
         {/* Action buttons */}
         <div className="flex gap-2">

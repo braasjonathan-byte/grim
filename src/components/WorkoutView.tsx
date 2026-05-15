@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
+import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1293,6 +1294,7 @@ const estimateCalories = (
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
       notifyFriendsOfCompletion(day, week, plan?.session_name || day, planStartDate);
+      autoShareCompletion(userId, week, day);
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
       if (week > 0) {
@@ -1307,6 +1309,8 @@ const estimateCalories = (
           setShowFireworks(true);
         }
       }
+    } else {
+      removeAutoShareCompletion(userId, week, day);
     }
   };
 
@@ -1635,6 +1639,7 @@ const estimateCalories = (
       playWorkoutComplete();
       hapticMedium();
       notifyFriendsOfCompletion(day, week, plan.session_name || day, planStartDate);
+      autoShareCompletion(userId, week, day);
 
       // Check if all scheduled workouts in this week are now done
       if (week > 0) {
@@ -4944,6 +4949,8 @@ const estimateCalories = (
           loggedDistanceKm={shareTarget.completion.logged_distance_km}
           loggedWeights={shareTarget.completion.logged_weights}
           nickname={userNickname}
+          ownerUserId={userId}
+          viewerUserId={userId}
           onClose={() => setShareTarget(null)}
           onChatShare={async () => {
             const plan = shareTarget.plan;
@@ -8666,6 +8673,8 @@ const estimateCalories = (
         loggedDistanceKm={shareTarget.completion.logged_distance_km}
         loggedWeights={shareTarget.completion.logged_weights}
         nickname={userNickname}
+        ownerUserId={userId}
+        viewerUserId={userId}
         onClose={() => setShareTarget(null)}
         onChatShare={async () => {
           const plan = shareTarget.plan;

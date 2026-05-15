@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
+import { autoShareCompletion } from "@/lib/workoutAutoShare";
 
 interface WorkoutLogDialogProps {
   userId: string;
@@ -222,6 +223,7 @@ const WorkoutLogDialog = ({
     );
 
     notifyFriendsOfCompletion(day, week, sessionName, planStartDate);
+    autoShareCompletion(userId, week, day);
     setSaving(false);
     onSaved();
   };
@@ -409,6 +411,7 @@ const WorkoutLogDialog = ({
                 { onConflict: "user_id,week,day" }
               );
               notifyFriendsOfCompletion(day, week, sessionName, planStartDate);
+              autoShareCompletion(userId, week, day);
               onSaved();
             }}
             className="flex-1 py-3 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
