@@ -26,6 +26,8 @@ export interface AchievementMetrics {
   tons: number;
   distanceKm: number;
   challenges: number;
+  firesGiven: number;
+  commentsGiven: number;
 }
 
 const difficultyForIndex = (index: number): AchievementDifficulty => {
