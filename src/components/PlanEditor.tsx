@@ -65,8 +65,10 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
 
     if (data) {
       setPlans(data.map((d) => ({ ...d, tempo: d.tempo || "" })));
-      const wks = [...new Set(data.map((d) => d.week))].sort((a, b) => a - b);
-      if (wks.length > 0) setWeeks(wks);
+      // Exclude week 0 — that slot is reserved for standalone/Strava sessions
+      // and should never appear as a plan week in the editor. Plans always start at week 1.
+      const wks = [...new Set(data.map((d) => d.week))].filter((w) => w >= 1).sort((a, b) => a - b);
+      setWeeks(wks.length > 0 ? wks : [1]);
     }
   };
 
