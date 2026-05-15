@@ -108,6 +108,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
       const fresh = await checkInteractionAchievements(viewerId);
       if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
+    emitPostInteraction(postId);
   };
 
   const submit = async () => {
