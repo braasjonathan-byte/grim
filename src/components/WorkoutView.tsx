@@ -4949,6 +4949,8 @@ const estimateCalories = (
           loggedDistanceKm={shareTarget.completion.logged_distance_km}
           loggedWeights={shareTarget.completion.logged_weights}
           nickname={userNickname}
+          ownerUserId={userId}
+          viewerUserId={userId}
           onClose={() => setShareTarget(null)}
           onChatShare={async () => {
             const plan = shareTarget.plan;
