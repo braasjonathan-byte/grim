@@ -401,6 +401,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data as any] }));
     setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
     setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
+    emitPostInteraction(postId);
     const fresh = await checkInteractionAchievements(userId);
     if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     // Push-notify post owner
@@ -421,6 +422,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     if (error) { toast.error("Kunde inte ta bort"); return; }
     setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== commentId) }));
     setCommentCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 1) - 1) }));
+    emitPostInteraction(postId);
   };
 
   const deletePost = async (postId: string) => {
