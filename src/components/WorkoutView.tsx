@@ -934,19 +934,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setComments((prev) => ({ ...commentMap, ...prev }));
     }
 
-    // Set likes
-    setWorkoutLikes((likesData || []) as any);
+    // Merge in social-post interactions so historical comments/likes from the feed appear here
+    const { comments: socialComments, likes: socialLikes } = await fetchSocialWorkoutInteractions(userId);
+    const mergedLikes = mergeWorkoutLikes((likesData || []) as any, socialLikes);
+    const mergedComments = mergeWorkoutComments((friendCommentsData || []) as any, socialComments);
+
+    setWorkoutLikes(mergedLikes as any);
 
     // Collect all author IDs from comments and likes
     const allAuthorIds = new Set<string>();
-    if (friendCommentsData) friendCommentsData.forEach((c) => allAuthorIds.add(c.author_id));
-    if (likesData) (likesData as any[]).forEach((l) => allAuthorIds.add(l.user_id));
+    mergedComments.forEach((c: any) => allAuthorIds.add(c.author_id));
+    mergedLikes.forEach((l: any) => allAuthorIds.add(l.user_id));
 
-    if (friendCommentsData && friendCommentsData.length > 0) {
-      setFriendComments(friendCommentsData);
-    } else {
-      setFriendComments([]);
-    }
+    setFriendComments(mergedComments as any);
 
     if (allAuthorIds.size > 0) {
       const { data: authorProfiles } = await supabase
