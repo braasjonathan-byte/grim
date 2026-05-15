@@ -52,6 +52,26 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, week, day]);
 
+  // Live-sync comments and likes from other surfaces (e.g. social feed)
+  useEffect(() => {
+    if (!postId) return;
+    const channel = supabase
+      .channel(`post-thread-${postId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "social_post_comments", filter: `post_id=eq.${postId}` },
+        () => { loadInteractions(postId); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "social_post_likes", filter: `post_id=eq.${postId}` },
+        () => { loadInteractions(postId); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
   const loadInteractions = async (pid: string) => {
     const [{ data: likes }, { data: cmts }] = await Promise.all([
       supabase.from("social_post_likes").select("user_id").eq("post_id", pid),
