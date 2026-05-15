@@ -10,6 +10,7 @@ import ImageCarousel from "./ImageCarousel";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
+import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -94,11 +95,16 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   // Live-sync comments and likes (e.g. when added from a workout card)
   useEffect(() => {
     const channel = supabase
-      .channel("social-feed-interactions")
+      .channel(`social-feed-interactions-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "social_post_comments" }, () => loadFeed())
       .on("postgres_changes", { event: "*", schema: "public", table: "social_post_likes" }, () => loadFeed())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Backup: in-app event bus — fires immediately when WorkoutPostThread mutates
+    const off = onPostInteraction((pid) => {
+      loadFeed();
+      if (pid && comments[pid]) loadComments(pid);
+    });
+    return () => { supabase.removeChannel(channel); off(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -350,6 +356,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       const fresh = await checkInteractionAchievements(userId);
       if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
+    emitPostInteraction(postId);
   };
 
   const loadComments = async (postId: string) => {
@@ -394,6 +401,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data as any] }));
     setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
     setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
+    emitPostInteraction(postId);
     const fresh = await checkInteractionAchievements(userId);
     if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     // Push-notify post owner
@@ -414,6 +422,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     if (error) { toast.error("Kunde inte ta bort"); return; }
     setComments(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(c => c.id !== commentId) }));
     setCommentCounts(prev => ({ ...prev, [postId]: Math.max(0, (prev[postId] || 1) - 1) }));
+    emitPostInteraction(postId);
   };
 
   const deletePost = async (postId: string) => {

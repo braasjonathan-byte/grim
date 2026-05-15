@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import { checkInteractionAchievements } from "@/lib/achievements";
+import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
 
 interface WorkoutPostThreadProps {
   userId: string; // owner of the workout (post owner)
@@ -57,7 +58,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
   useEffect(() => {
     if (!postId) return;
     const channel = supabase
-      .channel(`post-thread-${postId}`)
+      .channel(`post-thread-${postId}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "social_post_comments", filter: `post_id=eq.${postId}` },
@@ -69,7 +70,11 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
         () => { loadInteractions(postId); }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Backup: in-app event bus (fires immediately, no realtime needed)
+    const off = onPostInteraction((pid) => {
+      if (pid === postId) loadInteractions(postId);
+    });
+    return () => { supabase.removeChannel(channel); off(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
@@ -103,6 +108,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
       const fresh = await checkInteractionAchievements(viewerId);
       if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
+    emitPostInteraction(postId);
   };
 
   const submit = async () => {
@@ -119,6 +125,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     if (error) { toast.error("Kunde inte kommentera"); return; }
     setComments((prev) => [...prev, data as Comment]);
     setDraft("");
+    emitPostInteraction(postId);
     const fresh = await checkInteractionAchievements(viewerId);
     if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     if (!profiles[viewerId]) {
@@ -137,6 +144,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     if (ownerId !== viewerId && userId !== viewerId) return;
     await supabase.from("social_post_comments").delete().eq("id", id);
     setComments((prev) => prev.filter((c) => c.id !== id));
+    emitPostInteraction(postId);
   };
 
   if (loading) {
