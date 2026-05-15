@@ -132,10 +132,17 @@
   }
 
   /* Keep form controls fully native so mobile focus/keyboard and checkboxes work reliably. */
-  input, textarea, select, button, [role="button"], [contenteditable="true"], [contenteditable="true"] *,
+  input, textarea, select, button, [role="button"], a, label, [contenteditable="true"], [contenteditable="true"] *,
   .allow-select, .allow-select * {
     pointer-events: auto;
     touch-action: manipulation;
+  }
+
+  /* Buttons/links shouldn't be selectable, but must remain fully tappable on mobile. */
+  button, [role="button"], a, label {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   /* … but always allow real text input + opt-in selectable regions. */
