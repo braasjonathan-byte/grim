@@ -100,6 +100,8 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
       await supabase.from("social_post_likes").insert({ post_id: postId, user_id: viewerId });
       setILiked(true);
       setLikeCount((n) => n + 1);
+      const fresh = await checkInteractionAchievements(viewerId);
+      if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
   };
 
