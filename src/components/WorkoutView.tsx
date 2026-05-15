@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
+
 import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
