@@ -92,10 +92,11 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   useEffect(() => { loadFeed(); loadGroups(); loadFriendIds(); }, [userId]);
 
-  // Live-sync comments and likes (e.g. when added from a workout card)
+  // Live-sync new posts, comments and likes (e.g. when added from a workout card)
   useEffect(() => {
     const channel = supabase
       .channel(`social-feed-interactions-${Math.random().toString(36).slice(2, 8)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "social_posts" }, () => loadFeed())
       .on("postgres_changes", { event: "*", schema: "public", table: "social_post_comments" }, () => loadFeed())
       .on("postgres_changes", { event: "*", schema: "public", table: "social_post_likes" }, () => loadFeed())
       .subscribe();
@@ -104,7 +105,20 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       loadFeed();
       if (pid && comments[pid]) loadComments(pid);
     });
-    return () => { supabase.removeChannel(channel); off(); };
+    // Refresh whenever the tab regains focus / becomes visible
+    const onFocus = () => loadFeed();
+    const onVisibility = () => { if (document.visibilityState === "visible") loadFeed(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    // Also poll lightly every 60s as a final safety net
+    const interval = window.setInterval(() => loadFeed(), 60000);
+    return () => {
+      supabase.removeChannel(channel);
+      off();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
