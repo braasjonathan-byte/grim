@@ -87,6 +87,7 @@ const getHighestAchievementsByMetric = (achievements: AchievementDefinition[]) =
 export const calculateAchievementMetrics = (
   completions: AchievementCompletion[],
   challengeCount = 0,
+  interaction: { firesGiven?: number; commentsGiven?: number } = {},
 ): AchievementMetrics => {
   let workouts = 0;
   let reps = 0;
