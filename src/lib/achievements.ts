@@ -60,6 +60,8 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("ton", "Järnflyttare", "tons", [1, 2, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500], " ton", "🏋️"),
   ...makeAchievements("km", "Kilometerkrigare", "distanceKm", [1, 3, 5, 10, 21, 42, 75, 100, 150, 250, 400, 600, 800, 1000, 1500, 2000, 3000, 5000, 7500, 10000], " km", "👟"),
   ...makeAchievements("utmaning", "Utmaningsvinnare", "challenges", [1, 2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1500], " utmaningar", "⚔️"),
+  ...makeAchievements("eld", "Eldsjäl", "firesGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " eldningar", "🔥"),
+  ...makeAchievements("kommentar", "Hejarklacken", "commentsGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " kommentarer", "💬"),
 ];
 
 export const getAchievementById = (id: string) => ACHIEVEMENTS.find((a) => a.id === id);
