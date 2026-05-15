@@ -95,11 +95,16 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   // Live-sync comments and likes (e.g. when added from a workout card)
   useEffect(() => {
     const channel = supabase
-      .channel("social-feed-interactions")
+      .channel(`social-feed-interactions-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "social_post_comments" }, () => loadFeed())
       .on("postgres_changes", { event: "*", schema: "public", table: "social_post_likes" }, () => loadFeed())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Backup: in-app event bus — fires immediately when WorkoutPostThread mutates
+    const off = onPostInteraction((pid) => {
+      loadFeed();
+      if (pid && comments[pid]) loadComments(pid);
+    });
+    return () => { supabase.removeChannel(channel); off(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
