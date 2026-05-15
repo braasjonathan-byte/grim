@@ -9,6 +9,7 @@ import HonoraryBadge from "./HonoraryBadge";
 import ImageCarousel from "./ImageCarousel";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { checkInteractionAchievements } from "@/lib/achievements";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
