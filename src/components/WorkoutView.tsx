@@ -1398,7 +1398,21 @@ const estimateCalories = (
   };
 
   const deleteFriendComment = async (commentId: string) => {
-    await supabase.from("workout_comments").delete().eq("id", commentId);
+    const target = friendComments.find((c) => c.id === commentId);
+    if (isSocialInteractionId(commentId)) {
+      const realId = stripSocialInteractionId(commentId);
+      await supabase.from("social_post_comments").delete().eq("id", realId);
+      if (target) {
+        await supabase.from("workout_comments").delete()
+          .eq("target_user_id", target.target_user_id)
+          .eq("week", target.week)
+          .eq("day", target.day)
+          .eq("author_id", target.author_id)
+          .eq("comment", target.comment);
+      }
+    } else {
+      await supabase.from("workout_comments").delete().eq("id", commentId);
+    }
     setFriendComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
