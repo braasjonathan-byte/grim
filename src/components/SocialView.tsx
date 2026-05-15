@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Heart, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin } from "lucide-react";
+import { Users, Flame, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
