@@ -513,6 +513,22 @@ const WorkoutShareCard = ({
           </div>
         </div>
 
+        {/* Friend reactions on the auto-shared post */}
+        {ownerUserId && viewerUserId && (
+          <div className="rounded-xl border border-border bg-card p-3 space-y-3">
+            <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wide">
+              Vänner · 🔥 & kommentarer
+            </div>
+            <WorkoutPostThread
+              ownerUserId={ownerUserId as any}
+              viewerId={viewerUserId}
+              userId={ownerUserId}
+              week={week}
+              day={day}
+            />
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="flex gap-2">
           <button
