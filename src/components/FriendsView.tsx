@@ -9,6 +9,8 @@ import { sv } from "date-fns/locale";
 import FriendProfileView from "@/components/FriendProfileView";
 import EmptyState from "@/components/EmptyState";
 import HonoraryBadge from "./HonoraryBadge";
+import { getWorkoutPostId } from "@/lib/workoutSocialSync";
+import { emitPostInteraction } from "@/lib/postInteractionBus";
 
 interface FriendActivity {
   nickname: string;
@@ -684,6 +686,11 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     } as any).select().single();
 
     if (data) {
+      const postId = await getWorkoutPostId(viewingFriend.profile.user_id, week, day);
+      if (postId) {
+        await supabase.from("social_post_comments").insert({ post_id: postId, user_id: userId, comment: text });
+        emitPostInteraction(postId);
+      }
       setComments((prev) => [...prev, data]);
       // Make sure our nickname is in the map
       if (!nicknameMap[userId]) {
@@ -717,6 +724,11 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setLikingKey(key);
     if (existingLike) {
       await supabase.from("workout_likes").delete().eq("id", existingLike.id);
+      const postId = await getWorkoutPostId(fid, week, day);
+      if (postId) {
+        await supabase.from("social_post_likes").delete().eq("post_id", postId).eq("user_id", userId);
+        emitPostInteraction(postId);
+      }
       setLikes((prev) => prev.filter((l) => l.id !== existingLike.id));
     } else {
       const { data } = await supabase.from("workout_likes").insert({
@@ -726,6 +738,11 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         day,
       } as any).select().single();
       if (data) {
+        const postId = await getWorkoutPostId(fid, week, day);
+        if (postId) {
+          await supabase.from("social_post_likes").insert({ post_id: postId, user_id: userId });
+          emitPostInteraction(postId);
+        }
         setLikes((prev) => [...prev, data as any]);
         // Send push notification for the like
         supabase.functions.invoke("notify-like", {

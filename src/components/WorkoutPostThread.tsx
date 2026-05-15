@@ -6,6 +6,7 @@ import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import { checkInteractionAchievements } from "@/lib/achievements";
 import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
+import { isSocialInteractionId, mergeWorkoutComments, mergeWorkoutLikes, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 
 interface WorkoutPostThreadProps {
   userId: string; // owner of the workout (post owner)
@@ -79,14 +80,18 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
   }, [postId]);
 
   const loadInteractions = async (pid: string) => {
-    const [{ data: likes }, { data: cmts }] = await Promise.all([
-      supabase.from("social_post_likes").select("user_id").eq("post_id", pid),
+    const [{ data: likes }, { data: cmts }, { data: workoutLikes }, { data: workoutComments }] = await Promise.all([
+      supabase.from("social_post_likes").select("id, user_id").eq("post_id", pid),
       supabase.from("social_post_comments").select("id, user_id, comment, created_at").eq("post_id", pid).order("created_at", { ascending: true }),
+      supabase.from("workout_likes").select("id, user_id, target_user_id, week, day, created_at").eq("target_user_id", userId).eq("week", week).eq("day", day),
+      supabase.from("workout_comments").select("id, target_user_id, week, day, author_id, comment, created_at, plan_id").eq("target_user_id", userId).eq("week", week).eq("day", day),
     ]);
-    setLikeCount(likes?.length || 0);
-    setILiked(!!likes?.some((l: any) => l.user_id === viewerId));
-    setComments((cmts || []) as Comment[]);
-    const ids = [...new Set([...(likes || []).map((l: any) => l.user_id), ...(cmts || []).map((c: any) => c.user_id)])];
+    const mergedLikes = mergeWorkoutLikes((workoutLikes || []) as any, (likes || []).map((l: any) => ({ id: `social:${l.id}`, user_id: l.user_id, target_user_id: userId, week, day })));
+    const mergedComments = mergeWorkoutComments((workoutComments || []).map((c: any) => ({ ...c, user_id: c.author_id })), (cmts || []).map((c: any) => ({ ...c, id: `social:${c.id}`, target_user_id: userId, week, day, author_id: c.user_id, plan_id: null, user_id: c.user_id })));
+    setLikeCount(mergedLikes.length);
+    setILiked(mergedLikes.some((l: any) => l.user_id === viewerId));
+    setComments(mergedComments.map((c: any) => ({ id: c.id, user_id: c.author_id || c.user_id, comment: c.comment, created_at: c.created_at })) as Comment[]);
+    const ids = [...new Set([...mergedLikes.map((l: any) => l.user_id), ...mergedComments.map((c: any) => c.author_id || c.user_id)])];
     if (ids.length > 0) {
       const { data: profs } = await supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", ids);
       const map: Record<string, { nickname: string; avatar_url: string | null }> = {};
@@ -98,11 +103,17 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
   const toggleLike = async () => {
     if (!postId) return;
     if (iLiked) {
-      await supabase.from("social_post_likes").delete().eq("post_id", postId).eq("user_id", viewerId);
+      await Promise.all([
+        supabase.from("social_post_likes").delete().eq("post_id", postId).eq("user_id", viewerId),
+        supabase.from("workout_likes").delete().eq("target_user_id", userId).eq("week", week).eq("day", day).eq("user_id", viewerId),
+      ]);
       setILiked(false);
       setLikeCount((n) => Math.max(0, n - 1));
     } else {
-      await supabase.from("social_post_likes").insert({ post_id: postId, user_id: viewerId });
+      await Promise.all([
+        supabase.from("social_post_likes").insert({ post_id: postId, user_id: viewerId }),
+        supabase.from("workout_likes").upsert({ target_user_id: userId, week, day, user_id: viewerId } as any, { onConflict: "user_id,target_user_id,week,day" }),
+      ]);
       setILiked(true);
       setLikeCount((n) => n + 1);
       const fresh = await checkInteractionAchievements(viewerId);
@@ -123,6 +134,13 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
       .single();
     setPosting(false);
     if (error) { toast.error("Kunde inte kommentera"); return; }
+    await supabase.from("workout_comments").insert({
+      target_user_id: userId,
+      week,
+      day,
+      author_id: viewerId,
+      comment: text,
+    } as any);
     setComments((prev) => [...prev, data as Comment]);
     setDraft("");
     emitPostInteraction(postId);
@@ -140,10 +158,17 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     }
   };
 
-  const removeComment = async (id: string, ownerId: string) => {
-    if (ownerId !== viewerId && userId !== viewerId) return;
-    await supabase.from("social_post_comments").delete().eq("id", id);
-    setComments((prev) => prev.filter((c) => c.id !== id));
+  const removeComment = async (comment: Comment) => {
+    if (comment.user_id !== viewerId && userId !== viewerId) return;
+    if (isSocialInteractionId(comment.id)) {
+      await Promise.all([
+        supabase.from("social_post_comments").delete().eq("id", stripSocialInteractionId(comment.id)),
+        supabase.from("workout_comments").delete().eq("target_user_id", userId).eq("week", week).eq("day", day).eq("author_id", comment.user_id).eq("comment", comment.comment),
+      ]);
+    } else {
+      await supabase.from("workout_comments").delete().eq("id", comment.id);
+    }
+    setComments((prev) => prev.filter((c) => c.id !== comment.id));
     emitPostInteraction(postId);
   };
 
@@ -203,7 +228,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
               </div>
               {canDelete && (
                 <button
-                  onClick={() => removeComment(c.id, c.user_id)}
+                  onClick={() => removeComment(c)}
                   className="p-1 text-muted-foreground hover:text-destructive opacity-60 group-hover:opacity-100"
                   title="Ta bort"
                 >

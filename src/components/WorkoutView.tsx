@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
+import { onPostInteraction } from "@/lib/postInteractionBus";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -967,6 +968,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }, 1500);
     return () => clearTimeout(retryTimer);
   }, [fetchData]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`workout-social-sync-${userId}-${Math.random().toString(36).slice(2, 8)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_comments", filter: `target_user_id=eq.${userId}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_likes", filter: `target_user_id=eq.${userId}` }, () => fetchData())
+      .subscribe();
+    const off = onPostInteraction(() => fetchData());
+    return () => {
+      supabase.removeChannel(channel);
+      off();
+    };
+  }, [fetchData, userId]);
 
   // Backfill disabled: automatic plan mutations caused data corruption for users.
   // Tröskellöpning details should be set at plan creation time, not retroactively.
