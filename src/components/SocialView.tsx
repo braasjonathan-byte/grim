@@ -77,6 +77,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
   const [postImages, setPostImages] = useState<Record<string, { image_url: string; caption: string | null }[]>>({});
   const [comments, setComments] = useState<Record<string, { id: string; user_id: string; comment: string; created_at: string }[]>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
@@ -623,20 +624,31 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               {/* Post header */}
               <div className="px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold overflow-hidden">
-                    {avatarUrls[post.user_id] ? (
-                      <img src={avatarUrls[post.user_id]!} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      (nicknames[post.user_id] || "?")[0]?.toUpperCase()
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
-                    <p className="text-[10px] text-muted-foreground">
-                      {format(new Date(post.created_at), "d MMM HH:mm", { locale: sv })}
-                      {post.visibility === "group" && " • 👥 Grupp"}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (post.user_id === userId) return;
+                      setPendingFriendId(post.user_id);
+                      setSubTab("friends");
+                    }}
+                    className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+                    aria-label={`Visa ${nicknames[post.user_id] || "användarens"} profil`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold overflow-hidden">
+                      {avatarUrls[post.user_id] ? (
+                        <img src={avatarUrls[post.user_id]!} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (nicknames[post.user_id] || "?")[0]?.toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
+                      <p className="text-[10px] text-muted-foreground">
+                        {format(new Date(post.created_at), "d MMM HH:mm", { locale: sv })}
+                        {post.visibility === "group" && " • 👥 Grupp"}
+                      </p>
+                    </div>
+                  </button>
                 </div>
                 <div className="flex items-center gap-1">
                   {isAdmin && (
@@ -750,7 +762,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             isAdmin={isAdmin}
             friendActivities={friendActivities}
             onClearActivitiesForFriend={onClearActivitiesForFriend}
-            initialFriendId={initialFriendId || undefined}
+            initialFriendId={pendingFriendId || initialFriendId || undefined}
           />
         </Suspense>
       )}
