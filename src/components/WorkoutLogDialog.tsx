@@ -409,7 +409,6 @@ const WorkoutLogDialog = ({
                 } as any,
                 { onConflict: "user_id,week,day" }
               );
-              notifyFriendsOfCompletion(day, week, sessionName, planStartDate);
               autoShareCompletion(userId, week, day);
               onSaved();
             }}
