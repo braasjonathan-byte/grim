@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { notifyFriendsOfCompletion } from "@/hooks/usePushNotifications";
+import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
