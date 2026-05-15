@@ -189,7 +189,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [adminCondDistanceInput, setAdminCondDistanceInput] = useState("");
   const [showFullFriendAvatar, setShowFullFriendAvatar] = useState(false);
 
-  const initialFriendHandledRef = useRef(false);
+  const lastHandledFriendIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetchFriends();
@@ -280,10 +280,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
   // Auto-open a friend's profile when navigated from a notification
   useEffect(() => {
-    if (initialFriendId && friends.length > 0 && !initialFriendHandledRef.current) {
+    if (initialFriendId && friends.length > 0 && lastHandledFriendIdRef.current !== initialFriendId) {
       const friend = friends.find(f => f.profile.user_id === initialFriendId);
       if (friend) {
-        initialFriendHandledRef.current = true;
+        lastHandledFriendIdRef.current = initialFriendId;
         viewFriendWorkouts(friend);
       }
     }
