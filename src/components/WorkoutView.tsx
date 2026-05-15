@@ -1638,7 +1638,7 @@ const estimateCalories = (
     if (allExercisesDone && !completions[k]?.done && plan0) {
       playWorkoutComplete();
       hapticMedium();
-      notifyFriendsOfCompletion(day, week, plan.session_name || day, planStartDate);
+      
       autoShareCompletion(userId, week, day);
 
       // Check if all scheduled workouts in this week are now done
