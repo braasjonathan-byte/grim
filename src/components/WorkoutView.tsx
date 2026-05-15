@@ -1293,7 +1293,7 @@ const estimateCalories = (
 
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
-      notifyFriendsOfCompletion(day, week, plan?.session_name || day, planStartDate);
+      
       autoShareCompletion(userId, week, day);
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
