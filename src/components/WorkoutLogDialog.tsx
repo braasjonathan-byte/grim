@@ -223,6 +223,7 @@ const WorkoutLogDialog = ({
     );
 
     notifyFriendsOfCompletion(day, week, sessionName, planStartDate);
+    autoShareCompletion(userId, week, day);
     setSaving(false);
     onSaved();
   };
