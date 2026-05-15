@@ -125,6 +125,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     if (error) { toast.error("Kunde inte kommentera"); return; }
     setComments((prev) => [...prev, data as Comment]);
     setDraft("");
+    emitPostInteraction(postId);
     const fresh = await checkInteractionAchievements(viewerId);
     if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     if (!profiles[viewerId]) {
@@ -143,6 +144,7 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     if (ownerId !== viewerId && userId !== viewerId) return;
     await supabase.from("social_post_comments").delete().eq("id", id);
     setComments((prev) => prev.filter((c) => c.id !== id));
+    emitPostInteraction(postId);
   };
 
   if (loading) {
