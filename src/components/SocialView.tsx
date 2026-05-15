@@ -394,6 +394,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     setComments(prev => ({ ...prev, [postId]: [...(prev[postId] || []), data as any] }));
     setCommentCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
     setCommentDrafts(prev => ({ ...prev, [postId]: "" }));
+    const fresh = await checkInteractionAchievements(userId);
+    if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     // Push-notify post owner
     const post = posts.find(p => p.id === postId);
     if (post && post.user_id !== userId) {
