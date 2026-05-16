@@ -341,13 +341,17 @@ export const getExercisesByMuscle = (muscle: string) =>
   exerciseLibrary.filter((e) => e.muscleGroup === muscle);
 
 export const searchExercises = (query: string) => {
-  const q = query.toLowerCase();
-  return exerciseLibrary.filter(
-    (e) =>
+  const q = query.toLowerCase().trim();
+  if (!q) return exerciseLibrary;
+  return exerciseLibrary.filter((e) => {
+    const english = (exerciseTranslations[e.name] ?? "").toLowerCase();
+    return (
       e.name.toLowerCase().includes(q) ||
+      english.includes(q) ||
       e.category.toLowerCase().includes(q) ||
       e.muscleGroup.toLowerCase().includes(q)
-  );
+    );
+  });
 };
 
 export const muscleGroups = [
