@@ -4,6 +4,103 @@ export interface ExerciseInfo {
   muscleGroup: string;
 }
 
+/**
+ * Mapping från svenska övningsnamn till engelska (och vice versa).
+ * Används för att göra övningar sökbara på båda språken.
+ * Övningar som redan har samma namn på båda språk (t.ex. "Hip Thrust", "Dips")
+ * behöver inte finnas med här.
+ */
+export const exerciseTranslations: Record<string, string> = {
+  // Bröst
+  "Bänkpress": "Bench Press",
+  "Incline Bänkpress": "Incline Bench Press",
+  "Pausbänk": "Pause Bench Press",
+  "Close-Grip Bänkpress": "Close-Grip Bench Press",
+  "Hantlar Bänkpress": "Dumbbell Bench Press",
+  "Hantlar Flyes": "Dumbbell Flyes",
+  "Kabelflyes": "Cable Flyes",
+  "Armhävningar": "Push-Ups",
+  // Rygg
+  "Marklyft": "Deadlift",
+  "Rumänsk Marklyft": "Romanian Deadlift",
+  "Sumo Marklyft": "Sumo Deadlift",
+  "Rodd": "Row",
+  "Skivstångsrodd": "Barbell Row",
+  "Hantelrodd": "Dumbbell Row",
+  "Kabelrodd": "Cable Row",
+  "Latsdrag": "Lat Pulldown",
+  "Chins": "Chin-Ups",
+  // Ben
+  "Knäböj": "Squat",
+  "Frontböj": "Front Squat",
+  "Pausböj": "Pause Squat",
+  "Bulgarska Utfall": "Bulgarian Split Squat",
+  "Enbensutfall": "Single-Leg Lunge",
+  "Benpress": "Leg Press",
+  "Bencurl": "Leg Curl",
+  "Benextension": "Leg Extension",
+  "Vadpress": "Calf Raise",
+  "Steg-Ups": "Step-Ups",
+  // Axlar
+  "Axelpress": "Shoulder Press",
+  "Militärpress": "Military Press",
+  "Sidolyft": "Lateral Raise",
+  "Framlyfning": "Front Raise",
+  // Armar
+  "Bicepscurl": "Bicep Curl",
+  "Hammarcurl": "Hammer Curl",
+  "Skallkross": "Skull Crusher",
+  "Tricepspress": "Triceps Press",
+  // Core
+  "Planka": "Plank",
+  "Kabeldrag": "Cable Crunch",
+  "Hängande Benlyft": "Hanging Leg Raise",
+  "Sidoplanka": "Side Plank",
+  "Bålrotation": "Torso Rotation",
+  // Kondition
+  "Löpning": "Running",
+  "Tröskellöpning": "Threshold Run",
+  "Intervallträning": "Interval Training",
+  "Långpass": "Long Run",
+  "Cykling": "Cycling",
+  "Roddmaskin": "Rowing Machine",
+  "Simning": "Swimming",
+  "Promenad": "Walk",
+  "Trappmaskin": "Stairclimber",
+  "Löpband (Life Fitness)": "Treadmill (Life Fitness)",
+  "Löpband (Technogym)": "Treadmill (Technogym)",
+  "Löpband (Precor)": "Treadmill (Precor)",
+  "Löpband (Cybex)": "Treadmill (Cybex)",
+  "Motionscykel (Life Fitness)": "Exercise Bike (Life Fitness)",
+  "Motionscykel (Technogym)": "Exercise Bike (Technogym)",
+  "Motionscykel (Precor)": "Exercise Bike (Precor)",
+  // Rumpa
+  "Rumänsk Marklyft Hantel": "Dumbbell Romanian Deadlift",
+  "Stiff-Leg Marklyft": "Stiff-Leg Deadlift",
+  "Single-Leg Rumänsk Marklyft": "Single-Leg Romanian Deadlift",
+  "Step-Up med Knälyft": "Step-Up with Knee Raise",
+  "Abduktionsmaskin": "Abduction Machine",
+  "Kabelabduktion": "Cable Abduction",
+  "Kickback Maskin": "Kickback Machine",
+  "Benspark Bakåt": "Glute Kickback",
+  // Rörlighet
+  "Rörlighetspass": "Mobility Session",
+  "Dynamisk Uppvärmning": "Dynamic Warm-Up",
+};
+
+// Bygg en omvänd lookup: engelska -> svenska
+const reverseTranslations: Record<string, string> = Object.fromEntries(
+  Object.entries(exerciseTranslations).map(([sv, en]) => [en.toLowerCase(), sv])
+);
+
+/** Returnerar engelska namnet om det finns, annars samma namn. */
+export const getEnglishName = (swedishName: string): string =>
+  exerciseTranslations[swedishName] ?? swedishName;
+
+/** Returnerar svenska namnet om engelska namnet finns i mappningen. */
+export const getSwedishName = (englishName: string): string =>
+  reverseTranslations[englishName.toLowerCase()] ?? englishName;
+
 export const exerciseLibrary: ExerciseInfo[] = [
   // Bröst
   { name: "Bänkpress", category: "styrka", muscleGroup: "Bröst" },
