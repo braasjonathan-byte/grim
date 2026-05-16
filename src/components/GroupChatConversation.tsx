@@ -32,6 +32,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
