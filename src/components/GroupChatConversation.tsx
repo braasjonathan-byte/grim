@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface GroupChatConversationProps {
@@ -32,6 +32,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -157,7 +158,17 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
           <MoreVertical className="w-4 h-4" />
         </button>
         {showMenu && (
-          <div className="absolute right-2 top-12 z-30 bg-card border border-border min-w-[140px]">
+          <div className="absolute right-2 top-12 z-30 bg-card border border-border min-w-[160px]">
+            <button
+              onClick={() => {
+                setShowMenu(false);
+                setShowMembers(true);
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted"
+            >
+              <Users className="w-3.5 h-3.5" />
+              Visa medlemmar
+            </button>
             <button
               onClick={() => {
                 setShowMenu(false);
@@ -171,6 +182,57 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
           </div>
         )}
       </div>
+
+      {showMembers && (
+        <div
+          className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center px-3 pb-3"
+          onClick={() => setShowMembers(false)}
+        >
+          <div
+            className="w-full max-w-md bg-card border border-border max-h-[70vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                Medlemmar ({Object.keys(members).length})
+              </h3>
+              <button
+                onClick={() => setShowMembers(false)}
+                className="p-1 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div
+              className="flex-1 min-h-0 overflow-y-auto p-2"
+              style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+            >
+              {Object.values(members)
+                .sort((a, b) => a.nickname.localeCompare(b.nickname))
+                .map((m) => (
+                  <div key={m.user_id} className="flex items-center gap-3 p-2">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {m.avatar_url ? (
+                        <img src={m.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-bold text-primary">
+                          {m.nickname.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium flex-1 truncate">
+                      {m.nickname}
+                      {m.user_id === userId && (
+                        <span className="text-[10px] text-muted-foreground ml-1">(du)</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         ref={scrollRef}
