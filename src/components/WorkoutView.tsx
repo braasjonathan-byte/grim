@@ -5264,8 +5264,22 @@ const estimateCalories = (
               const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(p.day, dayName));
               const isRest = planIdx === -1;
               const isToday = dayName === todayName && currentWeek === activePlanWeek;
+              const dayDate = getPlanDayDateValue(planStartDate, currentWeek, dayName);
+              const isBeforeStart = !!(planStartDateObj && dayDate && dayDate.getTime() < planStartDateObj.getTime());
 
               if (isRest) {
+                if (isBeforeStart) {
+                  return (
+                    <button
+                      key={dayName}
+                      disabled
+                      className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
+                      title="Innan träningsplanen startade"
+                    >
+                      {dayName}
+                    </button>
+                  );
+                }
                 return (
                   <button
                     key={dayName}
