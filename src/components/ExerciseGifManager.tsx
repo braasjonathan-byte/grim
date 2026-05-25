@@ -99,6 +99,11 @@ const ExerciseGifManager = () => {
   const [bulkSubmuscles, setBulkSubmuscles] = useState<string[]>([]);
   const [bulkSecondary, setBulkSecondary] = useState<SecondaryMuscle[]>([]);
 
+  // Bulk merge
+  const [showBulkMerge, setShowBulkMerge] = useState(false);
+  const [mergeTarget, setMergeTarget] = useState("");
+  const [mergeCustomTarget, setMergeCustomTarget] = useState("");
+
   const fetchMappings = async () => {
     const { data } = await supabase
       .from("exercise_gif_mappings")
