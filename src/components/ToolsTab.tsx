@@ -19,7 +19,7 @@ const SupporterButton = lazy(() => import("@/components/SupporterButton"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
-const ExerciseMergeManager = lazy(() => import("@/components/ExerciseMergeManager"));
+
 const ReadyWorkoutManager = lazy(() => import("@/components/ReadyWorkoutManager"));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
