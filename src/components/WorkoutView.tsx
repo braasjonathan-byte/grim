@@ -5089,8 +5089,17 @@ const estimateCalories = (
   }
 
   // Plan mode (existing)
+  const planStartDateObj = parseDateKey(planStartDate);
   const weekDays = plans.
   filter((p) => p.week === currentWeek).
+  filter((p) => {
+    // Hide plan days that fall before the user's actual plan start date
+    // (e.g. Monday workouts in week 1 when the plan started later in the week)
+    if (!planStartDateObj) return true;
+    const planDate = getPlanDayDateValue(planStartDate, p.week, p.day);
+    if (!planDate) return true;
+    return planDate.getTime() >= planStartDateObj.getTime();
+  }).
   sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
 
   const mobileDayTabs = DAYS
