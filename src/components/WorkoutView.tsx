@@ -5404,7 +5404,7 @@ const estimateCalories = (
                 <div className="flex items-center gap-1 text-muted-foreground">
                     {(() => {
                     const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
-                    const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
+                    const dayFriendComments = friendComments.filter((c) => matchesPlanDay(c, plan, planStartDate));
                     const totalComments = ownLines + dayFriendComments.length;
                     return totalComments > 0 ?
                     <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full animate-fade-in">
