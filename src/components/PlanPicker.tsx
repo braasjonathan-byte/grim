@@ -319,8 +319,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     );
   }
 
-
+  if (step === "start-date") {
     const isEvent = selectedTemplate?.isEventPrep;
+
 
     // For event-prep plans, calculate start date from event date
     const computedStartDate = isEvent && eventDate
