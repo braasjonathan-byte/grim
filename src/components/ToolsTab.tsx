@@ -99,7 +99,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     )},
     { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} /> },
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
-    { key: "admin-merge-exercises", label: "Slå ihop övningar", adminOnly: true, render: () => <ExerciseMergeManager /> },
+    
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings-group", label: "Inställningar", render: () => (
       <div data-tour="tools-profile" className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
