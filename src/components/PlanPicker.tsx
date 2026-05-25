@@ -38,6 +38,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [pendingProfile, setPendingProfile] = useState<FitnessProfile | undefined>(undefined);
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
+  const [preferredDays, setPreferredDays] = useState<string[]>([]);
+
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
   const normalizedQuery = searchQuery.trim().toLowerCase();
