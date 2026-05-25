@@ -517,6 +517,39 @@ const ExerciseGifManager = () => {
     setSavingBulk(false);
   };
 
+  const bulkMerge = async () => {
+    const names = Array.from(selectedExercises);
+    if (names.length < 2) {
+      toast.error("Markera minst två övningar att slå ihop");
+      return;
+    }
+    const target = (mergeCustomTarget.trim() || mergeTarget).trim();
+    if (!target) {
+      toast.error("Välj eller skriv ett målnamn");
+      return;
+    }
+    if (!confirm(`Slå ihop ${names.length} övningar till «${target}»?\n\nAll loggad data flyttas och summeras. Detta kan inte ångras.`)) return;
+    setSavingBulk(true);
+    try {
+      const { data, error } = await supabase.rpc("admin_merge_exercises" as any, {
+        p_from: names,
+        p_to: target,
+      });
+      if (error) throw error;
+      toast.success(`Sammanslagna: ${JSON.stringify(data)}`);
+      setSelectedExercises(new Set());
+      setShowBulkMerge(false);
+      setMergeTarget("");
+      setMergeCustomTarget("");
+      await fetchCustomExercises();
+      await fetchMappings();
+      await fetchOverrides();
+    } catch (e: any) {
+      console.error("Bulk merge failed:", e);
+      toast.error(e?.message || "Kunde inte slå ihop");
+    }
+    setSavingBulk(false);
+
   const bulkSetMuscles = async () => {
     if (selectedExercises.size === 0 || !bulkPrimaryGroup) return;
     setSavingBulk(true);
