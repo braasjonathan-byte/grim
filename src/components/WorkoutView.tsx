@@ -83,6 +83,23 @@ interface FriendComment {
   created_at: string;
 }
 
+// Decide whether a friend comment belongs to a given plan day.
+// Comments saved with a plan_id stick to that exact plan row.
+// Comments matched only by (week, day) must also have been written on/after
+// the current plan's start date — otherwise old comments from a previous
+// plan cycle would leak onto the same week/day slot in a brand-new plan.
+const matchesPlanDay = (
+  c: FriendComment,
+  plan: { id: string; week: number; day: string },
+  planStartDate: string | null,
+): boolean => {
+  if (c.plan_id === plan.id) return true;
+  if (c.plan_id !== null) return false;
+  if (c.week !== plan.week || c.day !== plan.day) return false;
+  if (planStartDate && (c.created_at || "").substring(0, 10) < planStartDate) return false;
+  return true;
+};
+
 interface AchievementToastState {
   achievements: AchievementDefinition[];
 }
@@ -3710,7 +3727,7 @@ const estimateCalories = (
                   <div className="flex items-center gap-1">
                     {(() => {
                       const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
-                      const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
+                      const dayFriendComments = friendComments.filter((c) => matchesPlanDay(c, plan, planStartDate));
                       const totalComments = ownLines + dayFriendComments.length;
                       return totalComments > 0 ?
                       <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
@@ -4577,7 +4594,7 @@ const estimateCalories = (
 
                     {/* Friend comments */}
                     {(() => {
-                    const dayComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
+                    const dayComments = friendComments.filter((c) => matchesPlanDay(c, plan, planStartDate));
                     return dayComments.length > 0 ?
                     <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
                           <p className="text-xs font-bold text-primary flex items-center gap-1.5">
@@ -5387,7 +5404,7 @@ const estimateCalories = (
                 <div className="flex items-center gap-1 text-muted-foreground">
                     {(() => {
                     const ownLines = comments[key]?.trim() ? comments[key].trim().split("\n").filter(Boolean).length : 0;
-                    const dayFriendComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
+                    const dayFriendComments = friendComments.filter((c) => matchesPlanDay(c, plan, planStartDate));
                     const totalComments = ownLines + dayFriendComments.length;
                     return totalComments > 0 ?
                     <span className="flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full animate-fade-in">
@@ -7887,7 +7904,7 @@ const estimateCalories = (
 
                   {/* Friend comments */}
                   {(() => {
-                  const dayComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
+                  const dayComments = friendComments.filter((c) => matchesPlanDay(c, plan, planStartDate));
                   return dayComments.length > 0 ?
                   <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
                         <p className="text-xs font-bold text-primary flex items-center gap-1.5">
