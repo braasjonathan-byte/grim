@@ -1,60 +1,43 @@
-# Plan: Sök i planväljare, gruppchatter & rundtur
+# Admin: Slå ihop dubblettövningar
 
-## 1. Sök i planväljare (PlanPicker)
-- Lägg till ett sökfält överst i `PlanPicker.tsx`.
-- Filtrera planlistan live medan man skriver (case-insensitive på `name`).
-- Inga taggar/filter, ingen sökknapp – resultat uppdateras direkt.
+Ny adminflik där admin kan välja två eller flera övningsnamn som ska slås ihop till ett valt kanoniskt namn, och all loggad data flyttas/summeras automatiskt.
 
-## 2. Gruppchatter
+## UI
 
-### Datamodell (migration)
-- Ny tabell `chat_groups`: `id`, `name`, `created_by`, `event_group_id` (nullable, för event-grupper), `created_at`.
-- Ny tabell `chat_group_members`: `group_id`, `user_id`, `joined_at`, `role` (member/admin).
-- Utöka `chat_messages` med `group_id` (nullable) – när satt är meddelandet ett gruppmeddelande och `receiver_id` ignoreras.
-- RLS:
-  - Medlemmar kan läsa grupp + medlemmar + meddelanden.
-  - Skaparen och admins kan lägga till/ta bort medlemmar.
-  - Medlemmar kan skicka meddelanden till grupper de tillhör.
-- Realtime aktiveras för `chat_messages` (om inte redan).
-- För event-grupper: när användare öppnar chatt på en `event_group` skapas (om saknas) en `chat_groups`-rad kopplad via `event_group_id` och alla `event_group_members` läggs till automatiskt (via edge function eller trigger).
+Ny komponent `src/components/ExerciseMergeManager.tsx` i `ToolsTab` (admin-only, vid sidan av "Övningsbibliotek"):
 
-### UI
-- I chatt-vyn: ny "Skapa grupp"-knapp → dialog där man namnger gruppen och väljer vänner (multi-select).
-- Grupplistan visas tillsammans med 1-1 chattar, badge för olästa.
-- Gruppchatt-vy: visar avsändarens nickname per meddelande, "lägg till medlem" och "lämna grupp" i en meny.
-- Event-grupper får automatiskt en "Öppna chatt"-knapp.
+1. Lista alla unika övningsnamn (union av `custom_exercises.name`, `pr_overrides.exercise`, `exercise_muscle_overrides.exercise_name`, `exercise_gif_mappings.exercise_name`, plus distinkta nycklar från `workout_completions.logged_weights`) med antalet förekomster per namn.
+2. Sökfält + lista med kryssrutor — admin kryssar i 2+ namn som är dubbletter.
+3. Radio/select: välj vilket av de markerade namnen som blir det slutgiltiga (eller skriv in ett helt nytt namn).
+4. Förhandsvisning: "X loggade set och Y pass-rader kommer att slås ihop till «namn»".
+5. Bekräfta → anropar RPC `admin_merge_exercises(from_names text[], to_name text)`.
 
-## 3. Rundtur (onboarding tour)
+## Backend (migration)
 
-### Bibliotek
-- Använd `driver.js` (lättviktigt, fungerar bra med React + portals, square design passar GRIM).
+Skapa SECURITY DEFINER-funktionen `public.admin_merge_exercises(p_from text[], p_to text)`:
 
-### Datamodell
-- Ny kolumn `profiles.tour_completed boolean default false`.
-- Ny kolumn `profiles.tour_prompted boolean default false` (så vi inte frågar igen om de sa nej).
+- Kräver `has_role(auth.uid(),'admin')` annars `raise exception`.
+- Normaliserar: behandlar alla namn case-insensitivt; `from`-listan får inkludera `to`.
+- **custom_exercises**: behåll en rad med namn = `p_to` (välj den med flest fält ifyllda), radera övriga dubbletter.
+- **pr_overrides**: vid konflikt per `user_id` behåll den med högst `weight`.
+- **pr_stars**, **pr_goals**: byt namn, hantera unika konflikter med `ON CONFLICT DO NOTHING`.
+- **exercise_muscle_overrides** / **exercise_gif_mappings** / **exercise_description_reports**: byt namn, vid konflikt behåll senaste `updated_at`.
+- **workout_completions.logged_weights** (JSONB-objekt): per rad, slå ihop arrayer för matchande nycklar till en sammanslagen array under `p_to`; bevarar ordning (gamla namn först).
+- **workout_plans.details** + **saved_workouts.details** + **archived_plans.plan_data** (textfält / JSONB-fält `details`): regex-byt på radnivå — matchar början av rad case-insensitivt följt av valfri `set×rep`-notation, byter bara övningsnamnet och lämnar resten orört.
+- Returnerar JSON-summa med antal påverkade rader per tabell.
 
-### Flöde
-- Vid första inlogg efter feature-release: dialog "Vill du ha en rundtur?" med val:
-  - **Kort rundtur** (~5 steg): bottennav + dagens pass + plan + sociala + profil.
-  - **Lång rundtur** (~12 steg): ovanstående + skapa övning, redigera vikter, kalender, vänner, gruppchatt, butik, hjälp.
-  - **Hoppa över**.
-- Vald variant körs via `driver.js` med pilar och svenska beskrivningar.
-- `tour_prompted` sätts oavsett val; `tour_completed` när man kör klart.
-- Hjälpmenyn får två val: "Kort rundtur" och "Lång rundtur" som triggar samma flöden.
+Pekar admin-actionen från klienten via `supabase.rpc('admin_merge_exercises', { p_from, p_to })`.
 
-### Implementation
-- Ny fil `src/lib/tour.ts` med stegdefinitioner (kort + lång).
-- Ny komponent `<TourPrompt />` som mountas i app-shell och kollar `tour_prompted`.
-- `data-tour="..."` attribut läggs på relevanta element (bottennav-knappar, "Skapa övning", "Vänner" osv).
-- Hjälpmenyn (befintlig) får en sektion med två rundtursknappar.
+## Filer som ändras
 
-## Tekniska detaljer
-- driver.js installeras med `bun add driver.js`.
-- Stilar för driver.js anpassas till GRIM-temat (square, primärfärg, Permanent Marker).
-- Migration körs först, sedan UI/kod.
+- ny migration `admin_merge_exercises` (RPC + GRANT EXECUTE TO authenticated, inre kontroll via `has_role`).
+- ny komponent `src/components/ExerciseMergeManager.tsx`.
+- `src/components/ToolsTab.tsx` — lägg till sektion `admin-merge-exercises`.
 
-## Ordning
-1. Migration (chat_groups, chat_group_members, chat_messages.group_id, profiles.tour_*).
-2. PlanPicker-sök.
-3. Gruppchatt UI + edge function/trigger för event-grupper.
-4. Rundtur (bibliotek, steg, prompt, hjälpmeny).
+## Säkerhet
+
+- RPC är SECURITY DEFINER med inre `has_role`-kontroll.
+- Klienten visar endast knappen för admins (UI), men säkerheten ligger på funktionen.
+- Operationen körs i en transaktion; en helt felaktig sammanslagning kan inte ångras automatiskt — UI varnar tydligt med "Detta går inte att ångra".
+
+Vill du att jag bygger detta?
