@@ -1655,6 +1655,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_merge_exercises: {
+        Args: { p_from: string[]; p_to: string }
+        Returns: Json
+      }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
         Returns: {
