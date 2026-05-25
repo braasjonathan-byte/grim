@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X } from "lucide-react";
-import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
+import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info } from "lucide-react";
+import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,7 +15,8 @@ interface PlanPickerProps {
   onBack?: () => void;
 }
 
-type Step = "select" | "profile" | "1rm" | "start-date" | "loading" | "builder";
+type Step = "select" | "profile" | "1rm" | "preferred-days" | "start-date" | "loading" | "builder";
+
 
 const defaultProfile: FitnessProfile = {
   max_distance_km: null,
