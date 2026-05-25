@@ -98,8 +98,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     } else {
       setPendingRmValues(undefined);
       setPendingProfile(undefined);
-      setStep("start-date");
+      setStep("preferred-days");
     }
+
   };
 
   const handleProfileDone = (profile: FitnessProfile) => {
