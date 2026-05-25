@@ -83,6 +83,23 @@ interface FriendComment {
   created_at: string;
 }
 
+// Decide whether a friend comment belongs to a given plan day.
+// Comments saved with a plan_id stick to that exact plan row.
+// Comments matched only by (week, day) must also have been written on/after
+// the current plan's start date — otherwise old comments from a previous
+// plan cycle would leak onto the same week/day slot in a brand-new plan.
+const matchesPlanDay = (
+  c: FriendComment,
+  plan: { id: string; week: number; day: string },
+  planStartDate: string | null,
+): boolean => {
+  if (c.plan_id === plan.id) return true;
+  if (c.plan_id !== null) return false;
+  if (c.week !== plan.week || c.day !== plan.day) return false;
+  if (planStartDate && (c.created_at || "").substring(0, 10) < planStartDate) return false;
+  return true;
+};
+
 interface AchievementToastState {
   achievements: AchievementDefinition[];
 }
