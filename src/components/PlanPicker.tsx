@@ -147,7 +147,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       return;
     }
 
-    const paddedDays = padWeeksTo7Days(days);
+    const paddedDays = reorderDaysToPreferred(padWeeksTo7Days(days), preferredDays);
 
     // Clear any existing plan rows (week > 0) so the new plan starts fresh at week 1.
     // Single workouts (week = 0) are preserved.
