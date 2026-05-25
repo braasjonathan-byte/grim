@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X } from "lucide-react";
-import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
+import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info } from "lucide-react";
+import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,7 +15,8 @@ interface PlanPickerProps {
   onBack?: () => void;
 }
 
-type Step = "select" | "profile" | "1rm" | "start-date" | "loading" | "builder";
+type Step = "select" | "profile" | "1rm" | "preferred-days" | "start-date" | "loading" | "builder";
+
 
 const defaultProfile: FitnessProfile = {
   max_distance_km: null,
@@ -37,6 +38,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [pendingProfile, setPendingProfile] = useState<FitnessProfile | undefined>(undefined);
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
+  const [preferredDays, setPreferredDays] = useState<string[]>([]);
+
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
   const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -95,8 +98,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     } else {
       setPendingRmValues(undefined);
       setPendingProfile(undefined);
-      setStep("start-date");
+      setStep("preferred-days");
     }
+
   };
 
   const handleProfileDone = (profile: FitnessProfile) => {
@@ -112,8 +116,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     } else {
       setPendingRmValues(undefined);
       setPendingProfile(profile);
-      setStep("start-date");
+      setStep("preferred-days");
     }
+
   };
 
   const allRmsFilled = selectedTemplate
@@ -142,7 +147,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       return;
     }
 
-    const paddedDays = padWeeksTo7Days(days);
+    const paddedDays = reorderDaysToPreferred(padWeeksTo7Days(days), preferredDays);
 
     // Clear any existing plan rows (week > 0) so the new plan starts fresh at week 1.
     // Single workouts (week = 0) are preserved.
@@ -188,7 +193,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       rmValues[lift] = parseFloat(rms[lift] || "0");
     }
     setPendingRmValues(rmValues);
-    setStep("start-date");
+    setStep("preferred-days");
+
   };
 
   const handleStartDateConfirm = () => {
@@ -211,8 +217,111 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     );
   }
 
+  if (step === "preferred-days") {
+    const dayLabels: Record<string, string> = {
+      "Mån": "Måndag", "Tis": "Tisdag", "Ons": "Onsdag", "Tors": "Torsdag",
+      "Fre": "Fredag", "Lör": "Lördag", "Sön": "Söndag",
+    };
+    const toggleDay = (d: string) => {
+      setPreferredDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+    };
+    // Estimate workouts per week from the template's first week
+    let workoutsPerWeek = 0;
+    if (selectedTemplate) {
+      const profile = pendingProfile || fitnessProfile;
+      let probeDays = selectedTemplate.days;
+      try {
+        if (selectedTemplate.generateFromProfile) probeDays = selectedTemplate.generateFromProfile(profile);
+        else if (selectedTemplate.generateDays && pendingRmValues) probeDays = selectedTemplate.generateDays(pendingRmValues, profile);
+      } catch { /* ignore */ }
+      if (probeDays) {
+        const firstWeek = probeDays.filter(d => d.week === (probeDays[0]?.week ?? 1));
+        workoutsPerWeek = firstWeek.filter(d => d.session_name && !d.session_name.toLowerCase().includes("vila")).length;
+      }
+    }
+    const back = () => {
+      if (needs1RM) setStep("1rm");
+      else if (needsProfile) setStep("profile");
+      else setStep("select");
+    };
+    const enough = preferredDays.length === 0 || preferredDays.length >= workoutsPerWeek;
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <button
+          onClick={back}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Tillbaka
+        </button>
+
+        <div className="text-center space-y-2">
+          <CalendarDays className="w-10 h-10 text-primary mx-auto" />
+          <h2 className="text-xl font-black tracking-tight">När vill du helst träna?</h2>
+          <p className="text-sm text-muted-foreground">
+            Välj dina föredragna veckodagar. Passen fördelas på dessa dagar.
+          </p>
+          {workoutsPerWeek > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Planen innehåller cirka <span className="font-bold text-foreground">{workoutsPerWeek} pass/vecka</span>
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {ALL_DAYS.map((d) => {
+            const active = preferredDays.includes(d);
+            return (
+              <button
+                key={d}
+                onClick={() => toggleDay(d)}
+                className={`p-3 rounded-lg border text-sm font-semibold transition-all ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    : "border-border bg-card text-foreground hover:border-primary/50"
+                }`}
+              >
+                {dayLabels[d]}
+              </button>
+            );
+          })}
+        </div>
+
+        {!enough && (
+          <div className="bg-destructive/10 border border-destructive/40 rounded-lg p-3 text-center">
+            <p className="text-xs text-destructive">
+              Du har valt {preferredDays.length} dag{preferredDays.length === 1 ? "" : "ar"} men planen behöver minst {workoutsPerWeek}. Extra pass läggs på andra dagar.
+            </p>
+          </div>
+        )}
+
+        <div className="bg-secondary/50 border border-border rounded-lg p-3 flex gap-2">
+          <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Hoppa över för standardfördelning. Du kan <span className="font-semibold text-foreground">alltid flytta enskilda pass senare inne i träningsvyn</span> genom att trycka på veckodagen ovanför ett pass.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setPreferredDays([]); setStep("start-date"); }}
+            className="flex-1 py-3 bg-secondary text-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Hoppa över
+          </button>
+          <button
+            onClick={() => setStep("start-date")}
+            className="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Fortsätt
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (step === "start-date") {
     const isEvent = selectedTemplate?.isEventPrep;
+
 
     // For event-prep plans, calculate start date from event date
     const computedStartDate = isEvent && eventDate

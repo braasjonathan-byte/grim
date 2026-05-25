@@ -46,7 +46,7 @@ export interface TemplatePlanDay {
 const round = (v: number, step = 2.5) => Math.round(v / step) * step;
 const pct = (rm: number, p: number) => round(rm * p);
 
-const ALL_DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+export const ALL_DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
 /** Ensure every week has exactly 7 days. Missing days get an empty "Vila" entry. Vila sessions get details cleared. */
 export const padWeeksTo7Days = (days: TemplatePlanDay[]): TemplatePlanDay[] => {
@@ -70,6 +70,51 @@ export const padWeeksTo7Days = (days: TemplatePlanDay[]): TemplatePlanDay[] => {
   }
   return result;
 };
+
+/**
+ * Reorder workouts within each week onto user's preferred weekdays.
+ * Keeps workout order intact; assigns them to preferred days (sorted Mon→Sun).
+ * If fewer preferred days than workouts in a week, fills extra days with remaining weekdays.
+ * If preferred is empty/undefined, returns input unchanged.
+ */
+export const reorderDaysToPreferred = (days: TemplatePlanDay[], preferred: string[]): TemplatePlanDay[] => {
+  if (!preferred || preferred.length === 0) return days;
+  const byWeek = new Map<number, TemplatePlanDay[]>();
+  for (const d of days) {
+    if (!byWeek.has(d.week)) byWeek.set(d.week, []);
+    byWeek.get(d.week)!.push(d);
+  }
+  const result: TemplatePlanDay[] = [];
+  const sortedWeeks = Array.from(byWeek.keys()).sort((a, b) => a - b);
+  for (const w of sortedWeeks) {
+    const list = byWeek.get(w)!;
+    const workouts = list.filter(
+      d => d.session_name && !d.session_name.toLowerCase().includes("vila")
+    );
+    // Pick target weekdays: start with preferred (sorted), then fill with remaining weekdays
+    const target: string[] = [];
+    const preferredSorted = [...preferred].sort((a, b) => ALL_DAYS.indexOf(a) - ALL_DAYS.indexOf(b));
+    for (const d of preferredSorted) {
+      if (target.length < workouts.length) target.push(d);
+    }
+    if (target.length < workouts.length) {
+      for (const d of ALL_DAYS) {
+        if (!target.includes(d) && target.length < workouts.length) target.push(d);
+      }
+    }
+    target.sort((a, b) => ALL_DAYS.indexOf(a) - ALL_DAYS.indexOf(b));
+    for (const dayName of ALL_DAYS) {
+      const idx = target.indexOf(dayName);
+      if (idx >= 0 && workouts[idx]) {
+        result.push({ ...workouts[idx], week: w, day: dayName });
+      } else {
+        result.push({ week: w, day: dayName, session_name: "Vila", details: "", tempo: "" });
+      }
+    }
+  }
+  return result;
+};
+
 
 // Helper to generate repeating weekly structure across N weeks
 const generateWeeks = (
