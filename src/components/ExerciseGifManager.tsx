@@ -549,6 +549,7 @@ const ExerciseGifManager = () => {
       toast.error(e?.message || "Kunde inte slå ihop");
     }
     setSavingBulk(false);
+  };
 
   const bulkSetMuscles = async () => {
     if (selectedExercises.size === 0 || !bulkPrimaryGroup) return;
