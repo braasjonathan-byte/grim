@@ -7904,7 +7904,7 @@ const estimateCalories = (
 
                   {/* Friend comments */}
                   {(() => {
-                  const dayComments = friendComments.filter((c) => c.plan_id === plan.id || (c.plan_id === null && c.week === plan.week && c.day === plan.day));
+                  const dayComments = friendComments.filter((c) => matchesPlanDay(c, plan, planStartDate));
                   return dayComments.length > 0 ?
                   <div className="space-y-1.5 bg-primary/5 rounded-lg p-3 border border-primary/20">
                         <p className="text-xs font-bold text-primary flex items-center gap-1.5">
