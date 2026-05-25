@@ -767,6 +767,14 @@ const ExerciseGifManager = () => {
                   Sätt muskelgrupp…
                 </button>
                 <button
+                  onClick={() => { setShowBulkMerge(v => !v); setMergeTarget(Array.from(selectedExercises)[0] || ""); setMergeCustomTarget(""); }}
+                  disabled={savingBulk || selectedExercises.size < 2}
+                  className="text-[11px] px-2.5 py-1.5 bg-accent text-accent-foreground rounded-lg font-semibold disabled:opacity-40"
+                  title={selectedExercises.size < 2 ? "Markera minst två" : "Slå ihop dubbletter"}
+                >
+                  🔀 Slå ihop…
+                </button>
+                <button
                   onClick={bulkDelete}
                   disabled={savingBulk}
                   className="text-[11px] px-2.5 py-1.5 bg-destructive text-destructive-foreground rounded-lg font-semibold disabled:opacity-40 flex items-center gap-1"
@@ -774,6 +782,40 @@ const ExerciseGifManager = () => {
                   🗑️ Ta bort
                 </button>
               </div>
+
+              {showBulkMerge && selectedExercises.size >= 2 && (
+                <div className="mt-2 bg-card border border-border rounded-lg p-2 space-y-2">
+                  <p className="text-[11px] font-semibold">Slå ihop {selectedExercises.size} övningar → ett namn</p>
+                  <p className="text-[10px] text-muted-foreground">All loggad data flyttas och summeras. Går inte att ångra.</p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {Array.from(selectedExercises).map(n => (
+                      <label key={n} className="flex items-center gap-2 text-[11px] cursor-pointer">
+                        <input
+                          type="radio"
+                          name="merge-target"
+                          checked={!mergeCustomTarget && mergeTarget === n}
+                          onChange={() => { setMergeTarget(n); setMergeCustomTarget(""); }}
+                        />
+                        <span className="truncate">{n}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="…eller skriv nytt målnamn"
+                    value={mergeCustomTarget}
+                    onChange={(e) => setMergeCustomTarget(e.target.value)}
+                    className="w-full text-[11px] px-2 py-1.5 bg-background border border-border rounded-lg outline-none"
+                  />
+                  <button
+                    onClick={bulkMerge}
+                    disabled={savingBulk}
+                    className="w-full text-[11px] px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold disabled:opacity-40"
+                  >
+                    {savingBulk ? "Slår ihop…" : `Slå ihop till «${(mergeCustomTarget.trim() || mergeTarget) || "—"}»`}
+                  </button>
+                </div>
+              )}
 
               {showBulkMuscle && (
                 <div className="mt-2 bg-card border border-border rounded-lg p-2 space-y-2">
