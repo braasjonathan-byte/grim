@@ -193,7 +193,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       rmValues[lift] = parseFloat(rms[lift] || "0");
     }
     setPendingRmValues(rmValues);
-    setStep("start-date");
+    setStep("preferred-days");
+
   };
 
   const handleStartDateConfirm = () => {
