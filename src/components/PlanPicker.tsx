@@ -116,8 +116,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     } else {
       setPendingRmValues(undefined);
       setPendingProfile(profile);
-      setStep("start-date");
+      setStep("preferred-days");
     }
+
   };
 
   const allRmsFilled = selectedTemplate
