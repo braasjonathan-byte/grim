@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, BookOpen, Trash2, Pencil, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, BookOpen, Trash2, Pencil, GripVertical, ChefHat } from "lucide-react";
 import MacroRings from "./MacroRings";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
 import MealNameDialog from "./MealNameDialog";
+import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-interface Props { userId: string }
+interface Props { userId: string; isHonorary?: boolean }
 
 const DEFAULT_SLOTS = ["frukost", "lunch", "middag", "mellanmål"];
 
