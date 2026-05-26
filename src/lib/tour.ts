@@ -568,8 +568,22 @@ export function resumeTourIfNeeded(onDone?: () => void) {
   } catch { /* ignore */ }
 }
 
+function getStepsFor(variant: TourVariant): TourStep[] {
+  if (variant === "short") return SHORT;
+  if (variant === "long") return LONG;
+  if (variant === "nutrition") {
+    return LONG.filter((s) => s.meta?.tab === "nutrition");
+  }
+  if (variant === "workout") return LONG.filter((s) => s.meta?.tab === "workout");
+  if (variant === "stats") return LONG.filter((s) => s.meta?.tab === "stats");
+  if (variant === "social") return LONG.filter((s) => s.meta?.tab === "social");
+  if (variant === "tools") return LONG.filter((s) => s.meta?.tab === "calc");
+  return SHORT;
+}
+
 export function startTour(variant: TourVariant, onDone?: () => void, startIdx = 0) {
-  const all = variant === "long" ? LONG : SHORT;
+  const all = getStepsFor(variant);
+
 
   // Drop steps that target a missing element AND have no nav meta to bring it in.
   const available = all.filter(({ step, meta }) => {
