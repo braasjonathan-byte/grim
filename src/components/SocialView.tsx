@@ -182,48 +182,22 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       // Load likes + post images
       const postIds = postsData.map(p => p.id);
       if (postIds.length > 0) {
-        const workoutPosts = (postsData as SocialPost[]).filter(p => p.workout_week !== null && !!p.workout_day);
-        const workoutOwnerIds = [...new Set(workoutPosts.map(p => p.user_id))];
-        const [{ data: likesData }, { data: imgData }, { data: commentsData }, { data: workoutLikesData }, { data: workoutCommentsData }] = await Promise.all([
+        const [{ data: likesData }, { data: imgData }, { data: commentsData }] = await Promise.all([
           supabase.from("social_post_likes").select("post_id, user_id").in("post_id", postIds),
           supabase.from("social_post_images").select("post_id, image_url, caption, sort_order").in("post_id", postIds).order("sort_order", { ascending: true }),
           supabase.from("social_post_comments").select("post_id").in("post_id", postIds),
-          workoutOwnerIds.length > 0 ? supabase.from("workout_likes").select("target_user_id, week, day, user_id").in("target_user_id", workoutOwnerIds) : Promise.resolve({ data: [] }),
-          workoutOwnerIds.length > 0 ? supabase.from("workout_comments").select("target_user_id, week, day, author_id, comment").in("target_user_id", workoutOwnerIds) : Promise.resolve({ data: [] }),
         ]);
-        const postByWorkout = new Map<string, string>();
-        workoutPosts.forEach(p => postByWorkout.set(`${p.user_id}|${p.workout_week}|${p.workout_day}`, p.id));
         if (commentsData) {
           const cMap: Record<string, number> = {};
           (commentsData as { post_id: string }[]).forEach(c => { cMap[c.post_id] = (cMap[c.post_id] || 0) + 1; });
-          const seen = new Set<string>();
-          (workoutCommentsData as any[] | null || []).forEach(c => {
-            const postId = postByWorkout.get(`${c.target_user_id}|${c.week}|${c.day}`);
-            if (!postId) return;
-            const key = `${postId}|${c.author_id}|${String(c.comment).trim().toLowerCase()}`;
-            if (seen.has(key)) return;
-            seen.add(key);
-            cMap[postId] = (cMap[postId] || 0) + 1;
-          });
           setCommentCounts(cMap);
         }
         if (likesData) {
           const countMap: Record<string, number> = {};
           const mySet = new Set<string>();
-          const seenLikes = new Set<string>();
           likesData.forEach((l: { post_id: string; user_id: string }) => {
-            seenLikes.add(`${l.post_id}|${l.user_id}`);
             countMap[l.post_id] = (countMap[l.post_id] || 0) + 1;
             if (l.user_id === userId) mySet.add(l.post_id);
-          });
-          (workoutLikesData as any[] | null || []).forEach(l => {
-            const postId = postByWorkout.get(`${l.target_user_id}|${l.week}|${l.day}`);
-            if (!postId) return;
-            const key = `${postId}|${l.user_id}`;
-            if (seenLikes.has(key)) return;
-            seenLikes.add(key);
-            countMap[postId] = (countMap[postId] || 0) + 1;
-            if (l.user_id === userId) mySet.add(postId);
           });
           setLikes(countMap);
           setMyLikes(mySet);
