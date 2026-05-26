@@ -123,7 +123,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
               <h3 className="text-base font-black font-serif text-foreground">Nyhet: Kost i appen</h3>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-              Du kan nu logga måltider, följa makron och använda 200+ träningsanpassade recept – allt direkt i GRIM. Vill du se hur det funkar?
+              Du kan nu logga måltider, följa makron och använda 200+ träningsanpassade recept – allt direkt i GRIM. Över 2 600 livsmedel finns tillgängliga i sökningen. Vill du se hur det funkar?
             </p>
             <div className="space-y-2">
               <button
