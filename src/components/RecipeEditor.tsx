@@ -51,12 +51,13 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
       servings: portions,
       instructions: instructions.trim() || null,
       visibility,
+      category,
       kcal_per_serving: totalKcal / portions,
       fat_g_per_serving: totalFat / portions,
       protein_g_per_serving: totalProtein / portions,
       carbs_g_per_serving: totalCarbs / portions,
       ingredients: ingredients as any,
-    });
+    } as any);
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Recept sparat" });
