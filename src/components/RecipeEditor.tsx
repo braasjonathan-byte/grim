@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, Globe, Lock } from "lucide-react";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
+import { RECIPE_CATEGORIES } from "@/data/curatedRecipes";
 
 interface RecipeEditorProps {
   open: boolean;
