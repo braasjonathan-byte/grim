@@ -158,6 +158,35 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     };
   }, []);
 
+  // Live updates of a friend's workout completions (checked sets, kg/reps, done)
+  useEffect(() => {
+    if (!viewingFriend) return;
+    const fid = viewingFriend.profile.user_id;
+    const channel = supabase
+      .channel(`friend-completions-${fid}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "workout_completions", filter: `user_id=eq.${fid}` },
+        (payload: any) => {
+          const row: any = payload.new || payload.old;
+          if (!row) return;
+          const key = `${row.week}-${row.day}`;
+          setFriendCompletions((prev) => {
+            if (payload.eventType === "DELETE") {
+              const next = { ...prev };
+              delete next[key];
+              return next;
+            }
+            return { ...prev, [key]: { ...(prev[key] || {}), ...(payload.new as any) } as FriendCompletion };
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [viewingFriend?.profile.user_id]);
+
   // Comments
   const [comments, setComments] = useState<WorkoutComment[]>([]);
   const [newComment, setNewComment] = useState<Record<string, string>>({});
