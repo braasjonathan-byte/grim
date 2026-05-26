@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Camera, Sparkles } from "lucide-react";
+import { Loader2, Camera, Sparkles, Utensils, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UNITS, toGrams } from "@/lib/nutritionCalc";
 import type { PickedItem } from "./FoodPickerDialog";
+
+type ScanMode = "dish" | "label";
 
 interface Props {
   open: boolean;
@@ -29,10 +31,11 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
   const [result, setResult] = useState<AIResult | null>(null);
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
+  const [mode, setMode] = useState<ScanMode>("dish");
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!open) { stopCam(); setPhoto(null); setResult(null); return; }
+    if (!open) { stopCam(); setPhoto(null); setResult(null); setMode("dish"); return; }
     startCam();
     return () => stopCam();
     // eslint-disable-next-line
@@ -77,7 +80,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
   async function analyze(url: string) {
     setAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("nutrition-ai-scan", { body: { image: url } });
+      const { data, error } = await supabase.functions.invoke("nutrition-ai-scan", { body: { image: url, mode } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setResult(data);
@@ -118,13 +121,21 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
 
         {!result && (
           <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setMode("dish")} className={`flex items-center justify-center gap-1.5 py-2 text-xs font-bold border ${mode === "dish" ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}>
+                <Utensils className="w-3.5 h-3.5" /> Maträtt
+              </button>
+              <button onClick={() => setMode("label")} className={`flex items-center justify-center gap-1.5 py-2 text-xs font-bold border ${mode === "label" ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}>
+                <FileText className="w-3.5 h-3.5" /> Näringstabell
+              </button>
+            </div>
             <div className="relative bg-black aspect-square overflow-hidden flex items-center justify-center">
               {photo ? <img src={photo} alt="" className="w-full h-full object-cover" /> : <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />}
               {analyzing && (
                 <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
                   <div className="text-center">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-                    <p className="text-xs">Analyserar maträtt…</p>
+                    <p className="text-xs">{mode === "label" ? "Läser näringstabell…" : "Analyserar maträtt…"}</p>
                   </div>
                 </div>
               )}
@@ -136,7 +147,11 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
                 <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
               </div>
             )}
-            <p className="text-[10px] text-muted-foreground text-center">Endast för hedersmedlemmar. AI:n identifierar maträtten och uppskattar makros.</p>
+            <p className="text-[10px] text-muted-foreground text-center">
+              {mode === "label"
+                ? "Rikta kameran mot näringsdeklarationen på förpackningen."
+                : "AI:n identifierar maträtten och uppskattar makros. Endast för hedersmedlemmar."}
+            </p>
           </div>
         )}
 
@@ -153,7 +168,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
                 <div><p className="text-[10px] text-muted-foreground">Kcal/100g</p><p className="font-bold tabular-nums">{Math.round(result.food.kcal)}</p></div>
                 <div><p className="text-[10px] text-muted-foreground">Protein</p><p className="font-bold tabular-nums">{result.food.protein_g.toFixed(1)}</p></div>
                 <div><p className="text-[10px] text-muted-foreground">Fett</p><p className="font-bold tabular-nums">{result.food.fat_g.toFixed(1)}</p></div>
-                <div><p className="text-[10px] text-muted-foreground">Kh</p><p className="font-bold tabular-nums">{result.food.carbs_g.toFixed(1)}</p></div>
+                <div><p className="text-[10px] text-muted-foreground">Kolhydrater</p><p className="font-bold tabular-nums">{result.food.carbs_g.toFixed(1)}</p></div>
               </div>
             </div>
             <div>

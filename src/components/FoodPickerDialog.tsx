@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Loader2, ScanBarcode, Sparkles } from "lucide-react";
+import { Search, Plus, Loader2, ScanBarcode, Sparkles, Utensils } from "lucide-react";
 import { UNITS, toGrams } from "@/lib/nutritionCalc";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import AIFoodScanDialog from "./AIFoodScanDialog";
+import RestaurantSearchDialog from "./RestaurantSearchDialog";
 
 export interface PickedItem {
   source: "food" | "custom_food" | "recipe";
@@ -39,6 +40,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [unit, setUnit] = useState<string>("g");
   const [barcodeOpen, setBarcodeOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [restaurantOpen, setRestaurantOpen] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
 
   useEffect(() => {
@@ -145,14 +147,19 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
         {!selected && (
           <>
-            <div className="flex gap-2">
-              <button onClick={() => setBarcodeOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-input text-xs font-bold">
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => setBarcodeOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-input text-[11px] font-bold">
                 <ScanBarcode className="w-4 h-4" /> Streckkod
               </button>
-              {isHonorary && (
-                <button onClick={() => setAiOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-primary text-primary text-xs font-bold">
+              <button onClick={() => setRestaurantOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-input text-[11px] font-bold">
+                <Utensils className="w-4 h-4" /> Restaurang
+              </button>
+              {isHonorary ? (
+                <button onClick={() => setAiOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-primary text-primary text-[11px] font-bold">
                   <Sparkles className="w-4 h-4" /> AI-skanna
                 </button>
+              ) : (
+                <div />
               )}
             </div>
             <div className="relative">
@@ -220,6 +227,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
       <BarcodeScannerDialog open={barcodeOpen} onOpenChange={setBarcodeOpen} onPick={(item) => { setBarcodeOpen(false); onPick(item); }} />
       <AIFoodScanDialog open={aiOpen} onOpenChange={setAiOpen} onPick={(item) => { setAiOpen(false); onPick(item); }} />
+      <RestaurantSearchDialog open={restaurantOpen} onOpenChange={setRestaurantOpen} onPick={(item) => { setRestaurantOpen(false); onPick(item); }} />
     </Dialog>
   );
 }
