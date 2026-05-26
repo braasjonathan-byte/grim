@@ -118,7 +118,27 @@ const M: Record<string, { kcal: number; p: number; f: number; c: number; unit?: 
   "ingefära": { kcal: 80, p: 1.8, f: 0.8, c: 18 },
   "currypasta": { kcal: 100, p: 3, f: 4, c: 14 },
   "pankobröd": { kcal: 390, p: 10, f: 4, c: 75 },
+  "keso": { kcal: 80, p: 12, f: 2, c: 3 },
+  "kalkonpålägg": { kcal: 105, p: 22, f: 1.5, c: 1 },
+  "skinka": { kcal: 110, p: 18, f: 4, c: 1 },
+  "ramen nudlar": { kcal: 380, p: 10, f: 14, c: 55 },
+  "rödbeta": { kcal: 43, p: 1.6, f: 0.2, c: 9 },
+  "haricots verts": { kcal: 35, p: 1.8, f: 0.1, c: 7 },
+  "ost 17%": { kcal: 250, p: 28, f: 17, c: 0 },
+  "pinjenötter": { kcal: 670, p: 14, f: 68, c: 4 },
+  "russin": { kcal: 300, p: 3, f: 0.5, c: 75 },
+  "soltorkade tomater": { kcal: 260, p: 14, f: 3, c: 35 },
+  "oliver": { kcal: 145, p: 1, f: 15, c: 4 },
+  "purjolök": { kcal: 30, p: 1.5, f: 0.3, c: 6 },
+  "müsli": { kcal: 360, p: 10, f: 6, c: 65 },
+  "äggvitor": { kcal: 50, p: 11, f: 0.2, c: 0.7 },
+  "vita bönor": { kcal: 130, p: 9, f: 0.5, c: 22 },
+  "havredryck": { kcal: 45, p: 1, f: 1.5, c: 7 },
+  "pumpafrön": { kcal: 560, p: 30, f: 49, c: 11 },
+  "kallrökt lax": { kcal: 200, p: 22, f: 12, c: 0 },
+  "köttbullar färdiga": { kcal: 220, p: 14, f: 16, c: 7 },
 };
+
 
 function ing(name: string, amount: number, unit?: string): Ing {
   const m = M[name];
