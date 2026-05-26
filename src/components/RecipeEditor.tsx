@@ -24,12 +24,13 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
   const [instructions, setInstructions] = useState("");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [visibility, setVisibility] = useState<"private" | "public">("private");
+  const [category, setCategory] = useState<string>("middag");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   function reset() {
-    setName(""); setServings("4"); setInstructions(""); setIngredients([]); setVisibility("private");
+    setName(""); setServings("4"); setInstructions(""); setIngredients([]); setVisibility("private"); setCategory("middag");
   }
 
   const totalKcal = ingredients.reduce((s, i) => s + i.kcal, 0);
