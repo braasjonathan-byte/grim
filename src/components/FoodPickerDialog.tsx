@@ -185,13 +185,35 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     };
   }, [selected, amount, unit]);
 
-  function confirm() {
+  async function confirm() {
     if (!selected || !computed) return;
+    const a = parseFloat(amount.replace(",", ".")) || 0;
+
+    // If picked from Open Food Facts, save to custom_foods first
+    let outSource: PickedItem["source"] = selected.source === "off" ? "custom_food" : selected.source;
+    let outId = selected.id;
+    if (selected.source === "off") {
+      try {
+        const { data, error } = await supabase.from("custom_foods").insert({
+          user_id: userId,
+          name: selected.name,
+          kcal: selected.kcal,
+          protein_g: selected.protein_g,
+          fat_g: selected.fat_g,
+          carbs_g: selected.carbs_g,
+        }).select("id").single();
+        if (error) throw error;
+        outId = data!.id;
+      } catch (e) {
+        console.error("Failed to save OFF item to bank", e);
+      }
+    }
+
     onPick({
-      source: selected.source,
-      id: selected.id,
+      source: outSource,
+      id: outId,
       name: selected.name,
-      amount: parseFloat(amount.replace(",", ".")) || 0,
+      amount: a,
       unit: selected.source === "recipe" ? "portion" : unit,
       kcal: computed.kcal,
       protein_g: computed.protein_g,
