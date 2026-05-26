@@ -8397,6 +8397,70 @@ const estimateCalories = (
         }}
       />
     )}
+    {/* Empty / rest day chooser: create empty workout OR import ready workout */}
+    {emptyDayChoice && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setEmptyDayChoice(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-base">Lägg till pass · {emptyDayChoice.day}</h3>
+            <button onClick={() => setEmptyDayChoice(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Passnamn</label>
+            <input
+              type="text"
+              value={emptyDayName}
+              onChange={(e) => setEmptyDayName(e.target.value)}
+              placeholder="t.ex. Styrka överkropp"
+              className="w-full bg-secondary text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
+              autoFocus
+            />
+            <button
+              onClick={async () => {
+                const name = emptyDayName.trim();
+                if (!name) return;
+                const target = emptyDayChoice;
+                const baseDay = getBaseDay(target.day);
+                const uniqueDay = `${baseDay}_${Date.now().toString(36)}`;
+                await supabase.from("workout_plans").insert({
+                  user_id: userId,
+                  week: target.week,
+                  day: uniqueDay,
+                  session_name: name,
+                  details: "",
+                  tempo: null,
+                  is_circuit: false,
+                } as any);
+                setEmptyDayChoice(null);
+                setEmptyDayName("");
+                toast.success("Tomt pass skapat – lägg till övningar nedan");
+                fetchData();
+              }}
+              disabled={!emptyDayName.trim()}
+              className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 text-sm"
+            >
+              Skapa tomt pass
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">eller</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <button
+            onClick={() => {
+              const t = emptyDayChoice;
+              setEmptyDayChoice(null);
+              setImportWorkoutTarget({ planId: "__new__", week: t.week, day: t.day });
+            }}
+            className="w-full py-2.5 border border-warning/40 text-warning font-semibold rounded-lg hover:border-warning hover:bg-warning/5 text-sm flex items-center justify-center gap-2"
+          >
+            <Download className="w-3.5 h-3.5" /> Importera färdigt pass
+          </button>
+        </div>
+      </div>
+    )}
     {/* Import workout dialog */}
     {importWorkoutTarget && (
       <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
