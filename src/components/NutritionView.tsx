@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, BookOpen, Trash2, Pencil, GripVertical, ChefHat } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat } from "lucide-react";
 import MacroRings from "./MacroRings";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
