@@ -152,7 +152,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-4">
+      <DialogContent className="max-w-md p-4" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="font-serif">Skanna streckkod</DialogTitle>
         </DialogHeader>
@@ -171,7 +171,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
             <div>
               <label className="text-xs font-medium text-muted-foreground">Eller skriv in streckkoden manuellt</label>
               <div className="flex gap-2 mt-1">
-                <Input value={manual} onChange={(e) => setManual(e.target.value)} inputMode="numeric" pattern="[0-9]*" placeholder="t.ex. 7311170010014" className="rounded-none" />
+                <Input value={manual} onChange={(e) => setManual(e.target.value)} inputMode="numeric" pattern="[0-9]*" placeholder="t.ex. 7311170010014" className="rounded-none" autoFocus={false} />
                 <button onClick={() => manual && lookupBarcode(manual)} className="px-3 bg-primary text-primary-foreground text-sm font-bold">Sök</button>
               </div>
             </div>
