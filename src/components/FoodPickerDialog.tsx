@@ -29,7 +29,7 @@ interface FoodPickerDialogProps {
   hideRecipes?: boolean;
 }
 
-type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe"; servings?: number };
+type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string };
 
 export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes }: FoodPickerDialogProps) {
   const [query, setQuery] = useState("");
@@ -108,6 +108,57 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     return () => { cancelled = true; };
   }, [open, query, userId, hideRecipes]);
 
+  // Open Food Facts search (debounced)
+  const [offResults, setOffResults] = useState<FoodRow[]>([]);
+  const [offLoading, setOffLoading] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const term = query.trim();
+    if (term.length < 3) { setOffResults([]); return; }
+    let cancelled = false;
+    setOffLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=20&fields=code,product_name,product_name_sv,brands,nutriments`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (cancelled) return;
+        const rows: FoodRow[] = [];
+        for (const p of json?.products || []) {
+          const name = p.product_name_sv || p.product_name;
+          if (!name) continue;
+          const n = p.nutriments || {};
+          const kcal = Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0);
+          if (!kcal) continue;
+          const brand = (p.brands || "").split(",")[0]?.trim() || "";
+          rows.push({
+            id: `off-${p.code}`,
+            name: brand ? `${name} (${brand})` : name,
+            brand,
+            source: "off",
+            kcal,
+            protein_g: Number(n.proteins_100g) || 0,
+            fat_g: Number(n.fat_100g) || 0,
+            carbs_g: Number(n.carbohydrates_100g) || 0,
+          });
+        }
+        setOffResults(rows);
+      } catch {
+        if (!cancelled) setOffResults([]);
+      } finally {
+        if (!cancelled) setOffLoading(false);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, query]);
+
+  const combinedResults = useMemo(() => {
+    if (!query.trim()) return results;
+    const seen = new Set(results.map(r => r.name.toLowerCase()));
+    const extras = offResults.filter(r => !seen.has(r.name.toLowerCase()));
+    return [...results, ...extras];
+  }, [results, offResults, query]);
+
   function pick(row: FoodRow) {
     setSelected(row);
     setAmount(row.source === "recipe" ? "1" : "100");
@@ -134,13 +185,35 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     };
   }, [selected, amount, unit]);
 
-  function confirm() {
+  async function confirm() {
     if (!selected || !computed) return;
+    const a = parseFloat(amount.replace(",", ".")) || 0;
+
+    // If picked from Open Food Facts, save to custom_foods first
+    let outSource: PickedItem["source"] = selected.source === "off" ? "custom_food" : selected.source;
+    let outId = selected.id;
+    if (selected.source === "off") {
+      try {
+        const { data, error } = await supabase.from("custom_foods").insert({
+          user_id: userId,
+          name: selected.name,
+          kcal: selected.kcal,
+          protein_g: selected.protein_g,
+          fat_g: selected.fat_g,
+          carbs_g: selected.carbs_g,
+        }).select("id").single();
+        if (error) throw error;
+        outId = data!.id;
+      } catch (e) {
+        console.error("Failed to save OFF item to bank", e);
+      }
+    }
+
     onPick({
-      source: selected.source,
-      id: selected.id,
+      source: outSource,
+      id: outId,
       name: selected.name,
-      amount: parseFloat(amount.replace(",", ".")) || 0,
+      amount: a,
       unit: selected.source === "recipe" ? "portion" : unit,
       kcal: computed.kcal,
       protein_g: computed.protein_g,
@@ -182,21 +255,22 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             </div>
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && results.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
+              {!loading && combinedResults.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
               <ul className="divide-y divide-border">
-                {results.map((r) => (
+                {combinedResults.map((r) => (
                   <li key={`${r.source}-${r.id}`}>
                     <button onClick={() => pick(r)} className="w-full text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{r.name}</p>
                         <p className="text-[11px] text-muted-foreground">
-                          {r.source === "recipe" ? "Recept" : r.source === "custom_food" ? "Eget" : r.group_name || "Livsmedel"} · {Math.round(r.kcal)} kcal / {r.source === "recipe" ? "portion" : "100 g"}
+                          {r.source === "recipe" ? "Recept" : r.source === "custom_food" ? "Eget" : r.source === "off" ? "Open Food Facts" : r.group_name || "Livsmedel"} · {Math.round(r.kcal)} kcal / {r.source === "recipe" ? "portion" : "100 g"}
                         </p>
                       </div>
                       <Plus className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
                     </button>
                   </li>
                 ))}
+                {offLoading && <li className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></li>}
               </ul>
             </div>
           </>
