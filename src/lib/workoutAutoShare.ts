@@ -154,7 +154,8 @@ export async function autoShareCompletion(
 
     const caption = buildWorkoutSummaryCaption(plan, (completion || {}) as any, week, day);
 
-    // Dedupe: look up existing auto-share post
+    // Idempotent upsert: unique index (user_id, workout_week, workout_day) guarantees one row.
+    // Update caption if a post already exists, otherwise insert + notify.
     const { data: existing } = await supabase
       .from("social_posts")
       .select("id")
@@ -169,20 +170,24 @@ export async function autoShareCompletion(
         .update({ caption, visibility: "friends" })
         .eq("id", existing.id);
     } else {
-      await supabase.from("social_posts").insert({
-        user_id: userId,
-        caption,
-        visibility: "friends",
-        workout_week: week,
-        workout_day: day,
-      });
-      // Notify friends via the new social-post push channel
-      supabase.functions
-        .invoke("notify-social-post", {
-          body: { caption, visibility: "friends" },
-        })
-        .catch(() => {});
+      const { error } = await supabase.from("social_posts").upsert(
+        {
+          user_id: userId,
+          caption,
+          visibility: "friends",
+          workout_week: week,
+          workout_day: day,
+        },
+        { onConflict: "user_id,workout_week,workout_day", ignoreDuplicates: true }
+      );
+      // Only notify if we actually inserted (no unique-violation race)
+      if (!error) {
+        supabase.functions
+          .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
+          .catch(() => {});
+      }
     }
+
   } catch {
     // best-effort, swallow
   }
