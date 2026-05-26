@@ -217,6 +217,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           </div>
         )}
       </DialogContent>
+
+      <BarcodeScannerDialog open={barcodeOpen} onOpenChange={setBarcodeOpen} onPick={(item) => { setBarcodeOpen(false); onPick(item); }} />
+      <AIFoodScanDialog open={aiOpen} onOpenChange={setAiOpen} onPick={(item) => { setAiOpen(false); onPick(item); }} />
     </Dialog>
   );
 }
