@@ -80,18 +80,21 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
   }, [postId]);
 
   const loadInteractions = async (pid: string) => {
-    const [{ data: likes }, { data: cmts }, { data: workoutLikes }, { data: workoutComments }] = await Promise.all([
+    // Only load interactions tied directly to this social_post via post_id.
+    // Legacy workout_comments/workout_likes are keyed on (user_id, week, day)
+    // which collides across plans — a Feb comment on "Vecka 1 Tis" would bleed
+    // onto a new plan's "Vecka 1 Tis" post. New comments are dual-written, so
+    // social_post_* is the source of truth going forward.
+    const [{ data: likes }, { data: cmts }] = await Promise.all([
       supabase.from("social_post_likes").select("id, user_id").eq("post_id", pid),
       supabase.from("social_post_comments").select("id, user_id, comment, created_at").eq("post_id", pid).order("created_at", { ascending: true }),
-      supabase.from("workout_likes").select("id, user_id, target_user_id, week, day, created_at").eq("target_user_id", userId).eq("week", week).eq("day", day),
-      supabase.from("workout_comments").select("id, target_user_id, week, day, author_id, comment, created_at, plan_id").eq("target_user_id", userId).eq("week", week).eq("day", day),
     ]);
-    const mergedLikes = mergeWorkoutLikes((workoutLikes || []) as any, (likes || []).map((l: any) => ({ id: `social:${l.id}`, user_id: l.user_id, target_user_id: userId, week, day })));
-    const mergedComments = mergeWorkoutComments((workoutComments || []).map((c: any) => ({ ...c, user_id: c.author_id })), (cmts || []).map((c: any) => ({ ...c, id: `social:${c.id}`, target_user_id: userId, week, day, author_id: c.user_id, plan_id: null, user_id: c.user_id })));
-    setLikeCount(mergedLikes.length);
-    setILiked(mergedLikes.some((l: any) => l.user_id === viewerId));
-    setComments(mergedComments.map((c: any) => ({ id: c.id, user_id: c.author_id || c.user_id, comment: c.comment, created_at: c.created_at })) as Comment[]);
-    const ids = [...new Set([...mergedLikes.map((l: any) => l.user_id), ...mergedComments.map((c: any) => c.author_id || c.user_id)])];
+    const likeRows = (likes || []) as any[];
+    const commentRows = (cmts || []) as any[];
+    setLikeCount(likeRows.length);
+    setILiked(likeRows.some((l) => l.user_id === viewerId));
+    setComments(commentRows.map((c) => ({ id: `social:${c.id}`, user_id: c.user_id, comment: c.comment, created_at: c.created_at })));
+    const ids = [...new Set([...likeRows.map((l) => l.user_id), ...commentRows.map((c) => c.user_id)])];
     if (ids.length > 0) {
       const { data: profs } = await supabase.from("profiles").select("user_id, nickname, avatar_url").in("user_id", ids);
       const map: Record<string, { nickname: string; avatar_url: string | null }> = {};
