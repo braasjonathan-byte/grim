@@ -106,6 +106,8 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
       setResult(data);
       setAmount(String(Math.round(data.portion_g || 100)));
       setUnit("g");
+      setProductName(data?.food?.name || "");
+      setSaveToBank(mode === "label");
     } catch (e: any) {
       toast({ title: "AI-analys misslyckades", description: e?.message, variant: "destructive" });
       setPhoto(null); startCam();
