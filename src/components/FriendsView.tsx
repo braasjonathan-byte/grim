@@ -400,12 +400,23 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       supabase.from("workout_completions").select("week, day, done, user_comment, logged_weights, logged_distance_km").eq("user_id", fid),
       supabase.from("workout_comments").select("*").eq("target_user_id", fid),
       supabase.from("workout_likes").select("*").eq("target_user_id", fid),
-      supabase.from("profiles").select("theme").eq("user_id", fid).single(),
+      supabase.from("profiles").select("theme, plan_start_date").eq("user_id", fid).single(),
     ]);
 
     // Apply friend's theme
     const friendTheme = (friendProfile as any)?.theme || "default";
     applyTheme(friendTheme);
+
+    // Compute today's week based on friend's plan_start_date
+    const friendPlanStart = (friendProfile as any)?.plan_start_date as string | null | undefined;
+    const todayMonday = getMondayDate(new Date());
+    let todayWeekFromPlan: number | null = null;
+    if (friendPlanStart) {
+      const planMonday = getMondayDate(parseISO(friendPlanStart));
+      const diffDays = Math.floor((todayMonday.getTime() - planMonday.getTime()) / 86400000);
+      todayWeekFromPlan = Math.floor(diffDays / 7) + 1;
+    }
+
 
     // Build virtual plan entries for standalone completions without matching plans
     const allPlans = [...(plans || [])];
