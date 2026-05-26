@@ -47,6 +47,10 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       setIsHonorary(!!data?.is_honorary);
     });
   }, [open, userId]);
+
+  // search
+  useEffect(() => {
+    if (!open) return;
     let cancelled = false;
     const term = query.trim();
     setLoading(true);
