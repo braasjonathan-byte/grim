@@ -11,7 +11,21 @@ interface Props {
   onPick: (item: PickedItem) => void;
 }
 
-const POPULAR = ["McDonald's", "Subway", "Burger King", "Max", "KFC", "Sibylla", "Pizza Hut", "Domino's", "Starbucks", "Espresso House"];
+const POPULAR = [
+  "McDonald's", "Subway", "Burger King", "Max", "KFC", "Sibylla", "Pizza Hut", "Domino's",
+  "Starbucks", "Espresso House", "Waynes Coffee", "Joe & The Juice", "7-Eleven", "Pressbyrån",
+  "O'Learys", "T.G.I. Friday's", "Hard Rock Cafe", "Vapiano", "Pan Pizza", "Pizzeria",
+  "Taco Bar", "Mama's", "Greklands Matsal", "Sushi Yama", "Ichiban Sushi", "East",
+  "Wok House", "Szechuan", "Pong", "Bamboo", "Indian Garden", "Curry House", "Holy Cow",
+  "Hamburger Börs", "Steakhouse", "Texas Longhorn", "The Barn", "Rolfs Kök",
+  "Brasserie", "Bistro", "Gastrogate", "Kunglig", "Prinsen", "Operakällaren",
+  "Lidl", "Aldi", "Netto", "Willys", "ICA", "Coop", "Hemköp", "City Gross",
+  "Matsmart", "Mathem", "HelloFresh", "Wolt", "Foodora", "Uber Eats",
+  "Apoteket", "Hälsokost", "Gymgrossisten", "Proteinbolaget", "Kungliga",
+  "Nocco", "Barebells", "Oatly", "Valio", "Arla", "Skånemejerier", "Fazer",
+  "Coca-Cola", "Pepsi", "Red Bull", "Monster", "Vitamin Well", "Powerade",
+  "Fanta", "Sprite", "Zingo", "Schweppes", "Loka", "Ramlösa", "Vichy",
+];
 
 interface OFFItem {
   code: string;
