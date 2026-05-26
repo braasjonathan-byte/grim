@@ -279,10 +279,37 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         isHonorary={isHonorary}
         onCreateOwn={() => setRecipeOpen(true)}
         onPick={(item) => {
-          const meal = curatedTargetMeal || allSlots[0] || "middag";
-          addLog(meal, item);
+          if (curatedTargetMeal) {
+            addLog(curatedTargetMeal, item);
+          } else {
+            setPendingRecipe(item);
+            setCuratedOpen(false);
+          }
         }}
       />
+
+      {pendingRecipe && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60" onClick={() => setPendingRecipe(null)}>
+          <div className="bg-card border border-border w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <p className="font-serif text-lg">Lägg till i måltid</p>
+              <p className="text-xs text-muted-foreground truncate">{pendingRecipe.name}</p>
+            </div>
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+              {allSlots.map((meal) => (
+                <button
+                  key={meal}
+                  onClick={() => { const it = pendingRecipe; setPendingRecipe(null); addLog(meal, it); }}
+                  className="w-full text-left px-3 py-3 border border-input text-sm font-bold capitalize hover:bg-accent"
+                >
+                  {meal}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setPendingRecipe(null)} className="w-full py-2 text-xs text-muted-foreground">Avbryt</button>
+          </div>
+        </div>
+      )}
 
       <NutritionGoalsDialog open={goalsOpen} onOpenChange={setGoalsOpen} userId={userId} onSaved={load} />
       <MealNameDialog
