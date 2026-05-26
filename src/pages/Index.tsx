@@ -570,6 +570,7 @@ const Index = () => {
   const socialBadge = friendActivityCount + unreadChats + unreadPosts + unreadAnnouncements;
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
+  { key: "nutrition", icon: Apple, label: "Kost" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "social", icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg" }];
