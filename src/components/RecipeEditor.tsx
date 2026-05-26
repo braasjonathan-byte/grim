@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Plus, Globe, Lock } from "lucide-react";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
+import { RECIPE_CATEGORIES } from "@/data/curatedRecipes";
 
 interface RecipeEditorProps {
   open: boolean;
@@ -23,12 +24,13 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
   const [instructions, setInstructions] = useState("");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [visibility, setVisibility] = useState<"private" | "public">("private");
+  const [category, setCategory] = useState<string>("middag");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   function reset() {
-    setName(""); setServings("4"); setInstructions(""); setIngredients([]); setVisibility("private");
+    setName(""); setServings("4"); setInstructions(""); setIngredients([]); setVisibility("private"); setCategory("middag");
   }
 
   const totalKcal = ingredients.reduce((s, i) => s + i.kcal, 0);
@@ -49,12 +51,13 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
       servings: portions,
       instructions: instructions.trim() || null,
       visibility,
+      category,
       kcal_per_serving: totalKcal / portions,
       fat_g_per_serving: totalFat / portions,
       protein_g_per_serving: totalProtein / portions,
       carbs_g_per_serving: totalCarbs / portions,
       ingredients: ingredients as any,
-    });
+    } as any);
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Recept sparat" });
@@ -91,6 +94,22 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
               </div>
             </div>
           </div>
+
+          <div>
+            <label className="text-xs font-medium">Kategori</label>
+            <div className="flex gap-1 flex-wrap">
+              {RECIPE_CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`px-2 py-1.5 text-[11px] font-medium border ${category === c ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
 
           <div>
             <div className="flex items-center justify-between mb-1">

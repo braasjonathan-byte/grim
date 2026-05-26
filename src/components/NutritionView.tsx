@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, BookOpen, Trash2, Pencil, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, BookOpen, Trash2, Pencil, GripVertical, ChefHat } from "lucide-react";
 import MacroRings from "./MacroRings";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
 import MealNameDialog from "./MealNameDialog";
+import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-interface Props { userId: string }
+interface Props { userId: string; isHonorary?: boolean }
 
 const DEFAULT_SLOTS = ["frukost", "lunch", "middag", "mellanmål"];
 
@@ -92,13 +93,15 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
   );
 }
 
-export default function NutritionView({ userId }: Props) {
+export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [date, setDate] = useState(() => new Date());
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
   const [slots, setSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [picker, setPicker] = useState<string | null>(null);
   const [recipeOpen, setRecipeOpen] = useState(false);
+  const [curatedOpen, setCuratedOpen] = useState(false);
+  const [curatedTargetMeal, setCuratedTargetMeal] = useState<string | null>(null);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [addNameOpen, setAddNameOpen] = useState(false);
   const [renameIdx, setRenameIdx] = useState<number | null>(null);
@@ -183,16 +186,17 @@ export default function NutritionView({ userId }: Props) {
   }
 
   async function addLog(meal: string, item: PickedItem) {
+    const isCurated = item.source === "recipe" && typeof item.id === "string" && item.id.startsWith("curated:");
     const { error } = await supabase.from("meal_logs").insert({
       user_id: userId, log_date: dateKey, meal_type: meal, item_name: item.name,
       amount: item.amount, unit: item.unit,
       kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g,
       food_id: item.source === "food" ? item.id : null,
       custom_food_id: item.source === "custom_food" ? item.id : null,
-      recipe_id: item.source === "recipe" ? item.id : null,
+      recipe_id: item.source === "recipe" && !isCurated ? item.id : null,
     });
     if (error) toast({ title: "Fel", description: error.message, variant: "destructive" });
-    else { setPicker(null); load(); }
+    else { setPicker(null); setCuratedTargetMeal(null); setCuratedOpen(false); load(); }
   }
 
   async function removeLog(id: string) {
@@ -221,14 +225,18 @@ export default function NutritionView({ userId }: Props) {
       <div className="border border-border bg-card p-4 space-y-4">
         <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
 
-        <div className="flex gap-2">
-          <button onClick={() => setGoalsOpen(true)} className="flex-1 flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => setGoalsOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
             <Target className="w-3 h-3" /> Mål
           </button>
-          <button onClick={() => setRecipeOpen(true)} className="flex-1 flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
-            <BookOpen className="w-3 h-3" /> Nytt recept
+          <button onClick={() => setRecipeOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+            <BookOpen className="w-3 h-3" /> Nytt
+          </button>
+          <button onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+            <ChefHat className="w-3 h-3" /> Färdiga
           </button>
         </div>
+
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={slots} strategy={verticalListSortingStrategy}>
@@ -262,6 +270,16 @@ export default function NutritionView({ userId }: Props) {
 
       <FoodPickerDialog open={!!picker} onOpenChange={(v) => !v && setPicker(null)} userId={userId} onPick={(item) => picker && addLog(picker, item)} />
       <RecipeEditor open={recipeOpen} onOpenChange={setRecipeOpen} userId={userId} onSaved={load} />
+      <CuratedRecipesDialog
+        open={curatedOpen}
+        onOpenChange={(v) => { setCuratedOpen(v); if (!v) setCuratedTargetMeal(null); }}
+        isHonorary={isHonorary}
+        onPick={(item) => {
+          const meal = curatedTargetMeal || allSlots[0] || "middag";
+          addLog(meal, item);
+        }}
+      />
+
       <NutritionGoalsDialog open={goalsOpen} onOpenChange={setGoalsOpen} userId={userId} onSaved={load} />
       <MealNameDialog
         open={addNameOpen}

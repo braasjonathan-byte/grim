@@ -1114,6 +1114,7 @@ export type Database = {
       recipes: {
         Row: {
           carbs_g_per_serving: number
+          category: string | null
           created_at: string
           fat_g_per_serving: number
           id: string
@@ -1129,6 +1130,7 @@ export type Database = {
         }
         Insert: {
           carbs_g_per_serving?: number
+          category?: string | null
           created_at?: string
           fat_g_per_serving?: number
           id?: string
@@ -1144,6 +1146,7 @@ export type Database = {
         }
         Update: {
           carbs_g_per_serving?: number
+          category?: string | null
           created_at?: string
           fat_g_per_serving?: number
           id?: string
