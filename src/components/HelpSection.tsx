@@ -46,6 +46,22 @@ const categories: HelpCategory[] = [
     ],
   },
   {
+    title: "Kost & måltider",
+    icon: Apple,
+    tips: [
+      "Logga måltider och följ kalorier, protein, fett och kolhydrater dagligen.",
+      "Sätt egna mål för energi och makron via 'Mål' – eller använd kalorikalkylatorn under Verktyg.",
+      "Tryck '+ Lägg till' i en måltid för att söka livsmedel, skanna streckkod, hitta restaurangmat eller lägga in eget livsmedel.",
+      "Hedersmedlemmar kan AI-skanna näringsinnehåll från en bild på en innehållsförteckning.",
+      "Bläddra mellan dagar med pilarna i toppen – tryck 'Gå till idag' för att hoppa tillbaka.",
+      "Skapa egna måltider (t.ex. 'Pre-workout'), byt namn eller dra för att sortera om dem.",
+      "Recept-knappen ger dig 200+ träningsanpassade svenska recept i kategorier.",
+      "Skapa egna recept med ingredienser – appen räknar ut kalorier och makron per portion automatiskt.",
+      "När du lägger till ett recept väljer du antal portioner – makrona räknas om direkt.",
+    ],
+  },
+
+  {
     title: "Kroppsviktsövningar",
     icon: Weight,
     tips: [
