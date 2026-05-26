@@ -14,14 +14,14 @@ interface Props {
 
 export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick }: Props) {
   const [query, setQuery] = useState("");
-  const [cat, setCat] = useState<string>("frukost");
+  const [cat, setCat] = useState<string>("alla");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [portions, setPortions] = useState("1");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CURATED_RECIPES.filter((r) => r.category === cat && (q === "" || r.name.toLowerCase().includes(q)));
+    return CURATED_RECIPES.filter((r) => (cat === "alla" || r.category === cat) && (q === "" || r.name.toLowerCase().includes(q)));
   }, [query, cat]);
 
   function pick(r: CuratedRecipe) {
@@ -92,7 +92,13 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
               <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök recept…" className="pl-9 rounded-none" />
             </div>
-            <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
+            <div className="flex flex-wrap gap-1 pb-1">
+              <button
+                onClick={() => setCat("alla")}
+                className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap border ${cat === "alla" ? "bg-primary text-primary-foreground border-primary" : "border-input bg-background"}`}
+              >
+                Alla
+              </button>
               {RECIPE_CATEGORIES.map((c) => (
                 <button
                   key={c}
