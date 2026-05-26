@@ -14,14 +14,14 @@ interface Props {
 
 export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick }: Props) {
   const [query, setQuery] = useState("");
-  const [cat, setCat] = useState<string>("frukost");
+  const [cat, setCat] = useState<string>("alla");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [portions, setPortions] = useState("1");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CURATED_RECIPES.filter((r) => r.category === cat && (q === "" || r.name.toLowerCase().includes(q)));
+    return CURATED_RECIPES.filter((r) => (cat === "alla" || r.category === cat) && (q === "" || r.name.toLowerCase().includes(q)));
   }, [query, cat]);
 
   function pick(r: CuratedRecipe) {
