@@ -1,11 +1,18 @@
 import { driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 
-export type TourVariant = "short" | "long";
+export type TourVariant =
+  | "short"
+  | "long"
+  | "nutrition"
+  | "workout"
+  | "stats"
+  | "social"
+  | "tools";
 
 type StepMeta = {
   /** Switch the bottom-nav tab before showing this step. */
-  tab?: "workout" | "stats" | "social" | "calc";
+  tab?: "workout" | "nutrition" | "stats" | "social" | "calc";
   /** When tab is 'social', also switch the SocialView sub-tab. */
   subtab?: "feed" | "friends" | "chat" | "groups";
   /** When tab is 'calc', expand a section in ToolsTab and scroll to it. */
@@ -13,6 +20,7 @@ type StepMeta = {
 };
 
 type TourStep = { step: DriveStep; meta?: StepMeta };
+
 
 // ════════════════════════════════════════════════════════════
 // SHORT TOUR
