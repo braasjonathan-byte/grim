@@ -186,14 +186,15 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   }
 
   async function addLog(meal: string, item: PickedItem) {
-    const isCurated = item.source === "recipe" && typeof item.id === "string" && item.id.startsWith("curated:");
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUuid = typeof item.id === "string" && UUID_RE.test(item.id);
     const { error } = await supabase.from("meal_logs").insert({
       user_id: userId, log_date: dateKey, meal_type: meal, item_name: item.name,
       amount: item.amount, unit: item.unit,
       kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g,
-      food_id: item.source === "food" ? item.id : null,
-      custom_food_id: item.source === "custom_food" ? item.id : null,
-      recipe_id: item.source === "recipe" && !isCurated ? item.id : null,
+      food_id: item.source === "food" && isUuid ? item.id : null,
+      custom_food_id: item.source === "custom_food" && isUuid ? item.id : null,
+      recipe_id: item.source === "recipe" && isUuid ? item.id : null,
     });
     if (error) toast({ title: "Fel", description: error.message, variant: "destructive" });
     else { setPicker(null); setCuratedTargetMeal(null); setCuratedOpen(false); load(); }
