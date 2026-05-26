@@ -116,7 +116,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
               {(Object.keys(GOAL_LABEL) as GoalType[]).map((k) => <option key={k} value={k}>{GOAL_LABEL[k]}</option>)}
             </select>
           </div>
-          <button onClick={recalc} className="w-full py-2 border border-primary text-primary text-sm font-bold">Räkna ut mina makros</button>
+          <button onClick={() => computeMacros(false)} className="w-full py-2 border border-primary text-primary text-sm font-bold">Räkna ut mina makros</button>
           <div className="grid grid-cols-4 gap-2">
             <div><label className="text-[10px] font-medium">Kcal</label><Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
             <div><label className="text-[10px] font-medium">Protein g</label><Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
