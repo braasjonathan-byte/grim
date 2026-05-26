@@ -49,10 +49,31 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     if (found) return;
     setScanning(true);
     try {
-      // Manually request the back camera first so the live feed shows up
-      // even if zxing's auto-device selection picks the wrong one.
+      // Pick the standard back camera (not ultra-wide / telefoto).
+      // Many phones expose flera bakre linser där ultra-wide ofta är default.
+      let deviceId: string | undefined;
+      try {
+        // Be om kamerabehörighet först så att enhetsetiketter blir tillgängliga.
+        const tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+        tmp.getTracks().forEach((t) => t.stop());
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter((d) => d.kind === "videoinput");
+        const back = cams.filter((d) => /back|rear|environment|bak|trås/i.test(d.label));
+        const pool = back.length ? back : cams;
+        // Filtrera bort ultra-wide / tele / makro / depth – välj "vanlig" / wide (1x).
+        const isUltra = (l: string) => /ultra|ultrawide|ultra-wide|0\.5x|0,5x|fisheye/i.test(l);
+        const isTele = (l: string) => /tele|telephoto|2x|3x|5x|10x/i.test(l);
+        const isAux = (l: string) => /macro|depth|monochrome|ir|infrared/i.test(l);
+        const standard =
+          pool.find((d) => !isUltra(d.label) && !isTele(d.label) && !isAux(d.label) && /(^|\b)(wide|1x|main|standard|huvud)\b/i.test(d.label)) ||
+          pool.find((d) => !isUltra(d.label) && !isTele(d.label) && !isAux(d.label));
+        deviceId = standard?.deviceId;
+      } catch {}
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        video: deviceId
+          ? { deviceId: { exact: deviceId } }
+          : { facingMode: { ideal: "environment" } },
         audio: false,
       });
       streamRef.current = stream;
