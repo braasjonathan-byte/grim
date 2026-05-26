@@ -6,6 +6,16 @@ const WHATS_NEW_KEY = "gymberget_last_seen_changelog";
 
 const changelog = [
   {
+    version: "1.6.0",
+    date: "2026-05-26",
+    items: [
+      "🍎 Kost har flyttat in i appen – egen flik för måltidsloggning, makroringar och kalorimål.",
+      "📷 Skanna streckkoder, sök restaurangmat, lägg till egna livsmedel eller AI-skanna näringsinnehåll (hedersmedlemmar).",
+      "👨‍🍳 200+ träningsanpassade svenska recept fördelade på frukost, lunch, middag, mellanmål, pre/post-workout, smoothie och dessert.",
+      "🧭 Ny rundtur om kost – starta från Verktyg → Hjälp & tips eller via frågetecknet.",
+    ],
+  },
+  {
     version: "1.5.0",
     date: "2026-04-16",
     items: [
@@ -13,6 +23,7 @@ const changelog = [
       "🔄 Cirkelträning – skapa cirkelpass med flera rundor, individuella tider per övning och inbyggd vila. Starta timern och följ med runda för runda med automatisk nedräkning.",
     ],
   },
+
   {
     version: "1.4.0",
     date: "2026-04-12",
