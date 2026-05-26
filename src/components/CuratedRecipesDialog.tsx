@@ -121,7 +121,18 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
           </>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
-            <button onClick={() => setSelected(null)} className="text-xs font-bold text-primary">‹ Tillbaka</button>
+            <div className="flex items-center justify-between">
+              <button onClick={() => setSelected(null)} className="text-xs font-bold text-primary">‹ Tillbaka</button>
+              <div className="flex items-center gap-1">
+                <button onClick={goPrev} className="p-1.5 hover:bg-accent border border-border" title="Föregående recept">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] text-muted-foreground px-1 tabular-nums">{selectedIndex + 1} / {filtered.length}</span>
+                <button onClick={goNext} className="p-1.5 hover:bg-accent border border-border" title="Nästa recept">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
             <div className="bg-muted/40 p-2 grid grid-cols-4 gap-1 text-center">
               <div><p className="text-[9px] text-muted-foreground">Kcal/p</p><p className="text-sm font-bold tabular-nums">{selected.kcal_per_serving}</p></div>
               <div><p className="text-[9px] text-muted-foreground">Protein</p><p className="text-sm font-bold tabular-nums">{selected.protein_g_per_serving}g</p></div>
