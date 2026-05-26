@@ -1,14 +1,12 @@
 // Nutrition helpers: BMR, macro distributions, common unit conversions.
 
 export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
-export type GoalType = "strength" | "maintain" | "endurance" | "custom";
+export type GoalType =
+  | "lose_fast" | "lose_slow" | "recomp" | "maintain"
+  | "lean_bulk" | "bulk" | "strength" | "power" | "endurance" | "keto" | "custom";
 
 export const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
-  sedentary: 1.2,
-  light: 1.375,
-  moderate: 1.55,
-  active: 1.725,
-  very_active: 1.9,
+  sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9,
 };
 
 export const ACTIVITY_LABEL: Record<ActivityLevel, string> = {
@@ -20,9 +18,16 @@ export const ACTIVITY_LABEL: Record<ActivityLevel, string> = {
 };
 
 export const GOAL_LABEL: Record<GoalType, string> = {
-  strength: "Bli starkare",
+  lose_fast: "Gå ner i vikt snabbt",
+  lose_slow: "Gå ner i vikt långsamt",
+  recomp: "Kroppsrekomp (bygg muskler & förlora fett)",
   maintain: "Bibehålla vikt",
+  lean_bulk: "Lean bulk (lugn muskelökning)",
+  bulk: "Bygg muskelmassa (bulk)",
+  strength: "Bli starkare",
+  power: "Explosiv styrka / power",
   endurance: "Optimera uthållighet",
+  keto: "Keto / lågkolhydrat",
   custom: "Egna makros",
 };
 
@@ -36,38 +41,37 @@ export function calcTDEE(bmr: number, activity: ActivityLevel): number {
   return Math.round(bmr * ACTIVITY_FACTOR[activity]);
 }
 
-export interface MacroTargets {
-  kcal: number;
-  protein_g: number;
-  fat_g: number;
-  carbs_g: number;
-}
+export interface MacroTargets { kcal: number; protein_g: number; fat_g: number; carbs_g: number; }
 
-/**
- * Distribute kcal into macros depending on goal.
- * - strength: 2.0 g protein/kg, 25% fat, rest carbs (slight surplus)
- * - maintain: 1.6 g protein/kg, 30% fat, rest carbs
- * - endurance: 1.4 g protein/kg, 25% fat, rest carbs (carb-heavy)
- */
-export function distributeMacros(
-  tdee: number,
-  weightKg: number,
-  goal: GoalType,
-): MacroTargets {
-  let kcal = tdee;
-  let proteinPerKg = 1.6;
-  let fatPct = 0.3;
+const GOAL_PARAMS: Record<Exclude<GoalType, "custom" | "keto">, { kcalMult: number; proteinPerKg: number; fatPct: number }> = {
+  lose_fast:  { kcalMult: 0.80, proteinPerKg: 2.4, fatPct: 0.30 },
+  lose_slow:  { kcalMult: 0.90, proteinPerKg: 2.2, fatPct: 0.28 },
+  recomp:     { kcalMult: 1.00, proteinPerKg: 2.2, fatPct: 0.28 },
+  maintain:   { kcalMult: 1.00, proteinPerKg: 1.6, fatPct: 0.30 },
+  lean_bulk:  { kcalMult: 1.08, proteinPerKg: 2.0, fatPct: 0.25 },
+  bulk:       { kcalMult: 1.15, proteinPerKg: 2.0, fatPct: 0.25 },
+  strength:   { kcalMult: 1.05, proteinPerKg: 2.0, fatPct: 0.25 },
+  power:      { kcalMult: 1.05, proteinPerKg: 1.8, fatPct: 0.25 },
+  endurance:  { kcalMult: 1.00, proteinPerKg: 1.4, fatPct: 0.25 },
+};
 
-  if (goal === "strength") { kcal = Math.round(tdee * 1.05); proteinPerKg = 2.0; fatPct = 0.25; }
-  if (goal === "endurance") { proteinPerKg = 1.4; fatPct = 0.25; }
-  if (goal === "maintain") { proteinPerKg = 1.6; fatPct = 0.3; }
-  if (goal === "custom") { return { kcal, protein_g: Math.round((kcal * 0.25) / 4), fat_g: Math.round((kcal * 0.3) / 9), carbs_g: Math.round((kcal * 0.45) / 4) }; }
-
-  const protein_g = Math.round(proteinPerKg * weightKg);
-  const fat_g = Math.round((kcal * fatPct) / 9);
-  const proteinKcal = protein_g * 4;
-  const fatKcal = fat_g * 9;
-  const carbs_g = Math.max(0, Math.round((kcal - proteinKcal - fatKcal) / 4));
+export function distributeMacros(tdee: number, weightKg: number, goal: GoalType): MacroTargets {
+  if (goal === "custom") {
+    const kcal = tdee;
+    return { kcal, protein_g: Math.round((kcal * 0.25) / 4), fat_g: Math.round((kcal * 0.3) / 9), carbs_g: Math.round((kcal * 0.45) / 4) };
+  }
+  if (goal === "keto") {
+    const kcal = tdee;
+    const protein_g = Math.round(2.0 * weightKg);
+    const carbs_g = Math.round((kcal * 0.05) / 4);
+    const fat_g = Math.max(0, Math.round((kcal - protein_g * 4 - carbs_g * 4) / 9));
+    return { kcal, protein_g, fat_g, carbs_g };
+  }
+  const p = GOAL_PARAMS[goal];
+  const kcal = Math.round(tdee * p.kcalMult);
+  const protein_g = Math.round(p.proteinPerKg * weightKg);
+  const fat_g = Math.round((kcal * p.fatPct) / 9);
+  const carbs_g = Math.max(0, Math.round((kcal - protein_g * 4 - fat_g * 9) / 4));
   return { kcal, protein_g, fat_g, carbs_g };
 }
 
