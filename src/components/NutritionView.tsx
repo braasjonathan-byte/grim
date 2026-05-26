@@ -289,7 +289,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       />
 
       {pendingRecipe && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60" onClick={() => setPendingRecipe(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setPendingRecipe(null)}>
           <div className="bg-card border border-border w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div>
               <p className="font-serif text-lg">Lägg till i måltid</p>
