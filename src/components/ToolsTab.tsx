@@ -397,6 +397,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         </AlertDialogContent>
       </AlertDialog>
 
+      <Suspense fallback={null}>
+        <DisclaimerSection />
+      </Suspense>
+
       <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
     </div>
   );
