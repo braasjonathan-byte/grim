@@ -253,7 +253,87 @@ const LONG: TourStep[] = [
     },
   },
 
-  // ── Avsnitt 4: Socialt ──
+
+  // ── Avsnitt 4: Kost & makron ──
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      popover: {
+        title: "Avsnitt 4 av 8 – Kost",
+        description:
+          "Logga måltider, följ makron och hitta inspiration bland 200+ träningsanpassade recept – direkt i appen.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="tab-nutrition"]',
+      popover: {
+        title: "Kost-fliken",
+        description:
+          "Här hittar du allt om mat: dagens måltider, kalorier, makron, recept och dina mål.",
+        side: "top",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-rings"]',
+      popover: {
+        title: "Makroringar",
+        description:
+          "Ringarna visar dagens kalorier, protein, fett och kolhydrater jämfört med dina mål. Bläddra mellan dagar med pilarna.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-goals"]',
+      popover: {
+        title: "Sätt dina mål",
+        description:
+          "Använd kalorikalkylatorn eller ange manuellt. Du kan justera energi och makron när som helst.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-recipes"]',
+      popover: {
+        title: "Recept",
+        description:
+          "200+ färdiga svenska recept fördelat på frukost, lunch, middag, mellanmål, pre/post-workout, smoothie och dessert. Hedersmedlemmar låser upp alla.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      popover: {
+        title: "Lägg till livsmedel",
+        description:
+          "Inne i en måltid trycker du på + för att söka livsmedel, skanna streckkod, hitta restaurangmat, lägga in egna livsmedel manuellt – eller AI-skanna näringsinnehåll (hedersmedlemmar).",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-add-meal"]',
+      popover: {
+        title: "Anpassa dina måltider",
+        description:
+          "Lägg till egna måltider (t.ex. 'Pre-workout'), byt namn, dra för att sortera eller ta bort de du inte använder.",
+      },
+    },
+  },
+
+  // ── Avsnitt 5: Socialt ──
+
   {
     meta: { tab: "social", subtab: "feed" },
     step: {
