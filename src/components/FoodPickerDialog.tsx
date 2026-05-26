@@ -89,6 +89,17 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         }
       }
       for (const f of foodsR.data || []) list.push({ ...(f as any), source: "food" });
+      // Sort so names starting with the search term appear first
+      if (term) {
+        const lowerTerm = term.toLowerCase();
+        list.sort((a, b) => {
+          const aStarts = a.name.toLowerCase().startsWith(lowerTerm);
+          const bStarts = b.name.toLowerCase().startsWith(lowerTerm);
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+          return a.name.localeCompare(b.name, "sv");
+        });
+      }
       setResults(list);
       setLoading(false);
     })();
