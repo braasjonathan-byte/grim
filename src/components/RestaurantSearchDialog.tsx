@@ -214,17 +214,18 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  placeholder="Restaurang (t.ex. McDonald's)"
+                  value={item}
+                  onChange={(e) => setItem(e.target.value)}
+                  placeholder="Sök maträtt (t.ex. Big Mac)"
                   className="pl-9 rounded-none"
+                  autoFocus
                   onKeyDown={(e) => e.key === "Enter" && search(brand, item)}
                 />
               </div>
               <Input
-                value={item}
-                onChange={(e) => setItem(e.target.value)}
-                placeholder="Maträtt (valfritt, t.ex. Big Mac)"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                placeholder="Restaurang (valfritt)"
                 className="rounded-none"
                 onKeyDown={(e) => e.key === "Enter" && search(brand, item)}
               />
@@ -233,7 +234,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
               </button>
             </div>
 
-            {!brand && (
+            {!brand && !item && (
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Populära</p>
                 <div className="flex flex-wrap gap-1.5">
