@@ -49,9 +49,23 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     if (found) return;
     setScanning(true);
     try {
+      // Manually request the back camera first so the live feed shows up
+      // even if zxing's auto-device selection picks the wrong one.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", "true");
+        try { await video.play(); } catch {}
+      }
+
       const reader = new BrowserMultiFormatReader();
       readerRef.current = reader;
-      const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
+      const controls = await reader.decodeFromStream(stream, video!, (result) => {
         if (result) {
           const text = result.getText();
           if (/^\d{6,14}$/.test(text)) {
@@ -72,6 +86,9 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     try { controlsRef.current?.stop(); } catch {}
     controlsRef.current = null;
     readerRef.current = null;
+    try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
     setScanning(false);
   }
 
