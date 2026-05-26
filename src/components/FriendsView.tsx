@@ -400,12 +400,23 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       supabase.from("workout_completions").select("week, day, done, user_comment, logged_weights, logged_distance_km").eq("user_id", fid),
       supabase.from("workout_comments").select("*").eq("target_user_id", fid),
       supabase.from("workout_likes").select("*").eq("target_user_id", fid),
-      supabase.from("profiles").select("theme").eq("user_id", fid).single(),
+      supabase.from("profiles").select("theme, plan_start_date").eq("user_id", fid).single(),
     ]);
 
     // Apply friend's theme
     const friendTheme = (friendProfile as any)?.theme || "default";
     applyTheme(friendTheme);
+
+    // Compute today's week based on friend's plan_start_date
+    const friendPlanStart = (friendProfile as any)?.plan_start_date as string | null | undefined;
+    const todayMonday = getMondayDate(new Date());
+    let todayWeekFromPlan: number | null = null;
+    if (friendPlanStart) {
+      const planMonday = getMondayDate(parseISO(friendPlanStart));
+      const diffDays = Math.floor((todayMonday.getTime() - planMonday.getTime()) / 86400000);
+      todayWeekFromPlan = Math.floor(diffDays / 7) + 1;
+    }
+
 
     // Build virtual plan entries for standalone completions without matching plans
     const allPlans = [...(plans || [])];
@@ -478,11 +489,17 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             if (c.done) compMap[`${c.week}-${c.day}`] = true;
           }
         }
+        const todayWk = computeSingleWeek(
+          `${todayMonday.getFullYear()}-${String(todayMonday.getMonth() + 1).padStart(2, "0")}-${String(todayMonday.getDate()).padStart(2, "0")}`,
+          firstMonday,
+        );
         const latestDoneWeek = [...virtualWeeks].reverse().find((w) => {
           const wPlans = weekGroups.get(w) || [];
           return wPlans.some((p) => compMap[`${p.week}-${p.day}`]);
         });
-        setFriendCurrentWeek(latestDoneWeek ?? virtualWeeks[virtualWeeks.length - 1] ?? 1);
+        const preferredWeek = virtualWeeks.includes(todayWk) ? todayWk : null;
+        setFriendCurrentWeek(preferredWeek ?? latestDoneWeek ?? virtualWeeks[virtualWeeks.length - 1] ?? 1);
+
       } else {
         // Normal plan-based weeks (filter out week=0 from week list if mixed)
         setFriendPlans(allPlans);
@@ -499,7 +516,9 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           const weekPlans = allPlans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
           return weekPlans.some((p) => compMap[`${p.week}-${p.day}`]);
         });
-        setFriendCurrentWeek(latestDoneWeek ?? wks[wks.length - 1] ?? 1);
+        const preferredWeek = todayWeekFromPlan !== null && wks.includes(todayWeekFromPlan) ? todayWeekFromPlan : null;
+        setFriendCurrentWeek(preferredWeek ?? latestDoneWeek ?? wks[wks.length - 1] ?? 1);
+
       }
     }
 
