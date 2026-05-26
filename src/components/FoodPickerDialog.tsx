@@ -114,17 +114,25 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   useEffect(() => {
     if (!open) return;
     const term = query.trim();
-    if (term.length < 3) { setOffResults([]); return; }
+    if (term.length < 2) { setOffResults([]); return; }
     let cancelled = false;
     setOffLoading(true);
     const t = setTimeout(async () => {
       try {
-        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=20&fields=code,product_name,product_name_sv,brands,nutriments`;
-        const res = await fetch(url);
-        const json = await res.json();
+        const fields = "code,product_name,product_name_sv,brands,nutriments";
+        // Two parallel queries: free text + brand tag (so svenska varumärken som "Tyngre" hittas)
+        const url1 = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=50&sort_by=popularity_key&fields=${fields}`;
+        const url2 = `https://world.openfoodfacts.org/cgi/search.pl?action=process&json=1&page_size=50&sort_by=popularity_key&tagtype_0=brands&tag_contains_0=contains&tag_0=${encodeURIComponent(term)}&fields=${fields}`;
+        const [r1, r2] = await Promise.all([
+          fetch(url1).then(r => r.json()).catch(() => ({})),
+          fetch(url2).then(r => r.json()).catch(() => ({})),
+        ]);
         if (cancelled) return;
+        const seenCodes = new Set<string>();
         const rows: FoodRow[] = [];
-        for (const p of json?.products || []) {
+        for (const p of [...(r1?.products || []), ...(r2?.products || [])]) {
+          if (!p?.code || seenCodes.has(p.code)) continue;
+          seenCodes.add(p.code);
           const name = p.product_name_sv || p.product_name;
           if (!name) continue;
           const n = p.nutriments || {};
