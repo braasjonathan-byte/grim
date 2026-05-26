@@ -94,12 +94,20 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
         <DialogHeader>
           <DialogTitle className="font-serif flex items-center gap-2">
             <ChefHat className="w-5 h-5" />
-            {selected ? selected.name : "Färdiga recept"}
+            {selected ? selected.name : "Recept"}
           </DialogTitle>
         </DialogHeader>
 
         {!selected ? (
           <>
+            {onCreateOwn && (
+              <button
+                onClick={() => { onOpenChange(false); onCreateOwn(); }}
+                className="w-full flex items-center justify-center gap-2 py-2 border border-input text-xs font-bold"
+              >
+                <Plus className="w-3.5 h-3.5" /> Skapa eget recept
+              </button>
+            )}
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök recept…" className="pl-9 rounded-none" />
