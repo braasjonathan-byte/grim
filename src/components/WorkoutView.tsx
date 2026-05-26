@@ -5286,7 +5286,7 @@ const estimateCalories = (
                 return (
                   <button
                     key={dayName}
-                    onClick={() => setImportWorkoutTarget({ planId: "__new__", week: currentWeek, day: dayName })}
+                    onClick={() => { setEmptyDayName(""); setEmptyDayChoice({ week: currentWeek, day: dayName }); }}
                     className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                       isToday
                         ? "bg-warning/10 text-warning/80 border border-warning/30 hover:bg-warning/20"
