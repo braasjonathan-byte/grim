@@ -272,6 +272,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         open={curatedOpen}
         onOpenChange={(v) => { setCuratedOpen(v); if (!v) setCuratedTargetMeal(null); }}
         isHonorary={isHonorary}
+        onCreateOwn={() => setRecipeOpen(true)}
         onPick={(item) => {
           const meal = curatedTargetMeal || allSlots[0] || "middag";
           addLog(meal, item);
