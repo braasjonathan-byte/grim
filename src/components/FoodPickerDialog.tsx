@@ -255,21 +255,22 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             </div>
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && results.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
+              {!loading && combinedResults.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
               <ul className="divide-y divide-border">
-                {results.map((r) => (
+                {combinedResults.map((r) => (
                   <li key={`${r.source}-${r.id}`}>
                     <button onClick={() => pick(r)} className="w-full text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{r.name}</p>
                         <p className="text-[11px] text-muted-foreground">
-                          {r.source === "recipe" ? "Recept" : r.source === "custom_food" ? "Eget" : r.group_name || "Livsmedel"} · {Math.round(r.kcal)} kcal / {r.source === "recipe" ? "portion" : "100 g"}
+                          {r.source === "recipe" ? "Recept" : r.source === "custom_food" ? "Eget" : r.source === "off" ? "Open Food Facts" : r.group_name || "Livsmedel"} · {Math.round(r.kcal)} kcal / {r.source === "recipe" ? "portion" : "100 g"}
                         </p>
                       </div>
                       <Plus className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
                     </button>
                   </li>
                 ))}
+                {offLoading && <li className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></li>}
               </ul>
             </div>
           </>
