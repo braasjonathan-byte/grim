@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle, Share2, Repeat, Weight, Sparkles } from "lucide-react";
-import { startTour } from "@/lib/tour";
+import { ChevronDown, ChevronUp, Dumbbell, Users, BarChart3, Settings, Calculator, MessageCircle, Trophy, Calendar, HelpCircle, Share2, Repeat, Weight, Sparkles, Apple } from "lucide-react";
+import { startTour, type TourVariant } from "@/lib/tour";
+
 
 interface HelpCategory {
   title: string;
@@ -44,6 +45,22 @@ const categories: HelpCategory[] = [
       "Rader med flera övningar (separerade med '/' eller ';') delas upp automatiskt.",
     ],
   },
+  {
+    title: "Kost & måltider",
+    icon: Apple,
+    tips: [
+      "Logga måltider och följ kalorier, protein, fett och kolhydrater dagligen.",
+      "Sätt egna mål för energi och makron via 'Mål' – eller använd kalorikalkylatorn under Verktyg.",
+      "Tryck '+ Lägg till' i en måltid för att söka livsmedel, skanna streckkod, hitta restaurangmat eller lägga in eget livsmedel.",
+      "Hedersmedlemmar kan AI-skanna näringsinnehåll från en bild på en innehållsförteckning.",
+      "Bläddra mellan dagar med pilarna i toppen – tryck 'Gå till idag' för att hoppa tillbaka.",
+      "Skapa egna måltider (t.ex. 'Pre-workout'), byt namn eller dra för att sortera om dem.",
+      "Recept-knappen ger dig 200+ träningsanpassade svenska recept i kategorier.",
+      "Skapa egna recept med ingredienser – appen räknar ut kalorier och makron per portion automatiskt.",
+      "När du lägger till ett recept väljer du antal portioner – makrona räknas om direkt.",
+    ],
+  },
+
   {
     title: "Kroppsviktsövningar",
     icon: Weight,
@@ -210,6 +227,25 @@ const HelpSection = () => {
             Lång rundtur
           </button>
         </div>
+        <p className="text-[10px] text-muted-foreground pt-1">Eller starta tur för ett specifikt område:</p>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { v: "workout", label: "Träning", Icon: Dumbbell },
+            { v: "nutrition", label: "Kost", Icon: Apple },
+            { v: "stats", label: "Statistik", Icon: BarChart3 },
+            { v: "social", label: "Social", Icon: Users },
+            { v: "tools", label: "Verktyg", Icon: Calculator },
+          ] as { v: TourVariant; label: string; Icon: React.ElementType }[]).map(({ v, label, Icon }) => (
+            <button
+              key={v}
+              onClick={() => startTour(v)}
+              className="flex items-center justify-center gap-1.5 border border-border text-foreground text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
+            >
+              <Icon className="w-3.5 h-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+
       </div>
 
       <div className="divide-y divide-border">

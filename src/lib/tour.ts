@@ -1,11 +1,18 @@
 import { driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 
-export type TourVariant = "short" | "long";
+export type TourVariant =
+  | "short"
+  | "long"
+  | "nutrition"
+  | "workout"
+  | "stats"
+  | "social"
+  | "tools";
 
 type StepMeta = {
   /** Switch the bottom-nav tab before showing this step. */
-  tab?: "workout" | "stats" | "social" | "calc";
+  tab?: "workout" | "nutrition" | "stats" | "social" | "calc";
   /** When tab is 'social', also switch the SocialView sub-tab. */
   subtab?: "feed" | "friends" | "chat" | "groups";
   /** When tab is 'calc', expand a section in ToolsTab and scroll to it. */
@@ -13,6 +20,7 @@ type StepMeta = {
 };
 
 type TourStep = { step: DriveStep; meta?: StepMeta };
+
 
 // ════════════════════════════════════════════════════════════
 // SHORT TOUR
@@ -32,6 +40,18 @@ const SHORT: TourStep[] = [
     },
   },
   {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="tab-nutrition"]',
+      popover: {
+        title: "Kost",
+        description:
+          "Nytt! Logga måltider, räkna makron, skanna streckkoder och använd 200+ färdiga recept.",
+        side: "top",
+      },
+    },
+  },
+  {
     meta: { tab: "stats" },
     step: {
       element: '[data-tour="tab-stats"]',
@@ -43,6 +63,7 @@ const SHORT: TourStep[] = [
       },
     },
   },
+
   {
     meta: { tab: "social" },
     step: {
@@ -89,7 +110,7 @@ const LONG: TourStep[] = [
     meta: { tab: "workout" },
     step: {
       popover: {
-        title: "Avsnitt 1 av 7 – Komma igång",
+        title: "Avsnitt 1 av 8 – Komma igång",
         description:
           "Vi börjar med grunderna: var dina pass bor, hur veckoplanen fungerar och hur du markerar pass som klara.",
       },
@@ -123,7 +144,7 @@ const LONG: TourStep[] = [
     meta: { tab: "workout" },
     step: {
       popover: {
-        title: "Avsnitt 2 av 7 – Bygga & ändra pass",
+        title: "Avsnitt 2 av 8 – Bygga & ändra pass",
         description:
           "Nu visar vi knapparna för att lägga till, byta ut, ta bort och importera övningar.",
       },
@@ -203,7 +224,7 @@ const LONG: TourStep[] = [
     meta: { tab: "stats" },
     step: {
       popover: {
-        title: "Avsnitt 3 av 7 – Framsteg",
+        title: "Avsnitt 3 av 8 – Framsteg",
         description:
           "Allt du loggar samlas till en personlig statistikvy. Här ser du muskelkarta, PR och progression över tid.",
       },
@@ -232,12 +253,92 @@ const LONG: TourStep[] = [
     },
   },
 
-  // ── Avsnitt 4: Socialt ──
+
+  // ── Avsnitt 4: Kost & makron ──
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      popover: {
+        title: "Avsnitt 4 av 8 – Kost",
+        description:
+          "Logga måltider, följ makron och hitta inspiration bland 200+ träningsanpassade recept – direkt i appen.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="tab-nutrition"]',
+      popover: {
+        title: "Kost-fliken",
+        description:
+          "Här hittar du allt om mat: dagens måltider, kalorier, makron, recept och dina mål.",
+        side: "top",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-rings"]',
+      popover: {
+        title: "Makroringar",
+        description:
+          "Ringarna visar dagens kalorier, protein, fett och kolhydrater jämfört med dina mål. Bläddra mellan dagar med pilarna.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-goals"]',
+      popover: {
+        title: "Sätt dina mål",
+        description:
+          "Använd kalorikalkylatorn eller ange manuellt. Du kan justera energi och makron när som helst.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-recipes"]',
+      popover: {
+        title: "Recept",
+        description:
+          "200+ färdiga svenska recept fördelat på frukost, lunch, middag, mellanmål, pre/post-workout, smoothie och dessert. Hedersmedlemmar låser upp alla.",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      popover: {
+        title: "Lägg till livsmedel",
+        description:
+          "Inne i en måltid trycker du på + för att söka livsmedel, skanna streckkod, hitta restaurangmat, lägga in egna livsmedel manuellt – eller AI-skanna näringsinnehåll (hedersmedlemmar).",
+      },
+    },
+  },
+  {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="nutrition-add-meal"]',
+      popover: {
+        title: "Anpassa dina måltider",
+        description:
+          "Lägg till egna måltider (t.ex. 'Pre-workout'), byt namn, dra för att sortera eller ta bort de du inte använder.",
+      },
+    },
+  },
+
+  // ── Avsnitt 5: Socialt ──
+
   {
     meta: { tab: "social", subtab: "feed" },
     step: {
       popover: {
-        title: "Avsnitt 4 av 7 – Socialt",
+        title: "Avsnitt 5 av 8 – Socialt",
         description:
           "GRIM är roligare ihop. Lägg till vänner, peppa varandra, chatta och tävla på leaderboarden.",
       },
@@ -295,7 +396,7 @@ const LONG: TourStep[] = [
     meta: { tab: "calc" },
     step: {
       popover: {
-        title: "Avsnitt 5 av 7 – Verktyg",
+        title: "Avsnitt 6 av 8 – Verktyg",
         description:
           "Verktygsfliken samlar profil, inställningar, kalkylatorer, butik, kalender och hjälp.",
       },
@@ -343,7 +444,7 @@ const LONG: TourStep[] = [
     meta: { tab: "workout" },
     step: {
       popover: {
-        title: "Avsnitt 6 av 7 – Plan & passtyper",
+        title: "Avsnitt 7 av 8 – Plan & passtyper",
         description:
           "Ett par smarta funktioner så GRIM passar både för en strikt plan och spontan träning.",
       },
@@ -386,7 +487,7 @@ const LONG: TourStep[] = [
     step: {
       element: '[data-tour="tools-help"]',
       popover: {
-        title: "Avsnitt 7 av 7 – Hjälp & tips",
+        title: "Avsnitt 8 av 8 – Hjälp & tips",
         description:
           "Hela manualen i kategoriserad form. Längst upp i sektionen finns knappar för att starta kort eller lång rundtur igen när som helst.",
         side: "top",
@@ -467,8 +568,22 @@ export function resumeTourIfNeeded(onDone?: () => void) {
   } catch { /* ignore */ }
 }
 
+function getStepsFor(variant: TourVariant): TourStep[] {
+  if (variant === "short") return SHORT;
+  if (variant === "long") return LONG;
+  if (variant === "nutrition") {
+    return LONG.filter((s) => s.meta?.tab === "nutrition");
+  }
+  if (variant === "workout") return LONG.filter((s) => s.meta?.tab === "workout");
+  if (variant === "stats") return LONG.filter((s) => s.meta?.tab === "stats");
+  if (variant === "social") return LONG.filter((s) => s.meta?.tab === "social");
+  if (variant === "tools") return LONG.filter((s) => s.meta?.tab === "calc");
+  return SHORT;
+}
+
 export function startTour(variant: TourVariant, onDone?: () => void, startIdx = 0) {
-  const all = variant === "long" ? LONG : SHORT;
+  const all = getStepsFor(variant);
+
 
   // Drop steps that target a missing element AND have no nav meta to bring it in.
   const available = all.filter(({ step, meta }) => {

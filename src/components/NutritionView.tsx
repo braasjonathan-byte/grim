@@ -224,16 +224,19 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       </div>
 
       <div className="border border-border bg-card p-4 space-y-4">
-        <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
+        <div data-tour="nutrition-rings">
+          <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
+        </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => setGoalsOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
             <Target className="w-3 h-3" /> Mål
           </button>
-          <button onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
             <ChefHat className="w-3 h-3" /> Recept
           </button>
         </div>
+
 
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -261,9 +264,10 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </SortableContext>
         </DndContext>
 
-        <button onClick={() => setAddNameOpen(true)} className="w-full flex items-center justify-center gap-1 py-2 border border-dashed border-input text-xs font-bold">
+        <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full flex items-center justify-center gap-1 py-2 border border-dashed border-input text-xs font-bold">
           <Plus className="w-3 h-3" /> Lägg till måltid
         </button>
+
       </div>
 
       <FoodPickerDialog open={!!picker} onOpenChange={(v) => !v && setPicker(null)} userId={userId} onPick={(item) => picker && addLog(picker, item)} />
