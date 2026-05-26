@@ -87,6 +87,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const isChatTab = subTab === "chat";
 
   useLockBodyScroll(isChatTab);
