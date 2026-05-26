@@ -32,6 +32,7 @@ const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"
 const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
 const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
 const HelpSection = lazy(() => import("@/components/HelpSection"));
+const DisclaimerSection = lazy(() => import("@/components/DisclaimerSection"));
 
 interface ToolsTabProps {
   userId: string;
