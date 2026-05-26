@@ -15,11 +15,22 @@ Deno.serve(async (req) => {
     }
 
     // Open Food Facts lookup
-    const offRes = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`, {
-      headers: { "User-Agent": "GrimApp/1.0" },
-    });
-    const off = await offRes.json();
-    if (off.status !== 1 || !off.product) {
+    let off: any = null;
+    try {
+      const offRes = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`, {
+        headers: { "User-Agent": "GrimApp/1.0", "Accept": "application/json" },
+      });
+      const ct = offRes.headers.get("content-type") || "";
+      if (offRes.ok && ct.includes("application/json")) {
+        off = await offRes.json();
+      } else {
+        const txt = await offRes.text();
+        console.log("OFF non-JSON response", offRes.status, ct, txt.slice(0, 200));
+      }
+    } catch (e) {
+      console.log("OFF fetch failed", String(e));
+    }
+    if (!off || off.status !== 1 || !off.product) {
       return new Response(JSON.stringify({ found: false, message: "Produkt hittades inte" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
