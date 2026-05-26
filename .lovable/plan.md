@@ -1,43 +1,78 @@
-# Admin: Slå ihop dubblettövningar
+# Kostloggning
 
-Ny adminflik där admin kan välja två eller flera övningsnamn som ska slås ihop till ett valt kanoniskt namn, och all loggad data flyttas/summeras automatiskt.
+Stor ny funktion – jag delar upp i tydliga byggblock. Bekräfta så bygger jag allt i ordning.
+
+## Översikt
+- Ny flik **Kost** i footern, direkt till höger om **Träning**
+- Layout liknar träningssidan: ett "kort" per loggad dag
+- Fyra makroringar (kcal/protein/fett/kolhydrater) som visar % av dagsmål
+- Importerar Livsmedelsverkets databas (2 577 livsmedel) som global tabell
+
+## Databas (nya tabeller)
+
+**`foods`** – global livsmedelslista (read-only för users, admin kan editera)
+- name, food_number, group, kcal, protein_g, fat_g, carbs_g, fiber_g per 100 g
+- Seedas från excel-filen via migration
+
+**`custom_foods`** – användarens egna livsmedel (samma fält som foods)
+
+**`recipes`** – recept
+- user_id, name, servings, instructions, visibility (private/public), kcal/protein/fett/kolhydrater per portion (beräknas)
+- Publika recept syns för alla, likt publika saved_workouts
+
+**`recipe_ingredients`** – kopplar food/custom_food till recept med mängd och enhet
+
+**`nutrition_goals`** – användarens dagsmål
+- user_id, daily_kcal, protein_g, fat_g, carbs_g, activity_level, goal_type (styrka/bibehålla/uthållighet/eget)
+
+**`meal_logs`** – loggade måltider
+- user_id, log_date, meal_type (frukost/lunch/middag/mellanmål), food_id/custom_food_id/recipe_id, amount, unit, beräknade makros (snapshot)
 
 ## UI
 
-Ny komponent `src/components/ExerciseMergeManager.tsx` i `ToolsTab` (admin-only, vid sidan av "Övningsbibliotek"):
+**Huvudvy (`NutritionView`)**
+- Veckokarusell + dagskort (liknar `WorkoutView`)
+- Överst på dagen: 4 ringar (SVG) – kcal/protein/fett/kolhydrater i procent mot mål
+- Lista med dagens måltider grupperade per måltidstyp
+- "+ Lägg till" → bottom sheet med val: Livsmedel / Recept / Eget livsmedel
 
-1. Lista alla unika övningsnamn (union av `custom_exercises.name`, `pr_overrides.exercise`, `exercise_muscle_overrides.exercise_name`, `exercise_gif_mappings.exercise_name`, plus distinkta nycklar från `workout_completions.logged_weights`) med antalet förekomster per namn.
-2. Sökfält + lista med kryssrutor — admin kryssar i 2+ namn som är dubbletter.
-3. Radio/select: välj vilket av de markerade namnen som blir det slutgiltiga (eller skriv in ett helt nytt namn).
-4. Förhandsvisning: "X loggade set och Y pass-rader kommer att slås ihop till «namn»".
-5. Bekräfta → anropar RPC `admin_merge_exercises(from_names text[], to_name text)`.
+**Livsmedelsväljare (`FoodPickerDialog`)**
+- Sökbart, liknar `ExercisePickerDialog`
+- Visar livsmedel + recept (egna och publika)
+- Vid val → enhet/mängd-dialog (gram, portion, st) → räknar makros
 
-## Backend (migration)
+**Receptbyggare (`RecipeEditor`)**
+- Namn, portioner, instruktioner
+- Lägg till ingredienser via samma `FoodPickerDialog`
+- Live-beräkning av makros per portion
+- "Dela publikt"-toggle
 
-Skapa SECURITY DEFINER-funktionen `public.admin_merge_exercises(p_from text[], p_to text)`:
+**Måluppsättning (`NutritionGoalsDialog`)**
+- Om ålder/vikt saknas i `profiles`: be om dem och spara
+- Välj aktivitetsnivå (stillasittande → mycket aktiv)
+- Välj mål: Bli starkare / Bibehålla vikt / Optimera uthållighet / Egna makros
+- Beräknar BMR (Mifflin-St Jeor) × aktivitet → kcal, fördelar protein/fett/kolhydrater enligt mål
+- Användaren kan justera siffrorna manuellt
 
-- Kräver `has_role(auth.uid(),'admin')` annars `raise exception`.
-- Normaliserar: behandlar alla namn case-insensitivt; `from`-listan får inkludera `to`.
-- **custom_exercises**: behåll en rad med namn = `p_to` (välj den med flest fält ifyllda), radera övriga dubbletter.
-- **pr_overrides**: vid konflikt per `user_id` behåll den med högst `weight`.
-- **pr_stars**, **pr_goals**: byt namn, hantera unika konflikter med `ON CONFLICT DO NOTHING`.
-- **exercise_muscle_overrides** / **exercise_gif_mappings** / **exercise_description_reports**: byt namn, vid konflikt behåll senaste `updated_at`.
-- **workout_completions.logged_weights** (JSONB-objekt): per rad, slå ihop arrayer för matchande nycklar till en sammanslagen array under `p_to`; bevarar ordning (gamla namn först).
-- **workout_plans.details** + **saved_workouts.details** + **archived_plans.plan_data** (textfält / JSONB-fält `details`): regex-byt på radnivå — matchar början av rad case-insensitivt följt av valfri `set×rep`-notation, byter bara övningsnamnet och lämnar resten orört.
-- Returnerar JSON-summa med antal påverkade rader per tabell.
+## Tekniska detaljer
+- Återanvänder design tokens, Permanent Marker headers, flat/square corners (per memory)
+- Autosave-mönster (800ms refs)
+- RLS: egna meal_logs/custom_foods/goals; publika recept synliga för alla
+- Footer: lägger till knapp i samma komponent som "Träning"
 
-Pekar admin-actionen från klienten via `supabase.rpc('admin_merge_exercises', { p_from, p_to })`.
+## Filer som skapas
+- `supabase/migrations/...sql` – tabeller + RLS + seed av Livsmedelsverket
+- `src/components/NutritionView.tsx`
+- `src/components/FoodPickerDialog.tsx`
+- `src/components/RecipeEditor.tsx`
+- `src/components/NutritionGoalsDialog.tsx`
+- `src/components/MacroRings.tsx`
+- `src/lib/nutritionCalc.ts` (BMR, makrofördelning)
+- Edit: `src/pages/Index.tsx` (footer + route)
 
-## Filer som ändras
+## Att bekräfta innan jag börjar
+1. **Måltidstyper**: Frukost / Lunch / Middag / Mellanmål – ok, eller vill du ha andra?
+2. **Enheter**: gram, st, dl, msk, tsk, portion – ok som standard?
+3. **Recept-delning**: publika recept syns för alla användare (som publika saved_workouts) – ok?
 
-- ny migration `admin_merge_exercises` (RPC + GRANT EXECUTE TO authenticated, inre kontroll via `has_role`).
-- ny komponent `src/components/ExerciseMergeManager.tsx`.
-- `src/components/ToolsTab.tsx` — lägg till sektion `admin-merge-exercises`.
-
-## Säkerhet
-
-- RPC är SECURITY DEFINER med inre `has_role`-kontroll.
-- Klienten visar endast knappen för admins (UI), men säkerheten ligger på funktionen.
-- Operationen körs i en transaktion; en helt felaktig sammanslagning kan inte ångras automatiskt — UI varnar tydligt med "Detta går inte att ångra".
-
-Vill du att jag bygger detta?
+Säg bara "kör" så bygger jag allt, eller justera ovanstående punkter.

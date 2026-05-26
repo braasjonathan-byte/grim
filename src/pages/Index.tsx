@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { applyTheme, getStoredThemeId, storeThemeId, isThemeLocked } from "@/lib/themes";
 import grimIcon from "@/assets/grim-icon.webp";
@@ -30,8 +30,9 @@ const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
 const ToolsTab = lazy(() => import("@/components/ToolsTab"));
 const ChatView = lazy(() => import("@/components/ChatView"));
+const NutritionView = lazy(() => import("@/components/NutritionView"));
 
-type Tab = "workout" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
+type Tab = "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
@@ -94,7 +95,7 @@ const Index = () => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
-    if (urlTab === "workout" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
+    if (urlTab === "workout" || urlTab === "nutrition" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
       const resolvedTab = (urlTab === "friends" || urlTab === "chat") ? "social" : urlTab;
       localStorage.setItem("grim_active_tab", resolvedTab);
       return resolvedTab as Tab;
@@ -569,6 +570,7 @@ const Index = () => {
   const socialBadge = friendActivityCount + unreadChats + unreadPosts + unreadAnnouncements;
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
   { key: "workout", icon: Dumbbell, label: "Träning" },
+  { key: "nutrition", icon: Apple, label: "Kost" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
   { key: "social", icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined },
   { key: "calc", icon: Calculator, label: "Verktyg" }];
@@ -713,6 +715,7 @@ const Index = () => {
             }
           
           {tab === "stats" && <WorkoutStats userId={user.id} />}
+          {tab === "nutrition" && <NutritionView userId={user.id} />}
           {tab === "calc" &&
             <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
           }

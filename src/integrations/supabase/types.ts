@@ -354,6 +354,42 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_foods: {
+        Row: {
+          carbs_g: number
+          created_at: string
+          fat_g: number
+          fiber_g: number
+          id: string
+          kcal: number
+          name: string
+          protein_g: number
+          user_id: string
+        }
+        Insert: {
+          carbs_g?: number
+          created_at?: string
+          fat_g?: number
+          fiber_g?: number
+          id?: string
+          kcal?: number
+          name: string
+          protein_g?: number
+          user_id: string
+        }
+        Update: {
+          carbs_g?: number
+          created_at?: string
+          fat_g?: number
+          fiber_g?: number
+          id?: string
+          kcal?: number
+          name?: string
+          protein_g?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_challenge_completions: {
         Row: {
           challenge_date: string
@@ -610,6 +646,45 @@ export type Database = {
         }
         Relationships: []
       }
+      foods: {
+        Row: {
+          carbs_g: number
+          created_at: string
+          fat_g: number
+          fiber_g: number
+          food_number: number | null
+          group_name: string | null
+          id: string
+          kcal: number
+          name: string
+          protein_g: number
+        }
+        Insert: {
+          carbs_g?: number
+          created_at?: string
+          fat_g?: number
+          fiber_g?: number
+          food_number?: number | null
+          group_name?: string | null
+          id?: string
+          kcal?: number
+          name: string
+          protein_g?: number
+        }
+        Update: {
+          carbs_g?: number
+          created_at?: string
+          fat_g?: number
+          fiber_g?: number
+          food_number?: number | null
+          group_name?: string | null
+          id?: string
+          kcal?: number
+          name?: string
+          protein_g?: number
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           created_at: string
@@ -630,6 +705,60 @@ export type Database = {
           friend_id?: string
           id?: string
           status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meal_logs: {
+        Row: {
+          amount: number
+          carbs_g: number
+          created_at: string
+          custom_food_id: string | null
+          fat_g: number
+          food_id: string | null
+          id: string
+          item_name: string
+          kcal: number
+          log_date: string
+          meal_type: string
+          protein_g: number
+          recipe_id: string | null
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          carbs_g?: number
+          created_at?: string
+          custom_food_id?: string | null
+          fat_g?: number
+          food_id?: string | null
+          id?: string
+          item_name: string
+          kcal?: number
+          log_date: string
+          meal_type?: string
+          protein_g?: number
+          recipe_id?: string | null
+          unit?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          carbs_g?: number
+          created_at?: string
+          custom_food_id?: string | null
+          fat_g?: number
+          food_id?: string | null
+          id?: string
+          item_name?: string
+          kcal?: number
+          log_date?: string
+          meal_type?: string
+          protein_g?: number
+          recipe_id?: string | null
+          unit?: string
           user_id?: string
         }
         Relationships: []
@@ -658,6 +787,45 @@ export type Database = {
           type?: string
           user_id?: string
           week?: number
+        }
+        Relationships: []
+      }
+      nutrition_goals: {
+        Row: {
+          activity_level: string
+          carbs_g: number
+          created_at: string
+          daily_kcal: number
+          fat_g: number
+          goal_type: string
+          id: string
+          protein_g: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_level?: string
+          carbs_g?: number
+          created_at?: string
+          daily_kcal?: number
+          fat_g?: number
+          goal_type?: string
+          id?: string
+          protein_g?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_level?: string
+          carbs_g?: number
+          created_at?: string
+          daily_kcal?: number
+          fat_g?: number
+          goal_type?: string
+          id?: string
+          protein_g?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -800,6 +968,7 @@ export type Database = {
           created_at: string
           experience_level: string | null
           gender: string | null
+          height_cm: number | null
           id: string
           instagram: string | null
           is_honorary: boolean
@@ -829,6 +998,7 @@ export type Database = {
           created_at?: string
           experience_level?: string | null
           gender?: string | null
+          height_cm?: number | null
           id?: string
           instagram?: string | null
           is_honorary?: boolean
@@ -858,6 +1028,7 @@ export type Database = {
           created_at?: string
           experience_level?: string | null
           gender?: string | null
+          height_cm?: number | null
           id?: string
           instagram?: string | null
           is_honorary?: boolean
@@ -934,6 +1105,54 @@ export type Database = {
           is_circuit?: boolean
           updated_at?: string
           workout_name?: string
+        }
+        Relationships: []
+      }
+      recipes: {
+        Row: {
+          carbs_g_per_serving: number
+          created_at: string
+          fat_g_per_serving: number
+          id: string
+          ingredients: Json
+          instructions: string | null
+          kcal_per_serving: number
+          name: string
+          protein_g_per_serving: number
+          servings: number
+          updated_at: string
+          user_id: string
+          visibility: string
+        }
+        Insert: {
+          carbs_g_per_serving?: number
+          created_at?: string
+          fat_g_per_serving?: number
+          id?: string
+          ingredients?: Json
+          instructions?: string | null
+          kcal_per_serving?: number
+          name: string
+          protein_g_per_serving?: number
+          servings?: number
+          updated_at?: string
+          user_id: string
+          visibility?: string
+        }
+        Update: {
+          carbs_g_per_serving?: number
+          created_at?: string
+          fat_g_per_serving?: number
+          id?: string
+          ingredients?: Json
+          instructions?: string | null
+          kcal_per_serving?: number
+          name?: string
+          protein_g_per_serving?: number
+          servings?: number
+          updated_at?: string
+          user_id?: string
+          visibility?: string
         }
         Relationships: []
       }
@@ -1740,6 +1959,8 @@ export type Database = {
           user_id: string
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "member"
