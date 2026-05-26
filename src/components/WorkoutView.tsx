@@ -288,7 +288,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-          <input type="text" value={tempo} onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }} placeholder="t.ex. 5:30" className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <input type="text" inputMode="numeric" pattern="[0-9:]*" value={tempo} onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }} placeholder="t.ex. 5:30" className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
