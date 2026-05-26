@@ -22,6 +22,7 @@ interface FoundFood {
 
 export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const [scanning, setScanning] = useState(false);
