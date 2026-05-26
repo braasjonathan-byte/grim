@@ -110,7 +110,7 @@ const LONG: TourStep[] = [
     meta: { tab: "workout" },
     step: {
       popover: {
-        title: "Avsnitt 1 av 7 – Komma igång",
+        title: "Avsnitt 1 av 8 – Komma igång",
         description:
           "Vi börjar med grunderna: var dina pass bor, hur veckoplanen fungerar och hur du markerar pass som klara.",
       },
@@ -144,7 +144,7 @@ const LONG: TourStep[] = [
     meta: { tab: "workout" },
     step: {
       popover: {
-        title: "Avsnitt 2 av 7 – Bygga & ändra pass",
+        title: "Avsnitt 2 av 8 – Bygga & ändra pass",
         description:
           "Nu visar vi knapparna för att lägga till, byta ut, ta bort och importera övningar.",
       },
@@ -224,7 +224,7 @@ const LONG: TourStep[] = [
     meta: { tab: "stats" },
     step: {
       popover: {
-        title: "Avsnitt 3 av 7 – Framsteg",
+        title: "Avsnitt 3 av 8 – Framsteg",
         description:
           "Allt du loggar samlas till en personlig statistikvy. Här ser du muskelkarta, PR och progression över tid.",
       },
@@ -338,7 +338,7 @@ const LONG: TourStep[] = [
     meta: { tab: "social", subtab: "feed" },
     step: {
       popover: {
-        title: "Avsnitt 4 av 7 – Socialt",
+        title: "Avsnitt 5 av 8 – Socialt",
         description:
           "GRIM är roligare ihop. Lägg till vänner, peppa varandra, chatta och tävla på leaderboarden.",
       },
@@ -396,7 +396,7 @@ const LONG: TourStep[] = [
     meta: { tab: "calc" },
     step: {
       popover: {
-        title: "Avsnitt 5 av 7 – Verktyg",
+        title: "Avsnitt 6 av 8 – Verktyg",
         description:
           "Verktygsfliken samlar profil, inställningar, kalkylatorer, butik, kalender och hjälp.",
       },
@@ -444,7 +444,7 @@ const LONG: TourStep[] = [
     meta: { tab: "workout" },
     step: {
       popover: {
-        title: "Avsnitt 6 av 7 – Plan & passtyper",
+        title: "Avsnitt 7 av 8 – Plan & passtyper",
         description:
           "Ett par smarta funktioner så GRIM passar både för en strikt plan och spontan träning.",
       },
@@ -487,7 +487,7 @@ const LONG: TourStep[] = [
     step: {
       element: '[data-tour="tools-help"]',
       popover: {
-        title: "Avsnitt 7 av 7 – Hjälp & tips",
+        title: "Avsnitt 8 av 8 – Hjälp & tips",
         description:
           "Hela manualen i kategoriserad form. Längst upp i sektionen finns knappar för att starta kort eller lång rundtur igen när som helst.",
         side: "top",
