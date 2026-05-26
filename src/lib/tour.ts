@@ -40,6 +40,18 @@ const SHORT: TourStep[] = [
     },
   },
   {
+    meta: { tab: "nutrition" },
+    step: {
+      element: '[data-tour="tab-nutrition"]',
+      popover: {
+        title: "Kost",
+        description:
+          "Nytt! Logga måltider, räkna makron, skanna streckkoder och använd 200+ färdiga recept.",
+        side: "top",
+      },
+    },
+  },
+  {
     meta: { tab: "stats" },
     step: {
       element: '[data-tour="tab-stats"]',
@@ -51,6 +63,7 @@ const SHORT: TourStep[] = [
       },
     },
   },
+
   {
     meta: { tab: "social" },
     step: {
