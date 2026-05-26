@@ -108,6 +108,57 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     return () => { cancelled = true; };
   }, [open, query, userId, hideRecipes]);
 
+  // Open Food Facts search (debounced)
+  const [offResults, setOffResults] = useState<FoodRow[]>([]);
+  const [offLoading, setOffLoading] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const term = query.trim();
+    if (term.length < 3) { setOffResults([]); return; }
+    let cancelled = false;
+    setOffLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=20&fields=code,product_name,product_name_sv,brands,nutriments`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (cancelled) return;
+        const rows: FoodRow[] = [];
+        for (const p of json?.products || []) {
+          const name = p.product_name_sv || p.product_name;
+          if (!name) continue;
+          const n = p.nutriments || {};
+          const kcal = Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0);
+          if (!kcal) continue;
+          const brand = (p.brands || "").split(",")[0]?.trim() || "";
+          rows.push({
+            id: `off-${p.code}`,
+            name: brand ? `${name} (${brand})` : name,
+            brand,
+            source: "off",
+            kcal,
+            protein_g: Number(n.proteins_100g) || 0,
+            fat_g: Number(n.fat_100g) || 0,
+            carbs_g: Number(n.carbohydrates_100g) || 0,
+          });
+        }
+        setOffResults(rows);
+      } catch {
+        if (!cancelled) setOffResults([]);
+      } finally {
+        if (!cancelled) setOffLoading(false);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, query]);
+
+  const combinedResults = useMemo(() => {
+    if (!query.trim()) return results;
+    const seen = new Set(results.map(r => r.name.toLowerCase()));
+    const extras = offResults.filter(r => !seen.has(r.name.toLowerCase()));
+    return [...results, ...extras];
+  }, [results, offResults, query]);
+
   function pick(row: FoodRow) {
     setSelected(row);
     setAmount(row.source === "recipe" ? "1" : "100");
