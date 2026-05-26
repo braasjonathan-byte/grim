@@ -516,7 +516,9 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           const weekPlans = allPlans.filter((p) => p.week === w && p.details && p.details.trim() !== "");
           return weekPlans.some((p) => compMap[`${p.week}-${p.day}`]);
         });
-        setFriendCurrentWeek(latestDoneWeek ?? wks[wks.length - 1] ?? 1);
+        const preferredWeek = todayWeekFromPlan !== null && wks.includes(todayWeekFromPlan) ? todayWeekFromPlan : null;
+        setFriendCurrentWeek(preferredWeek ?? latestDoneWeek ?? wks[wks.length - 1] ?? 1);
+
       }
     }
 
