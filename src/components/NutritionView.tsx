@@ -264,9 +264,10 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </SortableContext>
         </DndContext>
 
-        <button onClick={() => setAddNameOpen(true)} className="w-full flex items-center justify-center gap-1 py-2 border border-dashed border-input text-xs font-bold">
+        <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full flex items-center justify-center gap-1 py-2 border border-dashed border-input text-xs font-bold">
           <Plus className="w-3 h-3" /> Lägg till måltid
         </button>
+
       </div>
 
       <FoodPickerDialog open={!!picker} onOpenChange={(v) => !v && setPicker(null)} userId={userId} onPick={(item) => picker && addLog(picker, item)} />
