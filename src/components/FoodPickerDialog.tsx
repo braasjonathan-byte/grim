@@ -205,7 +205,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         {selected && (
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Mängd</label>
+              <label className="text-xs font-medium text-muted-foreground">
+                {selected.source === "recipe" ? "Antal portioner" : "Mängd"}
+              </label>
               <div className="flex gap-2 mt-1">
                 <Input
                   value={amount}
@@ -222,6 +224,25 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   <div className="px-3 flex items-center text-sm border border-input bg-muted">portion(er)</div>
                 )}
               </div>
+              {selected.source === "recipe" && (
+                <>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Receptet ger {selected.servings || 1} portion(er) totalt · {Math.round(selected.kcal)} kcal/portion
+                  </p>
+                  <div className="flex gap-1 mt-2 flex-wrap">
+                    {["0.5", "1", "1.5", "2", "3"].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setAmount(p)}
+                        className={`px-2.5 py-1 text-[11px] font-bold border ${amount === p ? "bg-primary text-primary-foreground border-primary" : "border-input bg-background"}`}
+                      >
+                        {p.replace(".", ",")}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
             {computed && (
               <div className="grid grid-cols-4 gap-2 text-center bg-muted/40 p-2">
