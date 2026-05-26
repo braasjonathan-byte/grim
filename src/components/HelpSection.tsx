@@ -227,6 +227,25 @@ const HelpSection = () => {
             Lång rundtur
           </button>
         </div>
+        <p className="text-[10px] text-muted-foreground pt-1">Eller starta tur för ett specifikt område:</p>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { v: "workout", label: "Träning", Icon: Dumbbell },
+            { v: "nutrition", label: "Kost", Icon: Apple },
+            { v: "stats", label: "Statistik", Icon: BarChart3 },
+            { v: "social", label: "Social", Icon: Users },
+            { v: "tools", label: "Verktyg", Icon: Calculator },
+          ] as { v: TourVariant; label: string; Icon: React.ElementType }[]).map(({ v, label, Icon }) => (
+            <button
+              key={v}
+              onClick={() => startTour(v)}
+              className="flex items-center justify-center gap-1.5 border border-border text-foreground text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
+            >
+              <Icon className="w-3.5 h-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+
       </div>
 
       <div className="divide-y divide-border">
