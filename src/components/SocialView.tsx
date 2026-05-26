@@ -386,26 +386,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const loadComments = async (postId: string) => {
-    const post = posts.find(p => p.id === postId);
     const { data } = await supabase
       .from("social_post_comments")
       .select("id, user_id, comment, created_at")
       .eq("post_id", postId)
       .order("created_at", { ascending: true });
-    const { data: workoutData } = post?.workout_day && post.workout_week !== null ? await supabase
-      .from("workout_comments")
-      .select("id, target_user_id, week, day, author_id, comment, created_at, plan_id")
-      .eq("target_user_id", post.user_id)
-      .eq("week", post.workout_week)
-      .eq("day", post.workout_day)
-      .order("created_at", { ascending: true }) : { data: [] };
     if (data) {
-      const merged = mergeWorkoutComments(
-        (workoutData || []).map((c: any) => ({ ...c, user_id: c.author_id })),
-        (data || []).map((c: any) => ({ ...c, id: `social:${c.id}`, target_user_id: post?.user_id || "", week: post?.workout_week || 0, day: post?.workout_day || "", author_id: c.user_id, plan_id: null, user_id: c.user_id })),
-      ).map((c: any) => ({ id: c.id, user_id: c.author_id || c.user_id, comment: c.comment, created_at: c.created_at }));
+      const merged = (data as any[]).map((c) => ({ id: `social:${c.id}`, user_id: c.user_id, comment: c.comment, created_at: c.created_at }));
       setComments(prev => ({ ...prev, [postId]: merged as any }));
-      // Load nicknames/avatars for any new commenters
       const missing = [...new Set(merged.map((c: any) => c.user_id).filter((id: string) => !nicknames[id]))];
       if (missing.length > 0) {
         const [{ data: nicks }, { data: profs }] = await Promise.all([
