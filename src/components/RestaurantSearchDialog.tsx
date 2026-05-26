@@ -51,34 +51,74 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
     if (!open) { setBrand(""); setItem(""); setResults([]); setSelected(null); }
   }, [open]);
 
+  // Simple typo-tolerant Levenshtein for fuzzy ranking
+  function lev(a: string, b: string): number {
+    a = a.toLowerCase(); b = b.toLowerCase();
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    const m: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+    for (let i = 0; i <= a.length; i++) m[i][0] = i;
+    for (let j = 0; j <= b.length; j++) m[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        const c = a[i - 1] === b[j - 1] ? 0 : 1;
+        m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + c);
+      }
+    }
+    return m[a.length][b.length];
+  }
+
+  function fuzzyScore(needle: string, hay: string): number {
+    if (!needle) return 0;
+    const n = needle.toLowerCase().trim();
+    const h = hay.toLowerCase();
+    if (h.includes(n)) return 0;
+    // Best token-level distance
+    const tokens = h.split(/[^a-zåäö0-9]+/i).filter(Boolean);
+    let best = Infinity;
+    for (const t of tokens) {
+      const d = lev(n, t);
+      const ratio = d / Math.max(n.length, t.length);
+      if (ratio < best) best = ratio;
+    }
+    // Also try against whole string
+    const full = lev(n, h) / Math.max(n.length, h.length);
+    return Math.min(best, full);
+  }
+
   async function search(brandQ: string, itemQ?: string) {
-    if (!brandQ.trim()) return;
+    const b = brandQ.trim();
+    const it = (itemQ || "").trim();
+    if (!b && !it) return;
     setLoading(true);
     setSelected(null);
     try {
       const params = new URLSearchParams({
         action: "process",
         json: "1",
-        page_size: "30",
+        page_size: "60",
         sort_by: "popularity_key",
         fields: "code,product_name,product_name_sv,brands,nutriments,image_small_url",
-        tagtype_0: "brands",
-        tag_contains_0: "contains",
-        tag_0: brandQ.trim(),
       });
-      if (itemQ?.trim()) {
-        params.set("search_terms", itemQ.trim());
+      if (b) {
+        params.set("tagtype_0", "brands");
+        params.set("tag_contains_0", "contains");
+        params.set("tag_0", b);
       }
+      const terms = [b, it].filter(Boolean).join(" ");
+      if (terms) params.set("search_terms", terms);
+
       const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params.toString()}`);
       const data = await res.json();
-      const items: OFFItem[] = (data.products || [])
+      let items: OFFItem[] = (data.products || [])
         .map((p: any) => {
           const n = p.nutriments || {};
           const name = p.product_name_sv || p.product_name || "Okänd";
           return {
             code: p.code,
             product_name: name,
-            brands: p.brands || brandQ,
+            brands: p.brands || b,
             kcal: Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0),
             protein_g: Number(n.proteins_100g) || 0,
             fat_g: Number(n.fat_100g) || 0,
@@ -87,6 +127,50 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
           };
         })
         .filter((p: OFFItem) => p.product_name && p.kcal > 0);
+
+      // Fuzzy rank: prioritize items matching item term, then brand
+      const needle = (it || b).toLowerCase();
+      if (needle) {
+        items = items
+          .map((p) => {
+            const haystack = `${p.product_name} ${p.brands}`;
+            return { p, score: fuzzyScore(needle, haystack) };
+          })
+          .filter((x) => x.score <= 0.5) // tolerate typos
+          .sort((a, b) => a.score - b.score)
+          .map((x) => x.p);
+      }
+
+      // Fallback: if no item matches after brand+item query, retry with item-only fuzzy search
+      if (items.length === 0 && it) {
+        const p2 = new URLSearchParams({
+          action: "process", json: "1", page_size: "60",
+          sort_by: "popularity_key",
+          fields: "code,product_name,product_name_sv,brands,nutriments,image_small_url",
+          search_terms: it,
+        });
+        const r2 = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${p2.toString()}`);
+        const d2 = await r2.json();
+        items = (d2.products || [])
+          .map((p: any) => {
+            const n = p.nutriments || {};
+            const name = p.product_name_sv || p.product_name || "Okänd";
+            return {
+              code: p.code, product_name: name, brands: p.brands || "",
+              kcal: Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0),
+              protein_g: Number(n.proteins_100g) || 0,
+              fat_g: Number(n.fat_100g) || 0,
+              carbs_g: Number(n.carbohydrates_100g) || 0,
+              image: p.image_small_url,
+            };
+          })
+          .filter((p: OFFItem) => p.product_name && p.kcal > 0)
+          .map((p: OFFItem) => ({ p, score: fuzzyScore(it, `${p.product_name} ${p.brands}`) }))
+          .filter((x: any) => x.score <= 0.6)
+          .sort((a: any, b: any) => a.score - b.score)
+          .map((x: any) => x.p);
+      }
+
       setResults(items);
     } finally {
       setLoading(false);
