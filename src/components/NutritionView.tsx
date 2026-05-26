@@ -93,13 +93,15 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
   );
 }
 
-export default function NutritionView({ userId }: Props) {
+export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [date, setDate] = useState(() => new Date());
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
   const [slots, setSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [picker, setPicker] = useState<string | null>(null);
   const [recipeOpen, setRecipeOpen] = useState(false);
+  const [curatedOpen, setCuratedOpen] = useState(false);
+  const [curatedTargetMeal, setCuratedTargetMeal] = useState<string | null>(null);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [addNameOpen, setAddNameOpen] = useState(false);
   const [renameIdx, setRenameIdx] = useState<number | null>(null);
