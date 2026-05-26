@@ -102,6 +102,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [recipeOpen, setRecipeOpen] = useState(false);
   const [curatedOpen, setCuratedOpen] = useState(false);
   const [curatedTargetMeal, setCuratedTargetMeal] = useState<string | null>(null);
+  const [pendingRecipe, setPendingRecipe] = useState<PickedItem | null>(null);
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [addNameOpen, setAddNameOpen] = useState(false);
   const [renameIdx, setRenameIdx] = useState<number | null>(null);
