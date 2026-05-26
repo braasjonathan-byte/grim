@@ -116,15 +116,49 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
     }
   }
 
-  function confirm() {
+  async function confirm() {
     if (!result) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
     const grams = toGrams(a, unit);
     const factor = grams / 100;
+    const name = (productName.trim() || result.food.name || "Produkt");
+
+    let savedId: string | null = result.food.id;
+    let savedSource: "food" | "custom_food" = result.food.id ? "food" : "custom_food";
+
+    if (saveToBank && !result.food.id) {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth?.user?.id;
+        if (uid) {
+          const { data: ins, error: insErr } = await supabase
+            .from("custom_foods")
+            .insert({
+              user_id: uid,
+              name,
+              kcal: result.food.kcal,
+              protein_g: result.food.protein_g,
+              fat_g: result.food.fat_g,
+              carbs_g: result.food.carbs_g,
+            })
+            .select("id")
+            .single();
+          if (insErr) throw insErr;
+          if (ins?.id) {
+            savedId = ins.id;
+            savedSource = "custom_food";
+            toast({ title: "Sparad i din livsmedelsbank", description: name });
+          }
+        }
+      } catch (e: any) {
+        toast({ title: "Kunde inte spara i bank", description: e?.message, variant: "destructive" });
+      }
+    }
+
     onPick({
-      source: result.food.id ? "food" : "custom_food",
-      id: result.food.id || "ai-" + Date.now(),
-      name: result.food.name,
+      source: savedSource,
+      id: savedId || "ai-" + Date.now(),
+      name,
       amount: a, unit,
       kcal: result.food.kcal * factor,
       protein_g: result.food.protein_g * factor,
