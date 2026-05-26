@@ -59,7 +59,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     (async () => {
       // foods (global)
       const foodsQ = term
-        ? supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,group_name").ilike("name", `%${term}%`).limit(40)
+        ? supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,group_name").ilike("name", `%${term}%`).order("name").limit(40)
         : supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,group_name").order("name").limit(40);
       // custom foods (own)
       const customQ = supabase.from("custom_foods").select("id,name,kcal,protein_g,fat_g,carbs_g").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
