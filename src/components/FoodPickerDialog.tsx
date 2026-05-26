@@ -29,7 +29,7 @@ interface FoodPickerDialogProps {
   hideRecipes?: boolean;
 }
 
-type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe"; servings?: number };
+type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string };
 
 export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes }: FoodPickerDialogProps) {
   const [query, setQuery] = useState("");
