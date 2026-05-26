@@ -30,8 +30,9 @@ const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
 const ToolsTab = lazy(() => import("@/components/ToolsTab"));
 const ChatView = lazy(() => import("@/components/ChatView"));
+const NutritionView = lazy(() => import("@/components/NutritionView"));
 
-type Tab = "workout" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
+type Tab = "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
