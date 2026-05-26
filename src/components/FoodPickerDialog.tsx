@@ -145,6 +145,16 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
         {!selected && (
           <>
+            <div className="flex gap-2">
+              <button onClick={() => setBarcodeOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-input text-xs font-bold">
+                <ScanBarcode className="w-4 h-4" /> Streckkod
+              </button>
+              {isHonorary && (
+                <button onClick={() => setAiOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-2 border border-primary text-primary text-xs font-bold">
+                  <Sparkles className="w-4 h-4" /> AI-skanna
+                </button>
+              )}
+            </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 rounded-none" autoFocus />
