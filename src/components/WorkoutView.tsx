@@ -6876,7 +6876,7 @@ const estimateCalories = (
                                     </div>
                                     <div>
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                                      <AutoSaveInput type="text" initialValue={displayTempo} onSave={(v) => saveCondField('tempo', v)} placeholder="t.ex. 5:30" className="w-24 bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                      <AutoSaveInput type="text" inputMode="numeric" pattern="[0-9:]*" initialValue={displayTempo} onSave={(v) => saveCondField('tempo', v)} placeholder="t.ex. 5:30" className="w-24 bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                     </div>
                                   </div>
                                   <div className="grid grid-cols-2 gap-2 items-end">
