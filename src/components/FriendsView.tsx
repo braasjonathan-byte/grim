@@ -489,11 +489,17 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             if (c.done) compMap[`${c.week}-${c.day}`] = true;
           }
         }
+        const todayWk = computeSingleWeek(
+          `${todayMonday.getFullYear()}-${String(todayMonday.getMonth() + 1).padStart(2, "0")}-${String(todayMonday.getDate()).padStart(2, "0")}`,
+          firstMonday,
+        );
         const latestDoneWeek = [...virtualWeeks].reverse().find((w) => {
           const wPlans = weekGroups.get(w) || [];
           return wPlans.some((p) => compMap[`${p.week}-${p.day}`]);
         });
-        setFriendCurrentWeek(latestDoneWeek ?? virtualWeeks[virtualWeeks.length - 1] ?? 1);
+        const preferredWeek = virtualWeeks.includes(todayWk) ? todayWk : null;
+        setFriendCurrentWeek(preferredWeek ?? latestDoneWeek ?? virtualWeeks[virtualWeeks.length - 1] ?? 1);
+
       } else {
         // Normal plan-based weeks (filter out week=0 from week list if mixed)
         setFriendPlans(allPlans);
