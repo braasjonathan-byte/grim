@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, BookOpen, Trash2, Pencil, GripVertical, ChefHat } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat } from "lucide-react";
 import MacroRings from "./MacroRings";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
@@ -226,15 +226,12 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       <div className="border border-border bg-card p-4 space-y-4">
         <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button onClick={() => setGoalsOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
             <Target className="w-3 h-3" /> Mål
           </button>
-          <button onClick={() => setRecipeOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
-            <BookOpen className="w-3 h-3" /> Nytt
-          </button>
           <button onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
-            <ChefHat className="w-3 h-3" /> Färdiga
+            <ChefHat className="w-3 h-3" /> Recept
           </button>
         </div>
 
@@ -275,6 +272,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         open={curatedOpen}
         onOpenChange={(v) => { setCuratedOpen(v); if (!v) setCuratedTargetMeal(null); }}
         isHonorary={isHonorary}
+        onCreateOwn={() => setRecipeOpen(true)}
         onPick={(item) => {
           const meal = curatedTargetMeal || allSlots[0] || "middag";
           addLog(meal, item);

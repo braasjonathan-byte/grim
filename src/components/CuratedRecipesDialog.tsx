@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Lock, Search, ChefHat, ChevronLeft, ChevronRight } from "lucide-react";
+import { Lock, Search, ChefHat, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CURATED_RECIPES, RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
 import { PickedItem } from "./FoodPickerDialog";
 
@@ -10,9 +10,10 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   isHonorary: boolean;
   onPick?: (item: PickedItem) => void;
+  onCreateOwn?: () => void;
 }
 
-export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick }: Props) {
+export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick, onCreateOwn }: Props) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("alla");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
@@ -66,11 +67,22 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md p-6 text-center space-y-4">
           <DialogHeader>
-            <DialogTitle className="font-serif flex items-center justify-center gap-2"><Lock className="w-5 h-5" /> Endast hedersmedlemmar</DialogTitle>
+            <DialogTitle className="font-serif flex items-center justify-center gap-2"><ChefHat className="w-5 h-5" /> Recept</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            De färdiga träningsanpassade recepten är låsta. Bli hedersmedlem för att låsa upp 100+ recept anpassade för svenska livsmedel.
-          </p>
+          {onCreateOwn && (
+            <button
+              onClick={() => { onOpenChange(false); onCreateOwn(); }}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-bold"
+            >
+              <Plus className="w-4 h-4" /> Skapa eget recept
+            </button>
+          )}
+          <div className="border-t border-border pt-4 space-y-2">
+            <p className="text-xs font-bold flex items-center justify-center gap-1"><Lock className="w-3 h-3" /> Färdiga recept – hedersmedlemmar</p>
+            <p className="text-xs text-muted-foreground">
+              Lås upp 100+ träningsanpassade recept med svenska livsmedel som hedersmedlem.
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
     );
@@ -82,12 +94,20 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
         <DialogHeader>
           <DialogTitle className="font-serif flex items-center gap-2">
             <ChefHat className="w-5 h-5" />
-            {selected ? selected.name : "Färdiga recept"}
+            {selected ? selected.name : "Recept"}
           </DialogTitle>
         </DialogHeader>
 
         {!selected ? (
           <>
+            {onCreateOwn && (
+              <button
+                onClick={() => { onOpenChange(false); onCreateOwn(); }}
+                className="w-full flex items-center justify-center gap-2 py-2 border border-input text-xs font-bold"
+              >
+                <Plus className="w-3.5 h-3.5" /> Skapa eget recept
+              </button>
+            )}
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök recept…" className="pl-9 rounded-none" />
