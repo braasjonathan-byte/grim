@@ -799,6 +799,7 @@ export type Database = {
           fat_g: number
           goal_type: string
           id: string
+          meal_slots: string[]
           protein_g: number
           updated_at: string
           user_id: string
@@ -811,6 +812,7 @@ export type Database = {
           fat_g?: number
           goal_type?: string
           id?: string
+          meal_slots?: string[]
           protein_g?: number
           updated_at?: string
           user_id: string
@@ -823,6 +825,7 @@ export type Database = {
           fat_g?: number
           goal_type?: string
           id?: string
+          meal_slots?: string[]
           protein_g?: number
           updated_at?: string
           user_id?: string
