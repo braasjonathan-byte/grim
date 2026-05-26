@@ -68,13 +68,14 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         .from("recipes")
         .select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,visibility,servings")
         .or(`user_id.eq.${userId},visibility.eq.public`)
-        .limit(30);
+        .order("created_at", { ascending: false })
+        .limit(50);
 
       const [foodsR, customR, recipesR] = await Promise.all([foodsQ, customQ, recipesQ as any]);
       if (cancelled) return;
+      if ((recipesR as any)?.error) console.error("recipes query error", (recipesR as any).error);
 
       const list: FoodRow[] = [];
-      for (const c of customR.data || []) list.push({ ...(c as any), source: "custom_food" });
       if (recipesR?.data) {
         for (const r of recipesR.data as any[]) {
           if (term && !r.name.toLowerCase().includes(term.toLowerCase())) continue;
@@ -88,6 +89,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           });
         }
       }
+      for (const c of customR.data || []) list.push({ ...(c as any), source: "custom_food" });
       for (const f of foodsR.data || []) list.push({ ...(f as any), source: "food" });
       // Sort so names starting with the search term appear first
       if (term) {
