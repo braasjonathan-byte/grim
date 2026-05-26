@@ -1036,7 +1036,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     prevWeekRef.current = currentWeek;
 
-    const weekPlans = plans.filter((p) => p.week === currentWeek);
+    const planStartDateObjForDay = parseDateKey(planStartDate);
+    const weekPlans = plans
+      .filter((p) => p.week === currentWeek)
+      .filter((p) => {
+        // Mirror the visible-day filter used in render: hide plan days that fall
+        // before plan_start_date, so activeDayIndex aligns with mobileDayTabs.
+        if (!planStartDateObjForDay) return true;
+        const pd = getPlanDayDateValue(planStartDate, p.week, p.day);
+        if (!pd) return true;
+        return pd.getTime() >= planStartDateObjForDay.getTime();
+      });
     const currentWeekDays = DAYS
       .map((dayName) => weekPlans.find((p) => sameWorkoutDay(p.day, dayName)))
       .filter(Boolean) as PlanDay[];
