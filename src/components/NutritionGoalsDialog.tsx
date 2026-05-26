@@ -45,15 +45,26 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     })();
   }, [open, userId]);
 
-  function recalc() {
+  function computeMacros(silent = false) {
     const a = parseInt(age) || 0, w = parseFloat(weight) || 0, h = parseFloat(height) || 0;
-    if (!a || !w || !h) { toast({ title: "Fyll i ålder, vikt och längd", variant: "destructive" }); return; }
+    if (!a || !w || !h) {
+      if (!silent) toast({ title: "Fyll i ålder, vikt och längd", variant: "destructive" });
+      return;
+    }
     const bmr = calcBMR(w, h, a, gender);
     const tdee = calcTDEE(bmr, activity);
     const m = distributeMacros(tdee, w, goal);
     setKcal(String(m.kcal)); setProtein(String(m.protein_g));
     setFat(String(m.fat_g)); setCarbs(String(m.carbs_g));
   }
+
+  // Auto-räkna makros när mål, aktivitet, kön eller kroppsdata ändras
+  useEffect(() => {
+    if (!open) return;
+    if (goal === "custom") return;
+    computeMacros(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goal, activity, gender, age, weight, height]);
 
   async function save() {
     setSaving(true);
