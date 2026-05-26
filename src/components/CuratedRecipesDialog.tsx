@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Lock, Search, ChefHat, ChevronLeft, ChevronRight } from "lucide-react";
+import { Lock, Search, ChefHat, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CURATED_RECIPES, RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
 import { PickedItem } from "./FoodPickerDialog";
 
@@ -10,9 +10,10 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   isHonorary: boolean;
   onPick?: (item: PickedItem) => void;
+  onCreateOwn?: () => void;
 }
 
-export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick }: Props) {
+export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick, onCreateOwn }: Props) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("alla");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
