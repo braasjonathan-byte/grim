@@ -37,10 +37,16 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [selected, setSelected] = useState<FoodRow | null>(null);
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState<string>("g");
+  const [barcodeOpen, setBarcodeOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [isHonorary, setIsHonorary] = useState(false);
 
-  // search
   useEffect(() => {
     if (!open) return;
+    supabase.from("profiles").select("is_honorary").eq("user_id", userId).maybeSingle().then(({ data }) => {
+      setIsHonorary(!!data?.is_honorary);
+    });
+  }, [open, userId]);
     let cancelled = false;
     const term = query.trim();
     setLoading(true);
