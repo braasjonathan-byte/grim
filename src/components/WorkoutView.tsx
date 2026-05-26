@@ -748,6 +748,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Import workout dialog
   const [importWorkoutTarget, setImportWorkoutTarget] = useState<{ planId: string; week: number; day: string } | null>(null);
+  // Chooser for empty / rest days: pick "create empty" vs "import ready"
+  const [emptyDayChoice, setEmptyDayChoice] = useState<{ week: number; day: string } | null>(null);
+  const [emptyDayName, setEmptyDayName] = useState("");
   // Pending import that needs user choice (replace vs append, then propagation)
   const [pendingImport, setPendingImport] = useState<{
     target: { planId: string; week: number; day: string };
