@@ -121,7 +121,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
             <div><label className="text-[10px] font-medium">Kcal</label><Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
             <div><label className="text-[10px] font-medium">Protein g</label><Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
             <div><label className="text-[10px] font-medium">Fett g</label><Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
-            <div><label className="text-[10px] font-medium">Kh g</label><Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
+            <div><label className="text-[10px] font-medium">Kolhydrat g</label><Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
           </div>
           <button disabled={saving} onClick={save} className="w-full py-3 bg-primary text-primary-foreground font-bold disabled:opacity-50">{saving ? "Sparar…" : "Spara"}</button>
         </div>
