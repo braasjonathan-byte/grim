@@ -87,6 +87,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const isChatTab = subTab === "chat";
 
   useLockBodyScroll(isChatTab);
@@ -668,7 +669,11 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
               {/* Image upload */}
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
-              <div className="flex gap-2">
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageSelect} />
+              <div className="flex gap-2 flex-wrap">
+                <Button onClick={() => cameraRef.current?.click()} variant="outline" size="sm">
+                  <Camera className="w-4 h-4 mr-1.5" /> Kamera
+                </Button>
                 <Button onClick={() => fileRef.current?.click()} variant="outline" size="sm">
                   <ImagePlus className="w-4 h-4 mr-1.5" /> {isAdmin && imageFiles.length > 0 ? `Bild (${imageFiles.length})` : "Bild"}
                 </Button>
