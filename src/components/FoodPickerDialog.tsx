@@ -147,7 +147,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
         {!selected && (
           <>
-            <div className="grid grid-cols-3 gap-2">
+            <div className={`grid ${isHonorary ? "grid-cols-4" : "grid-cols-3"} gap-2`}>
               <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-input text-[11px] font-bold">
                 <PencilLine className="w-4 h-4" /> Eget
               </button>
@@ -157,6 +157,11 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               <button onClick={() => setRestaurantOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-input text-[11px] font-bold">
                 <Utensils className="w-4 h-4" /> Restaurang
               </button>
+              {isHonorary && (
+                <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-primary text-primary text-[11px] font-bold">
+                  <Sparkles className="w-4 h-4" /> AI-skanna
+                </button>
+              )}
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
