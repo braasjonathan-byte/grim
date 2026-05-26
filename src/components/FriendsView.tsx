@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon, CheckCircle } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { format, parseISO } from "date-fns";
@@ -157,6 +157,35 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
       applyTheme(getStoredThemeId());
     };
   }, []);
+
+  // Live updates of a friend's workout completions (checked sets, kg/reps, done)
+  useEffect(() => {
+    if (!viewingFriend) return;
+    const fid = viewingFriend.profile.user_id;
+    const channel = supabase
+      .channel(`friend-completions-${fid}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "workout_completions", filter: `user_id=eq.${fid}` },
+        (payload: any) => {
+          const row: any = payload.new || payload.old;
+          if (!row) return;
+          const key = `${row.week}-${row.day}`;
+          setFriendCompletions((prev) => {
+            if (payload.eventType === "DELETE") {
+              const next = { ...prev };
+              delete next[key];
+              return next;
+            }
+            return { ...prev, [key]: { ...(prev[key] || {}), ...(payload.new as any) } as FriendCompletion };
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [viewingFriend?.profile.user_id]);
 
   // Comments
   const [comments, setComments] = useState<WorkoutComment[]>([]);
@@ -1162,10 +1191,14 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                       const nameMatch = line.match(/^([^–—\d]+)/);
                                       const exerciseName = nameMatch ? nameMatch[1].replace(/^[•\-\s]+/, "").trim().toLowerCase() : "";
                                       let setData: { kg?: string | number; reps?: string | number }[] | null = null;
+                                      let setsStr: string | null = null;
                                       if (weights && typeof weights === "object") {
                                         for (const [k, v] of Object.entries(weights)) {
                                           if (k.startsWith("__setdata__") && k.replace("__setdata__", "").toLowerCase() === exerciseName) {
                                             try { setData = typeof v === "string" ? JSON.parse(v) : Array.isArray(v) ? v : null; } catch {}
+                                          }
+                                          if (k.startsWith("__sets__") && k.replace("__sets__", "").toLowerCase() === exerciseName) {
+                                            setsStr = typeof v === "string" ? v : null;
                                           }
                                         }
                                       }
@@ -1177,11 +1210,22 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                           </div>
                                           {setData && setData.length > 0 && (
                                             <div className="ml-5 mt-1 flex flex-wrap gap-1">
-                                              {setData.map((s, si) => (
-                                                <span key={si} className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                                                  {s.kg || 0}kg × {s.reps || 0}
-                                                </span>
-                                              ))}
+                                              {setData.map((s, si) => {
+                                                const done = setsStr ? setsStr[si] === "1" : false;
+                                                return (
+                                                  <span
+                                                    key={si}
+                                                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded inline-flex items-center gap-1 ${
+                                                      done
+                                                        ? "bg-success/20 text-success border border-success/40"
+                                                        : "bg-primary/10 text-primary"
+                                                    }`}
+                                                  >
+                                                    {done && <CheckCircle className="w-2.5 h-2.5" />}
+                                                    {s.kg || 0}kg × {s.reps || 0}
+                                                  </span>
+                                                );
+                                              })}
                                             </div>
                                           )}
                                         </li>
