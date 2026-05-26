@@ -32,6 +32,7 @@ const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"
 const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
 const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
 const HelpSection = lazy(() => import("@/components/HelpSection"));
+const DisclaimerSection = lazy(() => import("@/components/DisclaimerSection"));
 
 interface ToolsTabProps {
   userId: string;
@@ -395,6 +396,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Suspense fallback={null}>
+        <DisclaimerSection />
+      </Suspense>
 
       <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
     </div>
