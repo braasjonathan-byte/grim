@@ -96,6 +96,22 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
           </div>
 
           <div>
+            <label className="text-xs font-medium">Kategori</label>
+            <div className="flex gap-1 flex-wrap">
+              {RECIPE_CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`px-2 py-1.5 text-[11px] font-medium border ${category === c ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+
+          <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-medium">Ingredienser</label>
               <button onClick={() => setPickerOpen(true)} className="flex items-center gap-1 text-xs font-bold text-primary"><Plus className="w-3 h-3" />Lägg till</button>
