@@ -482,6 +482,323 @@ export const CURATED_RECIPES: CuratedRecipe[] = [
   R("de-05", "Chia-jordgubbspudding", "dessert", 2, [
     ing("chiafrön", 40), ing("mjölk 1.5%", 3, "dl"), ing("jordgubbar", 150), ing("honung", 1, "msk"),
   ], "Blanda chia med mjölk och honung. Låt stå över natten. Toppa med mosade jordgubbar."),
+
+  // === FRUKOST (15 till) ===
+  R("br-16", "Keso med müsli och bär", "frukost", 1, [
+    ing("keso", 200), ing("müsli", 40), ing("blåbär", 80),
+  ], "Lägg keso i en skål. Toppa med müsli och blåbär."),
+  R("br-17", "Äggvitomelett med spenat", "frukost", 1, [
+    ing("äggvitor", 200), ing("spenat", 60), ing("fetaost", 30), ing("olivolja", 1, "tsk"),
+  ], "Vispa äggvitor lätt. Häll i panna med olja, lägg på spenat och feta. Vik."),
+  R("br-18", "Havregröt med jordnötssmör", "frukost", 1, [
+    ing("havregryn", 60), ing("mjölk 1.5%", 2, "dl"), ing("jordnötssmör", 1, "msk"), ing("banan", 0.5, "st"),
+  ], "Koka grynen i mjölken. Rör i jordnötssmör. Toppa med bananskivor."),
+  R("br-19", "Lax och äggsmörgås", "frukost", 1, [
+    ing("rågbröd", 80), ing("kallrökt lax", 60), ing("ägg", 1, "st"), ing("creme fraiche", 1, "msk"),
+  ], "Koka ägg löskokt. Bred creme fraiche på bröd, lägg på lax och äggskivor."),
+  R("br-20", "Bär-skyrbowl", "frukost", 1, [
+    ing("skyr", 200), ing("frysta bär", 80), ing("pumpafrön", 15), ing("honung", 1, "tsk"),
+  ], "Lägg skyr i skål. Toppa med bär, pumpafrön och honung."),
+  R("br-21", "Mini-frukostfrittata", "frukost", 2, [
+    ing("ägg", 6, "st"), ing("paprika", 100), ing("skinka", 80), ing("ost 17%", 60),
+  ], "Vispa ägg. Fördela paprika, skinka och ost i muffinsformar. Häll på ägg. Grädda 180°C 18 min."),
+  R("br-22", "Banansmoothiebowl", "frukost", 1, [
+    ing("banan", 1, "st"), ing("kvarg vanilj", 200), ing("havregryn", 30), ing("hallon", 50),
+  ], "Mixa banan med kvarg. Häll i skål, toppa med havregryn och hallon."),
+  R("br-23", "Cottage-toast med tomat", "frukost", 1, [
+    ing("rågbröd", 80), ing("keso", 100), ing("tomat", 80),
+  ], "Rosta brödet, bred keso. Toppa med tomatskivor och peppar."),
+  R("br-24", "Havredryck-overnight oats", "frukost", 1, [
+    ing("havregryn", 50), ing("havredryck", 2, "dl"), ing("chiafrön", 1, "tsk"), ing("hallon", 80), ing("honung", 1, "tsk"),
+  ], "Blanda allt i burk, kyl över natten."),
+  R("br-25", "Proteinkräm med kanel", "frukost", 1, [
+    ing("kvarg vanilj", 250), ing("vassleprotein", 15), ing("äpple", 1, "st"), ing("valnötter", 10),
+  ], "Rör kvarg och protein. Toppa med tärnat äpple, nötter och kanel."),
+  R("br-26", "Skinkomelett", "frukost", 1, [
+    ing("ägg", 3, "st"), ing("skinka", 60), ing("ost 17%", 30), ing("smör", 1, "tsk"),
+  ], "Vispa ägg. Häll i panna med smör. Strö skinka och ost, vik."),
+  R("br-27", "Bär-chiapudding", "frukost", 1, [
+    ing("chiafrön", 30), ing("havredryck", 2, "dl"), ing("frysta bär", 100), ing("honung", 1, "tsk"),
+  ], "Blanda chia med havredryck och honung. Kyl 2 tim. Toppa med bär."),
+  R("br-28", "Russin-havregröt", "frukost", 1, [
+    ing("havregryn", 60), ing("mjölk 1.5%", 2, "dl"), ing("russin", 20), ing("mandlar", 10),
+  ], "Koka gröten med russin. Toppa med hackade mandlar."),
+  R("br-29", "Avokado-äggsmörgås med chili", "frukost", 1, [
+    ing("rågbröd", 80), ing("avokado", 80), ing("ägg", 2, "st"), ing("limefärsk", 0.3, "st"),
+  ], "Mosa avokado med lime och chiliflingor. Bred på rostat bröd. Toppa med stekta ägg."),
+  R("br-30", "Müsli med kvarg", "frukost", 1, [
+    ing("müsli", 50), ing("kvarg naturell", 200), ing("blåbär", 60),
+  ], "Blanda müsli med kvarg och bär."),
+
+  // === LUNCH (20 till) ===
+  R("lu-21", "Kycklingsallad med mango", "lunch", 1, [
+    ing("kycklingfilé", 150), ing("sallad", 80), ing("paprika", 80), ing("avokado", 60), ing("olivolja", 1, "msk"),
+  ], "Stek kyckling, skär i strimlor. Lägg på sallad med paprika och avokado. Ringla olja."),
+  R("lu-22", "Köttfärspaj-bowl", "lunch", 2, [
+    ing("nötfärs 5%", 300), ing("potatis", 400), ing("morot", 150), ing("ärtor", 150), ing("smör", 15),
+  ], "Bryn färs. Koka potatis, mosa med smör. Värm grönsaker. Lägg upp i skål."),
+  R("lu-23", "Räkpastasallad", "lunch", 2, [
+    ing("fullkornspasta", 160), ing("räkor", 200), ing("majs", 100), ing("paprika", 100), ing("creme fraiche", 2, "msk"),
+  ], "Koka pasta. Blanda med räkor, majs, paprika och creme fraiche."),
+  R("lu-24", "Kalkonbacon-wrap", "lunch", 1, [
+    ing("tortillabröd", 60), ing("kalkonpålägg", 60), ing("avokado", 60), ing("sallad", 30), ing("tomat", 50),
+  ], "Lägg pålägg, avokado, sallad och tomat i tortillan. Rulla."),
+  R("lu-25", "Linsalad med fetaost", "lunch", 2, [
+    ing("linser röda", 200), ing("fetaost", 100), ing("tomat", 150), ing("gurka", 100), ing("olivolja", 2, "msk"),
+  ], "Koka linser. Blanda med tärnade grönsaker, feta och olja."),
+  R("lu-26", "Asiatisk kycklingnudelsoppa", "lunch", 2, [
+    ing("kycklingfilé", 250), ing("ramen nudlar", 150), ing("morot", 100), ing("soja sås", 2, "msk"), ing("ingefära", 15),
+  ], "Koka kyckling i buljong med ingefära och soja. Tillsätt nudlar och morot sista 5 min."),
+  R("lu-27", "Rödbets-quinoasallad", "lunch", 2, [
+    ing("quinoa", 150), ing("rödbeta", 200), ing("fetaost", 100), ing("valnötter", 30), ing("olivolja", 2, "msk"),
+  ], "Koka quinoa. Blanda med tärnade kokta rödbetor, feta och valnötter. Ringla olja."),
+  R("lu-28", "Tonfiskwrap", "lunch", 1, [
+    ing("tortillabröd", 60), ing("tonfisk i vatten", 100), ing("creme fraiche", 1, "msk"), ing("sallad", 30), ing("majs", 50),
+  ], "Mosa tonfisk med creme fraiche. Lägg i tortilla med sallad och majs. Rulla."),
+  R("lu-29", "Kycklingsoppa med kokos", "lunch", 4, [
+    ing("kycklingfilé", 400), ing("kokosmjölk", 400), ing("morot", 200), ing("currypasta", 30), ing("ris", 200),
+  ], "Stek kyckling. Tillsätt kokosmjölk, currypasta, morot och 5 dl buljong. Sjud 15 min. Servera med ris."),
+  R("lu-30", "Vegetarisk biff-bowl", "lunch", 2, [
+    ing("svarta bönor", 300), ing("quinoa", 150), ing("avokado", 100), ing("salsa", 100), ing("majs", 100),
+  ], "Mixa bönor till smet, forma och stek biffar. Servera på quinoa med avokado, salsa och majs."),
+  R("lu-31", "Köttbullsbaguette", "lunch", 1, [
+    ing("vetebröd", 100), ing("köttbullar färdiga", 100), ing("sallad", 30), ing("creme fraiche", 1, "msk"),
+  ], "Värm köttbullar. Skär upp bröd, lägg på sallad, köttbullar och creme fraiche."),
+  R("lu-32", "Halloumibowl med couscous", "lunch", 2, [
+    ing("halloumi", 200), ing("couscous", 150), ing("paprika", 150), ing("hummus", 60), ing("olivolja", 1, "msk"),
+  ], "Koka couscous. Stek halloumi. Blanda med paprika, ringla olja. Servera med hummus."),
+  R("lu-33", "Pasta med kyckling och pesto", "lunch", 2, [
+    ing("fullkornspasta", 160), ing("kycklingfilé", 250), ing("pesto", 30), ing("spenat", 80), ing("pinjenötter", 20),
+  ], "Koka pasta. Stek kyckling. Blanda pasta med pesto, spenat och pinjenötter. Toppa med kyckling."),
+  R("lu-34", "Lax-sushi-bowl", "lunch", 2, [
+    ing("lax", 250), ing("ris", 160), ing("gurka", 100), ing("avokado", 100), ing("soja sås", 2, "msk"),
+  ], "Koka ris. Tärna lax, gurka och avokado. Lägg upp på ris. Ringla soja."),
+  R("lu-35", "Bönsoppa med korv", "lunch", 4, [
+    ing("vita bönor", 500), ing("krossade tomater", 400), ing("lök", 100), ing("morot", 200), ing("olivolja", 2, "msk"),
+  ], "Fräs lök och morot. Tillsätt bönor, tomater och 8 dl vatten. Sjud 25 min."),
+  R("lu-36", "Räksallad med ägg", "lunch", 1, [
+    ing("räkor", 150), ing("ägg", 2, "st"), ing("sallad", 80), ing("majs", 60), ing("creme fraiche", 1, "msk"),
+  ], "Hårdkoka ägg. Blanda räkor, sallad, majs och ägg. Toppa med creme fraiche."),
+  R("lu-37", "Kalkonfärs-tacobowl", "lunch", 2, [
+    ing("kalkonfärs", 300), ing("ris", 160), ing("salsa", 100), ing("majs", 100), ing("avokado", 100),
+  ], "Bryn färs med tacokrydda. Servera på ris med salsa, majs och avokado."),
+  R("lu-38", "Tofu-quinoa-bowl", "lunch", 2, [
+    ing("tofu", 250), ing("quinoa", 150), ing("broccoli", 200), ing("soja sås", 2, "msk"), ing("ingefära", 10),
+  ], "Tärna och stek tofu i soja och ingefära. Koka quinoa. Ångkoka broccoli."),
+  R("lu-39", "Kycklingpaj-sallad", "lunch", 1, [
+    ing("kycklingfilé", 150), ing("sallad", 100), ing("oliver", 30), ing("fetaost", 50), ing("olivolja", 1, "msk"),
+  ], "Stek kyckling. Lägg upp på sallad med oliver, feta och olja."),
+  R("lu-40", "Skinksmörgås med ost", "lunch", 1, [
+    ing("rågbröd", 100), ing("skinka", 50), ing("ost 17%", 30), ing("tomat", 60),
+  ], "Rosta brödet, lägg på ost, skinka och tomat."),
+
+  // === MIDDAG (25 till) ===
+  R("mi-26", "Kycklinggryta med kokos", "middag", 4, [
+    ing("kycklingfilé", 600), ing("kokosmjölk", 400), ing("paprika", 200), ing("lök", 150), ing("ris", 320),
+  ], "Stek kyckling och lök. Tillsätt paprika och kokosmjölk. Sjud 15 min. Servera med ris."),
+  R("mi-27", "Ugnsbakad torsk med tomat", "middag", 2, [
+    ing("torsk", 300), ing("krossade tomater", 300), ing("oliver", 40), ing("vitlök", 2, "klyfta"), ing("potatis", 400),
+  ], "Lägg torsk i form med tomater, oliver och vitlök. Baka 200°C 20 min. Servera med kokt potatis."),
+  R("mi-28", "Fläskfilé med svampsås", "middag", 2, [
+    ing("fläskfilé", 350), ing("champinjoner", 200), ing("matlagningsgrädde 15%", 200), ing("potatis", 500), ing("smör", 20),
+  ], "Stek fläskfilé. Fräs svamp, tillsätt grädde, sjud. Servera med kokt potatis."),
+  R("mi-29", "Köttfärsbiffar med rotmos", "middag", 4, [
+    ing("nötfärs 10%", 500), ing("potatis", 400), ing("morot", 300), ing("smör", 30), ing("mjölk 1.5%", 1, "dl"),
+  ], "Forma och stek biffar. Koka potatis och morot, mosa med smör och mjölk."),
+  R("mi-30", "Ugnslax med honungsglaze", "middag", 2, [
+    ing("lax", 300), ing("honung", 1, "msk"), ing("soja sås", 2, "msk"), ing("broccoli", 200), ing("ris", 160),
+  ], "Pensla lax med soja och honung. Baka 200°C 12 min. Servera med ris och broccoli."),
+  R("mi-31", "Vegetarisk linsbolognese", "middag", 4, [
+    ing("linser röda", 300), ing("krossade tomater", 800), ing("morot", 200), ing("lök", 150), ing("fullkornspasta", 320),
+  ], "Fräs lök och morot. Tillsätt linser och tomater. Sjud 25 min. Servera med pasta."),
+  R("mi-32", "Tacopaj med kalkonfärs", "middag", 4, [
+    ing("kalkonfärs", 500), ing("ost 17%", 200), ing("paprika", 150), ing("majs", 200), ing("ägg", 4, "st"),
+  ], "Bryn färs med tacokrydda. Lägg i form med paprika och majs. Vispa ägg och ost, häll över. Grädda 200°C 25 min."),
+  R("mi-33", "Asiatisk biffwok", "middag", 2, [
+    ing("nötfärs 5%", 300), ing("ris", 160), ing("paprika", 150), ing("broccoli", 150), ing("soja sås", 3, "msk"),
+  ], "Bryn färs. Woka grönsaker. Blanda med soja och servera på ris."),
+  R("mi-34", "Kycklingschnitzel med potatismos", "middag", 2, [
+    ing("kycklingfilé", 300), ing("ägg", 1, "st"), ing("pankobröd", 60), ing("potatis", 500), ing("smör", 20),
+  ], "Doppa kyckling i ägg och panko. Stek gyllene. Koka potatis, mosa med smör."),
+  R("mi-35", "Fiskgratäng", "middag", 4, [
+    ing("torsk", 500), ing("potatis", 600), ing("matlagningsgrädde 15%", 300), ing("ost 17%", 100), ing("spenat", 100),
+  ], "Skiva potatis och varva med torsk och spenat i form. Häll på grädde, toppa med ost. Grädda 200°C 35 min."),
+  R("mi-36", "Vegetarisk halloumigratäng", "middag", 4, [
+    ing("halloumi", 300), ing("potatis", 600), ing("matlagningsgrädde 15%", 300), ing("spenat", 100), ing("vitlök", 3, "klyfta"),
+  ], "Skiva potatis och halloumi, varva i form med spenat och vitlök. Häll på grädde. Grädda 200°C 35 min."),
+  R("mi-37", "Kyckling fajitas", "middag", 4, [
+    ing("kycklingfilé", 600), ing("tortillabröd", 240), ing("paprika", 200), ing("lök", 150), ing("guacamole", 150),
+  ], "Stek kyckling och grönsaker med fajitakrydda. Servera i tortilla med guacamole."),
+  R("mi-38", "Lax i ugn med pesto", "middag", 2, [
+    ing("lax", 300), ing("pesto", 30), ing("potatis", 500), ing("haricots verts", 200), ing("olivolja", 1, "msk"),
+  ], "Pensla lax med pesto. Baka 200°C 15 min med klyftpotatis. Ångkoka bönor."),
+  R("mi-39", "Köttbullar i gräddsås", "middag", 4, [
+    ing("nötfärs 10%", 500), ing("matlagningsgrädde 15%", 300), ing("potatis", 800), ing("smör", 20), ing("ägg", 1, "st"),
+  ], "Forma och stek köttbullar. Häll i grädde, sjud 5 min. Servera med kokt potatis."),
+  R("mi-40", "Kalkonfärsbowl med sötpotatis", "middag", 2, [
+    ing("kalkonfärs", 400), ing("sötpotatis", 400), ing("broccoli", 200), ing("avokado", 80), ing("olivolja", 1, "msk"),
+  ], "Tärna sötpotatis, baka 200°C 25 min. Bryn färs. Ångkoka broccoli. Servera tillsammans."),
+  R("mi-41", "Kycklingpasta med svamp", "middag", 2, [
+    ing("kycklingfilé", 300), ing("fullkornspasta", 160), ing("champinjoner", 200), ing("matlagningsgrädde 15%", 200), ing("spenat", 80),
+  ], "Stek kyckling och svamp. Tillsätt grädde och spenat. Blanda med kokt pasta."),
+  R("mi-42", "Stekt halloumi med quinoasallad", "middag", 2, [
+    ing("halloumi", 250), ing("quinoa", 150), ing("tomat", 150), ing("gurka", 100), ing("citron", 0.5, "st"),
+  ], "Koka quinoa. Stek halloumi. Blanda quinoa med grönsaker och citronsaft."),
+  R("mi-43", "Lax på linsbädd", "middag", 2, [
+    ing("lax", 300), ing("linser röda", 200), ing("spenat", 100), ing("citron", 0.5, "st"), ing("olivolja", 1, "msk"),
+  ], "Koka linser. Stek lax. Vänd linser med spenat och olja. Servera med citron."),
+  R("mi-44", "Tofu i sweet chili", "middag", 2, [
+    ing("tofu", 250), ing("ris", 160), ing("paprika", 150), ing("sweet chili", 4, "msk"), ing("soja sås", 1, "msk"),
+  ], "Tärna tofu, stek krispigt. Tillsätt paprika, sweet chili och soja. Servera med ris."),
+  R("mi-45", "Köttfärsstroganoff", "middag", 4, [
+    ing("nötfärs 10%", 500), ing("matlagningsgrädde 15%", 300), ing("ris", 320), ing("lök", 150), ing("krossade tomater", 200),
+  ], "Bryn färs och lök. Tillsätt grädde och tomater. Sjud 10 min. Servera med ris."),
+  R("mi-46", "Kyckling i ugn med fetaost", "middag", 2, [
+    ing("kycklingfilé", 300), ing("fetaost", 100), ing("tomat", 200), ing("oliver", 50), ing("potatis", 400),
+  ], "Lägg kyckling, tomat, feta och oliver i form. Baka 200°C 25 min med klyftpotatis."),
+  R("mi-47", "Pannbiff med lök", "middag", 2, [
+    ing("nötfärs 5%", 300), ing("lök", 200), ing("potatis", 500), ing("smör", 20), ing("ärtor", 150),
+  ], "Forma och stek biffar. Fräs lök gyllene. Koka potatis och ärtor."),
+  R("mi-48", "Fisk-curry", "middag", 2, [
+    ing("torsk", 300), ing("kokosmjölk", 300), ing("currypasta", 30), ing("ris", 160), ing("spenat", 100),
+  ], "Sjud kokosmjölk med currypasta. Lägg i torsk och spenat, sjud 8 min. Servera med ris."),
+  R("mi-49", "Kebabtallrik hemma", "middag", 2, [
+    ing("nötfärs 10%", 300), ing("tortillabröd", 120), ing("sallad", 80), ing("tomat", 150), ing("creme fraiche", 2, "msk"),
+  ], "Krydda och stek färs som kebabkött. Servera i tortilla med sallad, tomat och creme fraiche."),
+  R("mi-50", "Vegetarisk shakshuka", "middag", 2, [
+    ing("ägg", 4, "st"), ing("krossade tomater", 400), ing("paprika", 150), ing("lök", 100), ing("fetaost", 80),
+  ], "Fräs lök och paprika. Tillsätt tomater, sjud 10 min. Knäck i ägg, strö feta. Sjud tills äggvitan stelnat."),
+
+  // === MELLANMÅL (15 till) ===
+  R("me-16", "Keso med ananas", "mellanmål", 1, [
+    ing("keso", 200), ing("mandlar", 10),
+  ], "Lägg keso i skål. Toppa med mandlar."),
+  R("me-17", "Skinkknäcke", "mellanmål", 1, [
+    ing("knäckebröd", 40), ing("ost 17%", 30), ing("skinka", 30),
+  ], "Lägg ost och skinka på knäckebröd."),
+  R("me-18", "Proteinpudding-bär", "mellanmål", 1, [
+    ing("kvarg vanilj", 200), ing("vassleprotein", 15), ing("hallon", 60),
+  ], "Rör vassle i kvarg. Toppa med hallon."),
+  R("me-19", "Banan med mandelsmör", "mellanmål", 1, [
+    ing("banan", 1, "st"), ing("mandlar", 15),
+  ], "Skär banan. Servera med hackade mandlar."),
+  R("me-20", "Tonfiskröra-bowl", "mellanmål", 1, [
+    ing("tonfisk i vatten", 80), ing("avokado", 60), ing("limefärsk", 0.3, "st"),
+  ], "Mosa tonfisk med avokado och lime."),
+  R("me-21", "Krispigt knäcke med ägg", "mellanmål", 1, [
+    ing("knäckebröd", 40), ing("ägg", 1, "st"), ing("tomat", 50),
+  ], "Hårdkoka ägg. Skiva på knäckebröd med tomat."),
+  R("me-22", "Smoothie kvarg-bär", "mellanmål", 1, [
+    ing("kvarg vanilj", 200), ing("frysta bär", 100), ing("havredryck", 1, "dl"),
+  ], "Mixa allt slätt."),
+  R("me-23", "Edamame-mix", "mellanmål", 1, [
+    ing("edamame", 100), ing("cashewnötter", 20),
+  ], "Koka edamame. Blanda med cashew och flingsalt."),
+  R("me-24", "Hummustallrik", "mellanmål", 1, [
+    ing("hummus", 80), ing("morot", 100), ing("gurka", 80),
+  ], "Servera hummus med stavar av morot och gurka."),
+  R("me-25", "Frukt och keso", "mellanmål", 1, [
+    ing("keso", 150), ing("äpple", 1, "st"),
+  ], "Skär äpple och servera med keso."),
+  R("me-26", "Yoghurt med honung", "mellanmål", 1, [
+    ing("grekisk yoghurt 10%", 200), ing("honung", 1, "tsk"), ing("valnötter", 10),
+  ], "Blanda yoghurt med honung. Toppa med valnötter."),
+  R("me-27", "Avokado-knäcke", "mellanmål", 1, [
+    ing("knäckebröd", 40), ing("avokado", 60), ing("tomat", 40),
+  ], "Mosa avokado på knäckebröd, toppa med tomat."),
+  R("me-28", "Tortilla-rulle", "mellanmål", 1, [
+    ing("tortillabröd", 50), ing("kalkonpålägg", 40), ing("creme fraiche", 1, "tsk"),
+  ], "Bred creme fraiche på tortilla, lägg på pålägg. Rulla."),
+  R("me-29", "Proteinbar-hemmagjord", "mellanmål", 8, [
+    ing("havregryn", 200), ing("vassleprotein", 80), ing("jordnötssmör", 100), ing("honung", 4, "msk"), ing("dadlar", 100),
+  ], "Mixa allt. Tryck ut i form, kyl 2 tim. Skär i bitar."),
+  R("me-30", "Cottage-paprika", "mellanmål", 1, [
+    ing("keso", 200), ing("paprika", 100),
+  ], "Servera keso med stavar av paprika."),
+
+  // === PRE-WORKOUT (8 till) ===
+  R("pre-09", "Sötpotatis och ägg", "pre-workout", 1, [
+    ing("sötpotatis", 200), ing("ägg", 2, "st"),
+  ], "Baka sötpotatis. Koka ägg. Ät 60 min före pass."),
+  R("pre-10", "Risotto-light pre", "pre-workout", 1, [
+    ing("ris", 100), ing("kycklingfilé", 80), ing("morot", 50),
+  ], "Koka ris med tärnad morot. Stek kyckling. Lätt och energirikt."),
+  R("pre-11", "Toast med banan", "pre-workout", 1, [
+    ing("vetebröd", 60), ing("banan", 1, "st"), ing("honung", 1, "tsk"),
+  ], "Rosta bröd, lägg på bananskivor och honung."),
+  R("pre-12", "Skyr med havregryn", "pre-workout", 1, [
+    ing("skyr", 150), ing("havregryn", 40), ing("honung", 1, "tsk"),
+  ], "Blanda allt i en skål."),
+  R("pre-13", "Pasta-snabbenergi", "pre-workout", 1, [
+    ing("pasta", 80), ing("tomat", 100), ing("olivolja", 1, "tsk"),
+  ], "Koka pasta. Vänd med tärnad tomat och olja."),
+  R("pre-14", "Risbollar med kyckling", "pre-workout", 2, [
+    ing("ris", 200), ing("kycklingfilé", 150), ing("soja sås", 1, "msk"),
+  ], "Koka ris klibbigt. Blanda med tärnad kyckling och soja. Forma bollar."),
+  R("pre-15", "Couscous-bär", "pre-workout", 1, [
+    ing("couscous", 80), ing("frysta bär", 80), ing("honung", 1, "tsk"),
+  ], "Koka couscous. Blanda med bär och honung."),
+  R("pre-16", "Banan-müsli", "pre-workout", 1, [
+    ing("müsli", 50), ing("mjölk 1.5%", 2, "dl"), ing("banan", 1, "st"),
+  ], "Blanda müsli, mjölk och bananskivor."),
+
+  // === POST-WORKOUT (7 till) ===
+  R("po-08", "Kalkon-rissmörgås", "post-workout", 1, [
+    ing("rågbröd", 80), ing("kalkonpålägg", 60), ing("ägg", 1, "st"),
+  ], "Hårdkoka ägg. Lägg på pålägg och äggskivor."),
+  R("po-09", "Snabb kyckling-bowl", "post-workout", 1, [
+    ing("kycklingfilé", 180), ing("sötpotatis", 250), ing("spenat", 80),
+  ], "Stek kyckling, baka sötpotatis. Servera med spenat."),
+  R("po-10", "Skyr-shake", "post-workout", 1, [
+    ing("skyr", 250), ing("mjölk 1.5%", 2, "dl"), ing("banan", 1, "st"), ing("honung", 1, "tsk"),
+  ], "Mixa allt slätt."),
+  R("po-11", "Tonfiskmacka snabb", "post-workout", 1, [
+    ing("rågbröd", 80), ing("tonfisk i vatten", 100), ing("creme fraiche", 1, "msk"),
+  ], "Mosa tonfisk med creme fraiche, bred på bröd."),
+  R("po-12", "Kvarg och granola post", "post-workout", 1, [
+    ing("kvarg vanilj", 250), ing("müsli", 40), ing("frysta bär", 80),
+  ], "Blanda kvarg med müsli och bär."),
+  R("po-13", "Äggsallad", "post-workout", 1, [
+    ing("ägg", 3, "st"), ing("rågbröd", 60), ing("creme fraiche", 1, "msk"),
+  ], "Hårdkoka ägg, mosa med creme fraiche. Servera på bröd."),
+  R("po-14", "Lax-ris-bowl", "post-workout", 1, [
+    ing("lax", 150), ing("ris", 100), ing("broccoli", 100), ing("soja sås", 1, "msk"),
+  ], "Stek lax, koka ris, ångkoka broccoli. Ringla soja."),
+
+  // === SMOOTHIE (5 till) ===
+  R("sm-06", "Mango-proteinsmoothie", "smoothie", 1, [
+    ing("banan", 1, "st"), ing("kokosmjölk", 1, "dl"), ing("vassleprotein", 25), ing("havredryck", 2, "dl"),
+  ], "Mixa allt slätt."),
+  R("sm-07", "Bär-spenat-smoothie", "smoothie", 1, [
+    ing("spenat", 40), ing("frysta bär", 150), ing("vassleprotein", 25), ing("havredryck", 3, "dl"),
+  ], "Mixa allt slätt."),
+  R("sm-08", "Avokado-smoothie", "smoothie", 1, [
+    ing("avokado", 60), ing("banan", 1, "st"), ing("vassleprotein", 25), ing("mjölk 1.5%", 3, "dl"),
+  ], "Mixa allt slätt och krämigt."),
+  R("sm-09", "Havre-banansmoothie", "smoothie", 1, [
+    ing("havregryn", 40), ing("banan", 1, "st"), ing("mjölk 1.5%", 3, "dl"), ing("jordnötssmör", 1, "msk"),
+  ], "Mixa allt slätt."),
+  R("sm-10", "Hallon-yoghurt-smoothie", "smoothie", 1, [
+    ing("hallon", 150), ing("grekisk yoghurt 10%", 150), ing("mjölk 1.5%", 2, "dl"), ing("honung", 1, "tsk"),
+  ], "Mixa allt slätt."),
+
+  // === DESSERT (5 till) ===
+  R("de-06", "Bananglass", "dessert", 2, [
+    ing("banan", 3, "st"), ing("jordnötssmör", 1, "msk"), ing("kakao", 1, "tsk"),
+  ], "Frys mogna bananer i bitar. Mixa med jordnötssmör och kakao till glass."),
+  R("de-07", "Proteinmousse choklad", "dessert", 2, [
+    ing("kvarg vanilj", 300), ing("vassleprotein", 30), ing("kakao", 2, "msk"), ing("honung", 1, "msk"),
+  ], "Rör samman allt. Kyl 1 tim. Toppa med bär."),
+  R("de-08", "Bakade äpplen med kanel", "dessert", 2, [
+    ing("äpple", 2, "st"), ing("havregryn", 30), ing("smör", 15), ing("honung", 1, "msk"),
+  ], "Kärna ur äpplen, fyll med havregryn-smörsmula. Baka 180°C 25 min."),
+  R("de-09", "Jordgubbs-skyr-paj", "dessert", 4, [
+    ing("skyr", 400), ing("havregryn", 100), ing("smör", 30), ing("jordgubbar", 200), ing("honung", 2, "msk"),
+  ], "Mixa havregryn med smör som botten. Blanda skyr med honung, häll på. Kyl 2 tim. Toppa med jordgubbar."),
+  R("de-10", "Chia-kakaopudding", "dessert", 2, [
+    ing("chiafrön", 40), ing("mjölk 1.5%", 3, "dl"), ing("kakao", 1, "msk"), ing("honung", 2, "msk"),
+  ], "Blanda allt, kyl över natten."),
+
 ];
 
 
