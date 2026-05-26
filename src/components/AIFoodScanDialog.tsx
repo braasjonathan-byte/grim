@@ -32,6 +32,8 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
   const [mode, setMode] = useState<ScanMode>("dish");
+  const [productName, setProductName] = useState("");
+  const [saveToBank, setSaveToBank] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
