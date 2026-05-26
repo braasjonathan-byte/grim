@@ -32,6 +32,8 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
   const [mode, setMode] = useState<ScanMode>("dish");
+  const [productName, setProductName] = useState("");
+  const [saveToBank, setSaveToBank] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,6 +106,8 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
       setResult(data);
       setAmount(String(Math.round(data.portion_g || 100)));
       setUnit("g");
+      setProductName(data?.food?.name || "");
+      setSaveToBank(mode === "label");
     } catch (e: any) {
       toast({ title: "AI-analys misslyckades", description: e?.message, variant: "destructive" });
       setPhoto(null); startCam();
@@ -112,15 +116,49 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
     }
   }
 
-  function confirm() {
+  async function confirm() {
     if (!result) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
     const grams = toGrams(a, unit);
     const factor = grams / 100;
+    const name = (productName.trim() || result.food.name || "Produkt");
+
+    let savedId: string | null = result.food.id;
+    let savedSource: "food" | "custom_food" = result.food.id ? "food" : "custom_food";
+
+    if (saveToBank && !result.food.id) {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const uid = auth?.user?.id;
+        if (uid) {
+          const { data: ins, error: insErr } = await supabase
+            .from("custom_foods")
+            .insert({
+              user_id: uid,
+              name,
+              kcal: result.food.kcal,
+              protein_g: result.food.protein_g,
+              fat_g: result.food.fat_g,
+              carbs_g: result.food.carbs_g,
+            })
+            .select("id")
+            .single();
+          if (insErr) throw insErr;
+          if (ins?.id) {
+            savedId = ins.id;
+            savedSource = "custom_food";
+            toast({ title: "Sparad i din livsmedelsbank", description: name });
+          }
+        }
+      } catch (e: any) {
+        toast({ title: "Kunde inte spara i bank", description: e?.message, variant: "destructive" });
+      }
+    }
+
     onPick({
-      source: result.food.id ? "food" : "custom_food",
-      id: result.food.id || "ai-" + Date.now(),
-      name: result.food.name,
+      source: savedSource,
+      id: savedId || "ai-" + Date.now(),
+      name,
       amount: a, unit,
       kcal: result.food.kcal * factor,
       protein_g: result.food.protein_g * factor,
@@ -177,7 +215,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
           <div className="space-y-3">
             {photo && <img src={photo} alt="" className="w-full max-h-48 object-cover" />}
             <div className="border border-border p-3 bg-muted/40">
-              <p className="font-bold text-sm">{result.food.name}</p>
+              <p className="font-bold text-sm">{productName || result.food.name}</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">
                 Källa: {result.source === "livsmedelsverket" ? "Livsmedelsverket" : "AI-uppskattning"}
                 {result.identified?.confidence != null && ` · ${Math.round(result.identified.confidence * 100)}% säkerhet`}
@@ -189,6 +227,18 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
                 <div><p className="text-[10px] text-muted-foreground">Kolhydrater</p><p className="font-bold tabular-nums">{result.food.carbs_g.toFixed(1)}</p></div>
               </div>
             </div>
+            {mode === "label" && !result.food.id && (
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs font-medium">Namnge produkten</label>
+                  <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="t.ex. Kvarg vanilj" className="rounded-none mt-1" />
+                </div>
+                <label className="flex items-center gap-2 text-xs">
+                  <input type="checkbox" checked={saveToBank} onChange={(e) => setSaveToBank(e.target.checked)} />
+                  Spara i min livsmedelsbank
+                </label>
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium">Mängd (AI uppskattade {Math.round(result.portion_g)} g)</label>
               <div className="flex gap-2 mt-1">
