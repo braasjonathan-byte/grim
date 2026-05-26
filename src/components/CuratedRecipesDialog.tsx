@@ -16,6 +16,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("frukost");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [portions, setPortions] = useState("1");
 
   const filtered = useMemo(() => {
@@ -24,8 +25,22 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
   }, [query, cat]);
 
   function pick(r: CuratedRecipe) {
+    const idx = filtered.findIndex((x) => x.id === r.id);
     setSelected(r);
+    setSelectedIndex(idx >= 0 ? idx : 0);
     setPortions("1");
+  }
+
+  function goPrev() {
+    const newIndex = selectedIndex > 0 ? selectedIndex - 1 : filtered.length - 1;
+    setSelectedIndex(newIndex);
+    setSelected(filtered[newIndex]);
+  }
+
+  function goNext() {
+    const newIndex = selectedIndex < filtered.length - 1 ? selectedIndex + 1 : 0;
+    setSelectedIndex(newIndex);
+    setSelected(filtered[newIndex]);
   }
 
   function confirmAdd() {
