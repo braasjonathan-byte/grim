@@ -215,7 +215,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
           <div className="space-y-3">
             {photo && <img src={photo} alt="" className="w-full max-h-48 object-cover" />}
             <div className="border border-border p-3 bg-muted/40">
-              <p className="font-bold text-sm">{result.food.name}</p>
+              <p className="font-bold text-sm">{productName || result.food.name}</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">
                 Källa: {result.source === "livsmedelsverket" ? "Livsmedelsverket" : "AI-uppskattning"}
                 {result.identified?.confidence != null && ` · ${Math.round(result.identified.confidence * 100)}% säkerhet`}
@@ -227,6 +227,18 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
                 <div><p className="text-[10px] text-muted-foreground">Kolhydrater</p><p className="font-bold tabular-nums">{result.food.carbs_g.toFixed(1)}</p></div>
               </div>
             </div>
+            {mode === "label" && !result.food.id && (
+              <div className="space-y-2">
+                <div>
+                  <label className="text-xs font-medium">Namnge produkten</label>
+                  <Input value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="t.ex. Kvarg vanilj" className="rounded-none mt-1" />
+                </div>
+                <label className="flex items-center gap-2 text-xs">
+                  <input type="checkbox" checked={saveToBank} onChange={(e) => setSaveToBank(e.target.checked)} />
+                  Spara i min livsmedelsbank
+                </label>
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium">Mängd (AI uppskattade {Math.round(result.portion_g)} g)</label>
               <div className="flex gap-2 mt-1">
