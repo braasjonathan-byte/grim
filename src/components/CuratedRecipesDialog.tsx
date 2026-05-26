@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Lock, Search, ChefHat, X } from "lucide-react";
+import { Lock, Search, ChefHat, ChevronLeft, ChevronRight } from "lucide-react";
 import { CURATED_RECIPES, RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
 import { PickedItem } from "./FoodPickerDialog";
 
