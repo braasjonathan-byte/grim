@@ -148,10 +148,11 @@ const Index = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as Tab;
-      if (detail === "workout" || detail === "stats" || detail === "social" || detail === "calc") {
+      if (detail === "workout" || detail === "nutrition" || detail === "stats" || detail === "social" || detail === "calc") {
         setTab(detail);
       }
     };
+
     window.addEventListener("grim:set-tab", handler);
     return () => window.removeEventListener("grim:set-tab", handler);
   }, [setTab]);
