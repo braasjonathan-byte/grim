@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Globe, Lock } from "lucide-react";
+import { Trash2, Plus, Globe, Lock, Loader2 } from "lucide-react";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
 import { RECIPE_CATEGORIES } from "@/data/curatedRecipes";
@@ -13,25 +13,59 @@ interface RecipeEditorProps {
   onOpenChange: (v: boolean) => void;
   userId: string;
   onSaved: () => void;
-  initialRecipeId?: string;
+  initialRecipeId?: string | null;
 }
 
 type Ingredient = PickedItem;
 
-export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: RecipeEditorProps) {
-  const [name, setName] = useState("");
-  const [servings, setServings] = useState("4");
-  const [instructions, setInstructions] = useState("");
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [visibility, setVisibility] = useState<"private" | "public">("private");
-  const [category, setCategory] = useState<string>("middag");
+const EMPTY = { name: "", servings: "4", instructions: "", ingredients: [] as Ingredient[], visibility: "private" as "private" | "public", category: "middag" };
+
+export default function RecipeEditor({ open, onOpenChange, userId, onSaved, initialRecipeId }: RecipeEditorProps) {
+  const [name, setName] = useState(EMPTY.name);
+  const [servings, setServings] = useState(EMPTY.servings);
+  const [instructions, setInstructions] = useState(EMPTY.instructions);
+  const [ingredients, setIngredients] = useState<Ingredient[]>(EMPTY.ingredients);
+  const [visibility, setVisibility] = useState<"private" | "public">(EMPTY.visibility);
+  const [category, setCategory] = useState<string>(EMPTY.category);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const isEditing = !!initialRecipeId;
+
   function reset() {
-    setName(""); setServings("4"); setInstructions(""); setIngredients([]); setVisibility("private"); setCategory("middag");
+    setName(EMPTY.name); setServings(EMPTY.servings); setInstructions(EMPTY.instructions);
+    setIngredients(EMPTY.ingredients); setVisibility(EMPTY.visibility); setCategory(EMPTY.category);
   }
+
+  // Load existing recipe when editing
+  useEffect(() => {
+    if (!open) return;
+    if (!initialRecipeId) { reset(); return; }
+    let cancelled = false;
+    setLoading(true);
+    supabase
+      .from("recipes")
+      .select("name,servings,instructions,visibility,category,ingredients")
+      .eq("id", initialRecipeId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setLoading(false);
+        if (error || !data) {
+          toast({ title: "Kunde inte ladda receptet", description: error?.message, variant: "destructive" });
+          return;
+        }
+        setName((data as any).name || "");
+        setServings(String((data as any).servings ?? "1"));
+        setInstructions((data as any).instructions || "");
+        setVisibility(((data as any).visibility as any) || "private");
+        setCategory((data as any).category || "middag");
+        setIngredients(Array.isArray((data as any).ingredients) ? ((data as any).ingredients as Ingredient[]) : []);
+      });
+    return () => { cancelled = true; };
+  }, [open, initialRecipeId]);
 
   const totalKcal = ingredients.reduce((s, i) => s + i.kcal, 0);
   const totalProtein = ingredients.reduce((s, i) => s + i.protein_g, 0);
@@ -39,13 +73,35 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
   const totalCarbs = ingredients.reduce((s, i) => s + i.carbs_g, 0);
   const portions = Math.max(1, parseFloat(servings.replace(",", ".")) || 1);
 
+  /** Scale an ingredient's nutrition values when its amount changes. */
+  function updateIngredientAmount(idx: number, raw: string) {
+    setIngredients((arr) => arr.map((ing, i) => {
+      if (i !== idx) return ing;
+      const newAmt = parseFloat(raw.replace(",", ".")) || 0;
+      const oldAmt = ing.amount || 0;
+      if (oldAmt <= 0) {
+        // Can't scale from zero — just store the raw amount and zero out macros.
+        return { ...ing, amount: newAmt };
+      }
+      const f = newAmt / oldAmt;
+      return {
+        ...ing,
+        amount: newAmt,
+        kcal: ing.kcal * f,
+        protein_g: ing.protein_g * f,
+        fat_g: ing.fat_g * f,
+        carbs_g: ing.carbs_g * f,
+      };
+    }));
+  }
+
   async function save() {
     if (!name.trim() || ingredients.length === 0) {
       toast({ title: "Namn och minst en ingrediens krävs", variant: "destructive" });
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("recipes").insert({
+    const payload = {
       user_id: userId,
       name: name.trim(),
       servings: portions,
@@ -57,10 +113,13 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
       protein_g_per_serving: totalProtein / portions,
       carbs_g_per_serving: totalCarbs / portions,
       ingredients: ingredients as any,
-    } as any);
+    } as any;
+    const { error } = isEditing
+      ? await supabase.from("recipes").update(payload).eq("id", initialRecipeId!).eq("user_id", userId)
+      : await supabase.from("recipes").insert(payload);
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Recept sparat" });
+    toast({ title: isEditing ? "Recept uppdaterat" : "Recept sparat" });
     reset();
     onSaved();
     onOpenChange(false);
@@ -70,8 +129,11 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif">Nytt recept</DialogTitle>
+          <DialogTitle className="font-serif">{isEditing ? "Redigera recept" : "Nytt recept"}</DialogTitle>
         </DialogHeader>
+        {loading ? (
+          <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+        ) : (
         <div className="space-y-3">
           <div>
             <label className="text-xs font-medium">Namn</label>
@@ -121,12 +183,23 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
             ) : (
               <ul className="border border-border divide-y divide-border">
                 {ingredients.map((ing, idx) => (
-                  <li key={idx} className="flex items-center justify-between py-2 px-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{ing.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{ing.amount} {ing.unit} · {Math.round(ing.kcal)} kcal</p>
+                  <li key={idx} className="py-2 px-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium truncate flex-1">{ing.name}</p>
+                      <button onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))} className="text-destructive p-1" aria-label="Ta bort"><Trash2 className="w-4 h-4" /></button>
                     </div>
-                    <button onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))} className="text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        value={String(ing.amount)}
+                        onChange={(e) => updateIngredientAmount(idx, e.target.value)}
+                        inputMode="decimal"
+                        pattern="[0-9.,]*"
+                        className="rounded-none h-7 w-20 text-xs"
+                        aria-label="Mängd"
+                      />
+                      <span className="text-[11px] text-muted-foreground">{ing.unit}</span>
+                      <span className="text-[10px] text-muted-foreground ml-auto tabular-nums">{Math.round(ing.kcal)} kcal · P{ing.protein_g.toFixed(1)} F{ing.fat_g.toFixed(1)} K{ing.carbs_g.toFixed(1)}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -146,9 +219,10 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved }: Re
           </div>
 
           <button disabled={saving} onClick={save} className="w-full py-3 bg-primary text-primary-foreground font-bold disabled:opacity-50">
-            {saving ? "Sparar…" : "Spara recept"}
+            {saving ? "Sparar…" : isEditing ? "Spara ändringar" : "Spara recept"}
           </button>
         </div>
+        )}
 
         <FoodPickerDialog
           open={pickerOpen}
