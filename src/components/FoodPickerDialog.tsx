@@ -27,9 +27,11 @@ interface FoodPickerDialogProps {
   userId: string;
   /** If true, recipes are hidden (used when building a recipe) */
   hideRecipes?: boolean;
+  /** Optional: called when the user taps the edit pencil on one of their own recipes */
+  onEditRecipe?: (recipeId: string) => void;
 }
 
-type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string };
+type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string; owner_id?: string | null };
 
 export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes }: FoodPickerDialogProps) {
   const [query, setQuery] = useState("");
