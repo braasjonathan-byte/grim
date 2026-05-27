@@ -373,6 +373,48 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         existing={allSlots}
         onSave={(name) => { if (renameIdx !== null) handleRename(renameIdx, name); setRenameIdx(null); }}
       />
+
+      {editingLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setEditingLog(null)}>
+          <div className="bg-card border border-border w-full sm:max-w-sm p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <p className="font-serif text-lg">Redigera livsmedel</p>
+              <p className="text-xs text-muted-foreground truncate">{editingLog.item_name}</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold">Mängd ({editingLog.unit})</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="any"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                className="w-full px-3 py-2 border border-input bg-background text-sm"
+                autoFocus
+              />
+              {(() => {
+                const n = parseFloat(editAmount.replace(",", "."));
+                const oldAmt = Number(editingLog.amount) || 1;
+                const f = isFinite(n) && n > 0 ? n / oldAmt : 1;
+                return (
+                  <p className="text-[10px] text-muted-foreground tabular-nums pt-1">
+                    {Math.round(Number(editingLog.kcal) * f)} kcal · P{(Number(editingLog.protein_g) * f).toFixed(0)} F{(Number(editingLog.fat_g) * f).toFixed(0)} K{(Number(editingLog.carbs_g) * f).toFixed(0)}
+                  </p>
+                );
+              })()}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={deleteEditLog} className="flex-1 py-2 border border-destructive text-destructive text-xs font-bold flex items-center justify-center gap-1">
+                <Trash2 className="w-3.5 h-3.5" /> Ta bort
+              </button>
+              <button onClick={saveEditLog} className="flex-1 py-2 bg-primary text-primary-foreground text-xs font-bold">
+                Spara
+              </button>
+            </div>
+            <button onClick={() => setEditingLog(null)} className="w-full py-1 text-xs text-muted-foreground">Avbryt</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
