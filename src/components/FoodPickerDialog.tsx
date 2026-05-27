@@ -33,7 +33,7 @@ interface FoodPickerDialogProps {
 
 type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string; owner_id?: string | null };
 
-export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes }: FoodPickerDialogProps) {
+export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes, onEditRecipe }: FoodPickerDialogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodRow[]>([]);
   const [loading, setLoading] = useState(false);
