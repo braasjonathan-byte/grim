@@ -88,6 +88,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             fat_g: Number(r.fat_g_per_serving) || 0,
             carbs_g: Number(r.carbs_g_per_serving) || 0,
             servings: Number(r.servings) || 1,
+            owner_id: r.user_id || null,
           });
         }
       }
