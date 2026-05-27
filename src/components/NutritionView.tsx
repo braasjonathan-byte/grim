@@ -84,7 +84,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
                   {l.amount} {l.unit} · {Math.round(Number(l.kcal))} kcal · P{Number(l.protein_g).toFixed(0)} F{Number(l.fat_g).toFixed(0)} K{Number(l.carbs_g).toFixed(0)}
                 </p>
               </div>
-              <button onClick={() => onRemoveLog(l.id)} className="text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
+              <button onClick={() => onEditLog(l)} className="p-1" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>
