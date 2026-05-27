@@ -43,7 +43,7 @@ interface SortableMealProps {
   onEditLog: (l: MealLog) => void;
 }
 
-function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog }: SortableMealProps) {
+function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog }: SortableMealProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
