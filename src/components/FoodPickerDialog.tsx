@@ -269,8 +269,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               {!loading && combinedResults.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
               <ul className="divide-y divide-border">
                 {combinedResults.map((r) => (
-                  <li key={`${r.source}-${r.id}`}>
-                    <button onClick={() => pick(r)} className="w-full text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2">
+                  <li key={`${r.source}-${r.id}`} className="flex items-stretch">
+                    <button onClick={() => pick(r)} className="flex-1 text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2 min-w-0">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{r.name}</p>
                         <p className="text-[11px] text-muted-foreground">
@@ -279,6 +279,15 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                       </div>
                       <Plus className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
                     </button>
+                    {r.source === "recipe" && r.owner_id === userId && onEditRecipe && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditRecipe(r.id); }}
+                        className="px-2 text-muted-foreground hover:text-primary"
+                        aria-label="Redigera recept"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
                   </li>
                 ))}
                 {offLoading && <li className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></li>}
