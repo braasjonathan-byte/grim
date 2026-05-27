@@ -272,8 +272,20 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       </div>
 
-      <FoodPickerDialog open={!!picker} onOpenChange={(v) => !v && setPicker(null)} userId={userId} onPick={(item) => picker && addLog(picker, item)} />
-      <RecipeEditor open={recipeOpen} onOpenChange={setRecipeOpen} userId={userId} onSaved={load} />
+      <FoodPickerDialog
+        open={!!picker}
+        onOpenChange={(v) => !v && setPicker(null)}
+        userId={userId}
+        onPick={(item) => picker && addLog(picker, item)}
+        onEditRecipe={(id) => { setPicker(null); setEditingRecipeId(id); setRecipeOpen(true); }}
+      />
+      <RecipeEditor
+        open={recipeOpen}
+        onOpenChange={(v) => { setRecipeOpen(v); if (!v) setEditingRecipeId(null); }}
+        userId={userId}
+        onSaved={load}
+        initialRecipeId={editingRecipeId}
+      />
       <CuratedRecipesDialog
         open={curatedOpen}
         onOpenChange={(v) => { setCuratedOpen(v); if (!v) setCuratedTargetMeal(null); }}
