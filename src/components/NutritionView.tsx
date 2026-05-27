@@ -40,6 +40,7 @@ interface SortableMealProps {
   onRename: () => void;
   onDelete: () => void;
   onRemoveLog: (id: string) => void;
+  onEditLog: (l: MealLog) => void;
 }
 
 function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog }: SortableMealProps) {
