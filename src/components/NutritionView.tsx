@@ -260,6 +260,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                     onRename={() => setRenameIdx(idx)}
                     onDelete={() => deleteSlot(idx)}
                     onRemoveLog={removeLog}
+                    onEditLog={(l) => setEditingLog(l)}
                   />
                 );
               })}
