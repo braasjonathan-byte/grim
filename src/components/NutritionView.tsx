@@ -108,6 +108,37 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [addNameOpen, setAddNameOpen] = useState(false);
   const [renameIdx, setRenameIdx] = useState<number | null>(null);
+  const [editingLog, setEditingLog] = useState<MealLog | null>(null);
+  const [editAmount, setEditAmount] = useState<string>("");
+
+  useEffect(() => {
+    if (editingLog) setEditAmount(String(editingLog.amount));
+  }, [editingLog]);
+
+  async function saveEditLog() {
+    if (!editingLog) return;
+    const newAmt = parseFloat(editAmount.replace(",", "."));
+    if (!isFinite(newAmt) || newAmt <= 0) { toast({ title: "Ogiltig mängd", variant: "destructive" }); return; }
+    const oldAmt = Number(editingLog.amount) || 1;
+    const f = newAmt / oldAmt;
+    const { error } = await supabase.from("meal_logs").update({
+      amount: newAmt,
+      kcal: Number(editingLog.kcal) * f,
+      protein_g: Number(editingLog.protein_g) * f,
+      fat_g: Number(editingLog.fat_g) * f,
+      carbs_g: Number(editingLog.carbs_g) * f,
+    }).eq("id", editingLog.id);
+    if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
+    setEditingLog(null);
+    load();
+  }
+
+  async function deleteEditLog() {
+    if (!editingLog) return;
+    await supabase.from("meal_logs").delete().eq("id", editingLog.id);
+    setEditingLog(null);
+    load();
+  }
   const { toast } = useToast();
 
   const sensors = useSensors(
