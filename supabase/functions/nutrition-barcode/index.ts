@@ -48,29 +48,16 @@ Deno.serve(async (req) => {
       fiber_g: Number(n.fiber_100g) || 0,
     };
 
-    // Try to match against Livsmedelsverket "foods" table by name tokens
-    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const tokens = name.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((t) => t.length >= 3).slice(0, 4);
-
-    let lvMatch: any = null;
-    if (tokens.length) {
-      // Try most specific token first
-      for (const t of tokens) {
-        const { data } = await supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,fiber_g").ilike("name", `%${t}%`).limit(5);
-        if (data && data.length) {
-          lvMatch = data[0];
-          break;
-        }
-      }
-    }
-
+    // Use Open Food Facts data directly — it's keyed to the actual barcode.
+    // Fuzzy-matching against Livsmedelsverket by a single token gave wildly
+    // unrelated results (e.g. a yogurt matching the first row containing "van").
     return new Response(JSON.stringify({
       found: true,
-      source: lvMatch ? "livsmedelsverket" : "openfoodfacts",
+      source: "openfoodfacts",
       barcode,
       product_name: offFood.name,
       brand,
-      food: lvMatch ?? { id: null, ...offFood },
+      food: { id: null, ...offFood },
       off: offFood,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
