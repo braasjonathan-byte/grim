@@ -9,6 +9,7 @@ import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
 import AchievementsPanel from "@/components/AchievementsPanel";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
+import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
 import { calculateAchievementMetrics, unlockEarnedAchievements } from "@/lib/achievements";
 import {
   Dialog,
@@ -560,43 +561,49 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     for (const row of filteredCompletions) {
       if (!row.done || !hasExercise(row) || !row.logged_weights || typeof row.logged_weights !== "object") continue;
       const weights = row.logged_weights as Record<string, any>;
+      // Group setdata entries by base exercise name (strip "— 3×10 @ -20 kg" style suffixes
+      // that the progression engine appends when renaming). Same lift can appear under
+      // multiple variant names within the same workout — keep only the variant with the
+      // highest tonnage so we don't double/triple-count.
+      const tonnageByBase = new Map<string, number>();
       for (const [key, value] of Object.entries(weights)) {
-        if (key.startsWith("__setdata__")) {
-          const exerciseName = key.replace("__setdata__", "");
-          let sets: {kg?: string | number;reps?: string | number;}[] = [];
-          if (typeof value === "string") {
-            try {sets = JSON.parse(value);} catch {continue;}
-          } else if (Array.isArray(value)) {
-            sets = value;
-          }
-           // Check if this exercise has a bodyweight mode (per-set or exercise-level fallback)
-           const bwModeExercise = weights[`__bw_mode__${exerciseName}`];
-           for (let si = 0; si < sets.length; si++) {
-             const s = sets[si];
-             let kg = Number(s.kg) || 0;
-             const reps = Number(s.reps) || 0;
-             // Per-set bw mode, falling back to exercise-level
-              const bwMode = weights[`__bw_mode__${exerciseName}__${si}`] ?? bwModeExercise ?? (isAssistedBodyweightExercise(exerciseName) ? "sub" : undefined);
-             // Weighted bodyweight exercise: effective = bodyweight ± entered kg
-             if (bwMode && userWeightKg) {
-               const absKg = Math.abs(kg);
-               kg = bwMode === "sub" ? Math.max(0, userWeightKg - absKg) : userWeightKg + absKg;
-            } else if (bwMode && !userWeightKg) {
-              // Can't compute without body weight, just use entered kg
-            } else if (kg < 0 && userWeightKg) {
-              // Negative kg = assisted exercise: effective weight = bodyweight + kg (which subtracts)
-              kg = userWeightKg + kg;
-              if (kg < 0) kg = 0;
-            } else if (kg < 0) {
-              kg = 0; // Can't compute without body weight
-            }
-            total += kg * reps;
-          }
+        if (!key.startsWith("__setdata__")) continue;
+        const exerciseName = key.replace("__setdata__", "");
+        let sets: { kg?: string | number; reps?: string | number }[] = [];
+        if (typeof value === "string") {
+          try { sets = JSON.parse(value); } catch { continue; }
+        } else if (Array.isArray(value)) {
+          sets = value;
         }
+        const bwModeExercise = weights[`__bw_mode__${exerciseName}`];
+        let entryTotal = 0;
+        for (let si = 0; si < sets.length; si++) {
+          const s = sets[si];
+          let kg = Number(s.kg) || 0;
+          const reps = Number(s.reps) || 0;
+          const bwMode = weights[`__bw_mode__${exerciseName}__${si}`] ?? bwModeExercise ?? (isAssistedBodyweightExercise(exerciseName) ? "sub" : undefined);
+          if (bwMode && userWeightKg) {
+            const absKg = Math.abs(kg);
+            kg = bwMode === "sub" ? Math.max(0, userWeightKg - absKg) : userWeightKg + absKg;
+          } else if (bwMode && !userWeightKg) {
+            // can't compute
+          } else if (kg < 0 && userWeightKg) {
+            kg = userWeightKg + kg;
+            if (kg < 0) kg = 0;
+          } else if (kg < 0) {
+            kg = 0;
+          }
+          entryTotal += kg * reps;
+        }
+        const baseKey = stripSetRepSuffix(exerciseName).toLowerCase();
+        const prev = tonnageByBase.get(baseKey) ?? 0;
+        if (entryTotal > prev) tonnageByBase.set(baseKey, entryTotal);
       }
+      for (const v of tonnageByBase.values()) total += v;
     }
     return Math.round(total / 1000 * 10) / 10;
   }, [filteredCompletions, userWeightKg, plansWithExercises]);
+
 
   const cyclePeriod = () => {
     const order: SummaryPeriod[] = ["all", "week", "month", "year"];
