@@ -77,7 +77,7 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] bg-background/80 flex items-center justify-center p-4 pb-24" onClick={onClose}>
       <div className="bg-card border border-border rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h3 className="font-bold">Hur gick passet?</h3>
@@ -136,6 +136,9 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
             />
           </div>
 
+        </div>
+
+        <div className="sticky bottom-0 p-4 border-t border-border bg-card">
           <Button onClick={handleSubmit} disabled={saving} className="w-full">
             {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : "Spara & klar"}
           </Button>
