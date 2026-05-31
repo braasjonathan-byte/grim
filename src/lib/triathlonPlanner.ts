@@ -4,6 +4,8 @@
 export type Level = "beginner" | "intermediate" | "advanced";
 export type Discipline = "swim" | "bike" | "run" | "strength" | "rest";
 
+export type BikeType = "road" | "mtb" | "gravel" | "tt" | "indoor" | "hybrid";
+
 export interface TriathlonPlanInput {
   goalType: "duration" | "race_date";
   durationWeeks?: number;
@@ -12,6 +14,7 @@ export interface TriathlonPlanInput {
   swimLevel: Level;
   bikeLevel: Level;
   runLevel: Level;
+  bikeType?: BikeType;
   swimKmWeek: number;
   bikeKmWeek: number;
   runKmWeek: number;
@@ -19,6 +22,15 @@ export interface TriathlonPlanInput {
   longSessionDays: string[]; // ["Lör","Sön"]
   includeStrength: boolean;
 }
+
+export const bikeTypeLabel: Record<BikeType, string> = {
+  road: "Landsväg",
+  mtb: "MTB",
+  gravel: "Gravel",
+  tt: "Tempo/TT",
+  indoor: "Inomhus/Trainer",
+  hybrid: "Hybrid",
+};
 
 export interface GeneratedSession {
   week: number;
@@ -246,6 +258,11 @@ export function generateSessions(input: TriathlonPlanInput): GeneratedSession[] 
 
       const durationMin = Math.max(20, Math.round((distance / speedKmh[discipline]) * 60));
 
+      let desc = describeSession(discipline, kind, distance, durationMin);
+      if (discipline === "bike" && input.bikeType) {
+        desc = `[${bikeTypeLabel[input.bikeType]}] ${desc}`;
+      }
+
       out.push({
         week: w + 1,
         day_of_week: dayName,
@@ -254,7 +271,7 @@ export function generateSessions(input: TriathlonPlanInput): GeneratedSession[] 
         duration_min: durationMin,
         distance_km: Math.round(distance * 10) / 10,
         intensity: intensityForKind(kind),
-        description: describeSession(discipline, kind, distance, durationMin),
+        description: desc,
         is_long_session: kind === "long",
       });
     });
