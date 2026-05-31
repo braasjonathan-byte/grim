@@ -772,11 +772,15 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setNewComment((prev) => ({ ...prev, [key]: "" }));
   };
 
-  const toggleLike = async (week: number, day: string) => {
+  const toggleLike = async (week: number, day: string, planId?: string) => {
     if (!viewingFriend) return;
-    const key = `${week}-${day}`;
+    const key = planId || `${week}-${day}`;
     const fid = viewingFriend.profile.user_id;
-    const existingLike = likes.find((l) => l.user_id === userId && l.week === week && l.day === day && l.target_user_id === fid);
+    const existingLike = likes.find((l) =>
+      l.user_id === userId &&
+      l.target_user_id === fid &&
+      (planId ? l.plan_id === planId : !l.plan_id && l.week === week && l.day === day)
+    );
     
     setLikingKey(key);
     if (existingLike) {
@@ -793,6 +797,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         target_user_id: fid,
         week,
         day,
+        plan_id: planId || null,
       } as any).select().single();
       if (data) {
         const postId = await getWorkoutPostId(fid, week, day);
