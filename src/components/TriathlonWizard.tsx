@@ -66,6 +66,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
         sessionsPerWeek,
         longSessionDays: longDays,
         includeStrength,
+        strengthSessions,
       };
 
       if (goalType === "race_date" && !raceDate) {
