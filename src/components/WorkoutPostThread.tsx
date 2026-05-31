@@ -108,14 +108,14 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
     if (iLiked) {
       await Promise.all([
         supabase.from("social_post_likes").delete().eq("post_id", postId).eq("user_id", viewerId),
-        supabase.from("workout_likes").delete().eq("target_user_id", userId).eq("week", week).eq("day", day).eq("user_id", viewerId),
+        supabase.from("workout_likes").delete().eq("target_user_id", userId).eq("week", week).eq("day", day).eq("user_id", viewerId).is("plan_id", null),
       ]);
       setILiked(false);
       setLikeCount((n) => Math.max(0, n - 1));
     } else {
       await Promise.all([
         supabase.from("social_post_likes").insert({ post_id: postId, user_id: viewerId }),
-        supabase.from("workout_likes").upsert({ target_user_id: userId, week, day, user_id: viewerId } as any, { onConflict: "user_id,target_user_id,week,day" }),
+        supabase.from("workout_likes").insert({ target_user_id: userId, week, day, user_id: viewerId, plan_id: null } as any),
       ]);
       setILiked(true);
       setLikeCount((n) => n + 1);
