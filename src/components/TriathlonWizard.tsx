@@ -60,6 +60,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
         raceDate: goalType === "race_date" ? raceDate : undefined,
         startDate,
         swimLevel, bikeLevel, runLevel,
+        bikeType,
         swimKmWeek: swimKm, bikeKmWeek: bikeKm, runKmWeek: runKm,
         sessionsPerWeek,
         longSessionDays: longDays,
