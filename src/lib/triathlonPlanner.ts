@@ -4,6 +4,8 @@
 export type Level = "beginner" | "intermediate" | "advanced";
 export type Discipline = "swim" | "bike" | "run" | "strength" | "rest";
 
+export type BikeType = "road" | "mtb" | "gravel" | "tt" | "indoor" | "hybrid";
+
 export interface TriathlonPlanInput {
   goalType: "duration" | "race_date";
   durationWeeks?: number;
@@ -12,6 +14,7 @@ export interface TriathlonPlanInput {
   swimLevel: Level;
   bikeLevel: Level;
   runLevel: Level;
+  bikeType?: BikeType;
   swimKmWeek: number;
   bikeKmWeek: number;
   runKmWeek: number;
@@ -19,6 +22,15 @@ export interface TriathlonPlanInput {
   longSessionDays: string[]; // ["Lör","Sön"]
   includeStrength: boolean;
 }
+
+export const bikeTypeLabel: Record<BikeType, string> = {
+  road: "Landsväg",
+  mtb: "MTB",
+  gravel: "Gravel",
+  tt: "Tempo/TT",
+  indoor: "Inomhus/Trainer",
+  hybrid: "Hybrid",
+};
 
 export interface GeneratedSession {
   week: number;
