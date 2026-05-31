@@ -94,10 +94,15 @@ const matchesPlanDay = (
   planStartDate: string | null,
 ): boolean => {
   if (c.plan_id === plan.id) return true;
-  if (c.plan_id !== null) return false;
-  if (c.week !== plan.week || c.day !== plan.day) return false;
-  if (planStartDate && (c.created_at || "").substring(0, 10) < planStartDate) return false;
-  return true;
+  return false;
+};
+
+const matchesPlanLike = (
+  like: { week: number; day: string; plan_id?: string | null },
+  plan: { id: string; week: number; day: string },
+): boolean => {
+  if (like.plan_id) return like.plan_id === plan.id;
+  return false;
 };
 
 interface AchievementToastState {
@@ -658,7 +663,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [commentNicknames, setCommentNicknames] = useState<Record<string, string>>({});
 
   // Likes on own workouts
-  const [workoutLikes, setWorkoutLikes] = useState<{ id: string; user_id: string; week: number; day: string }[]>([]);
+  const [workoutLikes, setWorkoutLikes] = useState<{ id: string; user_id: string; week: number; day: string; plan_id?: string | null }[]>([]);
 
   // Replacement workout dialog state
   const [replacementTarget, setReplacementTarget] = useState<{planId: string;sessionName: string;week: number;day: string;} | null>(null);
@@ -7918,7 +7923,7 @@ const estimateCalories = (
 
                   {/* Likes from friends */}
                   {(() => {
-                    const dayLikes = workoutLikes.filter((l) => l.week === plan.week && l.day === plan.day);
+                    const dayLikes = workoutLikes.filter((l) => matchesPlanLike(l, plan));
                     return dayLikes.length > 0 ? (
                       <div className="flex items-center gap-2 px-1">
                         <span className="text-sm">🔥</span>

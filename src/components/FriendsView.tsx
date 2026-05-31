@@ -72,6 +72,15 @@ interface WorkoutComment {
   authorNickname?: string;
 }
 
+interface WorkoutLike {
+  id: string;
+  user_id: string;
+  target_user_id: string;
+  week: number;
+  day: string;
+  plan_id: string | null;
+}
+
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
 const WEEKDAY_NAMES_SV = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag"];
@@ -193,7 +202,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [nicknameMap, setNicknameMap] = useState<Record<string, string>>({});
 
   // Likes
-  const [likes, setLikes] = useState<{ id: string; user_id: string; target_user_id: string; week: number; day: string }[]>([]);
+  const [likes, setLikes] = useState<WorkoutLike[]>([]);
   const [likingKey, setLikingKey] = useState<string | null>(null);
   
   // Admin editing
@@ -763,11 +772,15 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     setNewComment((prev) => ({ ...prev, [key]: "" }));
   };
 
-  const toggleLike = async (week: number, day: string) => {
+  const toggleLike = async (week: number, day: string, planId?: string) => {
     if (!viewingFriend) return;
-    const key = `${week}-${day}`;
+    const key = planId || `${week}-${day}`;
     const fid = viewingFriend.profile.user_id;
-    const existingLike = likes.find((l) => l.user_id === userId && l.week === week && l.day === day && l.target_user_id === fid);
+    const existingLike = likes.find((l) =>
+      l.user_id === userId &&
+      l.target_user_id === fid &&
+      (planId ? l.plan_id === planId : !l.plan_id && l.week === week && l.day === day)
+    );
     
     setLikingKey(key);
     if (existingLike) {
@@ -784,6 +797,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         target_user_id: fid,
         week,
         day,
+        plan_id: planId || null,
       } as any).select().single();
       if (data) {
         const postId = await getWorkoutPostId(fid, week, day);
@@ -950,7 +964,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                 const colorClass = getSessionColor(plan.session_name);
                 const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
                 const dayComments = comments.filter((c) => c.plan_id ? c.plan_id === plan.id : (c.week === plan.week && c.day === plan.day));
-                const dayLikes = likes.filter((l) => l.week === plan.week && l.day === plan.day);
+                const dayLikes = likes.filter((l) => l.plan_id ? l.plan_id === plan.id : (l.week === plan.week && l.day === plan.day));
                 const hasLiked = dayLikes.some((l) => l.user_id === userId);
                 const likeCount = dayLikes.length;
                 const isStandalone = isStandaloneDayKey(plan.day);
@@ -1311,7 +1325,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                             />
                           </div>
                           <button
-                            onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day); }}
+                            onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day, plan.id); }}
                             disabled={likingKey === key}
                             className={`px-3 py-2 rounded-md text-sm font-semibold transition-all ${
                               hasLiked
