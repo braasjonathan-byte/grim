@@ -37,6 +37,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
   const [swimLevel, setSwimLevel] = useState<Level>("beginner");
   const [bikeLevel, setBikeLevel] = useState<Level>("beginner");
   const [runLevel, setRunLevel] = useState<Level>("beginner");
+  const [bikeType, setBikeType] = useState<BikeType>("road");
   const [swimKm, setSwimKm] = useState(2);
   const [bikeKm, setBikeKm] = useState(40);
   const [runKm, setRunKm] = useState(15);
