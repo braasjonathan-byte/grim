@@ -94,10 +94,7 @@ const matchesPlanDay = (
   planStartDate: string | null,
 ): boolean => {
   if (c.plan_id === plan.id) return true;
-  if (c.plan_id !== null) return false;
-  if (c.week !== plan.week || c.day !== plan.day) return false;
-  if (planStartDate && (c.created_at || "").substring(0, 10) < planStartDate) return false;
-  return true;
+  return false;
 };
 
 const matchesPlanLike = (
@@ -105,7 +102,7 @@ const matchesPlanLike = (
   plan: { id: string; week: number; day: string },
 ): boolean => {
   if (like.plan_id) return like.plan_id === plan.id;
-  return like.week === plan.week && like.day === plan.day;
+  return false;
 };
 
 interface AchievementToastState {
