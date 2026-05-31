@@ -258,6 +258,11 @@ export function generateSessions(input: TriathlonPlanInput): GeneratedSession[] 
 
       const durationMin = Math.max(20, Math.round((distance / speedKmh[discipline]) * 60));
 
+      let desc = describeSession(discipline, kind, distance, durationMin);
+      if (discipline === "bike" && input.bikeType) {
+        desc = `[${bikeTypeLabel[input.bikeType]}] ${desc}`;
+      }
+
       out.push({
         week: w + 1,
         day_of_week: dayName,
@@ -266,7 +271,7 @@ export function generateSessions(input: TriathlonPlanInput): GeneratedSession[] 
         duration_min: durationMin,
         distance_km: Math.round(distance * 10) / 10,
         intensity: intensityForKind(kind),
-        description: describeSession(discipline, kind, distance, durationMin),
+        description: desc,
         is_long_session: kind === "long",
       });
     });
