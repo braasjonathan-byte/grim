@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { generateSessions, computeDurationWeeks, bikeTypeLabel, type TriathlonPlanInput, type Level, type BikeType } from "@/lib/triathlonPlanner";
+import { generateSessions, computeDurationWeeks, computeWeeklySessionCount, bikeTypeLabel, type TriathlonPlanInput, type Level, type BikeType } from "@/lib/triathlonPlanner";
 
 interface Props {
   userId: string;
