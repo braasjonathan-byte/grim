@@ -72,6 +72,15 @@ interface WorkoutComment {
   authorNickname?: string;
 }
 
+interface WorkoutLike {
+  id: string;
+  user_id: string;
+  target_user_id: string;
+  week: number;
+  day: string;
+  plan_id: string | null;
+}
+
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
 const WEEKDAY_NAMES_SV = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag"];
@@ -193,7 +202,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const [nicknameMap, setNicknameMap] = useState<Record<string, string>>({});
 
   // Likes
-  const [likes, setLikes] = useState<{ id: string; user_id: string; target_user_id: string; week: number; day: string }[]>([]);
+  const [likes, setLikes] = useState<WorkoutLike[]>([]);
   const [likingKey, setLikingKey] = useState<string | null>(null);
   
   // Admin editing
