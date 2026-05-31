@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info } from "lucide-react";
+import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info, Waves } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
+import TriathlonView from "@/components/TriathlonView";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
@@ -15,7 +16,7 @@ interface PlanPickerProps {
   onBack?: () => void;
 }
 
-type Step = "select" | "profile" | "1rm" | "preferred-days" | "start-date" | "loading" | "builder";
+type Step = "select" | "profile" | "1rm" | "preferred-days" | "start-date" | "loading" | "builder" | "triathlon";
 
 
 const defaultProfile: FitnessProfile = {
@@ -77,6 +78,10 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const handleSelect = (index: number) => {
     if (index === -1) {
       setStep("builder");
+      return;
+    }
+    if (index === -2) {
+      setStep("triathlon");
       return;
     }
     const template = planTemplates[index];
@@ -203,6 +208,20 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
   if (step === "builder") {
     return <SchemaBuilder userId={userId} onDone={onDone} onBack={() => setStep("select")} />;
+  }
+
+  if (step === "triathlon") {
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <button
+          onClick={() => setStep("select")}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Tillbaka
+        </button>
+        <TriathlonView userId={userId} />
+      </div>
+    );
   }
 
   if (step === "profile") {
@@ -664,6 +683,27 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
             </button>
           );
         })}
+
+        <button
+          onClick={() => handleSelect(-2)}
+          disabled={loading}
+          className={`w-full text-left p-4 rounded-lg border transition-all ${
+            selected === -2
+              ? "border-primary bg-primary/10 ring-2 ring-primary ring-offset-2 ring-offset-background"
+              : "border-border bg-card hover:border-primary/50"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <Waves className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selected === -2 ? "text-primary" : "text-muted-foreground"}`} />
+            <div className="flex-1">
+              <h3 className="font-bold text-sm">🏊 Triathlonplan</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Anpassad plan för sim, cykel och löpning med erfarenhetsnivå, cykeltyp och styrkepass.
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
+          </div>
+        </button>
 
         <button
           onClick={() => handleSelect(-1)}
