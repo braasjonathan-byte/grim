@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Waves, Bike, Footprints, Dumbbell, Moon, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Waves, Bike, Footprints, Dumbbell, Moon, Check, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import TriathlonSessionLogDialog from "./TriathlonSessionLogDialog";
 
 interface Props {
@@ -23,6 +23,10 @@ interface Session {
 }
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
+const DAY_FULL: Record<string, string> = {
+  "Mån": "Måndag", "Tis": "Tisdag", "Ons": "Onsdag", "Tor": "Torsdag",
+  "Fre": "Fredag", "Lör": "Lördag", "Sön": "Söndag"
+};
 
 const disciplineMeta: Record<Session["discipline"], { icon: any; label: string; color: string }> = {
   swim: { icon: Waves, label: "Simning", color: "text-sky-500" },
@@ -69,14 +73,12 @@ const TriathlonCalendar = ({ userId, planId }: Props) => {
   const handleToggleComplete = async (s: Session) => {
     if (s.discipline === "rest") return;
     if (s.completed) {
-      // Un-mark: just clear completion
       await supabase.from("triathlon_sessions")
         .update({ completed: false, completed_at: null })
         .eq("id", s.id);
       await supabase.from("triathlon_session_logs").delete().eq("session_id", s.id);
       load();
     } else {
-      // Mark complete immediately, then open log dialog
       await supabase.from("triathlon_sessions")
         .update({ completed: true, completed_at: new Date().toISOString() })
         .eq("id", s.id);
@@ -102,52 +104,72 @@ const TriathlonCalendar = ({ userId, planId }: Props) => {
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {DAYS.map(day => {
           const s = weekSessions.find(x => x.day_of_week === day);
           if (!s) return null;
           const meta = disciplineMeta[s.discipline];
           const Icon = meta.icon;
           const isToday = s.session_date === todayIso;
-          const dateLabel = new Date(s.session_date + "T00:00:00Z").toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
           const isRest = s.discipline === "rest";
+          const isDone = s.completed;
+          const dateLabel = new Date(s.session_date + "T00:00:00Z").toLocaleDateString("sv-SE", { day: "numeric", month: "short" });
 
           return (
             <div
               key={s.id}
-              className={`bg-primary/10 border border-primary/30 rounded-lg p-3 space-y-2 ${isRest ? "opacity-60" : ""}`}
+              className={`rounded-lg border bg-card transition-colors ${isDone ? "opacity-80" : ""} ${isRest ? "opacity-60" : ""}`}
             >
-              <div className="flex items-start gap-2">
-                {!isRest && (
+              <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <button
                     onClick={() => handleToggleComplete(s)}
-                    className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center transition-all ${s.completed ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`}
-                    title="Klarmarkera"
+                    disabled={isRest}
+                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                      isDone ? "bg-success border-success" : "border-muted-foreground/30 hover:border-primary"
+                    } ${isRest ? "opacity-40 cursor-not-allowed" : ""}`}
+                    title="Genomfört"
                   >
-                    {s.completed ? <Check className="w-4 h-4"/> : null}
+                    {isDone && <Check className="w-4 h-4 text-success-foreground" />}
                   </button>
-                )}
-                <div className={`shrink-0 w-8 h-8 rounded-md flex items-center justify-center bg-background ${meta.color}`}>
-                  <Icon className="w-4 h-4"/>
+                </div>
+                <div className={`flex-shrink-0 ${meta.color}`}>
+                  <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] font-bold text-muted-foreground">{day} {dateLabel}</span>
-                    {s.is_long_session && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">LÅNG</span>}
-                    {isToday && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-semibold">IDAG</span>}
-                  </div>
-                  <p className="text-sm font-semibold mt-0.5 text-foreground">{meta.label}</p>
+                  <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">
+                    {DAY_FULL[day] || day}
+                  </span>
+                  <span className={`font-semibold text-sm block break-words ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                    {meta.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <CalendarIcon className="w-3 h-3" />
+                    {dateLabel}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {s.is_long_session && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">LÅNG</span>
+                  )}
+                  {isToday && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-semibold">IDAG</span>
+                  )}
                 </div>
               </div>
 
               {!isRest && (
-                <div className="pl-10 space-y-1">
+                <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                     <p className="text-xs">⏱ <span className="font-mono font-semibold">{s.duration_min} min</span></p>
-                    {s.distance_km > 0 && <p className="text-xs">📏 <span className="font-mono font-semibold">{s.distance_km} km</span></p>}
+                    {s.distance_km > 0 && (
+                      <p className="text-xs">📏 <span className="font-mono font-semibold">{s.distance_km} km</span></p>
+                    )}
                     <p className="text-xs">⚡ <span className="font-semibold">{s.intensity}</span></p>
                   </div>
-                  {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
+                  {s.description && (
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{s.description}</p>
+                  )}
                 </div>
               )}
             </div>
