@@ -160,7 +160,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         )}
       </div>
     )},
-    { key: "triathlon", label: "Triathlon", render: () => <TriathlonView userId={userId} /> },
+    
     { key: "suggestions", label: "Förslag", render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
     { key: "help", label: "Hjälp", render: () => <HelpSection /> },
   ];
