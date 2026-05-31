@@ -41,7 +41,6 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      // Insert log
       const { error: logErr } = await supabase.from("triathlon_session_logs").insert({
         session_id: session.id,
         user_id: userId,
@@ -53,12 +52,6 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
       });
       if (logErr) throw logErr;
 
-      // Mark session completed
-      await supabase.from("triathlon_sessions")
-        .update({ completed: true, completed_at: new Date().toISOString() })
-        .eq("id", session.id);
-
-      // Adapt if needed
       if (felt === "too_hard" || hadPain) {
         toast("Vi anpassar ditt schema för de kommande dagarna...");
         const modified = await adaptUpcomingSessions({
