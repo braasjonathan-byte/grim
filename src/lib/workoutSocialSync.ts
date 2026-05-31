@@ -17,6 +17,7 @@ export type SyncedWorkoutLike = {
   target_user_id: string;
   week: number;
   day: string;
+  plan_id: string | null;
   created_at?: string;
 };
 
@@ -100,6 +101,7 @@ export async function fetchSocialWorkoutInteractions(ownerUserId: string) {
         target_user_id: ownerUserId,
         week: post.workout_week,
         day: post.workout_day,
+        plan_id: null,
         created_at: like.created_at,
       };
     })
@@ -112,12 +114,18 @@ export function mergeWorkoutComments(
   legacyComments: SyncedWorkoutComment[] = [],
   socialComments: SyncedWorkoutComment[] = [],
 ) {
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
   const merged: SyncedWorkoutComment[] = [];
   [...socialComments, ...legacyComments].forEach((comment) => {
     const key = `${comment.target_user_id}|${comment.week}|${comment.day}|${comment.author_id}|${comment.comment.trim().toLowerCase()}`;
-    if (seen.has(key)) return;
-    seen.add(key);
+    const existingIndex = seen.get(key);
+    if (existingIndex !== undefined) {
+      if (!merged[existingIndex].plan_id && comment.plan_id) {
+        merged[existingIndex] = comment;
+      }
+      return;
+    }
+    seen.set(key, merged.length);
     merged.push(comment);
   });
   return merged.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -127,9 +135,17 @@ export function mergeWorkoutLikes(
   legacyLikes: SyncedWorkoutLike[] = [],
   socialLikes: SyncedWorkoutLike[] = [],
 ) {
-  const byUserWorkout = new Map<string, SyncedWorkoutLike>();
+  const planLikes = new Map<string, SyncedWorkoutLike>();
+  const dayLikes = new Map<string, SyncedWorkoutLike>();
   [...legacyLikes, ...socialLikes].forEach((like) => {
-    byUserWorkout.set(`${like.target_user_id}|${like.week}|${like.day}|${like.user_id}`, like);
+    if (like.plan_id) {
+      planLikes.set(`${like.target_user_id}|${like.plan_id}|${like.user_id}`, like);
+    } else {
+      dayLikes.set(`${like.target_user_id}|${like.week}|${like.day}|${like.user_id}`, like);
+    }
   });
-  return [...byUserWorkout.values()];
+  planLikes.forEach((like) => {
+    dayLikes.delete(`${like.target_user_id}|${like.week}|${like.day}|${like.user_id}`);
+  });
+  return [...planLikes.values(), ...dayLikes.values()];
 }
