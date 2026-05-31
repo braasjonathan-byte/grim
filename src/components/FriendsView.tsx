@@ -964,7 +964,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                 const colorClass = getSessionColor(plan.session_name);
                 const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
                 const dayComments = comments.filter((c) => c.plan_id ? c.plan_id === plan.id : (c.week === plan.week && c.day === plan.day));
-                const dayLikes = likes.filter((l) => l.week === plan.week && l.day === plan.day);
+                const dayLikes = likes.filter((l) => l.plan_id ? l.plan_id === plan.id : (l.week === plan.week && l.day === plan.day));
                 const hasLiked = dayLikes.some((l) => l.user_id === userId);
                 const likeCount = dayLikes.length;
                 const isStandalone = isStandaloneDayKey(plan.day);
@@ -1325,7 +1325,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                             />
                           </div>
                           <button
-                            onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day); }}
+                            onClick={(e) => { e.stopPropagation(); toggleLike(plan.week, plan.day, plan.id); }}
                             disabled={likingKey === key}
                             className={`px-3 py-2 rounded-md text-sm font-semibold transition-all ${
                               hasLiked
