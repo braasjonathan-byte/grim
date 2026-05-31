@@ -202,6 +202,20 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
                     <button key={l.value} onClick={() => d.setLevel(l.value)} className={`py-1.5 rounded text-xs font-semibold ${d.level === l.value ? "bg-primary text-primary-foreground" : "bg-background"}`}>{l.label}</button>
                   ))}
                 </div>
+                {d.key === "bike" && (
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Typ av cykling</label>
+                    <div className="grid grid-cols-3 gap-1">
+                      {(Object.keys(bikeTypeLabel) as BikeType[]).map(bt => (
+                        <button
+                          key={bt}
+                          onClick={() => setBikeType(bt)}
+                          className={`py-1.5 rounded text-xs font-semibold ${bikeType === bt ? "bg-primary text-primary-foreground" : "bg-background"}`}
+                        >{bikeTypeLabel[bt]}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs text-muted-foreground">Volym: <span className="text-foreground font-semibold">{d.km} {d.unit}</span></label>
                   <Slider value={[d.km]} onValueChange={v => d.setKm(v[0])} min={0} max={d.max} step={d.key === "swim" ? 0.5 : 1} />
