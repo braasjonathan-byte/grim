@@ -193,6 +193,16 @@ function weeklyTemplate(input: TriathlonPlanInput): Array<{
   return week;
 }
 
+export function computeWeeklySessionCount(input: TriathlonPlanInput): { cardio: number; strength: number; total: number } {
+  const t = weeklyTemplate(input);
+  let cardio = 0, strength = 0;
+  t.forEach(s => {
+    if (s.discipline === "strength") strength++;
+    else if (s.discipline !== "rest") cardio++;
+  });
+  return { cardio, strength, total: cardio + strength };
+}
+
 export function generateSessions(input: TriathlonPlanInput): GeneratedSession[] {
   const totalWeeks = computeDurationWeeks(input);
   const template = weeklyTemplate(input);
