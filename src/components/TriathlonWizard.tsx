@@ -44,7 +44,8 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
 
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [longDays, setLongDays] = useState<string[]>(["Lör", "Sön"]);
-  const [includeStrength, setIncludeStrength] = useState(false);
+  const [strengthSessions, setStrengthSessions] = useState(0);
+  const includeStrength = strengthSessions > 0;
 
   const toggleLongDay = (d: string) => {
     setLongDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
