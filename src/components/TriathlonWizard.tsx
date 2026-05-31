@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { generateSessions, computeDurationWeeks, bikeTypeLabel, type TriathlonPlanInput, type Level, type BikeType } from "@/lib/triathlonPlanner";
+import { generateSessions, computeDurationWeeks, computeWeeklySessionCount, bikeTypeLabel, type TriathlonPlanInput, type Level, type BikeType } from "@/lib/triathlonPlanner";
 
 interface Props {
   userId: string;
@@ -44,7 +44,8 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
 
   const [sessionsPerWeek, setSessionsPerWeek] = useState(4);
   const [longDays, setLongDays] = useState<string[]>(["Lör", "Sön"]);
-  const [includeStrength, setIncludeStrength] = useState(false);
+  const [strengthSessions, setStrengthSessions] = useState(0);
+  const includeStrength = strengthSessions > 0;
 
   const toggleLongDay = (d: string) => {
     setLongDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
@@ -65,6 +66,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
         sessionsPerWeek,
         longSessionDays: longDays,
         includeStrength,
+        strengthSessions,
       };
 
       if (goalType === "race_date" && !raceDate) {
@@ -132,6 +134,20 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
     sessionsPerWeek,
     longSessionDays: longDays,
     includeStrength,
+    strengthSessions,
+  });
+
+  const weeklyCount = computeWeeklySessionCount({
+    goalType,
+    durationWeeks,
+    raceDate: raceDate || undefined,
+    startDate: todayIso(),
+    swimLevel, bikeLevel, runLevel,
+    swimKmWeek: swimKm, bikeKmWeek: bikeKm, runKmWeek: runKm,
+    sessionsPerWeek,
+    longSessionDays: longDays,
+    includeStrength,
+    strengthSessions,
   });
 
   return (
@@ -228,9 +244,9 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
 
       {step === 3 && (
         <div className="space-y-4">
-          <h4 className="font-semibold">Tillgänglighet</h4>
+          <h4 className="font-semibold">Tillgänglighet & styrka</h4>
           <div className="space-y-2">
-            <label className="text-sm">Pass per vecka: <span className="text-primary font-bold">{sessionsPerWeek}</span></label>
+            <label className="text-sm">Konditionspass per vecka: <span className="text-primary font-bold">{sessionsPerWeek}</span></label>
             <Slider value={[sessionsPerWeek]} onValueChange={v => setSessionsPerWeek(v[0])} min={3} max={7} step={1} />
           </div>
           <div className="space-y-2">
@@ -241,25 +257,32 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
               ))}
             </div>
           </div>
+          <div className="space-y-2">
+            <label className="text-sm flex items-center gap-1"><Dumbbell className="w-4 h-4 text-primary"/>Styrkepass per vecka</label>
+            <div className="grid grid-cols-4 gap-1">
+              {[0, 1, 2, 3].map(n => (
+                <button key={n} onClick={() => setStrengthSessions(n)} className={`py-2 text-sm font-semibold rounded ${strengthSessions === n ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{n}</button>
+              ))}
+            </div>
+          </div>
+          <div className="p-3 rounded-lg border border-primary bg-primary/10 text-sm">
+            <div className="font-bold text-primary">Totalt {weeklyCount.total} pass/v</div>
+            <div className="text-xs text-muted-foreground">{weeklyCount.cardio} kondition{weeklyCount.strength > 0 ? ` + ${weeklyCount.strength} styrka` : ""}</div>
+            {weeklyCount.total < sessionsPerWeek + strengthSessions && (
+              <div className="text-xs text-destructive mt-1">Färre dagar tillgängliga än önskat – minska långpassdagar eller pass/v.</div>
+            )}
+          </div>
         </div>
       )}
 
       {step === 4 && (
         <div className="space-y-4">
-          <h4 className="font-semibold">Styrketräning & sammanfattning</h4>
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-secondary">
-            <div className="flex items-center gap-2">
-              <Dumbbell className="w-4 h-4 text-primary"/>
-              <span className="text-sm font-medium">Inkludera styrkepass</span>
-            </div>
-            <Switch checked={includeStrength} onCheckedChange={setIncludeStrength} />
-          </div>
-
+          <h4 className="font-semibold">Sammanfattning</h4>
           <div className="p-3 rounded-lg border border-border bg-secondary text-sm space-y-1">
             <p><span className="text-muted-foreground">Mål:</span> {goalType === "duration" ? `${durationWeeks} veckor` : `Tävling ${raceDate || "—"} (${totalWeeks} v)`}</p>
-            <p><span className="text-muted-foreground">Pass/v:</span> {sessionsPerWeek}{includeStrength ? " + styrka" : ""}</p>
+            <p><span className="text-muted-foreground">Pass/v:</span> {weeklyCount.total} ({weeklyCount.cardio} kondition{weeklyCount.strength > 0 ? ` + ${weeklyCount.strength} styrka` : ""})</p>
             <p><span className="text-muted-foreground">Långpass:</span> {longDays.join(", ") || "—"}</p>
-            <p><span className="text-muted-foreground">Nivåer:</span> Sim {swimLevel}, Cykel {bikeLevel}, Löp {runLevel}</p>
+            <p><span className="text-muted-foreground">Nivåer:</span> Sim {swimLevel}, Cykel {bikeLevel} ({bikeTypeLabel[bikeType]}), Löp {runLevel}</p>
           </div>
         </div>
       )}

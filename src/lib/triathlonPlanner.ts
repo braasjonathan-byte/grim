@@ -21,6 +21,7 @@ export interface TriathlonPlanInput {
   sessionsPerWeek: number; // 3-7
   longSessionDays: string[]; // ["Lör","Sön"]
   includeStrength: boolean;
+  strengthSessions?: number; // 0-3 per week
 }
 
 export const bikeTypeLabel: Record<BikeType, string> = {
@@ -173,13 +174,33 @@ function weeklyTemplate(input: TriathlonPlanInput): Array<{
     week[slot] = { discipline: disc, kind };
   }
 
-  // 3) Strength: place on first free non-long day
-  if (includeStrength) {
-    const free = DAYS.findIndex((d, i) => week[i].discipline === "rest" && !longDays.has(d));
-    if (free >= 0) week[free] = { discipline: "strength", kind: "strength" };
+  // 3) Strength: place N sessions on free non-long days, spaced apart
+  const strengthCount = input.includeStrength
+    ? Math.max(1, Math.min(3, input.strengthSessions ?? 1))
+    : (input.strengthSessions ?? 0);
+  if (strengthCount > 0) {
+    const strengthPriority = [0, 2, 4, 1, 3, 5, 6]; // Mon, Wed, Fri, Tue, Thu, Sat, Sun
+    let placed = 0;
+    for (const idx of strengthPriority) {
+      if (placed >= strengthCount) break;
+      if (week[idx].discipline === "rest" && !longDays.has(DAYS[idx])) {
+        week[idx] = { discipline: "strength", kind: "strength" };
+        placed++;
+      }
+    }
   }
 
   return week;
+}
+
+export function computeWeeklySessionCount(input: TriathlonPlanInput): { cardio: number; strength: number; total: number } {
+  const t = weeklyTemplate(input);
+  let cardio = 0, strength = 0;
+  t.forEach(s => {
+    if (s.discipline === "strength") strength++;
+    else if (s.discipline !== "rest") cardio++;
+  });
+  return { cardio, strength, total: cardio + strength };
 }
 
 export function generateSessions(input: TriathlonPlanInput): GeneratedSession[] {
