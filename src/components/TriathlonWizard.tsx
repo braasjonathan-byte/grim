@@ -170,7 +170,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Längd: <span className="text-primary">{durationWeeks} veckor</span></label>
               <div className="flex gap-2 flex-wrap">
-                {[8, 12, 16, 20].map(w => (
+                {[4, 6, 8, 12].map(w => (
                   <button key={w} onClick={() => setDurationWeeks(w)} className={`px-3 py-2 rounded-lg text-sm font-semibold ${durationWeeks === w ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{w} v</button>
                 ))}
               </div>
