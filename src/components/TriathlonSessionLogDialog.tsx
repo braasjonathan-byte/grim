@@ -136,9 +136,13 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
             />
           </div>
 
+        </div>
+
+        <div className="sticky bottom-0 p-4 border-t border-border bg-card">
           <Button onClick={handleSubmit} disabled={saving} className="w-full">
             {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : "Spara & klar"}
           </Button>
+        </div>
         </div>
       </div>
     </div>
