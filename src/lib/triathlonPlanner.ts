@@ -21,6 +21,7 @@ export interface TriathlonPlanInput {
   sessionsPerWeek: number; // 3-7
   longSessionDays: string[]; // ["Lör","Sön"]
   includeStrength: boolean;
+  strengthSessions?: number; // 0-3 per week
 }
 
 export const bikeTypeLabel: Record<BikeType, string> = {
