@@ -100,6 +100,14 @@ const matchesPlanDay = (
   return true;
 };
 
+const matchesPlanLike = (
+  like: { week: number; day: string; plan_id?: string | null },
+  plan: { id: string; week: number; day: string },
+): boolean => {
+  if (like.plan_id) return like.plan_id === plan.id;
+  return like.week === plan.week && like.day === plan.day;
+};
+
 interface AchievementToastState {
   achievements: AchievementDefinition[];
 }
@@ -658,7 +666,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [commentNicknames, setCommentNicknames] = useState<Record<string, string>>({});
 
   // Likes on own workouts
-  const [workoutLikes, setWorkoutLikes] = useState<{ id: string; user_id: string; week: number; day: string }[]>([]);
+  const [workoutLikes, setWorkoutLikes] = useState<{ id: string; user_id: string; week: number; day: string; plan_id?: string | null }[]>([]);
 
   // Replacement workout dialog state
   const [replacementTarget, setReplacementTarget] = useState<{planId: string;sessionName: string;week: number;day: string;} | null>(null);
