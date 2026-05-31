@@ -41,7 +41,6 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
   const handleSubmit = async () => {
     setSaving(true);
     try {
-      // Insert log
       const { error: logErr } = await supabase.from("triathlon_session_logs").insert({
         session_id: session.id,
         user_id: userId,
@@ -53,12 +52,6 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
       });
       if (logErr) throw logErr;
 
-      // Mark session completed
-      await supabase.from("triathlon_sessions")
-        .update({ completed: true, completed_at: new Date().toISOString() })
-        .eq("id", session.id);
-
-      // Adapt if needed
       if (felt === "too_hard" || hadPain) {
         toast("Vi anpassar ditt schema för de kommande dagarna...");
         const modified = await adaptUpcomingSessions({
@@ -87,7 +80,7 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
     <div className="fixed inset-0 z-50 bg-background/80 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
       <div className="bg-card border border-border rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="font-bold">Logga pass</h3>
+          <h3 className="font-bold">Hur gick passet?</h3>
           <button onClick={onClose} className="text-muted-foreground"><X className="w-5 h-5"/></button>
         </div>
 
