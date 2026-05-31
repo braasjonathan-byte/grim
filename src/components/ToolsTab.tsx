@@ -21,6 +21,7 @@ const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
 
 const ReadyWorkoutManager = lazy(() => import("@/components/ReadyWorkoutManager"));
+const TriathlonView = lazy(() => import("@/components/TriathlonView"));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
 const ReferralLink = lazy(() => import("@/components/ReferralLink"));
@@ -159,6 +160,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         )}
       </div>
     )},
+    { key: "triathlon", label: "Triathlon", render: () => <TriathlonView userId={userId} /> },
     { key: "suggestions", label: "Förslag", render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
     { key: "help", label: "Hjälp", render: () => <HelpSection /> },
   ];

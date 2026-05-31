@@ -1606,6 +1606,178 @@ export type Database = {
         }
         Relationships: []
       }
+      triathlon_plans: {
+        Row: {
+          bike_km_week: number
+          bike_level: string
+          created_at: string
+          duration_weeks: number | null
+          goal_type: string
+          id: string
+          include_strength: boolean
+          is_active: boolean
+          long_session_days: string[]
+          race_date: string | null
+          run_km_week: number
+          run_level: string
+          sessions_per_week: number
+          start_date: string
+          swim_km_week: number
+          swim_level: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bike_km_week?: number
+          bike_level?: string
+          created_at?: string
+          duration_weeks?: number | null
+          goal_type?: string
+          id?: string
+          include_strength?: boolean
+          is_active?: boolean
+          long_session_days?: string[]
+          race_date?: string | null
+          run_km_week?: number
+          run_level?: string
+          sessions_per_week?: number
+          start_date?: string
+          swim_km_week?: number
+          swim_level?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bike_km_week?: number
+          bike_level?: string
+          created_at?: string
+          duration_weeks?: number | null
+          goal_type?: string
+          id?: string
+          include_strength?: boolean
+          is_active?: boolean
+          long_session_days?: string[]
+          race_date?: string | null
+          run_km_week?: number
+          run_level?: string
+          sessions_per_week?: number
+          start_date?: string
+          swim_km_week?: number
+          swim_level?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      triathlon_session_logs: {
+        Row: {
+          created_at: string
+          felt: string
+          had_pain: boolean
+          id: string
+          notes: string | null
+          pain_area: string | null
+          pain_level: number | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          felt?: string
+          had_pain?: boolean
+          id?: string
+          notes?: string | null
+          pain_area?: string | null
+          pain_level?: number | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          felt?: string
+          had_pain?: boolean
+          id?: string
+          notes?: string | null
+          pain_area?: string | null
+          pain_level?: number | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "triathlon_session_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "triathlon_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      triathlon_sessions: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          day_of_week: string
+          description: string
+          discipline: string
+          distance_km: number
+          duration_min: number
+          id: string
+          intensity: string
+          is_long_session: boolean
+          plan_id: string
+          session_date: string
+          updated_at: string
+          user_id: string
+          week: number
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          day_of_week?: string
+          description?: string
+          discipline?: string
+          distance_km?: number
+          duration_min?: number
+          id?: string
+          intensity?: string
+          is_long_session?: boolean
+          plan_id: string
+          session_date: string
+          updated_at?: string
+          user_id: string
+          week?: number
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          day_of_week?: string
+          description?: string
+          discipline?: string
+          distance_km?: number
+          duration_min?: number
+          id?: string
+          intensity?: string
+          is_long_session?: boolean
+          plan_id?: string
+          session_date?: string
+          updated_at?: string
+          user_id?: string
+          week?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "triathlon_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "triathlon_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_id: string
