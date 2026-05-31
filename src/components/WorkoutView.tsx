@@ -7926,7 +7926,7 @@ const estimateCalories = (
 
                   {/* Likes from friends */}
                   {(() => {
-                    const dayLikes = workoutLikes.filter((l) => l.week === plan.week && l.day === plan.day);
+                    const dayLikes = workoutLikes.filter((l) => matchesPlanLike(l, plan));
                     return dayLikes.length > 0 ? (
                       <div className="flex items-center gap-2 px-1">
                         <span className="text-sm">🔥</span>
