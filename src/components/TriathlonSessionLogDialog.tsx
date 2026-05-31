@@ -143,7 +143,6 @@ const TriathlonSessionLogDialog = ({ userId, session, onClose, onLogged }: Props
             {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : "Spara & klar"}
           </Button>
         </div>
-        </div>
       </div>
     </div>
   );
