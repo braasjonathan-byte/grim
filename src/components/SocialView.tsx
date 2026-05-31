@@ -375,7 +375,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     } else {
       await Promise.all([
         supabase.from("social_post_likes").insert({ post_id: postId, user_id: userId }),
-        isWorkoutPost ? supabase.from("workout_likes").upsert({ target_user_id: post!.user_id, week: post!.workout_week, day: post!.workout_day, user_id: userId, plan_id: null } as any, { onConflict: "user_id,target_user_id,week,day" }) : Promise.resolve(),
+        isWorkoutPost ? supabase.from("workout_likes").insert({ target_user_id: post!.user_id, week: post!.workout_week, day: post!.workout_day, user_id: userId, plan_id: null } as any) : Promise.resolve(),
       ]);
       setMyLikes(prev => new Set(prev).add(postId));
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
