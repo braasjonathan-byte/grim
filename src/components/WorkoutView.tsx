@@ -474,9 +474,17 @@ const sanitizeCopiedLoggedWeights = (loggedWeights: Record<string, any> | null |
 const WEEKDAY_NAMES_SV = ["Söndag", "Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag"];
 
 // Extract date from a single workout day key and return weekday name
+const DAY_ABBR_TO_FULL_SV: Record<string, string> = {
+  "Mån": "Måndag", "Tis": "Tisdag", "Ons": "Onsdag",
+  "Tors": "Torsdag", "Tor": "Torsdag",
+  "Fre": "Fredag", "Lör": "Lördag", "Sön": "Söndag",
+};
+
 const getWeekdayFromDayKey = (day: string): string | null => {
   const date = parseDateKey(day);
-  return date ? WEEKDAY_NAMES_SV[date.getUTCDay()] : null;
+  if (date) return WEEKDAY_NAMES_SV[date.getUTCDay()];
+  const base = day.replace(/_[a-z0-9]+$/i, "").trim();
+  return DAY_ABBR_TO_FULL_SV[base] || null;
 };
 
 // Compute virtual week number for a single workout based on the earliest workout's Monday
