@@ -134,6 +134,20 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
     sessionsPerWeek,
     longSessionDays: longDays,
     includeStrength,
+    strengthSessions,
+  });
+
+  const weeklyCount = computeWeeklySessionCount({
+    goalType,
+    durationWeeks,
+    raceDate: raceDate || undefined,
+    startDate: todayIso(),
+    swimLevel, bikeLevel, runLevel,
+    swimKmWeek: swimKm, bikeKmWeek: bikeKm, runKmWeek: runKm,
+    sessionsPerWeek,
+    longSessionDays: longDays,
+    includeStrength,
+    strengthSessions,
   });
 
   return (
