@@ -585,8 +585,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       map.set(cat, { km: prev.km + km, passes: prev.passes + 1 });
     }
     return CARDIO_CATEGORIES
-      .filter(c => cardioVis[c.key] !== false && map.has(c.key))
-      .map(c => ({ meta: c, ...(map.get(c.key) as { km: number; passes: number }) }));
+      .filter(c => cardioVis[c.key] !== false)
+      .map(c => ({ meta: c, ...(map.get(c.key) ?? { km: 0, passes: 0 }) }));
   }, [filteredCompletions, planDetailsMap, cardioVis]);
 
 
