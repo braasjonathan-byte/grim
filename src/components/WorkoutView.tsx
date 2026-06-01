@@ -4990,7 +4990,7 @@ const estimateCalories = (
                             <div className="flex-1">
                               <span className="text-xs font-semibold text-primary">~{cal} kcal</span>
                               <span className="text-[10px] ml-1.5 text-primary">
-                                {(comp?.logged_weights as any)?.__strava_calories ? "synkat från Strava" : comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
                               </span>
                             </div>
                           </div>
@@ -8470,7 +8470,7 @@ const estimateCalories = (
                             <div className="flex-1">
                               <span className="text-xs font-semibold text-primary">~{cal} kcal</span>
                               <span className="text-[10px] ml-1.5 text-primary">
-                                {(comp?.logged_weights as any)?.__strava_calories ? "synkat från Strava" : comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
+                                {comp?.logged_pulse ? "baserat på puls, vikt & kön" : "uppskattning baserat på vikt"}
                               </span>
                             </div>
                           </div>
