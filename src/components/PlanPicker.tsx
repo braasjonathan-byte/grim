@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info, Waves } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
-import TriathlonView from "@/components/TriathlonView";
+import TriathlonWizard from "@/components/TriathlonWizard";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
