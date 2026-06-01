@@ -106,61 +106,42 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings-group", label: "Inställningar", render: () => (
-      <div data-tour="tools-profile" className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
-        <button
-          type="button"
-          onClick={() => setSettingsOpen((open) => !open)}
-          className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-secondary/60 transition-colors"
-          aria-expanded={settingsOpen}
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <SlidersHorizontal className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold text-foreground">Inställningar</span>
-              <span className="block truncate text-xs text-muted-foreground">Profil, tema och notiser</span>
-            </span>
+      <button
+        type="button"
+        data-tour="tools-profile"
+        onClick={() => setSubView("settings")}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <SlidersHorizontal className="h-4 w-4" />
           </span>
-          <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
-            {settingsOpen ? "Stäng" : "Öppna"}
-            <ChevronDown className={`h-4 w-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-foreground">Inställningar</span>
+            <span className="block truncate text-xs text-muted-foreground">Profil, tema och notiser</span>
           </span>
-        </button>
-        {settingsOpen && (
-          <div className="space-y-3 border-t border-border bg-background/50 p-3">
-            <ProfileTab userId={userId} isAdmin={isAdmin} />
-            <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
-            <NotificationSettings userId={userId} />
-          </div>
-        )}
-      </div>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
     )},
     { key: "helpers", label: "Hjälpmedel", render: () => (
-      <div data-tour="tools-helpers" className="rounded-lg border border-border overflow-hidden bg-secondary">
-        <button
-          type="button"
-          onClick={() => setToolsOpen((open) => !open)}
-          className="w-full flex items-center justify-between gap-3 p-4 text-left"
-          aria-expanded={toolsOpen}
-        >
-          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Wrench className="h-4 w-4 text-primary" />
-            Hjälpmedel
+      <button
+        type="button"
+        data-tour="tools-helpers"
+        onClick={() => setSubView("helpers")}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Wrench className="h-4 w-4" />
           </span>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toolsOpen ? "rotate-180" : ""}`} />
-        </button>
-        {toolsOpen && (
-          <div className="space-y-3 border-t border-border p-3">
-            <RestTimerSettings />
-            <EventCountdown userId={userId} />
-            <CalorieCalculator />
-            <OneRMCalculator />
-            <PulseZoneCalculator />
-            <WorkoutTimer />
-          </div>
-        )}
-      </div>
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-foreground">Hjälpmedel</span>
+            <span className="block truncate text-xs text-muted-foreground">Timer, kalkylatorer och nedräkning</span>
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
     )},
     
     { key: "suggestions", label: "Förslag", render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
