@@ -130,6 +130,12 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   onMoveUp: () => void; onMoveDown: () => void; onShowInfo: () => void; onDelete: () => void;
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
+  const isSwim = /simning|simma|sim\b/i.test(name);
+  const tempoUnit = isSwim ? "min/100m" : "min/km";
+  const tempoDisplayUnit = isSwim ? "/100m" : "/km";
+  const distUnit = isSwim ? "m" : "km";
+  // For swim: distance stored in meters; tempo is min/100m.
+  // time(min) = tempo * dist_m / 100  ⇔  tempo = time * 100 / dist_m  ⇔  dist_m = time * 100 / tempo
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
@@ -161,11 +167,15 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return null;
   };
 
-  const fmtTempo = (minPerKm: number): string => {
-    const mn = Math.floor(minPerKm);
-    const sc = Math.round((minPerKm - mn) * 60);
+  const fmtTempo = (minPerUnit: number): string => {
+    const mn = Math.floor(minPerUnit);
+    const sc = Math.round((minPerUnit - mn) * 60);
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
+
+  // Convert between displayed distance and "tempo-distance units" (km for run/bike, 100m blocks for swim)
+  const distToTempoUnits = (d: number): number => isSwim ? d / 100 : d;
+  const tempoUnitsToDist = (u: number): number => isSwim ? u * 100 : u;
 
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
     const t = totalMin;
@@ -181,10 +191,14 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     if (filledCount < 2) return;
     const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
     const calc = (field: "time" | "tempo" | "distance") => {
-      if (field === "distance" && t > 0 && p && p > 0) setDistance(String(Math.round((t / p) * 100) / 100));
-      else if (field === "tempo" && t > 0 && d > 0) setTempo(fmtTempo(t / d));
-      else if (field === "time" && d > 0 && p && p > 0) {
-        const tot = p * d;
+      const dUnits = distToTempoUnits(d);
+      if (field === "distance" && t > 0 && p && p > 0) {
+        const units = t / p;
+        setDistance(String(Math.round(tempoUnitsToDist(units) * 100) / 100));
+      } else if (field === "tempo" && t > 0 && d > 0) {
+        setTempo(fmtTempo(t / dUnits));
+      } else if (field === "time" && d > 0 && p && p > 0) {
+        const tot = p * dUnits;
         const hh = Math.floor(tot / 60);
         const rem = tot - hh * 60;
         const mm = Math.floor(rem);
