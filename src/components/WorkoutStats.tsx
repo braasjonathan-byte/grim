@@ -683,11 +683,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-[9px] text-muted-foreground mt-0.5">≈ {getWeightComparison(totalLiftedTons)}</p>
           }
         </div>
-        <div className="border border-border rounded-lg p-3 text-center bg-secondary">
-          <Footprints className="w-5 h-5 text-warning mx-auto mb-1" />
-          <p className="text-2xl font-black">{Math.round(totalDistanceKm * 10) / 10}</p>
-          <p className="text-[10px] text-muted-foreground">km sprungit</p>
-        </div>
         <button
           onClick={() => setShowChallengeList(true)}
           className="border border-border rounded-lg p-3 text-center transition-colors cursor-pointer bg-secondary"
