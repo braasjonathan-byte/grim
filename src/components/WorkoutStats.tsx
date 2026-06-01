@@ -556,14 +556,18 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     let total = 0;
     for (const c of filteredCompletions) {
       if (!c.done || !hasExercise(c)) continue;
+      const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
+      const cat = getCardioCategory(planText);
+      if (cat && cardioVis[cat] === false) continue;
       total += getWorkoutDistanceKm({
         loggedDistanceKm: c.logged_distance_km,
         loggedWeights: c.logged_weights,
-          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
+        planDetails: planText,
       });
     }
     return Math.round(total * 100) / 100;
-  }, [filteredCompletions, planDetailsMap, plansWithExercises]);
+  }, [filteredCompletions, planDetailsMap, plansWithExercises, cardioVis]);
+
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
