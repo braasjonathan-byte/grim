@@ -34,6 +34,7 @@ interface SettingsPanelProps {
 const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelProps) => {
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
+  const [gpsVoiceMin, setGpsVoiceMinState] = useState<number>(() => getGpsVoiceIntervalMin());
 
 
   const [wakeLock, setWakeLock] = useState(() => {
