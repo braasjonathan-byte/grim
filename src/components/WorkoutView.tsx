@@ -358,6 +358,23 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           ))}
         </div>
       )}
+      {!isSwim && (
+        <GpsTrackerControl
+          onStop={(km, sec) => {
+            const totMin = sec / 60;
+            const hh = Math.floor(totMin / 60);
+            const rem = totMin - hh * 60;
+            const mm = Math.floor(rem);
+            const ss = Math.round((rem - mm) * 60);
+            setHours(hh > 0 ? String(hh) : "");
+            setMinutes(String(mm));
+            setSeconds(ss > 0 ? String(ss) : "");
+            const distStr = String(Math.round(km * 100) / 100);
+            setDistance(distStr);
+            liveAutoCalc(totMin, tempo, distStr, "distance");
+          }}
+        />
+      )}
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
