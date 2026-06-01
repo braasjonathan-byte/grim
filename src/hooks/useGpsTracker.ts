@@ -224,7 +224,7 @@ const startTracking = async () => {
   if (voiceMin > 0) {
     voiceInterval = window.setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      speakPace(distAcc, elapsed, lastKmSec);
+      speakPace(distAcc, elapsed, lastKmSec != null && lastKmSec > 0 ? { label: "Senaste kilometer", secPerKm: lastKmSec } : null);
     }, voiceMin * 60 * 1000);
   }
 
