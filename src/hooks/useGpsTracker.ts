@@ -13,14 +13,17 @@ const haversineKm = (a: GeolocationCoordinates, b: GeolocationCoordinates) => {
   return 2 * R * Math.asin(Math.sqrt(x));
 };
 
+export type RoutePoint = [number, number]; // [lat, lng]
+
 export type GpsState = {
   isTracking: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
+  route: RoutePoint[];
   start: () => Promise<void>;
-  stop: () => { distanceKm: number; elapsedSec: number };
+  stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
 };
 
 export const useGpsTracker = (): GpsState => {
@@ -29,6 +32,7 @@ export const useGpsTracker = (): GpsState => {
   const [elapsedSec, setElapsedSec] = useState(0);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [route, setRoute] = useState<RoutePoint[]>([]);
 
   const watchIdRef = useRef<number | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -36,6 +40,7 @@ export const useGpsTracker = (): GpsState => {
   const startTimeRef = useRef<number>(0);
   const lastCoordRef = useRef<GeolocationCoordinates | null>(null);
   const distRef = useRef(0);
+  const routeRef = useRef<RoutePoint[]>([]);
 
   const cleanup = useCallback(() => {
     if (watchIdRef.current !== null && navigator.geolocation) {
@@ -54,7 +59,6 @@ export const useGpsTracker = (): GpsState => {
 
   useEffect(() => cleanup, [cleanup]);
 
-  // Re-acquire wake lock when tab becomes visible again
   useEffect(() => {
     const onVisible = async () => {
       if (document.visibilityState === "visible" && isTracking && !wakeLockRef.current) {
@@ -77,8 +81,10 @@ export const useGpsTracker = (): GpsState => {
     }
     setDistanceKm(0);
     setElapsedSec(0);
+    setRoute([]);
     distRef.current = 0;
     lastCoordRef.current = null;
+    routeRef.current = [];
     startTimeRef.current = Date.now();
 
     try {
@@ -89,19 +95,22 @@ export const useGpsTracker = (): GpsState => {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         setAccuracy(pos.coords.accuracy);
-        // Skip wildly inaccurate readings
         if (pos.coords.accuracy > 50) return;
         const last = lastCoordRef.current;
+        const pt: RoutePoint = [pos.coords.latitude, pos.coords.longitude];
         if (last) {
           const d = haversineKm(last, pos.coords);
-          // Ignore micro-jitter under 3m
           if (d > 0.003) {
             distRef.current += d;
             setDistanceKm(distRef.current);
             lastCoordRef.current = pos.coords;
+            routeRef.current = [...routeRef.current, pt];
+            setRoute(routeRef.current);
           }
         } else {
           lastCoordRef.current = pos.coords;
+          routeRef.current = [pt];
+          setRoute(routeRef.current);
         }
       },
       (err) => setError(err.message || "GPS-fel"),
@@ -116,11 +125,15 @@ export const useGpsTracker = (): GpsState => {
   }, [isTracking]);
 
   const stop = useCallback(() => {
-    const result = { distanceKm: distRef.current, elapsedSec: Math.floor((Date.now() - startTimeRef.current) / 1000) };
+    const result = {
+      distanceKm: distRef.current,
+      elapsedSec: Math.floor((Date.now() - startTimeRef.current) / 1000),
+      route: routeRef.current,
+    };
     cleanup();
     setIsTracking(false);
     return result;
   }, [cleanup]);
 
-  return { isTracking, distanceKm, elapsedSec, accuracy, error, start, stop };
+  return { isTracking, distanceKm, elapsedSec, accuracy, error, route, start, stop };
 };

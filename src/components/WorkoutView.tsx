@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
+import RouteMap from "@/components/RouteMap";
 import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -121,7 +122,7 @@ interface CustomExercise {
 }
 
 // Inline conditioning editing card (green, open by default)
-const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number) => void }) => {
+const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route: [number, number][]) => void }) => {
   const gps = useGpsTracker();
   const fmtTime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -132,37 +133,42 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number) => vo
       : `${m}:${String(sec).padStart(2, "0")}`;
   };
   return (
-    <div className="flex items-center gap-2 bg-background border border-border rounded-md p-2">
-      {!gps.isTracking ? (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); gps.start(); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
-        >
-          <MapPin className="w-3.5 h-3.5" /> Starta GPS
-        </button>
-      ) : (
-        <>
+    <div className="space-y-2 bg-background border border-border rounded-md p-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        {!gps.isTracking ? (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const r = gps.stop();
-              onStop(r.distanceKm, r.elapsedSec);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded-md"
+            onClick={(e) => { e.stopPropagation(); gps.start(); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
           >
-            <Square className="w-3.5 h-3.5 fill-current" /> Stoppa
+            <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
           </button>
-          <div className="flex flex-col text-[10px] leading-tight">
-            <span className="font-mono font-bold text-foreground">{fmtTime(gps.elapsedSec)} · {(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
-            <span className="text-muted-foreground">
-              {gps.accuracy != null ? `Noggrannhet ±${Math.round(gps.accuracy)}m` : "Söker signal…"}
-            </span>
-          </div>
-        </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const r = gps.stop();
+                onStop(r.distanceKm, r.elapsedSec, r.route);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded-md"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" /> Stoppa
+            </button>
+            <div className="flex flex-col text-[10px] leading-tight">
+              <span className="font-mono font-bold text-foreground">{fmtTime(gps.elapsedSec)} · {(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
+              <span className="text-muted-foreground">
+                {gps.accuracy != null ? `Noggrannhet ±${Math.round(gps.accuracy)}m` : "Söker signal…"}
+              </span>
+            </div>
+          </>
+        )}
+        {gps.error && <span className="text-[10px] text-destructive">{gps.error}</span>}
+      </div>
+      {gps.isTracking && gps.route.length > 1 && (
+        <RouteMap route={gps.route} height={160} />
       )}
-      {gps.error && <span className="text-[10px] text-destructive">{gps.error}</span>}
     </div>
   );
 };
@@ -215,6 +221,10 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const [tempo, setTempo] = useState(initTempo);
   const [distance, setDistance] = useState(initDist);
   const [pulse, setPulse] = useState(initPulse);
+  const [route, setRoute] = useState<[number, number][]>(() => {
+    const r = savedData?.route;
+    return Array.isArray(r) ? r as [number, number][] : [];
+  });
   const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
 
   const getTotalMin = () => {
@@ -312,6 +322,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     if (distance.trim()) data.dist = distance.trim();
     if (tempo.trim()) data.tempo = tempo.trim();
     if (pulse.trim()) data.pulse = pulse.trim();
+    if (route.length > 1) data.route = route;
     // Auto-calc tempo if time + dist (only for linked modes)
     if (tempoIsLinked && data.time && data.dist && !data.tempo) {
       const tVal = parseFloat(data.time);
@@ -363,6 +374,9 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
+        {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
+          <RouteMap route={savedData!.route as [number, number][]} height={180} />
+        )}
       </div>
     );
   }
@@ -404,23 +418,24 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           ))}
         </div>
       )}
-      {!isSwim && (
-        <GpsTrackerControl
-          onStop={(km, sec) => {
-            const totMin = sec / 60;
-            const hh = Math.floor(totMin / 60);
-            const rem = totMin - hh * 60;
-            const mm = Math.floor(rem);
-            const ss = Math.round((rem - mm) * 60);
-            setHours(hh > 0 ? String(hh) : "");
-            setMinutes(String(mm));
-            setSeconds(ss > 0 ? String(ss) : "");
-            const distStr = String(Math.round(km * 100) / 100);
-            setDistance(distStr);
-            liveAutoCalc(totMin, tempo, distStr, "distance");
-          }}
-        />
-      )}
+      <GpsTrackerControl
+        onStop={(km, sec, gpsRoute) => {
+          const totMin = sec / 60;
+          const hh = Math.floor(totMin / 60);
+          const rem = totMin - hh * 60;
+          const mm = Math.floor(rem);
+          const ss = Math.round((rem - mm) * 60);
+          setHours(hh > 0 ? String(hh) : "");
+          setMinutes(String(mm));
+          setSeconds(ss > 0 ? String(ss) : "");
+          // Swim: convert km → m for the distance field; others use km
+          const distVal = isSwim ? Math.round(km * 1000) : Math.round(km * 100) / 100;
+          const distStr = String(distVal);
+          setDistance(distStr);
+          if (gpsRoute.length > 1) setRoute(gpsRoute);
+          liveAutoCalc(totMin, tempo, distStr, "distance");
+        }}
+      />
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
