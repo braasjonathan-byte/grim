@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiometric } from "@/lib/biometric";
+import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
 
 const SHOW_STRAVA_INTEGRATION = false;
+
 
 
 export const SECURITY_QUESTIONS = [
