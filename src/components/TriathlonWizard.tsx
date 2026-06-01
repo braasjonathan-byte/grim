@@ -68,7 +68,10 @@ const buildCardioDetails = (
       const workM = Math.max(400, totalM - warm - cool);
       const reps = Math.max(4, Math.round(workM / 100));
       const repDist = Math.max(50, Math.round((workM / reps) / 25) * 25);
-      return `Uppvärmning ${warm}m simning; ${reps}×${repDist}m simning hårt (20-30s vila); Nedvarvning ${cool}m simning`;
+      const intervals = Array.from({ length: reps }, (_, i) =>
+        `Intervall ${i + 1} – ${repDist}m simning hårt`
+      ).join("; ");
+      return `Uppvärmning ${warm}m simning; ${intervals}; Nedvarvning ${cool}m simning`;
     }
     if (kind === "tempo") {
       const totalM = Math.round(distanceKm * 1000);
