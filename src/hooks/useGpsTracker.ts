@@ -43,6 +43,9 @@ export const useGpsTracker = (): GpsState => {
   const lastCoordRef = useRef<GeolocationCoordinates | null>(null);
   const distRef = useRef(0);
   const routeRef = useRef<RoutePoint[]>([]);
+  const kmCountRef = useRef(0);
+  const kmMarkSecRef = useRef(0);
+  const lastKmSecRef = useRef<number | null>(null);
 
   const cleanup = useCallback(() => {
     if (watchIdRef.current !== null && navigator.geolocation) {
@@ -92,6 +95,9 @@ export const useGpsTracker = (): GpsState => {
     distRef.current = 0;
     lastCoordRef.current = null;
     routeRef.current = [];
+    kmCountRef.current = 0;
+    kmMarkSecRef.current = 0;
+    lastKmSecRef.current = null;
     startTimeRef.current = Date.now();
 
     try {
@@ -113,6 +119,13 @@ export const useGpsTracker = (): GpsState => {
             lastCoordRef.current = pos.coords;
             routeRef.current = [...routeRef.current, pt];
             setRoute(routeRef.current);
+            const newKmCount = Math.floor(distRef.current);
+            if (newKmCount > kmCountRef.current) {
+              const nowSec = (Date.now() - startTimeRef.current) / 1000;
+              lastKmSecRef.current = nowSec - kmMarkSecRef.current;
+              kmMarkSecRef.current = nowSec;
+              kmCountRef.current = newKmCount;
+            }
           }
         } else {
           lastCoordRef.current = pos.coords;
@@ -132,7 +145,7 @@ export const useGpsTracker = (): GpsState => {
     if (voiceMin > 0) {
       voiceRef.current = window.setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        speakPace(distRef.current, elapsed);
+        speakPace(distRef.current, elapsed, lastKmSecRef.current);
       }, voiceMin * 60 * 1000);
     }
 
