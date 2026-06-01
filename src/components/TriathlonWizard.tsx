@@ -29,6 +29,60 @@ const todayIso = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+const toNoonUtcIsoLocal = (d: Date) => {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T12:00:00.000Z`;
+};
+
+const DAY_MAP: Record<string, string> = {
+  "Mån": "Mån", "Tis": "Tis", "Ons": "Ons", "Tor": "Tors",
+  "Fre": "Fre", "Lör": "Lör", "Sön": "Sön",
+};
+
+const kindLabel = (intensity: string): string => {
+  if (/intervall/i.test(intensity)) return "Intervaller";
+  if (/tempo/i.test(intensity)) return "Tempo";
+  if (/återhämtn/i.test(intensity)) return "Återhämtning";
+  return "Lugnt";
+};
+
+const formatDistance = (km: number, discipline: "swim" | "bike" | "run"): string => {
+  if (discipline === "swim") {
+    const m = Math.round(km * 1000);
+    return `${m}m`;
+  }
+  return `${km.toFixed(1).replace(/\.0$/, "")} km`;
+};
+
+const triathlonSessionsToPlanDays = (sessions: GeneratedSession[]): TemplatePlanDay[] => {
+  return sessions.map(s => {
+    const day = DAY_MAP[s.day_of_week] || s.day_of_week;
+    if (s.discipline === "rest") {
+      return { week: s.week, day, session_name: "Vila", details: "", tempo: "" };
+    }
+    if (s.discipline === "strength") {
+      return {
+        week: s.week, day,
+        session_name: "Styrka – Helkropp",
+        details: `Knäböj 3×10; Marklyft 3×8; Armhävningar 3×10; Hantelrodd 3×10; Axelpress 3×10; Planka 3×30s`,
+        tempo: s.intensity,
+      };
+    }
+    const isLong = s.is_long_session;
+    const kind = isLong ? "Långpass" : kindLabel(s.intensity);
+    const discSv = s.discipline === "swim" ? "Simning" : s.discipline === "bike" ? "Cykling" : "Löpning";
+    const dist = formatDistance(s.distance_km, s.discipline);
+    const sessionName = `${discSv} – ${kind}`;
+    const exercise = `${discSv} ${dist} (${s.duration_min} min)`;
+    return {
+      week: s.week, day,
+      session_name: sessionName,
+      details: exercise,
+      tempo: s.intensity,
+    };
+  });
+};
+
+
 const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
