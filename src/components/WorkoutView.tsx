@@ -130,6 +130,12 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   onMoveUp: () => void; onMoveDown: () => void; onShowInfo: () => void; onDelete: () => void;
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
+  const isSwim = /simning|simma|sim\b/i.test(name);
+  const tempoUnit = isSwim ? "min/100m" : "min/km";
+  const tempoDisplayUnit = isSwim ? "/100m" : "/km";
+  const distUnit = isSwim ? "m" : "km";
+  // For swim: distance stored in meters; tempo is min/100m.
+  // time(min) = tempo * dist_m / 100  ⇔  tempo = time * 100 / dist_m  ⇔  dist_m = time * 100 / tempo
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
@@ -161,11 +167,15 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return null;
   };
 
-  const fmtTempo = (minPerKm: number): string => {
-    const mn = Math.floor(minPerKm);
-    const sc = Math.round((minPerKm - mn) * 60);
+  const fmtTempo = (minPerUnit: number): string => {
+    const mn = Math.floor(minPerUnit);
+    const sc = Math.round((minPerUnit - mn) * 60);
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
+
+  // Convert between displayed distance and "tempo-distance units" (km for run/bike, 100m blocks for swim)
+  const distToTempoUnits = (d: number): number => isSwim ? d / 100 : d;
+  const tempoUnitsToDist = (u: number): number => isSwim ? u * 100 : u;
 
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
     const t = totalMin;
@@ -181,10 +191,14 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     if (filledCount < 2) return;
     const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
     const calc = (field: "time" | "tempo" | "distance") => {
-      if (field === "distance" && t > 0 && p && p > 0) setDistance(String(Math.round((t / p) * 100) / 100));
-      else if (field === "tempo" && t > 0 && d > 0) setTempo(fmtTempo(t / d));
-      else if (field === "time" && d > 0 && p && p > 0) {
-        const tot = p * d;
+      const dUnits = distToTempoUnits(d);
+      if (field === "distance" && t > 0 && p && p > 0) {
+        const units = t / p;
+        setDistance(String(Math.round(tempoUnitsToDist(units) * 100) / 100));
+      } else if (field === "tempo" && t > 0 && d > 0) {
+        setTempo(fmtTempo(t / dUnits));
+      } else if (field === "time" && d > 0 && p && p > 0) {
+        const tot = p * dUnits;
         const hh = Math.floor(tot / 60);
         const rem = tot - hh * 60;
         const mm = Math.floor(rem);
@@ -214,7 +228,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       const tVal = parseFloat(data.time);
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
-        const tm = tVal / dVal;
+        const dUnits = distToTempoUnits(dVal);
+        const tm = tVal / dUnits;
         const mn = Math.floor(tm);
         const sc = Math.round((tm - mn) * 60);
         data.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
@@ -251,8 +266,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
           {displayTime && <p className="text-xs">⏱ <span className="font-mono font-semibold">{displayTime} min</span></p>}
-          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{displayTempo}/km</span></p>}
-          {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} km</span></p>}
+          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{displayTempo}{tempoDisplayUnit}</span></p>}
+          {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
       </div>
@@ -292,13 +307,13 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           </div>
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-          <input type="text" inputMode="numeric" pattern="[0-9:]*" value={tempo} onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }} placeholder="t.ex. 5:30" className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo ({tempoUnit})</label>
+          <input type="text" inputMode="numeric" pattern="[0-9:]*" value={tempo} onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }} placeholder={isSwim ? "t.ex. 1:50" : "t.ex. 5:30"} className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans ({distUnit})</label>
           <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || "—"} className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
         <div>
