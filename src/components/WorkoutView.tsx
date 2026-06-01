@@ -340,6 +340,23 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
         </div>
       </div>
+      {isBike && (
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Enhet</span>
+          {([
+            { v: "kmh" as const, l: "km/h" },
+            { v: "minkm" as const, l: "min/km" },
+            { v: "watt" as const, l: "Watt" },
+          ]).map(opt => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setBikeMode(opt.v); setTempo(""); setAutoField(null); }}
+              className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === opt.v ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+            >{opt.l}</button>
+          ))}
+        </div>
+      )}
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
@@ -353,8 +370,21 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           </div>
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo ({tempoUnit})</label>
-          <input type="text" inputMode="numeric" pattern="[0-9:]*" value={tempo} onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }} placeholder={isSwim ? "t.ex. 1:50" : "t.ex. 5:30"} className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{isBike && bikeMode === "watt" ? "Effekt (W)" : isBike && bikeMode === "kmh" ? "Hastighet (km/h)" : `Tempo (${tempoUnit})`}</label>
+          <input
+            type="text"
+            inputMode={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "decimal" : "numeric"}
+            pattern={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "[0-9.,]*" : "[0-9:]*"}
+            value={tempo}
+            onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
+            placeholder={
+              isSwim ? "t.ex. 1:50"
+                : isBike && bikeMode === "kmh" ? "t.ex. 25"
+                : isBike && bikeMode === "watt" ? "t.ex. 180"
+                : "t.ex. 5:30"
+            }
+            className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
+          />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
