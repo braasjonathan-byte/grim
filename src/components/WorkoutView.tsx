@@ -375,7 +375,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
         {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
-          <RouteMap route={savedData!.route as [number, number][]} height={180} />
+          <RouteMap route={savedData!.route as [number, number][]} height={180} collapsible defaultOpen={false} />
         )}
       </div>
     );
@@ -3995,7 +3995,7 @@ const estimateCalories = (
                             const tMin = Math.floor(tempoMin);
                             const tSec = Math.round((tempoMin - tMin) * 60);
                             const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
-                            const name = "GPS-inspelning";
+                            const name = (plan.session_name || "Pass").trim();
                             const dataObj: Record<string, any> = {
                               time: String(Math.round(totMin * 10) / 10),
                               dist: String(distRounded),
@@ -5719,7 +5719,7 @@ const estimateCalories = (
                           const tMin = Math.floor(tempoMin);
                           const tSec = Math.round((tempoMin - tMin) * 60);
                           const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
-                          const name = "GPS-inspelning";
+                          const name = (plan.session_name || "Pass").trim();
                           const dataObj: Record<string, any> = {
                             time: String(Math.round(totMin * 10) / 10),
                             dist: String(distRounded),
