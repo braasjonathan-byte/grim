@@ -191,6 +191,20 @@ const startTracking = async () => {
             kmMarkSec = nowSec;
             kmCount = newKmCount;
           }
+          // Distance-based voice announcement
+          const distInterval = getGpsVoiceIntervalKm();
+          if (distInterval > 0 && distAcc - distAnnounceMarkKm >= distInterval) {
+            const nowSec = (Date.now() - startTime) / 1000;
+            const segKm = distAcc - distAnnounceMarkKm;
+            const segSec = nowSec - distAnnounceMarkSec;
+            const segPace = segSec / segKm;
+            distAnnounceMarkKm = distAcc;
+            distAnnounceMarkSec = nowSec;
+            speakPace(distAcc, Math.floor(nowSec), {
+              label: `Senaste ${segKm.toFixed(1).replace(".", " komma ")} kilometer`,
+              secPerKm: segPace,
+            });
+          }
         }
       } else {
         lastCoord = pos.coords;
