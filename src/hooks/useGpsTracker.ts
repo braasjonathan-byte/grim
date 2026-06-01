@@ -209,6 +209,10 @@ const startTracking = async () => {
       speakPace(distAcc, elapsed, lastKmSec);
     }, voiceMin * 60 * 1000);
   }
+
+  // Persistent status notification while tracking — updates every 15s
+  showStatusNotification();
+  notifInterval = window.setInterval(() => { showStatusNotification(); }, 15000);
 };
 
 const stopTracking = () => {
