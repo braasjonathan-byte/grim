@@ -221,6 +221,10 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const [tempo, setTempo] = useState(initTempo);
   const [distance, setDistance] = useState(initDist);
   const [pulse, setPulse] = useState(initPulse);
+  const [route, setRoute] = useState<[number, number][]>(() => {
+    const r = savedData?.route;
+    return Array.isArray(r) ? r as [number, number][] : [];
+  });
   const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
 
   const getTotalMin = () => {
