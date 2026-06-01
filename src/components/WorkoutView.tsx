@@ -265,16 +265,20 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     if (distance.trim()) data.dist = distance.trim();
     if (tempo.trim()) data.tempo = tempo.trim();
     if (pulse.trim()) data.pulse = pulse.trim();
-    // Auto-calc tempo if time + dist
-    if (data.time && data.dist && !data.tempo) {
+    // Auto-calc tempo if time + dist (only for linked modes)
+    if (tempoIsLinked && data.time && data.dist && !data.tempo) {
       const tVal = parseFloat(data.time);
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
-        const dUnits = distToTempoUnits(dVal);
-        const tm = tVal / dUnits;
-        const mn = Math.floor(tm);
-        const sc = Math.round((tm - mn) * 60);
-        data.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
+        if (isBike && bikeMode === "kmh") {
+          data.tempo = String(Math.round((60 * dVal / tVal) * 10) / 10);
+        } else {
+          const dUnits = distToTempoUnits(dVal);
+          const tm = tVal / dUnits;
+          const mn = Math.floor(tm);
+          const sc = Math.round((tm - mn) * 60);
+          data.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
+        }
       }
     }
     await onSave(data);
