@@ -213,16 +213,15 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   if (step === "triathlon") {
     return (
       <div className="space-y-4 animate-fade-in">
-        <button
-          onClick={() => setStep("select")}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Tillbaka
-        </button>
-        <TriathlonView userId={userId} />
+        <TriathlonWizard
+          userId={userId}
+          onCreated={onDone}
+          onCancel={() => setStep("select")}
+        />
       </div>
     );
   }
+
 
   if (step === "profile") {
     return (
