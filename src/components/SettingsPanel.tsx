@@ -32,6 +32,8 @@ interface SettingsPanelProps {
 
 const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelProps) => {
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
+  const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
+
 
   const [wakeLock, setWakeLock] = useState(() => {
     return localStorage.getItem("gymberget_wakelock") === "true";
