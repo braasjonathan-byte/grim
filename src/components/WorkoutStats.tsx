@@ -470,17 +470,22 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
       if (c.skipped) b.skipped++;
       if (c.done && hasExercise(c)) {
-        const distanceKm = getWorkoutDistanceKm({
-          loggedDistanceKm: c.logged_distance_km,
-          loggedWeights: c.logged_weights,
-          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
-        });
-
-        if (distanceKm > 0) {
-          b.distanceKm += distanceKm;
+        const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
+        const cat = getCardioCategory(planText);
+        const hidden = cat ? cardioVis[cat] === false : false;
+        if (!hidden) {
+          const distanceKm = getWorkoutDistanceKm({
+            loggedDistanceKm: c.logged_distance_km,
+            loggedWeights: c.logged_weights,
+            planDetails: planText,
+          });
+          if (distanceKm > 0) {
+            b.distanceKm += distanceKm;
+          }
         }
       }
     }
+
 
     // For week view, ensure all weeks with scheduled exercises have a bucket and set totalWithExercise from plans
     if (view === "week") {
