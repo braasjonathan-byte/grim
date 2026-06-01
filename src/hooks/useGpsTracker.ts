@@ -95,6 +95,9 @@ export const useGpsTracker = (): GpsState => {
     distRef.current = 0;
     lastCoordRef.current = null;
     routeRef.current = [];
+    kmCountRef.current = 0;
+    kmMarkSecRef.current = 0;
+    lastKmSecRef.current = null;
     startTimeRef.current = Date.now();
 
     try {
