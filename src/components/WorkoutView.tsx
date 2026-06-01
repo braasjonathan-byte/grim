@@ -322,6 +322,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     if (distance.trim()) data.dist = distance.trim();
     if (tempo.trim()) data.tempo = tempo.trim();
     if (pulse.trim()) data.pulse = pulse.trim();
+    if (route.length > 1) data.route = route;
     // Auto-calc tempo if time + dist (only for linked modes)
     if (tempoIsLinked && data.time && data.dist && !data.tempo) {
       const tVal = parseFloat(data.time);
