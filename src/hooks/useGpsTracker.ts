@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { getGpsVoiceIntervalMin, speakPace } from "@/lib/gpsSettings";
 
 type WakeLockSentinel = { release: () => Promise<void>; addEventListener: (t: string, l: () => void) => void };
 
