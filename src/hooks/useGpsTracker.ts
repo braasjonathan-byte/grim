@@ -38,6 +38,7 @@ export const useGpsTracker = (): GpsState => {
   const watchIdRef = useRef<number | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const tickRef = useRef<number | null>(null);
+  const voiceRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const lastCoordRef = useRef<GeolocationCoordinates | null>(null);
   const distRef = useRef(0);
