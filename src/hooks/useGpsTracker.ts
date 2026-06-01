@@ -119,6 +119,13 @@ export const useGpsTracker = (): GpsState => {
             lastCoordRef.current = pos.coords;
             routeRef.current = [...routeRef.current, pt];
             setRoute(routeRef.current);
+            const newKmCount = Math.floor(distRef.current);
+            if (newKmCount > kmCountRef.current) {
+              const nowSec = (Date.now() - startTimeRef.current) / 1000;
+              lastKmSecRef.current = nowSec - kmMarkSecRef.current;
+              kmMarkSecRef.current = nowSec;
+              kmCountRef.current = newKmCount;
+            }
           }
         } else {
           lastCoordRef.current = pos.coords;
