@@ -380,6 +380,37 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         </button>
       </div>
 
+      {/* Visning – konditionsövningar i statistik */}
+      <div className="pt-2 border-t border-border space-y-2">
+        <div className="flex items-center gap-2">
+          <Eye className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">Visning i statistik</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Välj vilka konditionsövningar som ska räknas med i statistikvyn.
+        </p>
+        <div className="space-y-1.5">
+          {CARDIO_CATEGORIES.map(cat => {
+            const on = cardioVis[cat.key] !== false;
+            return (
+              <div key={cat.key} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">{cat.icon}</span>
+                  <span className="text-sm">{cat.label}</span>
+                </div>
+                <button
+                  onClick={() => setCardioVis(cat.key, !on)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-primary" : "bg-secondary border border-border"}`}
+                  aria-label={`Visa ${cat.label} i statistik`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${on ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+
       {/* Biometric unlock toggle */}
       {bioSupported && userId && (
         <div className="flex items-center justify-between">
