@@ -128,6 +128,14 @@ export const useGpsTracker = (): GpsState => {
       setElapsedSec(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
 
+    const voiceMin = getGpsVoiceIntervalMin();
+    if (voiceMin > 0) {
+      voiceRef.current = window.setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        speakPace(distRef.current, elapsed);
+      }, voiceMin * 60 * 1000);
+    }
+
     setIsTracking(true);
   }, [isTracking]);
 
