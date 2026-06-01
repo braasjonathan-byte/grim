@@ -3502,6 +3502,23 @@ const estimateCalories = (
     else console.log("[DELETE] Success");
     skipDayResetRef.current = true;
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+
+    // Also remove any saved conditioning payload for this exercise so it doesn't
+    // re-appear in the "saved entries" list (would otherwise require a second delete).
+    const deletedRaw = deleteExerciseConfirm.name || "";
+    const deletedName = deletedRaw.replace(/\s*[—\-]\s*.*$/, "").trim().toLowerCase();
+    if (deletedName) {
+      await updateCompletionWeights(plan.week, plan.day, (existing) => {
+        const next: Record<string, any> = { ...existing };
+        for (const key of Object.keys(next)) {
+          if (!key.startsWith("__cond__")) continue;
+          const condName = key.replace(/^__cond__/, "").trim().toLowerCase();
+          if (condName === deletedName) delete next[key];
+        }
+        return next;
+      });
+    }
+
     setDeleteExerciseConfirm(null);
   };
 
