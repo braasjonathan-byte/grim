@@ -19,16 +19,29 @@ export const setGpsVoiceIntervalMin = (min: number): void => {
   localStorage.setItem(KEY, String(min));
 };
 
-export const speakPace = (distanceKm: number, elapsedSec: number): void => {
+const fmtPace = (secPerKm: number): string => {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m} minuter ${s} sekunder per kilometer`;
+};
+
+export const speakPace = (
+  distanceKm: number,
+  elapsedSec: number,
+  lastKmSec?: number | null,
+): void => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   if (distanceKm <= 0.01) return;
-  const paceSecPerKm = elapsedSec / distanceKm;
-  const pm = Math.floor(paceSecPerKm / 60);
-  const ps = Math.round(paceSecPerKm % 60);
+  const avgSecPerKm = elapsedSec / distanceKm;
   const km = Math.round(distanceKm * 10) / 10;
-  const text = `Tempo ${pm} minuter ${ps} sekunder per kilometer. Distans ${km.toString().replace(".", " komma ")} kilometer.`;
+  const parts: string[] = [];
+  parts.push(`Snittempo ${fmtPace(avgSecPerKm)}.`);
+  if (lastKmSec != null && lastKmSec > 0) {
+    parts.push(`Senaste kilometer ${fmtPace(lastKmSec)}.`);
+  }
+  parts.push(`Distans ${km.toString().replace(".", " komma ")} kilometer.`);
   try {
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(parts.join(" "));
     u.lang = "sv-SE";
     u.rate = 1;
     window.speechSynthesis.cancel();
