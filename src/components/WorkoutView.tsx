@@ -121,6 +121,52 @@ interface CustomExercise {
 }
 
 // Inline conditioning editing card (green, open by default)
+const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number) => void }) => {
+  const gps = useGpsTracker();
+  const fmtTime = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
+      : `${m}:${String(sec).padStart(2, "0")}`;
+  };
+  return (
+    <div className="flex items-center gap-2 bg-background border border-border rounded-md p-2">
+      {!gps.isTracking ? (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); gps.start(); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+        >
+          <MapPin className="w-3.5 h-3.5" /> Starta GPS
+        </button>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = gps.stop();
+              onStop(r.distanceKm, r.elapsedSec);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded-md"
+          >
+            <Square className="w-3.5 h-3.5 fill-current" /> Stoppa
+          </button>
+          <div className="flex flex-col text-[10px] leading-tight">
+            <span className="font-mono font-bold text-foreground">{fmtTime(gps.elapsedSec)} · {(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
+            <span className="text-muted-foreground">
+              {gps.accuracy != null ? `Noggrannhet ±${Math.round(gps.accuracy)}m` : "Söker signal…"}
+            </span>
+          </div>
+        </>
+      )}
+      {gps.error && <span className="text-[10px] text-destructive">{gps.error}</span>}
+    </div>
+  );
+};
+
 const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
