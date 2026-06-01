@@ -3982,6 +3982,45 @@ const estimateCalories = (
                 </div>
                 {expanded &&
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+                    {(() => {
+                      const sn = (plan.session_name || "").toLowerCase();
+                      const isCardio = /löp|jogg|spring|cykl|cycling|simn|simm|swim|tröskel|långpass|intervall|tempo|kondition/.test(sn);
+                      if (!isCardio) return null;
+                      return (
+                        <GpsTrackerControl
+                          onStop={async (km, sec, gpsRoute) => {
+                            const totMin = sec / 60;
+                            const distRounded = Math.round(km * 100) / 100;
+                            const tempoMin = km > 0 ? totMin / km : 0;
+                            const tMin = Math.floor(tempoMin);
+                            const tSec = Math.round((tempoMin - tMin) * 60);
+                            const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
+                            const name = "GPS-inspelning";
+                            const dataObj: Record<string, any> = {
+                              time: String(Math.round(totMin * 10) / 10),
+                              dist: String(distRounded),
+                              tempo: tempoStr,
+                              route: gpsRoute,
+                            };
+                            await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                              return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
+                            });
+                            const infoParts: string[] = [];
+                            infoParts.push(`${Math.round(totMin)} min`);
+                            if (tempoStr) infoParts.push(`${tempoStr}/km`);
+                            infoParts.push(`${distRounded} km`);
+                            const entry = `${name} — ${infoParts.join(", ")}`;
+                            const existingLines = (plan.details || "").split(/[;\n]/).map(x => x.trim()).filter(Boolean);
+                            const idx = existingLines.findIndex(l => l.toLowerCase().startsWith(name.toLowerCase()));
+                            if (idx >= 0) existingLines[idx] = entry; else existingLines.push(entry);
+                            const newDetails = existingLines.join("\n");
+                            await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                            setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                            triggerSave();
+                          }}
+                        />
+                      );
+                    })()}
                     {/* Exercises / details */}
                     {plan.details &&
                   (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
