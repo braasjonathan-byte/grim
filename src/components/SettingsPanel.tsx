@@ -637,7 +637,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         </div>
       )}
 
-      {userId && (
+      {userId && SHOW_STRAVA_INTEGRATION && (
         <div className="border-t border-border pt-2">
           <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-2">
