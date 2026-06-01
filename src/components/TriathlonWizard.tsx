@@ -60,55 +60,80 @@ const buildCardioDetails = (
   durationMin: number,
 ): string => {
   const discSv = discipline === "swim" ? "Simning" : discipline === "bike" ? "Cykling" : "Löpning";
+  const fmtKm = (km: number) => {
+    const v = Math.round(km * 100) / 100;
+    return v.toString();
+  };
+  const line = (name: string, min: number, km: number) =>
+    `${name} — ${Math.max(1, Math.round(min))} min, ${fmtKm(km)} km`;
 
   if (discipline === "swim") {
     if (kind === "interval") {
       const totalM = Math.round(distanceKm * 1000);
-      const warm = 200, cool = 200;
-      const workM = Math.max(400, totalM - warm - cool);
+      const warmM = 200, coolM = 200;
+      const workM = Math.max(400, totalM - warmM - coolM);
       const reps = Math.max(4, Math.round(workM / 100));
-      const repDist = Math.max(50, Math.round((workM / reps) / 25) * 25);
-      const intervals = Array.from({ length: reps }, (_, i) =>
-        `Intervall ${i + 1} – ${repDist}m simning hårt`
-      ).join("; ");
-      return `Uppvärmning ${warm}m simning; ${intervals}; Nedvarvning ${cool}m simning`;
+      const repM = Math.max(50, Math.round((workM / reps) / 25) * 25);
+      const warmMin = Math.max(3, Math.round(durationMin * (warmM / totalM)));
+      const coolMin = Math.max(3, Math.round(durationMin * (coolM / totalM)));
+      const repMin = Math.max(1, Math.round((durationMin - warmMin - coolMin) / reps));
+      const lines: string[] = [];
+      lines.push(line(`Uppvärmning ${discSv}`, warmMin, warmM / 1000));
+      for (let i = 0; i < reps; i++) {
+        lines.push(line(`${discSv} intervall ${i + 1}`, repMin, repM / 1000));
+      }
+      lines.push(line(`Nedvarvning ${discSv}`, coolMin, coolM / 1000));
+      return lines.join("\n");
     }
     if (kind === "tempo") {
+      const warmM = 200, coolM = 200;
       const totalM = Math.round(distanceKm * 1000);
-      const warm = 200, cool = 200;
-      const tempoM = Math.max(200, totalM - warm - cool);
-      return `Uppvärmning ${warm}m simning; ${tempoM}m simning i tempo; Nedvarvning ${cool}m simning`;
+      const tempoM = Math.max(200, totalM - warmM - coolM);
+      const warmMin = Math.max(3, Math.round(durationMin * (warmM / totalM)));
+      const coolMin = Math.max(3, Math.round(durationMin * (coolM / totalM)));
+      const tempoMin = Math.max(1, durationMin - warmMin - coolMin);
+      return [
+        line(`Uppvärmning ${discSv}`, warmMin, warmM / 1000),
+        line(`${discSv} tempo`, tempoMin, tempoM / 1000),
+        line(`Nedvarvning ${discSv}`, coolMin, coolM / 1000),
+      ].join("\n");
     }
-    if (kind === "long") {
-      return `Simning ${Math.round(distanceKm * 1000)}m långpass (${durationMin} min)`;
-    }
-    if (kind === "recovery") {
-      return `Simning ${Math.round(distanceKm * 1000)}m lätt återhämtning`;
-    }
-    return `Simning ${Math.round(distanceKm * 1000)}m lugnt`;
+    if (kind === "long") return line(`${discSv} långpass`, durationMin, distanceKm);
+    if (kind === "recovery") return line(`${discSv} återhämtning`, durationMin, distanceKm);
+    return line(discSv, durationMin, distanceKm);
   }
 
-  // Run / Bike share the same structure (time-based)
-  const km = distanceKm.toFixed(1).replace(/\.0$/, "");
+  // Run / Bike (time-based)
   if (kind === "interval") {
     const warm = 10, cool = 10;
     const workMin = Math.max(8, durationMin - warm - cool);
     const reps = Math.max(4, Math.min(10, Math.round(workMin / 3)));
     const repMin = Math.max(1, Math.round(workMin / reps));
-    return `Uppvärmning ${warm} min ${discSv.toLowerCase()}; ${reps}×${repMin} min ${discSv.toLowerCase()} hårt (1 min vila); Nedvarvning ${cool} min ${discSv.toLowerCase()}`;
+    const totalMin = warm + cool + reps * repMin;
+    const warmKm = distanceKm * (warm / totalMin);
+    const coolKm = distanceKm * (cool / totalMin);
+    const repKm = distanceKm * (repMin / totalMin);
+    const lines: string[] = [];
+    lines.push(line(`Uppvärmning ${discSv}`, warm, warmKm));
+    for (let i = 0; i < reps; i++) {
+      lines.push(line(`${discSv} intervall ${i + 1}`, repMin, repKm));
+    }
+    lines.push(line(`Nedvarvning ${discSv}`, cool, coolKm));
+    return lines.join("\n");
   }
   if (kind === "tempo") {
     const warm = 10, cool = 10;
     const tempoMin = Math.max(10, durationMin - warm - cool);
-    return `Uppvärmning ${warm} min ${discSv.toLowerCase()}; ${tempoMin} min ${discSv.toLowerCase()} i tröskeltempo; Nedvarvning ${cool} min ${discSv.toLowerCase()}`;
+    const total = warm + cool + tempoMin;
+    return [
+      line(`Uppvärmning ${discSv}`, warm, distanceKm * (warm / total)),
+      line(`${discSv} tempo`, tempoMin, distanceKm * (tempoMin / total)),
+      line(`Nedvarvning ${discSv}`, cool, distanceKm * (cool / total)),
+    ].join("\n");
   }
-  if (kind === "long") {
-    return `${discSv} ${km} km långpass (${durationMin} min)`;
-  }
-  if (kind === "recovery") {
-    return `${discSv} ${durationMin} min lätt återhämtning`;
-  }
-  return `${discSv} ${km} km (${durationMin} min)`;
+  if (kind === "long") return line(`${discSv} långpass`, durationMin, distanceKm);
+  if (kind === "recovery") return line(`${discSv} återhämtning`, durationMin, distanceKm);
+  return line(discSv, durationMin, distanceKm);
 };
 
 const detectKind = (intensity: string, isLong: boolean): "long" | "tempo" | "interval" | "easy" | "recovery" => {
