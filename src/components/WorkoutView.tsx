@@ -266,8 +266,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
           {displayTime && <p className="text-xs">⏱ <span className="font-mono font-semibold">{displayTime} min</span></p>}
-          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{displayTempo}/km</span></p>}
-          {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} km</span></p>}
+          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{displayTempo}{tempoDisplayUnit}</span></p>}
+          {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
       </div>
