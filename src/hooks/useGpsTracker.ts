@@ -145,7 +145,7 @@ export const useGpsTracker = (): GpsState => {
     if (voiceMin > 0) {
       voiceRef.current = window.setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        speakPace(distRef.current, elapsed);
+        speakPace(distRef.current, elapsed, lastKmSecRef.current);
       }, voiceMin * 60 * 1000);
     }
 
