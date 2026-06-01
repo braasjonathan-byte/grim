@@ -144,7 +144,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       </button>
     )},
     
-    { key: "suggestions", label: "Förslag", render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
+    { key: "suggestions", label: "Förslag", adminOnly: true, render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
     { key: "help", label: "Hjälp", render: () => <HelpSection /> },
   ];
 
