@@ -10,7 +10,7 @@ import UntrainedMuscles from "@/components/UntrainedMuscles";
 import AchievementsPanel from "@/components/AchievementsPanel";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
-import { useCardioVisibility, getCardioCategory } from "@/lib/cardioVisibility";
+import { useCardioVisibility, getCardioCategory, CARDIO_CATEGORIES, type CardioCategory } from "@/lib/cardioVisibility";
 
 import { calculateAchievementMetrics, unlockEarnedAchievements } from "@/lib/achievements";
 import {
@@ -568,6 +568,29 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return Math.round(total * 100) / 100;
   }, [filteredCompletions, planDetailsMap, plansWithExercises, cardioVis]);
 
+  const perCategoryStats = useMemo(() => {
+    const map = new Map<CardioCategory, { km: number; passes: number }>();
+    for (const c of filteredCompletions) {
+      if (!c.done || !hasExercise(c)) continue;
+      const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
+      const cat = getCardioCategory(planText);
+      if (!cat) continue;
+      if (cardioVis[cat] === false) continue;
+      const km = getWorkoutDistanceKm({
+        loggedDistanceKm: c.logged_distance_km,
+        loggedWeights: c.logged_weights,
+        planDetails: planText,
+      });
+      const prev = map.get(cat) ?? { km: 0, passes: 0 };
+      map.set(cat, { km: prev.km + km, passes: prev.passes + 1 });
+    }
+    return CARDIO_CATEGORIES
+      .filter(c => cardioVis[c.key] !== false && map.has(c.key))
+      .map(c => ({ meta: c, ...(map.get(c.key) as { km: number; passes: number }) }));
+  }, [filteredCompletions, planDetailsMap, cardioVis]);
+
+
+
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
@@ -674,6 +697,28 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
       </div>
+
+      {/* Per-category cardio breakdown */}
+      {perCategoryStats.length > 0 && (
+        <div className="border border-border rounded-lg p-3 bg-secondary space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Konditionsövningar</p>
+          <div className="grid grid-cols-2 gap-2">
+            {perCategoryStats.map(({ meta, km, passes }) => (
+              <div key={meta.key} className="border border-border rounded-md p-2 bg-background flex items-center gap-2">
+                <span className="text-xl leading-none">{meta.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold truncate">{meta.label}</p>
+                  <p className="text-sm font-black leading-tight">
+                    {Math.round(km * 10) / 10}<span className="text-[10px] font-normal text-muted-foreground"> km</span>
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">{passes} pass</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <DailyQuoteCard />
       <AchievementsPanel unlockedIds={achievementIds} />
 
