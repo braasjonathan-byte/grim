@@ -409,6 +409,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
             );
           })}
         </div>
+      </div>
+
+
 
 
       {/* Biometric unlock toggle */}
