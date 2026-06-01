@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
+import RouteMap from "@/components/RouteMap";
 import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
