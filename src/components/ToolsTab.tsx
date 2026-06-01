@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronDown, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
@@ -58,30 +58,32 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const autoScrollRef = useRef<number | null>(null);
 
-  // Tour navigation – expand sections + scroll into view when requested
+  // Tour navigation – open the relevant subpage when requested
   useEffect(() => {
     const handler = (e: Event) => {
       const target = (e as CustomEvent).detail as "settings" | "helpers" | "help";
-      if (target === "settings") setSettingsOpen(true);
-      if (target === "helpers") setToolsOpen(true);
-      // Scroll the related anchor into view
-      requestAnimationFrame(() => {
-        const sel =
-          target === "settings" ? '[data-tour="tools-profile"]' :
-          target === "helpers" ? '[data-tour="tools-helpers"]' :
-          target === "help" ? '[data-tour="tools-help"]' : null;
-        if (sel) document.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
+      if (target === "settings") setSubView("settings");
+      else if (target === "helpers") setSubView("helpers");
+      else if (target === "help") {
+        setSubView("home");
+        requestAnimationFrame(() => {
+          document.querySelector('[data-tour="tools-help"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
     };
     window.addEventListener("grim:tools-expand", handler);
     return () => window.removeEventListener("grim:tools-expand", handler);
   }, []);
+
+  // Reset scroll when entering/leaving a subpage
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [subView]);
 
   const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
   const settingsToolKeys = new Set(["profile", "settings", "notifications"]);
@@ -104,61 +106,42 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
     { key: "settings-group", label: "Inställningar", render: () => (
-      <div data-tour="tools-profile" className="rounded-lg border border-border overflow-hidden shadow-none bg-secondary">
-        <button
-          type="button"
-          onClick={() => setSettingsOpen((open) => !open)}
-          className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-secondary/60 transition-colors"
-          aria-expanded={settingsOpen}
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <SlidersHorizontal className="h-4 w-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold text-foreground">Inställningar</span>
-              <span className="block truncate text-xs text-muted-foreground">Profil, tema och notiser</span>
-            </span>
+      <button
+        type="button"
+        data-tour="tools-profile"
+        onClick={() => setSubView("settings")}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <SlidersHorizontal className="h-4 w-4" />
           </span>
-          <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
-            {settingsOpen ? "Stäng" : "Öppna"}
-            <ChevronDown className={`h-4 w-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-foreground">Inställningar</span>
+            <span className="block truncate text-xs text-muted-foreground">Profil, tema och notiser</span>
           </span>
-        </button>
-        {settingsOpen && (
-          <div className="space-y-3 border-t border-border bg-background/50 p-3">
-            <ProfileTab userId={userId} isAdmin={isAdmin} />
-            <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
-            <NotificationSettings userId={userId} />
-          </div>
-        )}
-      </div>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
     )},
     { key: "helpers", label: "Hjälpmedel", render: () => (
-      <div data-tour="tools-helpers" className="rounded-lg border border-border overflow-hidden bg-secondary">
-        <button
-          type="button"
-          onClick={() => setToolsOpen((open) => !open)}
-          className="w-full flex items-center justify-between gap-3 p-4 text-left"
-          aria-expanded={toolsOpen}
-        >
-          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Wrench className="h-4 w-4 text-primary" />
-            Hjälpmedel
+      <button
+        type="button"
+        data-tour="tools-helpers"
+        onClick={() => setSubView("helpers")}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Wrench className="h-4 w-4" />
           </span>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${toolsOpen ? "rotate-180" : ""}`} />
-        </button>
-        {toolsOpen && (
-          <div className="space-y-3 border-t border-border p-3">
-            <RestTimerSettings />
-            <EventCountdown userId={userId} />
-            <CalorieCalculator />
-            <OneRMCalculator />
-            <PulseZoneCalculator />
-            <WorkoutTimer />
-          </div>
-        )}
-      </div>
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-foreground">Hjälpmedel</span>
+            <span className="block truncate text-xs text-muted-foreground">Timer, kalkylatorer och nedräkning</span>
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
     )},
     
     { key: "suggestions", label: "Förslag", render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
@@ -206,7 +189,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       if (!ordered.find(o => o.key === s.key)) ordered.push(s);
     }
     return ordered;
-  }, [editMode, localOrder, savedOrder, isAdmin, userId, userRole, isHonorary, toolsOpen, settingsOpen]);
+  }, [editMode, localOrder, savedOrder, isAdmin, userId, userRole, isHonorary]);
 
   const handleStartEdit = () => {
     const current = savedOrder || defaultOrder;
@@ -291,6 +274,43 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   };
 
   const orderedSections = getOrderedSections();
+
+  if (subView !== "home") {
+    const title = subView === "settings" ? "Inställningar" : "Hjälpmedel";
+    return (
+      <div className="py-2 space-y-4">
+        <div className="flex items-center gap-2 -mx-1">
+          <button
+            type="button"
+            onClick={() => setSubView("home")}
+            className="flex items-center gap-1 py-2 px-2 text-sm font-semibold text-primary hover:opacity-80 transition-opacity"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Tillbaka
+          </button>
+          <h2 className="text-base font-bold text-foreground">{title}</h2>
+        </div>
+        <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}>
+          {subView === "settings" ? (
+            <div className="space-y-3">
+              <ProfileTab userId={userId} isAdmin={isAdmin} />
+              <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
+              <NotificationSettings userId={userId} />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <RestTimerSettings />
+              <EventCountdown userId={userId} />
+              <CalorieCalculator />
+              <OneRMCalculator />
+              <PulseZoneCalculator />
+              <WorkoutTimer />
+            </div>
+          )}
+        </Suspense>
+      </div>
+    );
+  }
 
   return (
     <div className="py-2 space-y-4">
