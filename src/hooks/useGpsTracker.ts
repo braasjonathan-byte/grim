@@ -43,6 +43,9 @@ export const useGpsTracker = (): GpsState => {
   const lastCoordRef = useRef<GeolocationCoordinates | null>(null);
   const distRef = useRef(0);
   const routeRef = useRef<RoutePoint[]>([]);
+  const kmCountRef = useRef(0);
+  const kmMarkSecRef = useRef(0);
+  const lastKmSecRef = useRef<number | null>(null);
 
   const cleanup = useCallback(() => {
     if (watchIdRef.current !== null && navigator.geolocation) {
