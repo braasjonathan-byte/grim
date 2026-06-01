@@ -53,10 +53,15 @@ export const useGpsTracker = (): GpsState => {
       window.clearInterval(tickRef.current);
       tickRef.current = null;
     }
+    if (voiceRef.current !== null) {
+      window.clearInterval(voiceRef.current);
+      voiceRef.current = null;
+    }
     if (wakeLockRef.current) {
       wakeLockRef.current.release().catch(() => {});
       wakeLockRef.current = null;
     }
+    try { window.speechSynthesis?.cancel(); } catch {}
   }, []);
 
   useEffect(() => cleanup, [cleanup]);
