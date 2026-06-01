@@ -131,18 +131,36 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
   const isSwim = /simning|simma|sim\b/i.test(name);
-  const tempoUnit = isSwim ? "min/100m" : "min/km";
-  const tempoDisplayUnit = isSwim ? "/100m" : "/km";
+  const isBike = /cykling|cykel|cykla|spinning/i.test(name);
+  type BikeMode = "minkm" | "kmh" | "watt";
+  const BIKE_MODE_KEY = "grim_bike_tempo_mode";
+  const [bikeMode, setBikeModeState] = useState<BikeMode>(() => {
+    if (typeof window === "undefined") return "minkm";
+    const v = localStorage.getItem(BIKE_MODE_KEY);
+    return (v === "kmh" || v === "watt" || v === "minkm") ? v : "minkm";
+  });
+  const setBikeMode = (m: BikeMode) => {
+    setBikeModeState(m);
+    try { localStorage.setItem(BIKE_MODE_KEY, m); } catch {}
+  };
+  // Effective unit semantics
+  const tempoUnit = isSwim
+    ? "min/100m"
+    : isBike
+      ? (bikeMode === "kmh" ? "km/h" : bikeMode === "watt" ? "W" : "min/km")
+      : "min/km";
+  const tempoDisplayUnit = isSwim
+    ? "/100m"
+    : isBike
+      ? (bikeMode === "kmh" ? " km/h" : bikeMode === "watt" ? " W" : "/km")
+      : "/km";
   const distUnit = isSwim ? "m" : "km";
-  // For swim: distance stored in meters; tempo is min/100m.
-  // time(min) = tempo * dist_m / 100  ⇔  tempo = time * 100 / dist_m  ⇔  dist_m = time * 100 / tempo
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
   const initTempo = savedData?.tempo || planCondTempo || "";
   const initPulse = savedData?.pulse || planCondPulse || "";
 
-  // H:M:S state from total minutes
   const totalMin = parseFloat(initTime) || 0;
   const [hours, setHours] = useState(() => { const h = Math.floor(totalMin / 60); return h > 0 ? String(h) : ""; });
   const [minutes, setMinutes] = useState(() => { const m = Math.floor(totalMin % 60); return totalMin > 0 ? String(m) : ""; });
@@ -162,8 +180,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const parseTempoToMin = (t: string): number | null => {
     const mm = t.trim().match(/^(\d+)[:\.](\d+)$/);
     if (mm) return parseInt(mm[1]) + parseInt(mm[2]) / 60;
-    const mm2 = t.trim().match(/^(\d+)$/);
-    if (mm2) return parseInt(mm2[1]);
+    const mm2 = t.trim().match(/^(\d+(?:[.,]\d+)?)$/);
+    if (mm2) return parseFloat(mm2[1].replace(",", "."));
     return null;
   };
 
@@ -173,14 +191,20 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
 
-  // Convert between displayed distance and "tempo-distance units" (km for run/bike, 100m blocks for swim)
   const distToTempoUnits = (d: number): number => isSwim ? d / 100 : d;
   const tempoUnitsToDist = (u: number): number => isSwim ? u * 100 : u;
 
+  // Watt mode: no relation between tempo and time/distance — skip auto-calc on tempo.
+  const tempoIsLinked = !(isBike && bikeMode === "watt");
+
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
+    if (!tempoIsLinked) return;
     const t = totalMin;
-    const p = parseTempoToMin(tempoVal);
     const d = parseFloat(distVal.replace(",", "."));
+    // For km/h mode, tempo is plain number
+    const isKmh = isBike && bikeMode === "kmh";
+    const tempoNumeric = isKmh ? parseFloat(tempoVal.replace(",", ".")) : NaN;
+    const p = isKmh ? (tempoNumeric > 0 ? tempoNumeric : null) : parseTempoToMin(tempoVal);
     const filled = {
       time: t > 0,
       tempo: tempoVal.trim().length > 0 && p !== null && p > 0,
@@ -192,6 +216,24 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
     const calc = (field: "time" | "tempo" | "distance") => {
       const dUnits = distToTempoUnits(d);
+      if (isKmh) {
+        // km/h: speed = 60 * dist_km / time_min
+        if (field === "distance" && t > 0 && p && p > 0) {
+          setDistance(String(Math.round((p * t / 60) * 100) / 100));
+        } else if (field === "tempo" && t > 0 && d > 0) {
+          setTempo(String(Math.round((60 * d / t) * 10) / 10));
+        } else if (field === "time" && d > 0 && p && p > 0) {
+          const tot = 60 * d / p;
+          const hh = Math.floor(tot / 60);
+          const rem = tot - hh * 60;
+          const mm = Math.floor(rem);
+          const ss = Math.round((rem - mm) * 60);
+          setHours(hh > 0 ? String(hh) : "");
+          setMinutes(String(mm));
+          setSeconds(ss > 0 ? String(ss) : "");
+        }
+        return;
+      }
       if (field === "distance" && t > 0 && p && p > 0) {
         const units = t / p;
         setDistance(String(Math.round(tempoUnitsToDist(units) * 100) / 100));
@@ -223,16 +265,20 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     if (distance.trim()) data.dist = distance.trim();
     if (tempo.trim()) data.tempo = tempo.trim();
     if (pulse.trim()) data.pulse = pulse.trim();
-    // Auto-calc tempo if time + dist
-    if (data.time && data.dist && !data.tempo) {
+    // Auto-calc tempo if time + dist (only for linked modes)
+    if (tempoIsLinked && data.time && data.dist && !data.tempo) {
       const tVal = parseFloat(data.time);
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
-        const dUnits = distToTempoUnits(dVal);
-        const tm = tVal / dUnits;
-        const mn = Math.floor(tm);
-        const sc = Math.round((tm - mn) * 60);
-        data.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
+        if (isBike && bikeMode === "kmh") {
+          data.tempo = String(Math.round((60 * dVal / tVal) * 10) / 10);
+        } else {
+          const dUnits = distToTempoUnits(dVal);
+          const tm = tVal / dUnits;
+          const mn = Math.floor(tm);
+          const sc = Math.round((tm - mn) * 60);
+          data.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
+        }
       }
     }
     await onSave(data);
@@ -294,6 +340,23 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
         </div>
       </div>
+      {isBike && (
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Enhet</span>
+          {([
+            { v: "kmh" as const, l: "km/h" },
+            { v: "minkm" as const, l: "min/km" },
+            { v: "watt" as const, l: "Watt" },
+          ]).map(opt => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setBikeMode(opt.v); setTempo(""); setAutoField(null); }}
+              className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === opt.v ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+            >{opt.l}</button>
+          ))}
+        </div>
+      )}
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
@@ -307,8 +370,21 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           </div>
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo ({tempoUnit})</label>
-          <input type="text" inputMode="numeric" pattern="[0-9:]*" value={tempo} onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }} placeholder={isSwim ? "t.ex. 1:50" : "t.ex. 5:30"} className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{isBike && bikeMode === "watt" ? "Effekt (W)" : isBike && bikeMode === "kmh" ? "Hastighet (km/h)" : `Tempo (${tempoUnit})`}</label>
+          <input
+            type="text"
+            inputMode={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "decimal" : "numeric"}
+            pattern={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "[0-9.,]*" : "[0-9:]*"}
+            value={tempo}
+            onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
+            placeholder={
+              isSwim ? "t.ex. 1:50"
+                : isBike && bikeMode === "kmh" ? "t.ex. 25"
+                : isBike && bikeMode === "watt" ? "t.ex. 180"
+                : "t.ex. 5:30"
+            }
+            className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
+          />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
