@@ -13,14 +13,17 @@ const haversineKm = (a: GeolocationCoordinates, b: GeolocationCoordinates) => {
   return 2 * R * Math.asin(Math.sqrt(x));
 };
 
+export type RoutePoint = [number, number]; // [lat, lng]
+
 export type GpsState = {
   isTracking: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
+  route: RoutePoint[];
   start: () => Promise<void>;
-  stop: () => { distanceKm: number; elapsedSec: number };
+  stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
 };
 
 export const useGpsTracker = (): GpsState => {
