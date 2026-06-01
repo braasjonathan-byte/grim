@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye } from "lucide-react";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiometric } from "@/lib/biometric";
+import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
 
 const ChangePassword = lazy(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
 
 const SHOW_STRAVA_INTEGRATION = false;
+
 
 
 export const SECURITY_QUESTIONS = [
@@ -30,6 +32,8 @@ interface SettingsPanelProps {
 
 const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelProps) => {
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
+  const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
+
 
   const [wakeLock, setWakeLock] = useState(() => {
     return localStorage.getItem("gymberget_wakelock") === "true";
@@ -375,6 +379,40 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${soundEnabled ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
         </button>
       </div>
+
+      {/* Visning – konditionsövningar i statistik */}
+      <div className="pt-2 border-t border-border space-y-2">
+        <div className="flex items-center gap-2">
+          <Eye className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">Visning i statistik</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Välj vilka konditionsövningar som ska räknas med i statistikvyn.
+        </p>
+        <div className="space-y-1.5">
+          {CARDIO_CATEGORIES.map(cat => {
+            const on = cardioVis[cat.key] !== false;
+            return (
+              <div key={cat.key} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base leading-none">{cat.icon}</span>
+                  <span className="text-sm">{cat.label}</span>
+                </div>
+                <button
+                  onClick={() => setCardioVis(cat.key, !on)}
+                  className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-primary" : "bg-secondary border border-border"}`}
+                  aria-label={`Visa ${cat.label} i statistik`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${on ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+
+
 
       {/* Biometric unlock toggle */}
       {bioSupported && userId && (

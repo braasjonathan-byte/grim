@@ -10,6 +10,8 @@ import UntrainedMuscles from "@/components/UntrainedMuscles";
 import AchievementsPanel from "@/components/AchievementsPanel";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
+import { useCardioVisibility, getCardioCategory } from "@/lib/cardioVisibility";
+
 import { calculateAchievementMetrics, unlockEarnedAchievements } from "@/lib/achievements";
 import {
   Dialog,
@@ -240,7 +242,9 @@ const getCompletionStatsDate = (
 };
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
+  const { state: cardioVis } = useCardioVisibility();
   const [userWeightKg, setUserWeightKg] = useState<number | null>(null);
+
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("week");
@@ -466,17 +470,22 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       }
       if (c.skipped) b.skipped++;
       if (c.done && hasExercise(c)) {
-        const distanceKm = getWorkoutDistanceKm({
-          loggedDistanceKm: c.logged_distance_km,
-          loggedWeights: c.logged_weights,
-          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
-        });
-
-        if (distanceKm > 0) {
-          b.distanceKm += distanceKm;
+        const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
+        const cat = getCardioCategory(planText);
+        const hidden = cat ? cardioVis[cat] === false : false;
+        if (!hidden) {
+          const distanceKm = getWorkoutDistanceKm({
+            loggedDistanceKm: c.logged_distance_km,
+            loggedWeights: c.logged_weights,
+            planDetails: planText,
+          });
+          if (distanceKm > 0) {
+            b.distanceKm += distanceKm;
+          }
         }
       }
     }
+
 
     // For week view, ensure all weeks with scheduled exercises have a bucket and set totalWithExercise from plans
     if (view === "week") {
@@ -509,7 +518,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       result.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
     }
     return result;
-  }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap, planStartDate, plansWithExercises, plansPerDay]);
+  }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap, planStartDate, plansWithExercises, plansPerDay, cardioVis]);
 
   const filteredCompletions = useMemo(() => {
     if (summaryPeriod === "all") return completions;
@@ -547,14 +556,18 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     let total = 0;
     for (const c of filteredCompletions) {
       if (!c.done || !hasExercise(c)) continue;
+      const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
+      const cat = getCardioCategory(planText);
+      if (cat && cardioVis[cat] === false) continue;
       total += getWorkoutDistanceKm({
         loggedDistanceKm: c.logged_distance_km,
         loggedWeights: c.logged_weights,
-          planDetails: c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`),
+        planDetails: planText,
       });
     }
     return Math.round(total * 100) / 100;
-  }, [filteredCompletions, planDetailsMap, plansWithExercises]);
+  }, [filteredCompletions, planDetailsMap, plansWithExercises, cardioVis]);
+
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
