@@ -10,7 +10,7 @@ import UntrainedMuscles from "@/components/UntrainedMuscles";
 import AchievementsPanel from "@/components/AchievementsPanel";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
-import { useCardioVisibility, getCardioCategory } from "@/lib/cardioVisibility";
+import { useCardioVisibility, getCardioCategory, CARDIO_CATEGORIES, type CardioCategory } from "@/lib/cardioVisibility";
 
 import { calculateAchievementMetrics, unlockEarnedAchievements } from "@/lib/achievements";
 import {
