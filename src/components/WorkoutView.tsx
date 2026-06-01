@@ -228,7 +228,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       const tVal = parseFloat(data.time);
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
-        const tm = tVal / dVal;
+        const dUnits = distToTempoUnits(dVal);
+        const tm = tVal / dUnits;
         const mn = Math.floor(tm);
         const sc = Math.round((tm - mn) * 60);
         data.tempo = `${mn}:${sc.toString().padStart(2, "0")}`;
