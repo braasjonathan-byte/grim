@@ -154,7 +154,7 @@ const triathlonSessionsToPlanDays = (sessions: GeneratedSession[]): TemplatePlan
       return {
         week: s.week, day,
         session_name: "Styrka – Helkropp",
-        details: `Knäböj 3×10; Marklyft 3×8; Armhävningar 3×10; Hantelrodd 3×10; Axelpress 3×10; Planka 3×30s`,
+        details: `Knäböj — 3×10\nMarklyft — 3×8\nArmhävningar — 3×10\nHantelrodd — 3×10\nAxelpress — 3×10\nPlanka — 3×30s`,
         tempo: s.intensity,
       };
     }
