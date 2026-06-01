@@ -36,8 +36,10 @@ const RouteMap = ({ route, height = 200, className = "" }: Props) => {
       }
     });
 
+    const primaryVar = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+    const lineColor = primaryVar ? `hsl(${primaryVar})` : "#2563eb";
     const line = L.polyline(route, {
-      color: "hsl(var(--primary))",
+      color: lineColor,
       weight: 4,
       opacity: 0.9,
     }).addTo(map);
