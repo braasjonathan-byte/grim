@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { getGpsVoiceIntervalMin, speakPace } from "@/lib/gpsSettings";
 
 type WakeLockSentinel = { release: () => Promise<void>; addEventListener: (t: string, l: () => void) => void };
@@ -27,141 +27,154 @@ export type GpsState = {
   stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
 };
 
-export const useGpsTracker = (): GpsState => {
-  const [isTracking, setIsTracking] = useState(false);
-  const [distanceKm, setDistanceKm] = useState(0);
-  const [elapsedSec, setElapsedSec] = useState(0);
-  const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [route, setRoute] = useState<RoutePoint[]>([]);
+// ---------------- Singleton store (persists across tab/component unmounts) ----------------
 
-  const watchIdRef = useRef<number | null>(null);
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const tickRef = useRef<number | null>(null);
-  const voiceRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const lastCoordRef = useRef<GeolocationCoordinates | null>(null);
-  const distRef = useRef(0);
-  const routeRef = useRef<RoutePoint[]>([]);
-  const kmCountRef = useRef(0);
-  const kmMarkSecRef = useRef(0);
-  const lastKmSecRef = useRef<number | null>(null);
+type Snapshot = {
+  isTracking: boolean;
+  distanceKm: number;
+  elapsedSec: number;
+  accuracy: number | null;
+  error: string | null;
+  route: RoutePoint[];
+};
 
-  const cleanup = useCallback(() => {
-    if (watchIdRef.current !== null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
+let snapshot: Snapshot = {
+  isTracking: false,
+  distanceKm: 0,
+  elapsedSec: 0,
+  accuracy: null,
+  error: null,
+  route: [],
+};
+
+const listeners = new Set<() => void>();
+const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
+const emit = () => { listeners.forEach(l => l()); };
+const setSnap = (patch: Partial<Snapshot>) => { snapshot = { ...snapshot, ...patch }; emit(); };
+
+let watchId: number | null = null;
+let wakeLock: WakeLockSentinel | null = null;
+let tickInterval: number | null = null;
+let voiceInterval: number | null = null;
+let startTime = 0;
+let lastCoord: GeolocationCoordinates | null = null;
+let distAcc = 0;
+let routeAcc: RoutePoint[] = [];
+let kmCount = 0;
+let kmMarkSec = 0;
+let lastKmSec: number | null = null;
+let visibilityHandlerInstalled = false;
+
+const installVisibilityHandler = () => {
+  if (visibilityHandlerInstalled || typeof document === "undefined") return;
+  visibilityHandlerInstalled = true;
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "visible" && snapshot.isTracking && !wakeLock) {
+      try {
+        // @ts-ignore
+        wakeLock = await navigator.wakeLock?.request("screen");
+      } catch {}
     }
-    if (tickRef.current !== null) {
-      window.clearInterval(tickRef.current);
-      tickRef.current = null;
-    }
-    if (voiceRef.current !== null) {
-      window.clearInterval(voiceRef.current);
-      voiceRef.current = null;
-    }
-    if (wakeLockRef.current) {
-      wakeLockRef.current.release().catch(() => {});
-      wakeLockRef.current = null;
-    }
-    try { window.speechSynthesis?.cancel(); } catch {}
-  }, []);
+  });
+};
 
-  useEffect(() => cleanup, [cleanup]);
+const cleanup = () => {
+  if (watchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  if (tickInterval !== null) { window.clearInterval(tickInterval); tickInterval = null; }
+  if (voiceInterval !== null) { window.clearInterval(voiceInterval); voiceInterval = null; }
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  try { window.speechSynthesis?.cancel(); } catch {}
+};
 
-  useEffect(() => {
-    const onVisible = async () => {
-      if (document.visibilityState === "visible" && isTracking && !wakeLockRef.current) {
-        try {
-          // @ts-ignore
-          wakeLockRef.current = await navigator.wakeLock?.request("screen");
-        } catch {}
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [isTracking]);
+const startTracking = async () => {
+  if (snapshot.isTracking) return;
+  if (!navigator.geolocation) {
+    setSnap({ error: "GPS stöds inte i denna webbläsare" });
+    return;
+  }
+  installVisibilityHandler();
+  distAcc = 0;
+  lastCoord = null;
+  routeAcc = [];
+  kmCount = 0;
+  kmMarkSec = 0;
+  lastKmSec = null;
+  startTime = Date.now();
+  setSnap({ isTracking: true, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null });
 
-  const start = useCallback(async () => {
-    if (isTracking) return;
-    setError(null);
-    if (!navigator.geolocation) {
-      setError("GPS stöds inte i denna webbläsare");
-      return;
-    }
-    setDistanceKm(0);
-    setElapsedSec(0);
-    setRoute([]);
-    distRef.current = 0;
-    lastCoordRef.current = null;
-    routeRef.current = [];
-    kmCountRef.current = 0;
-    kmMarkSecRef.current = 0;
-    lastKmSecRef.current = null;
-    startTimeRef.current = Date.now();
+  try {
+    // @ts-ignore
+    wakeLock = await navigator.wakeLock?.request("screen");
+  } catch {}
 
-    try {
-      // @ts-ignore
-      wakeLockRef.current = await navigator.wakeLock?.request("screen");
-    } catch {}
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        setAccuracy(pos.coords.accuracy);
-        if (pos.coords.accuracy > 50) return;
-        const last = lastCoordRef.current;
-        const pt: RoutePoint = [pos.coords.latitude, pos.coords.longitude];
-        if (last) {
-          const d = haversineKm(last, pos.coords);
-          if (d > 0.003) {
-            distRef.current += d;
-            setDistanceKm(distRef.current);
-            lastCoordRef.current = pos.coords;
-            routeRef.current = [...routeRef.current, pt];
-            setRoute(routeRef.current);
-            const newKmCount = Math.floor(distRef.current);
-            if (newKmCount > kmCountRef.current) {
-              const nowSec = (Date.now() - startTimeRef.current) / 1000;
-              lastKmSecRef.current = nowSec - kmMarkSecRef.current;
-              kmMarkSecRef.current = nowSec;
-              kmCountRef.current = newKmCount;
-            }
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      setSnap({ accuracy: pos.coords.accuracy });
+      if (pos.coords.accuracy > 50) return;
+      const pt: RoutePoint = [pos.coords.latitude, pos.coords.longitude];
+      if (lastCoord) {
+        const d = haversineKm(lastCoord, pos.coords);
+        if (d > 0.003) {
+          distAcc += d;
+          lastCoord = pos.coords;
+          routeAcc = [...routeAcc, pt];
+          setSnap({ distanceKm: distAcc, route: routeAcc });
+          const newKmCount = Math.floor(distAcc);
+          if (newKmCount > kmCount) {
+            const nowSec = (Date.now() - startTime) / 1000;
+            lastKmSec = nowSec - kmMarkSec;
+            kmMarkSec = nowSec;
+            kmCount = newKmCount;
           }
-        } else {
-          lastCoordRef.current = pos.coords;
-          routeRef.current = [pt];
-          setRoute(routeRef.current);
         }
-      },
-      (err) => setError(err.message || "GPS-fel"),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
-    );
+      } else {
+        lastCoord = pos.coords;
+        routeAcc = [pt];
+        setSnap({ route: routeAcc });
+      }
+    },
+    (err) => setSnap({ error: err.message || "GPS-fel" }),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+  );
 
-    tickRef.current = window.setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }, 1000);
+  tickInterval = window.setInterval(() => {
+    setSnap({ elapsedSec: Math.floor((Date.now() - startTime) / 1000) });
+  }, 1000);
 
-    const voiceMin = getGpsVoiceIntervalMin();
-    if (voiceMin > 0) {
-      voiceRef.current = window.setInterval(() => {
-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        speakPace(distRef.current, elapsed, lastKmSecRef.current);
-      }, voiceMin * 60 * 1000);
-    }
+  const voiceMin = getGpsVoiceIntervalMin();
+  if (voiceMin > 0) {
+    voiceInterval = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      speakPace(distAcc, elapsed, lastKmSec);
+    }, voiceMin * 60 * 1000);
+  }
+};
 
-    setIsTracking(true);
-  }, [isTracking]);
+const stopTracking = () => {
+  const result = {
+    distanceKm: distAcc,
+    elapsedSec: Math.floor((Date.now() - startTime) / 1000),
+    route: routeAcc,
+  };
+  cleanup();
+  setSnap({ isTracking: false });
+  return result;
+};
 
-  const stop = useCallback(() => {
-    const result = {
-      distanceKm: distRef.current,
-      elapsedSec: Math.floor((Date.now() - startTimeRef.current) / 1000),
-      route: routeRef.current,
-    };
-    cleanup();
-    setIsTracking(false);
-    return result;
-  }, [cleanup]);
-
-  return { isTracking, distanceKm, elapsedSec, accuracy, error, route, start, stop };
+export const useGpsTracker = (): GpsState => {
+  const [, force] = useState(0);
+  useEffect(() => subscribe(() => force(n => n + 1)), []);
+  return {
+    isTracking: snapshot.isTracking,
+    distanceKm: snapshot.distanceKm,
+    elapsedSec: snapshot.elapsedSec,
+    accuracy: snapshot.accuracy,
+    error: snapshot.error,
+    route: snapshot.route,
+    start: startTracking,
+    stop: stopTracking,
+  };
 };
