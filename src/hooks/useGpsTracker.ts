@@ -158,6 +158,16 @@ const startTracking = async () => {
     wakeLock = await navigator.wakeLock?.request("screen");
   } catch {}
 
+  // Request notification permission and show persistent status notification
+  if (typeof window !== "undefined" && "Notification" in window) {
+    try {
+      if (Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+    } catch {}
+  }
+
+
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
       setSnap({ accuracy: pos.coords.accuracy });
