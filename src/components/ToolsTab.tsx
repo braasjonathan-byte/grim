@@ -275,6 +275,43 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
 
   const orderedSections = getOrderedSections();
 
+  if (subView !== "home") {
+    const title = subView === "settings" ? "Inställningar" : "Hjälpmedel";
+    return (
+      <div className="py-2 space-y-4">
+        <div className="flex items-center gap-2 -mx-1">
+          <button
+            type="button"
+            onClick={() => setSubView("home")}
+            className="flex items-center gap-1 py-2 px-2 text-sm font-semibold text-primary hover:opacity-80 transition-opacity"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Tillbaka
+          </button>
+          <h2 className="text-base font-bold text-foreground">{title}</h2>
+        </div>
+        <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}>
+          {subView === "settings" ? (
+            <div className="space-y-3">
+              <ProfileTab userId={userId} isAdmin={isAdmin} />
+              <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
+              <NotificationSettings userId={userId} />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <RestTimerSettings />
+              <EventCountdown userId={userId} />
+              <CalorieCalculator />
+              <OneRMCalculator />
+              <PulseZoneCalculator />
+              <WorkoutTimer />
+            </div>
+          )}
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="py-2 space-y-4">
       <h2 className="sr-only">Verktyg och inställningar</h2>
