@@ -64,6 +64,7 @@ let kmCount = 0;
 let kmMarkSec = 0;
 let lastKmSec: number | null = null;
 let visibilityHandlerInstalled = false;
+let notifInterval: number | null = null;
 
 const installVisibilityHandler = () => {
   if (visibilityHandlerInstalled || typeof document === "undefined") return;
@@ -78,6 +79,51 @@ const installVisibilityHandler = () => {
   });
 };
 
+const NOTIF_TAG = "grim-gps-tracking";
+
+const fmtTime = (s: number) => {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
+    : `${m}:${String(sec).padStart(2, "0")}`;
+};
+
+const showStatusNotification = async () => {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  if (!("serviceWorker" in navigator)) return;
+  if (Notification.permission !== "granted") return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const km = (Math.round(distAcc * 100) / 100).toFixed(2);
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    await reg.showNotification("GRIM – GPS-spårning pågår", {
+      body: `${km} km · ${fmtTime(elapsed)}`,
+      tag: NOTIF_TAG,
+      renotify: false,
+      requireInteraction: true,
+      silent: true,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      data: { url: "/" },
+    } as NotificationOptions);
+  } catch {
+    // ignore
+  }
+};
+
+const closeStatusNotification = async () => {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const notifs = await reg.getNotifications({ tag: NOTIF_TAG });
+    notifs.forEach(n => n.close());
+  } catch {
+    // ignore
+  }
+};
+
 const cleanup = () => {
   if (watchId !== null && navigator.geolocation) {
     navigator.geolocation.clearWatch(watchId);
@@ -85,8 +131,10 @@ const cleanup = () => {
   }
   if (tickInterval !== null) { window.clearInterval(tickInterval); tickInterval = null; }
   if (voiceInterval !== null) { window.clearInterval(voiceInterval); voiceInterval = null; }
+  if (notifInterval !== null) { window.clearInterval(notifInterval); notifInterval = null; }
   if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
   try { window.speechSynthesis?.cancel(); } catch {}
+  closeStatusNotification();
 };
 
 const startTracking = async () => {
@@ -109,6 +157,16 @@ const startTracking = async () => {
     // @ts-ignore
     wakeLock = await navigator.wakeLock?.request("screen");
   } catch {}
+
+  // Request notification permission and show persistent status notification
+  if (typeof window !== "undefined" && "Notification" in window) {
+    try {
+      if (Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+    } catch {}
+  }
+
 
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
@@ -151,6 +209,10 @@ const startTracking = async () => {
       speakPace(distAcc, elapsed, lastKmSec);
     }, voiceMin * 60 * 1000);
   }
+
+  // Persistent status notification while tracking — updates every 15s
+  showStatusNotification();
+  notifInterval = window.setInterval(() => { showStatusNotification(); }, 15000);
 };
 
 const stopTracking = () => {
