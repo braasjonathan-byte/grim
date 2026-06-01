@@ -568,6 +568,29 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return Math.round(total * 100) / 100;
   }, [filteredCompletions, planDetailsMap, plansWithExercises, cardioVis]);
 
+  const perCategoryStats = useMemo(() => {
+    const map = new Map<CardioCategory, { km: number; passes: number }>();
+    for (const c of filteredCompletions) {
+      if (!c.done || !hasExercise(c)) continue;
+      const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
+      const cat = getCardioCategory(planText);
+      if (!cat) continue;
+      if (cardioVis[cat] === false) continue;
+      const km = getWorkoutDistanceKm({
+        loggedDistanceKm: c.logged_distance_km,
+        loggedWeights: c.logged_weights,
+        planDetails: planText,
+      });
+      const prev = map.get(cat) ?? { km: 0, passes: 0 };
+      map.set(cat, { km: prev.km + km, passes: prev.passes + 1 });
+    }
+    return CARDIO_CATEGORIES
+      .filter(c => cardioVis[c.key] !== false && map.has(c.key))
+      .map(c => ({ meta: c, ...(map.get(c.key) as { km: number; passes: number }) }));
+  }, [filteredCompletions, planDetailsMap, cardioVis]);
+
+
+
 
   const totalLiftedTons = useMemo(() => {
     let total = 0;
