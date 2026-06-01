@@ -697,6 +697,28 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
       </div>
+
+      {/* Per-category cardio breakdown */}
+      {perCategoryStats.length > 0 && (
+        <div className="border border-border rounded-lg p-3 bg-secondary space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Konditionsövningar</p>
+          <div className="grid grid-cols-2 gap-2">
+            {perCategoryStats.map(({ meta, km, passes }) => (
+              <div key={meta.key} className="border border-border rounded-md p-2 bg-background flex items-center gap-2">
+                <span className="text-xl leading-none">{meta.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold truncate">{meta.label}</p>
+                  <p className="text-sm font-black leading-tight">
+                    {Math.round(km * 10) / 10}<span className="text-[10px] font-normal text-muted-foreground"> km</span>
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">{passes} pass</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <DailyQuoteCard />
       <AchievementsPanel unlockedIds={achievementIds} />
 
