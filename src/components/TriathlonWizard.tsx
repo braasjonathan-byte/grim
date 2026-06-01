@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { generateSessions, computeDurationWeeks, computeWeeklySessionCount, bikeTypeLabel, type TriathlonPlanInput, type Level, type BikeType } from "@/lib/triathlonPlanner";
+import { generateSessions, computeDurationWeeks, computeWeeklySessionCount, bikeTypeLabel, type TriathlonPlanInput, type Level, type BikeType, type GeneratedSession } from "@/lib/triathlonPlanner";
+import { padWeeksTo7Days, type TemplatePlanDay } from "@/data/planTemplates";
+import { toLocalDateKey } from "@/lib/dateUtils";
+
 
 interface Props {
   userId: string;
@@ -25,6 +28,60 @@ const todayIso = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
+
+const toNoonUtcIsoLocal = (d: Date) => {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T12:00:00.000Z`;
+};
+
+const DAY_MAP: Record<string, string> = {
+  "Mån": "Mån", "Tis": "Tis", "Ons": "Ons", "Tor": "Tors",
+  "Fre": "Fre", "Lör": "Lör", "Sön": "Sön",
+};
+
+const kindLabel = (intensity: string): string => {
+  if (/intervall/i.test(intensity)) return "Intervaller";
+  if (/tempo/i.test(intensity)) return "Tempo";
+  if (/återhämtn/i.test(intensity)) return "Återhämtning";
+  return "Lugnt";
+};
+
+const formatDistance = (km: number, discipline: "swim" | "bike" | "run"): string => {
+  if (discipline === "swim") {
+    const m = Math.round(km * 1000);
+    return `${m}m`;
+  }
+  return `${km.toFixed(1).replace(/\.0$/, "")} km`;
+};
+
+const triathlonSessionsToPlanDays = (sessions: GeneratedSession[]): TemplatePlanDay[] => {
+  return sessions.map(s => {
+    const day = DAY_MAP[s.day_of_week] || s.day_of_week;
+    if (s.discipline === "rest") {
+      return { week: s.week, day, session_name: "Vila", details: "", tempo: "" };
+    }
+    if (s.discipline === "strength") {
+      return {
+        week: s.week, day,
+        session_name: "Styrka – Helkropp",
+        details: `Knäböj 3×10; Marklyft 3×8; Armhävningar 3×10; Hantelrodd 3×10; Axelpress 3×10; Planka 3×30s`,
+        tempo: s.intensity,
+      };
+    }
+    const isLong = s.is_long_session;
+    const kind = isLong ? "Långpass" : kindLabel(s.intensity);
+    const discSv = s.discipline === "swim" ? "Simning" : s.discipline === "bike" ? "Cykling" : "Löpning";
+    const dist = formatDistance(s.distance_km, s.discipline);
+    const sessionName = `${discSv} – ${kind}`;
+    const exercise = `${discSv} ${dist} (${s.duration_min} min)`;
+    return {
+      week: s.week, day,
+      session_name: sessionName,
+      details: exercise,
+      tempo: s.intensity,
+    };
+  });
+};
+
 
 const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
   const [step, setStep] = useState(1);
@@ -54,7 +111,14 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
   const handleCreate = async () => {
     setSaving(true);
     try {
+      const startDateObj = new Date();
       const startDate = todayIso();
+
+      if (goalType === "race_date" && !raceDate) {
+        toast.error("Välj ett måldatum");
+        setSaving(false); return;
+      }
+
       const input: TriathlonPlanInput = {
         goalType,
         durationWeeks: goalType === "duration" ? durationWeeks : undefined,
@@ -69,51 +133,33 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
         strengthSessions,
       };
 
-      if (goalType === "race_date" && !raceDate) {
-        toast.error("Välj ett måldatum");
-        setSaving(false); return;
-      }
-
-      // Deactivate previous plans
-      await supabase.from("triathlon_plans").update({ is_active: false }).eq("user_id", userId).eq("is_active", true);
-
-      const { data: plan, error } = await supabase.from("triathlon_plans").insert({
-        user_id: userId,
-        goal_type: goalType,
-        duration_weeks: input.durationWeeks ?? null,
-        race_date: input.raceDate ?? null,
-        start_date: startDate,
-        swim_level: swimLevel, bike_level: bikeLevel, run_level: runLevel,
-        swim_km_week: swimKm, bike_km_week: bikeKm, run_km_week: runKm,
-        sessions_per_week: sessionsPerWeek,
-        long_session_days: longDays,
-        include_strength: includeStrength,
-        is_active: true,
-      }).select("id").single();
-
-      if (error || !plan) throw error || new Error("Kunde inte spara plan");
-
       const sessions = generateSessions(input);
-      const rows = sessions.map(s => ({
-        plan_id: plan.id,
+      const planDays = triathlonSessionsToPlanDays(sessions);
+      const padded = padWeeksTo7Days(planDays);
+
+      // Clear any existing plan rows (week > 0) so the new plan starts fresh
+      await supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0);
+
+      const startCreatedAt = toNoonUtcIsoLocal(startDateObj);
+      const rows = padded.map(d => ({
         user_id: userId,
-        session_date: s.session_date,
-        week: s.week,
-        day_of_week: s.day_of_week,
-        discipline: s.discipline,
-        duration_min: s.duration_min,
-        distance_km: s.distance_km,
-        intensity: s.intensity,
-        description: s.description,
-        is_long_session: s.is_long_session,
+        week: d.week,
+        day: d.day,
+        session_name: d.session_name,
+        details: d.details,
+        tempo: d.tempo,
+        created_at: startCreatedAt,
       }));
 
-      // Insert in chunks of 200 to stay polite
-      for (let i = 0; i < rows.length; i += 200) {
-        const chunk = rows.slice(i, i + 200);
-        const { error: sErr } = await supabase.from("triathlon_sessions").insert(chunk);
-        if (sErr) throw sErr;
+      for (let i = 0; i < rows.length; i += 50) {
+        const { error: insErr } = await supabase.from("workout_plans").insert(rows.slice(i, i + 50));
+        if (insErr) throw insErr;
       }
+
+      const startDateStr = toLocalDateKey(startDateObj);
+      await supabase.from("profiles")
+        .update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any)
+        .eq("user_id", userId);
 
       toast.success("Triathlonplan skapad!");
       onCreated();
@@ -123,6 +169,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
       setSaving(false);
     }
   };
+
 
   const totalWeeks = computeDurationWeeks({
     goalType,

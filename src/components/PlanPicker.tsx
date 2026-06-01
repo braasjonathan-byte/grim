@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info, Waves } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
 import SchemaBuilder from "@/components/SchemaBuilder";
-import TriathlonView from "@/components/TriathlonView";
+import TriathlonWizard from "@/components/TriathlonWizard";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
@@ -213,16 +213,15 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   if (step === "triathlon") {
     return (
       <div className="space-y-4 animate-fade-in">
-        <button
-          onClick={() => setStep("select")}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Tillbaka
-        </button>
-        <TriathlonView userId={userId} />
+        <TriathlonWizard
+          userId={userId}
+          onCreated={onDone}
+          onCancel={() => setStep("select")}
+        />
       </div>
     );
   }
+
 
   if (step === "profile") {
     return (
