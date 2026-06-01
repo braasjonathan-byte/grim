@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw } from "lucide-react";
 import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
@@ -381,19 +381,23 @@ const getTodayInfo = () => {
 const getSessionIcon = (session: string) => {
   const s = session.toLowerCase();
   if (s.includes("styrka") || s.includes("tung")) return Dumbbell;
+  if (s.includes("simning")) return Waves;
   if (s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel")) return Footprints;
-  if (s.includes("cykel") || s.includes("återhämtning") || s.includes("crosstrainer")) return Bike;
+  if (s.includes("cykel") || s.includes("cykling") || s.includes("återhämtning") || s.includes("crosstrainer")) return Bike;
   return Moon;
 };
 
 const getSessionColor = (session: string) => {
   const s = session.toLowerCase();
   if (s.includes("styrka") || s.includes("tung")) return "text-primary";
+  if (s.includes("simning")) return "text-primary";
+  if (s.includes("cykel") || s.includes("cykling")) return "text-primary";
   if (s.includes("löpning") || s.includes("tröskel")) return "text-warning";
   if (s.includes("långpass")) return "text-destructive";
   if (s.includes("vila")) return "text-muted-foreground";
   return "text-secondary-foreground";
 };
+
 
 // Format a day key for display - if it looks like an ISO date, format it nicely
 const formatDayDisplay = (day: string) => {
@@ -1130,7 +1134,7 @@ const estimateCalories = (
   let totalMinutes = 0;
   let runDistanceKm = 0; // accumulated running/jogging distance from logged cond data
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-  const condRegex = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i;
+  const condRegex = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i;
   const runRegex = /löpning|jogg|spring|run/i;
 
   // Collect conditioning time from __cond__ logged data (stored in minutes)
@@ -1255,7 +1259,7 @@ const estimateCalories = (
         // Skip daily challenge exercises
         if (part.startsWith("⚔️")) continue;
         // Check if conditioning exercise — skip set tracking for those
-        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
         if (isCondExercise) continue;
         // Skip rest/rest day markers
         if (/^(vila|vilodag)/i.test(part)) continue;
@@ -1286,7 +1290,7 @@ const estimateCalories = (
       const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
       for (const part of parts) {
         if (part.startsWith("⚔️")) continue;
-        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
         if (isCondExercise) continue;
         if (/^(vila|vilodag)/i.test(part)) continue;
         const { clean: cleanPart } = extractRpe(part);
@@ -5087,7 +5091,7 @@ const estimateCalories = (
                         const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
                         for (const part of parts) {
                           if (part.startsWith("⚔️")) continue;
-                          const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+                          const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
                           if (isCondExercise) continue;
                           if (/^(vila|vilodag)/i.test(part)) continue;
                           const { clean: cleanPart } = extractRpe(part);
@@ -6236,7 +6240,7 @@ const estimateCalories = (
                         // Check if this part is a regular exercise (not a header/conditioning)
                         const { name: eName } = parseExerciseWeight(p);
                         const matchedEx = allExercises.find(e => e.name.toLowerCase() === eName.toLowerCase());
-                        const isCondFormat = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad/i.test(p) && !/^\d+\s*[×x]\s*\d+/i.test(p);
+                        const isCondFormat = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad/i.test(p) && !/^\d+\s*[×x]\s*\d+/i.test(p);
                         if (!isCondFormat && !/^vila$/i.test(eName.trim())) {
                           currentCircuit.exerciseIndices.push(pi);
                           circuitMap[pi] = currentCircuit;
@@ -6393,7 +6397,7 @@ const estimateCalories = (
                         // Check if this is a conditioning exercise
                         const { name: partCondCheckName } = parseExerciseWeight(part);
                         const matchedExercise = allExercises.find(e => e.name.toLowerCase() === partCondCheckName.toLowerCase());
-                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
+                        const isCondExercise = (matchedExercise?.category === "kondition" || /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning/i.test(part)) && !/amrap\s*:/i.test(part) && !/^\d+\s+(?:rundor|cirklar)\s*/i.test(part.trim()) && !/^\d+\s*[×x]\s*\d+\s*min/i.test(part.trim()) && !/^mål:/i.test(part.trim()) && !/^intervallöpning\s*:/i.test(part.trim()) && !(plan.session_name.toLowerCase().includes("intervall") && /rundor/i.test(plan.details));
                         
                         if (isCondExercise) {
                           // Check if this is a pure distance suggestion (e.g. "Löpning 8.5 km")
@@ -8721,7 +8725,7 @@ const estimateCalories = (
                       const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
                       for (const part of parts) {
                         if (part.startsWith("⚔️")) continue;
-                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
                         if (isCondExercise) continue;
                         if (/^(vila|vilodag)/i.test(part)) continue;
                         const { clean: cleanPart } = extractRpe(part);
