@@ -381,19 +381,23 @@ const getTodayInfo = () => {
 const getSessionIcon = (session: string) => {
   const s = session.toLowerCase();
   if (s.includes("styrka") || s.includes("tung")) return Dumbbell;
+  if (s.includes("simning")) return Waves;
   if (s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel")) return Footprints;
-  if (s.includes("cykel") || s.includes("återhämtning") || s.includes("crosstrainer")) return Bike;
+  if (s.includes("cykel") || s.includes("cykling") || s.includes("återhämtning") || s.includes("crosstrainer")) return Bike;
   return Moon;
 };
 
 const getSessionColor = (session: string) => {
   const s = session.toLowerCase();
   if (s.includes("styrka") || s.includes("tung")) return "text-primary";
+  if (s.includes("simning")) return "text-primary";
+  if (s.includes("cykel") || s.includes("cykling")) return "text-primary";
   if (s.includes("löpning") || s.includes("tröskel")) return "text-warning";
   if (s.includes("långpass")) return "text-destructive";
   if (s.includes("vila")) return "text-muted-foreground";
   return "text-secondary-foreground";
 };
+
 
 // Format a day key for display - if it looks like an ISO date, format it nicely
 const formatDayDisplay = (day: string) => {
