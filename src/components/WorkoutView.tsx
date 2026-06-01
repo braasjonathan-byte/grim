@@ -166,6 +166,11 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
         )}
         {gps.error && <span className="text-[10px] text-destructive">{gps.error}</span>}
       </div>
+      {gps.isTracking && (
+        <p className="text-[10px] text-warning font-semibold">
+          ⚠️ Släck inte skärmen – inspelningen pausas om skärmen släcks.
+        </p>
+      )}
       {gps.isTracking && gps.route.length > 1 && (
         <RouteMap route={gps.route} height={160} />
       )}

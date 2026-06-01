@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { getGpsVoiceIntervalMin, speakPace } from "@/lib/gpsSettings";
 
 type WakeLockSentinel = { release: () => Promise<void>; addEventListener: (t: string, l: () => void) => void };
 
@@ -37,6 +38,7 @@ export const useGpsTracker = (): GpsState => {
   const watchIdRef = useRef<number | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const tickRef = useRef<number | null>(null);
+  const voiceRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const lastCoordRef = useRef<GeolocationCoordinates | null>(null);
   const distRef = useRef(0);
@@ -51,10 +53,15 @@ export const useGpsTracker = (): GpsState => {
       window.clearInterval(tickRef.current);
       tickRef.current = null;
     }
+    if (voiceRef.current !== null) {
+      window.clearInterval(voiceRef.current);
+      voiceRef.current = null;
+    }
     if (wakeLockRef.current) {
       wakeLockRef.current.release().catch(() => {});
       wakeLockRef.current = null;
     }
+    try { window.speechSynthesis?.cancel(); } catch {}
   }, []);
 
   useEffect(() => cleanup, [cleanup]);
@@ -120,6 +127,14 @@ export const useGpsTracker = (): GpsState => {
     tickRef.current = window.setInterval(() => {
       setElapsedSec(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
+
+    const voiceMin = getGpsVoiceIntervalMin();
+    if (voiceMin > 0) {
+      voiceRef.current = window.setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        speakPace(distRef.current, elapsed);
+      }, voiceMin * 60 * 1000);
+    }
 
     setIsTracking(true);
   }, [isTracking]);
