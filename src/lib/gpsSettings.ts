@@ -1,22 +1,25 @@
 // GPS voice announcement settings
-const KEY = "gymberget_gps_voice_interval_min";
-
-export const GPS_VOICE_INTERVALS = [
-  { value: 0, label: "Av" },
-  { value: 1, label: "Varje minut" },
-  { value: 2, label: "Var 2:a minut" },
-  { value: 5, label: "Var 5:e minut" },
-  { value: 10, label: "Var 10:e minut" },
-] as const;
+const KEY_MIN = "gymberget_gps_voice_interval_min";
+const KEY_KM = "gymberget_gps_voice_interval_km";
 
 export const getGpsVoiceIntervalMin = (): number => {
-  const raw = localStorage.getItem(KEY);
+  const raw = localStorage.getItem(KEY_MIN);
   const n = raw == null ? 0 : Number(raw);
   return Number.isFinite(n) && n >= 0 ? n : 0;
 };
 
 export const setGpsVoiceIntervalMin = (min: number): void => {
-  localStorage.setItem(KEY, String(min));
+  localStorage.setItem(KEY_MIN, String(min));
+};
+
+export const getGpsVoiceIntervalKm = (): number => {
+  const raw = localStorage.getItem(KEY_KM);
+  const n = raw == null ? 0 : Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+};
+
+export const setGpsVoiceIntervalKm = (km: number): void => {
+  localStorage.setItem(KEY_KM, String(km));
 };
 
 const fmtPace = (secPerKm: number): string => {
@@ -25,10 +28,12 @@ const fmtPace = (secPerKm: number): string => {
   return `${m} minuter ${s} sekunder per kilometer`;
 };
 
+export type PaceSegment = { label: string; secPerKm: number };
+
 export const speakPace = (
   distanceKm: number,
   elapsedSec: number,
-  lastKmSec?: number | null,
+  segment?: PaceSegment | null,
 ): void => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   if (distanceKm <= 0.01) return;
@@ -36,8 +41,8 @@ export const speakPace = (
   const km = Math.round(distanceKm * 10) / 10;
   const parts: string[] = [];
   parts.push(`Snittempo ${fmtPace(avgSecPerKm)}.`);
-  if (lastKmSec != null && lastKmSec > 0) {
-    parts.push(`Senaste kilometer ${fmtPace(lastKmSec)}.`);
+  if (segment && segment.secPerKm > 0) {
+    parts.push(`${segment.label} ${fmtPace(segment.secPerKm)}.`);
   }
   parts.push(`Distans ${km.toString().replace(".", " komma ")} kilometer.`);
   try {
