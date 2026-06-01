@@ -63,6 +63,8 @@ let routeAcc: RoutePoint[] = [];
 let kmCount = 0;
 let kmMarkSec = 0;
 let lastKmSec: number | null = null;
+let distAnnounceMarkKm = 0;
+let distAnnounceMarkSec = 0;
 let visibilityHandlerInstalled = false;
 let notifInterval: number | null = null;
 
