@@ -58,30 +58,32 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const autoScrollRef = useRef<number | null>(null);
 
-  // Tour navigation – expand sections + scroll into view when requested
+  // Tour navigation – open the relevant subpage when requested
   useEffect(() => {
     const handler = (e: Event) => {
       const target = (e as CustomEvent).detail as "settings" | "helpers" | "help";
-      if (target === "settings") setSettingsOpen(true);
-      if (target === "helpers") setToolsOpen(true);
-      // Scroll the related anchor into view
-      requestAnimationFrame(() => {
-        const sel =
-          target === "settings" ? '[data-tour="tools-profile"]' :
-          target === "helpers" ? '[data-tour="tools-helpers"]' :
-          target === "help" ? '[data-tour="tools-help"]' : null;
-        if (sel) document.querySelector(sel)?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
+      if (target === "settings") setSubView("settings");
+      else if (target === "helpers") setSubView("helpers");
+      else if (target === "help") {
+        setSubView("home");
+        requestAnimationFrame(() => {
+          document.querySelector('[data-tour="tools-help"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
     };
     window.addEventListener("grim:tools-expand", handler);
     return () => window.removeEventListener("grim:tools-expand", handler);
   }, []);
+
+  // Reset scroll when entering/leaving a subpage
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, [subView]);
 
   const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
   const settingsToolKeys = new Set(["profile", "settings", "notifications"]);
