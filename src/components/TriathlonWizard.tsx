@@ -53,6 +53,69 @@ const formatDistance = (km: number, discipline: "swim" | "bike" | "run"): string
   return `${km.toFixed(1).replace(/\.0$/, "")} km`;
 };
 
+const buildCardioDetails = (
+  discipline: "swim" | "bike" | "run",
+  kind: "long" | "tempo" | "interval" | "easy" | "recovery",
+  distanceKm: number,
+  durationMin: number,
+): string => {
+  const discSv = discipline === "swim" ? "Simning" : discipline === "bike" ? "Cykling" : "Löpning";
+
+  if (discipline === "swim") {
+    if (kind === "interval") {
+      const totalM = Math.round(distanceKm * 1000);
+      const warm = 200, cool = 200;
+      const workM = Math.max(400, totalM - warm - cool);
+      const reps = Math.max(4, Math.round(workM / 100));
+      const repDist = Math.max(50, Math.round((workM / reps) / 25) * 25);
+      return `Uppvärmning ${warm}m simning; ${reps}×${repDist}m simning hårt (20-30s vila); Nedvarvning ${cool}m simning`;
+    }
+    if (kind === "tempo") {
+      const totalM = Math.round(distanceKm * 1000);
+      const warm = 200, cool = 200;
+      const tempoM = Math.max(200, totalM - warm - cool);
+      return `Uppvärmning ${warm}m simning; ${tempoM}m simning i tempo; Nedvarvning ${cool}m simning`;
+    }
+    if (kind === "long") {
+      return `Simning ${Math.round(distanceKm * 1000)}m långpass (${durationMin} min)`;
+    }
+    if (kind === "recovery") {
+      return `Simning ${Math.round(distanceKm * 1000)}m lätt återhämtning`;
+    }
+    return `Simning ${Math.round(distanceKm * 1000)}m lugnt`;
+  }
+
+  // Run / Bike share the same structure (time-based)
+  const km = distanceKm.toFixed(1).replace(/\.0$/, "");
+  if (kind === "interval") {
+    const warm = 10, cool = 10;
+    const workMin = Math.max(8, durationMin - warm - cool);
+    const reps = Math.max(4, Math.min(10, Math.round(workMin / 3)));
+    const repMin = Math.max(1, Math.round(workMin / reps));
+    return `Uppvärmning ${warm} min ${discSv.toLowerCase()}; ${reps}×${repMin} min ${discSv.toLowerCase()} hårt (1 min vila); Nedvarvning ${cool} min ${discSv.toLowerCase()}`;
+  }
+  if (kind === "tempo") {
+    const warm = 10, cool = 10;
+    const tempoMin = Math.max(10, durationMin - warm - cool);
+    return `Uppvärmning ${warm} min ${discSv.toLowerCase()}; ${tempoMin} min ${discSv.toLowerCase()} i tröskeltempo; Nedvarvning ${cool} min ${discSv.toLowerCase()}`;
+  }
+  if (kind === "long") {
+    return `${discSv} ${km} km långpass (${durationMin} min)`;
+  }
+  if (kind === "recovery") {
+    return `${discSv} ${durationMin} min lätt återhämtning`;
+  }
+  return `${discSv} ${km} km (${durationMin} min)`;
+};
+
+const detectKind = (intensity: string, isLong: boolean): "long" | "tempo" | "interval" | "easy" | "recovery" => {
+  if (isLong) return "long";
+  if (/intervall/i.test(intensity)) return "interval";
+  if (/tempo/i.test(intensity)) return "tempo";
+  if (/återhämtn/i.test(intensity)) return "recovery";
+  return "easy";
+};
+
 const triathlonSessionsToPlanDays = (sessions: GeneratedSession[]): TemplatePlanDay[] => {
   return sessions.map(s => {
     const day = DAY_MAP[s.day_of_week] || s.day_of_week;
@@ -67,20 +130,19 @@ const triathlonSessionsToPlanDays = (sessions: GeneratedSession[]): TemplatePlan
         tempo: s.intensity,
       };
     }
-    const isLong = s.is_long_session;
-    const kind = isLong ? "Långpass" : kindLabel(s.intensity);
+    const kind = detectKind(s.intensity, s.is_long_session);
+    const kindSv = kind === "long" ? "Långpass" : kind === "interval" ? "Intervaller"
+      : kind === "tempo" ? "Tempo" : kind === "recovery" ? "Återhämtning" : "Lugnt";
     const discSv = s.discipline === "swim" ? "Simning" : s.discipline === "bike" ? "Cykling" : "Löpning";
-    const dist = formatDistance(s.distance_km, s.discipline);
-    const sessionName = `${discSv} – ${kind}`;
-    const exercise = `${discSv} ${dist} (${s.duration_min} min)`;
     return {
       week: s.week, day,
-      session_name: sessionName,
-      details: exercise,
+      session_name: `${discSv} – ${kindSv}`,
+      details: buildCardioDetails(s.discipline, kind, s.distance_km, s.duration_min),
       tempo: s.intensity,
     };
   });
 };
+
 
 
 const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
