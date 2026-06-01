@@ -242,7 +242,9 @@ const getCompletionStatsDate = (
 };
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
+  const { state: cardioVis } = useCardioVisibility();
   const [userWeightKg, setUserWeightKg] = useState<number | null>(null);
+
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("week");
