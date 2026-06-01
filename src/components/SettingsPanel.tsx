@@ -413,6 +413,36 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
         </div>
       </div>
 
+      {/* GPS – röst & inspelning */}
+      <div className="pt-2 border-t border-border space-y-2">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">GPS</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Hur ofta vill du att en röst läser upp ditt tempo under en GPS-inspelning?
+        </p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {GPS_VOICE_INTERVALS.map(opt => {
+            const active = gpsVoiceMin === opt.value;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  setGpsVoiceIntervalMin(opt.value);
+                  setGpsVoiceMinState(opt.value);
+                  if (opt.value > 0) speakPace(1, 360);
+                }}
+                className={`text-xs py-1.5 rounded-md border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-foreground"}`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+
 
 
 
