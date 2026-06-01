@@ -313,7 +313,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans ({distUnit})</label>
           <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || "—"} className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
         <div>
