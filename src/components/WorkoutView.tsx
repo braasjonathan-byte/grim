@@ -374,6 +374,9 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
+        {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
+          <RouteMap route={savedData!.route as [number, number][]} height={180} />
+        )}
       </div>
     );
   }
