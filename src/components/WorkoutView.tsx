@@ -124,6 +124,7 @@ interface CustomExercise {
 // Inline conditioning editing card (green, open by default)
 const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route: [number, number][]) => void }) => {
   const gps = useGpsTracker();
+  const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
   const fmtTime = (s: number) => {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
@@ -132,6 +133,65 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
       ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
       : `${m}:${String(sec).padStart(2, "0")}`;
   };
+  const fmtPace = (km: number, sec: number) => {
+    if (km <= 0.01) return "–";
+    const p = sec / km; // sec per km
+    const mn = Math.floor(p / 60);
+    const sc = Math.round(p % 60);
+    return `${mn}:${String(sc).padStart(2, "0")}/km`;
+  };
+  const fmtKmh = (km: number, sec: number) => {
+    if (sec <= 0) return "–";
+    return `${(km / (sec / 3600)).toFixed(1)} km/h`;
+  };
+
+  if (summary) {
+    return (
+      <div className="space-y-2 bg-background border border-primary rounded-md p-3">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+          <MapPin className="w-3.5 h-3.5" /> Pass slutfört
+        </div>
+        {summary.route.length > 1 && (
+          <RouteMap route={summary.route} height={180} />
+        )}
+        <div className="grid grid-cols-2 gap-1.5">
+          <div className="border border-border rounded-md p-2 text-center bg-secondary">
+            <p className="text-lg font-black leading-tight">{(Math.round(summary.km * 100) / 100).toFixed(2)}</p>
+            <p className="text-[10px] text-muted-foreground">km</p>
+          </div>
+          <div className="border border-border rounded-md p-2 text-center bg-secondary">
+            <p className="text-lg font-black leading-tight font-mono">{fmtTime(summary.sec)}</p>
+            <p className="text-[10px] text-muted-foreground">tid</p>
+          </div>
+          <div className="border border-border rounded-md p-2 text-center bg-secondary">
+            <p className="text-lg font-black leading-tight font-mono">{fmtPace(summary.km, summary.sec)}</p>
+            <p className="text-[10px] text-muted-foreground">snittempo</p>
+          </div>
+          <div className="border border-border rounded-md p-2 text-center bg-secondary">
+            <p className="text-lg font-black leading-tight font-mono">{fmtKmh(summary.km, summary.sec)}</p>
+            <p className="text-[10px] text-muted-foreground">snitthastighet</p>
+          </div>
+        </div>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onStop(summary.km, summary.sec, summary.route); }}
+            className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+          >
+            Spara pass
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setSummary(null); }}
+            className="px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-md border border-border"
+          >
+            Släng
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 bg-background border border-border rounded-md p-2">
       <div className="flex items-center gap-2 flex-wrap">
@@ -150,7 +210,7 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
               onClick={(e) => {
                 e.stopPropagation();
                 const r = gps.stop();
-                onStop(r.distanceKm, r.elapsedSec, r.route);
+                setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
               }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded-md"
             >
