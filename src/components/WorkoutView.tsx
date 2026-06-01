@@ -131,18 +131,36 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
   const isSwim = /simning|simma|sim\b/i.test(name);
-  const tempoUnit = isSwim ? "min/100m" : "min/km";
-  const tempoDisplayUnit = isSwim ? "/100m" : "/km";
+  const isBike = /cykling|cykel|cykla|spinning/i.test(name);
+  type BikeMode = "minkm" | "kmh" | "watt";
+  const BIKE_MODE_KEY = "grim_bike_tempo_mode";
+  const [bikeMode, setBikeModeState] = useState<BikeMode>(() => {
+    if (typeof window === "undefined") return "minkm";
+    const v = localStorage.getItem(BIKE_MODE_KEY);
+    return (v === "kmh" || v === "watt" || v === "minkm") ? v : "minkm";
+  });
+  const setBikeMode = (m: BikeMode) => {
+    setBikeModeState(m);
+    try { localStorage.setItem(BIKE_MODE_KEY, m); } catch {}
+  };
+  // Effective unit semantics
+  const tempoUnit = isSwim
+    ? "min/100m"
+    : isBike
+      ? (bikeMode === "kmh" ? "km/h" : bikeMode === "watt" ? "W" : "min/km")
+      : "min/km";
+  const tempoDisplayUnit = isSwim
+    ? "/100m"
+    : isBike
+      ? (bikeMode === "kmh" ? " km/h" : bikeMode === "watt" ? " W" : "/km")
+      : "/km";
   const distUnit = isSwim ? "m" : "km";
-  // For swim: distance stored in meters; tempo is min/100m.
-  // time(min) = tempo * dist_m / 100  ⇔  tempo = time * 100 / dist_m  ⇔  dist_m = time * 100 / tempo
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
   const initTempo = savedData?.tempo || planCondTempo || "";
   const initPulse = savedData?.pulse || planCondPulse || "";
 
-  // H:M:S state from total minutes
   const totalMin = parseFloat(initTime) || 0;
   const [hours, setHours] = useState(() => { const h = Math.floor(totalMin / 60); return h > 0 ? String(h) : ""; });
   const [minutes, setMinutes] = useState(() => { const m = Math.floor(totalMin % 60); return totalMin > 0 ? String(m) : ""; });
@@ -162,8 +180,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   const parseTempoToMin = (t: string): number | null => {
     const mm = t.trim().match(/^(\d+)[:\.](\d+)$/);
     if (mm) return parseInt(mm[1]) + parseInt(mm[2]) / 60;
-    const mm2 = t.trim().match(/^(\d+)$/);
-    if (mm2) return parseInt(mm2[1]);
+    const mm2 = t.trim().match(/^(\d+(?:[.,]\d+)?)$/);
+    if (mm2) return parseFloat(mm2[1].replace(",", "."));
     return null;
   };
 
@@ -173,14 +191,20 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
 
-  // Convert between displayed distance and "tempo-distance units" (km for run/bike, 100m blocks for swim)
   const distToTempoUnits = (d: number): number => isSwim ? d / 100 : d;
   const tempoUnitsToDist = (u: number): number => isSwim ? u * 100 : u;
 
+  // Watt mode: no relation between tempo and time/distance — skip auto-calc on tempo.
+  const tempoIsLinked = !(isBike && bikeMode === "watt");
+
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
+    if (!tempoIsLinked) return;
     const t = totalMin;
-    const p = parseTempoToMin(tempoVal);
     const d = parseFloat(distVal.replace(",", "."));
+    // For km/h mode, tempo is plain number
+    const isKmh = isBike && bikeMode === "kmh";
+    const tempoNumeric = isKmh ? parseFloat(tempoVal.replace(",", ".")) : NaN;
+    const p = isKmh ? (tempoNumeric > 0 ? tempoNumeric : null) : parseTempoToMin(tempoVal);
     const filled = {
       time: t > 0,
       tempo: tempoVal.trim().length > 0 && p !== null && p > 0,
@@ -192,6 +216,24 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
     const calc = (field: "time" | "tempo" | "distance") => {
       const dUnits = distToTempoUnits(d);
+      if (isKmh) {
+        // km/h: speed = 60 * dist_km / time_min
+        if (field === "distance" && t > 0 && p && p > 0) {
+          setDistance(String(Math.round((p * t / 60) * 100) / 100));
+        } else if (field === "tempo" && t > 0 && d > 0) {
+          setTempo(String(Math.round((60 * d / t) * 10) / 10));
+        } else if (field === "time" && d > 0 && p && p > 0) {
+          const tot = 60 * d / p;
+          const hh = Math.floor(tot / 60);
+          const rem = tot - hh * 60;
+          const mm = Math.floor(rem);
+          const ss = Math.round((rem - mm) * 60);
+          setHours(hh > 0 ? String(hh) : "");
+          setMinutes(String(mm));
+          setSeconds(ss > 0 ? String(ss) : "");
+        }
+        return;
+      }
       if (field === "distance" && t > 0 && p && p > 0) {
         const units = t / p;
         setDistance(String(Math.round(tempoUnitsToDist(units) * 100) / 100));
