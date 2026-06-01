@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getGpsVoiceIntervalMin, speakPace } from "@/lib/gpsSettings";
+import { getGpsVoiceIntervalMin, getGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 
 type WakeLockSentinel = { release: () => Promise<void>; addEventListener: (t: string, l: () => void) => void };
 
@@ -63,6 +63,8 @@ let routeAcc: RoutePoint[] = [];
 let kmCount = 0;
 let kmMarkSec = 0;
 let lastKmSec: number | null = null;
+let distAnnounceMarkKm = 0;
+let distAnnounceMarkSec = 0;
 let visibilityHandlerInstalled = false;
 let notifInterval: number | null = null;
 
@@ -150,6 +152,8 @@ const startTracking = async () => {
   kmCount = 0;
   kmMarkSec = 0;
   lastKmSec = null;
+  distAnnounceMarkKm = 0;
+  distAnnounceMarkSec = 0;
   startTime = Date.now();
   setSnap({ isTracking: true, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null });
 
@@ -187,6 +191,20 @@ const startTracking = async () => {
             kmMarkSec = nowSec;
             kmCount = newKmCount;
           }
+          // Distance-based voice announcement
+          const distInterval = getGpsVoiceIntervalKm();
+          if (distInterval > 0 && distAcc - distAnnounceMarkKm >= distInterval) {
+            const nowSec = (Date.now() - startTime) / 1000;
+            const segKm = distAcc - distAnnounceMarkKm;
+            const segSec = nowSec - distAnnounceMarkSec;
+            const segPace = segSec / segKm;
+            distAnnounceMarkKm = distAcc;
+            distAnnounceMarkSec = nowSec;
+            speakPace(distAcc, Math.floor(nowSec), {
+              label: `Senaste ${segKm.toFixed(1).replace(".", " komma ")} kilometer`,
+              secPerKm: segPace,
+            });
+          }
         }
       } else {
         lastCoord = pos.coords;
@@ -206,7 +224,7 @@ const startTracking = async () => {
   if (voiceMin > 0) {
     voiceInterval = window.setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      speakPace(distAcc, elapsed, lastKmSec);
+      speakPace(distAcc, elapsed, lastKmSec != null && lastKmSec > 0 ? { label: "Senaste kilometer", secPerKm: lastKmSec } : null);
     }, voiceMin * 60 * 1000);
   }
 

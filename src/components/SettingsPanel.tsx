@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin } from "lucide-react";
-import { GPS_VOICE_INTERVALS, getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, speakPace } from "@/lib/gpsSettings";
+import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
+import { Slider } from "@/components/ui/slider";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
   const [gpsVoiceMin, setGpsVoiceMinState] = useState<number>(() => getGpsVoiceIntervalMin());
+  const [gpsVoiceKm, setGpsVoiceKmState] = useState<number>(() => getGpsVoiceIntervalKm());
 
 
   const [wakeLock, setWakeLock] = useState(() => {
@@ -419,26 +421,54 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
           <MapPin className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">GPS</span>
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          Hur ofta vill du att en röst läser upp ditt tempo under en GPS-inspelning?
-        </p>
-        <div className="grid grid-cols-3 gap-1.5">
-          {GPS_VOICE_INTERVALS.map(opt => {
-            const active = gpsVoiceMin === opt.value;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => {
-                  setGpsVoiceIntervalMin(opt.value);
-                  setGpsVoiceMinState(opt.value);
-                  if (opt.value > 0) speakPace(1, 360);
-                }}
-                className={`text-xs py-1.5 rounded-md border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary border-border text-foreground"}`}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">
+              Röstuppläsning av tempo efter tid
+            </p>
+            <span className="text-[11px] font-semibold text-foreground">
+              {gpsVoiceMin === 0 ? "Av" : `Var ${gpsVoiceMin}:e min`}
+            </span>
+          </div>
+          <Slider
+            min={0}
+            max={30}
+            step={1}
+            value={[gpsVoiceMin]}
+            onValueChange={(v) => {
+              const val = v[0] ?? 0;
+              setGpsVoiceIntervalMin(val);
+              setGpsVoiceMinState(val);
+            }}
+            onValueCommit={(v) => {
+              if ((v[0] ?? 0) > 0) speakPace(1, 360);
+            }}
+          />
+        </div>
+
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">
+              Röstuppläsning av tempo efter distans
+            </p>
+            <span className="text-[11px] font-semibold text-foreground">
+              {gpsVoiceKm === 0 ? "Av" : `Var ${gpsVoiceKm.toFixed(1)} km`}
+            </span>
+          </div>
+          <Slider
+            min={0}
+            max={10}
+            step={0.5}
+            value={[gpsVoiceKm]}
+            onValueChange={(v) => {
+              const val = v[0] ?? 0;
+              setGpsVoiceIntervalKm(val);
+              setGpsVoiceKmState(val);
+            }}
+            onValueCommit={(v) => {
+              if ((v[0] ?? 0) > 0) speakPace(1, 360);
+            }}
+          />
         </div>
       </div>
 
