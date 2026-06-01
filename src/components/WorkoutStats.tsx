@@ -691,22 +691,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
+        {perCategoryStats.map(({ meta, km, passes }) => (
+          <div key={meta.key} className="border border-border rounded-lg p-3 text-center bg-secondary">
+            <div className="text-2xl leading-none mb-1">{meta.icon}</div>
+            <p className="text-2xl font-black">
+              {Math.round(km * 10) / 10} <span className="text-xs font-normal text-muted-foreground">km</span>
+            </p>
+            <p className="text-[10px] text-muted-foreground">{meta.label} · {passes} pass</p>
+          </div>
+        ))}
       </div>
 
-      {/* Per-category cardio breakdown — matches summary-card style */}
-      {perCategoryStats.length > 0 && (
-        <div className="grid grid-cols-2 gap-2">
-          {perCategoryStats.map(({ meta, km, passes }) => (
-            <div key={meta.key} className="border border-border rounded-lg p-3 text-center bg-secondary">
-              <div className="text-2xl leading-none mb-1">{meta.icon}</div>
-              <p className="text-2xl font-black">
-                {Math.round(km * 10) / 10} <span className="text-xs font-normal text-muted-foreground">km</span>
-              </p>
-              <p className="text-[10px] text-muted-foreground">{meta.label} · {passes} pass</p>
-            </div>
-          ))}
-        </div>
-      )}
 
 
       <DailyQuoteCard />
