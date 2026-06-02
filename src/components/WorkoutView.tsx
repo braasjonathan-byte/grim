@@ -251,9 +251,7 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
         </div>
       )}
 
-          </>
-        )}
-      </div>
+
       {gps.error && (
         <div className="bg-destructive/10 border border-destructive rounded-md p-2 text-[11px] text-destructive font-semibold leading-snug">
           {gps.error}
