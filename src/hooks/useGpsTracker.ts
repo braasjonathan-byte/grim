@@ -18,12 +18,15 @@ export type RoutePoint = [number, number]; // [lat, lng]
 
 export type GpsState = {
   isTracking: boolean;
+  isPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
   start: () => Promise<void>;
+  pause: () => void;
+  resume: () => void;
   stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
 };
 
@@ -31,6 +34,7 @@ export type GpsState = {
 
 type Snapshot = {
   isTracking: boolean;
+  isPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
@@ -40,6 +44,7 @@ type Snapshot = {
 
 let snapshot: Snapshot = {
   isTracking: false,
+  isPaused: false,
   distanceKm: 0,
   elapsedSec: 0,
   accuracy: null,
@@ -197,7 +202,7 @@ const startTracking = async () => {
   distAnnounceMarkKm = 0;
   distAnnounceMarkSec = 0;
   startTime = Date.now();
-  setSnap({ isTracking: true, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null });
+  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null });
 
   try {
     // @ts-ignore
@@ -275,14 +280,74 @@ const startTracking = async () => {
   notifInterval = window.setInterval(() => { showStatusNotification(); }, 15000);
 };
 
+const pauseTracking = () => {
+  if (!snapshot.isTracking || snapshot.isPaused) return;
+  // Stop GPS watch + ticks but keep accumulated state
+  if (watchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  if (tickInterval !== null) { window.clearInterval(tickInterval); tickInterval = null; }
+  if (voiceInterval !== null) { window.clearInterval(voiceInterval); voiceInterval = null; }
+  try { window.speechSynthesis?.cancel(); } catch {}
+  lastCoord = null; // avoid huge jump when resuming
+  setSnap({ isPaused: true, accuracy: null });
+};
+
+const resumeTracking = async () => {
+  if (!snapshot.isTracking || !snapshot.isPaused) return;
+  // Shift startTime so elapsedSec continues from where it paused
+  startTime = Date.now() - snapshot.elapsedSec * 1000;
+  // Reset segment markers so we don't announce huge gaps
+  const nowSec = snapshot.elapsedSec;
+  kmMarkSec = nowSec;
+  distAnnounceMarkSec = nowSec;
+  distAnnounceMarkKm = distAcc;
+
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      setSnap({ accuracy: pos.coords.accuracy });
+      if (pos.coords.accuracy > 50) return;
+      const pt: RoutePoint = [pos.coords.latitude, pos.coords.longitude];
+      if (lastCoord) {
+        const d = haversineKm(lastCoord, pos.coords);
+        if (d > 0.003) {
+          distAcc += d;
+          lastCoord = pos.coords;
+          routeAcc = [...routeAcc, pt];
+          setSnap({ distanceKm: distAcc, route: routeAcc });
+        }
+      } else {
+        lastCoord = pos.coords;
+      }
+    },
+    (err) => setSnap({ error: err.message || "GPS-fel" }),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+  );
+
+  tickInterval = window.setInterval(() => {
+    setSnap({ elapsedSec: Math.floor((Date.now() - startTime) / 1000) });
+  }, 1000);
+
+  const voiceMin = getGpsVoiceIntervalMin();
+  if (voiceMin > 0) {
+    voiceInterval = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      speakPace(distAcc, elapsed, lastKmSec != null && lastKmSec > 0 ? { label: "Senaste kilometer", secPerKm: lastKmSec } : null);
+    }, voiceMin * 60 * 1000);
+  }
+
+  setSnap({ isPaused: false, error: null });
+};
+
 const stopTracking = () => {
   const result = {
     distanceKm: distAcc,
-    elapsedSec: Math.floor((Date.now() - startTime) / 1000),
+    elapsedSec: snapshot.isPaused ? snapshot.elapsedSec : Math.floor((Date.now() - startTime) / 1000),
     route: routeAcc,
   };
   cleanup();
-  setSnap({ isTracking: false });
+  setSnap({ isTracking: false, isPaused: false });
   return result;
 };
 
@@ -291,12 +356,15 @@ export const useGpsTracker = (): GpsState => {
   useEffect(() => subscribe(() => force(n => n + 1)), []);
   return {
     isTracking: snapshot.isTracking,
+    isPaused: snapshot.isPaused,
     distanceKm: snapshot.distanceKm,
     elapsedSec: snapshot.elapsedSec,
     accuracy: snapshot.accuracy,
     error: snapshot.error,
     route: snapshot.route,
     start: startTracking,
+    pause: pauseTracking,
+    resume: resumeTracking,
     stop: stopTracking,
   };
 };

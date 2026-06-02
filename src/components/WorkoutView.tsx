@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2 } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
 import RouteMap from "@/components/RouteMap";
 import { format, getISOWeek } from "date-fns";
@@ -211,6 +211,16 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (gps.isPaused) gps.resume(); else gps.pause();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground text-xs font-semibold rounded-md border border-border"
+            >
+              {gps.isPaused ? (<><Play className="w-3.5 h-3.5 fill-current" /> Fortsätt</>) : (<><Pause className="w-3.5 h-3.5 fill-current" /> Pausa</>)}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 const r = gps.stop();
                 setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
               }}
@@ -221,7 +231,7 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
             <div className="flex flex-col text-[10px] leading-tight">
               <span className="font-mono font-bold text-foreground">{fmtTime(gps.elapsedSec)} · {(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
               <span className="text-muted-foreground">
-                {gps.accuracy != null ? `Noggrannhet ±${Math.round(gps.accuracy)}m` : "Söker signal…"}
+                {gps.isPaused ? "Pausad" : (gps.accuracy != null ? `Noggrannhet ±${Math.round(gps.accuracy)}m` : "Söker signal…")}
               </span>
             </div>
           </>
@@ -309,7 +319,17 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
                 <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
               </div>
             </div>
-            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center">
+            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (gps.isPaused) gps.resume(); else gps.pause();
+                }}
+                className="flex items-center gap-2 px-5 py-3 bg-secondary text-secondary-foreground text-sm font-bold rounded-md border border-border shadow"
+              >
+                {gps.isPaused ? (<><Play className="w-4 h-4 fill-current" /> Fortsätt</>) : (<><Pause className="w-4 h-4 fill-current" /> Pausa</>)}
+              </button>
               <button
                 type="button"
                 onClick={(e) => {
@@ -320,7 +340,7 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
                 }}
                 className="flex items-center gap-2 px-5 py-3 bg-destructive text-destructive-foreground text-sm font-bold rounded-md shadow"
               >
-                <Square className="w-4 h-4 fill-current" /> Stoppa inspelning
+                <Square className="w-4 h-4 fill-current" /> Stoppa
               </button>
             </div>
           </div>
