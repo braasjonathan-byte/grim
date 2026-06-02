@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2 } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
 import RouteMap from "@/components/RouteMap";
 import { format, getISOWeek } from "date-fns";
