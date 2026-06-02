@@ -150,8 +150,9 @@ serve(async (req) => {
     const nickname = profile?.nickname || "En vän";
 
     const { data: subscriptions } = await supabaseAdmin.from("push_subscriptions").select("*").eq("user_id", receiverId);
-    if (!subscriptions || subscriptions.length === 0) {
-      return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: nativeTokens } = await supabaseAdmin.from("device_push_tokens").select("id").eq("user_id", receiverId);
+    if ((!subscriptions || subscriptions.length === 0) && (!nativeTokens || nativeTokens.length === 0)) {
+      return new Response(JSON.stringify({ sent: 0, webSent: 0, nativeSent: 0, webTotal: 0, nativeTotal: 0, error: "Inga push-tokens hittades för mottagaren" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { data: vapid } = await supabaseAdmin.from("vapid_keys").select("*").eq("id", 1).single();
