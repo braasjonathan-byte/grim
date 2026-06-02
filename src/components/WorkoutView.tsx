@@ -175,7 +175,7 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
         <div className="flex gap-1.5">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onStop(summary.km, summary.sec, summary.route); }}
+            onClick={(e) => { e.stopPropagation(); onStop(summary.km, summary.sec, summary.route); setSummary(null); }}
             className="flex-1 px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
           >
             Spara pass
