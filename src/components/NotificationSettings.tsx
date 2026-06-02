@@ -41,6 +41,33 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   const [reminderLoading, setReminderLoading] = useState(false);
   const [reminderSaved, setReminderSaved] = useState(false);
 
+  // Push test state
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  const runPushTest = async () => {
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("notify-chat", {
+        body: { receiverId: userId, messagePreview: "🔔 Testnotis från inställningar", selfTest: true },
+      });
+      if (error) {
+        setTestResult(`❌ Fel: ${error.message}`);
+      } else if (data?.error) {
+        setTestResult(`❌ ${data.error}`);
+      } else {
+        const { webSent = 0, nativeSent = 0, webTotal = 0, nativeTotal = 0 } = data || {};
+        setTestResult(
+          `✅ Skickade ${webSent + nativeSent} notiser • Web: ${webSent}/${webTotal} • Native: ${nativeSent}/${nativeTotal}`
+        );
+      }
+    } catch (e) {
+      setTestResult(`❌ Fel: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    setTestLoading(false);
+  };
+
   useEffect(() => {
     if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       setSupported(false);
