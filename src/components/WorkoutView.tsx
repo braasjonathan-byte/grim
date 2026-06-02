@@ -319,7 +319,17 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
                 <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
               </div>
             </div>
-            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center">
+            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (gps.isPaused) gps.resume(); else gps.pause();
+                }}
+                className="flex items-center gap-2 px-5 py-3 bg-secondary text-secondary-foreground text-sm font-bold rounded-md border border-border shadow"
+              >
+                {gps.isPaused ? (<><Play className="w-4 h-4 fill-current" /> Fortsätt</>) : (<><Pause className="w-4 h-4 fill-current" /> Pausa</>)}
+              </button>
               <button
                 type="button"
                 onClick={(e) => {
@@ -330,7 +340,7 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
                 }}
                 className="flex items-center gap-2 px-5 py-3 bg-destructive text-destructive-foreground text-sm font-bold rounded-md shadow"
               >
-                <Square className="w-4 h-4 fill-current" /> Stoppa inspelning
+                <Square className="w-4 h-4 fill-current" /> Stoppa
               </button>
             </div>
           </div>
