@@ -18,21 +18,28 @@ jobs:
           node-version: '22.x'
           cache: npm
 
+      - uses: actions/setup-java@v4
+        id: setup-java
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - uses: android-actions/setup-android@v3
         with:
           accept-android-sdk-licenses: true
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
+      - name: Force JAVA_HOME to JDK 21
+        if: always()
+        run: |
+          echo "JAVA_HOME=${{ steps.setup-java.outputs.path }}" >> $GITHUB_ENV
+          echo "ORG_GRADLE_PROJECT_org.gradle.java.home=${{ steps.setup-java.outputs.path }}" >> $GITHUB_ENV
 
       - name: Verify Java version
         if: always()
         run: |
           echo "JAVA_HOME=$JAVA_HOME"
-          java -version
-          javac -version
+          "$JAVA_HOME/bin/java" -version
+          "$JAVA_HOME/bin/javac" -version
 
       - name: Install dependencies
         id: deps
