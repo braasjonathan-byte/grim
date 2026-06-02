@@ -150,8 +150,13 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
+  const isNative = Capacitor.isNativePlatform();
 
-  const openDeviceSettings = () => {
+  const openDeviceSettings = async () => {
+    if (isNative) {
+      const ok = await openAppSettings("notifications");
+      if (ok) return;
+    }
     if (isAndroid) {
       window.open("intent:#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;S.android.provider.extra.APP_PACKAGE=com.android.chrome;end", "_blank");
     }
