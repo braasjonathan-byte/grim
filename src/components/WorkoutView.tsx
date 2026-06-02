@@ -265,11 +265,71 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
         </p>
       )}
       {gps.isTracking && gps.route.length > 1 && (
-        <RouteMap route={gps.route} height={160} />
+        <div className="relative">
+          <RouteMap route={gps.route} height={160} />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setFullscreen(true); }}
+            className="absolute top-2 right-2 z-[1000] bg-background/95 border border-border rounded-md p-1.5 shadow"
+            aria-label="Öppna karta i helskärm"
+          >
+            <Maximize2 className="w-4 h-4 text-foreground" />
+          </button>
+        </div>
+      )}
+      {fullscreen && gps.isTracking && (
+        <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
+          <div className="flex-1 relative">
+            {gps.route.length > 1 ? (
+              <RouteMap route={gps.route} height={9999} className="!h-full !rounded-none !border-0" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
+                Söker GPS-signal…
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setFullscreen(false); }}
+              className="absolute top-3 right-3 z-[1000] bg-background/95 border border-border rounded-md p-2 shadow"
+              aria-label="Stäng helskärm"
+            >
+              <Minimize2 className="w-5 h-5 text-foreground" />
+            </button>
+            <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-3 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
+                <span className="font-mono font-bold text-base text-foreground">{fmtTime(gps.elapsedSec)}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Distans</span>
+                <span className="font-mono font-bold text-base text-foreground">{(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tempo</span>
+                <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
+              </div>
+            </div>
+            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const r = gps.stop();
+                  setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
+                  setFullscreen(false);
+                }}
+                className="flex items-center gap-2 px-5 py-3 bg-destructive text-destructive-foreground text-sm font-bold rounded-md shadow"
+              >
+                <Square className="w-4 h-4 fill-current" /> Stoppa inspelning
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 };
+
 
 const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
