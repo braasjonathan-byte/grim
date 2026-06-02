@@ -267,8 +267,22 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
 
 
       {gps.error && (
-        <div className="bg-destructive/10 border border-destructive rounded-md p-2 text-[11px] text-destructive font-semibold leading-snug">
-          {gps.error}
+        <div className="bg-destructive/10 border border-destructive rounded-md p-2 text-[11px] text-destructive font-semibold leading-snug space-y-2">
+          <div>{gps.error}</div>
+          {/Platstillstånd|nekade platstillstånd|Tillåt plats/i.test(gps.error) && (
+            <button
+              type="button"
+              onClick={async () => {
+                const opened = await openAppSettings("location");
+                if (!opened && !Capacitor.isNativePlatform()) {
+                  toast.info("Öppna webbläsarens platsinställningar för denna sida och försök igen.");
+                }
+              }}
+              className="w-full py-2 bg-destructive text-destructive-foreground rounded-md text-xs font-bold flex items-center justify-center gap-2"
+            >
+              <Settings className="w-3.5 h-3.5" /> Öppna platsinställningar
+            </button>
+          )}
         </div>
       )}
       {gps.isTracking && (
