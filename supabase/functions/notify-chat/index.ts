@@ -139,10 +139,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { receiverId, messagePreview } = await req.json();
+    const { receiverId, messagePreview, selfTest } = await req.json();
 
-    // Don't notify yourself
-    if (receiverId === user.id) {
+    // Don't notify yourself, unless this is an explicit self-test
+    if (receiverId === user.id && !selfTest) {
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
