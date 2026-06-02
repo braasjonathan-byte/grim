@@ -62,6 +62,17 @@ jobs:
             npx cap add android || echo "::warning::cap add android failed"
           fi
 
+      - name: Copy google-services.json into Android app
+        if: always()
+        run: |
+          if [ -f "google-services.json" ]; then
+            mkdir -p android/app
+            cp google-services.json android/app/google-services.json
+            echo "✅ google-services.json copied to android/app/"
+          else
+            echo "::warning::google-services.json not found in repo root — native push will not work"
+          fi
+
       - name: Sync Capacitor
         if: always()
         run: npx cap sync android || echo "::warning::cap sync failed"
