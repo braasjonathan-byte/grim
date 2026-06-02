@@ -139,10 +139,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { receiverId, messagePreview } = await req.json();
+    const { receiverId, messagePreview, selfTest } = await req.json();
 
-    // Don't notify yourself
-    if (receiverId === user.id) {
+    // Don't notify yourself, unless this is an explicit self-test
+    if (receiverId === user.id && !selfTest) {
       return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -150,8 +150,9 @@ serve(async (req) => {
     const nickname = profile?.nickname || "En vän";
 
     const { data: subscriptions } = await supabaseAdmin.from("push_subscriptions").select("*").eq("user_id", receiverId);
-    if (!subscriptions || subscriptions.length === 0) {
-      return new Response(JSON.stringify({ sent: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: nativeTokens } = await supabaseAdmin.from("device_push_tokens").select("id").eq("user_id", receiverId);
+    if ((!subscriptions || subscriptions.length === 0) && (!nativeTokens || nativeTokens.length === 0)) {
+      return new Response(JSON.stringify({ sent: 0, webSent: 0, nativeSent: 0, webTotal: 0, nativeTotal: 0, error: "Inga push-tokens hittades för mottagaren" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { data: vapid } = await supabaseAdmin.from("vapid_keys").select("*").eq("id", 1).single();
@@ -171,12 +172,13 @@ serve(async (req) => {
       data: { url: `/?tab=chat&friendId=${user.id}` },
     });
 
-    let sent = 0;
+    let webSent = 0;
     const staleEndpoints: string[] = [];
+    const webTotal = subscriptions?.length || 0;
 
-    for (const sub of subscriptions) {
+    for (const sub of (subscriptions || [])) {
       const ok = await sendWebPush({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, payload, vapid.public_key, vapid.private_key);
-      if (ok) { sent++; } else { staleEndpoints.push(sub.endpoint); }
+      if (ok) { webSent++; } else { staleEndpoints.push(sub.endpoint); }
     }
 
     if (staleEndpoints.length > 0) {
@@ -184,6 +186,7 @@ serve(async (req) => {
     }
 
     // Native push
+    const nativeTotal = nativeTokens?.length || 0;
     const nativePayload = JSON.parse(payload);
     const nativeSent = await sendNativePush(supabaseAdmin, [receiverId], {
       title: nativePayload.title,
@@ -191,7 +194,7 @@ serve(async (req) => {
       data: nativePayload.data ? Object.fromEntries(Object.entries(nativePayload.data).map(([k, v]) => [k, String(v)])) : {},
     });
 
-    return new Response(JSON.stringify({ sent: sent + nativeSent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ sent: webSent + nativeSent, webSent, nativeSent, webTotal, nativeTotal }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
