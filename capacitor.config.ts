@@ -8,7 +8,6 @@ const config: CapacitorConfig = {
     includePlugins: [
       '@capacitor/haptics',
       '@capacitor/screen-orientation',
-      '@capacitor/push-notifications',
       '@capacitor/geolocation',
       'capacitor-native-settings',
     ],
