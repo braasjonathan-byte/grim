@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff, ExternalLink, Loader2, Check, Clock, AlarmClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Capacitor } from "@capacitor/core";
+import { openAppSettings } from "@/lib/openSettings";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -148,8 +150,13 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
+  const isNative = Capacitor.isNativePlatform();
 
-  const openDeviceSettings = () => {
+  const openDeviceSettings = async () => {
+    if (isNative) {
+      const ok = await openAppSettings("notifications");
+      if (ok) return;
+    }
     if (isAndroid) {
       window.open("intent:#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;S.android.provider.extra.APP_PACKAGE=com.android.chrome;end", "_blank");
     }
@@ -189,7 +196,15 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
           <p className="text-xs text-muted-foreground">
             Notiser är blockerade. Du behöver aktivera dem i enhetens inställningar.
           </p>
-          {isIOS ? (
+          {isNative || isAndroid ? (
+            <button
+              onClick={openDeviceSettings}
+              className="w-full py-2 bg-secondary text-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Öppna notisinställningar
+            </button>
+          ) : isIOS ? (
             <div className="text-xs text-muted-foreground space-y-1">
               <p className="font-semibold text-foreground">Så här aktiverar du på iPhone:</p>
               <ol className="list-decimal list-inside space-y-0.5">
@@ -199,14 +214,6 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
                 <li>Aktivera notiser för denna sida</li>
               </ol>
             </div>
-          ) : isAndroid ? (
-            <button
-              onClick={openDeviceSettings}
-              className="w-full py-2 bg-secondary text-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Öppna notisinställningar
-            </button>
           ) : (
             <div className="text-xs text-muted-foreground space-y-1">
               <p className="font-semibold text-foreground">Så här aktiverar du:</p>
