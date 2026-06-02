@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'se.grim.app',
   appName: 'Grim',
   webDir: 'dist',
+  android: {
+    includePlugins: ['@capacitor/haptics', '@capacitor/screen-orientation'],
+  },
   ios: {
     // Lock to portrait on iOS
     contentInset: 'always',

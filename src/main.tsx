@@ -3,9 +3,11 @@ import App from "./App.tsx";
 import "./index.css";
 import { applyTheme, getStoredThemeId } from "./lib/themes";
 import { APP_VERSION } from "./lib/version";
+import { Capacitor } from "@capacitor/core";
 
 const APP_VERSION_STORAGE_KEY = "grim_app_version";
 const APP_VERSION_REFRESH_KEY = `grim_version_refresh_${APP_VERSION}`;
+const IS_NATIVE_CAPACITOR = Capacitor.isNativePlatform();
 
 const clearAllCaches = async () => {
   if (!("caches" in window)) return;
@@ -38,7 +40,9 @@ const syncAppVersion = async () => {
   window.location.reload();
 };
 
-void syncAppVersion();
+if (!IS_NATIVE_CAPACITOR) {
+  void syncAppVersion();
+}
 
 // Poll server for the latest deployed version. When a new version is detected,
 // clear caches and hard-reload so PWA users always get the freshest build.
@@ -72,10 +76,12 @@ const checkRemoteVersion = async () => {
   }
 };
 
-void checkRemoteVersion();
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") void checkRemoteVersion();
-});
+if (!IS_NATIVE_CAPACITOR) {
+  void checkRemoteVersion();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void checkRemoteVersion();
+  });
+}
 
 // Initialize theme from localStorage before render
 const storedTheme = localStorage.getItem("gymberget_theme");
@@ -98,7 +104,7 @@ const clearBadge = () => {
   if ("clearAppBadge" in navigator) {
     (navigator as any).clearAppBadge().catch(() => {});
   }
-  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+  if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({ type: "CLEAR_BADGE" });
   }
 };
@@ -108,7 +114,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 // Force service worker update check on every app load + periodically
-if ("serviceWorker" in navigator) {
+if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   const checkForUpdate = () => {
     navigator.serviceWorker.getRegistration().then((reg) => {
       if (reg) reg.update().catch(() => {});
@@ -157,7 +163,7 @@ if (isIOS) {
 }
 
 // Lock screen orientation to portrait when supported (PWA / installed apps)
-try {
+if (!IS_NATIVE_CAPACITOR) try {
   const orientation = (screen as any).orientation;
   if (orientation && typeof orientation.lock === "function") {
     orientation.lock("portrait").catch(() => {});
