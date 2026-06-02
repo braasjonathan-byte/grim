@@ -225,6 +225,33 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
           </>
         )}
       </div>
+      {gps.isTracking && (
+        <div className="grid grid-cols-3 gap-2 bg-secondary border border-border rounded-md p-2">
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
+            <span className="font-mono font-bold text-sm text-foreground">{fmtTime(gps.elapsedSec)}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Distans</span>
+            <span className="font-mono font-bold text-sm text-foreground">{(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tempo</span>
+            <span className="font-mono font-bold text-sm text-foreground">
+              {gps.distanceKm >= 0.05
+                ? (() => {
+                    const sPerKm = gps.elapsedSec / gps.distanceKm;
+                    const m = Math.floor(sPerKm / 60);
+                    const s = Math.round(sPerKm % 60);
+                    return `${m}:${String(s).padStart(2, "0")}/km`;
+                  })()
+                : "—"}
+            </span>
+          </div>
+        </div>
+      )}
+
+
       {gps.error && (
         <div className="bg-destructive/10 border border-destructive rounded-md p-2 text-[11px] text-destructive font-semibold leading-snug">
           {gps.error}
