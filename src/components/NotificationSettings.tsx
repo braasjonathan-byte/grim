@@ -217,6 +217,19 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
           <p className="text-xs text-muted-foreground">
             Du får notiser när admin publicerar meddelanden, när vänner slutför träningspass och när någon kommenterar ditt pass.
           </p>
+          <button
+            onClick={runPushTest}
+            disabled={testLoading}
+            className="w-full mt-2 py-2 bg-secondary border border-border text-foreground text-sm font-semibold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+          >
+            {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            Skicka testnotis till mig
+          </button>
+          {testResult && (
+            <p className="text-xs font-mono break-words text-foreground bg-background border border-border rounded p-2">
+              {testResult}
+            </p>
+          )}
         </div>
       ) : isDenied ? (
         <div className="space-y-2">
