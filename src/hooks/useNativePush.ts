@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
-import { PushNotifications } from "@capacitor/push-notifications";
 import { supabase } from "@/integrations/supabase/client";
+
+const NATIVE_PUSH_ENABLED = import.meta.env.VITE_ENABLE_NATIVE_PUSH === "true";
 
 /**
  * Registers native push notifications (FCM/APNs) when running inside
@@ -14,9 +15,17 @@ export function useNativePush(userId: string | null) {
   useEffect(() => {
     if (!userId || registeredRef.current) return;
     if (!Capacitor.isNativePlatform()) return;
+    if (!NATIVE_PUSH_ENABLED) return;
+    if (!Capacitor.isPluginAvailable("PushNotifications")) return;
+
+    let cleanupNativeListeners: (() => void) | undefined;
+    let cancelled = false;
 
     const setup = async () => {
       try {
+        const { PushNotifications } = await import("@capacitor/push-notifications");
+        if (cancelled) return;
+
         // Request permission
         const permResult = await PushNotifications.requestPermissions();
         if (permResult.receive !== "granted") {
@@ -65,6 +74,10 @@ export function useNativePush(userId: string | null) {
 
         // Register with FCM/APNs
         await PushNotifications.register();
+
+        cleanupNativeListeners = () => {
+          PushNotifications.removeAllListeners();
+        };
       } catch (err) {
         console.error("Native push setup error:", err);
       }
@@ -73,7 +86,8 @@ export function useNativePush(userId: string | null) {
     setup();
 
     return () => {
-      PushNotifications.removeAllListeners();
+      cancelled = true;
+      cleanupNativeListeners?.();
     };
   }, [userId]);
 }
