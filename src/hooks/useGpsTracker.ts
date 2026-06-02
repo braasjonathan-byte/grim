@@ -202,7 +202,7 @@ const startTracking = async () => {
   distAnnounceMarkKm = 0;
   distAnnounceMarkSec = 0;
   startTime = Date.now();
-  setSnap({ isTracking: true, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null });
+  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null });
 
   try {
     // @ts-ignore
