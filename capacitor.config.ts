@@ -10,7 +10,6 @@ const config: CapacitorConfig = {
       '@capacitor/screen-orientation',
       '@capacitor/push-notifications',
       '@capacitor/geolocation',
-      '@capacitor-community/bluetooth-le',
       'capacitor-native-settings',
     ],
   },
