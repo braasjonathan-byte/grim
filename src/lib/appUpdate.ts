@@ -1,30 +1,12 @@
-import { Capacitor } from "@capacitor/core";
-
-/**
- * URL to the latest APK / release page. Override at build time with
- * VITE_APK_UPDATE_URL (e.g. a GitHub Releases "latest" URL).
- */
-export const APK_UPDATE_URL: string =
-  (import.meta.env.VITE_APK_UPDATE_URL as string | undefined) ||
-  "https://github.com/";
-
 /**
  * Triggers an app update flow.
- * - On native (Capacitor): opens the APK download URL in the system browser
- *   so the user can install the latest build.
- * - On web/PWA: clears caches, unregisters the service worker and forces
- *   a hard reload so the newest build is fetched from the network.
+ * Clears caches, unregisters the service worker and forces a hard reload
+ * so the newest build is fetched from the network. Works the same on
+ * web/PWA and inside the native Capacitor webview (which loads the same
+ * web bundle), so the user always gets the latest version without having
+ * to reinstall the app.
  */
 export async function updateApp(): Promise<void> {
-  if (Capacitor.isNativePlatform()) {
-    try {
-      window.open(APK_UPDATE_URL, "_system");
-    } catch {
-      window.location.href = APK_UPDATE_URL;
-    }
-    return;
-  }
-
   try {
     if ("caches" in window) {
       const names = await caches.keys();
