@@ -172,12 +172,13 @@ serve(async (req) => {
       data: { url: `/?tab=chat&friendId=${user.id}` },
     });
 
-    let sent = 0;
+    let webSent = 0;
     const staleEndpoints: string[] = [];
+    const webTotal = subscriptions?.length || 0;
 
-    for (const sub of subscriptions) {
+    for (const sub of (subscriptions || [])) {
       const ok = await sendWebPush({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, payload, vapid.public_key, vapid.private_key);
-      if (ok) { sent++; } else { staleEndpoints.push(sub.endpoint); }
+      if (ok) { webSent++; } else { staleEndpoints.push(sub.endpoint); }
     }
 
     if (staleEndpoints.length > 0) {
@@ -185,6 +186,7 @@ serve(async (req) => {
     }
 
     // Native push
+    const nativeTotal = nativeTokens?.length || 0;
     const nativePayload = JSON.parse(payload);
     const nativeSent = await sendNativePush(supabaseAdmin, [receiverId], {
       title: nativePayload.title,
@@ -192,7 +194,7 @@ serve(async (req) => {
       data: nativePayload.data ? Object.fromEntries(Object.entries(nativePayload.data).map(([k, v]) => [k, String(v)])) : {},
     });
 
-    return new Response(JSON.stringify({ sent: sent + nativeSent }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ sent: webSent + nativeSent, webSent, nativeSent, webTotal, nativeTotal }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
