@@ -5,11 +5,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      VITE_APK_UPDATE_URL: "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk"
     steps:
       - uses: actions/checkout@v4
 
