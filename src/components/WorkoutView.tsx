@@ -4686,6 +4686,27 @@ const estimateCalories = (
                           <Footprints className="w-4 h-4 text-warning" />
                           {conditioningDialog.exerciseName}
                         </h4>
+                        {!isStairMachine(conditioningDialog.exerciseName) && !conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (
+                          <GpsTrackerControl
+                            onStop={(km, sec) => {
+                              const totMin = sec / 60;
+                              const hh = Math.floor(sec / 3600);
+                              const mm = Math.floor((sec % 3600) / 60);
+                              const ss = sec % 60;
+                              setCondTimeHours(hh > 0 ? String(hh) : "");
+                              setCondTimeMinutes(String(mm));
+                              setCondTimeSeconds(ss > 0 ? String(ss) : "");
+                              const distRounded = Math.round(km * 100) / 100;
+                              setCondDistanceInput(String(distRounded));
+                              if (km > 0) {
+                                const paceMin = totMin / km;
+                                const pm = Math.floor(paceMin);
+                                const ps = Math.round((paceMin - pm) * 60);
+                                setCondTempoInput(`${pm}:${String(ps).padStart(2, "0")}`);
+                              }
+                            }}
+                          />
+                        )}
                         {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{condTempoInput}/km</span>
