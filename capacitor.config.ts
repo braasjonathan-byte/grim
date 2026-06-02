@@ -5,7 +5,13 @@ const config: CapacitorConfig = {
   appName: 'Grim',
   webDir: 'dist',
   android: {
-    includePlugins: ['@capacitor/haptics', '@capacitor/screen-orientation', 'capacitor-native-settings'],
+    includePlugins: [
+      '@capacitor/haptics',
+      '@capacitor/screen-orientation',
+      '@capacitor/push-notifications',
+      '@capacitor/geolocation',
+      'capacitor-native-settings',
+    ],
   },
   ios: {
     // Lock to portrait on iOS
