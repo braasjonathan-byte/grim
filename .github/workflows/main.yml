@@ -100,6 +100,16 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: ignore
 
+      - name: Publish GitHub Release with APK
+        if: success() && steps.apk.outcome == 'success'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Grim build ${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          make_latest: "true"
+          generate_release_notes: true
+
       - name: Fail job if APK build failed
         if: always() && steps.apk.outcome == 'failure'
         run: |
