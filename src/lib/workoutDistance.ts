@@ -1,6 +1,6 @@
 type LoggedWeights = Record<string, unknown> | null | undefined;
 
-const CYCLING_KEYWORDS = /cykel|motioncykel|spinning|crosstrainer/i;
+const CYCLING_KEYWORDS = /cykling|cykel|motioncykel|spinning|crosstrainer/i;
 const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|intervall|intervaller|långpass|distanslöpning|promenad|gång|tröskel/i;
 const RUN_SEGMENT_KEYWORDS = /uppvärmning|nedvarvning|avjogg|joggvila|jogg|promenad|gång/i;
 
