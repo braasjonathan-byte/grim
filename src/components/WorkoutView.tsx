@@ -125,6 +125,8 @@ interface CustomExercise {
 const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route: [number, number][]) => void }) => {
   const gps = useGpsTracker();
   const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
   const fmtTime = (s: number) => {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
