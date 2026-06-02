@@ -28,36 +28,69 @@ jobs:
           java-version: '21'
 
       - name: Verify Java version
+        if: always()
         run: |
           echo "JAVA_HOME=$JAVA_HOME"
           java -version
           javac -version
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        id: deps
+        if: always()
+        run: npm install --legacy-peer-deps --no-audit --no-fund || echo "::warning::npm install failed"
 
       - name: Build web
-        run: npm run build
+        id: web
+        if: always()
+        run: npm run build || echo "::warning::web build failed"
 
       - name: Add Android platform (if missing)
+        if: always()
         run: |
           if [ ! -d "android" ]; then
-            npx cap add android
+            npx cap add android || echo "::warning::cap add android failed"
           fi
 
       - name: Sync Capacitor
-        run: npx cap sync android
+        if: always()
+        run: npx cap sync android || echo "::warning::cap sync failed"
 
       - name: Make gradlew executable
-        run: chmod +x android/gradlew
+        if: always()
+        run: chmod +x android/gradlew || true
 
-      - name: Build debug APK
+      - name: Build debug APK (continue on error to surface all failures)
+        id: apk
+        if: always()
+        continue-on-error: true
         working-directory: android
         run: |
           echo "Gradle JAVA_HOME=$JAVA_HOME"
-          ./gradlew assembleDebug --stacktrace -Dorg.gradle.java.home="$JAVA_HOME"
+          ./gradlew assembleDebug --stacktrace --info --warning-mode all --continue -Dorg.gradle.java.home="$JAVA_HOME"
+
+      - name: Collect Gradle reports
+        if: always()
+        run: |
+          mkdir -p _reports
+          find android -path '*/build/reports' -type d -exec cp -r {} _reports/ \; 2>/dev/null || true
+          find android -name '*.log' -exec cp {} _reports/ \; 2>/dev/null || true
 
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gradle-reports
+          path: _reports
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: grim-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
+
+      - name: Fail job if APK build failed
+        if: always() && steps.apk.outcome == 'failure'
+        run: |
+          echo "::error::APK build failed — see gradle-reports artifact for full details"
+          exit 1
