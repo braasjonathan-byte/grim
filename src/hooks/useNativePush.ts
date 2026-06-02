@@ -72,8 +72,13 @@ export function useNativePush(userId: string | null) {
           }
         });
 
-        // Register with FCM/APNs
-        await PushNotifications.register();
+        // Register with FCM/APNs — wrap in try/catch since this throws
+        // hard if google-services.json / Firebase isn't configured.
+        try {
+          await PushNotifications.register();
+        } catch (regErr) {
+          console.error("PushNotifications.register() failed:", regErr);
+        }
 
         cleanupNativeListeners = () => {
           PushNotifications.removeAllListeners();
