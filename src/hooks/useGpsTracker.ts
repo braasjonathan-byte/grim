@@ -145,6 +145,48 @@ const startTracking = async () => {
     setSnap({ error: "GPS stöds inte i denna webbläsare" });
     return;
   }
+
+  // Check permission state up-front so we can prompt clearly
+  setSnap({ error: null });
+  try {
+    // @ts-ignore - permissions API not in all TS lib versions
+    const perm = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+    if (perm?.state === "denied") {
+      setSnap({
+        error:
+          "Platstillstånd är blockerat. Aktivera plats för denna sida i webbläsarens inställningar (lås-ikonen i adressfältet → Behörigheter → Plats → Tillåt) och försök igen.",
+      });
+      return;
+    }
+  } catch {
+    // permissions API not supported — fall through to getCurrentPosition prompt
+  }
+
+  // Trigger the native permission prompt explicitly before starting watchPosition
+  try {
+    await new Promise<void>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        () => resolve(),
+        (err) => reject(err),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      );
+    });
+  } catch (err: any) {
+    if (err?.code === 1 /* PERMISSION_DENIED */) {
+      setSnap({
+        error:
+          "Du nekade platstillstånd. Tillåt plats för denna sida (lås-ikonen i adressfältet → Behörigheter → Plats → Tillåt) och tryck på Starta GPS-inspelning igen.",
+      });
+    } else if (err?.code === 2 /* POSITION_UNAVAILABLE */) {
+      setSnap({ error: "GPS-signal hittades inte. Gå utomhus och försök igen." });
+    } else if (err?.code === 3 /* TIMEOUT */) {
+      setSnap({ error: "GPS-signalen tog för lång tid. Försök igen utomhus med fri sikt mot himlen." });
+    } else {
+      setSnap({ error: err?.message || "Kunde inte starta GPS" });
+    }
+    return;
+  }
+
   installVisibilityHandler();
   distAcc = 0;
   lastCoord = null;
