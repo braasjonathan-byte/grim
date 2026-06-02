@@ -77,6 +77,42 @@ jobs:
         if: always()
         run: npx cap sync android || echo "::warning::cap sync failed"
 
+      - name: Patch AndroidManifest.xml with required permissions
+        if: always()
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::warning::AndroidManifest.xml not found, skipping permission patch"
+            exit 0
+          fi
+          python3 <<'PY'
+          import re, pathlib
+          p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          needed = [
+              'android.permission.ACCESS_FINE_LOCATION',
+              'android.permission.ACCESS_COARSE_LOCATION',
+              'android.permission.ACCESS_BACKGROUND_LOCATION',
+              'android.permission.POST_NOTIFICATIONS',
+              'android.permission.INTERNET',
+              'android.permission.FOREGROUND_SERVICE',
+              'android.permission.FOREGROUND_SERVICE_LOCATION',
+              'android.permission.WAKE_LOCK',
+          ]
+          insert = ""
+          for perm in needed:
+              if perm not in s:
+                  insert += f'    <uses-permission android:name="{perm}" />\n'
+          if insert:
+              s = re.sub(r'(</manifest>)', insert + r'\1', s, count=1)
+              p.write_text(s)
+              print("✅ Patched manifest with:", insert)
+          else:
+              print("✅ All required permissions already present")
+          PY
+          echo "---- Final AndroidManifest.xml ----"
+          cat "$MANIFEST"
+
       - name: Make gradlew executable
         if: always()
         run: chmod +x android/gradlew || true
