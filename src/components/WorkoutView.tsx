@@ -211,6 +211,16 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                if (gps.isPaused) gps.resume(); else gps.pause();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground text-xs font-semibold rounded-md border border-border"
+            >
+              {gps.isPaused ? (<><Play className="w-3.5 h-3.5 fill-current" /> Fortsätt</>) : (<><Pause className="w-3.5 h-3.5 fill-current" /> Pausa</>)}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 const r = gps.stop();
                 setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
               }}
@@ -221,7 +231,7 @@ const GpsTrackerControl = ({ onStop }: { onStop: (km: number, sec: number, route
             <div className="flex flex-col text-[10px] leading-tight">
               <span className="font-mono font-bold text-foreground">{fmtTime(gps.elapsedSec)} · {(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
               <span className="text-muted-foreground">
-                {gps.accuracy != null ? `Noggrannhet ±${Math.round(gps.accuracy)}m` : "Söker signal…"}
+                {gps.isPaused ? "Pausad" : (gps.accuracy != null ? `Noggrannhet ±${Math.round(gps.accuracy)}m` : "Söker signal…")}
               </span>
             </div>
           </>
