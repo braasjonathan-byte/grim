@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { updateApp } from "@/lib/appUpdate";
+import { APP_VERSION } from "@/lib/version";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import { APP_VERSION } from "@/lib/version";
