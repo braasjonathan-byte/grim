@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "470041783980",
+    "project_id": "grim-73ea5",
+    "storage_bucket": "grim-73ea5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:470041783980:android:6c1f7bb8aa633917553909",
+        "android_client_info": {
+          "package_name": "se.grim.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVSsaMdRYOPYnvJSr3kGvY5tAHTBJoOx0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
