@@ -196,7 +196,15 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
           <p className="text-xs text-muted-foreground">
             Notiser är blockerade. Du behöver aktivera dem i enhetens inställningar.
           </p>
-          {isIOS ? (
+          {isNative || isAndroid ? (
+            <button
+              onClick={openDeviceSettings}
+              className="w-full py-2 bg-secondary text-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Öppna notisinställningar
+            </button>
+          ) : isIOS ? (
             <div className="text-xs text-muted-foreground space-y-1">
               <p className="font-semibold text-foreground">Så här aktiverar du på iPhone:</p>
               <ol className="list-decimal list-inside space-y-0.5">
@@ -206,14 +214,6 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
                 <li>Aktivera notiser för denna sida</li>
               </ol>
             </div>
-          ) : isAndroid ? (
-            <button
-              onClick={openDeviceSettings}
-              className="w-full py-2 bg-secondary text-foreground text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Öppna notisinställningar
-            </button>
           ) : (
             <div className="text-xs text-muted-foreground space-y-1">
               <p className="font-semibold text-foreground">Så här aktiverar du:</p>
