@@ -4195,7 +4195,9 @@ const estimateCalories = (
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
                     {(() => {
                       const sn = (plan.session_name || "").toLowerCase();
-                      const isCardio = /löp|jogg|spring|cykl|cycling|simn|simm|swim|tröskel|långpass|intervall|tempo|kondition/.test(sn);
+                      const detailsLower = (plan.details || "").toLowerCase();
+                      const hasCondEx = allExercises.some(e => e.category === "kondition" && e.name && detailsLower.includes(e.name.toLowerCase()));
+                      const isCardio = hasCondEx || /löp|jogg|spring|cykl|cycling|simn|simm|swim|tröskel|långpass|intervall|tempo|kondition/.test(sn);
                       if (!isCardio) return null;
                       return (
                         <GpsTrackerControl
