@@ -34,6 +34,7 @@ export type GpsState = {
 
 type Snapshot = {
   isTracking: boolean;
+  isPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
@@ -43,6 +44,7 @@ type Snapshot = {
 
 let snapshot: Snapshot = {
   isTracking: false,
+  isPaused: false,
   distanceKm: 0,
   elapsedSec: 0,
   accuracy: null,
