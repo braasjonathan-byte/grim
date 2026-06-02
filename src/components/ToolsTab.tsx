@@ -5,7 +5,6 @@ import { updateApp } from "@/lib/appUpdate";
 import { APP_VERSION } from "@/lib/version";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
-import { APP_VERSION } from "@/lib/version";
 import {
   AlertDialog,
   AlertDialogAction,
