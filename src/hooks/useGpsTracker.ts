@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { getGpsVoiceIntervalMin, getGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 
 type WakeLockSentinel = { release: () => Promise<void>; addEventListener: (t: string, l: () => void) => void };
@@ -153,18 +154,39 @@ const startTracking = async () => {
 
   // Check permission state up-front so we can prompt clearly
   setSnap({ error: null });
-  try {
-    // @ts-ignore - permissions API not in all TS lib versions
-    const perm = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
-    if (perm?.state === "denied") {
-      setSnap({
-        error:
-          "Platstillstånd är blockerat. Aktivera plats för denna sida i webbläsarens inställningar (lås-ikonen i adressfältet → Behörigheter → Plats → Tillåt) och försök igen.",
-      });
-      return;
+
+  // On native (Capacitor), request OS-level location permission explicitly via the plugin.
+  // This triggers the native Android/iOS permission dialog the first time.
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Geolocation } = await import("@capacitor/geolocation");
+      let perm = await Geolocation.checkPermissions();
+      if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
+        perm = await Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] });
+      }
+      if (perm.location !== "granted" && perm.coarseLocation !== "granted") {
+        setSnap({
+          error: "Platstillstånd nekades. Aktivera plats för appen i enhetens inställningar och försök igen.",
+        });
+        return;
+      }
+    } catch (err) {
+      console.error("Native geolocation permission error:", err);
     }
-  } catch {
-    // permissions API not supported — fall through to getCurrentPosition prompt
+  } else {
+    try {
+      // @ts-ignore - permissions API not in all TS lib versions
+      const perm = await navigator.permissions?.query({ name: "geolocation" as PermissionName });
+      if (perm?.state === "denied") {
+        setSnap({
+          error:
+            "Platstillstånd är blockerat. Aktivera plats för denna sida i webbläsarens inställningar (lås-ikonen i adressfältet → Behörigheter → Plats → Tillåt) och försök igen.",
+        });
+        return;
+      }
+    } catch {
+      // permissions API not supported — fall through to getCurrentPosition prompt
+    }
   }
 
   // Trigger the native permission prompt explicitly before starting watchPosition
