@@ -18,12 +18,15 @@ export type RoutePoint = [number, number]; // [lat, lng]
 
 export type GpsState = {
   isTracking: boolean;
+  isPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
   start: () => Promise<void>;
+  pause: () => void;
+  resume: () => void;
   stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
 };
 
