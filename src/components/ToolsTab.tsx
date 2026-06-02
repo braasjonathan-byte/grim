@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { updateApp } from "@/lib/appUpdate";
+import { APP_VERSION } from "@/lib/version";
 import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
-import { APP_VERSION } from "@/lib/version";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -422,6 +424,15 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       <Suspense fallback={null}>
         <DisclaimerSection />
       </Suspense>
+
+      <button
+        type="button"
+        onClick={updateApp}
+        className="w-full py-2.5 mt-2 bg-secondary text-foreground text-sm font-bold border border-border flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+      >
+        <RefreshCw className="w-4 h-4" />
+        {Capacitor.isNativePlatform() ? "Uppdatera appen" : "Sök efter uppdatering"}
+      </button>
 
       <p className="text-center text-[11px] text-muted-foreground pt-2 pb-4">Version {APP_VERSION}</p>
     </div>
