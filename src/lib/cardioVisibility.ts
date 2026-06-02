@@ -55,8 +55,13 @@ export const setCardioVisibility = (key: CardioCategory, visible: boolean) => {
 /** Returns the matched category for a plan's text, or null if none. */
 export const getCardioCategory = (planText: string | null | undefined): CardioCategory | null => {
   if (!planText) return null;
-  for (const c of CARDIO_CATEGORIES) {
-    if (c.keywords.test(planText)) return c.key;
+  // Check more specific categories first; löpning regex includes broad terms
+  // like "tröskel" that can also appear in cycling/swimming plans (e.g.
+  // "Cykling – Tempo" with "tröskeltempo" in the details). Match those first.
+  const priority: CardioCategory[] = ["cykling", "simning", "rodd", "trapp", "promenad", "löpning"];
+  for (const key of priority) {
+    const c = CARDIO_CATEGORIES.find((cat) => cat.key === key);
+    if (c && c.keywords.test(planText)) return c.key;
   }
   return null;
 };

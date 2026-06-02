@@ -1,6 +1,6 @@
 type LoggedWeights = Record<string, unknown> | null | undefined;
 
-const CYCLING_KEYWORDS = /cykel|motioncykel|spinning|crosstrainer/i;
+const CYCLING_KEYWORDS = /cykling|cykel|motioncykel|spinning|crosstrainer/i;
 const RUNNING_KEYWORDS = /löpning|löp|jogg|sprint|intervall|intervaller|långpass|distanslöpning|promenad|gång|tröskel/i;
 const RUN_SEGMENT_KEYWORDS = /uppvärmning|nedvarvning|avjogg|joggvila|jogg|promenad|gång/i;
 
@@ -233,16 +233,21 @@ export const getWorkoutDistanceKm = ({
   loggedWeights: LoggedWeights;
   planDetails?: string | null;
 }): number => {
-  if (!isRunningPlan(planDetails)) return 0;
+  const isRunning = isRunningPlan(planDetails);
+  const isCardio = isRunning || (planDetails ? CYCLING_KEYWORDS.test(getPlanText(planDetails)) || /simning|sim(?![a-zåäö])|rodd/i.test(getPlanText(planDetails)) : false);
+  if (!isCardio) return 0;
 
   const directDistance = toNumber(loggedDistanceKm);
-  const completedIntervalSetDistance = getCompletedIntervalSetDistanceKm(loggedWeights, planDetails);
-  if (completedIntervalSetDistance > 0) return completedIntervalSetDistance;
+
+  if (isRunning) {
+    const completedIntervalSetDistance = getCompletedIntervalSetDistanceKm(loggedWeights, planDetails);
+    if (completedIntervalSetDistance > 0) return completedIntervalSetDistance;
+  }
 
   if (directDistance > 0) return directDistance;
 
   const conditioningDistance = getConditioningDistanceKm(loggedWeights);
   if (conditioningDistance > 0) return conditioningDistance;
 
-  return planDetails ? extractDistanceFromDetails(planDetails) : 0;
+  return isRunning && planDetails ? extractDistanceFromDetails(planDetails) : 0;
 };
