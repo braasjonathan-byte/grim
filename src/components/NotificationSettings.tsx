@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Bell, BellOff, ExternalLink, Loader2, Check, Clock, AlarmClock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Capacitor } from "@capacitor/core";
+import { openAppSettings } from "@/lib/openSettings";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
