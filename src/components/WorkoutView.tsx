@@ -6160,7 +6160,10 @@ const estimateCalories = (
                       const onlyLine = detailParts.length === 1 ? detailParts[0] : null;
                       const { name: onlyName } = onlyLine ? parseExerciseWeight(onlyLine) : { name: "" };
                       const alreadySingleCondEntry = onlyLine && onlyName.trim().toLowerCase() === plan.session_name.trim().toLowerCase();
-                      if (!alreadySingleCondEntry) {
+                      // Also skip when the only line is a GPS-logged entry (auto-formatted by DayGpsRecorder
+                      // as "Name — X min, Y:YY/km, Z km") — it's an exercise, not instructions.
+                      const isLoggedCondLine = !!onlyLine && /\d+\s*min/.test(onlyLine) && (/\/km/.test(onlyLine) || /\d+(?:[.,]\d+)?\s*km/.test(onlyLine));
+                      if (!alreadySingleCondEntry && !isLoggedCondLine) {
                         cardioInstructionsText = plan.details;
                       }
                     }
