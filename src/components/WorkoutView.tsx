@@ -423,8 +423,8 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
         className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
         title="Starta GPS-inspelning"
       >
-        <MapPin className="w-3.5 h-3.5" />
-        <span>Starta GPS-inspelning</span>
+        <MapPin className="w-3.5 h-3.5 shrink-0" />
+        <span className="whitespace-nowrap">Spela in GPS</span>
       </button>
       {pickerOpen && createPortal(
         <div
