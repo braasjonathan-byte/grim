@@ -3,6 +3,8 @@ import { User, Camera, Loader2, Instagram, Music, Crown, Shield } from "lucide-r
 import HonoraryBadge from "./HonoraryBadge";
 import AvatarCropDialog from "./AvatarCropDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { pickImage } from "@/lib/pickImage";
+
 
 interface ProfileSectionProps {
   userId: string;
