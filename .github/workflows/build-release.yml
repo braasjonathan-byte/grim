@@ -40,8 +40,14 @@ jobs:
           echo "Error: ANDROID_KEYSTORE_BASE64 secret is not set!"
           exit 1
         fi
-        # Vi rensar bort eventuella radbrytningar/mellanslag innan avkodning
-        echo "$KEYSTORE_BASE64" | tr -d '\n ' | base64 --decode > android/app/min-app-nyckel.jks
+        # Vi rensar bort ALLA typer av whitespace och ignorerar skräptecken vid avkodning
+        echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -di > android/app/min-app-nyckel.jks
+        
+        # Kontrollera att filen faktiskt skapades och inte är tom
+        if [ ! -s android/app/min-app-nyckel.jks ]; then
+          echo "Error: Keystore file is empty after decoding. Base64 input might be invalid."
+          exit 1
+        fi
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
