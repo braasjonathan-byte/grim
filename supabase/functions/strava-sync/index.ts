@@ -378,6 +378,11 @@ serve(async (req) => {
     if (body.mode === "user") {
       if (!requestedUserId) return jsonResponse({ error: "Unauthorized" }, 401);
       query = query.eq("user_id", requestedUserId).limit(1);
+    } else {
+      // Batch mode: require admin role
+      if (!requestedUserId) return jsonResponse({ error: "Unauthorized" }, 401);
+      const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: requestedUserId, _role: "admin" });
+      if (!isAdmin) return jsonResponse({ error: "Forbidden" }, 403);
     }
 
     const targetWorkout = body.targetWorkout &&
@@ -416,7 +421,6 @@ serve(async (req) => {
     return jsonResponse({ success: true, syncedConnections: results.length, results });
   } catch (error) {
     console.error("Strava sync failed", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return jsonResponse({ error: errorMessage }, 500);
+    return jsonResponse({ error: "Internal error" }, 500);
   }
 });
