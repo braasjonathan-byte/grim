@@ -49,6 +49,24 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     if (found) return;
     setScanning(true);
     try {
+      // On native (APK) ensure runtime CAMERA permission is granted before
+      // the WebView tries to open getUserMedia (otherwise we get "Permission denied").
+      try {
+        const { Capacitor } = await import("@capacitor/core");
+        if (Capacitor.isNativePlatform()) {
+          const { Camera } = await import("@capacitor/camera");
+          const status = await Camera.checkPermissions();
+          if (status.camera !== "granted") {
+            const req = await Camera.requestPermissions({ permissions: ["camera"] });
+            if (req.camera !== "granted") {
+              throw new Error("Kamerabehörighet nekad. Tillåt kameraåtkomst i appens inställningar.");
+            }
+          }
+        }
+      } catch (permErr: any) {
+        if (permErr?.message?.includes("Kamerabehörighet")) throw permErr;
+        // non-fatal — continue and let getUserMedia trigger the OS prompt
+      }
       // Pick the standard back camera (not ultra-wide / telefoto).
       // Many phones expose flera bakre linser där ultra-wide ofta är default.
       let deviceId: string | undefined;

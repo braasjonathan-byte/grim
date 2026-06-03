@@ -118,6 +118,39 @@ const nativeConnect = async (silent: boolean): Promise<void> => {
       }
     }
 
+    // No remembered device — try a brief background scan for any HR device
+    // (e.g. a paired smartwatch broadcasting the Heart Rate service).
+    try {
+      const found: { deviceId: string; name?: string } | null = await new Promise((resolve) => {
+        let resolved = false;
+        const timeout = setTimeout(async () => {
+          if (resolved) return;
+          resolved = true;
+          try { await BleClient.stopLEScan(); } catch {}
+          resolve(null);
+        }, silent ? 6000 : 12000);
+        BleClient.requestLEScan(
+          { services: [HR_SERVICE], allowDuplicates: false },
+          async (res) => {
+            if (resolved || !res?.device?.deviceId) return;
+            resolved = true;
+            clearTimeout(timeout);
+            try { await BleClient.stopLEScan(); } catch {}
+            resolve({ deviceId: res.device.deviceId, name: res.device.name });
+          }
+        ).catch(() => {
+          if (resolved) return;
+          resolved = true;
+          clearTimeout(timeout);
+          resolve(null);
+        });
+      });
+      if (found) {
+        await nativeStart(found.deviceId, found.name ?? null);
+        return;
+      }
+    } catch {}
+
     if (silent) {
       setSnap({ connecting: false });
       return;

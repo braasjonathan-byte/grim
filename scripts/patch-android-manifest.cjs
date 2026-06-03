@@ -29,6 +29,14 @@ const PERMS = [
   "android.permission.BLUETOOTH_CONNECT",
   "android.permission.BLUETOOTH",
   "android.permission.BLUETOOTH_ADMIN",
+  "android.permission.CAMERA",
+];
+
+// Features (non-required so the app can still install on devices without them)
+const FEATURES = [
+  { name: "android.hardware.camera", required: false },
+  { name: "android.hardware.camera.autofocus", required: false },
+  { name: "android.hardware.bluetooth_le", required: false },
 ];
 
 let changed = false;
@@ -38,6 +46,15 @@ for (const p of PERMS) {
     xml = xml.replace(/<\/manifest>/, `${tag}\n</manifest>`);
     changed = true;
     console.log(`[patch-android-manifest] Added ${p}`);
+  }
+}
+
+for (const f of FEATURES) {
+  if (!xml.includes(`android:name="${f.name}"`)) {
+    const tag = `    <uses-feature android:name="${f.name}" android:required="${f.required}" />`;
+    xml = xml.replace(/<\/manifest>/, `${tag}\n</manifest>`);
+    changed = true;
+    console.log(`[patch-android-manifest] Added feature ${f.name}`);
   }
 }
 
