@@ -299,4 +299,8 @@ export const disconnectHeartRate = (): Promise<void> =>
   isNative ? nativeDisconnect() : webDisconnect();
 
 export const autoConnectHeartRate = (): Promise<void> =>
-  isNative ? nativeConnect(true) : webConnect(true);
+  // Do not start BLE scanning automatically in the native Android shell.
+  // Some devices/Android versions can terminate the app when BLE is touched
+  // before the runtime Bluetooth permission flow has completed. Users can
+  // still connect from the heart-rate UI via connectHeartRate().
+  isNative ? Promise.resolve() : webConnect(true);
