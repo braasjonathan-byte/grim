@@ -399,7 +399,7 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
   if (selectedName) {
     return (
-      <div className="space-y-1.5">
+      <div className="col-span-2 w-full space-y-1.5 mt-2">
         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           <MapPin className="w-3 h-3" /> {selectedName}
         </div>
