@@ -6032,21 +6032,17 @@ const estimateCalories = (
               {expanded &&
               <div className="px-4 pb-8 space-y-3 border-t border-border pt-3">
                   {(() => {
-                    const sn = (plan.session_name || "").toLowerCase();
-                    const detailsLower = (plan.details || "").toLowerCase();
-                    const hasCondEx = allExercises.some(e => e.category === "kondition" && e.name && detailsLower.includes(e.name.toLowerCase()));
-                    const isCardio = hasCondEx || /löp|jogg|spring|cykl|cycling|simn|simm|swim|tröskel|långpass|intervall|tempo|kondition/.test(sn);
-                    if (!isCardio) return null;
+                    const konditionExercises = allExercises.filter(e => e.category === "kondition" && e.name);
                     return (
-                      <GpsTrackerControl
-                        onStop={async (km, sec, gpsRoute) => {
+                      <DayGpsRecorder
+                        konditionExercises={konditionExercises}
+                        onSave={async (name, km, sec, gpsRoute) => {
                           const totMin = sec / 60;
                           const distRounded = Math.round(km * 100) / 100;
                           const tempoMin = km > 0 ? totMin / km : 0;
                           const tMin = Math.floor(tempoMin);
                           const tSec = Math.round((tempoMin - tMin) * 60);
                           const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
-                          const name = (plan.session_name || "Pass").trim();
                           const dataObj: Record<string, any> = {
                             time: String(Math.round(totMin * 10) / 10),
                             dist: String(distRounded),
@@ -6072,6 +6068,7 @@ const estimateCalories = (
                       />
                     );
                   })()}
+
                   {/* Inline weight inputs for strength exercises */}
                   {(() => {
                   const s = (plan.session_name + " " + plan.details).toLowerCase();
