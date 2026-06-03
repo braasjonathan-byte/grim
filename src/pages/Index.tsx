@@ -200,19 +200,22 @@ const Index = () => {
   const [isAppInstalled, setIsAppInstalled] = useState(() => {
     const isPreview = isPreviewEnvironment();
     if (isPreview) return false;
+    if (Capacitor.isNativePlatform()) return true;
     return window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
   });
   const [showInstallDialog, setShowInstallDialog] = useState(false);
 
-  // Detect if app is installed (standalone mode)
+  // Detect if app is installed (standalone mode or native Capacitor app)
   useEffect(() => {
     const isPreview = isPreviewEnvironment();
+    const isNative = Capacitor.isNativePlatform();
     const isStandalone =
+      isNative ||
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as any).standalone === true;
     setIsAppInstalled(isStandalone && !isPreview);
 
-    if (isPreview) {
+    if (isPreview || isNative) {
       setShowInstallDialog(false);
       return;
     }
@@ -224,6 +227,7 @@ const Index = () => {
       }
     }
   }, [user]);
+
 
   usePushNotifications(user?.id ?? null);
   useNativePush(user?.id ?? null);
