@@ -244,16 +244,19 @@ const Index = () => {
   }, [user]);
 
 
-  // Shared helper to load profile + role (called once per session)
+  // Shared helper to load profile + role. Profile and role are loaded
+  // INDEPENDENTLY — a failure in one must not silently wipe the other,
+  // which previously caused admins/hedersmedlemmar to render as "Medlem".
   const loadUserData = useCallback(async (uid: string) => {
+    await logCrashlyticsMessage("loadUserData:start");
+
     try {
-      await logCrashlyticsMessage("loadUserData:start");
-      const [{ data, error: profileError }, { data: roleData, error: roleError }] = await Promise.all([
-        supabase.from("profiles").select("nickname, must_change_password, is_honorary, theme").eq("user_id", uid).single(),
-        supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
-      ]);
+      const { data, error: profileError } = await supabase
+        .from("profiles")
+        .select("nickname, must_change_password, is_honorary, theme")
+        .eq("user_id", uid)
+        .maybeSingle();
       if (profileError) throw profileError;
-      if (roleError) throw roleError;
       if (data) {
         setNickname(data.nickname);
         setIsHonorary((data as any).is_honorary || false);
@@ -261,51 +264,63 @@ const Index = () => {
           setForceChangePassword(true);
           setShowChangePassword(true);
         }
-        // Apply saved color theme (only if not locked by friend profile view)
         const savedTheme = (data as any).theme || "default";
         storeThemeId(savedTheme);
         if (!isThemeLocked()) {
           applyTheme(savedTheme);
         }
       }
-      if (roleData) setUserRole(roleData.role);
-      await logCrashlyticsMessage("loadUserData:done");
     } catch (error) {
-      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData" });
-      setNickname("Grim");
+      console.warn("[loadUserData] profile failed", error);
+      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:profile" });
     }
+
+    try {
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (roleError) throw roleError;
+      setUserRole(roleData ? (roleData as any).role : "member");
+    } catch (error) {
+      console.warn("[loadUserData] role failed", error);
+      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:role" });
+    }
+
+    await logCrashlyticsMessage("loadUserData:done");
   }, []);
 
   useEffect(() => {
-    let initialDone = false;
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         void logCrashlyticsMessage(`auth:${_event}`);
         void setCrashlyticsUserId(session?.user?.id ?? null);
         setUser(session?.user ?? null);
-        if (session?.user && initialDone) {
-          setTimeout(() => loadUserData(session.user.id), 0);
-        }
         setLoading(false);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      initialDone = true;
       if (error || !session) {
-        // Clear any stale/invalid session so user gets a clean login screen
         supabase.auth.signOut().catch(() => {});
       }
       setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserData(session.user.id);
-      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [loadUserData]);
+  }, []);
+
+  // Single source of truth: (re)load profile + role whenever the auth user changes.
+  useEffect(() => {
+    if (!user?.id) {
+      setUserRole("member");
+      setIsHonorary(false);
+      return;
+    }
+    void loadUserData(user.id);
+  }, [user?.id, loadUserData]);
   // App icon badge — show unread count when away, clear when visible
   const totalUnread = unreadAnnouncements + unreadChats + unreadPosts + friendActivities.length;
   useEffect(() => {
