@@ -1,4 +1,4 @@
-name: Build Release APK
+name: Build Stable Release APK
 
 on:
   push:
@@ -9,15 +9,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Source
+      uses: actions/checkout@v4
 
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '22'
+        cache: 'npm'
 
-    - name: Install dependencies
-      run: npm install --legacy-peer-deps
+    - name: Install Dependencies
+      run: npm ci --legacy-peer-deps
 
     - name: Build Web App
       run: npm run build
@@ -36,24 +38,18 @@ jobs:
       env:
         KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       run: |
-        if [ -z "$KEYSTORE_BASE64" ]; then
-          echo "Error: ANDROID_KEYSTORE_BASE64 secret is not set!"
-          exit 1
-        fi
-        # Vi använder printf för att undvika problem med dolda tecken och tr -dc
-        # för att behålla ENDAST giltiga Base64-tecken (A-Z, a-z, 0-9, +, /, =)
-        printf '%s' "$KEYSTORE_BASE64" | tr -dc 'A-Za-z0-9+/=' | base64 -d > android/app/min-app-nyckel.jks
+        # Vi använder Python för att rensa bort precis allt skräp och avkoda säkert
+        python3 -c "import base64, os, re; data = os.environ.get('KEYSTORE_BASE64', ''); data = re.sub(r'[^A-Za-z0-9+/=]', '', data); open('android/app/min-app-nyckel.jks', 'wb').write(base64.b64decode(data))"
         
-        # Kontrollera att filen faktiskt skapades och inte är tom
         if [ ! -s android/app/min-app-nyckel.jks ]; then
-          echo "Error: Keystore file is empty after decoding. Base64 input might be invalid."
+          echo "Error: Keystore file is empty after decoding. Check your GitHub Secret!"
           exit 1
         fi
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
-    - name: Build with Gradle
+    - name: Build Release APK
       run: |
         cd android
         ./gradlew assembleRelease
@@ -62,8 +58,9 @@ jobs:
         RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
 
-    - name: Upload APK
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
+        name: release-apk
         path: android/app/build/outputs/apk/release/*.apk
+        retention-days: 7
