@@ -117,15 +117,15 @@ jobs:
               print("Signing config already present")
           else:
               signing = f'''
-    signingConfigs {{
-        release {{
-            storeFile file("release.keystore")
-            storePassword "{os.environ['KEYSTORE_PASSWORD']}"
-            keyAlias "{os.environ['KEY_ALIAS']}"
-            keyPassword "{os.environ['KEY_PASSWORD']}"
-        }}
-    }}
-'''
+                  signingConfigs {{
+                      release {{
+                          storeFile file("release.keystore")
+                          storePassword "{os.environ['KEYSTORE_PASSWORD']}"
+                          keyAlias "{os.environ['KEY_ALIAS']}"
+                          keyPassword "{os.environ['KEY_PASSWORD']}"
+                      }}
+                  }}
+              '''
               s = re.sub(r'(android\s*\{)', r'\1' + signing, s, count=1)
               s = re.sub(
                   r'buildTypes\s*\{\s*release\s*\{',
