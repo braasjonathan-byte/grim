@@ -251,3 +251,93 @@ export const getWorkoutDistanceKm = ({
 
   return isRunning && planDetails ? extractDistanceFromDetails(planDetails) : 0;
 };
+
+// ---------------- Per-category breakdown ----------------
+// Splits the workout distance per cardio category by inspecting each
+// conditioning entry's exercise name. Used for accurate per-category stats
+// when a single session mixes e.g. treadmill (running) and bike (cycling).
+
+export type CardioCategoryKey = "löpning" | "cykling" | "simning" | "rodd" | "promenad" | "trapp";
+
+const CATEGORY_PATTERNS: { key: CardioCategoryKey; re: RegExp }[] = [
+  { key: "cykling",  re: /cykling|cykel|motioncykel|spinning/i },
+  { key: "simning",  re: /simning|sim(?![a-zåäö])/i },
+  { key: "rodd",     re: /roddmaskin|rodd(?:pass)?/i },
+  { key: "trapp",    re: /trappmaskin|stair\s*machine|crosstrainer/i },
+  { key: "promenad", re: /promenad|(?<![-\w])gång(?![-\w])/i },
+  { key: "löpning",  re: /löpning|löpband|löp|jogg|sprint|tröskel|långpass|distanslöpning|intervaller?(?:löpning)?/i },
+];
+
+const categoryFromText = (text: string): CardioCategoryKey | null => {
+  for (const { key, re } of CATEGORY_PATTERNS) {
+    if (re.test(text)) return key;
+  }
+  return null;
+};
+
+export const getWorkoutDistanceByCategory = ({
+  loggedDistanceKm,
+  loggedWeights,
+  planDetails,
+}: {
+  loggedDistanceKm: unknown;
+  loggedWeights: LoggedWeights;
+  planDetails?: string | null;
+}): Partial<Record<CardioCategoryKey, number>> => {
+  const result: Partial<Record<CardioCategoryKey, number>> = {};
+  const add = (cat: CardioCategoryKey | null, km: number) => {
+    if (!cat || !(km > 0)) return;
+    result[cat] = (result[cat] ?? 0) + km;
+  };
+
+  const planText = planDetails ? getPlanText(planDetails) : "";
+  const fallbackCat = categoryFromText(planText);
+
+  const weights = (loggedWeights && typeof loggedWeights === "object" && !Array.isArray(loggedWeights))
+    ? (loggedWeights as Record<string, unknown>)
+    : null;
+
+  // 1) Per-__cond__ entry — derive category from the exercise/line name in the key.
+  if (weights) {
+    for (const [key, value] of Object.entries(weights)) {
+      if (!key.startsWith("__cond__")) continue;
+      const data = parseConditioningPayload(value);
+      if (!data) continue;
+
+      let km = 0;
+      const intervals = Array.isArray(data.intervals) ? data.intervals : [];
+      const intervalTotal = intervals.reduce((sum, interval) => sum + getIntervalDistanceKm(interval), 0);
+      if (intervalTotal > 0) {
+        km = intervalTotal;
+      } else {
+        const direct = toNumber(data.dist ?? data.distance);
+        km = direct > 0 ? direct : getDistanceFromTimeAndTempo(data.time, data.tempo);
+      }
+      if (km <= 0) continue;
+
+      const lineName = key.replace(/^__cond__/, "");
+      add(categoryFromText(lineName) ?? fallbackCat, km);
+    }
+
+    // 2) Completed interval sets (running-specific format) when no __cond__ already covered it.
+    if (isRunningPlan(planDetails) && Object.keys(result).length === 0) {
+      const intervalKm = getCompletedIntervalSetDistanceKm(loggedWeights, planDetails);
+      if (intervalKm > 0) add("löpning", intervalKm);
+    }
+  }
+
+  // 3) Direct logged_distance_km (only when no __cond__ already accounted for it)
+  const direct = toNumber(loggedDistanceKm);
+  const summed = Object.values(result).reduce((a, b) => a + (b || 0), 0);
+  if (direct > 0 && summed === 0) {
+    add(fallbackCat, direct);
+  }
+
+  // 4) Fallback: extract from plan details text (running-only legacy path)
+  if (Object.keys(result).length === 0 && isRunningPlan(planDetails) && planDetails) {
+    const km = extractDistanceFromDetails(planDetails);
+    if (km > 0) add("löpning", km);
+  }
+
+  return result;
+};
