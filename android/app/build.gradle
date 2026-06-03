@@ -6,10 +6,11 @@ android {
 
     signingConfigs {
         release {
+            // Vi använder miljövariabler för att GitHub ska kunna signera säkert
             storeFile = file("min-app-nyckel.jks")
-            storePassword = "JonneCCool98!"
-            keyAlias = "key0"
-            keyPassword = "JonneCCool98!"
+            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: "JonneCCool98!"
+            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "key0"
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: "JonneCCool98!"
         }
     }
 
