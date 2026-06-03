@@ -13,6 +13,7 @@ const config: CapacitorConfig = {
       '@capacitor/status-bar',
       '@capacitor/camera',
       'capacitor-native-settings',
+      '@capacitor-community/bluetooth-le',
     ],
 
   },
