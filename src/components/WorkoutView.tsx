@@ -6121,13 +6121,18 @@ const estimateCalories = (
                     const sessionLower = plan.session_name.toLowerCase();
                     const isCycling = /cykling|cykel|spinning/.test(sessionLower);
                     const isSwimming = /simning|simma|sim\b/.test(sessionLower);
+                    const isRowing = /rodd|roddmaskin/.test(sessionLower);
+                    const isWalking = /promenad|gång|vandring/.test(sessionLower);
+                    const isStairs = /trappmaskin|stair|crosstrainer|cross-trainer/.test(sessionLower);
+                    const isOtherCondition = /kondition|kondis|cardio|intervaller|uthållighet/.test(sessionLower);
+                    const isCardioSession = isRunning || isCycling || isSwimming || isRowing || isWalking || isStairs || isOtherCondition;
                     const comp = completions[key];
                     let detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
                     let cardioInstructionsText: string | null = null;
 
-                    // For cycling/swimming sessions: treat details as instructions (like running),
+                    // For all cardio/conditioning sessions: treat details as instructions
                     // and surface a single conditioning entry so the user can log manually or via GPS.
-                    if ((isCycling || isSwimming) && plan.session_name.trim() && detailParts.length > 0) {
+                    if (isCardioSession && plan.session_name.trim() && detailParts.length > 0) {
                       // Skip rewrite if the only line is already a logged conditioning entry for this session
                       const onlyLine = detailParts.length === 1 ? detailParts[0] : null;
                       const { name: onlyName } = onlyLine ? parseExerciseWeight(onlyLine) : { name: "" };
