@@ -60,13 +60,19 @@ const APP_GRADLE = path.join(ANDROID, "app", "build.gradle");
 if (fs.existsSync(APP_GRADLE)) {
   let g = fs.readFileSync(APP_GRADLE, "utf8");
   const APPLY_LINE = "apply plugin: 'com.google.gms.google-services'";
+  const CRASHLYTICS_LINE = "apply plugin: 'com.google.firebase.crashlytics'";
+  let modified = false;
   if (!g.includes(APPLY_LINE)) {
     g = g.trimEnd() + "\n\n" + APPLY_LINE + "\n";
-    fs.writeFileSync(APP_GRADLE, g, "utf8");
-    console.log("[patch-android-firebase] Applied google-services plugin in android/app/build.gradle");
-  } else {
-    console.log("[patch-android-firebase] google-services plugin already applied.");
+    modified = true;
+    console.log("[patch-android-firebase] Applied google-services plugin");
   }
+  if (!g.includes(CRASHLYTICS_LINE)) {
+    g = g.trimEnd() + "\n" + CRASHLYTICS_LINE + "\n";
+    modified = true;
+    console.log("[patch-android-firebase] Applied crashlytics plugin");
+  }
+  if (modified) fs.writeFileSync(APP_GRADLE, g, "utf8");
 }
 
 console.log("[patch-android-firebase] Done. Rebuild the APK with `cd android && ./gradlew assembleDebug`.");
