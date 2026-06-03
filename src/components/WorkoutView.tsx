@@ -4267,7 +4267,7 @@ const estimateCalories = (
                   </div>
                 </div>
                 {/* Action buttons row */}
-                <div className="grid grid-cols-3 gap-1.5 px-4 pb-2">
+                <div className="grid grid-cols-2 gap-1.5 px-4 pb-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -4288,6 +4288,18 @@ const estimateCalories = (
                     title="Dela pass">
                     <Share2 className="w-3.5 h-3.5" />
                     <span>Dela</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+                      setSaveWorkoutName(plan.session_name);
+                      setSaveWorkoutVisibility("private");
+                    }}
+                    className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                    title="Spara pass">
+                    <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
+                    <span>Spara       </span>
                   </button>
                   {(() => {
                     const konditionExercises = allExercises.filter(e => {
@@ -4331,24 +4343,13 @@ const estimateCalories = (
                     );
                   })()}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
-                      setSaveWorkoutName(plan.session_name);
-                      setSaveWorkoutVisibility("private");
-                    }}
-                    className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                    title="Spara pass">
-                    <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
-                    <span>Spara       </span>
-                  </button>
-                  <button
                     onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
-                    className="min-h-9 flex items-center justify-center gap-1.5 px-[5px] py-1 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                    className="col-span-2 min-h-9 flex items-center justify-center gap-1.5 px-[5px] py-1 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
                     title="Ta bort">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+
                 {expanded &&
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
 
