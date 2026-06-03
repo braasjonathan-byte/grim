@@ -6035,13 +6035,14 @@ const estimateCalories = (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
-                    setRenameInput(plan.session_name);
+                    setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+                    setSaveWorkoutName(plan.session_name);
+                    setSaveWorkoutVisibility("private");
                   }}
-                  className="relative z-20 min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                  title="Inställningar">
-                  <Settings className="w-3.5 h-3.5" />
-                  <span>Inställningar</span>
+                  className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                  title="Spara pass">
+                  <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
+                  <span>Spara       </span>
                 </button>
                 <button
                   onClick={(e) => {
@@ -6056,14 +6057,13 @@ const estimateCalories = (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
-                    setSaveWorkoutName(plan.session_name);
-                    setSaveWorkoutVisibility("private");
+                    setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                    setRenameInput(plan.session_name);
                   }}
-                  className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                  title="Spara pass">
-                  <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
-                  <span>Spara       </span>
+                  className="relative z-20 min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                  title="Inställningar">
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Inställningar</span>
                 </button>
                 {(() => {
                   const konditionExercises = allExercises.filter(e => {
