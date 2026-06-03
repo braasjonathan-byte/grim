@@ -58,6 +58,16 @@ for (const f of FEATURES) {
   }
 }
 
+const MLKIT_BARCODE_META = 'android:name="com.google.mlkit.vision.DEPENDENCIES"';
+if (!xml.includes(MLKIT_BARCODE_META)) {
+  xml = xml.replace(
+    /<application([^>]*)>/,
+    `<application$1>\n        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />`
+  );
+  changed = true;
+  console.log("[patch-android-manifest] Added ML Kit barcode scanner dependency metadata");
+}
+
 if (changed) {
   fs.writeFileSync(MANIFEST, xml, "utf8");
   console.log("[patch-android-manifest] AndroidManifest.xml updated.");
