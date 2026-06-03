@@ -6274,9 +6274,10 @@ const estimateCalories = (
                                 const isCondLine = (condLineWeight && (condLineWeight.includes("min") || condLineWeight.includes("/km") || /\d+\s*km/i.test(condLineWeight))) || isBareKonditionEx || hasCondLineLogged;
 
                                 if (isCondLine) {
-                                  const cTimeM = condLineWeight.match(/(\d+)\s*min/);
-                                  const cTempoM = condLineWeight.match(/([\d:.]+)\/km/);
-                                  const cDistM = condLineWeight.match(/([\d.,]+)\s*km(?!\/)/);
+                                  const cwStr = condLineWeight || "";
+                                  const cTimeM = cwStr.match(/(\d+)\s*min/);
+                                  const cTempoM = cwStr.match(/([\d:.]+)\/km/);
+                                  const cDistM = cwStr.match(/([\d.,]+)\s*km(?!\/)/);
                                   const pTime = cTimeM ? cTimeM[1] : "";
                                   const pDist = cDistM ? cDistM[1] : "";
                                   const pTempo = cTempoM ? cTempoM[1] : "";
