@@ -49,6 +49,15 @@ for (const p of PERMS) {
   }
 }
 
+for (const f of FEATURES) {
+  if (!xml.includes(`android:name="${f.name}"`)) {
+    const tag = `    <uses-feature android:name="${f.name}" android:required="${f.required}" />`;
+    xml = xml.replace(/<\/manifest>/, `${tag}\n</manifest>`);
+    changed = true;
+    console.log(`[patch-android-manifest] Added feature ${f.name}`);
+  }
+}
+
 if (changed) {
   fs.writeFileSync(MANIFEST, xml, "utf8");
   console.log("[patch-android-manifest] AndroidManifest.xml updated.");
