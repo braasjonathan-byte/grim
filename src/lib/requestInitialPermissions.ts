@@ -46,15 +46,9 @@ export async function requestInitialPermissions(): Promise<void> {
       console.warn("Geolocation permission request failed:", err);
     }
 
-    // Push notifications (FCM/APNs)
-    try {
-      if (Capacitor.isPluginAvailable("PushNotifications")) {
-        const { PushNotifications } = await import("@capacitor/push-notifications");
-        await PushNotifications.requestPermissions();
-      }
-    } catch (err) {
-      console.warn("Push permission request failed:", err);
-    }
+    // Do not request push permission during startup/login. On Android, some
+    // Capacitor PushNotifications permission paths can crash natively before JS
+    // can catch the failure. Native push is requested only from explicit flows.
   } else {
     // Web / PWA — only notifications and geolocation can be pre-prompted.
     // Camera/photo access is requested by the browser on first use.

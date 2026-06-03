@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
@@ -59,6 +60,7 @@ export function usePushNotifications(userId: string | null) {
 
   const subscribe = useCallback(async () => {
     if (!userId || subscribedRef.current) return;
+    if (Capacitor.isNativePlatform()) return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
     if (Notification.permission === "denied") return;
 
