@@ -29,6 +29,14 @@ const PERMS = [
   "android.permission.BLUETOOTH_CONNECT",
   "android.permission.BLUETOOTH",
   "android.permission.BLUETOOTH_ADMIN",
+  "android.permission.CAMERA",
+];
+
+// Features (non-required so the app can still install on devices without them)
+const FEATURES = [
+  { name: "android.hardware.camera", required: false },
+  { name: "android.hardware.camera.autofocus", required: false },
+  { name: "android.hardware.bluetooth_le", required: false },
 ];
 
 let changed = false;
