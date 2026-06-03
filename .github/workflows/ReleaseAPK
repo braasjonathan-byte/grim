@@ -1,0 +1,53 @@
+      - name: Configure signing in build.gradle
+        if: steps.keystore.outputs.keystore_present == 'true'
+        env:
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          python3 <<'PY'
+          import os
+          import pathlib
+          import re
+
+          p = pathlib.Path("android/app/build.gradle")
+          s = p.read_text()
+
+          if "release.keystore" in s:
+              print("Signing config already present")
+          else:
+              signing = """
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "%s"
+            keyAlias "%s"
+            keyPassword "%s"
+        }
+    }
+""" % (
+                os.environ["KEYSTORE_PASSWORD"],
+                os.environ["KEY_ALIAS"],
+                os.environ["KEY_PASSWORD"]
+              )
+
+              s = re.sub(
+                  r'(android\s*\{)',
+                  r'\1\n' + signing,
+                  s,
+                  count=1
+              )
+
+              s = re.sub(
+                  r'buildTypes\s*\{\s*release\s*\{',
+                  '''buildTypes {
+        release {
+            signingConfig signingConfigs.release''',
+                  s,
+                  count=1
+              )
+
+              p.write_text(s)
+              print("Signing config injected")
+
+          PY
