@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, ArrowLeft, ShieldQuestion, Fingerprint } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import grimIcon from "@/assets/grim-icon.webp";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -82,21 +83,20 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     }
   }, []);
 
-  // Sign out on tab/browser close if "remember me" is off
+  // Sign out on real browser close if "remember me" is off.
+  // Do not use visibilitychange here: native Android password managers / OS
+  // permission sheets can hide the WebView during login and would otherwise
+  // immediately clear the fresh session.
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
     const handleUnload = () => {
       if (localStorage.getItem("grim_remember_me") !== "true") {
         void supabase.auth.signOut({ scope: "local" });
       }
     };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") handleUnload();
-    };
     window.addEventListener("beforeunload", handleUnload);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
