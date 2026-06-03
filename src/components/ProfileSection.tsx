@@ -228,7 +228,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             )}
           </div>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handlePickAvatar}
             disabled={uploading}
             className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40"
           >
@@ -245,6 +245,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             onChange={handleFileSelect}
             className="hidden"
           />
+
         </div>
         <div className="text-xs text-muted-foreground">
           <p>Klicka på kameran för att ladda upp.</p>
