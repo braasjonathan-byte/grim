@@ -6264,14 +6264,20 @@ const estimateCalories = (
                                   );
                                 }
 
-                                // Check if this is a conditioning line (Name — X min / X km)
+                                // Check if this is a conditioning line (Name — X min / X km),
+                                // OR a bare kondition exercise without data so users can still edit/add data.
                                 const { name: condLineName, weight: condLineWeight } = parseExerciseWeight(line);
-                                const isCondLine = condLineWeight && (condLineWeight.includes("min") || condLineWeight.includes("/km") || /\d+\s*km/i.test(condLineWeight));
+                                const condLineNameLower = condLineName.trim().toLowerCase();
+                                const isBareKonditionEx = !!condLineNameLower && allExercises.some(e => e.category === "kondition" && e.name && e.name.toLowerCase() === condLineNameLower);
+                                const condLineKey = `__cond__${condLineName}`;
+                                const hasCondLineLogged = !!(completions[key]?.logged_weights as any)?.[condLineKey];
+                                const isCondLine = (condLineWeight && (condLineWeight.includes("min") || condLineWeight.includes("/km") || /\d+\s*km/i.test(condLineWeight))) || isBareKonditionEx || hasCondLineLogged;
 
                                 if (isCondLine) {
-                                  const cTimeM = condLineWeight.match(/(\d+)\s*min/);
-                                  const cTempoM = condLineWeight.match(/([\d:.]+)\/km/);
-                                  const cDistM = condLineWeight.match(/([\d.,]+)\s*km(?!\/)/);
+                                  const cwStr = condLineWeight || "";
+                                  const cTimeM = cwStr.match(/(\d+)\s*min/);
+                                  const cTempoM = cwStr.match(/([\d:.]+)\/km/);
+                                  const cDistM = cwStr.match(/([\d.,]+)\s*km(?!\/)/);
                                   const pTime = cTimeM ? cTimeM[1] : "";
                                   const pDist = cDistM ? cDistM[1] : "";
                                   const pTempo = cTempoM ? cTempoM[1] : "";
@@ -6370,12 +6376,17 @@ const estimateCalories = (
                           ) : (() => {
                             // Single line - check conditioning format first
                             const { name: sCondName, weight: sCondWeight } = parseExerciseWeight(plan.details);
-                            const isSingleCond = sCondWeight && (sCondWeight.includes("min") || sCondWeight.includes("/km") || /\d+\s*km/i.test(sCondWeight));
+                            const sCondNameLower = sCondName.trim().toLowerCase();
+                            const sIsBareKonditionEx = !!sCondNameLower && allExercises.some(e => e.category === "kondition" && e.name && e.name.toLowerCase() === sCondNameLower);
+                            const sCondKeyProbe = `__cond__${sCondName}`;
+                            const sHasCondLogged = !!(completions[key]?.logged_weights as any)?.[sCondKeyProbe];
+                            const isSingleCond = (sCondWeight && (sCondWeight.includes("min") || sCondWeight.includes("/km") || /\d+\s*km/i.test(sCondWeight))) || sIsBareKonditionEx || sHasCondLogged;
 
                             if (isSingleCond) {
-                              const scTimeM = sCondWeight.match(/(\d+)\s*min/);
-                              const scTempoM = sCondWeight.match(/([\d:.]+)\/km/);
-                              const scDistM = sCondWeight.match(/([\d.,]+)\s*km(?!\/)/);
+                              const swStr = sCondWeight || "";
+                              const scTimeM = swStr.match(/(\d+)\s*min/);
+                              const scTempoM = swStr.match(/([\d:.]+)\/km/);
+                              const scDistM = swStr.match(/([\d.,]+)\s*km(?!\/)/);
                               const spTime = scTimeM ? scTimeM[1] : "";
                               const spDist = scDistM ? scDistM[1] : "";
                               const spTempo = scTempoM ? scTempoM[1] : "";
