@@ -37,15 +37,21 @@ const PROJECT_GRADLE = path.join(ANDROID, "build.gradle");
 if (fs.existsSync(PROJECT_GRADLE)) {
   let g = fs.readFileSync(PROJECT_GRADLE, "utf8");
   if (!g.includes("com.google.gms:google-services")) {
-    // Insert inside the existing dependencies { } block under buildscript
     g = g.replace(
       /(buildscript\s*\{[\s\S]*?dependencies\s*\{)/,
-      `$1\n        classpath 'com.google.gms:google-services:4.4.2'`
+      `$1\n        classpath 'com.google.gms:google-services:4.4.2'\n        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.2'`
     );
     fs.writeFileSync(PROJECT_GRADLE, g, "utf8");
-    console.log("[patch-android-firebase] Added google-services classpath to android/build.gradle");
+    console.log("[patch-android-firebase] Added google-services + crashlytics classpath to android/build.gradle");
+  } else if (!g.includes("firebase-crashlytics-gradle")) {
+    g = g.replace(
+      /(classpath 'com\.google\.gms:google-services:[^']+')/,
+      `$1\n        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.2'`
+    );
+    fs.writeFileSync(PROJECT_GRADLE, g, "utf8");
+    console.log("[patch-android-firebase] Added crashlytics-gradle classpath to android/build.gradle");
   } else {
-    console.log("[patch-android-firebase] google-services classpath already present.");
+    console.log("[patch-android-firebase] classpaths already present.");
   }
 }
 
