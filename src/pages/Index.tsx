@@ -22,6 +22,8 @@ import TourPrompt from "@/components/TourPrompt";
 import PageTransition from "@/components/PageTransition";
 import { hapticLight } from "@/lib/haptics";
 import { ensureUnlocked } from "@/lib/biometric";
+import { Capacitor } from "@capacitor/core";
+
 
 // Lazy-loaded tab components for code splitting
 const WorkoutView = lazy(() => import("@/components/WorkoutView"));
