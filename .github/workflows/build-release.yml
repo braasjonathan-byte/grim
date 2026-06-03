@@ -32,6 +32,9 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
 
+    - name: Decode Keystore
+      run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/min-app-nyckel.jks
+
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
@@ -39,6 +42,10 @@ jobs:
       run: |
         cd android
         ./gradlew assembleRelease
+      env:
+        RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
