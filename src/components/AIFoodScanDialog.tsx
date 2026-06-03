@@ -41,12 +41,21 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
 
   useEffect(() => {
     if (!open) { stopCam(); setPhoto(null); setResult(null); setMode("dish"); return; }
-    startCam();
+    // On native (Capacitor) we use the OS camera via @capacitor/camera instead of getUserMedia.
+    if (!Capacitor.isNativePlatform()) startCam();
     return () => stopCam();
     // eslint-disable-next-line
   }, [open]);
 
+  async function pickNative(source: "camera" | "gallery") {
+    const picked = await pickImage({ source, quality: 80 });
+    if (!picked) return;
+    setPhoto(picked.dataUrl);
+    analyze(picked.dataUrl);
+  }
+
   async function startCam() {
+
     try {
       let deviceId: string | undefined;
       try {
