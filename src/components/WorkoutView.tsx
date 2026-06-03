@@ -6222,9 +6222,20 @@ const estimateCalories = (
                             </div>
                           )}
                           {cardioInstructionsText && (() => {
-                            const condName = plan.session_name.trim();
+                            // Resolve the actual conditioning name dynamically so we hit the
+                            // same __cond__<name> key that DayGpsRecorder used when saving
+                            // (e.g. on a "Vila" rest day where a "Löpning" pass was registered).
+                            const lw = (completions[key]?.logged_weights || {}) as Record<string, any>;
+                            const condKeys = Object.keys(lw).filter(k => k.startsWith("__cond__") && !k.startsWith("__cond_done__"));
+                            let condName = plan.session_name.trim();
+                            if (condKeys.length > 0) {
+                              condName = condKeys[0].replace(/^__cond__/, "");
+                            } else if (detailParts.length > 0) {
+                              const { name: firstName } = parseExerciseWeight(detailParts[0]);
+                              if (firstName.trim()) condName = firstName.trim();
+                            }
                             const cKey = `__cond__${condName}`;
-                            const cRaw = (completions[key]?.logged_weights as Record<string, any>)?.[cKey];
+                            const cRaw = lw[cKey];
                             let cSaved: Record<string, any> | null = null;
                             if (cRaw) { try { const p = typeof cRaw === "string" ? JSON.parse(cRaw) : cRaw; if (p && typeof p === "object") cSaved = p; } catch {} }
                             const cHasSaved = !!(cSaved && (cSaved.time || cSaved.dist || cSaved.tempo || cSaved.pulse));
@@ -6251,7 +6262,22 @@ const estimateCalories = (
                                   onMoveUp={() => {}}
                                   onMoveDown={() => {}}
                                   onShowInfo={() => setExerciseInfoState({ name: condName })}
-                                  onDelete={() => {}}
+                                  onDelete={async () => {
+                                    // Clear the saved cardio payload (incl. GPS route)
+                                    await deleteCondWeightLog(plan.week, plan.day, cKey);
+                                    // Also remove the matching auto-added line from plan.details
+                                    const lines = (plan.details || "").split(/\n/).map(l => l.trim()).filter(Boolean);
+                                    const newLines = lines.filter(l => {
+                                      const { name: ln } = parseExerciseWeight(l);
+                                      return ln.trim().toLowerCase() !== condName.toLowerCase();
+                                    });
+                                    if (newLines.length !== lines.length) {
+                                      const newDetails = newLines.join("\n");
+                                      await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                    }
+                                    triggerSave();
+                                  }}
                                   onSave={async (data) => {
                                     await updateCompletionWeights(plan.week, plan.day, (existing) => {
                                       return { ...existing, [cKey]: JSON.stringify(data) };
