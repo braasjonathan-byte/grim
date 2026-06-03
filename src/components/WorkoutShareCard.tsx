@@ -364,6 +364,24 @@ const WorkoutShareCard = ({
           )}
         </div>
 
+        {/* Photo picker */}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={handlePickPhoto}
+            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-accent transition-colors flex items-center gap-1.5">
+            <ImageIcon className="w-3.5 h-3.5" />
+            {userPhoto ? "Byt foto" : "Lägg till foto"}
+          </button>
+          {userPhoto && (
+            <button
+              onClick={() => setUserPhoto(null)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/20 transition-colors flex items-center gap-1.5">
+              <Trash2 className="w-3.5 h-3.5" /> Ta bort
+            </button>
+          )}
+        </div>
+
+
         {/* The card */}
         <div
           ref={cardRef}
