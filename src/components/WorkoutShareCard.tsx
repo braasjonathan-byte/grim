@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
-import { X, Download, Share2, Palette, Send, CalendarIcon, Copy } from "lucide-react";
+import { X, Download, Share2, Palette, Send, CalendarIcon, Copy, Image as ImageIcon, Trash2 } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
+import { pickImage } from "@/lib/pickImage";
 import WorkoutPostThread from "./WorkoutPostThread";
+
 
 type Theme = "colorful" | "light" | "dark";
 
