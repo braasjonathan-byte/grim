@@ -10,6 +10,7 @@ const config: CapacitorConfig = {
       '@capacitor/screen-orientation',
       '@capacitor/geolocation',
       '@capacitor/push-notifications',
+      '@capacitor/status-bar',
       'capacitor-native-settings',
     ],
   },
