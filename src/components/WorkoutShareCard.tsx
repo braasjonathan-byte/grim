@@ -260,8 +260,10 @@ const WorkoutShareCard = ({
         exercises: svgExercises,
         isRunning,
         logoBase64,
-        theme: t
+        theme: t,
+        userPhotoBase64: userPhoto || undefined,
       });
+
 
       // SVG → Canvas → PNG
       const scale = 3;
