@@ -205,7 +205,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   }
 
   return (
-    <div className="space-y-2 bg-background border border-border rounded-md p-1 w-fit max-w-full">
+    <div className={`space-y-2 bg-background border border-border rounded-md p-1 max-w-full ${gps.isTracking ? "w-full" : "w-fit"}`}>
       <div className="flex items-center gap-2 flex-wrap">
         {!gps.isTracking ? (
           <button
