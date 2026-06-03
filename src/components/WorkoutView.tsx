@@ -420,9 +420,11 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setPickerOpen(true); }}
-        className="min-h-9 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+        className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+        title="Starta GPS-inspelning"
       >
-        <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
+        <MapPin className="w-3.5 h-3.5" />
+        <span>Starta GPS-inspelning</span>
       </button>
       {pickerOpen && createPortal(
         <div
