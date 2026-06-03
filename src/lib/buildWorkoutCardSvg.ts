@@ -27,7 +27,10 @@ export interface SvgCardInput {
   isRunning: boolean;
   logoBase64: string;
   theme: SvgCardTheme;
+  /** Optional user-supplied background photo (base64 data URL). */
+  userPhotoBase64?: string;
 }
+
 
 /* ── helpers ─────────────────────────────────────── */
 
