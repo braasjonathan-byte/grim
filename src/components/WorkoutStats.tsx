@@ -556,13 +556,15 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     for (const c of filteredCompletions) {
       if (!c.done || !hasExercise(c)) continue;
       const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
-      const cat = getCardioCategory(planText);
-      if (cat && cardioVis[cat] === false) continue;
-      total += getWorkoutDistanceKm({
+      const breakdown = getWorkoutDistanceByCategory({
         loggedDistanceKm: c.logged_distance_km,
         loggedWeights: c.logged_weights,
         planDetails: planText,
       });
+      for (const [cat, km] of Object.entries(breakdown)) {
+        if (cardioVis[cat as keyof typeof cardioVis] === false) continue;
+        total += km || 0;
+      }
     }
     return Math.round(total * 100) / 100;
   }, [filteredCompletions, planDetailsMap, plansWithExercises, cardioVis]);
@@ -572,16 +574,26 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     for (const c of filteredCompletions) {
       if (!c.done || !hasExercise(c)) continue;
       const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
-      const cat = getCardioCategory(planText);
-      if (!cat) continue;
-      if (cardioVis[cat] === false) continue;
-      const km = getWorkoutDistanceKm({
+      const breakdown = getWorkoutDistanceByCategory({
         loggedDistanceKm: c.logged_distance_km,
         loggedWeights: c.logged_weights,
         planDetails: planText,
       });
-      const prev = map.get(cat) ?? { km: 0, passes: 0 };
-      map.set(cat, { km: prev.km + km, passes: prev.passes + 1 });
+      const cats = Object.keys(breakdown) as CardioCategory[];
+      if (cats.length === 0) {
+        // No distance recorded — still count the pass against its primary category if any
+        const cat = getCardioCategory(planText);
+        if (!cat || cardioVis[cat] === false) continue;
+        const prev = map.get(cat) ?? { km: 0, passes: 0 };
+        map.set(cat, { km: prev.km, passes: prev.passes + 1 });
+        continue;
+      }
+      for (const cat of cats) {
+        if (cardioVis[cat] === false) continue;
+        const km = breakdown[cat] || 0;
+        const prev = map.get(cat) ?? { km: 0, passes: 0 };
+        map.set(cat, { km: prev.km + km, passes: prev.passes + 1 });
+      }
     }
     return CARDIO_CATEGORIES
       .filter(c => cardioVis[c.key] !== false)
