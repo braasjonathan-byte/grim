@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2, Settings, Hourglass, TimerReset } from "lucide-react";
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2, Settings, Hourglass, TimerReset, Heart, HeartOff } from "lucide-react";
 import { hapticAlarm } from "@/lib/haptics";
+import { useHeartRate } from "@/hooks/useHeartRate";
 
 type Mode = "stopwatch" | "countdown";
 
@@ -70,6 +71,7 @@ const MiniTimer = () => {
   });
   const intervalRef = useRef<number | null>(null);
   const finishedRef = useRef(false);
+  const hr = useHeartRate();
 
   useEffect(() => {
     localStorage.setItem(MODE_KEY, mode);
@@ -317,6 +319,14 @@ const MiniTimer = () => {
         <span className="text-[10px] font-semibold uppercase text-muted-foreground">
           {mode === "countdown" ? label : "Stoppur"}
         </span>
+        {hr.connected && (
+          <span className="ml-auto flex items-center gap-1 text-destructive">
+            <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
+            <span className="font-mono text-sm font-bold tabular-nums">
+              {hr.bpm ?? "--"}
+            </span>
+          </span>
+        )}
         <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
     );
@@ -384,6 +394,37 @@ const MiniTimer = () => {
             </button>
           </div>
         </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hr.connected) hr.disconnect();
+            else hr.connect();
+          }}
+          disabled={hr.connecting}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold border ${
+            hr.connected
+              ? "bg-destructive/10 text-destructive border-destructive"
+              : "bg-secondary text-foreground border-border"
+          }`}
+        >
+          {hr.connected ? (
+            <>
+              <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
+              <span className="font-mono">{hr.bpm ?? "--"} bpm</span>
+              <span className="text-muted-foreground font-normal">· {hr.deviceName}</span>
+              <HeartOff className="w-3 h-3 ml-1" />
+            </>
+          ) : (
+            <>
+              <Heart className="w-3.5 h-3.5" />
+              {hr.connecting ? "Söker pulsmätare…" : "Anslut pulsmätare"}
+            </>
+          )}
+        </button>
+        {hr.error && !hr.connected && (
+          <p className="text-[10px] text-destructive font-semibold">{hr.error}</p>
+        )}
 
         {settingsOpen && <SettingsPanel />}
       </div>

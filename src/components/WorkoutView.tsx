@@ -4,8 +4,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
+import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
 import { Capacitor } from "@capacitor/core";
 import RouteMap from "@/components/RouteMap";
@@ -126,6 +127,7 @@ interface CustomExercise {
 // Inline conditioning editing card (green, open by default)
 const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean }) => {
   const gps = useGpsTracker();
+  const hr = useHeartRate();
   const didAutoStart = useRef(false);
   useEffect(() => {
     if (autoStart && !didAutoStart.current && !gps.isTracking) {
@@ -329,7 +331,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
             >
               <Minimize2 className="w-5 h-5 text-foreground" />
             </button>
-            <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-3 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
+            <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-4 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
               <div className="flex flex-col items-center">
                 <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
                 <span className="font-mono font-bold text-base text-foreground">{fmtTime(gps.elapsedSec)}</span>
@@ -342,7 +344,28 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
                 <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tempo</span>
                 <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
               </div>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (hr.connected) hr.disconnect(); else hr.connect(); }}
+                disabled={hr.connecting}
+                className="flex flex-col items-center"
+                aria-label={hr.connected ? "Koppla från pulsmätare" : "Anslut pulsmätare"}
+              >
+                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1">
+                  <Heart className={`w-2.5 h-2.5 ${hr.connected ? "text-destructive fill-current" : ""}`} /> Puls
+                </span>
+                <span className={`font-mono font-bold text-base ${hr.connected ? "text-destructive" : "text-muted-foreground"}`}>
+                  {hr.connected ? (hr.bpm ?? "--") : (hr.connecting ? "…" : "anslut")}
+                </span>
+              </button>
             </div>
+            {hr.connected && hr.bpm != null && (
+              <div className="absolute top-24 right-3 z-[1000] flex items-center gap-2 bg-destructive text-destructive-foreground rounded-md px-3 py-2 shadow-lg">
+                <Heart className="w-6 h-6 fill-current animate-pulse" />
+                <span className="font-mono font-black text-2xl tabular-nums">{hr.bpm}</span>
+                <span className="text-[10px] font-bold uppercase opacity-80">bpm</span>
+              </div>
+            )}
             <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center gap-2">
               <button
                 type="button"
