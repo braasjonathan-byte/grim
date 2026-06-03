@@ -2864,7 +2864,8 @@ const estimateCalories = (
     triggerSave();
   };
 
-  const parseExerciseWeight = (line: string): {name: string;weight: string | null;} => {
+  const parseExerciseWeight = (line: string | null | undefined): {name: string;weight: string | null;} => {
+    if (!line) return { name: "", weight: null };
     const match = line.match(/^(.+?)\s*—\s*(.+)$/);
     if (match) return { name: match[1].trim(), weight: match[2].trim() };
     return { name: line.trim(), weight: null };
