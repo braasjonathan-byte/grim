@@ -6554,6 +6554,8 @@ const estimateCalories = (
                               })}
                             </ul>
                           ) : (() => {
+                            // Hide the default single-line render when cardio instructions block has already rendered the entry.
+                            if (cardioInstructionsText) return null;
                             // Single line - check conditioning format first
                             const { name: sCondName, weight: sCondWeight } = parseExerciseWeight(plan.details);
                             const sCondNameLower = sCondName.trim().toLowerCase();
