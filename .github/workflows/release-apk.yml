@@ -92,19 +92,19 @@ jobs:
         run: npx cap sync android
 
       # -------------------------
+      # Patch Firebase / FCM after the clean Android project is generated
+      # (copying google-services.json alone is not enough; Gradle must also
+      # apply the Google Services plugin or native push can crash at startup)
+      # -------------------------
+      - name: Patch Firebase / FCM
+        run: node scripts/patch-android-firebase.cjs
+
+      # -------------------------
       # Patch AndroidManifest with required permissions
       # (location, notifications, bluetooth, camera, mlkit metadata)
       # -------------------------
       - name: Patch AndroidManifest
         run: node scripts/patch-android-manifest.cjs
-
-      # -------------------------
-      # Safety check (prevents Cordova crash)
-      # -------------------------
-      - name: Remove Cordova bridge if present
-        run: |
-          rm -rf android/capacitor-cordova-android-plugins || true
-
 
       # -------------------------
       # Keystore
