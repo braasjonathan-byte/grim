@@ -11,8 +11,10 @@ const config: CapacitorConfig = {
       '@capacitor/geolocation',
       '@capacitor/push-notifications',
       '@capacitor/status-bar',
+      '@capacitor/camera',
       'capacitor-native-settings',
     ],
+
   },
   ios: {
     // Lock to portrait on iOS
