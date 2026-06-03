@@ -471,18 +471,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       if (c.skipped) b.skipped++;
       if (c.done && hasExercise(c)) {
         const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
-        const cat = getCardioCategory(planText);
-        const hidden = cat ? cardioVis[cat] === false : false;
-        if (!hidden) {
-          const distanceKm = getWorkoutDistanceKm({
-            loggedDistanceKm: c.logged_distance_km,
-            loggedWeights: c.logged_weights,
-            planDetails: planText,
-          });
-          if (distanceKm > 0) {
-            b.distanceKm += distanceKm;
-          }
+        const breakdown = getWorkoutDistanceByCategory({
+          loggedDistanceKm: c.logged_distance_km,
+          loggedWeights: c.logged_weights,
+          planDetails: planText,
+        });
+        let visibleKm = 0;
+        for (const [cat, km] of Object.entries(breakdown)) {
+          if (cardioVis[cat as keyof typeof cardioVis] === false) continue;
+          visibleKm += km || 0;
         }
+        if (visibleKm > 0) b.distanceKm += visibleKm;
       }
     }
 
