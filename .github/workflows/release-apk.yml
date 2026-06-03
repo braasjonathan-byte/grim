@@ -1,10 +1,10 @@
-name: Build Release APK
+name: Capacitor Android Build (Production Stable)
 
 on:
   workflow_dispatch:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -12,180 +12,136 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-      VITE_APK_UPDATE_URL: "https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk"
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      # -------------------------
+      # Checkout
+      # -------------------------
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # -------------------------
+      # Node
+      # -------------------------
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
-        id: setup-java
+      # -------------------------
+      # Java
+      # -------------------------
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: 21
 
-      - uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
-          packages: 'tools platform-tools build-tools;34.0.0 platforms;android-34'
-
-      - name: Force JAVA_HOME to JDK 21
-        run: |
-          echo "JAVA_HOME=${{ steps.setup-java.outputs.path }}" >> $GITHUB_ENV
-          echo "ORG_GRADLE_PROJECT_org.gradle.java.home=${{ steps.setup-java.outputs.path }}" >> $GITHUB_ENV
-
+      # -------------------------
+      # Clean install (IMPORTANT)
+      # -------------------------
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci
 
+      # -------------------------
+      # Build web
+      # -------------------------
       - name: Build web
         run: npm run build
 
-      - name: Add Android platform (if missing)
+      # -------------------------
+      # FORCE CLEAN (removes ALL Cordova remnants)
+      # -------------------------
+      - name: Clean everything
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+          rm -rf android
+          rm -rf node_modules/.cache
 
-      - name: Copy google-services.json into Android app
+      # -------------------------
+      # Install ONLY Capacitor (no Cordova dependency)
+      # -------------------------
+      - name: Install Capacitor core
         run: |
-          if [ -f "google-services.json" ]; then
-            mkdir -p android/app
-            cp google-services.json android/app/google-services.json
-            echo "✅ google-services.json copied to android/app/"
-          else
-            echo "::warning::google-services.json not found — native push will not work"
-          fi
+          npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Sync Capacitor
+      # -------------------------
+      # Create Android project clean
+      # -------------------------
+      - name: Create Android platform
+        run: npx cap add android
+
+      # -------------------------
+      # Sync Capacitor (ONLY ONCE, CLEAN STATE)
+      # -------------------------
+      - name: Capacitor sync
         run: npx cap sync android
 
-      - name: Patch AndroidManifest.xml with required permissions
+      # -------------------------
+      # Safety check (prevents Cordova crash)
+      # -------------------------
+      - name: Remove Cordova bridge if present
         run: |
-          MANIFEST=android/app/src/main/AndroidManifest.xml
-          python3 <<'PY'
-          import re, pathlib
-          p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
-          s = p.read_text()
-          needed = [
-              'android.permission.ACCESS_FINE_LOCATION',
-              'android.permission.ACCESS_COARSE_LOCATION',
-              'android.permission.ACCESS_BACKGROUND_LOCATION',
-              'android.permission.POST_NOTIFICATIONS',
-              'android.permission.INTERNET',
-              'android.permission.FOREGROUND_SERVICE',
-              'android.permission.FOREGROUND_SERVICE_LOCATION',
-              'android.permission.WAKE_LOCK',
-          ]
-          insert = ""
-          for perm in needed:
-              if perm not in s:
-                  insert += f'    <uses-permission android:name="{perm}" />\n'
-          if insert:
-              s = re.sub(r'(</manifest>)', insert + r'\1', s, count=1)
-              p.write_text(s)
-              print("✅ Patched manifest with:", insert)
-          else:
-              print("✅ All required permissions already present")
-          PY
+          rm -rf android/capacitor-cordova-android-plugins || true
 
-      - name: Decode keystore (if provided)
-        id: keystore
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      # -------------------------
+      # Keystore
+      # -------------------------
+      - name: Decode keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
-          echo "keystore_present=true" >> $GITHUB_OUTPUT
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
 
-      - name: Configure signing in build.gradle
-        if: steps.keystore.outputs.keystore_present == 'true'
-        env:
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      # -------------------------
+      # Signing (clean Gradle properties method)
+      # -------------------------
+      - name: Setup signing
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         run: |
-          python3 <<'PY'
-          import os, pathlib, re
-          p = pathlib.Path("android/app/build.gradle")
-          s = p.read_text()
-          if "signingConfigs" in s and "release {" in s and "release.keystore" in s:
-              print("Signing config already present")
-          else:
-              signing = f'''
-                  signingConfigs {{
-                      release {{
-                          storeFile file("release.keystore")
-                          storePassword "{os.environ['KEYSTORE_PASSWORD']}"
-                          keyAlias "{os.environ['KEY_ALIAS']}"
-                          keyPassword "{os.environ['KEY_PASSWORD']}"
-                      }}
-                  }}
-              '''
-              s = re.sub(r'(android\s*\{)', r'\1' + signing, s, count=1)
-              s = re.sub(
-                  r'buildTypes\s*\{\s*release\s*\{',
-                  'buildTypes {\n        release {\n            signingConfig signingConfigs.release',
-                  s, count=1
-              )
-              p.write_text(s)
-              print("✅ Signing config injected")
-          PY
+          cat >> android/gradle.properties <<EOF
+RELEASE_STORE_FILE=release.keystore
+RELEASE_STORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+RELEASE_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
+RELEASE_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
+EOF
 
+      # -------------------------
+      # Make gradlew executable
+      # -------------------------
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      # -------------------------
+      # Build APK
+      # -------------------------
       - name: Build release APK
-        id: apk
         working-directory: android
-        run: |
-          ./gradlew assembleRelease --stacktrace --warning-mode all -Dorg.gradle.java.home="$JAVA_HOME"
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Locate release APK
-        id: locate
+      # -------------------------
+      # Find APK
+      # -------------------------
+      - name: Locate APK
+        id: apk
         run: |
-          SIGNED=android/app/build/outputs/apk/release/app-release.apk
-          UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
-          if [ -f "$SIGNED" ]; then
-            echo "apk_path=$SIGNED" >> $GITHUB_OUTPUT
-            echo "apk_name=app-release.apk" >> $GITHUB_OUTPUT
-          elif [ -f "$UNSIGNED" ]; then
-            echo "apk_path=$UNSIGNED" >> $GITHUB_OUTPUT
-            echo "apk_name=app-release-unsigned.apk" >> $GITHUB_OUTPUT
-          else
-            echo "::error::No release APK found"
-            ls -R android/app/build/outputs/apk || true
-            exit 1
-          fi
+          APK=$(find android -name "*release*.apk" | head -n 1)
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
 
-      - name: Collect Gradle reports
-        if: always()
-        run: |
-          mkdir -p _reports
-          find android -path '*/build/reports' -type d -exec cp -r {} _reports/ \; 2>/dev/null || true
-
-      - uses: actions/upload-artifact@v4
-        if: always()
+      # -------------------------
+      # Upload artifact
+      # -------------------------
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          name: gradle-reports-release
-          path: _reports
-          if-no-files-found: ignore
+          name: app-release-apk
+          path: ${{ steps.apk.outputs.apk_path }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: grim-release-apk
-          path: ${{ steps.locate.outputs.apk_path }}
-
-      - name: Publish GitHub Release with APK
-        if: success()
+      # -------------------------
+      # GitHub Release
+      # -------------------------
+      - name: Create Release
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: release-${{ github.run_number }}
-          name: Grim release ${{ github.run_number }}
-          files: ${{ steps.locate.outputs.apk_path }}
-          make_latest: "true"
+          files: ${{ steps.apk.outputs.apk_path }}
           generate_release_notes: true
