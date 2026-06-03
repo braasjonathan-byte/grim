@@ -6065,6 +6065,9 @@ const estimateCalories = (
                   <Settings className="w-3.5 h-3.5" />
                   <span>Inställningar</span>
                 </button>
+              </div>
+              {expanded &&
+              <div className="px-4 pb-8 space-y-3 border-t border-border pt-3">
                 {(() => {
                   const konditionExercises = allExercises.filter(e => {
                     if (e.category !== "kondition" || !e.name) return false;
@@ -6106,9 +6109,7 @@ const estimateCalories = (
                     />
                   );
                 })()}
-              </div>
-              {expanded &&
-              <div className="px-4 pb-8 space-y-3 border-t border-border pt-3">
+
 
 
 
