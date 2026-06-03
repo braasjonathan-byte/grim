@@ -157,9 +157,17 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     if (!file.type.startsWith("image/")) return;
     setCropFile(file);
     setCropOpen(true);
-    // Reset input so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const handlePickAvatar = async () => {
+    const picked = await pickImage({ source: "prompt" });
+    if (!picked) return;
+    if (!picked.file.type.startsWith("image/")) return;
+    setCropFile(picked.file);
+    setCropOpen(true);
+  };
+
 
   const handleCropSave = async (blob: Blob) => {
     setUploading(true);
