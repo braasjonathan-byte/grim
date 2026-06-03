@@ -33,7 +33,14 @@ jobs:
       run: npx cap sync android
 
     - name: Decode Keystore
-      run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/min-app-nyckel.jks
+      env:
+        KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      run: |
+        if [ -z "$KEYSTORE_BASE64" ]; then
+          echo "Error: ANDROID_KEYSTORE_BASE64 secret is not set!"
+          exit 1
+        fi
+        echo "$KEYSTORE_BASE64" | base64 --decode > android/app/min-app-nyckel.jks
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
