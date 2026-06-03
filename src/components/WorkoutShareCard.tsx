@@ -378,6 +378,32 @@ const WorkoutShareCard = ({
             position: "relative"
           }}>
 
+          {userPhoto && (
+            <>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundImage: `url(${userPhoto})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  opacity: 0.45,
+                  pointerEvents: "none",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.35)",
+                  pointerEvents: "none",
+                }}
+              />
+            </>
+          )}
+          <div style={{ position: "relative", zIndex: 1 }}>
+
+
           {/* Header with logo */}
           <div style={{ marginBottom: "18px", display: "table", width: "100%" }}>
             <div style={{ display: "table-cell", width: "60px", verticalAlign: "middle" }}>
