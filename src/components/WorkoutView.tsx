@@ -4241,13 +4241,20 @@ const estimateCalories = (
                       const { name, weight } = parseExerciseWeight(line);
                       
                       // Check if this is a conditioning exercise (format includes "min", "/km", or "km")
-                      const isCondFormat = weight && (weight.includes("min") || weight.includes("/km") || /\d+\s*km/i.test(weight));
+                      // OR if the bare exercise name matches a known kondition exercise (so users
+                      // can edit/add data even when the line was added without any data).
+                      const nameLower = name.trim().toLowerCase();
+                      const isKonditionEx = !!nameLower && allExercises.some(e => e.category === "kondition" && e.name && e.name.toLowerCase() === nameLower);
+                      const condKeyInlineProbe = `__cond__${name}`;
+                      const hasCondLogged = !!(completions[key]?.logged_weights as any)?.[condKeyInlineProbe];
+                      const isCondFormat = (weight && (weight.includes("min") || weight.includes("/km") || /\d+\s*km/i.test(weight))) || isKonditionEx || hasCondLogged;
                       
                       if (isCondFormat) {
-                        const condTimeM = weight.match(/(\d+)\s*min/);
-                        const condTempoM = weight.match(/([\d:.]+)\/km/);
-                        const condDistM = weight.match(/([\d.,]+)\s*km(?!\/)/);
-                        const condPulseM = weight.match(/(\d+)\s*bpm/);
+                        const weightStr = weight || "";
+                        const condTimeM = weightStr.match(/(\d+)\s*min/);
+                        const condTempoM = weightStr.match(/([\d:.]+)\/km/);
+                        const condDistM = weightStr.match(/([\d.,]+)\s*km(?!\/)/);
+                        const condPulseM = weightStr.match(/(\d+)\s*bpm/);
                         const planCondTime = condTimeM ? condTimeM[1] : "";
                         const planCondTempo = condTempoM ? condTempoM[1] : "";
                         const planCondDist = condDistM ? condDistM[1] : "";
