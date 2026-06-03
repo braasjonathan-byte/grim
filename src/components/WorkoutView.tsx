@@ -420,7 +420,7 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setPickerOpen(true); }}
-        className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+        className="min-h-9 gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
         title="Starta GPS-inspelning"
       >
         <MapPin className="w-3.5 h-3.5 shrink-0" />
@@ -4274,7 +4274,7 @@ const estimateCalories = (
                       setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                       setRenameInput(plan.session_name);
                     }}
-                    className="relative z-20 min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    className="relative z-20 min-h-9 gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
                     title="Inställningar">
                     <Settings className="w-3.5 h-3.5" />
                     <span>Inställningar</span>
@@ -4284,7 +4284,7 @@ const estimateCalories = (
                       e.stopPropagation();
                       setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
                     }}
-                    className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    className="min-h-9 gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
                     title="Dela pass">
                     <Share2 className="w-3.5 h-3.5" />
                     <span>Dela</span>
@@ -4337,10 +4337,10 @@ const estimateCalories = (
                       setSaveWorkoutName(plan.session_name);
                       setSaveWorkoutVisibility("private");
                     }}
-                    className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                    className="min-h-9 gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
                     title="Spara pass">
                     <Download className="w-3.5 h-3.5" />
-                    <span>Spara</span>
+                    <span>Spara       </span>
                   </button>
                   <button
                     onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
@@ -6037,7 +6037,7 @@ const estimateCalories = (
                     setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
                     setRenameInput(plan.session_name);
                   }}
-                  className="relative z-20 min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  className="relative z-20 min-h-9 gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
                   title="Inställningar">
                   <Settings className="w-3.5 h-3.5" />
                   <span>Inställningar</span>
@@ -6047,7 +6047,7 @@ const estimateCalories = (
                     e.stopPropagation();
                     setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
                   }}
-                  className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  className="min-h-9 gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
                   title="Dela pass">
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Dela</span>
@@ -6059,10 +6059,10 @@ const estimateCalories = (
                     setSaveWorkoutName(plan.session_name);
                     setSaveWorkoutVisibility("private");
                   }}
-                  className="min-h-9 flex items-center justify-center gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted"
+                  className="min-h-9 gap-1.5 px-2 py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
                   title="Spara pass">
                   <Download className="w-3.5 h-3.5" />
-                  <span>Spara</span>
+                  <span>Spara       </span>
                 </button>
                 {(() => {
                   const konditionExercises = allExercises.filter(e => {
