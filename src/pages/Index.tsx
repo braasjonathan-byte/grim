@@ -235,6 +235,10 @@ const Index = () => {
   useOfflineSync();
   useDataSnapshots(user?.id ?? null);
 
+  useEffect(() => {
+    void requestInitialPermissions();
+  }, []);
+
 
   // Shared helper to load profile + role (called once per session)
   const loadUserData = useCallback(async (uid: string) => {
