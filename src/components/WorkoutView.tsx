@@ -205,7 +205,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   }
 
   return (
-    <div className="space-y-2 bg-background border border-border rounded-md p-1 w-fit max-w-full">
+    <div className={`space-y-2 bg-background border border-border rounded-md p-1 max-w-full ${gps.isTracking ? "w-full" : "w-fit"}`}>
       <div className="flex items-center gap-2 flex-wrap">
         {!gps.isTracking ? (
           <button
@@ -300,7 +300,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
       )}
       {gps.isTracking && gps.route.length > 1 && (
         <div className="relative">
-          <RouteMap route={gps.route} height={160} />
+          <RouteMap route={gps.route} height={280} />
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setFullscreen(true); }}
@@ -399,7 +399,7 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
   if (selectedName) {
     return (
-      <div className="space-y-1.5">
+      <div className="col-span-2 w-full space-y-1.5 mt-2">
         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
           <MapPin className="w-3 h-3" /> {selectedName}
         </div>
