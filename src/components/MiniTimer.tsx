@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2, Settings, Hourglass, TimerReset } from "lucide-react";
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2, Settings, Hourglass, TimerReset, Heart, HeartOff } from "lucide-react";
 import { hapticAlarm } from "@/lib/haptics";
+import { useHeartRate } from "@/hooks/useHeartRate";
 
 type Mode = "stopwatch" | "countdown";
 
