@@ -188,6 +188,15 @@ if (IS_NATIVE_CAPACITOR) {
       /* status bar plugin unavailable */
     }
   })();
+
+  void (async () => {
+    try {
+      const { initCrashlytics } = await import("./lib/crashlytics");
+      await initCrashlytics();
+    } catch (e) {
+      console.warn("[crashlytics] init failed", e);
+    }
+  })();
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
