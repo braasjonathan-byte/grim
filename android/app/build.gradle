@@ -3,6 +3,16 @@ apply plugin: 'com.android.application'
 android {
     namespace = "se.grim.app"
     compileSdk = rootProject.ext.compileSdkVersion
+
+    signingConfigs {
+        release {
+            storeFile file("min-app-nyckel.jks")
+            storePassword "JonneCCool98!"
+            keyAlias "key0"
+            keyPassword "JonneCCool98!"
+        }
+    }
+
     defaultConfig {
         applicationId "se.grim.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -16,8 +26,10 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
