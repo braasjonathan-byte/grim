@@ -4290,7 +4290,11 @@ const estimateCalories = (
                     <span>Dela</span>
                   </button>
                   {(() => {
-                    const konditionExercises = allExercises.filter(e => e.category === "kondition" && e.name);
+                    const konditionExercises = allExercises.filter(e => {
+                      if (e.category !== "kondition" || !e.name) return false;
+                      const n = e.name.toLowerCase();
+                      return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
+                    });
                     return (
                       <DayGpsRecorder
                         konditionExercises={konditionExercises}
@@ -6061,7 +6065,11 @@ const estimateCalories = (
                   <span>Spara</span>
                 </button>
                 {(() => {
-                  const konditionExercises = allExercises.filter(e => e.category === "kondition" && e.name);
+                  const konditionExercises = allExercises.filter(e => {
+                    if (e.category !== "kondition" || !e.name) return false;
+                    const n = e.name.toLowerCase();
+                    return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
+                  });
                   return (
                     <DayGpsRecorder
                       konditionExercises={konditionExercises}
