@@ -549,7 +549,9 @@ const WorkoutShareCard = ({
               grim.lovable.app
             </div>
           </div>
+          </div>
         </div>
+
 
         {/* Friend reactions on the auto-shared post */}
         {ownerUserId && viewerUserId && (
