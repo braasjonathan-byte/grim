@@ -71,6 +71,7 @@ const MiniTimer = () => {
   });
   const intervalRef = useRef<number | null>(null);
   const finishedRef = useRef(false);
+  const hr = useHeartRate();
 
   useEffect(() => {
     localStorage.setItem(MODE_KEY, mode);
