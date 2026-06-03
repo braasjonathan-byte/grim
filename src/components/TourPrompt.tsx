@@ -20,16 +20,14 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("tour_prompted, tour_completed")
+        .select("tour_prompted")
         .eq("user_id", userId)
         .maybeSingle();
       if (cancelled || !data) return;
       if (!data.tour_prompted) {
         setTimeout(() => !cancelled && setMode("welcome"), 800);
-      } else if (data.tour_completed && !localStorage.getItem(NUTRITION_PROMPTED_KEY)) {
-        // Existing users who already did the original tour – offer the new kost tour once
-        setTimeout(() => !cancelled && setMode("nutrition"), 1200);
       }
+      // Nutrition tour is no longer auto-prompted — it's no longer a new feature.
     })();
     return () => {
       cancelled = true;
