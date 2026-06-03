@@ -6118,12 +6118,28 @@ const estimateCalories = (
                   const isStrength = s.includes("styrka") || s.includes("bänk") || s.includes("böj") || s.includes("mark") || s.includes("press") || s.includes("rodd") || s.includes("chins") || s.includes("tung") || s.includes("rpe") || s.includes("×") || s.includes("x");
                   if (!isStrength) {
                     const isRunning = s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel");
+                    const sessionLower = plan.session_name.toLowerCase();
+                    const isCycling = /cykling|cykel|spinning/.test(sessionLower);
+                    const isSwimming = /simning|simma|sim\b/.test(sessionLower);
                     const comp = completions[key];
                     let detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
-                    
+                    let cardioInstructionsText: string | null = null;
+
+                    // For cycling/swimming sessions: treat details as instructions (like running),
+                    // and surface a single conditioning entry so the user can log manually or via GPS.
+                    if ((isCycling || isSwimming) && plan.session_name.trim() && detailParts.length > 0) {
+                      // Skip rewrite if the only line is already a logged conditioning entry for this session
+                      const onlyLine = detailParts.length === 1 ? detailParts[0] : null;
+                      const { name: onlyName } = onlyLine ? parseExerciseWeight(onlyLine) : { name: "" };
+                      const alreadySingleCondEntry = onlyLine && onlyName.trim().toLowerCase() === plan.session_name.trim().toLowerCase();
+                      if (!alreadySingleCondEntry) {
+                        cardioInstructionsText = plan.details;
+                        detailParts = [plan.session_name];
+                      }
+                    }
+
                     // Auto-generate conditioning entry for tröskelpass/running with empty details
                     if (detailParts.length === 0 && isRunning && plan.session_name.trim()) {
-                      const sessionLower = plan.session_name.toLowerCase();
                       if (sessionLower.includes("tröskel")) {
                         detailParts = ["Tröskellöpning"];
                       } else if (sessionLower.includes("långpass")) {
