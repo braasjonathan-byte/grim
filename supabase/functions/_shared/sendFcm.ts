@@ -115,7 +115,16 @@ export async function sendNativePush(
   try {
     sa = JSON.parse(serviceAccountJson);
   } catch {
-    console.error("Failed to parse FCM_SERVICE_ACCOUNT JSON");
+    console.error("Failed to parse FCM_SERVICE_ACCOUNT JSON. Make sure the secret contains the complete service account JSON file from Firebase.");
+    return 0;
+  }
+
+  if (!sa.private_key || !sa.client_email || !sa.project_id) {
+    console.error(
+      "FCM_SERVICE_ACCOUNT is missing required fields. Got keys:",
+      Object.keys(sa || {}).join(", "),
+      "- Required: private_key, client_email, project_id. Re-download the service account JSON from Firebase Console → Project Settings → Service Accounts → Generate new private key, and paste the ENTIRE file contents as the secret value."
+    );
     return 0;
   }
 
