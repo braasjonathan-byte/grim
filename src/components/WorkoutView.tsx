@@ -6134,7 +6134,6 @@ const estimateCalories = (
                       const alreadySingleCondEntry = onlyLine && onlyName.trim().toLowerCase() === plan.session_name.trim().toLowerCase();
                       if (!alreadySingleCondEntry) {
                         cardioInstructionsText = plan.details;
-                        detailParts = [plan.session_name];
                       }
                     }
 
