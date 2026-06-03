@@ -433,16 +433,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       let sortKey: string;
 
       if (view === "week") {
-        // Group by plan week, label with calendar week
-        const planWeek = c.week;
-        key = `plan-W${planWeek}`;
-        if (planStartCalendarWeek) {
-          const calendarWeek = planStartCalendarWeek.week + (planWeek - 1);
-          label = `V${calendarWeek} ${planStartCalendarWeek.year}`;
-        } else {
-          label = `Vecka ${planWeek}`;
-        }
-        sortKey = String(planWeek).padStart(4, "0");
+        // Group by the ACTUAL ISO calendar week of the completion date
+        const iso = getISOWeek(calendarDate);
+        key = `iso-${iso.year}-W${String(iso.week).padStart(2, "0")}`;
+        label = `V${iso.week} ${iso.year}`;
+        sortKey = `${iso.year}-${String(iso.week).padStart(2, "0")}`;
       } else if (view === "month") {
         const m = calendarDate.getMonth();
         const yr = calendarDate.getFullYear();
