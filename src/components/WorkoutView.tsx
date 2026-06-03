@@ -300,7 +300,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
       )}
       {gps.isTracking && gps.route.length > 1 && (
         <div className="relative">
-          <RouteMap route={gps.route} height={160} />
+          <RouteMap route={gps.route} height={280} />
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setFullscreen(true); }}
