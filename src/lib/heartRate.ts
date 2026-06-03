@@ -1,9 +1,11 @@
-// Singleton heart-rate service using Web Bluetooth (standard GATT Heart Rate
-// service 0x180D / characteristic 0x2A37). Works in Chrome on Android/Desktop
-// and in the Capacitor WebView on Android when the device exposes a standard
-// BLE heart rate profile (most chest straps + many smartwatches in
-// "broadcast" mode such as Polar, Garmin, Wahoo, Apple Watch via HR-relay
-// apps, Coros, etc.).
+// Heart-rate service — uses Capacitor BLE plugin on native (Android APK / iOS)
+// and Web Bluetooth in the browser/PWA. Remembers the last paired device id
+// in localStorage so it can silently auto-reconnect on app start and after
+// disconnects.
+//
+// Standard GATT Heart Rate Service 0x180D / characteristic 0x2A37.
+
+import { Capacitor } from "@capacitor/core";
 
 type Snapshot = {
   bpm: number | null;
@@ -14,13 +16,20 @@ type Snapshot = {
   supported: boolean;
 };
 
+const HR_SERVICE = "0000180d-0000-1000-8000-00805f9b34fb";
+const HR_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb";
+const REMEMBER_KEY = "grim_hr_device_v1";
+
+const isNative = Capacitor.isNativePlatform();
+const isWeb = !isNative;
+
 let snapshot: Snapshot = {
   bpm: null,
   connected: false,
   connecting: false,
   deviceName: null,
   error: null,
-  supported: typeof navigator !== "undefined" && !!(navigator as any).bluetooth,
+  supported: isNative || (typeof navigator !== "undefined" && !!(navigator as any).bluetooth),
 };
 
 const listeners = new Set<() => void>();
@@ -39,8 +48,18 @@ export const subscribeHeartRate = (l: () => void) => {
 
 export const getHeartRateSnapshot = (): Snapshot => snapshot;
 
-let device: any = null;
-let characteristic: any = null;
+const rememberDevice = (id: string, name: string | null) => {
+  try { localStorage.setItem(REMEMBER_KEY, JSON.stringify({ id, name })); } catch {}
+};
+const forgetDevice = () => {
+  try { localStorage.removeItem(REMEMBER_KEY); } catch {}
+};
+const getRemembered = (): { id: string; name: string | null } | null => {
+  try {
+    const raw = localStorage.getItem(REMEMBER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
 
 const parseHeartRate = (value: DataView): number => {
   const flags = value.getUint8(0);
@@ -48,40 +67,126 @@ const parseHeartRate = (value: DataView): number => {
   return is16bit ? value.getUint16(1, true) : value.getUint8(1);
 };
 
-const onValueChanged = (event: Event) => {
+// ---------------- Native (Capacitor BLE) ----------------
+
+let nativeDeviceId: string | null = null;
+
+const nativeNotifHandler = (value: DataView) => {
+  try {
+    const bpm = parseHeartRate(value);
+    if (bpm > 0 && bpm < 250) setSnap({ bpm });
+  } catch {}
+};
+
+const nativeStart = async (deviceId: string, deviceName: string | null) => {
+  const { BleClient } = await import("@capacitor-community/bluetooth-le");
+  await BleClient.connect(deviceId, () => {
+    // disconnected callback
+    setSnap({ connected: false, bpm: null });
+    // Try to reconnect silently after a short delay
+    setTimeout(() => { void autoConnectHeartRate(); }, 2000);
+  });
+  await BleClient.startNotifications(deviceId, HR_SERVICE, HR_MEASUREMENT, nativeNotifHandler);
+  nativeDeviceId = deviceId;
+  rememberDevice(deviceId, deviceName);
+  setSnap({
+    connected: true,
+    connecting: false,
+    deviceName: deviceName || "Pulsmätare",
+    error: null,
+  });
+};
+
+const nativeConnect = async (silent: boolean): Promise<void> => {
+  const { BleClient } = await import("@capacitor-community/bluetooth-le");
+  setSnap({ connecting: true, error: null });
+  try {
+    await BleClient.initialize({ androidNeverForLocation: true });
+
+    // Silent path: try the remembered device id first (no scan needed)
+    const remembered = getRemembered();
+    if (remembered) {
+      try {
+        await nativeStart(remembered.id, remembered.name);
+        return;
+      } catch (err) {
+        if (silent) {
+          setSnap({ connecting: false });
+          return; // don't pop UI on auto-connect failure
+        }
+        // fall through to picker
+      }
+    }
+
+    if (silent) {
+      setSnap({ connecting: false });
+      return;
+    }
+
+    // Interactive: show native chooser filtered by HR service
+    const device = await BleClient.requestDevice({
+      services: [HR_SERVICE],
+      optionalServices: [HR_SERVICE],
+    });
+    await nativeStart(device.deviceId, device.name ?? null);
+  } catch (err: any) {
+    setSnap({
+      connecting: false,
+      connected: false,
+      error: silent ? null : (err?.message || "Kunde inte ansluta till pulsmätare"),
+    });
+  }
+};
+
+const nativeDisconnect = async () => {
+  try {
+    const { BleClient } = await import("@capacitor-community/bluetooth-le");
+    if (nativeDeviceId) {
+      try { await BleClient.stopNotifications(nativeDeviceId, HR_SERVICE, HR_MEASUREMENT); } catch {}
+      try { await BleClient.disconnect(nativeDeviceId); } catch {}
+    }
+  } catch {}
+  nativeDeviceId = null;
+  forgetDevice();
+  setSnap({ connected: false, connecting: false, bpm: null, deviceName: null });
+};
+
+// ---------------- Web Bluetooth ----------------
+
+let webDevice: any = null;
+let webChar: any = null;
+
+const onWebValueChanged = (event: Event) => {
   const target = event.target as any;
   const value: DataView = target.value;
   if (!value) return;
   try {
     const bpm = parseHeartRate(value);
     if (bpm > 0 && bpm < 250) setSnap({ bpm });
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 };
 
-const onDisconnected = () => {
+const onWebDisconnected = () => {
   setSnap({ connected: false, connecting: false, bpm: null });
-  // Try to re-establish silently if we still have a known device.
-  if (device) {
-    setTimeout(() => { attachToDevice(device).catch(() => {}); }, 1500);
+  if (webDevice) {
+    setTimeout(() => { attachToWebDevice(webDevice).catch(() => {}); }, 1500);
   }
 };
 
-// Connects to a device handle we already have (no UI prompt).
-const attachToDevice = async (dev: any): Promise<boolean> => {
+const attachToWebDevice = async (dev: any): Promise<boolean> => {
   if (!dev?.gatt) return false;
   setSnap({ connecting: true, error: null });
   try {
-    dev.removeEventListener?.("gattserverdisconnected", onDisconnected);
-    dev.addEventListener("gattserverdisconnected", onDisconnected);
+    dev.removeEventListener?.("gattserverdisconnected", onWebDisconnected);
+    dev.addEventListener("gattserverdisconnected", onWebDisconnected);
     const server = await dev.gatt.connect();
     const service = await server.getPrimaryService("heart_rate");
     const ch = await service.getCharacteristic("heart_rate_measurement");
     await ch.startNotifications();
-    ch.addEventListener("characteristicvaluechanged", onValueChanged);
-    device = dev;
-    characteristic = ch;
+    ch.addEventListener("characteristicvaluechanged", onWebValueChanged);
+    webDevice = dev;
+    webChar = ch;
+    rememberDevice(dev.id || dev.name || "web", dev.name || null);
     setSnap({
       connected: true,
       connecting: false,
@@ -95,97 +200,70 @@ const attachToDevice = async (dev: any): Promise<boolean> => {
   }
 };
 
-// Auto-connect to any previously authorized heart-rate device without
-// showing the chooser. Requires the user to have paired the device once
-// (or for the OS to expose it via Web Bluetooth's getDevices()).
-export const autoConnectHeartRate = async (): Promise<void> => {
-  if (!snapshot.supported || snapshot.connected || snapshot.connecting) return;
-  const nav: any = navigator;
-  if (typeof nav.bluetooth?.getDevices !== "function") return;
-  try {
-    const devices: any[] = await nav.bluetooth.getDevices();
-    if (!devices || devices.length === 0) return;
-    for (const dev of devices) {
-      // Try advertisement watching first (Chrome flag) to wait for device
-      // to be in range, then connect. Fall back to direct connect.
-      try {
-        if (typeof dev.watchAdvertisements === "function" && !dev.watchingAdvertisements) {
-          const ac = new AbortController();
-          const onAdv = async () => {
-            dev.removeEventListener("advertisementreceived", onAdv);
-            ac.abort();
-            await attachToDevice(dev);
-          };
-          dev.addEventListener("advertisementreceived", onAdv, { once: true });
-          await dev.watchAdvertisements({ signal: ac.signal }).catch(() => {});
-        }
-      } catch {
-        /* ignore */
-      }
-      // Optimistic direct connect attempt
-      const ok = await attachToDevice(dev);
-      if (ok) return;
-    }
-  } catch {
-    /* ignore — user hasn't granted any device yet */
-  }
-};
-
-export const connectHeartRate = async (): Promise<void> => {
+const webConnect = async (silent: boolean): Promise<void> => {
   if (!snapshot.supported) {
-    setSnap({
-      error:
-        "Bluetooth stöds inte i denna webbläsare. Använd Chrome på Android/dator eller en kompatibel app.",
-    });
+    if (!silent) {
+      setSnap({
+        error:
+          "Bluetooth stöds inte i denna webbläsare. Använd Chrome på Android/dator eller appen.",
+      });
+    }
     return;
   }
   if (snapshot.connecting || snapshot.connected) return;
+
+  if (silent) {
+    const nav: any = navigator;
+    if (typeof nav.bluetooth?.getDevices !== "function") return;
+    try {
+      const devices: any[] = await nav.bluetooth.getDevices();
+      for (const dev of devices || []) {
+        const ok = await attachToWebDevice(dev);
+        if (ok) return;
+      }
+    } catch {}
+    return;
+  }
+
   setSnap({ connecting: true, error: null });
   try {
     const nav: any = navigator;
-    device = await nav.bluetooth.requestDevice({
+    const dev = await nav.bluetooth.requestDevice({
       filters: [{ services: ["heart_rate"] }],
       optionalServices: ["battery_service"],
     });
-    if (!device) {
-      setSnap({ connecting: false });
-      return;
-    }
-    device.addEventListener("gattserverdisconnected", onDisconnected);
-    const server = await device.gatt.connect();
-    const service = await server.getPrimaryService("heart_rate");
-    characteristic = await service.getCharacteristic("heart_rate_measurement");
-    await characteristic.startNotifications();
-    characteristic.addEventListener("characteristicvaluechanged", onValueChanged);
-    setSnap({
-      connected: true,
-      connecting: false,
-      deviceName: device.name || "Pulsmätare",
-      error: null,
-    });
+    if (!dev) { setSnap({ connecting: false }); return; }
+    await attachToWebDevice(dev);
   } catch (err: any) {
     setSnap({
       connecting: false,
-      connected: false,
       error: err?.message || "Kunde inte ansluta till pulsmätare",
     });
   }
 };
 
-export const disconnectHeartRate = async (): Promise<void> => {
+const webDisconnect = async () => {
   try {
-    if (characteristic) {
+    if (webChar) {
       try {
-        characteristic.removeEventListener("characteristicvaluechanged", onValueChanged);
-        await characteristic.stopNotifications();
-      } catch {
-        /* ignore */
-      }
-      characteristic = null;
+        webChar.removeEventListener("characteristicvaluechanged", onWebValueChanged);
+        await webChar.stopNotifications();
+      } catch {}
+      webChar = null;
     }
-    if (device?.gatt?.connected) device.gatt.disconnect();
-  } catch {
-    /* ignore */
-  }
+    if (webDevice?.gatt?.connected) webDevice.gatt.disconnect();
+  } catch {}
+  forgetDevice();
   setSnap({ connected: false, connecting: false, bpm: null, deviceName: null });
 };
+
+// ---------------- Public API ----------------
+
+export const connectHeartRate = (): Promise<void> =>
+  isNative ? nativeConnect(false) : webConnect(false);
+
+export const disconnectHeartRate = (): Promise<void> =>
+  isNative ? nativeDisconnect() : webDisconnect();
+
+export const autoConnectHeartRate = (): Promise<void> =>
+  isNative ? nativeConnect(true) : webConnect(true);
