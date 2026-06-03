@@ -127,6 +127,7 @@ interface CustomExercise {
 // Inline conditioning editing card (green, open by default)
 const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean }) => {
   const gps = useGpsTracker();
+  const hr = useHeartRate();
   const didAutoStart = useRef(false);
   useEffect(() => {
     if (autoStart && !didAutoStart.current && !gps.isTracking) {
