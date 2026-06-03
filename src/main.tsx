@@ -172,4 +172,22 @@ if (!IS_NATIVE_CAPACITOR) try {
   /* unsupported */
 }
 
+// Native (Capacitor): make WebView start BELOW the OS status bar instead of
+// behind it, so the sticky app header matches PWA behaviour and never gets
+// hidden by the status bar.
+if (IS_NATIVE_CAPACITOR) {
+  void (async () => {
+    try {
+      const { StatusBar, Style } = await import("@capacitor/status-bar");
+      await StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+      const isDark = document.documentElement.classList.contains("dark");
+      await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => {});
+      const bg = isDark ? "#0b0b0b" : "#ffffff";
+      await StatusBar.setBackgroundColor({ color: bg }).catch(() => {});
+    } catch {
+      /* status bar plugin unavailable */
+    }
+  })();
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
