@@ -25,6 +25,10 @@ const PERMS = [
   "android.permission.FOREGROUND_SERVICE",
   "android.permission.FOREGROUND_SERVICE_LOCATION",
   "android.permission.POST_NOTIFICATIONS",
+  "android.permission.BLUETOOTH_SCAN",
+  "android.permission.BLUETOOTH_CONNECT",
+  "android.permission.BLUETOOTH",
+  "android.permission.BLUETOOTH_ADMIN",
 ];
 
 let changed = false;
