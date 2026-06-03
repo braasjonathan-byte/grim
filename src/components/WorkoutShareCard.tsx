@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
-import { X, Download, Share2, Palette, Send, CalendarIcon, Copy } from "lucide-react";
+import { X, Download, Share2, Palette, Send, CalendarIcon, Copy, Image as ImageIcon, Trash2 } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
+import { pickImage } from "@/lib/pickImage";
 import WorkoutPostThread from "./WorkoutPostThread";
+
 
 type Theme = "colorful" | "light" | "dark";
 
@@ -100,6 +102,14 @@ const WorkoutShareCard = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
   const [theme, setTheme] = useState<Theme>("colorful");
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
+
+  const handlePickPhoto = async () => {
+    const picked = await pickImage({ source: "prompt", quality: 80 });
+    if (!picked) return;
+    setUserPhoto(picked.dataUrl);
+  };
+
 
   const t = themes[theme];
 
@@ -250,8 +260,10 @@ const WorkoutShareCard = ({
         exercises: svgExercises,
         isRunning,
         logoBase64,
-        theme: t
+        theme: t,
+        userPhotoBase64: userPhoto || undefined,
       });
+
 
       // SVG → Canvas → PNG
       const scale = 3;
@@ -352,6 +364,24 @@ const WorkoutShareCard = ({
           )}
         </div>
 
+        {/* Photo picker */}
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={handlePickPhoto}
+            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-accent transition-colors flex items-center gap-1.5">
+            <ImageIcon className="w-3.5 h-3.5" />
+            {userPhoto ? "Byt foto" : "Lägg till foto"}
+          </button>
+          {userPhoto && (
+            <button
+              onClick={() => setUserPhoto(null)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/20 transition-colors flex items-center gap-1.5">
+              <Trash2 className="w-3.5 h-3.5" /> Ta bort
+            </button>
+          )}
+        </div>
+
+
         {/* The card */}
         <div
           ref={cardRef}
@@ -365,6 +395,32 @@ const WorkoutShareCard = ({
             aspectRatio: "9 / 16",
             position: "relative"
           }}>
+
+          {userPhoto && (
+            <>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundImage: `url(${userPhoto})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  opacity: 0.45,
+                  pointerEvents: "none",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.35)",
+                  pointerEvents: "none",
+                }}
+              />
+            </>
+          )}
+          <div style={{ position: "relative", zIndex: 1 }}>
+
 
           {/* Header with logo */}
           <div style={{ marginBottom: "18px", display: "table", width: "100%" }}>
@@ -511,7 +567,9 @@ const WorkoutShareCard = ({
               grim.lovable.app
             </div>
           </div>
+          </div>
         </div>
+
 
         {/* Friend reactions on the auto-shared post */}
         {ownerUserId && viewerUserId && (

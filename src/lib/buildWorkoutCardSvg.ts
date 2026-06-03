@@ -27,7 +27,10 @@ export interface SvgCardInput {
   isRunning: boolean;
   logoBase64: string;
   theme: SvgCardTheme;
+  /** Optional user-supplied background photo (base64 data URL). */
+  userPhotoBase64?: string;
 }
+
 
 /* ── helpers ─────────────────────────────────────── */
 
@@ -106,6 +109,15 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
 
   // ── Background ──
   els.push(`<rect width="${W}" height="${H}" rx="16" fill="url(#bg-grad)"/>`);
+  if (input.userPhotoBase64) {
+    els.push(
+      `<image href="${input.userPhotoBase64}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice" opacity="0.45"/>`
+    );
+    els.push(
+      `<rect width="${W}" height="${H}" fill="#000" fill-opacity="0.35"/>`
+    );
+  }
+
 
   // ── Logo ──
   els.push(

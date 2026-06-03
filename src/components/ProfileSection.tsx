@@ -3,6 +3,8 @@ import { User, Camera, Loader2, Instagram, Music, Crown, Shield } from "lucide-r
 import HonoraryBadge from "./HonoraryBadge";
 import AvatarCropDialog from "./AvatarCropDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { pickImage } from "@/lib/pickImage";
+
 
 interface ProfileSectionProps {
   userId: string;
@@ -155,9 +157,17 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     if (!file.type.startsWith("image/")) return;
     setCropFile(file);
     setCropOpen(true);
-    // Reset input so same file can be re-selected
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const handlePickAvatar = async () => {
+    const picked = await pickImage({ source: "prompt" });
+    if (!picked) return;
+    if (!picked.file.type.startsWith("image/")) return;
+    setCropFile(picked.file);
+    setCropOpen(true);
+  };
+
 
   const handleCropSave = async (blob: Blob) => {
     setUploading(true);
@@ -218,7 +228,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             )}
           </div>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handlePickAvatar}
             disabled={uploading}
             className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40"
           >
@@ -235,6 +245,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             onChange={handleFileSelect}
             className="hidden"
           />
+
         </div>
         <div className="text-xs text-muted-foreground">
           <p>Klicka på kameran för att ladda upp.</p>
