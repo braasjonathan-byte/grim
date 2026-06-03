@@ -319,6 +319,14 @@ const MiniTimer = () => {
         <span className="text-[10px] font-semibold uppercase text-muted-foreground">
           {mode === "countdown" ? label : "Stoppur"}
         </span>
+        {hr.connected && (
+          <span className="ml-auto flex items-center gap-1 text-destructive">
+            <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
+            <span className="font-mono text-sm font-bold tabular-nums">
+              {hr.bpm ?? "--"}
+            </span>
+          </span>
+        )}
         <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
       </div>
     );
