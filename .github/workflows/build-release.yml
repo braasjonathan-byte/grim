@@ -40,7 +40,8 @@ jobs:
           echo "Error: ANDROID_KEYSTORE_BASE64 secret is not set!"
           exit 1
         fi
-        echo "$KEYSTORE_BASE64" | base64 --decode > android/app/min-app-nyckel.jks
+        # Vi rensar bort eventuella radbrytningar/mellanslag innan avkodning
+        echo "$KEYSTORE_BASE64" | tr -d '\n ' | base64 --decode > android/app/min-app-nyckel.jks
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
