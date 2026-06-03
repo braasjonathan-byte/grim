@@ -6376,12 +6376,17 @@ const estimateCalories = (
                           ) : (() => {
                             // Single line - check conditioning format first
                             const { name: sCondName, weight: sCondWeight } = parseExerciseWeight(plan.details);
-                            const isSingleCond = sCondWeight && (sCondWeight.includes("min") || sCondWeight.includes("/km") || /\d+\s*km/i.test(sCondWeight));
+                            const sCondNameLower = sCondName.trim().toLowerCase();
+                            const sIsBareKonditionEx = !!sCondNameLower && allExercises.some(e => e.category === "kondition" && e.name && e.name.toLowerCase() === sCondNameLower);
+                            const sCondKeyProbe = `__cond__${sCondName}`;
+                            const sHasCondLogged = !!(completions[key]?.logged_weights as any)?.[sCondKeyProbe];
+                            const isSingleCond = (sCondWeight && (sCondWeight.includes("min") || sCondWeight.includes("/km") || /\d+\s*km/i.test(sCondWeight))) || sIsBareKonditionEx || sHasCondLogged;
 
                             if (isSingleCond) {
-                              const scTimeM = sCondWeight.match(/(\d+)\s*min/);
-                              const scTempoM = sCondWeight.match(/([\d:.]+)\/km/);
-                              const scDistM = sCondWeight.match(/([\d.,]+)\s*km(?!\/)/);
+                              const swStr = sCondWeight || "";
+                              const scTimeM = swStr.match(/(\d+)\s*min/);
+                              const scTempoM = swStr.match(/([\d:.]+)\/km/);
+                              const scDistM = swStr.match(/([\d.,]+)\s*km(?!\/)/);
                               const spTime = scTimeM ? scTimeM[1] : "";
                               const spDist = scDistM ? scDistM[1] : "";
                               const spTempo = scTempoM ? scTempoM[1] : "";
