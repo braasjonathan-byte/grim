@@ -62,6 +62,73 @@ const onValueChanged = (event: Event) => {
 
 const onDisconnected = () => {
   setSnap({ connected: false, connecting: false, bpm: null });
+  // Try to re-establish silently if we still have a known device.
+  if (device) {
+    setTimeout(() => { attachToDevice(device).catch(() => {}); }, 1500);
+  }
+};
+
+// Connects to a device handle we already have (no UI prompt).
+const attachToDevice = async (dev: any): Promise<boolean> => {
+  if (!dev?.gatt) return false;
+  setSnap({ connecting: true, error: null });
+  try {
+    dev.removeEventListener?.("gattserverdisconnected", onDisconnected);
+    dev.addEventListener("gattserverdisconnected", onDisconnected);
+    const server = await dev.gatt.connect();
+    const service = await server.getPrimaryService("heart_rate");
+    const ch = await service.getCharacteristic("heart_rate_measurement");
+    await ch.startNotifications();
+    ch.addEventListener("characteristicvaluechanged", onValueChanged);
+    device = dev;
+    characteristic = ch;
+    setSnap({
+      connected: true,
+      connecting: false,
+      deviceName: dev.name || "Pulsmätare",
+      error: null,
+    });
+    return true;
+  } catch (err: any) {
+    setSnap({ connecting: false, error: err?.message || null });
+    return false;
+  }
+};
+
+// Auto-connect to any previously authorized heart-rate device without
+// showing the chooser. Requires the user to have paired the device once
+// (or for the OS to expose it via Web Bluetooth's getDevices()).
+export const autoConnectHeartRate = async (): Promise<void> => {
+  if (!snapshot.supported || snapshot.connected || snapshot.connecting) return;
+  const nav: any = navigator;
+  if (typeof nav.bluetooth?.getDevices !== "function") return;
+  try {
+    const devices: any[] = await nav.bluetooth.getDevices();
+    if (!devices || devices.length === 0) return;
+    for (const dev of devices) {
+      // Try advertisement watching first (Chrome flag) to wait for device
+      // to be in range, then connect. Fall back to direct connect.
+      try {
+        if (typeof dev.watchAdvertisements === "function" && !dev.watchingAdvertisements) {
+          const ac = new AbortController();
+          const onAdv = async () => {
+            dev.removeEventListener("advertisementreceived", onAdv);
+            ac.abort();
+            await attachToDevice(dev);
+          };
+          dev.addEventListener("advertisementreceived", onAdv, { once: true });
+          await dev.watchAdvertisements({ signal: ac.signal }).catch(() => {});
+        }
+      } catch {
+        /* ignore */
+      }
+      // Optimistic direct connect attempt
+      const ok = await attachToDevice(dev);
+      if (ok) return;
+    }
+  } catch {
+    /* ignore — user hasn't granted any device yet */
+  }
 };
 
 export const connectHeartRate = async (): Promise<void> => {
