@@ -395,6 +395,37 @@ const MiniTimer = () => {
           </div>
         </div>
 
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hr.connected) hr.disconnect();
+            else hr.connect();
+          }}
+          disabled={hr.connecting}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold border ${
+            hr.connected
+              ? "bg-destructive/10 text-destructive border-destructive"
+              : "bg-secondary text-foreground border-border"
+          }`}
+        >
+          {hr.connected ? (
+            <>
+              <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
+              <span className="font-mono">{hr.bpm ?? "--"} bpm</span>
+              <span className="text-muted-foreground font-normal">· {hr.deviceName}</span>
+              <HeartOff className="w-3 h-3 ml-1" />
+            </>
+          ) : (
+            <>
+              <Heart className="w-3.5 h-3.5" />
+              {hr.connecting ? "Söker pulsmätare…" : "Anslut pulsmätare"}
+            </>
+          )}
+        </button>
+        {hr.error && !hr.connected && (
+          <p className="text-[10px] text-destructive font-semibold">{hr.error}</p>
+        )}
+
         {settingsOpen && <SettingsPanel />}
       </div>
     </div>
