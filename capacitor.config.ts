@@ -12,6 +12,7 @@ const config: CapacitorConfig = {
       '@capacitor/push-notifications',
       '@capacitor/status-bar',
       '@capacitor/camera',
+      '@capacitor-mlkit/barcode-scanning',
       'capacitor-native-settings',
       '@capacitor-community/bluetooth-le',
     ],

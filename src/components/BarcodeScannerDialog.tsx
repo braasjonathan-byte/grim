@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import { Capacitor } from "@capacitor/core";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UNITS, toGrams } from "@/lib/nutritionCalc";
@@ -25,6 +26,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
   const streamRef = useRef<MediaStream | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
+  const nativeScanRef = useRef(false);
   const [scanning, setScanning] = useState(false);
   const [lookup, setLookup] = useState(false);
   const [found, setFound] = useState<FoundFood | null>(null);
@@ -49,24 +51,11 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     if (found) return;
     setScanning(true);
     try {
-      // On native (APK) ensure runtime CAMERA permission is granted before
-      // the WebView tries to open getUserMedia (otherwise we get "Permission denied").
-      try {
-        const { Capacitor } = await import("@capacitor/core");
-        if (Capacitor.isNativePlatform()) {
-          const { Camera } = await import("@capacitor/camera");
-          const status = await Camera.checkPermissions();
-          if (status.camera !== "granted") {
-            const req = await Camera.requestPermissions({ permissions: ["camera"] });
-            if (req.camera !== "granted") {
-              throw new Error("Kamerabehörighet nekad. Tillåt kameraåtkomst i appens inställningar.");
-            }
-          }
-        }
-      } catch (permErr: any) {
-        if (permErr?.message?.includes("Kamerabehörighet")) throw permErr;
-        // non-fatal — continue and let getUserMedia trigger the OS prompt
+      if (Capacitor.isNativePlatform()) {
+        await startNativeScan();
+        return;
       }
+
       // Pick the standard back camera (not ultra-wide / telefoto).
       // Many phones expose flera bakre linser där ultra-wide ofta är default.
       let deviceId: string | undefined;
@@ -122,6 +111,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
   }
 
   function stop() {
+    nativeScanRef.current = false;
     try { controlsRef.current?.stop(); } catch {}
     controlsRef.current = null;
     readerRef.current = null;
@@ -129,6 +119,41 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setScanning(false);
+  }
+
+  async function startNativeScan() {
+    nativeScanRef.current = true;
+    try {
+      const { BarcodeScanner, BarcodeFormat } = await import("@capacitor-mlkit/barcode-scanning");
+      const supported = await BarcodeScanner.isSupported();
+      if (!supported.supported) throw new Error("Streckkodsskanning stöds inte på den här enheten.");
+
+      try {
+        const mod = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+        if (!mod.available) await BarcodeScanner.installGoogleBarcodeScannerModule();
+      } catch {
+        // scan() below will still surface a clear error if Google Play Services cannot provide the module.
+      }
+
+      const result = await BarcodeScanner.scan({
+        formats: [BarcodeFormat.Ean13, BarcodeFormat.Ean8, BarcodeFormat.UpcA, BarcodeFormat.UpcE],
+        autoZoom: true,
+      });
+      const text = result.barcodes?.[0]?.rawValue || result.barcodes?.[0]?.displayValue || "";
+      setScanning(false);
+      if (/^\d{6,14}$/.test(text)) {
+        lookupBarcode(text);
+      } else if (nativeScanRef.current) {
+        toast({ title: "Ingen giltig streckkod", description: "Försök igen eller skriv in koden manuellt.", variant: "destructive" });
+      }
+    } catch (e: any) {
+      if (String(e?.message || e).toLowerCase().includes("cancel")) {
+        setScanning(false);
+        return;
+      }
+      setScanning(false);
+      throw e;
+    }
   }
 
   async function lookupBarcode(barcode: string) {
