@@ -591,7 +591,7 @@ const Index = () => {
 
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 44px)" }}>
       {biometricLocked && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 px-6">
           <img src={grimIcon} alt="Grim app icon" className="w-16 h-16" />
