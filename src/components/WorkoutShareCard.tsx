@@ -102,6 +102,14 @@ const WorkoutShareCard = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
   const [theme, setTheme] = useState<Theme>("colorful");
+  const [userPhoto, setUserPhoto] = useState<string | null>(null);
+
+  const handlePickPhoto = async () => {
+    const picked = await pickImage({ source: "prompt", quality: 80 });
+    if (!picked) return;
+    setUserPhoto(picked.dataUrl);
+  };
+
 
   const t = themes[theme];
 
