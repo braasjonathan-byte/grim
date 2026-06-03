@@ -293,7 +293,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           )}
         </div>
       )}
-      {gps.isTracking && (
+      {gps.isTracking && !Capacitor.isNativePlatform() && (
         <p className="text-[10px] text-warning font-semibold">
           ⚠️ Släck inte skärmen – inspelningen pausas om skärmen släcks.
         </p>
