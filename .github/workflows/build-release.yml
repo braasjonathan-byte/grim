@@ -33,3 +33,10 @@ jobs:
       with:
         name: app-release
         path: android/app/build/outputs/apk/release/*.apk
+        - run: |
+    rm -rf android node_modules
+    npm ci
+    npm install @capacitor/android
+    npx cap add android
+    npx cap sync android
+    npx cap sync android
