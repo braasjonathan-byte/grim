@@ -6,8 +6,8 @@
       "name": "vite_react_shadcn_ts",
       "dependencies": {
         "@capacitor-community/bluetooth-le": "^8.2.0",
-        "@capacitor-firebase/app": "^7",
-        "@capacitor-firebase/crashlytics": "^7",
+        "@capacitor-firebase/app": "^8",
+        "@capacitor-firebase/crashlytics": "^8",
         "@capacitor-mlkit/barcode-scanning": "^8.1.0",
         "@capacitor/android": "^8.3.0",
         "@capacitor/camera": "^8.2.0",
@@ -303,9 +303,9 @@
 
     "@capacitor-community/bluetooth-le": ["@capacitor-community/bluetooth-le@8.2.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-community/bluetooth-le/-/bluetooth-le-8.2.0.tgz", { "dependencies": { "@types/web-bluetooth": "^0.0.20" }, "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-wsy2h9sVcXaynyb3Nf9fVZklnQHDtIfT4fc6iL9McZvi19rDJ5aCoEBqa4wch5RywbF3Ic1W/StKuHJuWUumiQ=="],
 
-    "@capacitor-firebase/app": ["@capacitor-firebase/app@7.5.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-firebase/app/-/app-7.5.0.tgz", { "peerDependencies": { "@capacitor/core": ">=7.0.0", "firebase": "^11.2.0" }, "optionalPeers": ["firebase"] }, "sha512-umX3CvcxHV47X3rnjb9sWpqW1NZ/DcCpKbi/Usr/HJqZCZZRjpVCqlmZB/zvKJ0wF9kEtg3vJuvlvccudaPpSQ=="],
+    "@capacitor-firebase/app": ["@capacitor-firebase/app@8.2.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-firebase/app/-/app-8.2.0.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0", "firebase": "^12.6.0" }, "optionalPeers": ["firebase"] }, "sha512-DnMNGV9zmmRppe+34h395Y/ihFvizQWIulppyxzGsaQwmcgLnny9T8abGAQFpoZaodEv5ETvae5j6luJYhF5kw=="],
 
-    "@capacitor-firebase/crashlytics": ["@capacitor-firebase/crashlytics@7.5.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-firebase/crashlytics/-/crashlytics-7.5.0.tgz", { "peerDependencies": { "@capacitor/core": ">=7.0.0" } }, "sha512-lSXUjIlZFN7O8ueNhAd33GQ2Lr5M99/Qg2hivvRTnvXoUDISgEi35Ro18ZJeOigqHUCGGiMApfng2UgpCH8fjg=="],
+    "@capacitor-firebase/crashlytics": ["@capacitor-firebase/crashlytics@8.2.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-firebase/crashlytics/-/crashlytics-8.2.0.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-3unj3kfKgmQMMXpenv3vYF4GwPqJn0vABFwJVMet32vZl2Dn+7z5vf41G+kJLmV7vDLC40R7mMntpQGVZMQYaw=="],
 
     "@capacitor-mlkit/barcode-scanning": ["@capacitor-mlkit/barcode-scanning@8.1.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-mlkit/barcode-scanning/-/barcode-scanning-8.1.0.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-lhOYHZINLOCT0i5YSbSMkouik3zh0BncJouumNTgXCT0/533Z4733jAX9zv+nEd++bE8QHeUl2g0NrewreumnQ=="],
 
