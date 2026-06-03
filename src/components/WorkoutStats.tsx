@@ -433,16 +433,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       let sortKey: string;
 
       if (view === "week") {
-        // Group by plan week, label with calendar week
-        const planWeek = c.week;
-        key = `plan-W${planWeek}`;
-        if (planStartCalendarWeek) {
-          const calendarWeek = planStartCalendarWeek.week + (planWeek - 1);
-          label = `V${calendarWeek} ${planStartCalendarWeek.year}`;
-        } else {
-          label = `Vecka ${planWeek}`;
-        }
-        sortKey = String(planWeek).padStart(4, "0");
+        // Group by the ACTUAL ISO calendar week of the completion date
+        const iso = getISOWeek(calendarDate);
+        key = `iso-${iso.year}-W${String(iso.week).padStart(2, "0")}`;
+        label = `V${iso.week} ${iso.year}`;
+        sortKey = `${iso.year}-${String(iso.week).padStart(2, "0")}`;
       } else if (view === "month") {
         const m = calendarDate.getMonth();
         const yr = calendarDate.getFullYear();
@@ -486,22 +481,21 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     }
 
 
-    // For week view, ensure all weeks with scheduled exercises have a bucket and set totalWithExercise from plans
-    if (view === "week") {
+    // For week view, ensure all weeks with scheduled exercises have a bucket (keyed by ISO calendar week)
+    if (view === "week" && planStartDate) {
+      const planMonday = getMonday(planStartDate);
       for (const [planWeek, count] of scheduledPerWeek) {
-        const key = `plan-W${planWeek}`;
+        const weekDate = new Date(planMonday);
+        weekDate.setDate(weekDate.getDate() + (planWeek - 1) * 7);
+        const iso = getISOWeek(weekDate);
+        const key = `iso-${iso.year}-W${String(iso.week).padStart(2, "0")}`;
         if (!buckets.has(key)) {
-          let label: string;
-          if (planStartCalendarWeek) {
-            const calendarWeek = planStartCalendarWeek.week + (planWeek - 1);
-            label = `V${calendarWeek} ${planStartCalendarWeek.year}`;
-          } else {
-            label = `Vecka ${planWeek}`;
-          }
-          const sortKey = String(planWeek).padStart(4, "0");
+          const label = `V${iso.week} ${iso.year}`;
+          const sortKey = `${iso.year}-${String(iso.week).padStart(2, "0")}`;
           buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: count, distanceKm: 0, sortKey });
         } else {
-          buckets.get(key)!.totalWithExercise = count;
+          const b = buckets.get(key)!;
+          if (count > b.totalWithExercise) b.totalWithExercise = count;
         }
       }
     }
