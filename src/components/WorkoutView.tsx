@@ -293,7 +293,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           )}
         </div>
       )}
-      {gps.isTracking && (
+      {gps.isTracking && !Capacitor.isNativePlatform() && (
         <p className="text-[10px] text-warning font-semibold">
           ⚠️ Släck inte skärmen – inspelningen pausas om skärmen släcks.
         </p>
@@ -6118,12 +6118,27 @@ const estimateCalories = (
                   const isStrength = s.includes("styrka") || s.includes("bänk") || s.includes("böj") || s.includes("mark") || s.includes("press") || s.includes("rodd") || s.includes("chins") || s.includes("tung") || s.includes("rpe") || s.includes("×") || s.includes("x");
                   if (!isStrength) {
                     const isRunning = s.includes("löpning") || s.includes("jogg") || s.includes("långpass") || s.includes("tröskel");
+                    const sessionLower = plan.session_name.toLowerCase();
+                    const isCycling = /cykling|cykel|spinning/.test(sessionLower);
+                    const isSwimming = /simning|simma|sim\b/.test(sessionLower);
                     const comp = completions[key];
                     let detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
-                    
+                    let cardioInstructionsText: string | null = null;
+
+                    // For cycling/swimming sessions: treat details as instructions (like running),
+                    // and surface a single conditioning entry so the user can log manually or via GPS.
+                    if ((isCycling || isSwimming) && plan.session_name.trim() && detailParts.length > 0) {
+                      // Skip rewrite if the only line is already a logged conditioning entry for this session
+                      const onlyLine = detailParts.length === 1 ? detailParts[0] : null;
+                      const { name: onlyName } = onlyLine ? parseExerciseWeight(onlyLine) : { name: "" };
+                      const alreadySingleCondEntry = onlyLine && onlyName.trim().toLowerCase() === plan.session_name.trim().toLowerCase();
+                      if (!alreadySingleCondEntry) {
+                        cardioInstructionsText = plan.details;
+                      }
+                    }
+
                     // Auto-generate conditioning entry for tröskelpass/running with empty details
                     if (detailParts.length === 0 && isRunning && plan.session_name.trim()) {
-                      const sessionLower = plan.session_name.toLowerCase();
                       if (sessionLower.includes("tröskel")) {
                         detailParts = ["Tröskellöpning"];
                       } else if (sessionLower.includes("långpass")) {
@@ -6178,7 +6193,48 @@ const estimateCalories = (
                               </p>
                             </div>
                           )}
-                          {detailParts.length > 1 ? (
+                          {cardioInstructionsText && (() => {
+                            const condName = plan.session_name.trim();
+                            const cKey = `__cond__${condName}`;
+                            const cRaw = (completions[key]?.logged_weights as Record<string, any>)?.[cKey];
+                            let cSaved: Record<string, any> | null = null;
+                            if (cRaw) { try { const p = typeof cRaw === "string" ? JSON.parse(cRaw) : cRaw; if (p && typeof p === "object") cSaved = p; } catch {} }
+                            const cHasSaved = !!(cSaved && (cSaved.time || cSaved.dist || cSaved.tempo || cSaved.pulse));
+                            return (
+                              <div className="space-y-2">
+                                <div className="bg-muted/40 border border-border rounded-md px-3 py-2">
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">Upplägg</p>
+                                  <p className="text-xs text-foreground italic leading-relaxed whitespace-pre-line">
+                                    {cardioInstructionsText}
+                                  </p>
+                                </div>
+                                <ConditioningEditCard
+                                  name={condName}
+                                  lineIndex={0}
+                                  planId={plan.id}
+                                  planCondTime=""
+                                  planCondDist=""
+                                  planCondTempo=""
+                                  savedData={cSaved}
+                                  hasSavedData={cHasSaved}
+                                  exerciseLinesCount={1}
+                                  isCompleted={isConditioningDone(key, condName)}
+                                  onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, condName)}
+                                  onMoveUp={() => {}}
+                                  onMoveDown={() => {}}
+                                  onShowInfo={() => setExerciseInfoState({ name: condName })}
+                                  onDelete={() => {}}
+                                  onSave={async (data) => {
+                                    await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                                      return { ...existing, [cKey]: JSON.stringify(data) };
+                                    });
+                                    triggerSave();
+                                  }}
+                                />
+                              </div>
+                            );
+                          })()}
+                          {!cardioInstructionsText && detailParts.length > 1 ? (
                             <ul className="space-y-1.5">
                               {detailParts.map((line, i) => {
                                 const cleanName = line.replace(/\s*[—\-]\s*\d+[×x].*$/i, "").replace(/\s*@\s*\d+.*$/i, "").trim();
@@ -6498,6 +6554,8 @@ const estimateCalories = (
                               })}
                             </ul>
                           ) : (() => {
+                            // Hide the default single-line render when cardio instructions block has already rendered the entry.
+                            if (cardioInstructionsText) return null;
                             // Single line - check conditioning format first
                             const { name: sCondName, weight: sCondWeight } = parseExerciseWeight(plan.details);
                             const sCondNameLower = sCondName.trim().toLowerCase();
