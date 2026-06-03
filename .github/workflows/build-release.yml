@@ -40,8 +40,9 @@ jobs:
           echo "Error: ANDROID_KEYSTORE_BASE64 secret is not set!"
           exit 1
         fi
-        # Vi rensar bort ALLA typer av whitespace och ignorerar skräptecken vid avkodning
-        echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -di > android/app/min-app-nyckel.jks
+        # Vi använder printf för att undvika problem med dolda tecken och tr -dc
+        # för att behålla ENDAST giltiga Base64-tecken (A-Z, a-z, 0-9, +, /, =)
+        printf '%s' "$KEYSTORE_BASE64" | tr -dc 'A-Za-z0-9+/=' | base64 -d > android/app/min-app-nyckel.jks
         
         # Kontrollera att filen faktiskt skapades och inte är tom
         if [ ! -s android/app/min-app-nyckel.jks ]; then
