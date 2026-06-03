@@ -374,40 +374,60 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   );
 };
 
-// Day-level GPS recorder: after stop, prompts user to pick which kondition exercise to log against.
+// Day-level GPS recorder: first lets user pick which kondition exercise to record,
+// then starts GPS tracking. On stop, saves directly to the chosen exercise.
 const DayGpsRecorder = ({ konditionExercises, onSave }: {
   konditionExercises: { name: string }[];
   onSave: (name: string, km: number, sec: number, route: [number, number][]) => Promise<void> | void;
 }) => {
-  const [pending, setPending] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const names = Array.from(new Set(konditionExercises.map(e => e.name))).sort((a, b) => a.localeCompare(b, "sv"));
     return q ? names.filter(n => n.toLowerCase().includes(q)) : names;
   }, [query, konditionExercises]);
 
-  const choose = async (name: string) => {
-    if (!pending) return;
-    const p = pending;
-    setPending(null);
-    setQuery("");
-    await onSave(name, p.km, p.sec, p.route);
+  const closePicker = () => { setPickerOpen(false); setQuery(""); };
+
+  const pick = (name: string) => {
+    closePicker();
+    setSelectedName(name);
   };
 
-  const fmtTime = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${String(sec).padStart(2, "0")}`;
-  };
+  if (selectedName) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          <MapPin className="w-3 h-3" /> {selectedName}
+        </div>
+        <GpsTrackerControl
+          autoStart
+          onStop={async (km, sec, route) => {
+            const name = selectedName;
+            setSelectedName(null);
+            await onSave(name, km, sec, route);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <>
-      <GpsTrackerControl onStop={(km, sec, route) => setPending({ km, sec, route })} />
-      {pending && createPortal(
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setPickerOpen(true); }}
+        className="min-h-9 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+      >
+        <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
+      </button>
+      {pickerOpen && createPortal(
         <div
           className="fixed inset-0 z-[10000] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
-          onClick={() => setPending(null)}
+          onClick={closePicker}
         >
           <div
             className="w-full max-w-md bg-background border border-border rounded-md p-4 space-y-3 shadow-lg"
@@ -417,29 +437,27 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
               <h3 className="text-sm font-bold">Välj övning att registrera</h3>
               <button
                 type="button"
-                onClick={() => setPending(null)}
+                onClick={closePicker}
                 className="text-muted-foreground hover:text-foreground"
                 aria-label="Stäng"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[11px] text-muted-foreground font-mono">
-              {(Math.round(pending.km * 100) / 100).toFixed(2)} km · {fmtTime(pending.sec)}
-            </p>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Sök övning…"
               className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary"
+              autoFocus
             />
             <div className="max-h-72 overflow-y-auto space-y-1">
               {filtered.map(name => (
                 <button
                   key={name}
                   type="button"
-                  onClick={() => choose(name)}
+                  onClick={() => pick(name)}
                   className="w-full text-left px-3 py-2 text-sm rounded-md border border-border hover:bg-secondary"
                 >
                   {name}
@@ -456,6 +474,8 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
     </>
   );
 };
+
+
 
 
 
