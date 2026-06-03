@@ -170,6 +170,14 @@ const startTracking = async () => {
         });
         return;
       }
+      // After foreground is granted, nudge the OS to prompt for "Allow all the time"
+      // (background location) so recording survives the screen turning off.
+      // Requires ACCESS_BACKGROUND_LOCATION in AndroidManifest.xml.
+      try {
+        await Geolocation.requestPermissions({ permissions: ["location"] });
+      } catch (err) {
+        console.warn("Background geolocation request failed:", err);
+      }
     } catch (err) {
       console.error("Native geolocation permission error:", err);
     }
