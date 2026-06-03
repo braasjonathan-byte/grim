@@ -12,6 +12,7 @@ import TabSkeleton from "@/components/TabSkeleton";
 import AuthScreen from "@/components/AuthScreen";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useNativePush } from "@/hooks/useNativePush";
+import { requestInitialPermissions } from "@/lib/requestInitialPermissions";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
