@@ -25,6 +25,7 @@ import PageTransition from "@/components/PageTransition";
 import { hapticLight } from "@/lib/haptics";
 import { ensureUnlocked } from "@/lib/biometric";
 import { Capacitor } from "@capacitor/core";
+import { logCrashlyticsMessage, recordError, setCrashlyticsUserId } from "@/lib/crashlytics";
 
 
 // Lazy-loaded tab components for code splitting
@@ -237,32 +238,42 @@ const Index = () => {
   useDataSnapshots(user?.id ?? null);
 
   useEffect(() => {
+    if (!user || Capacitor.isNativePlatform()) return;
     void requestInitialPermissions();
     void autoConnectHeartRate();
-  }, []);
+  }, [user]);
 
 
   // Shared helper to load profile + role (called once per session)
   const loadUserData = useCallback(async (uid: string) => {
-    const [{ data }, { data: roleData }] = await Promise.all([
-      supabase.from("profiles").select("nickname, must_change_password, is_honorary, theme").eq("user_id", uid).single(),
-      supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
-    ]);
-    if (data) {
-      setNickname(data.nickname);
-      setIsHonorary((data as any).is_honorary || false);
-      if (data.must_change_password) {
-        setForceChangePassword(true);
-        setShowChangePassword(true);
+    try {
+      await logCrashlyticsMessage("loadUserData:start");
+      const [{ data, error: profileError }, { data: roleData, error: roleError }] = await Promise.all([
+        supabase.from("profiles").select("nickname, must_change_password, is_honorary, theme").eq("user_id", uid).single(),
+        supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
+      ]);
+      if (profileError) throw profileError;
+      if (roleError) throw roleError;
+      if (data) {
+        setNickname(data.nickname);
+        setIsHonorary((data as any).is_honorary || false);
+        if (data.must_change_password) {
+          setForceChangePassword(true);
+          setShowChangePassword(true);
+        }
+        // Apply saved color theme (only if not locked by friend profile view)
+        const savedTheme = (data as any).theme || "default";
+        storeThemeId(savedTheme);
+        if (!isThemeLocked()) {
+          applyTheme(savedTheme);
+        }
       }
-      // Apply saved color theme (only if not locked by friend profile view)
-      const savedTheme = (data as any).theme || "default";
-      storeThemeId(savedTheme);
-      if (!isThemeLocked()) {
-        applyTheme(savedTheme);
-      }
+      if (roleData) setUserRole(roleData.role);
+      await logCrashlyticsMessage("loadUserData:done");
+    } catch (error) {
+      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData" });
+      setNickname("Grim");
     }
-    if (roleData) setUserRole(roleData.role);
   }, []);
 
   useEffect(() => {
@@ -270,6 +281,8 @@ const Index = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        void logCrashlyticsMessage(`auth:${_event}`);
+        void setCrashlyticsUserId(session?.user?.id ?? null);
         setUser(session?.user ?? null);
         if (session?.user && initialDone) {
           setTimeout(() => loadUserData(session.user.id), 0);

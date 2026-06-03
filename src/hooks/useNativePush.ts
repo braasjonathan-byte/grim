@@ -2,7 +2,10 @@ import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 
-const NATIVE_PUSH_ENABLED = import.meta.env.VITE_ENABLE_NATIVE_PUSH !== "false";
+// Disabled by default: Capacitor PushNotifications.register/requestPermissions can
+// terminate the Android process natively on some devices/configurations, before
+// JavaScript catch handlers run. Enable explicitly only after the APK is stable.
+const NATIVE_PUSH_ENABLED = import.meta.env.VITE_ENABLE_NATIVE_PUSH === "true";
 
 /**
  * Registers native push notifications (FCM/APNs) when running inside
@@ -15,7 +18,12 @@ export function useNativePush(userId: string | null) {
   useEffect(() => {
     if (!userId || registeredRef.current) return;
     if (!Capacitor.isNativePlatform()) return;
-    if (!NATIVE_PUSH_ENABLED) return;
+    if (!NATIVE_PUSH_ENABLED) {
+      void import("@/lib/crashlytics")
+        .then(({ logCrashlyticsMessage }) => logCrashlyticsMessage("Native push auto-registration skipped"))
+        .catch(() => undefined);
+      return;
+    }
     if (!Capacitor.isPluginAvailable("PushNotifications")) return;
 
     let cleanupNativeListeners: (() => void) | undefined;
