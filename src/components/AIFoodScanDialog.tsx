@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Loader2, Camera, Sparkles, Utensils, FileText } from "lucide-react";
+import { Loader2, Camera, Sparkles, Utensils, FileText, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UNITS, toGrams } from "@/lib/nutritionCalc";
+import { pickImage } from "@/lib/pickImage";
+import { Capacitor } from "@capacitor/core";
 import type { PickedItem } from "./FoodPickerDialog";
+
 
 type ScanMode = "dish" | "label";
 
