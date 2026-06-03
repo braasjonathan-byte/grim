@@ -6264,9 +6264,14 @@ const estimateCalories = (
                                   );
                                 }
 
-                                // Check if this is a conditioning line (Name — X min / X km)
+                                // Check if this is a conditioning line (Name — X min / X km),
+                                // OR a bare kondition exercise without data so users can still edit/add data.
                                 const { name: condLineName, weight: condLineWeight } = parseExerciseWeight(line);
-                                const isCondLine = condLineWeight && (condLineWeight.includes("min") || condLineWeight.includes("/km") || /\d+\s*km/i.test(condLineWeight));
+                                const condLineNameLower = condLineName.trim().toLowerCase();
+                                const isBareKonditionEx = !!condLineNameLower && allExercises.some(e => e.category === "kondition" && e.name && e.name.toLowerCase() === condLineNameLower);
+                                const condLineKey = `__cond__${condLineName}`;
+                                const hasCondLineLogged = !!(completions[key]?.logged_weights as any)?.[condLineKey];
+                                const isCondLine = (condLineWeight && (condLineWeight.includes("min") || condLineWeight.includes("/km") || /\d+\s*km/i.test(condLineWeight))) || isBareKonditionEx || hasCondLineLogged;
 
                                 if (isCondLine) {
                                   const cTimeM = condLineWeight.match(/(\d+)\s*min/);
