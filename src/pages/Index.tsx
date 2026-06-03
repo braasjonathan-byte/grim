@@ -384,7 +384,7 @@ const Index = () => {
     checkUnread();
   }, [user, userRole]);
 
-  // Fetch unread chat count — use incremental updates from realtime instead of refetching
+  // Fetch unread chat count — always re-sync from DB to avoid drift
   useEffect(() => {
     if (!user) return;
     const fetchUnreadChats = async () => {
@@ -397,21 +397,28 @@ const Index = () => {
     };
     fetchUnreadChats();
 
+    const onFocus = () => fetchUnreadChats();
+    const onVisibility = () => { if (document.visibilityState === "visible") fetchUnreadChats(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
     const channel = supabase.
     channel("unread-chat-count").
     on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
-      // Increment locally instead of refetching
-      setUnreadChats(prev => prev + 1);
+      fetchUnreadChats();
     }).
-    on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, (payload) => {
-      // If message was marked as read, decrement
-      const newMsg = payload.new as any;
-      if (newMsg.read) {
-        setUnreadChats(prev => Math.max(0, prev - 1));
-      }
+    on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages", filter: `receiver_id=eq.${user.id}` }, () => {
+      fetchUnreadChats();
+    }).
+    on("postgres_changes", { event: "DELETE", schema: "public", table: "chat_messages" }, () => {
+      fetchUnreadChats();
     }).
     subscribe();
-    return () => {supabase.removeChannel(channel);};
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [user]);
 
   // Track unread social posts
