@@ -421,7 +421,6 @@ serve(async (req) => {
     return jsonResponse({ success: true, syncedConnections: results.length, results });
   } catch (error) {
     console.error("Strava sync failed", error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return jsonResponse({ error: errorMessage }, 500);
+    return jsonResponse({ error: "Internal error" }, 500);
   }
 });
