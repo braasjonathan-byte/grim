@@ -238,6 +238,7 @@ const Index = () => {
 
   useEffect(() => {
     void requestInitialPermissions();
+    void autoConnectHeartRate();
   }, []);
 
 
