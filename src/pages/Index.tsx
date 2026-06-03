@@ -13,6 +13,7 @@ import AuthScreen from "@/components/AuthScreen";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useNativePush } from "@/hooks/useNativePush";
 import { requestInitialPermissions } from "@/lib/requestInitialPermissions";
+import { autoConnectHeartRate } from "@/lib/heartRate";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
