@@ -19,16 +19,15 @@ jobs:
         cache: 'npm'
 
     - name: Install Dependencies
-      # Använder npm install istället för ci för att hantera ev. osynkade lock-filer temporärt
       run: npm install --legacy-peer-deps
 
     - name: Build Web App
       run: npm run build
 
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
         cache: gradle
 
