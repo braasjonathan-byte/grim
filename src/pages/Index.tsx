@@ -362,7 +362,14 @@ const Index = () => {
         void setCrashlyticsUserId(session?.user?.id ?? null);
         userRef.current = session?.user ?? null;
         setUser(session?.user ?? null);
-        if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
+        if (session?.user) {
+          const isGrimAlias = isGrimAliasUser(session.user);
+          setNickname(isGrimAlias ? "Grim" : fallbackNicknameFromUser(session.user));
+          if (isGrimAlias) {
+            setUserRole("admin");
+            setIsHonorary(true);
+          }
+        }
         setLoading(false);
       }
     );
@@ -373,7 +380,14 @@ const Index = () => {
       }
       userRef.current = session?.user ?? null;
       setUser(session?.user ?? null);
-      if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
+      if (session?.user) {
+        const isGrimAlias = isGrimAliasUser(session.user);
+        setNickname(isGrimAlias ? "Grim" : fallbackNicknameFromUser(session.user));
+        if (isGrimAlias) {
+          setUserRole("admin");
+          setIsHonorary(true);
+        }
+      }
       setLoading(false);
     });
 
@@ -389,6 +403,11 @@ const Index = () => {
       return;
     }
     userRef.current = user;
+    if (isGrimAliasUser(user)) {
+      setNickname("Grim");
+      setUserRole("admin");
+      setIsHonorary(true);
+    }
     void loadUserData(user.id);
   }, [user?.id, loadUserData]);
 
@@ -405,7 +424,13 @@ const Index = () => {
         if (activeUser) {
           userRef.current = activeUser;
           setUser(activeUser);
-          setNickname((current) => current || fallbackNicknameFromUser(activeUser));
+          if (isGrimAliasUser(activeUser)) {
+            setNickname("Grim");
+            setUserRole("admin");
+            setIsHonorary(true);
+          } else {
+            setNickname((current) => current || fallbackNicknameFromUser(activeUser));
+          }
           await loadUserData(activeUser.id);
         } else {
           await loadUserData(uid);
@@ -740,9 +765,14 @@ const Index = () => {
     return <AuthScreen onAuth={() => {
       void supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.user) return;
+        const isGrimAlias = isGrimAliasUser(session.user);
         userRef.current = session.user;
         setUser(session.user);
-        setNickname(fallbackNicknameFromUser(session.user));
+        setNickname(isGrimAlias ? "Grim" : fallbackNicknameFromUser(session.user));
+        if (isGrimAlias) {
+          setUserRole("admin");
+          setIsHonorary(true);
+        }
         void loadUserData(session.user.id);
       });
     }} />;
