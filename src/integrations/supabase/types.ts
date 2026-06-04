@@ -2083,6 +2083,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_my_access_status: {
+        Args: never
+        Returns: {
+          is_honorary: boolean
+          must_change_password: boolean
+          nickname: string
+          role: Database["public"]["Enums"]["app_role"]
+          theme: string
+        }[]
+      }
       get_my_security_question_indices: {
         Args: never
         Returns: {
