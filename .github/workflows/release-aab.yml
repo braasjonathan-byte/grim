@@ -41,7 +41,7 @@ jobs:
           rm -rf node_modules/.cache
 
       - name: Install Capacitor core
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps --no-audit --no-fund
 
       - name: Create Android platform
         run: npx cap add android
