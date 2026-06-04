@@ -345,7 +345,9 @@ const Index = () => {
       (_event, session) => {
         void logCrashlyticsMessage(`auth:${_event}`);
         void setCrashlyticsUserId(session?.user?.id ?? null);
+        userRef.current = session?.user ?? null;
         setUser(session?.user ?? null);
+        if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
         setLoading(false);
       }
     );
@@ -354,7 +356,9 @@ const Index = () => {
       if (error || !session) {
         supabase.auth.signOut().catch(() => {});
       }
+      userRef.current = session?.user ?? null;
       setUser(session?.user ?? null);
+      if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
       setLoading(false);
     });
 
@@ -366,8 +370,10 @@ const Index = () => {
     if (!user?.id) {
       setUserRole("member");
       setIsHonorary(false);
+      setNickname("");
       return;
     }
+    userRef.current = user;
     void loadUserData(user.id);
   }, [user?.id, loadUserData]);
 
@@ -377,7 +383,20 @@ const Index = () => {
   useEffect(() => {
     if (!user?.id) return;
     const uid = user.id;
-    const refresh = () => { void loadUserData(uid); };
+    const refresh = () => {
+      void (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const activeUser = session?.user ?? userRef.current;
+        if (activeUser) {
+          userRef.current = activeUser;
+          setUser(activeUser);
+          setNickname((current) => current || fallbackNicknameFromUser(activeUser));
+          await loadUserData(activeUser.id);
+        } else {
+          await loadUserData(uid);
+        }
+      })();
+    };
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -385,6 +404,7 @@ const Index = () => {
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", refresh);
 
+    let disposed = false;
     let removeNative: (() => void) | undefined;
     if (Capacitor.isNativePlatform()) {
       void (async () => {
@@ -398,6 +418,7 @@ const Index = () => {
             handle.remove().catch(() => {});
             handle2.remove().catch(() => {});
           };
+          if (disposed) removeNative();
         } catch {
           /* @capacitor/app unavailable */
         }
@@ -405,6 +426,7 @@ const Index = () => {
     }
 
     return () => {
+      disposed = true;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", refresh);
       removeNative?.();
