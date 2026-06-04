@@ -10,6 +10,7 @@
         "@capacitor-firebase/crashlytics": "^8",
         "@capacitor-mlkit/barcode-scanning": "^8.1.0",
         "@capacitor/android": "^8.3.0",
+        "@capacitor/app": "^8",
         "@capacitor/camera": "^8.2.0",
         "@capacitor/cli": "^8.3.0",
         "@capacitor/core": "^8.3.0",
@@ -310,6 +311,8 @@
     "@capacitor-mlkit/barcode-scanning": ["@capacitor-mlkit/barcode-scanning@8.1.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-mlkit/barcode-scanning/-/barcode-scanning-8.1.0.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-lhOYHZINLOCT0i5YSbSMkouik3zh0BncJouumNTgXCT0/533Z4733jAX9zv+nEd++bE8QHeUl2g0NrewreumnQ=="],
 
     "@capacitor/android": ["@capacitor/android@8.3.1", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/android/-/android-8.3.1.tgz", { "peerDependencies": { "@capacitor/core": "^8.3.0" } }, "sha512-hjskIG8YcBEh3X4yaTXvE9gcqpdcxunTgFruSKnuPxtMxAUzEK4Oq25x0Z1g3cz+MQPc+lRG09R7Ovc+ydKsNw=="],
+
+    "@capacitor/app": ["@capacitor/app@8.1.0", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/app/-/app-8.1.0.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-MlmttTOWHDedr/G4SrhNRxsXMqY+R75S4MM4eIgzsgCzOYhb/MpCkA5Q3nuOCfL1oHm26xjUzqZ5aupbOwdfYg=="],
 
     "@capacitor/camera": ["@capacitor/camera@8.2.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/camera/-/camera-8.2.0.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-hYfrT6xpL936qoEkIpJzSnb0fQCaTkOux1cXzGBfH8QLOGqr6gSLiWZlZz/fqMPmMKJMNRBqlTQkj5fuMhVZog=="],
 

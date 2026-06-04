@@ -18,6 +18,7 @@
     "@capacitor-firebase/crashlytics": "^8",
     "@capacitor-mlkit/barcode-scanning": "^8.1.0",
     "@capacitor/android": "^8.3.0",
+    "@capacitor/app": "^8",
     "@capacitor/camera": "^8.2.0",
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",

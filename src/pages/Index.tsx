@@ -321,6 +321,46 @@ const Index = () => {
     }
     void loadUserData(user.id);
   }, [user?.id, loadUserData]);
+
+  // Force-refresh profile/role data when the app resumes (native APK) or tab
+  // becomes visible (PWA). Ensures admin/honorary status appears without
+  // requiring a logout/login cycle after server-side grant changes.
+  useEffect(() => {
+    if (!user?.id) return;
+    const uid = user.id;
+    const refresh = () => { void loadUserData(uid); };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", refresh);
+
+    let removeNative: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void (async () => {
+        try {
+          const { App } = await import("@capacitor/app");
+          const handle = await App.addListener("appStateChange", ({ isActive }) => {
+            if (isActive) refresh();
+          });
+          const handle2 = await App.addListener("resume", refresh);
+          removeNative = () => {
+            handle.remove().catch(() => {});
+            handle2.remove().catch(() => {});
+          };
+        } catch {
+          /* @capacitor/app unavailable */
+        }
+      })();
+    }
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", refresh);
+      removeNative?.();
+    };
+  }, [user?.id, loadUserData]);
   // App icon badge — show unread count when away, clear when visible
   const totalUnread = unreadAnnouncements + unreadChats + unreadPosts + friendActivities.length;
   useEffect(() => {
