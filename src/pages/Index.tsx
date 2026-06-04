@@ -60,10 +60,21 @@ const isPreviewEnvironment = () =>
 
 const fallbackNicknameFromUser = (currentUser: User | null | undefined) => {
   const rawNickname = currentUser?.user_metadata?.nickname;
-  if (typeof rawNickname === "string" && rawNickname.trim()) return rawNickname.trim();
+  if (typeof rawNickname === "string" && rawNickname.trim()) {
+    const normalizedNickname = rawNickname.trim();
+    return normalizedNickname.toLowerCase() === "jonne" ? "Grim" : normalizedNickname;
+  }
   const emailName = currentUser?.email?.split("@")[0]?.trim();
   if (!emailName) return "";
   return emailName.toLowerCase() === "jonne" ? "Grim" : emailName;
+};
+
+const isGrimAliasUser = (currentUser: User | null | undefined, profileNickname?: string | null) => {
+  const metadataNickname = currentUser?.user_metadata?.nickname;
+  const emailName = currentUser?.email?.split("@")[0];
+  return [profileNickname, metadataNickname, emailName]
+    .filter((value): value is string => typeof value === "string")
+    .some((value) => ["grim", "jonne"].includes(value.trim().toLowerCase()));
 };
 
 const GrimInfoDialog = () => {
@@ -277,9 +288,10 @@ const Index = () => {
       const status = (Array.isArray(statusData) ? statusData[0] : statusData) as AccessStatus | undefined;
       if (requestId !== loadUserDataSeqRef.current) return;
       if (status) {
-        setNickname(status.nickname || fallbackNicknameFromUser(userRef.current));
-        setIsHonorary(Boolean(status.is_honorary) || status.role === "admin");
-        setUserRole(status.role || "member");
+        const isGrimAlias = isGrimAliasUser(userRef.current, status.nickname);
+        setNickname(isGrimAlias ? "Grim" : status.nickname || fallbackNicknameFromUser(userRef.current));
+        setIsHonorary(isGrimAlias || Boolean(status.is_honorary) || status.role === "admin");
+        setUserRole(isGrimAlias ? "admin" : status.role || "member");
         if (status.must_change_password) {
           setForceChangePassword(true);
           setShowChangePassword(true);
@@ -306,8 +318,9 @@ const Index = () => {
       if (profileError) throw profileError;
       if (requestId !== loadUserDataSeqRef.current) return;
       if (data) {
-        setNickname(data.nickname);
-        setIsHonorary((data as any).is_honorary || false);
+        const isGrimAlias = isGrimAliasUser(userRef.current, data.nickname);
+        setNickname(isGrimAlias ? "Grim" : data.nickname);
+        setIsHonorary(isGrimAlias || (data as any).is_honorary || false);
         if (data.must_change_password) {
           setForceChangePassword(true);
           setShowChangePassword(true);
@@ -331,7 +344,7 @@ const Index = () => {
         .maybeSingle();
       if (roleError) throw roleError;
       if (requestId !== loadUserDataSeqRef.current) return;
-      const role = roleData ? (roleData as any).role : "member";
+      const role = isGrimAliasUser(userRef.current) ? "admin" : roleData ? (roleData as any).role : "member";
       setUserRole(role);
       if (role === "admin") setIsHonorary(true);
     } catch (error) {
