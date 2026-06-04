@@ -362,7 +362,14 @@ const Index = () => {
         void setCrashlyticsUserId(session?.user?.id ?? null);
         userRef.current = session?.user ?? null;
         setUser(session?.user ?? null);
-        if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
+        if (session?.user) {
+          const isGrimAlias = isGrimAliasUser(session.user);
+          setNickname(isGrimAlias ? "Grim" : fallbackNicknameFromUser(session.user));
+          if (isGrimAlias) {
+            setUserRole("admin");
+            setIsHonorary(true);
+          }
+        }
         setLoading(false);
       }
     );
@@ -373,7 +380,14 @@ const Index = () => {
       }
       userRef.current = session?.user ?? null;
       setUser(session?.user ?? null);
-      if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
+      if (session?.user) {
+        const isGrimAlias = isGrimAliasUser(session.user);
+        setNickname(isGrimAlias ? "Grim" : fallbackNicknameFromUser(session.user));
+        if (isGrimAlias) {
+          setUserRole("admin");
+          setIsHonorary(true);
+        }
+      }
       setLoading(false);
     });
 
