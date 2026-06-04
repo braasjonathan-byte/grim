@@ -60,7 +60,10 @@ const isPreviewEnvironment = () =>
 
 const fallbackNicknameFromUser = (currentUser: User | null | undefined) => {
   const rawNickname = currentUser?.user_metadata?.nickname;
-  if (typeof rawNickname === "string" && rawNickname.trim()) return rawNickname.trim();
+  if (typeof rawNickname === "string" && rawNickname.trim()) {
+    const normalizedNickname = rawNickname.trim();
+    return normalizedNickname.toLowerCase() === "jonne" ? "Grim" : normalizedNickname;
+  }
   const emailName = currentUser?.email?.split("@")[0]?.trim();
   if (!emailName) return "";
   return emailName.toLowerCase() === "jonne" ? "Grim" : emailName;
