@@ -403,6 +403,11 @@ const Index = () => {
       return;
     }
     userRef.current = user;
+    if (isGrimAliasUser(user)) {
+      setNickname("Grim");
+      setUserRole("admin");
+      setIsHonorary(true);
+    }
     void loadUserData(user.id);
   }, [user?.id, loadUserData]);
 
@@ -419,7 +424,13 @@ const Index = () => {
         if (activeUser) {
           userRef.current = activeUser;
           setUser(activeUser);
-          setNickname((current) => current || fallbackNicknameFromUser(activeUser));
+          if (isGrimAliasUser(activeUser)) {
+            setNickname("Grim");
+            setUserRole("admin");
+            setIsHonorary(true);
+          } else {
+            setNickname((current) => current || fallbackNicknameFromUser(activeUser));
+          }
           await loadUserData(activeUser.id);
         } else {
           await loadUserData(uid);
