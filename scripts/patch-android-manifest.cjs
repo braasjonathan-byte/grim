@@ -68,6 +68,16 @@ if (!xml.includes(MLKIT_BARCODE_META)) {
   console.log("[patch-android-manifest] Added ML Kit barcode scanner dependency metadata");
 }
 
+const FCM_CHANNEL_META = 'android:name="com.google.firebase.messaging.default_notification_channel_id"';
+if (!xml.includes(FCM_CHANNEL_META)) {
+  xml = xml.replace(
+    /<application([^>]*)>/,
+    `<application$1>\n        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="grim_default" />`
+  );
+  changed = true;
+  console.log("[patch-android-manifest] Added FCM default notification channel meta-data");
+}
+
 if (changed) {
   fs.writeFileSync(MANIFEST, xml, "utf8");
   console.log("[patch-android-manifest] AndroidManifest.xml updated.");

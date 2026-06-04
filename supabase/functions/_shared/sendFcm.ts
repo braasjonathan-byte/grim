@@ -161,7 +161,14 @@ export async function sendNativePush(
       if (tokenRow.platform === "android") {
         message.android = {
           priority: "high",
-          notification: { icon: "ic_notification", default_sound: true },
+          notification: {
+            icon: "ic_notification",
+            sound: "default",
+            default_sound: true,
+            default_vibrate_timings: true,
+            channel_id: "grim_default",
+            notification_priority: "PRIORITY_MAX",
+          },
         };
       } else if (tokenRow.platform === "ios") {
         message.apns = {
