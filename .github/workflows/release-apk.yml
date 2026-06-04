@@ -63,7 +63,7 @@ jobs:
       # -------------------------
       - name: Install Capacitor core
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps --no-audit --no-fund
 
       # -------------------------
       # Create Android project clean
