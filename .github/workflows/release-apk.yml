@@ -42,7 +42,7 @@ jobs:
       # Clean install (IMPORTANT)
       # -------------------------
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       # -------------------------
       # Build web
