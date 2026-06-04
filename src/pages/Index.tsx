@@ -331,7 +331,9 @@ const Index = () => {
         .maybeSingle();
       if (roleError) throw roleError;
       if (requestId !== loadUserDataSeqRef.current) return;
-      setUserRole(roleData ? (roleData as any).role : "member");
+      const role = roleData ? (roleData as any).role : "member";
+      setUserRole(role);
+      if (role === "admin") setIsHonorary(true);
     } catch (error) {
       console.warn("[loadUserData] role failed", error);
       await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:role" });
@@ -722,7 +724,15 @@ const Index = () => {
   }
 
   if (!user) {
-    return <AuthScreen onAuth={() => {}} />;
+    return <AuthScreen onAuth={() => {
+      void supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.user) return;
+        userRef.current = session.user;
+        setUser(session.user);
+        setNickname(fallbackNicknameFromUser(session.user));
+        void loadUserData(session.user.id);
+      });
+    }} />;
   }
 
   const friendActivityCount = friendActivities.length;
