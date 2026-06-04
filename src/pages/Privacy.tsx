@@ -19,7 +19,7 @@ const Privacy = () => {
           <h2 className="text-xl font-bold">1. Personuppgiftsansvarig</h2>
           <p className="text-sm leading-relaxed">
             Grim ("vi", "appen") är personuppgiftsansvarig för behandlingen av dina personuppgifter
-            i denna app. Kontakt: support@grim.lovable.app
+            i denna app. Kontakt: grimtraning@gmail.com
           </p>
         </section>
 
@@ -90,7 +90,7 @@ const Privacy = () => {
           </ul>
           <p className="text-sm leading-relaxed">
             Du kan radera ditt konto direkt i appen under Profil → Inställningar, eller kontakta
-            support@grim.lovable.app.
+            grimtraning@gmail.com.
           </p>
         </section>
 
@@ -111,7 +111,7 @@ const Privacy = () => {
         <section className="space-y-2">
           <h2 className="text-xl font-bold">10. Kontakt</h2>
           <p className="text-sm leading-relaxed">
-            Frågor om personuppgifter: <a className="underline" href="mailto:support@grim.lovable.app">support@grim.lovable.app</a>
+            Frågor om personuppgifter: <a className="underline" href="mailto:grimtraning@gmail.com">grimtraning@gmail.com</a>
           </p>
         </section>
       </main>
