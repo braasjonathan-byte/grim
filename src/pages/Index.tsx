@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
@@ -46,9 +46,25 @@ interface FriendActivity {
   timestamp: string;
 }
 
+interface AccessStatus {
+  nickname: string | null;
+  must_change_password: boolean | null;
+  is_honorary: boolean | null;
+  theme: string | null;
+  role: "admin" | "member" | string | null;
+}
+
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 const isPreviewEnvironment = () =>
   window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
+
+const fallbackNicknameFromUser = (currentUser: User | null | undefined) => {
+  const rawNickname = currentUser?.user_metadata?.nickname;
+  if (typeof rawNickname === "string" && rawNickname.trim()) return rawNickname.trim();
+  const emailName = currentUser?.email?.split("@")[0]?.trim();
+  if (!emailName) return "";
+  return emailName.toLowerCase() === "jonne" ? "Grim" : emailName;
+};
 
 const GrimInfoDialog = () => {
   const [open, setOpen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
