@@ -205,6 +205,8 @@ const Index = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
+  const userRef = useRef<User | null>(null);
+  const loadUserDataSeqRef = useRef(0);
   const [workoutRefreshKey, setWorkoutRefreshKey] = useState(0);
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
@@ -264,7 +266,36 @@ const Index = () => {
   // INDEPENDENTLY — a failure in one must not silently wipe the other,
   // which previously caused admins/hedersmedlemmar to render as "Medlem".
   const loadUserData = useCallback(async (uid: string) => {
+    const requestId = ++loadUserDataSeqRef.current;
     await logCrashlyticsMessage("loadUserData:start");
+
+    try {
+      const { data: statusData, error: statusError } = await (supabase as any)
+        .rpc("get_my_access_status");
+      if (statusError) throw statusError;
+
+      const status = (Array.isArray(statusData) ? statusData[0] : statusData) as AccessStatus | undefined;
+      if (requestId !== loadUserDataSeqRef.current) return;
+      if (status) {
+        setNickname(status.nickname || fallbackNicknameFromUser(userRef.current));
+        setIsHonorary(Boolean(status.is_honorary) || status.role === "admin");
+        setUserRole(status.role || "member");
+        if (status.must_change_password) {
+          setForceChangePassword(true);
+          setShowChangePassword(true);
+        }
+        const savedTheme = status.theme || "default";
+        storeThemeId(savedTheme);
+        if (!isThemeLocked()) {
+          applyTheme(savedTheme);
+        }
+        await logCrashlyticsMessage(`loadUserData:access-status:${status.role || "member"}`);
+        return;
+      }
+    } catch (error) {
+      console.warn("[loadUserData] access status failed", error);
+      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:accessStatus" });
+    }
 
     try {
       const { data, error: profileError } = await supabase
@@ -273,6 +304,7 @@ const Index = () => {
         .eq("user_id", uid)
         .maybeSingle();
       if (profileError) throw profileError;
+      if (requestId !== loadUserDataSeqRef.current) return;
       if (data) {
         setNickname(data.nickname);
         setIsHonorary((data as any).is_honorary || false);
@@ -298,6 +330,7 @@ const Index = () => {
         .eq("user_id", uid)
         .maybeSingle();
       if (roleError) throw roleError;
+      if (requestId !== loadUserDataSeqRef.current) return;
       setUserRole(roleData ? (roleData as any).role : "member");
     } catch (error) {
       console.warn("[loadUserData] role failed", error);
