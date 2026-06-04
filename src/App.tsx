@@ -28,6 +28,8 @@ const App = () => (
               <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
               <Route path="/index" element={<Suspense fallback={null}><Index /></Suspense>} />
               <Route path="/install" element={<Suspense fallback={null}><Install /></Suspense>} />
+              <Route path="/privacy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
+              <Route path="/integritetspolicy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
               <Route path="*" element={<Suspense fallback={null}><NotFound /></Suspense>} />
             </Routes>
           </BrowserRouter>
