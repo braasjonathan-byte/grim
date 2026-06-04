@@ -11,6 +11,7 @@ import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Install = lazy(() => import("./pages/Install"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,8 @@ const App = () => (
               <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
               <Route path="/index" element={<Suspense fallback={null}><Index /></Suspense>} />
               <Route path="/install" element={<Suspense fallback={null}><Install /></Suspense>} />
+              <Route path="/privacy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
+              <Route path="/integritetspolicy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
               <Route path="*" element={<Suspense fallback={null}><NotFound /></Suspense>} />
             </Routes>
           </BrowserRouter>
