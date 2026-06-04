@@ -69,6 +69,14 @@ const fallbackNicknameFromUser = (currentUser: User | null | undefined) => {
   return emailName.toLowerCase() === "jonne" ? "Grim" : emailName;
 };
 
+const isGrimAliasUser = (currentUser: User | null | undefined, profileNickname?: string | null) => {
+  const metadataNickname = currentUser?.user_metadata?.nickname;
+  const emailName = currentUser?.email?.split("@")[0];
+  return [profileNickname, metadataNickname, emailName]
+    .filter((value): value is string => typeof value === "string")
+    .some((value) => ["grim", "jonne"].includes(value.trim().toLowerCase()));
+};
+
 const GrimInfoDialog = () => {
   const [open, setOpen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
   const handleClose = () => { localStorage.setItem(GRIM_INFO_KEY, "1"); setOpen(false); };
