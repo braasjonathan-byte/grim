@@ -41,6 +41,25 @@ export function useNativePush(userId: string | null) {
           return;
         }
 
+        // Create a high-importance Android channel so notifications make sound
+        // and show as heads-up. Must exist before the first notification arrives.
+        if (Capacitor.getPlatform() === "android") {
+          try {
+            await PushNotifications.createChannel({
+              id: "grim_default",
+              name: "Grim Notiser",
+              description: "Standardkanal för Grim push-notiser",
+              importance: 5, // 5 = MAX (heads-up + sound)
+              visibility: 1,
+              sound: "default",
+              vibration: true,
+              lights: true,
+            });
+          } catch (chErr) {
+            console.error("Failed to create notification channel:", chErr);
+          }
+        }
+
         // Listen for registration success
         PushNotifications.addListener("registration", async (token) => {
           console.log("Native push token:", token.value);
