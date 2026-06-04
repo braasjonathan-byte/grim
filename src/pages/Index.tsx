@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
@@ -46,9 +46,25 @@ interface FriendActivity {
   timestamp: string;
 }
 
+interface AccessStatus {
+  nickname: string | null;
+  must_change_password: boolean | null;
+  is_honorary: boolean | null;
+  theme: string | null;
+  role: "admin" | "member" | string | null;
+}
+
 const GRIM_INFO_KEY = "gymberget_grim_info_seen";
 const isPreviewEnvironment = () =>
   window.location.hostname.includes("preview") || window.location.hostname.includes("lovableproject.com");
+
+const fallbackNicknameFromUser = (currentUser: User | null | undefined) => {
+  const rawNickname = currentUser?.user_metadata?.nickname;
+  if (typeof rawNickname === "string" && rawNickname.trim()) return rawNickname.trim();
+  const emailName = currentUser?.email?.split("@")[0]?.trim();
+  if (!emailName) return "";
+  return emailName.toLowerCase() === "jonne" ? "Grim" : emailName;
+};
 
 const GrimInfoDialog = () => {
   const [open, setOpen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
@@ -189,6 +205,8 @@ const Index = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
+  const userRef = useRef<User | null>(null);
+  const loadUserDataSeqRef = useRef(0);
   const [workoutRefreshKey, setWorkoutRefreshKey] = useState(0);
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
@@ -248,7 +266,36 @@ const Index = () => {
   // INDEPENDENTLY — a failure in one must not silently wipe the other,
   // which previously caused admins/hedersmedlemmar to render as "Medlem".
   const loadUserData = useCallback(async (uid: string) => {
+    const requestId = ++loadUserDataSeqRef.current;
     await logCrashlyticsMessage("loadUserData:start");
+
+    try {
+      const { data: statusData, error: statusError } = await (supabase as any)
+        .rpc("get_my_access_status");
+      if (statusError) throw statusError;
+
+      const status = (Array.isArray(statusData) ? statusData[0] : statusData) as AccessStatus | undefined;
+      if (requestId !== loadUserDataSeqRef.current) return;
+      if (status) {
+        setNickname(status.nickname || fallbackNicknameFromUser(userRef.current));
+        setIsHonorary(Boolean(status.is_honorary) || status.role === "admin");
+        setUserRole(status.role || "member");
+        if (status.must_change_password) {
+          setForceChangePassword(true);
+          setShowChangePassword(true);
+        }
+        const savedTheme = status.theme || "default";
+        storeThemeId(savedTheme);
+        if (!isThemeLocked()) {
+          applyTheme(savedTheme);
+        }
+        await logCrashlyticsMessage(`loadUserData:access-status:${status.role || "member"}`);
+        return;
+      }
+    } catch (error) {
+      console.warn("[loadUserData] access status failed", error);
+      await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:accessStatus" });
+    }
 
     try {
       const { data, error: profileError } = await supabase
@@ -257,6 +304,7 @@ const Index = () => {
         .eq("user_id", uid)
         .maybeSingle();
       if (profileError) throw profileError;
+      if (requestId !== loadUserDataSeqRef.current) return;
       if (data) {
         setNickname(data.nickname);
         setIsHonorary((data as any).is_honorary || false);
@@ -282,7 +330,10 @@ const Index = () => {
         .eq("user_id", uid)
         .maybeSingle();
       if (roleError) throw roleError;
-      setUserRole(roleData ? (roleData as any).role : "member");
+      if (requestId !== loadUserDataSeqRef.current) return;
+      const role = roleData ? (roleData as any).role : "member";
+      setUserRole(role);
+      if (role === "admin") setIsHonorary(true);
     } catch (error) {
       console.warn("[loadUserData] role failed", error);
       await recordError(error instanceof Error ? error : new Error(String(error)), { step: "loadUserData:role" });
@@ -296,7 +347,9 @@ const Index = () => {
       (_event, session) => {
         void logCrashlyticsMessage(`auth:${_event}`);
         void setCrashlyticsUserId(session?.user?.id ?? null);
+        userRef.current = session?.user ?? null;
         setUser(session?.user ?? null);
+        if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
         setLoading(false);
       }
     );
@@ -305,7 +358,9 @@ const Index = () => {
       if (error || !session) {
         supabase.auth.signOut().catch(() => {});
       }
+      userRef.current = session?.user ?? null;
       setUser(session?.user ?? null);
+      if (session?.user) setNickname(fallbackNicknameFromUser(session.user));
       setLoading(false);
     });
 
@@ -317,8 +372,10 @@ const Index = () => {
     if (!user?.id) {
       setUserRole("member");
       setIsHonorary(false);
+      setNickname("");
       return;
     }
+    userRef.current = user;
     void loadUserData(user.id);
   }, [user?.id, loadUserData]);
 
@@ -328,7 +385,20 @@ const Index = () => {
   useEffect(() => {
     if (!user?.id) return;
     const uid = user.id;
-    const refresh = () => { void loadUserData(uid); };
+    const refresh = () => {
+      void (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const activeUser = session?.user ?? userRef.current;
+        if (activeUser) {
+          userRef.current = activeUser;
+          setUser(activeUser);
+          setNickname((current) => current || fallbackNicknameFromUser(activeUser));
+          await loadUserData(activeUser.id);
+        } else {
+          await loadUserData(uid);
+        }
+      })();
+    };
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
@@ -336,6 +406,7 @@ const Index = () => {
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", refresh);
 
+    let disposed = false;
     let removeNative: (() => void) | undefined;
     if (Capacitor.isNativePlatform()) {
       void (async () => {
@@ -349,6 +420,7 @@ const Index = () => {
             handle.remove().catch(() => {});
             handle2.remove().catch(() => {});
           };
+          if (disposed) removeNative();
         } catch {
           /* @capacitor/app unavailable */
         }
@@ -356,6 +428,7 @@ const Index = () => {
     }
 
     return () => {
+      disposed = true;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", refresh);
       removeNative?.();
@@ -651,7 +724,15 @@ const Index = () => {
   }
 
   if (!user) {
-    return <AuthScreen onAuth={() => {}} />;
+    return <AuthScreen onAuth={() => {
+      void supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session?.user) return;
+        userRef.current = session.user;
+        setUser(session.user);
+        setNickname(fallbackNicknameFromUser(session.user));
+        void loadUserData(session.user.id);
+      });
+    }} />;
   }
 
   const friendActivityCount = friendActivities.length;
