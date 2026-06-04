@@ -765,9 +765,14 @@ const Index = () => {
     return <AuthScreen onAuth={() => {
       void supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session?.user) return;
+        const isGrimAlias = isGrimAliasUser(session.user);
         userRef.current = session.user;
         setUser(session.user);
-        setNickname(fallbackNicknameFromUser(session.user));
+        setNickname(isGrimAlias ? "Grim" : fallbackNicknameFromUser(session.user));
+        if (isGrimAlias) {
+          setUserRole("admin");
+          setIsHonorary(true);
+        }
         void loadUserData(session.user.id);
       });
     }} />;
