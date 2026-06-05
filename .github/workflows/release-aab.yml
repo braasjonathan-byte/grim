@@ -125,8 +125,21 @@ jobs:
             echo "RELEASE_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}"
           } >> android/gradle.properties
 
+      - name: Patch build.gradle with signing config
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: node scripts/patch-android-signing.cjs
+
+      - name: Verify signing config in build.gradle
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "--- android/app/build.gradle ---"
+          cat android/app/build.gradle
+          grep -q "signingConfig signingConfigs.release" android/app/build.gradle \
+            || (echo "ERROR: release signingConfig not wired up" && exit 1)
+
       - name: Make gradlew executable
         run: chmod +x android/gradlew
+
 
       # -------------------------
       # Build AAB (Android App Bundle) — required format for Google Play
