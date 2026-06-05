@@ -7,6 +7,39 @@
 const fs = require("fs");
 const path = "android/app/build.gradle";
 
+// ---- 0. Write proguard-rules.pro with safe keep rules for Capacitor/Firebase ----
+const proguardRules = `# Keep line numbers for crash reports & hide original source file name
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Capacitor / Cordova
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+-keepclassmembers class * extends com.getcapacitor.Plugin {
+    @com.getcapacitor.PluginMethod <methods>;
+}
+-keep class org.apache.cordova.** { *; }
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Firebase / Google Play services
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# AndroidX / Kotlin
+-dontwarn androidx.**
+-dontwarn kotlin.**
+-dontwarn kotlinx.**
+
+# App
+-keep class se.grim.app.** { *; }
+`;
+fs.writeFileSync("android/app/proguard-rules.pro", proguardRules);
+
 let s = fs.readFileSync(path, "utf8");
 
 // ---- 1. signingConfigs ----
