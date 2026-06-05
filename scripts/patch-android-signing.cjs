@@ -1,17 +1,17 @@
 // Injects a release signingConfig into android/app/build.gradle that reads
 // from gradle.properties (RELEASE_STORE_FILE / RELEASE_STORE_PASSWORD /
 // RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD). Safe to run multiple times.
+// Also enables R8/proguard minification (produces mapping.txt) and full
+// native debug symbols (produces native-debug-symbols.zip) so Google Play
+// stops warning about missing deobfuscation/symbol files.
 const fs = require("fs");
 const path = "android/app/build.gradle";
 
 let s = fs.readFileSync(path, "utf8");
 
-if (s.includes("signingConfigs.release") && s.includes("RELEASE_STORE_FILE")) {
-  console.log("Signing config already present, skipping.");
-  process.exit(0);
-}
-
-const signingBlock = `
+// ---- 1. signingConfigs ----
+if (!(s.includes("signingConfigs.release") && s.includes("RELEASE_STORE_FILE"))) {
+  const signingBlock = `
     signingConfigs {
         release {
             if (project.hasProperty('RELEASE_STORE_FILE')) {
@@ -23,23 +23,38 @@ const signingBlock = `
         }
     }
 `;
+  s = s.replace(/android\s*\{/, (m) => m + signingBlock);
 
-// Insert signingConfigs right after `android {`
-s = s.replace(/android\s*\{/, (m) => m + signingBlock);
+  if (/buildTypes\s*\{[\s\S]*?release\s*\{/.test(s)) {
+    s = s.replace(
+      /(buildTypes\s*\{[\s\S]*?release\s*\{)/,
+      `$1\n            signingConfig signingConfigs.release`
+    );
+  } else {
+    s = s.replace(
+      /\n\}\s*$/m,
+      `\n    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }\n    }\n}\n`
+    );
+  }
+}
 
-// Ensure release buildType uses the signingConfig
-if (/buildTypes\s*\{[\s\S]*?release\s*\{/.test(s)) {
+// ---- 2. Enable R8/proguard so mapping.txt is generated ----
+if (/minifyEnabled\s+false/.test(s)) {
+  s = s.replace(/minifyEnabled\s+false/, "minifyEnabled true");
+} else if (!/minifyEnabled\s+true/.test(s)) {
   s = s.replace(
     /(buildTypes\s*\{[\s\S]*?release\s*\{)/,
-    `$1\n            signingConfig signingConfigs.release`
+    `$1\n            minifyEnabled true\n            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'`
   );
-} else {
-  // Add a buildTypes block before the closing of android { }
+}
+
+// ---- 3. Native debug symbols (FULL) so Play has symbol files for crashes ----
+if (!/debugSymbolLevel/.test(s)) {
   s = s.replace(
-    /\n\}\s*$/m,
-    `\n    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n        }\n    }\n}\n`
+    /(defaultConfig\s*\{)/,
+    `$1\n        ndk {\n            debugSymbolLevel 'FULL'\n        }`
   );
 }
 
 fs.writeFileSync(path, s);
-console.log("Patched android/app/build.gradle with release signingConfig.");
+console.log("Patched android/app/build.gradle: signing + R8 + native debug symbols.");
