@@ -159,15 +159,47 @@ jobs:
           echo "aab_path=$AAB" >> $GITHUB_OUTPUT
           echo "Found AAB at: $AAB"
 
+      - name: Locate mapping.txt (R8 deobfuscation)
+        id: mapping
+        run: |
+          MAPPING=$(find android/app/build/outputs/mapping/release -name "mapping.txt" | head -n 1)
+          echo "mapping_path=$MAPPING" >> $GITHUB_OUTPUT
+          echo "Found mapping at: $MAPPING"
+
+      - name: Locate native debug symbols
+        id: symbols
+        run: |
+          SYMS=$(find android/app/build/outputs -name "native-debug-symbols.zip" | head -n 1)
+          echo "symbols_path=$SYMS" >> $GITHUB_OUTPUT
+          echo "Found symbols at: $SYMS"
+
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-aab
           path: ${{ steps.aab.outputs.aab_path }}
 
+      - name: Upload mapping.txt artifact
+        if: steps.mapping.outputs.mapping_path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapping
+          path: ${{ steps.mapping.outputs.mapping_path }}
+
+      - name: Upload native debug symbols artifact
+        if: steps.symbols.outputs.symbols_path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-debug-symbols
+          path: ${{ steps.symbols.outputs.symbols_path }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ${{ steps.aab.outputs.aab_path }}
+          files: |
+            ${{ steps.aab.outputs.aab_path }}
+            ${{ steps.mapping.outputs.mapping_path }}
+            ${{ steps.symbols.outputs.symbols_path }}
           generate_release_notes: true
+
