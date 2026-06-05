@@ -190,7 +190,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
         setSecurityAnswers(data.questions.map(() => ""));
         setForgotStep("questions");
       } else {
-        setResetMessage("Inga säkerhetsfrågor hittades för detta konto. Skicka ett mail till GrimTraning@gmail.com med ditt användarnamn för att begära ett nytt lösenord. Det kan ta upp till ett dygn innan du får svar.");
+        setResetMessage("Inga säkerhetsfrågor hittades för detta konto. Skicka ett mail till grimtraning@gmail.com med ditt användarnamn för att begära ett nytt lösenord. Det kan ta upp till ett dygn innan du får svar.");
         setForgotStep("done");
       }
     } catch {
@@ -289,7 +289,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
                 </p>
               </div>
               <a
-              href="mailto:GrimTraning@gmail.com?subject=Återställ lösenord&body=Hej! Jag vill återställa mitt lösenord. Mitt användarnamn är: "
+              href="mailto:grimtraning@gmail.com?subject=Återställ lösenord&body=Hej! Jag vill återställa mitt lösenord. Mitt användarnamn är: "
               className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity block text-center">
                 📧 Skicka mail
               </a>
