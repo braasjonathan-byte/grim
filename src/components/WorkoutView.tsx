@@ -31,6 +31,7 @@ import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
+import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import EventProgressBar from "@/components/EventProgressBar";
@@ -1213,6 +1214,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     uncheckedCount: number;
   } | null>(null);
 
+  // Ask the user after marking a workout done whether to share to friends feed.
+  const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string } | null>(null);
+
   // Share card
   const [shareTarget, setShareTarget] = useState<{
     plan: PlanDay;
@@ -1860,6 +1864,7 @@ const estimateCalories = (
       const plan = plans.find((p) => p.week === week && p.day === day);
       
       autoShareCompletion(userId, week, day);
+      setSharePromptDialog({ week, day });
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
       if (week > 0) {
