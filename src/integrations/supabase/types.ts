@@ -972,6 +972,7 @@ export type Database = {
           age: number | null
           avatar_url: string | null
           created_at: string
+          deletion_scheduled_at: string | null
           experience_level: string | null
           gender: string | null
           height_cm: number | null
@@ -1002,6 +1003,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string
+          deletion_scheduled_at?: string | null
           experience_level?: string | null
           gender?: string | null
           height_cm?: number | null
@@ -1032,6 +1034,7 @@ export type Database = {
           age?: number | null
           avatar_url?: string | null
           created_at?: string
+          deletion_scheduled_at?: string | null
           experience_level?: string | null
           gender?: string | null
           height_cm?: number | null
