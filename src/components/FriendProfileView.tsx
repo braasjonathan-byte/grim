@@ -371,9 +371,39 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
                 )}
               </div>
             </div>
-           <button onClick={handleClose} className="p-1 text-muted-foreground hover:text-foreground">
-             <X className="w-4 h-4" />
-           </button>
+           <div className="flex items-center gap-1">
+             <button
+               onClick={async () => {
+                 if (!confirm(`Blockera ${nickname}? Ni kommer inte längre se varandras inlägg.`)) return;
+                 const { data: auth } = await supabase.auth.getUser();
+                 const me = auth.user?.id;
+                 if (!me) return;
+                 // Remove any existing friendships rows both directions
+                 await supabase.from("friendships").delete().or(
+                   `and(user_id.eq.${me},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${me})`
+                 );
+                 const { error } = await supabase.from("friendships").insert({
+                   user_id: me,
+                   friend_id: friendUserId,
+                   status: "blocked",
+                   blocked_by: me,
+                 } as any);
+                 if (error) {
+                   toast.error("Kunde inte blockera: " + error.message);
+                   return;
+                 }
+                 toast.success(`${nickname} är nu blockerad`);
+                 handleClose();
+               }}
+               className="p-1.5 text-muted-foreground hover:text-destructive"
+               title="Blockera användare"
+             >
+               <Ban className="w-4 h-4" />
+             </button>
+             <button onClick={handleClose} className="p-1 text-muted-foreground hover:text-foreground">
+               <X className="w-4 h-4" />
+             </button>
+           </div>
          </div>
 
          <div className="p-4 space-y-4 overflow-y-auto flex-1">
