@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { updateApp } from "@/lib/appUpdate";
 import { APP_VERSION } from "@/lib/version";
 import { supabase } from "@/integrations/supabase/client";
