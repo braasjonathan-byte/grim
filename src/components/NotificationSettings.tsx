@@ -69,6 +69,13 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
   };
 
   useEffect(() => {
+    // On native (Play-installed app), push is handled by FCM via useNativePush —
+    // Web PushManager doesn't exist in the webview, but that doesn't mean push is unsupported.
+    if (Capacitor.isNativePlatform()) {
+      setSupported(true);
+      loadReminder();
+      return;
+    }
     if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       setSupported(false);
       return;
