@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield } from "lucide-react";
+import { Loader2, X, Star, User, CheckCircle, Swords, Footprints, Weight, Instagram, Music, ExternalLink, Crown, Shield, Ban } from "lucide-react";
+import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import AchievementsPanel from "@/components/AchievementsPanel";
