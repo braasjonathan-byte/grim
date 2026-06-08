@@ -35,7 +35,7 @@ const DeleteAccount = () => {
       const { error } = await supabase.functions.invoke("delete-account");
       if (error) throw error;
       await supabase.auth.signOut();
-      toast.success("Ditt konto har raderats");
+      toast.success("Ditt konto är schemalagt för radering. Data raderas permanent om 90 dagar.");
       navigate("/", { replace: true });
     } catch (e) {
       toast.error("Kunde inte radera kontot: " + (e as Error).message);
