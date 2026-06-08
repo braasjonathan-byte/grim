@@ -5660,6 +5660,24 @@ const estimateCalories = (
           }}
         />
       )}
+      <ShareWorkoutPromptDialog
+        open={!!sharePromptDialog}
+        onConfirm={() => {
+          setSharePromptDialog(null);
+          toast.success("Passet delades med dina vänner");
+        }}
+        onSkip={async () => {
+          const target = sharePromptDialog;
+          setSharePromptDialog(null);
+          if (!target) return;
+          await supabase
+            .from("social_posts")
+            .delete()
+            .eq("user_id", userId)
+            .eq("workout_week", target.week)
+            .eq("workout_day", target.day);
+        }}
+      />
       {uncheckedSetsDialog && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
