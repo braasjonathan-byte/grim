@@ -687,6 +687,7 @@ export type Database = {
       }
       friendships: {
         Row: {
+          blocked_by: string | null
           created_at: string
           friend_id: string
           id: string
@@ -694,6 +695,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          blocked_by?: string | null
           created_at?: string
           friend_id: string
           id?: string
@@ -701,6 +703,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          blocked_by?: string | null
           created_at?: string
           friend_id?: string
           id?: string
@@ -2067,6 +2070,7 @@ export type Database = {
         Args: { p_from: string[]; p_to: string }
         Returns: Json
       }
+      are_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
         Returns: {
