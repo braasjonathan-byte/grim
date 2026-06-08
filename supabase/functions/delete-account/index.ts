@@ -6,6 +6,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Schedules account for deletion in 90 days instead of deleting immediately.
+// User is signed out + banned so the account is unusable, but data can be
+// restored within the grace period (or to satisfy retention requirements).
+// Actual purge happens via the `purge-deleted-accounts` cron job.
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -36,17 +40,27 @@ Deno.serve(async (req) => {
     const userId = userData.user.id;
     const admin = createClient(supabaseUrl, serviceKey);
 
-    const { error: delErr } = await admin.auth.admin.deleteUser(userId);
-    if (delErr) {
-      return new Response(JSON.stringify({ error: delErr.message }), {
+    // 1. Mark profile as scheduled for deletion
+    const { error: profileErr } = await admin
+      .from("profiles")
+      .update({ deletion_scheduled_at: new Date().toISOString() })
+      .eq("user_id", userId);
+    if (profileErr) {
+      return new Response(JSON.stringify({ error: profileErr.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // 2. Ban the auth user (lock them out for ~100 years) and revoke all sessions
+    const banUntil = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString();
+    await admin.auth.admin.updateUserById(userId, { ban_duration: "876000h" }).catch(() => {});
+    await admin.auth.admin.signOut(userId, "global").catch(() => {});
+
+    return new Response(
+      JSON.stringify({ ok: true, scheduled_purge_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
