@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS deletion_scheduled_at timestamptz;
+CREATE INDEX IF NOT EXISTS idx_profiles_deletion_scheduled_at ON public.profiles(deletion_scheduled_at) WHERE deletion_scheduled_at IS NOT NULL;
