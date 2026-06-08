@@ -197,31 +197,28 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
                 <FileText className="w-3.5 h-3.5" /> Näringstabell
               </button>
             </div>
-            <div className="relative bg-black aspect-square overflow-hidden flex items-center justify-center">
-              {photo ? (
-                <img src={photo} alt="" className="w-full h-full object-cover" />
-              ) : Capacitor.isNativePlatform() ? (
-                <div className="text-center text-white/60 text-xs px-4">
-                  <Camera className="w-8 h-8 mx-auto mb-2 opacity-60" />
-                  Tryck nedan för att ta foto eller välja från galleriet.
-                </div>
-              ) : (
-                <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
-              )}
-              {analyzing && (
-                <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-                  <div className="text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-                    <p className="text-xs">{mode === "label" ? "Läser näringstabell…" : "Analyserar maträtt…"}</p>
+            {(photo || !Capacitor.isNativePlatform()) && (
+              <div className="relative bg-black aspect-square overflow-hidden flex items-center justify-center">
+                {photo ? (
+                  <img src={photo} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
+                )}
+                {analyzing && (
+                  <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+                    <div className="text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
+                      <p className="text-xs">{mode === "label" ? "Läser näringstabell…" : "Analyserar maträtt…"}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
             {!photo && (
               <div className="flex gap-2">
                 {Capacitor.isNativePlatform() ? (
                   <>
-                    <button onClick={() => pickNative("camera")} className="flex-1 py-3 bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2"><Camera className="w-4 h-4" /> Ta foto</button>
+                    <button onClick={() => pickNative("camera")} className="flex-1 py-3 bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2"><Camera className="w-4 h-4" /> Öppna kameran</button>
                     <button onClick={() => pickNative("gallery")} className="flex-1 py-3 border border-input text-sm flex items-center justify-center gap-2"><ImageIcon className="w-4 h-4" /> Galleri</button>
                   </>
                 ) : (
@@ -232,6 +229,21 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
                   </>
                 )}
               </div>
+            )}
+            {photo && !analyzing && !result && (
+              <button
+                onClick={() => {
+                  setPhoto(null);
+                  if (Capacitor.isNativePlatform()) {
+                    pickNative("camera");
+                  } else {
+                    startCam();
+                  }
+                }}
+                className="w-full py-2.5 border border-input text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <Camera className="w-4 h-4" /> Ta nytt foto
+              </button>
             )}
 
             <p className="text-[10px] text-muted-foreground text-center">

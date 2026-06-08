@@ -18,6 +18,15 @@ if (!fs.existsSync(MANIFEST)) {
 
 let xml = fs.readFileSync(MANIFEST, "utf8");
 
+// Lock MainActivity to portrait orientation
+if (!/android:screenOrientation="portrait"/.test(xml)) {
+  xml = xml.replace(
+    /(<activity[^>]*android:name=".MainActivity")/,
+    `$1\n            android:screenOrientation="portrait"`
+  );
+  console.log("[patch-android-manifest] Locked MainActivity to portrait orientation");
+}
+
 const PERMS = [
   "android.permission.ACCESS_FINE_LOCATION",
   "android.permission.ACCESS_COARSE_LOCATION",
