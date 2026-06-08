@@ -12,6 +12,7 @@ const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Install = lazy(() => import("./pages/Install"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const DeleteAccount = lazy(() => import("./pages/DeleteAccount"));
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,8 @@ const App = () => (
               <Route path="/install" element={<Suspense fallback={null}><Install /></Suspense>} />
               <Route path="/privacy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
               <Route path="/integritetspolicy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
+              <Route path="/delete-account" element={<Suspense fallback={null}><DeleteAccount /></Suspense>} />
+              <Route path="/radera-konto" element={<Suspense fallback={null}><DeleteAccount /></Suspense>} />
               <Route path="*" element={<Suspense fallback={null}><NotFound /></Suspense>} />
             </Routes>
           </BrowserRouter>

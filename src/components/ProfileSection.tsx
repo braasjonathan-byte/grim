@@ -376,6 +376,15 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         onSave={handleCropSave}
         saving={uploading}
       />
+
+      <div className="pt-4 border-t border-border">
+        <a
+          href="/delete-account"
+          className="text-xs text-destructive underline hover:opacity-80"
+        >
+          Radera mitt konto permanent
+        </a>
+      </div>
     </div>
   );
 };
