@@ -35,7 +35,7 @@ const DeleteAccount = () => {
       const { error } = await supabase.functions.invoke("delete-account");
       if (error) throw error;
       await supabase.auth.signOut();
-      toast.success("Ditt konto har raderats");
+      toast.success("Ditt konto är schemalagt för radering. Data raderas permanent om 90 dagar.");
       navigate("/", { replace: true });
     } catch (e) {
       toast.error("Kunde inte radera kontot: " + (e as Error).message);
@@ -60,11 +60,30 @@ const DeleteAccount = () => {
           <h1 className="text-xl font-bold">Radera ditt konto</h1>
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          Detta tar permanent bort ditt konto <strong>{email}</strong> och all
-          tillhörande data: pass, planer, kommentarer, vänner, prenumeration
-          och meddelanden. Åtgärden kan <strong>inte</strong> ångras.
-        </p>
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            Du är på väg att radera ditt konto <strong className="text-foreground">{email}</strong>.
+          </p>
+
+          <div className="rounded-md border border-border bg-secondary p-3 space-y-2">
+            <p className="font-semibold text-foreground">Så här fungerar raderingen</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong className="text-foreground">Direkt:</strong> du loggas ut från alla enheter och kontot låses. Du kan inte längre logga in eller använda appen.
+              </li>
+              <li>
+                <strong className="text-foreground">Inom 90 dagar:</strong> din data (pass, planer, kommentarer, vänner, prenumeration, meddelanden) sparas i låst läge. Kontakta supporten under denna period om du ångrar dig och vill återställa kontot.
+              </li>
+              <li>
+                <strong className="text-foreground">Efter 90 dagar:</strong> kontot och all tillhörande data raderas permanent och kan <strong>inte</strong> återskapas.
+              </li>
+            </ul>
+          </div>
+
+          <p className="text-xs">
+            Obs! Har du en aktiv prenumeration bör du säga upp den separat innan du fortsätter, så att du inte debiteras under väntetiden.
+          </p>
+        </div>
 
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground block">
