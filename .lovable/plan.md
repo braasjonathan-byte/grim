@@ -1,71 +1,97 @@
-## Triathlon Training Plan — Feature Plan
 
-A new training category "Triathlon" with its own wizard, dynamic calendar, and adaptive feedback loop. Separated from existing workout plans so it doesn't collide with the current strength plan system.
+## Batch 1 — Snabba UI/native-fixar (utan databasändringar)
 
-### 1. Database (new tables)
+1. **Portrait-lås (Android)**
+   - `android/app/src/main/AndroidManifest.xml`: lägg `android:screenOrientation="portrait"` på `MainActivity`.
+   - Skapa `scripts/patch-android-orientation.cjs` så det överlever `npx cap sync`. Lägg in i `release-aab.yml` patch-steget.
 
-- `triathlon_plans` — one active plan per user
-  - `user_id`, `goal_type` ('duration' | 'race_date'), `duration_weeks`, `race_date`, `start_date`
-  - levels: `swim_level`, `bike_level`, `run_level` ('beginner'|'intermediate'|'advanced')
-  - volumes: `swim_km_week`, `bike_km_week`, `run_km_week`
-  - `sessions_per_week`, `long_session_days` (text[]), `include_strength` (bool)
-  - `created_at`, `updated_at`
+2. **App-ikon i AAB**
+   - Generera ny ikongrafik (foreground 432×432 + bakgrund) från Grim-loggan via imagegen (premium).
+   - Skapa adaptive icon-XML + PNG i alla mipmap-mappar (mdpi → xxxhdpi) + `mipmap-anydpi-v26/ic_launcher.xml`.
+   - Lägg in i `scripts/patch-android-icons.cjs` (kopierar från `android-icons-source/` till `android/app/src/main/res/`) så ikonerna återställs efter `npx cap add android` i GitHub Actions.
+   - Hooka in scriptet i `release-aab.yml`.
 
-- `triathlon_sessions` — generated workouts
-  - `plan_id`, `user_id`, `session_date`, `week`, `day_of_week`
-  - `discipline` ('swim'|'bike'|'run'|'strength'|'rest')
-  - `duration_min`, `distance_km`, `intensity` (RPE 1-10 or zone label), `description`
-  - `is_long_session` (bool)
-  - `completed` (bool), `completed_at`
+3. **AI-foto-dialog (AIFoodScanDialog)**
+   - Ta bort den generiska placeholder-bilden när dialog är öppen utan eget foto.
+   - Lägg knapp "Öppna kameran igen" som triggar samma kameraflöde som första gången.
 
-- `triathlon_session_logs` — feedback
-  - `session_id`, `user_id`, `felt` ('easy'|'good'|'hard'|'too_hard')
-  - `had_pain` (bool), `pain_area` (text), `pain_level` (int 1-10)
-  - `notes`
+4. **Lås klarmarkerat pass**
+   - I `WorkoutLogDialog` / set-redigerings-UI: när `completion.done === true`, gör alla inputs/textareas `disabled` och knappar grå.
+   - Visa banner överst: "Passet är klarmarkerat. Avmarkera bocken för att redigera."
 
-All tables: RLS owner-only + service_role, GRANTs to authenticated.
+## Batch 2 — Nya sidor/dialoger
 
-### 2. Plan generation logic (client-side, `src/lib/triathlonPlanner.ts`)
+5. **/delete-account (inloggad self-service)**
+   - Ny route i `App.tsx` → `src/pages/DeleteAccount.tsx`.
+   - Kräver inlogg. Bekräftelse + lösenord. Anropar ny edge-funktion `delete-account` som tar bort `auth.users`-rad via service-role (CASCADE rensar profiles/övriga tabeller).
+   - Länka från ProfileSection och från Privacy-sidan. Sätt också länken som "Account deletion URL" i Play Console-instruktionerna i README.
 
-Inputs → weekly template based on `sessions_per_week` (3-7) and `include_strength`. Distributes swim/bike/run roughly equal, places long sessions on chosen weekend days, scales weekly volume by level (beginner = 60%, intermediate = 100%, advanced = 130% of input baseline). Builds a 4-week mesocycle (3 build + 1 recovery) repeating across the total weeks (computed from `duration_weeks` or `race_date - today`). Final week = taper.
+6. **Dela-pass-dialog efter klarmarkering**
+   - I samma flöde som idag auto-skapar social_post (`ensure_workout_social_post` trigger): lägg en frontend-dialog som öppnas när användaren bockar i "klar" och frågar "Dela passet med dina vänner?".
+   - Ja → låt triggern göra sitt + visa toast "Delat".
+   - Nej → kör en edge-funktion (eller direkt DELETE) som tar bort det auto-skapade `social_posts`-inlägget för det passet.
+   - Spara val i `localStorage` som "kom-ihåg" (med "fråga alltid")-toggle i inställningar — separat task om tid finns.
 
-Intensity per session: easy/long → RPE 4-5, tempo → RPE 6-7, intervals → RPE 8-9.
+7. **Blockera vän från profil**
+   - Migration: lägg `status = 'blocked'` (redan tillåtet i enum/text?) och ny tabell **endast om** `friendships.status` inte räcker. Standardplan: använd befintlig friendships med ny status `'blocked'` + `blocked_by` kolumn.
+   - RLS-policy: blockerad användare ser inte den blockerandes inlägg/profil. Uppdatera SELECT-policies på `social_posts`, `social_post_comments`, `chat_messages`, `friendships`.
+   - UI: knapp "Blockera" i `FriendProfileView` med bekräftelse. "Avblockera" från ny lista i inställningar.
 
-### 3. UI
+## Batch 3 — Play Store-beskrivningar (textfil, ingen kod)
 
-- New tab/category "Triathlon" in the main nav/tools area
-- `TriathlonView.tsx` — entry: shows wizard if no plan, else calendar
-- `TriathlonWizard.tsx` — 4-step wizard:
-  1. Goal (duration vs race date)
-  2. Levels + current weekly volumes per discipline
-  3. Availability (sessions/week, long-session days)
-  4. Strength toggle + summary → generate
-- `TriathlonCalendar.tsx` — week view with session cards (discipline icon, duration/distance, intensity, description). Tap a card → detail + "Logga pass" button.
-- `TriathlonSessionLogDialog.tsx` — feedback: felt slider, pain Y/N, area + 1-10 if yes. On submit, if `too_hard` or pain → call adapter.
+8. **Skapa `store/play-store-listing.md`** med:
+   - Kort beskrivning (max 80 tecken).
+   - Lång beskrivning (max 4000 tecken) — funktioner, målgrupp, USP.
+   - Skrivs på svenska eftersom appen är på svenska.
 
-### 4. Adaptive algorithm (`src/lib/triathlonAdapter.ts`)
+## Batch 4 — Google Play Billing-migration (STÖRSTA jobbet)
 
-Triggered after a log marks `too_hard` or `had_pain`:
-- Window: next 7 days
-- If pain in lower body (knees/shins/feet/hip) → convert upcoming run sessions to swim or rest
-- If general fatigue → reduce duration by 30% and drop intensity one notch
-- If high pain (≥7) → insert 2 rest days
-- Show toast: "Vi anpassar ditt schema för de kommande dagarna..."
+9. **Ersätt Stripe på Android med Play Billing**
+   - Installera `@capacitor-community/in-app-purchases` (eller RevenueCat om vi vill ha enklare server-validering — rekommenderar RevenueCat för subscription-state-hantering).
+   - Lägg till plugin i `capacitor.config.ts` includePlugins.
+   - Ny tjänst `src/lib/playBilling.ts` som wrappar plugin: `getProducts()`, `purchase(productId)`, `restorePurchases()`.
+   - Ny edge-funktion `validate-play-purchase`: tar emot purchase token från klient, validerar mot Google Play Developer API (kräver service account JSON som secret `GOOGLE_PLAY_SERVICE_ACCOUNT`), skriver entitlement till ny tabell `play_entitlements` (user_id, product_id, expiry_time, original_purchase_token).
+   - Uppdatera `check-subscription` så den i Android-app-kontext läser från `play_entitlements` istället för Stripe.
+   - I `SettingsPanel`: när `Capacitor.isNativePlatform() && platform === 'android'`, dölj "Hantera medlemskap" (Stripe-portalen) och visa istället knapp "Hantera prenumeration" som öppnar `https://play.google.com/store/account/subscriptions?sku=...&package=se.grim.app` via `Browser.open`.
+   - Fixa även den befintliga kundportal-buggen: lägg in proper error-toast + console-log på `customer-portal`-anropet så vi ser varför den inte öppnas idag (sannolikt popup blockerad i Capacitor WebView — behöver `Browser.open(url)` istället för `window.open`).
+   - **Krav från användaren:** Skapa produkt i Play Console med samma `product_id` som vi använder i koden (förslag: `grim_pro_monthly`), och ladda upp service account-JSON till Lovable secrets.
 
-### 5. Integration
+## Teknisk detalj — påverkade filer
 
-- Add "Triathlon" entry into ToolsTab (existing pattern in app)
-- Icons via lucide-react (Waves, Bike, Footprints, Dumbbell)
-- Swedish UI throughout, follows existing design tokens (no custom colors)
+```
+android/app/src/main/AndroidManifest.xml
+android/app/src/main/res/mipmap-*/ic_launcher*.png  (genererade)
+android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+android/app/src/main/res/drawable/ic_launcher_foreground.xml
+scripts/patch-android-orientation.cjs              (ny)
+scripts/patch-android-icons.cjs                    (ny)
+.github/workflows/release-aab.yml                  (kalla nya patch-scripts)
 
-### Files to create
-- `supabase/migrations/...` — 3 tables + RLS + grants
-- `src/lib/triathlonPlanner.ts`
-- `src/lib/triathlonAdapter.ts`
-- `src/components/TriathlonView.tsx`
-- `src/components/TriathlonWizard.tsx`
-- `src/components/TriathlonCalendar.tsx`
-- `src/components/TriathlonSessionLogDialog.tsx`
+src/App.tsx                                        (route /delete-account)
+src/pages/DeleteAccount.tsx                        (ny)
+src/components/AIFoodScanDialog.tsx                (ta bort placeholder + ny knapp)
+src/components/WorkoutLogDialog.tsx                (disable-state)
+src/components/FriendProfileView.tsx               (blockera-knapp)
+src/components/SettingsPanel.tsx                   (Play Billing-portal, avblockera-lista)
+src/components/ProfileSection.tsx                  (länk till /delete-account)
+src/components/WorkoutShareCard.tsx eller motsv.   (dela-dialog efter klar)
+src/lib/playBilling.ts                             (ny)
 
-### Files to edit
-- `src/components/ToolsTab.tsx` — add Triathlon entry point
+supabase/functions/delete-account/index.ts         (ny)
+supabase/functions/validate-play-purchase/index.ts (ny)
+supabase/functions/check-subscription/index.ts     (Android-läge)
+
+migration: friendships.blocked_by, blocked-policies, play_entitlements-tabell
+
+store/play-store-listing.md                        (ny)
+```
+
+## Ordning och leverans
+
+Jag levererar i 4 separata commits/svarsrundor:
+- **Runda 1:** Batch 1 (portrait + ikoner + AI-foto + lås pass) — minimal risk, du kan tagga ny AAB direkt.
+- **Runda 2:** Batch 2 (delete-account, dela-pass-dialog, blockera vän + migration).
+- **Runda 3:** Batch 3 (Play Store-beskrivningar).
+- **Runda 4:** Batch 4 (Play Billing — kräver att du skapar produkt i Play Console och laddar upp Google service account-JSON innan validate-funktionen fungerar).
+
+Säg till om ordningen ska ändras, eller om vi ska skippa något. Annars kör jag igång med Runda 1 direkt efter ditt OK.
