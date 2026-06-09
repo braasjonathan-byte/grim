@@ -214,15 +214,14 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
 
   const handleClick = (n: Notif) => {
     setOpen(false);
-    if (n.type === "comment" && n.postId) {
-      window.dispatchEvent(new CustomEvent("grim:open-social-post", {
-        detail: { postId: n.postId, commentId: n.commentId },
-      }));
-    } else if (n.type === "like" && n.postId) {
-      window.dispatchEvent(new CustomEvent("grim:open-social-post", {
-        detail: { postId: n.postId },
-      }));
+    if ((n.type === "comment" || n.type === "like") && n.postId) {
+      const payload = { postId: n.postId, commentId: n.type === "comment" ? n.commentId : undefined };
+      // Persist so SocialView (lazy-loaded) can pick it up on mount
+      try { sessionStorage.setItem("grim_pending_social_post", JSON.stringify(payload)); } catch {}
+      // Also dispatch live in case SocialView is already mounted
+      window.dispatchEvent(new CustomEvent("grim:open-social-post", { detail: payload }));
     } else if (n.type === "friend_request") {
+      try { sessionStorage.setItem("grim_pending_social_subtab", "friends"); } catch {}
       window.dispatchEvent(new CustomEvent("grim:open-social-subtab", { detail: { subtab: "friends" } }));
     }
     onNavigate?.(n.target, { postId: n.postId, commentId: n.commentId });
