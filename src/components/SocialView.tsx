@@ -858,7 +858,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         </button>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                   <div className="flex items-end gap-2 pt-1">
                     <textarea
                       value={commentDrafts[post.id] || ""}
