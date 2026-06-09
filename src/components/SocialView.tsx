@@ -827,8 +827,11 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   {(comments[post.id] || []).length === 0 && (
                     <p className="text-xs text-muted-foreground text-center">Inga kommentarer än. Var först!</p>
                   )}
-                  {(comments[post.id] || []).map(c => (
-                    <div key={c.id} className="flex items-start gap-2 group">
+                  {(comments[post.id] || []).map(c => {
+                    const rawCommentId = c.id.startsWith("social:") ? c.id.slice(7) : c.id;
+                    const isHighlighted = highlightedCommentId === rawCommentId;
+                    return (
+                    <div key={c.id} data-comment-id={rawCommentId} className={`flex items-start gap-2 group transition-all rounded-lg ${isHighlighted ? "ring-2 ring-primary bg-primary/10 p-1.5 -m-1.5" : ""}`}>
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold overflow-hidden flex-shrink-0">
                         {avatarUrls[c.user_id] ? (
                           <img src={avatarUrls[c.user_id]!} alt="" className="w-full h-full object-cover" />
