@@ -132,13 +132,11 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
   // Open a specific post (and optionally a comment) from a notification click
   useEffect(() => {
-    const handler = async (e: Event) => {
-      const detail = (e as CustomEvent).detail as { postId?: string; commentId?: string } | undefined;
+    const openTarget = async (detail: { postId?: string; commentId?: string } | undefined) => {
       if (!detail?.postId) return;
       setSubTab("feed");
       setFeedFilter("all");
       setOpenGroupId(null);
-      // Make sure comments are loaded & open for this post
       setOpenComments(prev => {
         const s = new Set(prev);
         s.add(detail.postId!);
@@ -147,17 +145,38 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       await loadComments(detail.postId);
       setHighlightedPostId(detail.postId);
       setHighlightedCommentId(detail.commentId || null);
-      // Scroll after DOM updates
-      setTimeout(() => {
-        const sel = detail.commentId
-          ? `[data-comment-id="${detail.commentId}"]`
-          : `[data-post-id="${detail.postId}"]`;
+      // Retry scroll until the target element exists in the DOM (max ~3s)
+      const sel = detail.commentId
+        ? `[data-comment-id="${detail.commentId}"]`
+        : `[data-post-id="${detail.postId}"]`;
+      let attempts = 0;
+      const tryScroll = () => {
         const el = document.querySelector(sel) as HTMLElement | null;
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 250);
-      // Clear highlight after a few seconds
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+        if (attempts++ < 20) setTimeout(tryScroll, 150);
+      };
+      tryScroll();
       setTimeout(() => { setHighlightedCommentId(null); setHighlightedPostId(null); }, 4000);
     };
+
+    // Consume any pending target that was set before SocialView mounted (lazy load)
+    try {
+      const raw = sessionStorage.getItem("grim_pending_social_post");
+      if (raw) {
+        sessionStorage.removeItem("grim_pending_social_post");
+        openTarget(JSON.parse(raw));
+      }
+      const pendingSub = sessionStorage.getItem("grim_pending_social_subtab");
+      if (pendingSub === "friends") {
+        sessionStorage.removeItem("grim_pending_social_subtab");
+        setSubTab("friends");
+      }
+    } catch {}
+
+    const handler = (e: Event) => openTarget((e as CustomEvent).detail);
     const subtabHandler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { subtab?: SubTab } | undefined;
       if (detail?.subtab) setSubTab(detail.subtab);
