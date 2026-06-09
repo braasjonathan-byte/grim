@@ -46,13 +46,13 @@ export default function NotificationsBell({ onViewAll }: NotificationsBellProps)
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="relative flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-primary/10 transition-colors"
+          className="relative flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary transition-colors"
           aria-label="Aviseringar"
           title="Aviseringar"
         >
-          <Bell className="w-4 h-4 text-primary" />
+          <Bell className="w-[18px] h-[18px]" strokeWidth={2.25} />
           {unread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold leading-none">
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-none ring-2 ring-background">
               {unread}
             </span>
           )}
