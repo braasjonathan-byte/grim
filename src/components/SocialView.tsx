@@ -126,6 +126,51 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  // Highlight state for notification deep-linking
+  const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+
+  // Open a specific post (and optionally a comment) from a notification click
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const detail = (e as CustomEvent).detail as { postId?: string; commentId?: string } | undefined;
+      if (!detail?.postId) return;
+      setSubTab("feed");
+      setFeedFilter("all");
+      setOpenGroupId(null);
+      // Make sure comments are loaded & open for this post
+      setOpenComments(prev => {
+        const s = new Set(prev);
+        s.add(detail.postId!);
+        return s;
+      });
+      await loadComments(detail.postId);
+      setHighlightedPostId(detail.postId);
+      setHighlightedCommentId(detail.commentId || null);
+      // Scroll after DOM updates
+      setTimeout(() => {
+        const sel = detail.commentId
+          ? `[data-comment-id="${detail.commentId}"]`
+          : `[data-post-id="${detail.postId}"]`;
+        const el = document.querySelector(sel) as HTMLElement | null;
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 250);
+      // Clear highlight after a few seconds
+      setTimeout(() => { setHighlightedCommentId(null); setHighlightedPostId(null); }, 4000);
+    };
+    const subtabHandler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { subtab?: SubTab } | undefined;
+      if (detail?.subtab) setSubTab(detail.subtab);
+    };
+    window.addEventListener("grim:open-social-post", handler as EventListener);
+    window.addEventListener("grim:open-social-subtab", subtabHandler as EventListener);
+    return () => {
+      window.removeEventListener("grim:open-social-post", handler as EventListener);
+      window.removeEventListener("grim:open-social-subtab", subtabHandler as EventListener);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Tour navigation – switch sub-tab when tour requests it
   useEffect(() => {
     const handler = (e: Event) => {
