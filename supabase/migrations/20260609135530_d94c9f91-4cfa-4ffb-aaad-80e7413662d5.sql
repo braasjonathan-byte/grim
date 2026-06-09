@@ -1,0 +1,1 @@
+CREATE POLICY "Public read share-videos" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'share-videos');
