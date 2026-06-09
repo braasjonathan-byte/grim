@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import TabSkeleton from "@/components/TabSkeleton";
 import AuthScreen from "@/components/AuthScreen";
+import NotificationsBell from "@/components/NotificationsBell";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useNativePush } from "@/hooks/useNativePush";
 import { requestInitialPermissions } from "@/lib/requestInitialPermissions";
@@ -884,6 +885,7 @@ const Index = () => {
             >
               <HelpCircle className="w-4 h-4 text-primary" />
             </button>
+            <NotificationsBell onViewAll={() => setTab("social")} />
             {!isAppInstalled && (
               <button
                 onClick={() => navigate("/install")}
