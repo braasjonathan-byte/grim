@@ -124,6 +124,11 @@ export function usePushNotifications(userId: string | null) {
         return;
       }
 
+      const displayMode = typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches
+        ? "standalone"
+        : "browser";
+      const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : null;
+
       // Store in database (upsert) - delete old entries for this user+endpoint first, then insert
       await supabase.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", endpoint);
       await supabase.from("push_subscriptions").insert({
@@ -131,6 +136,8 @@ export function usePushNotifications(userId: string | null) {
         endpoint,
         p256dh,
         auth,
+        user_agent: userAgent,
+        display_mode: displayMode,
       });
 
       subscribedRef.current = true;
