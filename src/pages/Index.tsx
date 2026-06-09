@@ -885,6 +885,7 @@ const Index = () => {
             >
               <HelpCircle className="w-4 h-4 text-primary" />
             </button>
+            <NotificationsBell onViewAll={() => setTab("social")} />
             {!isAppInstalled && (
               <button
                 onClick={() => navigate("/install")}
