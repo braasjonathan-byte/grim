@@ -742,7 +742,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             });
 
             return sortedPosts.map(post => (
-            <div key={post.id} className={`border rounded-xl overflow-hidden bg-card ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"}`}>
+            <div key={post.id} data-post-id={post.id} className={`border rounded-xl overflow-hidden bg-card transition-all ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"} ${highlightedPostId === post.id ? "ring-2 ring-primary shadow-lg" : ""}`}>
               {/* Pinned indicator */}
               {post.pinned && (
                 <div className="px-4 py-1.5 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
