@@ -164,12 +164,19 @@ const NotificationSettings = ({ userId }: NotificationSettingsProps) => {
         const p256dh = subJson.keys?.p256dh || "";
         const auth = subJson.keys?.auth || "";
 
+        const displayMode = typeof window !== "undefined" && window.matchMedia?.("(display-mode: standalone)").matches
+          ? "standalone"
+          : "browser";
+        const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : null;
+
         await supabase.from("push_subscriptions").delete().eq("user_id", userId).eq("endpoint", endpoint);
         await supabase.from("push_subscriptions").insert({
           user_id: userId,
           endpoint,
           p256dh,
           auth,
+          user_agent: userAgent,
+          display_mode: displayMode,
         });
 
         setHasSubscription(true);
