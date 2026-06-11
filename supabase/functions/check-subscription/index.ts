@@ -87,16 +87,24 @@ serve(async (req) => {
       }
     }
 
-    const shouldBeHonorary = hasActiveSub || isAlwaysHonorary || wasHonoraryViaReferral;
-    await supabaseClient
-      .from("profiles")
-      .update({ is_honorary: shouldBeHonorary })
-      .eq("user_id", user.id);
+    // Only GRANT honorary here — never revoke. Revocation must be an explicit
+    // admin action via the user-management tool, otherwise admin-granted
+    // honorary status gets wiped on every page load (this is the bug that
+    // hit grim and wilma02 when they reinstalled the app).
+    const shouldGrantHonorary = hasActiveSub || isAlwaysHonorary || wasHonoraryViaReferral;
+    const finalHonorary = shouldGrantHonorary || !!profile?.is_honorary;
+
+    if (shouldGrantHonorary && !profile?.is_honorary) {
+      await supabaseClient
+        .from("profiles")
+        .update({ is_honorary: true })
+        .eq("user_id", user.id);
+    }
 
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       subscription_end: subscriptionEnd,
-      is_honorary: shouldBeHonorary,
+      is_honorary: finalHonorary,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
