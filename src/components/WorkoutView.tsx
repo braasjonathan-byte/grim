@@ -6191,15 +6191,18 @@ const estimateCalories = (
                       // ("Cykling — 25 min\nLöpning — 15 min") render as individual logable cards
                       // instead of a single "Upplägg" instructions block.
                       const allStructuredExerciseLines = detailParts.length >= 1 && detailParts.every((l) => {
-                        if (!/\s—\s/.test(l)) return false;
                         const { name: n, weight: w } = parseExerciseWeight(l);
                         if (!n) return false;
                         const nLower = n.toLowerCase();
                         const isKnownEx = allExercises.some(e => e.name && e.name.toLowerCase() === nLower);
+                        // A bare known exercise name (no separator, no params) is also a valid
+                        // exercise row — e.g. "Löpning" added via the exercise picker.
+                        if (!/\s—\s/.test(l)) return isKnownEx;
                         const hasCardioMetric = !!w && (/\bmin\b/.test(w) || /\/km/.test(w) || /\d+\s*km\b/i.test(w));
                         const hasSetReps = !!w && /\d+\s*[×x]\s*\d+/i.test(w);
                         return isKnownEx || hasCardioMetric || hasSetReps;
                       });
+
                       if (!alreadySingleCondEntry && !isLoggedCondLine && !allStructuredExerciseLines) {
                         cardioInstructionsText = plan.details;
                       }
