@@ -9190,8 +9190,15 @@ const estimateCalories = (
         })()}
         onClose={() => setRunLogTarget(null)}
         onSaved={() => {
+          const target = runLogTarget;
           setRunLogTarget(null);
           fetchData();
+          if (target) {
+            setSharePromptDialog({ week: target.week, day: target.day, caption: null, loading: true });
+            previewWorkoutCaption(userId, target.week, target.day).then((caption) => {
+              setSharePromptDialog((prev) => (prev && prev.week === target.week && prev.day === target.day ? { ...prev, caption: caption || "", loading: false } : prev));
+            });
+          }
         }} />
 
       }
