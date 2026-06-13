@@ -1640,89 +1640,88 @@ const estimateCalories = (
     return Math.round(stravaCalories);
   }
 
-  let totalMinutes = 0;
-  let runDistanceKm = 0; // accumulated running/jogging distance from logged cond data
   const lines = details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
   const condRegex = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i;
-  const runRegex = /löpning|jogg|spring|run/i;
 
-  // Collect conditioning time from __cond__ logged data (stored in minutes)
-  const condNamesWithTime = new Set<number>();
+  // Pick MET value for activity name
+  const metFor = (name: string): number => {
+    const n = name.toLowerCase();
+    if (/löpning|jogg|spring|run/.test(n)) return 9.8;       // ~10 km/h running
+    if (/cykl|cykel|bike|cycling/.test(n)) return 7.5;       // moderate cycling
+    if (/simning|swim/.test(n)) return 7.0;
+    if (/rodd|row/.test(n)) return 7.0;
+    if (/promenad|walk|(?<![-\w])gång(?![-\w])/.test(n)) return 3.8;
+    if (/trapp|stair/.test(n)) return 8.8;
+    if (/intervall/.test(n)) return 9.0;
+    return 7.0;
+  };
+
+  // Kcal/min from MET: kcal = MET * 3.5 * kg / 200
+  const metKcalPerMin = (met: number) => (met * 3.5 * weightKg) / 200;
+
+  let totalKcal = 0;
+  let strengthMinutes = 0;
+  let totalCondMin = 0;
+  const condKeysHandled: string[] = [];
+
+  // 1) Sum each logged conditioning entry independently
   if (loggedWeights) {
     for (const [k, v] of Object.entries(loggedWeights)) {
-      if (k.startsWith('__cond__')) {
-        try {
-          const data = typeof v === 'string' ? JSON.parse(v) : v;
-          const t = parseFloat(data?.time);
-          if (t > 0) {
-            totalMinutes += t;
-            // Extract line index from key if possible
-            const idxMatch = k.match(/__cond__(\d+)$/);
-            if (idxMatch) condNamesWithTime.add(parseInt(idxMatch[1]));
-          }
-          // Capture distance for running activities (Strava-aligned kcal calc)
-          const dist = parseFloat(data?.dist);
-          if (dist > 0 && runRegex.test(k)) {
-            runDistanceKm += dist;
-          }
-        } catch {}
-      }
+      if (!k.startsWith('__cond__')) continue;
+      try {
+        const data = typeof v === 'string' ? JSON.parse(v) : v;
+        const t = parseFloat(data?.time);
+        const dist = parseFloat(data?.dist);
+        const name = k.replace(/^__cond__/, '').replace(/_\d+$/, '');
+        condKeysHandled.push(name.toLowerCase());
+        const isRun = /löpning|jogg|spring|run/i.test(name);
+        let kcal = 0;
+        if (isRun && dist > 0) {
+          kcal = 1.036 * weightKg * dist;
+        } else if (t > 0) {
+          kcal = metKcalPerMin(metFor(name)) * t;
+        }
+        if (kcal > 0) totalKcal += kcal;
+        if (t > 0) totalCondMin += t;
+      } catch {}
     }
   }
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Skip conditioning lines — their time is counted from __cond__ data above
+  // 2) Walk details lines for non-logged conditioning + strength
+  for (const line of lines) {
     if (condRegex.test(line)) {
-      // Only add time from details text if no __cond__ data was found for this exercise
-      if (loggedWeights) {
-        // Check if any __cond__ key matches this exercise name
-        const hasCondData = Object.keys(loggedWeights).some(k =>
-          k.startsWith('__cond__') && (() => {
-            try {
-              const data = typeof loggedWeights[k] === 'string' ? JSON.parse(loggedWeights[k]) : loggedWeights[k];
-              return data?.time && parseFloat(data.time) > 0;
-            } catch { return false; }
-          })()
-        );
-        if (hasCondData) continue; // Skip — already counted from __cond__
-      }
-      // Fallback: parse time from details text
+      const nameMatch = line.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+)/);
+      const lname = (nameMatch?.[1] || '').trim().toLowerCase();
+      if (lname && condKeysHandled.some(k => k.includes(lname) || lname.includes(k))) continue;
+
       const timeMatch = line.match(/(\d+(?:[.,]\d+)?)\s*min/i);
-      if (timeMatch) {
-        totalMinutes += parseFloat(timeMatch[1].replace(",", "."));
+      const distMatch = line.match(/(\d+(?:[.,]\d+)?)\s*km(?!\/)/i);
+      const t = timeMatch ? parseFloat(timeMatch[1].replace(',', '.')) : 0;
+      const d = distMatch ? parseFloat(distMatch[1].replace(',', '.')) : 0;
+      const isRun = /löpning|jogg|spring|run/i.test(line);
+      if (isRun && d > 0) {
+        totalKcal += 1.036 * weightKg * d;
+      } else if (t > 0) {
+        totalKcal += metKcalPerMin(metFor(line)) * t;
       } else {
-        totalMinutes += 10; // Default for conditioning without time info
+        totalKcal += metKcalPerMin(metFor(line)) * 10;
       }
       continue;
     }
-    // Check for sets×reps format
     const setsMatch = line.match(/(\d+)\s*[×x]\s*(\d+)/i);
     if (setsMatch) {
-      const sets = parseInt(setsMatch[1]);
-      // ~1.5 min per set (including rest)
-      totalMinutes += sets * 1.5;
-      continue;
+      strengthMinutes += parseInt(setsMatch[1]) * 1.5;
+    } else {
+      strengthMinutes += 2;
     }
-    // Default: assume ~2 min per exercise line
-    totalMinutes += 2;
   }
 
-  if (totalMinutes <= 0) return 0;
+  if (strengthMinutes > 0) {
+    totalKcal += metKcalPerMin(5.0) * strengthMinutes;
+  }
 
-  // Sanity cap: max 4 hours for a single session
-  totalMinutes = Math.min(totalMinutes, 240);
-
-  // Distance-based calc for running (matches Strava: ~1.036 kcal/kg/km gross).
-  // This is the most accurate for outdoor running and is what Strava uses when
-  // GPS distance is available. Use it as the primary signal when distance exists.
-  const runKcalFromDistance = runDistanceKm > 0
-    ? Math.round(1.036 * weightKg * runDistanceKm)
-    : 0;
-
-  // Use heart rate based formula if pulse is available (more accurate)
-  if (loggedPulse && loggedPulse > 0 && loggedPulse < 250 && age) {
-    // Keytel et al. formula (kcal/min)
+  // 4) Optional HR-based override (only when session is purely cardio)
+  if (loggedPulse && loggedPulse > 0 && loggedPulse < 250 && age && totalCondMin > 0 && strengthMinutes === 0) {
     let kcalPerMin: number;
     if (gender === 'male') {
       kcalPerMin = (-55.0969 + 0.6309 * loggedPulse + 0.1988 * weightKg + 0.2017 * age) / 4.184;
@@ -1730,22 +1729,13 @@ const estimateCalories = (
       kcalPerMin = (-20.4022 + 0.4472 * loggedPulse - 0.1263 * weightKg + 0.074 * age) / 4.184;
     }
     if (kcalPerMin > 0) {
-      const hrKcal = Math.round(kcalPerMin * totalMinutes);
-      // For running, prefer the higher of HR-based and distance-based to align with Strava
-      return Math.max(hrKcal, runKcalFromDistance);
+      const hrKcal = kcalPerMin * totalCondMin;
+      totalKcal = Math.max(totalKcal, hrKcal);
     }
   }
 
-  // If we have running distance but no usable pulse, use distance-based estimate
-  if (runKcalFromDistance > 0) {
-    return runKcalFromDistance;
-  }
-
-  // Fallback: MET-based estimate
-  // Strength training: MET ~5.0, Cardio: MET ~8.0, average ~6.0
-  const avgMET = 6.0;
-  const hours = totalMinutes / 60;
-  return Math.round(avgMET * weightKg * hours);
+  if (totalKcal <= 0) return 0;
+  return Math.round(Math.min(totalKcal, 3000));
 };
 
   const filteredExercises = allExercises.filter((e) => {
