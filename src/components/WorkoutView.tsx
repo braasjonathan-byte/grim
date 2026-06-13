@@ -5667,20 +5667,17 @@ const estimateCalories = (
       )}
       <ShareWorkoutPromptDialog
         open={!!sharePromptDialog}
-        onConfirm={() => {
-          setSharePromptDialog(null);
-          toast.success("Passet delades med dina vänner");
-        }}
-        onSkip={async () => {
+        initialCaption={sharePromptDialog?.caption ?? ""}
+        loading={!!sharePromptDialog?.loading}
+        onConfirm={async (caption) => {
           const target = sharePromptDialog;
           setSharePromptDialog(null);
           if (!target) return;
-          await supabase
-            .from("social_posts")
-            .delete()
-            .eq("user_id", userId)
-            .eq("workout_week", target.week)
-            .eq("workout_day", target.day);
+          await autoShareCompletion(userId, target.week, target.day, caption);
+          toast.success("Passet delades med dina vänner");
+        }}
+        onSkip={() => {
+          setSharePromptDialog(null);
         }}
       />
       {uncheckedSetsDialog && (
