@@ -1105,7 +1105,7 @@ function generateSprintTriathlon(profile: FitnessProfile): TemplatePlanDay[] {
       { week: w, day: "Ons", session_name: "Cykling – Uthållighet", details: `${bikeMin} min i zon 2. Fokus kadens 85–95 rpm.`, tempo: "Zon 2" },
       { week: w, day: "Tors", session_name: "Styrka – Helkropp", details: `Knäböj 3×8; Bänkpress 3×8; Rodd 3×10; Planka 3×${30 + w * 5}s; Vadpress 3×15`, tempo: "" },
       { week: w, day: "Fre", session_name: "Vila", details: "Vilodag", tempo: "" },
-      { week: w, day: "Lör", session_name: "Brick – Cykel + Löpning", details: isDeload ? "20 min cykel + 10 min jogg" : `${bikeMin} min cykel direkt följt av ${runMin} min löpning. Öva transition.`, tempo: "Zon 2–3" },
+      { week: w, day: "Lör", session_name: "Brick – Cykel + Löpning", details: isDeload ? `Cykling — 20 min\nLöpning — 10 min` : `Cykling — ${bikeMin} min\nLöpning — ${runMin} min`, tempo: "Zon 2–3" },
       { week: w, day: "Sön", session_name: "Simning – Distans", details: `${isDeload ? swimDist - 200 : swimDist}m sammanhängande simning`, tempo: "Zon 2" },
     );
   }
