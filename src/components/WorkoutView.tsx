@@ -5328,7 +5328,8 @@ const estimateCalories = (
                     {isDone && plan.details && (
                       profileWeight ? (() => {
                         const comp = completions[key];
-                        const cal = estimateCalories(plan.details, comp?.logged_weights as Record<string, any> | null, comp?.logged_pulse || null, profileWeight, profileGender, profileAge);
+                        const allDetails = plans.filter(p => p.week === plan.week && p.day === plan.day).map(p => p.details).filter(Boolean).join("\n");
+                        const cal = estimateCalories(allDetails || plan.details, comp?.logged_weights as Record<string, any> | null, comp?.logged_pulse || null, profileWeight, profileGender, profileAge);
                         return cal > 0 ? (
                           <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 flex items-center gap-2">
                             <Flame className="w-4 h-4 flex-shrink-0 text-primary" />
