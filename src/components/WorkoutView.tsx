@@ -6288,11 +6288,60 @@ const estimateCalories = (
                             return (
                               <div className="space-y-2">
                                 <div className="bg-muted/40 border border-border rounded-md px-3 py-2">
-                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mb-1">Upplägg</p>
-                                  <p className="text-xs text-foreground italic leading-relaxed whitespace-pre-line">
-                                    {cardioInstructionsText}
-                                  </p>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Upplägg</p>
+                                    {editingUppläggPlanId !== plan.id && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingUppläggPlanId(plan.id);
+                                          setEditingUppläggText(plan.details || "");
+                                        }}
+                                        className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                                        title="Redigera upplägg"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {editingUppläggPlanId === plan.id ? (
+                                    <div className="space-y-2">
+                                      <textarea
+                                        value={editingUppläggText}
+                                        onChange={(e) => setEditingUppläggText(e.target.value)}
+                                        rows={Math.max(3, editingUppläggText.split("\n").length)}
+                                        className="w-full bg-background text-foreground text-xs px-2 py-1.5 rounded border border-border outline-none focus:ring-1 focus:ring-primary leading-relaxed"
+                                        autoFocus
+                                      />
+                                      <div className="flex gap-2 justify-end">
+                                        <button
+                                          onClick={() => { setEditingUppläggPlanId(null); setEditingUppläggText(""); }}
+                                          className="px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground"
+                                        >
+                                          Avbryt
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            const newDetails = editingUppläggText;
+                                            await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                                            setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                                            setEditingUppläggPlanId(null);
+                                            setEditingUppläggText("");
+                                            triggerSave();
+                                          }}
+                                          className="px-2.5 py-1 text-[11px] bg-primary text-primary-foreground rounded font-semibold"
+                                        >
+                                          Spara
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-foreground italic leading-relaxed whitespace-pre-line">
+                                      {cardioInstructionsText}
+                                    </p>
+                                  )}
                                 </div>
+
                                 <ConditioningEditCard
                                   name={condName}
                                   lineIndex={0}
