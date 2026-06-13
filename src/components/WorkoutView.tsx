@@ -1864,9 +1864,12 @@ const estimateCalories = (
 
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
-      
-      autoShareCompletion(userId, week, day);
-      setSharePromptDialog({ week, day });
+
+      // Open share dialog first; only create the post if the user confirms.
+      setSharePromptDialog({ week, day, caption: null, loading: true });
+      previewWorkoutCaption(userId, week, day).then((caption) => {
+        setSharePromptDialog((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
+      });
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
       if (week > 0) {
