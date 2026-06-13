@@ -50,13 +50,12 @@ export function buildWorkoutSummaryCaption(
 
   const isRunning = isRunningSession(plan.session_name);
   const stats: string[] = [];
-  if (isRunning) {
-    if (completion.logged_distance_km) stats.push(`📏 ${completion.logged_distance_km} km`);
-    if (completion.logged_tempo) stats.push(`⏱ ${completion.logged_tempo}/km`);
-    if (completion.logged_pulse) stats.push(`❤️ ${completion.logged_pulse} bpm`);
-  }
+  // Always show cardio metrics if they exist (gäller även cykel/simning/brick)
+  if (completion.logged_distance_km) stats.push(`📏 ${completion.logged_distance_km} km`);
+  if (completion.logged_tempo) stats.push(`⏱ ${completion.logged_tempo}/km`);
+  if (completion.logged_pulse) stats.push(`❤️ ${completion.logged_pulse} bpm`);
 
-  // Strength volume + sets
+  // Strength volume + sets + per-exercise breakdown
   let totalVolume = 0;
   let completedSets = 0;
   const setLines: string[] = [];
@@ -95,15 +94,32 @@ export function buildWorkoutSummaryCaption(
     }
   }
 
-  if (!isRunning) {
-    if (completedSets > 0) stats.push(`💪 ${completedSets} set`);
-    if (totalVolume > 0) {
-      const v = totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(Math.round(totalVolume));
-      stats.push(`🏋️‍♂️ ${v} kg volym`);
-    }
+  if (completedSets > 0) stats.push(`💪 ${completedSets} set`);
+  if (totalVolume > 0) {
+    const v = totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(Math.round(totalVolume));
+    stats.push(`🏋️‍♂️ ${v} kg volym`);
   }
 
   if (stats.length) lines.push(stats.join("  ·  "));
+
+  // Per-exercise breakdown så alla får samma detaljnivå
+  if (setLines.length) {
+    lines.push("");
+    lines.push(...setLines);
+  }
+
+  // Visa det inplanerade upplägget om inga loggade set finns (cykel/löppass etc.)
+  if (setLines.length === 0 && plan.details && plan.details.trim()) {
+    const planLines = plan.details
+      .split(/\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+    if (planLines.length) {
+      lines.push("");
+      planLines.forEach((l) => lines.push(`• ${l}`));
+    }
+  }
 
   lines.push("");
   lines.push("Elda passet 🔥 eller heja på i kommentarerna!");
@@ -111,16 +127,15 @@ export function buildWorkoutSummaryCaption(
 }
 
 /**
- * Auto-create a "friends" social post summarizing a completed workout.
- * Idempotent: if a post for the same user/week/day already exists, it is updated.
+ * Build a caption for a completed workout without writing to the database.
+ * Used to pre-fill the share-prompt dialog so the user can edit before publishing.
  */
-export async function autoShareCompletion(
+export async function previewWorkoutCaption(
   userId: string,
   week: number,
   day: string
-): Promise<void> {
+): Promise<string | null> {
   try {
-    // Gather all plan rows for that day (user may have multiple parts)
     const { data: planRows } = await supabase
       .from("workout_plans")
       .select("session_name, details, tempo")
@@ -128,18 +143,16 @@ export async function autoShareCompletion(
       .eq("week", week)
       .eq("day", day);
 
-    if (!planRows || planRows.length === 0) return;
-    let validPlans = (planRows as any[]).filter(
-      (p) => (p.details || "").trim() && (p.session_name || "").trim()
+    let validPlans = ((planRows || []) as any[]).filter(
+      (p) => (p.session_name || "").trim() || (p.details || "").trim()
     );
-    // Fallback for single workouts: accept rows with just a session name
     if (validPlans.length === 0) {
-      validPlans = (planRows as any[]).filter((p) => (p.session_name || "").trim());
+      // Last-resort fallback: still allow sharing with a generic name
+      validPlans = [{ session_name: "Pass", details: "", tempo: null }];
     }
-    if (validPlans.length === 0) return;
 
     const plan: PlanLike = {
-      session_name: validPlans.map((p) => p.session_name).join(" + "),
+      session_name: validPlans.map((p) => p.session_name || "Pass").filter(Boolean).join(" + ") || "Pass",
       details: validPlans.map((p) => p.details).filter(Boolean).join("\n"),
       tempo: validPlans[0].tempo,
     };
@@ -152,10 +165,31 @@ export async function autoShareCompletion(
       .eq("day", day)
       .maybeSingle();
 
-    const caption = buildWorkoutSummaryCaption(plan, (completion || {}) as any, week, day);
+    return buildWorkoutSummaryCaption(plan, (completion || {}) as any, week, day);
+  } catch {
+    return null;
+  }
+}
 
-    // Idempotent upsert: unique index (user_id, workout_week, workout_day) guarantees one row.
-    // Update caption if a post already exists, otherwise insert + notify.
+/**
+ * Create or update a "friends" social post for a completed workout.
+ * Accepts an optional caption override (used when the user edits the text in the dialog).
+ * Idempotent: if a post for the same user/week/day already exists, it is updated.
+ */
+export async function autoShareCompletion(
+  userId: string,
+  week: number,
+  day: string,
+  captionOverride?: string
+): Promise<void> {
+  try {
+    let caption = captionOverride;
+    if (!caption) {
+      const preview = await previewWorkoutCaption(userId, week, day);
+      if (!preview) return;
+      caption = preview;
+    }
+
     const { data: existing } = await supabase
       .from("social_posts")
       .select("id")
@@ -180,16 +214,14 @@ export async function autoShareCompletion(
         },
         { onConflict: "user_id,workout_week,workout_day", ignoreDuplicates: true }
       );
-      // Only notify if we actually inserted (no unique-violation race)
       if (!error) {
         supabase.functions
           .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
           .catch(() => {});
       }
     }
-
   } catch {
-    // best-effort, swallow
+    // best-effort
   }
 }
 
