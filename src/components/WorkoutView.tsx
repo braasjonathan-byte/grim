@@ -4470,6 +4470,8 @@ const estimateCalories = (
                           return !!(condSavedInline.time || condSavedInline.dist || condSavedInline.tempo || condSavedInline.pulse);
                         })();
 
+                        // Hide inline edit card once the entry is logged — it shows in the green "Loggat resultat" box instead
+                        if (hasSavedCondData) return null;
                         return (
                           <ConditioningEditCard
                             key={i}
@@ -6615,6 +6617,7 @@ const estimateCalories = (
                                   let cSaved: Record<string, any> | null = null;
                                   if (cRaw) { try { const p = typeof cRaw === "string" ? JSON.parse(cRaw) : cRaw; if (p && typeof p === "object") cSaved = p; } catch {} }
                                   const cHasSaved = !!(cSaved && (cSaved.time || cSaved.dist || cSaved.tempo || cSaved.pulse));
+                                  if (cHasSaved) return null;
                                   return (
                                     <li key={i} className="list-none">
                                       <ConditioningEditCard
@@ -6726,6 +6729,7 @@ const estimateCalories = (
                               let scSaved: Record<string, any> | null = null;
                               if (scRaw) { try { const p = typeof scRaw === "string" ? JSON.parse(scRaw) : scRaw; if (p && typeof p === "object") scSaved = p; } catch {} }
                               const scHasSaved = !!(scSaved && (scSaved.time || scSaved.dist || scSaved.tempo || scSaved.pulse));
+                              if (scHasSaved) return null;
                               return (
                                 <ConditioningEditCard
                                   name={sCondName}
