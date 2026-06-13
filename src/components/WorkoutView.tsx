@@ -5692,12 +5692,13 @@ const estimateCalories = (
         open={!!sharePromptDialog}
         initialCaption={sharePromptDialog?.caption ?? ""}
         loading={!!sharePromptDialog?.loading}
+        nickname={userNickname}
         onConfirm={async (caption) => {
           const target = sharePromptDialog;
           setSharePromptDialog(null);
           if (!target) return;
           await autoShareCompletion(userId, target.week, target.day, caption);
-          toast.success("Passet delades med dina vänner");
+          toast.success("Passet publicerades för dina vänner");
         }}
         onSkip={() => {
           setSharePromptDialog(null);
