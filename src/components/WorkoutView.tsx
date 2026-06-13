@@ -6850,6 +6850,8 @@ const estimateCalories = (
 
                                 if (!(time || tempo || distance || pulse || spm || steps)) continue;
 
+                                const route = Array.isArray(data.route) && data.route.length > 1 ? (data.route as [number, number][]) : undefined;
+
                                 const existing = loggedEntries.find((entry) => entry.name.toLowerCase() === name.toLowerCase());
                                 if (existing) {
                                   if (!existing.time && time) existing.time = time;
@@ -6858,6 +6860,7 @@ const estimateCalories = (
                                   if (!existing.pulse && pulse) existing.pulse = pulse;
                                   if (!existing.spm && spm) existing.spm = spm;
                                   if (!existing.steps && steps) existing.steps = steps;
+                                  if (!existing.route && route) existing.route = route;
                                   continue;
                                 }
 
@@ -6872,6 +6875,7 @@ const estimateCalories = (
                                   lineIndex: -1,
                                   source: "weights",
                                   weightKey,
+                                  route,
                                 });
                               } catch {}
                             }
