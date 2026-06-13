@@ -6897,16 +6897,9 @@ const estimateCalories = (
                               }
                             }
 
-                            // Filter out entries already rendered inline by ConditioningEditCard
-                            const inlineCondNames = new Set<string>();
-                            const pLines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-                            for (const pLine of pLines) {
-                              const { name: pName, weight: pWeight } = parseExerciseWeight(pLine);
-                              if (pWeight && (pWeight.includes("min") || pWeight.includes("/km") || /\d+\s*km/i.test(pWeight))) {
-                                inlineCondNames.add(pName.toLowerCase());
-                              }
-                            }
-                            const filteredEntries = loggedEntries.filter(e => !inlineCondNames.has(e.name.toLowerCase()));
+                            // Show all logged entries in the green "Loggat resultat" box,
+                            // even if the same exercise is also rendered inline above.
+                            const filteredEntries = loggedEntries;
 
                             if (filteredEntries.length === 0) return null;
 
