@@ -28,8 +28,10 @@ const RouteMap = ({ route, height = 200, className = "", collapsible = false, de
         attributionControl: false,
         scrollWheelZoom: false,
       });
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 20,
+        subdomains: "abcd",
+        attribution: '© OpenStreetMap © CARTO',
       }).addTo(mapRef.current);
     } else {
       // ensure size recalculates after re-show
@@ -45,10 +47,14 @@ const RouteMap = ({ route, height = 200, className = "", collapsible = false, de
 
     const primaryVar = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
     const lineColor = primaryVar ? `hsl(${primaryVar})` : "#2563eb";
+    // Outer halo for contrast on the map
+    L.polyline(route, { color: "#ffffff", weight: 8, opacity: 0.85, lineCap: "round", lineJoin: "round" }).addTo(map);
     const line = L.polyline(route, {
       color: lineColor,
-      weight: 4,
-      opacity: 0.9,
+      weight: 5,
+      opacity: 0.95,
+      lineCap: "round",
+      lineJoin: "round",
     }).addTo(map);
 
     const start = route[0];

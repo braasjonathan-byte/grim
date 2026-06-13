@@ -6794,6 +6794,7 @@ const estimateCalories = (
                               source: "details" | "direct" | "weights";
                               rawInfo?: string;
                               weightKey?: string;
+                              route?: [number, number][];
                             }[] = [];
 
                             // 1) Parse plan details for logged lines (format: "Name — time, tempo, distance, pulse")
@@ -6849,6 +6850,8 @@ const estimateCalories = (
 
                                 if (!(time || tempo || distance || pulse || spm || steps)) continue;
 
+                                const route = Array.isArray(data.route) && data.route.length > 1 ? (data.route as [number, number][]) : undefined;
+
                                 const existing = loggedEntries.find((entry) => entry.name.toLowerCase() === name.toLowerCase());
                                 if (existing) {
                                   if (!existing.time && time) existing.time = time;
@@ -6857,6 +6860,7 @@ const estimateCalories = (
                                   if (!existing.pulse && pulse) existing.pulse = pulse;
                                   if (!existing.spm && spm) existing.spm = spm;
                                   if (!existing.steps && steps) existing.steps = steps;
+                                  if (!existing.route && route) existing.route = route;
                                   continue;
                                 }
 
@@ -6871,6 +6875,7 @@ const estimateCalories = (
                                   lineIndex: -1,
                                   source: "weights",
                                   weightKey,
+                                  route,
                                 });
                               } catch {}
                             }
@@ -6994,7 +6999,7 @@ const estimateCalories = (
                               <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
                                 <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
                                 {filteredEntries.map((e, i) => (
-                                  <div key={i} className={`${filteredEntries.length > 1 ? "border-l-2 border-success/30 pl-2" : ""} group`}>
+                                  <div key={i} className={`${filteredEntries.length > 1 ? "border-l-2 border-success/30 pl-2" : ""} group space-y-2`}>
                                     <div className="flex items-start justify-between gap-1">
                                       <div className="flex-1">
                                         {filteredEntries.length > 1 && <p className="text-[10px] font-semibold text-success/80">{e.name}</p>}
@@ -7036,6 +7041,11 @@ const estimateCalories = (
                                         </button>
                                       </div>
                                     </div>
+                                    {e.route && e.route.length > 1 && (
+                                      <div onClick={(ev) => ev.stopPropagation()}>
+                                        <RouteMap route={e.route} height={220} collapsible defaultOpen={false} />
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
