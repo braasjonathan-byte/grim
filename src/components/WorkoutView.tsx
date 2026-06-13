@@ -1865,12 +1865,43 @@ const estimateCalories = (
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
 
+      // Auto-mark all conditioning lines in this day as completed as well
+      try {
+        const dayPlans = plans.filter((p) => p.week === week && p.day === day);
+        const condNames: string[] = [];
+        for (const dp of dayPlans) {
+          if (!dp.details) continue;
+          const lines = dp.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+          for (const line of lines) {
+            if (line.startsWith("⚔️")) continue;
+            const { name, weight } = parseExerciseWeight(line);
+            const nameLower = (name || "").trim().toLowerCase();
+            if (!nameLower) continue;
+            const isKonditionEx = allExercises.some(
+              (e) => e.category === "kondition" && e.name && e.name.toLowerCase() === nameLower
+            );
+            const w = weight || "";
+            const isCondFormat =
+              (w && (w.includes("min") || w.includes("/km") || /\d+\s*km/i.test(w))) || isKonditionEx;
+            if (isCondFormat) condNames.push(name);
+          }
+        }
+        if (condNames.length > 0) {
+          await updateCompletionWeights(week, day, (existing) => {
+            const next = { ...existing };
+            for (const n of condNames) next[`__cond_done__${n}`] = "1";
+            return next;
+          });
+        }
+      } catch {}
+
       // Open share dialog first; only create the post if the user confirms.
       setSharePromptDialog({ week, day, caption: null, loading: true });
       previewWorkoutCaption(userId, week, day).then((caption) => {
         setSharePromptDialog((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
       });
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
+
 
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
