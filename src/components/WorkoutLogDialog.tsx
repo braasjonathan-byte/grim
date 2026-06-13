@@ -408,7 +408,6 @@ const WorkoutLogDialog = ({
                 } as any,
                 { onConflict: "user_id,week,day" }
               );
-              autoShareCompletion(userId, week, day);
               onSaved();
             }}
             className="flex-1 py-3 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"
