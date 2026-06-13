@@ -152,6 +152,9 @@ android {{
         with:
           name: app-release-apk
           path: ${{ steps.apk.outputs.apk_path }}
+          retention-days: 3
+          name: app-release-apk
+          path: ${{ steps.apk.outputs.apk_path }}
 
       # ------------------------
       # GitHub Release

@@ -140,10 +140,18 @@ jobs:
           name: gradle-reports
           path: _reports
           if-no-files-found: ignore
+          retention-days: 3
+          name: gradle-reports
+          path: _reports
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
+          name: grim-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
+          retention-days: 3
           name: grim-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: ignore
