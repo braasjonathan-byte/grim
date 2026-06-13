@@ -224,9 +224,6 @@ const WorkoutLogDialog = ({
 
     setSaving(false);
     onSaved();
-    return;
-    setSaving(false);
-    onSaved();
   };
 
   const inputClass = "w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground";
