@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
 
-import { autoShareCompletion } from "@/lib/workoutAutoShare";
+
 
 interface WorkoutLogDialogProps {
   userId: string;
@@ -222,7 +222,6 @@ const WorkoutLogDialog = ({
       { onConflict: "user_id,week,day" }
     );
 
-    autoShareCompletion(userId, week, day);
     setSaving(false);
     onSaved();
   };
@@ -409,7 +408,6 @@ const WorkoutLogDialog = ({
                 } as any,
                 { onConflict: "user_id,week,day" }
               );
-              autoShareCompletion(userId, week, day);
               onSaved();
             }}
             className="flex-1 py-3 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm"

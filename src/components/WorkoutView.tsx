@@ -23,7 +23,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
-import { autoShareCompletion, removeAutoShareCompletion } from "@/lib/workoutAutoShare";
+import { autoShareCompletion, removeAutoShareCompletion, previewWorkoutCaption } from "@/lib/workoutAutoShare";
 import { onPostInteraction } from "@/lib/postInteractionBus";
 import { fetchSocialWorkoutInteractions, mergeWorkoutComments, mergeWorkoutLikes, isSocialInteractionId, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
@@ -1215,7 +1215,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   } | null>(null);
 
   // Ask the user after marking a workout done whether to share to friends feed.
-  const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string } | null>(null);
+  const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
 
   // Share card
   const [shareTarget, setShareTarget] = useState<{
@@ -1864,9 +1864,12 @@ const estimateCalories = (
 
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
-      
-      autoShareCompletion(userId, week, day);
-      setSharePromptDialog({ week, day });
+
+      // Open share dialog first; only create the post if the user confirms.
+      setSharePromptDialog({ week, day, caption: null, loading: true });
+      previewWorkoutCaption(userId, week, day).then((caption) => {
+        setSharePromptDialog((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
+      });
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
       if (week > 0) {
@@ -5664,20 +5667,17 @@ const estimateCalories = (
       )}
       <ShareWorkoutPromptDialog
         open={!!sharePromptDialog}
-        onConfirm={() => {
-          setSharePromptDialog(null);
-          toast.success("Passet delades med dina vänner");
-        }}
-        onSkip={async () => {
+        initialCaption={sharePromptDialog?.caption ?? ""}
+        loading={!!sharePromptDialog?.loading}
+        onConfirm={async (caption) => {
           const target = sharePromptDialog;
           setSharePromptDialog(null);
           if (!target) return;
-          await supabase
-            .from("social_posts")
-            .delete()
-            .eq("user_id", userId)
-            .eq("workout_week", target.week)
-            .eq("workout_day", target.day);
+          await autoShareCompletion(userId, target.week, target.day, caption);
+          toast.success("Passet delades med dina vänner");
+        }}
+        onSkip={() => {
+          setSharePromptDialog(null);
         }}
       />
       {uncheckedSetsDialog && (
@@ -9190,8 +9190,15 @@ const estimateCalories = (
         })()}
         onClose={() => setRunLogTarget(null)}
         onSaved={() => {
+          const target = runLogTarget;
           setRunLogTarget(null);
           fetchData();
+          if (target) {
+            setSharePromptDialog({ week: target.week, day: target.day, caption: null, loading: true });
+            previewWorkoutCaption(userId, target.week, target.day).then((caption) => {
+              setSharePromptDialog((prev) => (prev && prev.week === target.week && prev.day === target.day ? { ...prev, caption: caption || "", loading: false } : prev));
+            });
+          }
         }} />
 
       }
