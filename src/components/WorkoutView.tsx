@@ -4470,8 +4470,7 @@ const estimateCalories = (
                           return !!(condSavedInline.time || condSavedInline.dist || condSavedInline.tempo || condSavedInline.pulse);
                         })();
 
-                        // Hide inline edit card once the entry is logged — it shows in the green "Loggat resultat" box instead
-                        if (hasSavedCondData) return null;
+                        // Always show inline card; green "Loggat resultat" box is suppressed
                         return (
                           <ConditioningEditCard
                             key={i}
@@ -6344,7 +6343,7 @@ const estimateCalories = (
                                   )}
                                 </div>
 
-                                {!cHasSaved && <ConditioningEditCard
+                                {<ConditioningEditCard
                                   name={condName}
                                   lineIndex={0}
                                   planId={plan.id}
@@ -6617,7 +6616,6 @@ const estimateCalories = (
                                   let cSaved: Record<string, any> | null = null;
                                   if (cRaw) { try { const p = typeof cRaw === "string" ? JSON.parse(cRaw) : cRaw; if (p && typeof p === "object") cSaved = p; } catch {} }
                                   const cHasSaved = !!(cSaved && (cSaved.time || cSaved.dist || cSaved.tempo || cSaved.pulse));
-                                  if (cHasSaved) return null;
                                   return (
                                     <li key={i} className="list-none">
                                       <ConditioningEditCard
@@ -6729,7 +6727,6 @@ const estimateCalories = (
                               let scSaved: Record<string, any> | null = null;
                               if (scRaw) { try { const p = typeof scRaw === "string" ? JSON.parse(scRaw) : scRaw; if (p && typeof p === "object") scSaved = p; } catch {} }
                               const scHasSaved = !!(scSaved && (scSaved.time || scSaved.dist || scSaved.tempo || scSaved.pulse));
-                              if (scHasSaved) return null;
                               return (
                                 <ConditioningEditCard
                                   name={sCondName}
@@ -6992,6 +6989,10 @@ const estimateCalories = (
                               );
                             }
 
+                            // Green "Loggat resultat" box is suppressed — each activity is shown inline above instead
+                            return null;
+
+                            // eslint-disable-next-line no-unreachable
                             return (
                               <div className="bg-success/10 border border-success/30 rounded-lg p-3 space-y-2">
                                 <p className="text-xs font-bold text-success">📊 Loggat resultat</p>
