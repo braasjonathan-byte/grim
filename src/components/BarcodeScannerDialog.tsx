@@ -202,15 +202,29 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
 
         {!found && (
           <div className="space-y-3">
-            <div className="relative bg-black aspect-square overflow-hidden">
-              <video ref={videoRef} className="w-full h-full object-cover" muted playsInline autoPlay />
-              <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-primary/80" />
-              {(scanning || lookup) && (
-                <div className="absolute top-2 right-2 bg-background/80 px-2 py-1 text-[10px] flex items-center gap-1">
-                  <Loader2 className="w-3 h-3 animate-spin" /> {lookup ? "Söker…" : "Skannar…"}
-                </div>
-              )}
-            </div>
+            {Capacitor.isNativePlatform() ? (
+              <button
+                onClick={() => start()}
+                disabled={scanning || lookup}
+                className="w-full py-4 bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {(scanning || lookup) ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> {lookup ? "Söker…" : "Skannar…"}</>
+                ) : (
+                  "Skanna ny streckkod"
+                )}
+              </button>
+            ) : (
+              <div className="relative bg-black aspect-square overflow-hidden">
+                <video ref={videoRef} className="w-full h-full object-cover" muted playsInline autoPlay />
+                <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-0.5 bg-primary/80" />
+                {(scanning || lookup) && (
+                  <div className="absolute top-2 right-2 bg-background/80 px-2 py-1 text-[10px] flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" /> {lookup ? "Söker…" : "Skannar…"}
+                  </div>
+                )}
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-muted-foreground">Eller skriv in streckkoden manuellt</label>
               <div className="flex gap-2 mt-1">
