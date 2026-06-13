@@ -6344,7 +6344,7 @@ const estimateCalories = (
                                   )}
                                 </div>
 
-                                <ConditioningEditCard
+                                {!cHasSaved && <ConditioningEditCard
                                   name={condName}
                                   lineIndex={0}
                                   planId={plan.id}
