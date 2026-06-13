@@ -1227,6 +1227,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Change day / rename session dialogs
   const [changeDayDialog, setChangeDayDialog] = useState<{planId: string; currentDay: string; week: number; sessionName: string} | null>(null);
   const [renameDialog, setRenameDialog] = useState<{planId: string; currentName: string; week: number; day: string; sessionName: string} | null>(null);
+  const [editingUppläggPlanId, setEditingUppläggPlanId] = useState<string | null>(null);
+  const [editingUppläggText, setEditingUppläggText] = useState<string>("");
   const [renameInput, setRenameInput] = useState("");
   const [settingCurrentDay, setSettingCurrentDay] = useState(false);
 
