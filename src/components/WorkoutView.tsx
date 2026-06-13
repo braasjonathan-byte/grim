@@ -6381,7 +6381,7 @@ const estimateCalories = (
                                     });
                                     triggerSave();
                                   }}
-                                />
+                                />}
                               </div>
                             );
                           })()}
