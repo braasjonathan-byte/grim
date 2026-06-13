@@ -6794,6 +6794,7 @@ const estimateCalories = (
                               source: "details" | "direct" | "weights";
                               rawInfo?: string;
                               weightKey?: string;
+                              route?: [number, number][];
                             }[] = [];
 
                             // 1) Parse plan details for logged lines (format: "Name — time, tempo, distance, pulse")
