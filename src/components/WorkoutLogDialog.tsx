@@ -222,7 +222,9 @@ const WorkoutLogDialog = ({
       { onConflict: "user_id,week,day" }
     );
 
-    autoShareCompletion(userId, week, day);
+    setSaving(false);
+    onSaved();
+    return;
     setSaving(false);
     onSaved();
   };
