@@ -9644,6 +9644,22 @@ const estimateCalories = (
         </div>
       </div>
     )}
+    <ShareWorkoutPromptDialog
+      open={!!sharePromptDialog}
+      initialCaption={sharePromptDialog?.caption ?? ""}
+      loading={!!sharePromptDialog?.loading}
+      nickname={userNickname}
+      onConfirm={async (caption) => {
+        const target = sharePromptDialog;
+        setSharePromptDialog(null);
+        if (!target) return;
+        await autoShareCompletion(userId, target.week, target.day, caption);
+        toast.success("Passet publicerades för dina vänner");
+      }}
+      onSkip={() => {
+        setSharePromptDialog(null);
+      }}
+    />
     {deleteExerciseConfirm && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/60" onClick={() => setDeleteExerciseConfirm(null)} />
