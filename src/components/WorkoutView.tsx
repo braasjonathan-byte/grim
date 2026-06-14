@@ -6201,6 +6201,7 @@ const estimateCalories = (
                     const comp = completions[key];
                     let detailParts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
                     let cardioInstructionsText: string | null = null;
+                    let cardioInstructionLines: string[] = [];
 
                     // For all cardio/conditioning sessions: treat details as instructions
                     // and surface a single conditioning entry so the user can log manually or via GPS.
@@ -6216,7 +6217,7 @@ const estimateCalories = (
                       // and a recognised exercise name OR cardio metric). This lets brick sessions
                       // ("Cykling — 25 min\nLöpning — 15 min") render as individual logable cards
                       // instead of a single "Upplägg" instructions block.
-                      const allStructuredExerciseLines = detailParts.length >= 1 && detailParts.every((l) => {
+                      const isStructuredExerciseLine = (l: string) => {
                         const { name: n, weight: w } = parseExerciseWeight(l);
                         if (!n) return false;
                         const nLower = n.toLowerCase();
@@ -6227,10 +6228,12 @@ const estimateCalories = (
                         const hasCardioMetric = !!w && (/\bmin\b/.test(w) || /\/km/.test(w) || /\d+\s*km\b/i.test(w));
                         const hasSetReps = !!w && /\d+\s*[×x]\s*\d+/i.test(w);
                         return isKnownEx || hasCardioMetric || hasSetReps;
-                      });
+                      };
+                      const allStructuredExerciseLines = detailParts.length >= 1 && detailParts.every(isStructuredExerciseLine);
 
                       if (!alreadySingleCondEntry && !isLoggedCondLine && !allStructuredExerciseLines) {
-                        cardioInstructionsText = plan.details;
+                        cardioInstructionLines = detailParts.filter((line) => !isStructuredExerciseLine(line));
+                        cardioInstructionsText = cardioInstructionLines.join("\n") || null;
                       }
                     }
 
@@ -6304,6 +6307,7 @@ const estimateCalories = (
                               const { name: firstName } = parseExerciseWeight(detailParts[0]);
                               if (firstName.trim()) condName = firstName.trim();
                             }
+                            const hasExplicitExerciseLines = detailParts.some((line) => !cardioInstructionLines.includes(line));
                             const cKey = `__cond__${condName}`;
                             const cRaw = lw[cKey];
                             let cSaved: Record<string, any> | null = null;
@@ -6366,7 +6370,7 @@ const estimateCalories = (
                                   )}
                                 </div>
 
-                                {<ConditioningEditCard
+                                {!hasExplicitExerciseLines && <ConditioningEditCard
                                   name={condName}
                                   lineIndex={0}
                                   planId={plan.id}
@@ -6407,9 +6411,10 @@ const estimateCalories = (
                               </div>
                             );
                           })()}
-                          {!cardioInstructionsText && detailParts.length > 1 ? (
+                          {((!cardioInstructionsText && detailParts.length > 1) || (cardioInstructionsText && detailParts.some((line) => !cardioInstructionLines.includes(line)))) ? (
                             <ul className="space-y-1.5">
                               {detailParts.map((line, i) => {
+                                if (cardioInstructionsText && cardioInstructionLines.includes(line)) return null;
                                 const cleanName = line.replace(/\s*[—\-]\s*\d+[×x].*$/i, "").replace(/\s*@\s*\d+.*$/i, "").trim();
                                 const suggestion = isSuggestedDistance(line);
                                 if (suggestion) {
