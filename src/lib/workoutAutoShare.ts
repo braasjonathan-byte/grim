@@ -79,13 +79,31 @@ export function buildWorkoutSummaryCaption(
               done.forEach((s: any) => {
                 totalVolume += (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0);
               });
-              const repsList = done
-                .map((s: any) => {
-                  const kg = parseFloat(s.kg) || 0;
-                  const reps = parseInt(s.reps) || 0;
-                  return kg > 0 ? `${reps}@${kg}kg` : `${reps}`;
-                })
-                .join(", ");
+              const normalized = done.map((s: any) => ({
+                kg: parseFloat(s.kg) || 0,
+                reps: parseInt(s.reps) || 0,
+              }));
+              const hasWeight = normalized.some((s) => s.kg > 0);
+              let repsList: string;
+              if (!hasWeight) {
+                repsList = normalized.map((s) => String(s.reps)).join(", ");
+              } else {
+                const groups: { reps: number; kg: number; count: number }[] = [];
+                for (const s of normalized) {
+                  const last = groups[groups.length - 1];
+                  if (last && last.reps === s.reps && last.kg === s.kg) {
+                    last.count++;
+                  } else {
+                    groups.push({ reps: s.reps, kg: s.kg, count: 1 });
+                  }
+                }
+                repsList = groups
+                  .map((g) => {
+                    const base = g.kg > 0 ? `${g.reps}@${g.kg}kg` : `${g.reps}`;
+                    return g.count > 1 ? `${g.count}x${base}` : base;
+                  })
+                  .join(", ");
+              }
               setLines.push(`• ${exName}: ${repsList}`);
             }
           }
