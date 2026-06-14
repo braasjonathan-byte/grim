@@ -249,7 +249,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 border-primary">
+      <PopoverContent align="end" className="w-80 p-0 border-primary shadow-none">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border">
           <span className="text-sm font-semibold text-foreground">Aviseringar</span>
           {unread > 0 && (
