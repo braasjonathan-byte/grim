@@ -12,6 +12,7 @@ import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
 import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
 import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId } from "@/lib/workoutSocialSync";
+import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -50,6 +51,30 @@ interface EventGroup {
   member_count?: number;
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DAY_INDEX: Record<string, number> = { "Mån": 0, "Tis": 1, "Ons": 2, "Tor": 3, "Tors": 3, "Fre": 4, "Lör": 5, "Sön": 6 };
+
+const addUtcDays = (date: Date, days: number) => new Date(date.getTime() + days * MS_PER_DAY);
+
+const getMonday = (date: Date) => {
+  const normalized = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 12));
+  const day = normalized.getUTCDay() || 7;
+  return addUtcDays(normalized, -day + 1);
+};
+
+const resolveWorkoutPostDate = (post: SocialPost, planStartDate?: string | null) => {
+  const dateMatch = post.workout_day?.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) return parseDateKeyNoonUtc(dateMatch[1]);
+
+  const dayKey = post.workout_day?.replace(/_[a-z0-9]+$/i, "").trim();
+  const dayIndex = dayKey ? DAY_INDEX[dayKey] : undefined;
+  if (planStartDate && post.workout_week && post.workout_week > 0 && dayIndex !== undefined) {
+    return addUtcDays(getMonday(parseDateKeyNoonUtc(planStartDate)), (post.workout_week - 1) * 7 + dayIndex);
+  }
+
+  return null;
+};
+
 type SubTab = "feed" | "friends" | "chat" | "groups";
 
 const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
@@ -82,6 +107,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
   const [postImages, setPostImages] = useState<Record<string, { image_url: string; caption: string | null }[]>>({});
+  const [planStartDates, setPlanStartDates] = useState<Record<string, string | null>>({});
   const [comments, setComments] = useState<Record<string, { id: string; user_id: string; comment: string; created_at: string }[]>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
@@ -230,7 +256,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       if (userIds.length > 0) {
         const [{ data: nicks }, { data: profilesData }] = await Promise.all([
           supabase.rpc("get_suggestion_nicknames", { user_ids: userIds }),
-          supabase.from("profiles").select("user_id, avatar_url").in("user_id", userIds),
+          supabase.from("profiles").select("user_id, avatar_url, plan_start_date").in("user_id", userIds),
         ]);
         if (nicks) {
           const map: Record<string, string> = {};
@@ -239,8 +265,13 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         }
         if (profilesData) {
           const aMap: Record<string, string | null> = {};
-          profilesData.forEach((p: { user_id: string; avatar_url: string | null }) => { aMap[p.user_id] = p.avatar_url; });
+          const startMap: Record<string, string | null> = {};
+          profilesData.forEach((p: { user_id: string; avatar_url: string | null; plan_start_date: string | null }) => {
+            aMap[p.user_id] = p.avatar_url;
+            startMap[p.user_id] = p.plan_start_date;
+          });
           setAvatarUrls(aMap);
+          setPlanStartDates(startMap);
         }
       }
       // Load likes + post images
@@ -792,12 +823,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
                       <p className="text-[10px] text-muted-foreground">
                         {(() => {
-                          const m = post.workout_day?.match(/^(\d{4}-\d{2}-\d{2})/);
-                          if (m) {
-                            try {
-                              return format(new Date(m[1]), "d MMM", { locale: sv });
-                            } catch {}
-                          }
+                          const workoutDate = resolveWorkoutPostDate(post, planStartDates[post.user_id]);
+                          if (workoutDate) return format(workoutDate, "d MMM", { locale: sv });
                           return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
                         })()}
                         {post.visibility === "group" && " • 👥 Grupp"}
