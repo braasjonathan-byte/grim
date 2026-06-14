@@ -791,7 +791,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                     <div>
                       <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
                       <p className="text-[10px] text-muted-foreground">
-                        {format(new Date(post.created_at), "d MMM HH:mm", { locale: sv })}
+                        {(() => {
+                          const m = post.workout_day?.match(/^(\d{4}-\d{2}-\d{2})/);
+                          if (m) {
+                            try {
+                              return format(new Date(m[1]), "d MMM", { locale: sv });
+                            } catch {}
+                          }
+                          return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
+                        })()}
                         {post.visibility === "group" && " • 👥 Grupp"}
                       </p>
                     </div>
