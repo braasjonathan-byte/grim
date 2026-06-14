@@ -823,12 +823,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
                       <p className="text-[10px] text-muted-foreground">
                         {(() => {
-                          const m = post.workout_day?.match(/^(\d{4}-\d{2}-\d{2})/);
-                          if (m) {
-                            try {
-                              return format(new Date(m[1]), "d MMM", { locale: sv });
-                            } catch {}
-                          }
+                          const workoutDate = resolveWorkoutPostDate(post, planStartDates[post.user_id]);
+                          if (workoutDate) return format(workoutDate, "d MMM", { locale: sv });
                           return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
                         })()}
                         {post.visibility === "group" && " • 👥 Grupp"}
