@@ -182,8 +182,6 @@ jobs:
           name: app-release-aab
           path: ${{ steps.aab.outputs.aab_path }}
           retention-days: 3
-          name: app-release-aab
-          path: ${{ steps.aab.outputs.aab_path }}
 
       - name: Upload mapping.txt artifact
         if: steps.mapping.outputs.mapping_path != ''
@@ -192,8 +190,6 @@ jobs:
           name: mapping
           path: ${{ steps.mapping.outputs.mapping_path }}
           retention-days: 3
-          name: mapping
-          path: ${{ steps.mapping.outputs.mapping_path }}
 
       - name: Upload native debug symbols artifact
         if: steps.symbols.outputs.symbols_path != ''
@@ -202,8 +198,6 @@ jobs:
           name: native-debug-symbols
           path: ${{ steps.symbols.outputs.symbols_path }}
           retention-days: 3
-          name: native-debug-symbols
-          path: ${{ steps.symbols.outputs.symbols_path }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
