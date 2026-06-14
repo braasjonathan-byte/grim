@@ -6307,6 +6307,7 @@ const estimateCalories = (
                               const { name: firstName } = parseExerciseWeight(detailParts[0]);
                               if (firstName.trim()) condName = firstName.trim();
                             }
+                            const hasExplicitExerciseLines = detailParts.some((line) => !cardioInstructionLines.includes(line));
                             const cKey = `__cond__${condName}`;
                             const cRaw = lw[cKey];
                             let cSaved: Record<string, any> | null = null;
@@ -6369,7 +6370,7 @@ const estimateCalories = (
                                   )}
                                 </div>
 
-                                {<ConditioningEditCard
+                                {!hasExplicitExerciseLines && <ConditioningEditCard
                                   name={condName}
                                   lineIndex={0}
                                   planId={plan.id}
