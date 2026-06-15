@@ -3719,31 +3719,35 @@ const estimateCalories = (
   };
 
   // Save edited exercise line (sets/reps/weight)
-  const saveEditedExercise = async (propagate = false) => {
-    if (!editingExercise) return;
-    const plan = plans.find((p) => p.id === editingExercise.planId);
+  const saveEditedExercise = async (
+    propagate = false,
+    override?: { planId: string; lineIndex: number; name: string; originalName: string; sets: string; reps: string; weight: string }
+  ) => {
+    const src = override ?? editingExercise;
+    if (!src) return;
+    const plan = plans.find((p) => p.id === src.planId);
     if (!plan) return;
 
-    const sets = parseInt(editingExercise.sets) || 3;
-    const reps = parseInt(editingExercise.reps) || 10;
-    const w = editingExercise.weight.trim();
+    const sets = parseInt(src.sets) || 3;
+    const reps = parseInt(src.reps) || 10;
+    const w = src.weight.trim();
 
     const originalLines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
-    const originalLine = originalLines[editingExercise.lineIndex] || "";
+    const originalLine = originalLines[src.lineIndex] || "";
     const hadStructuredFormat = originalLine.includes("—");
 
     let entry: string;
     if (hadStructuredFormat || w) {
       entry = w
-        ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg`
-        : `${editingExercise.name} — ${sets}×${reps}`;
+        ? `${src.name} — ${sets}×${reps} @ ${w} kg`
+        : `${src.name} — ${sets}×${reps}`;
     } else {
-      entry = editingExercise.name;
+      entry = src.name;
     }
 
     const separator = plan.details.includes("\n") ? "\n" : "; ";
     const lines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
-    lines[editingExercise.lineIndex] = entry;
+    lines[src.lineIndex] = entry;
     const newDetails = lines.join(separator);
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
@@ -3751,7 +3755,7 @@ const estimateCalories = (
     triggerSave();
     // In plan mode, ask about propagation to future weeks
     if (mode === "plan" && plan.week > 0 && !propagate) {
-      setPropagateDialog({ entry, originalName: editingExercise.originalName, newName: editingExercise.name, plan, lineIndex: editingExercise.lineIndex });
+      setPropagateDialog({ entry, originalName: src.originalName, newName: src.name, plan, lineIndex: src.lineIndex });
       setEditingExercise(null);
       return;
     }
@@ -3769,20 +3773,20 @@ const estimateCalories = (
         // Find the original exercise by name
         const matchIdx = fpLines.findIndex(l => {
           const { name: ln } = parseExerciseWeight(l);
-          return ln.toLowerCase() === editingExercise.originalName.toLowerCase();
+          return ln.toLowerCase() === src.originalName.toLowerCase();
         });
         if (matchIdx >= 0) {
           // Existing exercise — apply progressive overload
           const progressiveWeight = baseWeight > 0 ? Math.round((baseWeight + step * (fi + 1)) * 4) / 4 : 0;
           const fpEntry = progressiveWeight > 0
-            ? `${editingExercise.name} — ${sets}×${reps} @ ${progressiveWeight} kg`
-            : w ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` : `${editingExercise.name} — ${sets}×${reps}`;
+            ? `${src.name} — ${sets}×${reps} @ ${progressiveWeight} kg`
+            : w ? `${src.name} — ${sets}×${reps} @ ${w} kg` : `${src.name} — ${sets}×${reps}`;
           fpLines[matchIdx] = fpEntry;
         } else {
           // Newly added exercise — use exact values the user entered, no progression
           const fpEntry = w
-            ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg`
-            : `${editingExercise.name} — ${sets}×${reps}`;
+            ? `${src.name} — ${sets}×${reps} @ ${w} kg`
+            : `${src.name} — ${sets}×${reps}`;
           fpLines.push(fpEntry);
         }
         const fpSep = fp.details.includes("\n") ? "\n" : "; ";
@@ -3797,19 +3801,14 @@ const estimateCalories = (
 
   const handlePropagate = async (doPropagate: boolean) => {
     if (doPropagate && propagateDialog) {
-      // Re-run save with propagation
       const { plan, originalName, newName, entry, lineIndex } = propagateDialog;
       const w = entry.match(/@\s*([\d.,]+)\s*kg/)?.[1] || "";
       const setsMatch = entry.match(/(\d+)[×x](\d+)/i);
       const sets = setsMatch ? setsMatch[1] : "3";
       const reps = setsMatch ? setsMatch[2] : "10";
-      
-      setEditingExercise({ planId: plan.id, lineIndex, name: newName, originalName, sets, reps, weight: w });
+
       setPropagateDialog(null);
-      // Use setTimeout to let state update
-      setTimeout(() => {
-        saveEditedExercise(true);
-      }, 0);
+      await saveEditedExercise(true, { planId: plan.id, lineIndex, name: newName, originalName, sets, reps, weight: w });
       return;
     }
     setPropagateDialog(null);
