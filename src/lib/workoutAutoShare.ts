@@ -66,6 +66,10 @@ export function buildWorkoutSummaryCaption(
         completedSets += val.split("").filter((c) => c === "1").length;
       }
     }
+    // Standalone-importerade pass saknar ofta __sets__-markörer.
+    // Då räknar vi alla set i __setdata__ som genomförda så att
+    // captionen får samma rika format som plan-pass.
+    const hadSetsMarkers = completedSets > 0;
     for (const [key, val] of Object.entries(lw)) {
       if (key.startsWith("__setdata__")) {
         const exName = key.replace("__setdata__", "");
@@ -74,8 +78,13 @@ export function buildWorkoutSummaryCaption(
         try {
           const data = typeof val === "string" ? JSON.parse(val) : val;
           if (Array.isArray(data)) {
-            const done = data.filter((_: any, i: number) => setsStr[i] === "1");
+            const done = setsStr
+              ? data.filter((_: any, i: number) => setsStr[i] === "1")
+              : data.filter(
+                  (s: any) => (parseFloat(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0
+                );
             if (done.length > 0) {
+              if (!hadSetsMarkers) completedSets += done.length;
               done.forEach((s: any) => {
                 totalVolume += (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0);
               });
