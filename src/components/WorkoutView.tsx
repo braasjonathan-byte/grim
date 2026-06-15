@@ -3771,14 +3771,18 @@ const estimateCalories = (
           const { name: ln } = parseExerciseWeight(l);
           return ln.toLowerCase() === editingExercise.originalName.toLowerCase();
         });
-        const progressiveWeight = baseWeight > 0 ? Math.round((baseWeight + step * (fi + 1)) * 4) / 4 : 0;
-        const fpEntry = progressiveWeight > 0
-          ? `${editingExercise.name} — ${sets}×${reps} @ ${progressiveWeight} kg`
-          : w ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` : `${editingExercise.name} — ${sets}×${reps}`;
         if (matchIdx >= 0) {
+          // Existing exercise — apply progressive overload
+          const progressiveWeight = baseWeight > 0 ? Math.round((baseWeight + step * (fi + 1)) * 4) / 4 : 0;
+          const fpEntry = progressiveWeight > 0
+            ? `${editingExercise.name} — ${sets}×${reps} @ ${progressiveWeight} kg`
+            : w ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` : `${editingExercise.name} — ${sets}×${reps}`;
           fpLines[matchIdx] = fpEntry;
         } else {
-          // Exercise didn't exist in this future week — append it
+          // Newly added exercise — use exact values the user entered, no progression
+          const fpEntry = w
+            ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg`
+            : `${editingExercise.name} — ${sets}×${reps}`;
           fpLines.push(fpEntry);
         }
         const fpSep = fp.details.includes("\n") ? "\n" : "; ";
