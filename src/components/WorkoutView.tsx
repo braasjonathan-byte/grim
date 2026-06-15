@@ -3771,16 +3771,19 @@ const estimateCalories = (
           const { name: ln } = parseExerciseWeight(l);
           return ln.toLowerCase() === editingExercise.originalName.toLowerCase();
         });
+        const progressiveWeight = baseWeight > 0 ? Math.round((baseWeight + step * (fi + 1)) * 4) / 4 : 0;
+        const fpEntry = progressiveWeight > 0
+          ? `${editingExercise.name} — ${sets}×${reps} @ ${progressiveWeight} kg`
+          : w ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` : `${editingExercise.name} — ${sets}×${reps}`;
         if (matchIdx >= 0) {
-          const progressiveWeight = baseWeight > 0 ? Math.round((baseWeight + step * (fi + 1)) * 4) / 4 : 0;
-          const fpEntry = progressiveWeight > 0
-            ? `${editingExercise.name} — ${sets}×${reps} @ ${progressiveWeight} kg`
-            : w ? `${editingExercise.name} — ${sets}×${reps} @ ${w} kg` : `${editingExercise.name} — ${sets}×${reps}`;
           fpLines[matchIdx] = fpEntry;
-          const fpSep = fp.details.includes("\n") ? "\n" : "; ";
-          const fpNewDetails = fpLines.join(fpSep);
-          await supabase.from("workout_plans").update({ details: fpNewDetails }).eq("id", fp.id);
+        } else {
+          // Exercise didn't exist in this future week — append it
+          fpLines.push(fpEntry);
         }
+        const fpSep = fp.details.includes("\n") ? "\n" : "; ";
+        const fpNewDetails = fpLines.join(fpSep);
+        await supabase.from("workout_plans").update({ details: fpNewDetails }).eq("id", fp.id);
       }
       fetchData();
     }
