@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark } from "lucide-react";
 import MacroRings from "./MacroRings";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
 import MealNameDialog from "./MealNameDialog";
 import CuratedRecipesDialog from "./CuratedRecipesDialog";
+import MealTemplatesDialog from "./MealTemplatesDialog";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
@@ -110,6 +111,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [renameIdx, setRenameIdx] = useState<number | null>(null);
   const [editingLog, setEditingLog] = useState<MealLog | null>(null);
   const [editAmount, setEditAmount] = useState<string>("");
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   useEffect(() => {
     if (editingLog) setEditAmount(String(editingLog.amount));
@@ -262,12 +264,15 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
             <Target className="w-3 h-3" /> Mål
           </button>
           <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
             <ChefHat className="w-3 h-3" /> Recept
+          </button>
+          <button onClick={() => setTemplatesOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+            <Bookmark className="w-3 h-3" /> Mallar
           </button>
         </div>
 
@@ -358,6 +363,14 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       )}
 
       <NutritionGoalsDialog open={goalsOpen} onOpenChange={setGoalsOpen} userId={userId} onSaved={load} />
+      <MealTemplatesDialog
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        userId={userId}
+        currentMealSlots={allSlots}
+        currentDayItemsBySlot={Object.fromEntries(allSlots.map((s) => [s, logs.filter((l) => l.meal_type === s)]))}
+        onApplied={load}
+      />
       <MealNameDialog
         open={addNameOpen}
         onOpenChange={setAddNameOpen}

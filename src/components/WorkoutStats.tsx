@@ -8,6 +8,7 @@ import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
 import AchievementsPanel from "@/components/AchievementsPanel";
+import MuscleBalanceWarning from "@/components/MuscleBalanceWarning";
 import { getWorkoutDistanceKm, getWorkoutDistanceByCategory } from "@/lib/workoutDistance";
 import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
 import { useCardioVisibility, getCardioCategory, CARDIO_CATEGORIES, type CardioCategory } from "@/lib/cardioVisibility";
@@ -709,6 +710,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
 
 
+      <MuscleBalanceWarning userId={userId} />
       <DailyQuoteCard />
       <AchievementsPanel unlockedIds={achievementIds} />
 
