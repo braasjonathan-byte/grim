@@ -766,6 +766,33 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_templates: {
+        Row: {
+          created_at: string
+          id: string
+          items: Json
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items?: Json
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_log: {
         Row: {
           created_at: string
@@ -1877,6 +1904,36 @@ export type Database = {
           id?: number
           private_key?: string
           public_key?: string
+        }
+        Relationships: []
+      }
+      workout_cheers: {
+        Row: {
+          created_at: string
+          emoji: string
+          from_user_id: string
+          id: string
+          to_user_id: string
+          workout_day: string | null
+          workout_week: number | null
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string
+          from_user_id: string
+          id?: string
+          to_user_id: string
+          workout_day?: string | null
+          workout_week?: number | null
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          from_user_id?: string
+          id?: string
+          to_user_id?: string
+          workout_day?: string | null
+          workout_week?: number | null
         }
         Relationships: []
       }

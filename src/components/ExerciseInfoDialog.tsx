@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { X, Info, Loader2, Pencil, Save, RotateCcw, Sparkles, Flag, Check } from "lucide-react";
+import { X, Info, Loader2, Pencil, Save, RotateCcw, Sparkles, Flag, Check, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import ExerciseHistoryDialog from "@/components/ExerciseHistoryDialog";
 import { toast } from "sonner";
 
 interface ExerciseInfoDialogProps {
@@ -38,6 +39,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setAuthUserId(user?.id || null));
@@ -201,10 +203,29 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
             <Info className="w-4 h-4 text-primary flex-shrink-0" />
             <h3 className="font-bold text-sm truncate">{exerciseName}</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-muted-foreground hover:text-foreground flex-shrink-0">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {authUserId && (
+              <button
+                onClick={() => setShowHistory(true)}
+                className="p-1.5 text-muted-foreground hover:text-primary"
+                title="Visa historik"
+                aria-label="Visa historik"
+              >
+                <History className="w-4 h-4" />
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 text-muted-foreground hover:text-foreground">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+        {showHistory && authUserId && (
+          <ExerciseHistoryDialog
+            exerciseName={exerciseName}
+            userId={authUserId}
+            onClose={() => setShowHistory(false)}
+          />
+        )}
 
         {isAdmin && (
           <div className="px-4 pb-2 flex items-center gap-2 border-b border-border">
