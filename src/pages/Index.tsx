@@ -19,6 +19,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useDataSnapshots } from "@/hooks/useDataSnapshots";
 import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
+import WorkoutCheerListener from "@/components/WorkoutCheerListener";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TourPrompt from "@/components/TourPrompt";
@@ -986,6 +987,7 @@ const Index = () => {
 
       {/* Mini Timer above footer */}
       <MiniTimer />
+      {user?.id && <WorkoutCheerListener userId={user.id} />}
 
       {/* Bottom tab bar */}
       <nav

@@ -28,6 +28,8 @@ export interface AchievementMetrics {
   challenges: number;
   firesGiven: number;
   commentsGiven: number;
+  bestSessionTons: number;
+  currentStreak: number;
 }
 
 const difficultyForIndex = (index: number): AchievementDifficulty => {
@@ -62,6 +64,8 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("utmaning", "Utmaningsvinnare", "challenges", [1, 2, 3, 5, 7, 10, 14, 21, 30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000, 1500], " utmaningar", "⚔️"),
   ...makeAchievements("eld", "Eldsjäl", "firesGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " eldningar", "🔥"),
   ...makeAchievements("kommentar", "Hejarklacken", "commentsGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " kommentarer", "💬"),
+  ...makeAchievements("tonpass", "Tonklubben", "bestSessionTons", [5, 10, 15, 20, 30, 50], "-tons pass", "💥"),
+  ...makeAchievements("streak", "Streak", "currentStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "⚡"),
 ];
 
 export const getAchievementById = (id: string) => ACHIEVEMENTS.find((a) => a.id === id);
@@ -93,6 +97,9 @@ export const calculateAchievementMetrics = (
   let reps = 0;
   let kgTotal = 0;
   let distanceKm = 0;
+  let bestSessionTons = 0;
+
+  const dateSet = new Set<string>();
 
   for (const completion of completions) {
     if (!completion.done) continue;
@@ -103,8 +110,15 @@ export const calculateAchievementMetrics = (
       planDetails: completion.plan_details ?? null,
     });
 
+    const ts = (completion as any).updated_at;
+    if (ts && typeof ts === "string") {
+      const d = ts.slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) dateSet.add(d);
+    }
+
     const weights = completion.logged_weights;
     if (!weights || typeof weights !== "object") continue;
+    let sessionKg = 0;
     for (const [key, value] of Object.entries(weights)) {
       if (!key.startsWith("__setdata__")) continue;
       const sets = typeof value === "string" ? safelyParseSets(value) : Array.isArray(value) ? value : [];
@@ -113,7 +127,23 @@ export const calculateAchievementMetrics = (
         const kg = Math.max(0, Number(set?.kg) || 0);
         reps += setReps;
         kgTotal += kg * setReps;
+        sessionKg += kg * setReps;
       }
+    }
+    const sessionTons = sessionKg / 1000;
+    if (sessionTons > bestSessionTons) bestSessionTons = sessionTons;
+  }
+
+  let currentStreak = 0;
+  if (dateSet.size > 0) {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const cursor = new Date(today);
+    const todayStr = today.toISOString().slice(0, 10);
+    if (!dateSet.has(todayStr)) cursor.setUTCDate(cursor.getUTCDate() - 1);
+    while (dateSet.has(cursor.toISOString().slice(0, 10))) {
+      currentStreak += 1;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
     }
   }
 
@@ -125,6 +155,8 @@ export const calculateAchievementMetrics = (
     challenges: challengeCount,
     firesGiven: interaction.firesGiven ?? 0,
     commentsGiven: interaction.commentsGiven ?? 0,
+    bestSessionTons: Math.floor(bestSessionTons),
+    currentStreak,
   };
 };
 
@@ -142,6 +174,8 @@ export const checkInteractionAchievements = async (userId: string) => {
       workouts: 0, reps: 0, tons: 0, distanceKm: 0, challenges: 0,
       firesGiven: firesGiven || 0,
       commentsGiven: commentsGiven || 0,
+      bestSessionTons: 0,
+      currentStreak: 0,
     }).filter((a) => a.metric === "firesGiven" || a.metric === "commentsGiven");
     if (earned.length === 0) return [];
 

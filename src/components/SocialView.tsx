@@ -7,6 +7,7 @@ import { sv } from "date-fns/locale";
 import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import ImageCarousel from "./ImageCarousel";
+import WorkoutCheerButton from "./WorkoutCheerButton";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
@@ -873,6 +874,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   <MessageCircle className={`w-4 h-4 transition-colors ${openComments.has(post.id) ? "text-primary" : "text-muted-foreground"}`} />
                   <span className="text-xs text-muted-foreground">{commentCounts[post.id] || 0}</span>
                 </button>
+                {post.user_id !== userId && (
+                  <WorkoutCheerButton
+                    toUserId={post.user_id}
+                    fromUserId={userId}
+                    week={post.workout_week}
+                    day={post.workout_day}
+                  />
+                )}
               </div>
 
               {/* Comments */}
