@@ -237,7 +237,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="relative flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 hover:border-primary transition-colors"
+          className="relative flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
           aria-label="Aviseringar"
           title="Aviseringar"
         >
