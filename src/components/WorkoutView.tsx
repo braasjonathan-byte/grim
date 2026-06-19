@@ -5187,7 +5187,7 @@ const estimateCalories = (
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondAutoField(null);setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}}
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondAutoField(null);setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");setCondIntervalRows([]);}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                             Avbryt
                           </button>
