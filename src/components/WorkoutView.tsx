@@ -3547,9 +3547,24 @@ const estimateCalories = (
     const isStair = isStairMachine(conditioningDialog.exerciseName);
     
     if (isInterval && condIntervalsInput.trim()) {
-      const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
-      infoParts.push(intervalPart);
-      if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+      const n = parseInt(condIntervalsInput.trim()) || 0;
+      const summary = summarizeIntervalRows(condIntervalRows.slice(0, n));
+      if (summary.hasAny) {
+        const timeStr = summary.totalTimeMin > 0
+          ? String(Math.round(summary.totalTimeMin * 100) / 100)
+          : "?";
+        infoParts.push(`${n}×${timeStr} min`);
+        if (summary.totalDistanceKm > 0) {
+          infoParts.push(`${Math.round(summary.totalDistanceKm * 100) / 100} km`);
+        }
+        if (summary.avgTempoStr) infoParts.push(`${summary.avgTempoStr}/km`);
+        if (summary.avgPulse > 0) infoParts.push(`${summary.avgPulse} bpm`);
+        if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+      } else {
+        const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
+        infoParts.push(intervalPart);
+        if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+      }
     } else {
       if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
     }
