@@ -5107,6 +5107,12 @@ const estimateCalories = (
                               <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </>
+                        ) : conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (parseInt(condIntervalsInput) || 0) > 0 ? (
+                          <IntervalRowsEditor
+                            count={parseInt(condIntervalsInput) || 0}
+                            rows={condIntervalRows}
+                            onChange={setCondIntervalRows}
+                          />
                         ) : (
                           <>
                         <div className="mb-4">
