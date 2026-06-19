@@ -3613,6 +3613,7 @@ const estimateCalories = (
     setCondRestInput("");
     setCondPulseInput("");
     setCondSpmInput("");
+    setCondIntervalRows([]);
     setIsWarmupMode(false);
 
     // Show propagation dialog if this was a replacement in plan mode
