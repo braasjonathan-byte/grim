@@ -1174,6 +1174,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [condRestInput, setCondRestInput] = useState("");
   const [condPulseInput, setCondPulseInput] = useState("");
   const [condSpmInput, setCondSpmInput] = useState("");
+  const [condIntervalRows, setCondIntervalRows] = useState<IntervalRow[]>([]);
 
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
