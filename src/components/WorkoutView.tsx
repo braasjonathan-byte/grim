@@ -34,6 +34,7 @@ import WorkoutShareCard from "@/components/WorkoutShareCard";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
+import IntervalRowsEditor, { IntervalRow, emptyIntervalRow, summarizeIntervalRows } from "@/components/IntervalRowsEditor";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
@@ -1173,6 +1174,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [condRestInput, setCondRestInput] = useState("");
   const [condPulseInput, setCondPulseInput] = useState("");
   const [condSpmInput, setCondSpmInput] = useState("");
+  const [condIntervalRows, setCondIntervalRows] = useState<IntervalRow[]>([]);
 
   // Friend comments on own workouts
   const [friendComments, setFriendComments] = useState<FriendComment[]>([]);
@@ -3545,9 +3547,24 @@ const estimateCalories = (
     const isStair = isStairMachine(conditioningDialog.exerciseName);
     
     if (isInterval && condIntervalsInput.trim()) {
-      const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
-      infoParts.push(intervalPart);
-      if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+      const n = parseInt(condIntervalsInput.trim()) || 0;
+      const summary = summarizeIntervalRows(condIntervalRows.slice(0, n));
+      if (summary.hasAny) {
+        const timeStr = summary.totalTimeMin > 0
+          ? String(Math.round(summary.totalTimeMin * 100) / 100)
+          : "?";
+        infoParts.push(`${n}×${timeStr} min`);
+        if (summary.totalDistanceKm > 0) {
+          infoParts.push(`${Math.round(summary.totalDistanceKm * 100) / 100} km`);
+        }
+        if (summary.avgTempoStr) infoParts.push(`${summary.avgTempoStr}/km`);
+        if (summary.avgPulse > 0) infoParts.push(`${summary.avgPulse} bpm`);
+        if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+      } else {
+        const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
+        infoParts.push(intervalPart);
+        if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+      }
     } else {
       if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
     }
@@ -3596,6 +3613,7 @@ const estimateCalories = (
     setCondRestInput("");
     setCondPulseInput("");
     setCondSpmInput("");
+    setCondIntervalRows([]);
     setIsWarmupMode(false);
 
     // Show propagation dialog if this was a replacement in plan mode
@@ -5089,6 +5107,12 @@ const estimateCalories = (
                               <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </>
+                        ) : conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (parseInt(condIntervalsInput) || 0) > 0 ? (
+                          <IntervalRowsEditor
+                            count={parseInt(condIntervalsInput) || 0}
+                            rows={condIntervalRows}
+                            onChange={setCondIntervalRows}
+                          />
                         ) : (
                           <>
                         <div className="mb-4">
@@ -5163,7 +5187,7 @@ const estimateCalories = (
                             <Plus className="w-3.5 h-3.5" /> Lägg till
                           </button>
                           <button
-                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondAutoField(null);setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}}
+                        onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondAutoField(null);setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");setCondIntervalRows([]);}}
                         className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                             Avbryt
                           </button>
@@ -8676,6 +8700,12 @@ const estimateCalories = (
                             <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                         </>
+                      ) : conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (parseInt(condIntervalsInput) || 0) > 0 ? (
+                        <IntervalRowsEditor
+                          count={parseInt(condIntervalsInput) || 0}
+                          rows={condIntervalRows}
+                          onChange={setCondIntervalRows}
+                        />
                       ) : (
                         <>
                       <div>
@@ -8709,7 +8739,7 @@ const estimateCalories = (
                         <button onClick={addConditioningExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
                           <Plus className="w-3.5 h-3.5" /> Lägg till
                         </button>
-                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                        <button onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");setCondIntervalRows([]);}} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                           Avbryt
                         </button>
                       </div>
