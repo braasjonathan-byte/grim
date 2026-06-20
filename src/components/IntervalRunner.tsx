@@ -493,6 +493,12 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const buildResult = (): IntervalRunnerResult => {
+    // If the user finishes mid-interval, capture the current one too so its
+    // measured tempo lands in the saved row.
+    if (phase === "interval") {
+      try { captureAchievedPace(currentIdx); } catch {}
+    }
+
     const intervals = effective.map((e, i) => {
       const ach = achievedSecPerKm.current[i];
       let tempoStr = e.tempoStr;
