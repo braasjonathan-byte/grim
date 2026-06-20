@@ -39,6 +39,34 @@ jobs:
           java-version: 21
 
       # -------------------------
+      # Cache Gradle (dependencies + wrapper) so we don't re-download
+      # ~500MB of Android/Google/Capacitor artifacts every build.
+      # Survives the `rm -rf android` clean below because it lives in $HOME.
+      # -------------------------
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'scripts/patch-android-*.cjs', '.github/workflows/release-apk.yml') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # -------------------------
+      # Cache Android SDK build artifacts
+      # -------------------------
+      - name: Cache Android SDK build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/build-cache
+            ~/.android/cache
+          key: android-sdk-${{ runner.os }}-${{ hashFiles('.github/workflows/release-apk.yml') }}
+          restore-keys: |
+            android-sdk-${{ runner.os }}-
+
+      # -------------------------
       # Clean install (IMPORTANT)
       # -------------------------
       - name: Install dependencies
