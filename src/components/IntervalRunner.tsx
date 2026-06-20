@@ -302,7 +302,11 @@ const speakAndWait = (text: string, maxMs = 5000) =>
   new Promise<void>((resolve) => {
     let done = false;
     const finish = () => { if (done) return; done = true; resolve(); };
-    const timer = setTimeout(finish, maxMs);
+    const timer = setTimeout(() => {
+      _speechSerial += 1;
+      stopAiSpeech();
+      finish();
+    }, maxMs);
     speakAi(text).then((ok) => {
       if (done) return;
       if (ok) { clearTimeout(timer); finish(); return; }
