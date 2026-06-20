@@ -43,6 +43,7 @@ let _voicePlayhead = 0;
 let _voicePendingBytes = new Uint8Array(0);
 const _voiceSources = new Set<AudioBufferSourceNode>();
 const _aiSpeechCache = new Map<string, Uint8Array>();
+let _speechSerial = 0;
 
 const concatBytes = (parts: Uint8Array[]): Uint8Array => {
   const total = parts.reduce((sum, p) => sum + p.length, 0);
@@ -110,9 +111,11 @@ const parseSseData = (block: string): string | null => {
 const speakAi = async (text: string): Promise<boolean> => {
   const cleanText = text.trim();
   if (!cleanText || !AI_TTS_ENDPOINT || !AI_TTS_ANON_KEY) return false;
+  const serial = ++_speechSerial;
   try {
     const cached = _aiSpeechCache.get(cleanText);
     if (cached) {
+      if (serial !== _speechSerial) return true;
       stopAiSpeech();
       const waitMs = await playPcmBytes(cached);
       if (waitMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, waitMs + 60));
@@ -130,6 +133,7 @@ const speakAi = async (text: string): Promise<boolean> => {
       body: JSON.stringify({ text: cleanText }),
     });
     if (!res.ok || !res.body) throw new Error(`AI TTS ${res.status}`);
+    if (serial !== _speechSerial) return true;
 
     stopAiSpeech();
     const reader = res.body.getReader();
@@ -144,6 +148,7 @@ const speakAi = async (text: string): Promise<boolean> => {
       let payload: { type?: string; audio?: string };
       try { payload = JSON.parse(data); } catch { return; }
       if (payload.type !== "speech.audio.delta" || !payload.audio) return;
+      if (serial !== _speechSerial) return;
       const bytes = decodeBase64(payload.audio);
       chunks.push(bytes);
       lastWaitMs = await playPcmBytes(bytes);
@@ -265,6 +270,7 @@ const cancelNative = async () => {
 };
 
 const cancelVoice = () => {
+  _speechSerial += 1;
   stopAiSpeech();
   void cancelNative();
   try { window.speechSynthesis?.cancel(); } catch {}
@@ -712,8 +718,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     // Prime again inside this click gesture (the "Starta passet" button)
     if (prefs.enabled) {
       primeSpeech();
-      // tiny audible nudge confirms voice works
-      speak("Redo.");
     }
     setShowVoicePrefs(false);
     setPaused(false);
