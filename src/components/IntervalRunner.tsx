@@ -480,10 +480,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                   <Input type="number" min={0} value={warmupMin} onChange={(e) => setWarmupMin(Math.max(0, parseInt(e.target.value) || 0))} />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
-                <MapPin className="w-4 h-4" /> Spela in med GPS
-              </label>
             </div>
           )}
 
