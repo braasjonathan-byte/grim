@@ -686,7 +686,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const t = totalMin;
     const d = parseFloat(distVal.replace(",", "."));
     // For km/h mode, tempo is plain number
-    const isKmh = isBike && bikeMode === "kmh";
+    const isKmh = bikeMode === "kmh";
     const tempoNumeric = isKmh ? parseFloat(tempoVal.replace(",", ".")) : NaN;
     const p = isKmh ? (tempoNumeric > 0 ? tempoNumeric : null) : parseTempoToMin(tempoVal);
     const filled = {
