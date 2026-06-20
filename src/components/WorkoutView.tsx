@@ -6602,7 +6602,7 @@ const estimateCalories = (
                                       </div>
                                       {Array.from({ length: activeCount }, (_, ii) => {
                                         const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
-                                        const rowTempo = row.tempo;
+                                         const rowTempo = normalizeTempoInput(row.tempo || "");
                                         const rowTime = parseFloat(row.time) || 0;
                                         let rowDist = '';
                                         if (rowTempo && rowTime > 0) {
@@ -7653,7 +7653,7 @@ const estimateCalories = (
                                     
                                     return Array.from({ length: activeCount }, (_, ii) => {
                                     const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: planTempo || '', dist: '' };
-                                    const rowTempo = row.tempo;
+                                    const rowTempo = normalizeTempoInput(row.tempo || "");
                                     const rowTime = parseFloat(row.time) || 0;
                                     // Auto-calc distance
                                     let rowDist = '';
@@ -8152,7 +8152,7 @@ const estimateCalories = (
                               </div>
                               {Array.from({ length: activeCount }, (_, ii) => {
                                 const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
-                                const rowTempo = row.tempo;
+                                const rowTempo = normalizeTempoInput(row.tempo || "");
                                 const rowTime = parseFloat(row.time) || 0;
                                 let rowDist = '';
                                 if (rowTempo && rowTime > 0) {
