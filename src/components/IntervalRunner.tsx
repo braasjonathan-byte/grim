@@ -273,17 +273,18 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const buildResult = (): IntervalRunnerResult => {
-    const target = intervalTargetSec / 60; // minutes per interval
-    const intervals = Array.from({ length: numIntervals }, () => ({
-      time: String(Math.round(target * 100) / 100),
-      dist: String(Math.round((distM / 1000) * 1000) / 1000),
-      tempo,
+    const intervals = effective.map((e) => ({
+      time: String(Math.round((e.durSec / 60) * 100) / 100),
+      dist: e.distKm > 0 ? String(Math.round(e.distKm * 1000) / 1000) : "",
+      tempo: e.tempoStr,
     }));
     const warm = warmupMin > 0 ? { time: String(warmupMin), dist: "", tempo: "" } : null;
     const cool = cooldownMin > 0 ? { time: String(cooldownMin), dist: "", tempo: "" } : null;
     const all = [warm, ...intervals, cool].filter(Boolean) as { time: string; dist: string; tempo: string }[];
-    const totalDistKm = numIntervals * (distM / 1000);
-    const totalTimeMin = (warmupMin + cooldownMin) + numIntervals * target + (numIntervals - 1) * (restSec / 60);
+    const totalDistKm = effective.reduce((acc, e) => acc + (e.distKm || 0), 0);
+    const totalSec = effective.reduce((acc, e) => acc + e.durSec, 0);
+    const totalTimeMin = (warmupMin + cooldownMin) + totalSec / 60 + Math.max(0, effective.length - 1) * (restSec / 60);
+    const avgTempo = effective[0]?.tempoStr || tempo;
     let gpsDistanceKm: number | undefined;
     let route: [number, number][] | undefined;
     if (gps.isTracking) {
@@ -291,7 +292,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       gpsDistanceKm = res.distanceKm;
       route = res.route;
     }
-    return { intervals: all, totalDistKm, totalTimeMin, tempo, gpsDistanceKm, route };
+    return { intervals: all, totalDistKm, totalTimeMin, tempo: avgTempo, gpsDistanceKm, route };
   };
 
   const handleFinish = async () => {
