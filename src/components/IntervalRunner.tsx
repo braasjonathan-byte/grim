@@ -132,7 +132,8 @@ const speakAi = async (text: string): Promise<boolean> => {
     if (!res.ok || !res.body) throw new Error(`AI TTS ${res.status}`);
 
     stopAiSpeech();
-    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
     const chunks: Uint8Array[] = [];
     let pending = "";
     let lastWaitMs = 0;
@@ -151,11 +152,12 @@ const speakAi = async (text: string): Promise<boolean> => {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-      pending += value;
+      pending += decoder.decode(value, { stream: true });
       const blocks = pending.split(/\r?\n\r?\n/);
       pending = blocks.pop() || "";
       for (const block of blocks) await consumeBlock(block);
     }
+    pending += decoder.decode();
     if (pending.trim()) await consumeBlock(pending);
     if (chunks.length > 0) _aiSpeechCache.set(cleanText, concatBytes(chunks));
     if (lastWaitMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, lastWaitMs + 60));
