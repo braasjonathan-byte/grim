@@ -300,11 +300,20 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const buildResult = (): IntervalRunnerResult => {
-    const intervals = effective.map((e) => ({
-      time: String(Math.round((e.durSec / 60) * 100) / 100),
-      dist: e.distKm > 0 ? String(Math.round(e.distKm * 1000) / 1000) : "",
-      tempo: e.tempoStr,
-    }));
+    const intervals = effective.map((e, i) => {
+      const ach = achievedSecPerKm.current[i];
+      let tempoStr = e.tempoStr;
+      if (ach && ach > 0) {
+        const mm = Math.floor(ach / 60);
+        const ss = Math.round(ach % 60);
+        tempoStr = `${mm}:${String(ss).padStart(2, "0")}`;
+      }
+      return {
+        time: String(Math.round((e.durSec / 60) * 100) / 100),
+        dist: e.distKm > 0 ? String(Math.round(e.distKm * 1000) / 1000) : "",
+        tempo: tempoStr,
+      };
+    });
     const warm = warmupMin > 0 ? { time: String(warmupMin), dist: "", tempo: "" } : null;
     const cool = cooldownMin > 0 ? { time: String(cooldownMin), dist: "", tempo: "" } : null;
     const all = [warm, ...intervals, cool].filter(Boolean) as { time: string; dist: string; tempo: string }[];
