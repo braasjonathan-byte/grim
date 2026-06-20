@@ -440,9 +440,9 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
           if (cur2.unit && cur2.value) {
             target = `Mål ${spokenTarget(cur2.value, cur2.unit, profile)}`;
           } else if (cur.distKm > 0) {
-            target = `Distans ${cur.distKm} kilometer`;
+            target = `Mål ${spokenTarget(cur.distKm, "distance_km", profile)}`;
           }
-          const paceSpoken = cur.tempoStr ? `, tempo ${fmtTempoSpoken(cur.tempoStr).replace("per kilometer", profile.paceSpoken)}` : "";
+          const paceSpoken = cur.tempoStr ? `, ${profile.paceLabel.toLowerCase()} ${fmtTempoSpokenForProfile(cur.tempoStr, profile.paceUnit, profile.paceSpoken)}` : "";
           if (target || paceSpoken) {
             await speakAndWait(`${target}${paceSpoken}.`, 6000);
           }
