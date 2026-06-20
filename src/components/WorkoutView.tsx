@@ -592,7 +592,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     if (isAirbike) return ["watt", "kmh", "minkm"];
     if (isCrosstrainer) return ["kmh", "minkm", "watt"];
     if (isStair) return ["spm", "kmh"];
-    if (isJumprope) return ["spm", "minkm"];
+    if (isJumprope) return ["spm"];
     // Default (löpning, promenad, vandring, skidåkning, skridsko, …)
     return ["minkm", "kmh"];
   })();
