@@ -211,23 +211,35 @@ const fmtTempoDisplay = (tempo: string): string => {
   return tempo;
 };
 
-const fmtTempoSpoken = (tempo: string): string => {
-  // Natural Swedish: "4:30" -> "fyra trettio per kilometer", "4:00" -> "fyra minuter per kilometer"
-  const m = tempo.trim().match(/^(\d+)[:.](\d+)$/);
-  if (m) {
-    const mm = parseInt(m[1]);
-    const ss = parseInt(m[2]);
-    if (ss === 0) return `${mm} minuter per kilometer`;
-    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
+// Sport-aware spoken pace string. For mm:ss-style paces (/km, /100m, /500m)
+// reads as "X minuter Y sekunder per <enhet>". For numeric-only rates
+// (km/h, /min, spm, W) reads the bare number followed by the spoken unit.
+const fmtTempoSpokenForProfile = (tempo: string, paceUnit: string, paceSpoken: string): string => {
+  const t = (tempo || "").trim();
+  if (!t) return "";
+  const isMmSs = /\/km|\/100m|\/500m/i.test(paceUnit);
+  if (isMmSs) {
+    const m = t.match(/^(\d+)[:.](\d+)$/);
+    let mm = 0, ss = 0;
+    if (m) { mm = parseInt(m[1]); ss = parseInt(m[2]); }
+    else {
+      const n = parseFloat(t.replace(",", "."));
+      if (!Number.isFinite(n)) return t;
+      mm = Math.floor(n); ss = Math.round((n - mm) * 60);
+    }
+    if (mm === 0) return `${ss} sekunder ${paceSpoken}`;
+    if (ss === 0) return `${mm} minuter ${paceSpoken}`;
+    return `${mm} minuter ${ss} sekunder ${paceSpoken}`;
   }
-  const n = parseFloat(tempo.replace(",", "."));
-  if (Number.isFinite(n)) {
-    const mm = Math.floor(n);
-    const ss = Math.round((n - mm) * 60);
-    if (ss === 0) return `${mm} minuter per kilometer`;
-    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
-  }
-  return tempo;
+  // Numeric rate (km/h, /min, spm, W) — speak the bare number.
+  const m = t.match(/^(\d+)[:.](\d+)$/);
+  let num: number;
+  if (m) num = parseInt(m[1]);
+  else num = parseFloat(t.replace(",", "."));
+  if (!Number.isFinite(num)) return t;
+  const rounded = Math.round(num * 10) / 10;
+  const str = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace(".", " komma ");
+  return `${str} ${paceSpoken}`;
 };
 
 // ---------------- Types ----------------
