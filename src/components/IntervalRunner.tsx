@@ -9,22 +9,52 @@ import { useGpsTracker } from "@/hooks/useGpsTracker";
 import { toast } from "sonner";
 
 // ---------------- Voice helpers (Web Speech API) ----------------
-const speak = (text: string) => {
+// Note: do NOT call cancel() before every speak — it kills queued utterances
+// and breaks the user-gesture chain on mobile, causing total silence.
+const speak = (text: string, opts: { flush?: boolean } = {}) => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
+    if (opts.flush) window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "sv-SE";
     u.rate = 1;
+    window.speechSynthesis.speak(u);
+  } catch (e) { console.warn("[voice] speak failed", e); }
+};
+
+// Queue an utterance and resolve when it actually finishes (with a max fallback).
+const speakAndWait = (text: string, maxMs = 5000) =>
+  new Promise<void>((resolve) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setTimeout(resolve, 150);
+      return;
+    }
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "sv-SE";
+      u.rate = 1;
+      let done = false;
+      const finish = () => { if (done) return; done = true; resolve(); };
+      u.onend = finish;
+      u.onerror = finish;
+      window.speechSynthesis.speak(u);
+      setTimeout(finish, maxMs);
+    } catch {
+      setTimeout(resolve, 150);
+    }
+  });
+
+// Prime the speech engine inside the user gesture (required on iOS/Android Chrome).
+const primeSpeech = () => {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
     window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(" ");
+    u.lang = "sv-SE";
+    u.volume = 0;
     window.speechSynthesis.speak(u);
   } catch {}
 };
-
-const speakAndWait = (text: string, ms = 1800) =>
-  new Promise<void>((resolve) => {
-    speak(text);
-    setTimeout(resolve, ms);
-  });
 
 const fmtTempoSpoken = (tempo: string): string => {
   // tempo like "4:30" -> "fyra minuter trettio sekunder per kilometer"
