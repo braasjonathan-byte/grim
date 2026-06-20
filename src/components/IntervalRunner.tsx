@@ -491,6 +491,18 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             </div>
           )}
 
+          {phase === "done" && (
+            <div className="space-y-4 text-center py-4">
+              <div className="text-2xl font-bold">Klart!</div>
+              <p className="text-sm text-muted-foreground">Passet är genomfört. Spara för att logga det.</p>
+              {gps.isTracking && (
+                <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                  <MapPin className="w-3 h-3" /> GPS: {gps.distanceKm.toFixed(2)} km
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
             {!running && phase !== "done" && (
               <>
@@ -503,7 +515,16 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 </Button>
               </>
             )}
+            {phase === "done" && (
+              <>
+                <Button variant="ghost" onClick={handleAbort}>Avbryt</Button>
+                <Button onClick={handleFinish}>
+                  <Square className="w-4 h-4 mr-1" /> Spara pass
+                </Button>
+              </>
+            )}
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
