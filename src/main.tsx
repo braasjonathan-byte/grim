@@ -124,6 +124,7 @@ document.addEventListener("visibilitychange", () => {
 // Force service worker update check on every app load + periodically
 if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   const checkForUpdate = () => {
+    if (isGpsRecordingActive()) return; // skip — GPS pass pågår
     navigator.serviceWorker.getRegistration().then((reg) => {
       if (reg) reg.update().catch(() => {});
     });
@@ -138,16 +139,30 @@ if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   });
 
   let refreshing = false;
+  let pendingReload = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
-    const key = "grim_sw_reload";
-    const last = sessionStorage.getItem(key);
-    const now = Date.now();
-    if (!last || now - Number(last) > 10000) {
-      refreshing = true;
-      sessionStorage.setItem(key, String(now));
-      window.location.reload();
-    }
+    const doReload = () => {
+      if (isGpsRecordingActive()) {
+        // Re-check once GPS stops
+        if (!pendingReload) {
+          pendingReload = true;
+          const id = setInterval(() => {
+            if (!isGpsRecordingActive()) { clearInterval(id); doReload(); }
+          }, 5000);
+        }
+        return;
+      }
+      const key = "grim_sw_reload";
+      const last = sessionStorage.getItem(key);
+      const now = Date.now();
+      if (!last || now - Number(last) > 10000) {
+        refreshing = true;
+        sessionStorage.setItem(key, String(now));
+        window.location.reload();
+      }
+    };
+    doReload();
   });
 }
 
