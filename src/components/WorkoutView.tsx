@@ -562,6 +562,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return Array.isArray(r) ? r as [number, number][] : [];
   });
   const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
+  const [showIntervalRunner, setShowIntervalRunner] = useState(false);
+  const isIntervalRun = /intervall/i.test(name) && !isBike && !isSwim;
 
   const getTotalMin = () => {
     const h = parseInt(hours) || 0;
