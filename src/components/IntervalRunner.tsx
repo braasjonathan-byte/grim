@@ -472,9 +472,9 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         tempo: tempoStr,
       };
     });
-    const warm = warmupMin > 0 ? { time: String(warmupMin), dist: "", tempo: "" } : null;
-    const cool = cooldownMin > 0 ? { time: String(cooldownMin), dist: "", tempo: "" } : null;
-    const all = [warm, ...intervals, cool].filter(Boolean) as { time: string; dist: string; tempo: string }[];
+    const warm = warmupMin > 0 ? { time: String(warmupMin), dist: "", tempo: "", kind: "warmup" as const } : null;
+    const cool = cooldownMin > 0 ? { time: String(cooldownMin), dist: "", tempo: "", kind: "cooldown" as const } : null;
+    const all = [warm, ...intervals, cool].filter(Boolean) as { time: string; dist: string; tempo: string; kind?: "warmup" | "cooldown" }[];
     const totalDistKm = effective.reduce((acc, e) => acc + (e.distKm || 0), 0);
     const totalSec = effective.reduce((acc, e) => acc + e.durSec, 0);
     const totalTimeMin = (warmupMin + cooldownMin) + totalSec / 60 + Math.max(0, effective.length - 1) * (restSec / 60);
