@@ -142,7 +142,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const [restSec, setRestSec] = useState(90);
   const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : 10);
   const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : 5);
-  const [useGps, setUseGps] = useState(false);
+  const [useGps, setUseGps] = useState(true);
 
   // Voice settings dialog
   const [showVoicePrefs, setShowVoicePrefs] = useState(false);
