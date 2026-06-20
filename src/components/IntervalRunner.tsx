@@ -139,6 +139,8 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   // Track each interval's start (for achieved-pace announcement)
   const intervalStartMs = useRef<number>(0);
   const intervalStartKm = useRef<number | null>(null);
+  // Achieved sec/km per interval index (from GPS) — overrides saved tempo
+  const achievedSecPerKm = useRef<number[]>([]);
 
   // Tick
   useEffect(() => {
@@ -227,17 +229,20 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       // Announce achieved pace for the interval just finished
       const cur = effective[currentIdx];
       const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
-      let achievedSecPerKm = 0;
+      let achPace = 0;
       if (intervalStartKm.current != null && gps.isTracking) {
         const dKm = gps.distanceKm - intervalStartKm.current;
-        if (dKm > 0.01) achievedSecPerKm = elapsedSec / dKm;
+        if (dKm > 0.01) achPace = elapsedSec / dKm;
       }
-      if (achievedSecPerKm === 0 && cur && cur.distKm > 0) {
-        achievedSecPerKm = elapsedSec / cur.distKm;
+      if (achPace === 0 && cur && cur.distKm > 0) {
+        achPace = elapsedSec / cur.distKm;
       }
-      if (prefs.enabled && achievedSecPerKm > 0) {
-        const mm = Math.floor(achievedSecPerKm / 60);
-        const ss = Math.round(achievedSecPerKm % 60);
+      if (achPace > 0) {
+        achievedSecPerKm.current[currentIdx] = achPace;
+      }
+      if (prefs.enabled && achPace > 0) {
+        const mm = Math.floor(achPace / 60);
+        const ss = Math.round(achPace % 60);
         speak(`Du höll tempo ${mm} minuter ${ss} sekunder per kilometer.`);
       }
       if (currentIdx + 1 < totalIntervals) {
@@ -295,11 +300,20 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const buildResult = (): IntervalRunnerResult => {
-    const intervals = effective.map((e) => ({
-      time: String(Math.round((e.durSec / 60) * 100) / 100),
-      dist: e.distKm > 0 ? String(Math.round(e.distKm * 1000) / 1000) : "",
-      tempo: e.tempoStr,
-    }));
+    const intervals = effective.map((e, i) => {
+      const ach = achievedSecPerKm.current[i];
+      let tempoStr = e.tempoStr;
+      if (ach && ach > 0) {
+        const mm = Math.floor(ach / 60);
+        const ss = Math.round(ach % 60);
+        tempoStr = `${mm}:${String(ss).padStart(2, "0")}`;
+      }
+      return {
+        time: String(Math.round((e.durSec / 60) * 100) / 100),
+        dist: e.distKm > 0 ? String(Math.round(e.distKm * 1000) / 1000) : "",
+        tempo: tempoStr,
+      };
+    });
     const warm = warmupMin > 0 ? { time: String(warmupMin), dist: "", tempo: "" } : null;
     const cool = cooldownMin > 0 ? { time: String(cooldownMin), dist: "", tempo: "" } : null;
     const all = [warm, ...intervals, cool].filter(Boolean) as { time: string; dist: string; tempo: string }[];
