@@ -7695,13 +7695,11 @@ const estimateCalories = (
                                             </button>
                                           );
                                         })()}
-                                        <AutoSaveInput
-                                          type="number" inputMode="numeric"
-                                          initialValue={row.time || String(intervalDuration)}
+                                        <IntervalTimeMSInput
+                                          valueMinDecimal={row.time || String(intervalDuration)}
                                           onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], time: v };
-                                            // Auto-calc dist
                                             const t = parseFloat(v) || 0;
                                             const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
                                             const ts = arr[ii].tempo?.match(/^(\d+)$/);
@@ -7711,7 +7709,6 @@ const estimateCalories = (
                                             if (t > 0 && mpk > 0) arr[ii].dist = String(Math.round((t / mpk) * 100) / 100);
                                             saveCondField('intervals', arr as any);
                                           }}
-                                          className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none"
                                         />
                                         <AutoSaveInput
                                           type="text"
