@@ -15,6 +15,7 @@ const config: CapacitorConfig = {
       '@capacitor-mlkit/barcode-scanning',
       'capacitor-native-settings',
       '@capacitor-community/bluetooth-le',
+      '@capacitor-community/text-to-speech',
       '@capacitor-firebase/app',
       '@capacitor-firebase/crashlytics',
     ],
