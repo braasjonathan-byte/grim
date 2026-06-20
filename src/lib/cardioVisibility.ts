@@ -19,11 +19,11 @@ export interface CardioCategoryMeta {
 
 export const CARDIO_CATEGORIES: CardioCategoryMeta[] = [
   { key: "löpning",   label: "Löpning",         icon: "🏃", keywords: /löpning|löp|jogg|sprint|tröskel|långpass|distanslöpning|intervaller?(?:löpning)?/i },
-  { key: "cykling",   label: "Cykling",         icon: "🚴", keywords: /cykling|cykel|spinning/i },
+  { key: "cykling",   label: "Cykling",         icon: "🚴", keywords: /cykling|cykel|spinning|airbike|air\s*bike|assault\s*bike/i },
   { key: "simning",   label: "Simning",         icon: "🏊", keywords: /simning|sim(?![a-zåäö])/i },
-  { key: "rodd",      label: "Rodd",            icon: "🚣", keywords: /roddmaskin|rodd(?:pass)?/i },
-  { key: "promenad",  label: "Promenad / Gång", icon: "🚶", keywords: /promenad|(?<![-\w])gång(?![-\w])/i },
-  { key: "trapp",     label: "Trappmaskin",     icon: "🪜", keywords: /trappmaskin|stair\s*machine|crosstrainer/i },
+  { key: "rodd",      label: "Rodd",            icon: "🚣", keywords: /roddmaskin|rodd(?:pass|\s*–\s*intervaller)?|skierg|paddling|kajak|kanot/i },
+  { key: "promenad",  label: "Promenad / Gång", icon: "🚶", keywords: /promenad|vandring|(?<![-\w])gång(?![-\w])|hopprep|skidåkning|skidor|skridsko/i },
+  { key: "trapp",     label: "Trappmaskin",     icon: "🪜", keywords: /trappmaskin|stair\s*machine|stairclimber|crosstrainer/i },
 ];
 
 const STORAGE_KEY = "grim_cardio_visibility";
