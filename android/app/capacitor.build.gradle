@@ -18,6 +18,7 @@ dependencies {
     implementation project(':capacitor-mlkit-barcode-scanning')
     implementation project(':capacitor-native-settings')
     implementation project(':capacitor-community-bluetooth-le')
+    implementation project(':capacitor-community-text-to-speech')
 
 }
 
