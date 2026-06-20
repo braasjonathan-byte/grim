@@ -87,6 +87,22 @@ if (!xml.includes(FCM_CHANNEL_META)) {
   console.log("[patch-android-manifest] Added FCM default notification channel meta-data");
 }
 
+// Android 11+ package visibility: required so the TextToSpeech plugin can
+// bind to the installed TTS engine. Without this <queries> block,
+// tts.speak() silently fails on real devices (no voice output).
+if (!xml.includes("android.intent.action.TTS_SERVICE")) {
+  const queriesBlock = `    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+`;
+  xml = xml.replace(/<\/manifest>/, `${queriesBlock}</manifest>`);
+  changed = true;
+  console.log("[patch-android-manifest] Added TTS_SERVICE queries block (Android 11+ package visibility)");
+}
+
+
 if (changed) {
   fs.writeFileSync(MANIFEST, xml, "utf8");
   console.log("[patch-android-manifest] AndroidManifest.xml updated.");
