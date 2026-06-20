@@ -139,6 +139,8 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   // Track each interval's start (for achieved-pace announcement)
   const intervalStartMs = useRef<number>(0);
   const intervalStartKm = useRef<number | null>(null);
+  // Achieved sec/km per interval index (from GPS) — overrides saved tempo
+  const achievedSecPerKm = useRef<number[]>([]);
 
   // Tick
   useEffect(() => {
