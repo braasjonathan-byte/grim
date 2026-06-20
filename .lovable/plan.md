@@ -1,121 +1,53 @@
-# Plan: 6 nya funktioner
+## Funktion: Löpning – intervaller
 
-Det här är en stor leverans (uppskattat 6–8 timmar arbete). Jag bygger i 3 faser så du kan testa varje del innan nästa. Säg till om du vill ändra ordning eller hoppa över något.
+Ny övning som registreras som intervallpass, summeras in i löpningsstatistik, kan spelas in via GPS och spelar upp röstguidning under passet.
 
----
+### 1. Övningen i biblioteket
+- Lägg till "Löpning – intervaller" i exercise-listan (kategori: kondition, typ: löpning) i samma fil där "Cykling" / "Löpning" definieras.
+- Aliasar matchar regex för löpning så att statistiken (km, tempo) räknas in i totalen för "Löpning".
 
-## Fas 1 — Frontend-only, snabb vinst (ingen DB)
+### 2. Registrering av passet
+När övningen läggs till i ett pass öppnas en konfigurationsdialog där användaren väljer:
+- Antal intervaller (1–30)
+- Längd per intervall (sekunder eller meter)
+- Vila per intervall (sekunder)
+- Mål-tempo per intervall (min/km) – ett värde eller per-intervall lista
+- Ev. uppvärmning / nedvarvning (min)
 
-### 1.1 Övningshistorik-popup
-- Ny komponent `ExerciseHistoryDialog.tsx`
-- Tap på övningsnamn i `WorkoutView` → öppnar dialog
-- Visar de senaste 5 gångerna övningen loggats: datum, sets×reps@kg, PR-markör om det var rekord
-- Hämtar från `workout_completions.logged_weights` + `archived_plans.completion_data` (samma källor som leaderboard)
-- Mobile-first bottom sheet enligt mem-regler
+Konfigen sparas i `workout_plans.details` som en strukturerad rad, t.ex.:
+`Löpning – intervaller: 6×400m @ 4:30/km, vila 90s`
 
-### 1.2 Achievement-system 2.0
-- Utöka `src/lib/achievements.ts` med nya badges:
-  - **100 pass** / **250 pass** / **500 pass**
-  - **10-tons-klubben** (totalvolym ≥ 10 000 kg ett enskilt pass)
-  - **100-tons-klubben** (totalvolym ≥ 100 000 kg över tid)
-  - **Bodyweight-bänk** (första bänk ≥ kroppsvikt)
-  - **Bodyweight-marklyft** (2× kroppsvikt mark)
-  - **Tidig fågel** (5 pass före kl 07)
-  - **Nattuggla** (5 pass efter kl 22)
-  - **Streak 7 / 30 / 100 dagar**
-  - **Triathlon-debut** (första triathlon-pass loggat)
-- Trigger-check körs i samma flöde som dagens achievements
-- Visas i befintliga `AchievementsPanel`
+### 3. Statistik
+- Distansen (antal intervaller × distans + ev. uppvärmning/nedvarvning) summeras in i veckans/månadens "Löpning" i statistikvyn.
+- Loggas i `workout_completions.logged_distance_km` + `logged_tempo` som vanlig löpning.
 
----
+### 4. GPS-inspelning
+- I `useGpsTracker` läggs stöd för intervall-läge: tracker tar emot intervall-konfig och markerar lap vid varje intervall/vila-byte.
+- Knapp "Spela in med GPS" visas på intervall-kortet precis som för vanlig löpning.
 
-## Fas 2 — Backend + frontend (kräver migration)
+### 5. Röstguidning (Web Speech API – `speechSynthesis`)
+- Inställning per pass i en ny "Röstguidning"-meny som öppnas vid Start:
+  - På/av
+  - Läs upp: kommande tempo, intervallnummer, vila-start, vila kvar, nedräkning 3-2-1
+  - Språk: sv-SE
+- Flöde under passet:
+  1. "Intervall 1 av 6, mål-tempo 4:30 per kilometer" (tempo läses upp **före** startsignalen)
+  2. Kort paus → "3, 2, 1, kör"
+  3. När intervallen är klar: "Vila 90 sekunder"
+  4. Innan nästa: upprepa från 1 med nästa tempo
+- All TTS-kod i ny modul `src/lib/intervalVoice.ts`.
 
-### 2.1 Måltidsmallar
-**Migration:**
-```sql
-CREATE TABLE public.meal_templates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  name text NOT NULL,
-  items jsonb NOT NULL DEFAULT '[]'::jsonb, -- [{food_id, grams, name, kcal, protein, carbs, fat}]
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.meal_templates TO authenticated;
-GRANT ALL ON public.meal_templates TO service_role;
-ALTER TABLE public.meal_templates ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Own templates" ON public.meal_templates
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-```
+### 6. UI-komponenter
+- `IntervalConfigDialog.tsx` – konfig vid tillägg/redigering.
+- `IntervalRunner.tsx` – run-time vy med timer, lap-räknare, GPS-status och röstkontroll.
+- Start-knappen på passet öppnar en liten "Röstinställningar"-popover innan timern startar.
 
-**UI i `NutritionView.tsx`:**
-- Ny knapp "Spara som mall" på loggade måltider
-- Ny sektion "Mina mallar" — tap → loggar hela måltiden idag direkt
-- Edit/delete på mallar via long-press
+### Tekniska detaljer
+- Filer som ändras: `src/components/WorkoutView.tsx` (exercise-detektering, render), `src/hooks/useGpsTracker.ts` (lap-stöd), `src/lib/gpsSettings.ts` (voice-prefs).
+- Nya filer: `src/lib/intervalVoice.ts`, `src/components/IntervalConfigDialog.tsx`, `src/components/IntervalRunner.tsx`.
+- Inga schema-ändringar krävs – konfig sparas i text i `workout_plans.details`, loggar i befintliga `logged_distance_km/logged_tempo`.
 
-### 2.2 Push:Pull:Ben-balansvarning
-- Ny komponent `MuscleBalanceWarning.tsx` på Stats-tab
-- Analyserar senaste 4 veckorna från `workout_completions.logged_weights`
-- Klassar varje övning via befintliga muskelgrupp-mappningar (`exercise_muscle_overrides` + `exerciseLibrary`)
-- Räknar set-volym per kategori (push/pull/ben)
-- Om någon kategori är >30 % under snittet → visa rödflaggad varning med förslag
-
----
-
-## Fas 3 — Realtid + scheduled (mest komplex)
-
-### 3.1 Hejarop / realtidsreaktioner
-**Migration:**
-```sql
-CREATE TABLE public.workout_cheers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  from_user_id uuid NOT NULL,
-  to_user_id uuid NOT NULL,
-  emoji text NOT NULL DEFAULT '💪',
-  workout_session_id text,  -- valfri koppling till pågående pass
-  created_at timestamptz DEFAULT now()
-);
-GRANT SELECT, INSERT ON public.workout_cheers TO authenticated;
-GRANT ALL ON public.workout_cheers TO service_role;
-ALTER TABLE public.workout_cheers ENABLE ROW LEVEL SECURITY;
--- mottagare ser sina, avsändare ser sina, bara mellan vänner
-ALTER PUBLICATION supabase_realtime ADD TABLE public.workout_cheers;
-```
-
-**Flöde:**
-- När vän börjar pass (befintlig "active workout"-signal i social feed) → ny "💪 Hejaropp"-knapp
-- Klick → insertar i `workout_cheers`
-- Mottagaren prenumererar via Supabase Realtime → animerad emoji-overlay (`FireworksOverlay`-stil) + push-notis via befintlig FCM
-- Edge function `notify-cheer` skickar push
-
-### 3.2 Veckorapport på söndagar
-- Ny edge function `weekly-report`
-- Cron: `0 18 * * 0` (söndagar 18:00 svensk tid → 17:00 UTC)
-- För varje aktiv användare: hämta veckans pass-antal, totalvolym, distans, PRs, längsta streak
-- Skickar push via befintlig FCM-pipeline med Open Graph-vänlig text:
-  > "Vecka X: 4 pass · 12.3 ton · 2 nya PRs 🔥 Tap för detaljer"
-- Tap → ny route `/weekly-report/:week` med detaljvy
-
----
-
-## Tekniska anmärkningar
-
-- All datum-hantering i UTC (mem-regel)
-- 800 ms auto-save via refs där input finns (mem-regel)
-- Mobile-first bottom sheets (mem-regel)
-- Inga rundade hörn, inga skuggor (mem-regel)
-- Realtime-prenumerationer alltid i `useEffect` med cleanup
-- Achievements re-evalueras endast på pass-completion, inte vid varje rendering
-
----
-
-## Vad jag INTE bygger nu (säg till om du vill)
-
-- Push-tokens för iOS web (bara FCM Android + Web Push i dag)
-- Inställning för att slå av veckorapporten per användare — lägger som default på, kan adderas senare
-- Historisk backfill av achievements för befintliga pass — bara nya pass triggar nya badges initialt
-
----
-
-Säg **"kör fas 1"** så börjar jag direkt. Eller välj annan ordning / strykningar.
+### Att bekräfta innan jag bygger
+1. Ska distansen anges i **meter per intervall** (t.ex. 400 m) eller **tid per intervall** (t.ex. 60 s)? Eller båda som val?
+2. Ska röstguidningen alltid använda webbläsarens röst (gratis, fungerar offline) eller vill du ha en mer naturlig AI-röst via Lovable AI (kostar tokens)?
+3. Ska intervallpasset kunna sparas som mall i veckoplanen, eller bara läggas till i dagens pass?
