@@ -218,7 +218,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (phase === "warmup") {
       void startPhase("interval", 0);
     } else if (phase === "interval") {
-      if (currentIdx + 1 < numIntervals) {
+      if (currentIdx + 1 < totalIntervals) {
         void startPhase("rest", currentIdx);
       } else if (cooldownMin > 0) {
         void startPhase("cooldown", currentIdx);
@@ -230,7 +230,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     } else if (phase === "cooldown") {
       void startPhase("done", currentIdx);
     }
-  }, [now, phase, paused, phaseEnd, currentIdx, numIntervals, cooldownMin]);
+  }, [now, phase, paused, phaseEnd, currentIdx, totalIntervals, cooldownMin]);
 
   const handleStart = () => {
     // Prime synth inside the user gesture so audio is allowed later
