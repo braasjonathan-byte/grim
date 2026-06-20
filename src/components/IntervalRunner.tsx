@@ -232,7 +232,7 @@ const fmtClock = (sec: number) => {
 };
 
 export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Intervaller", onComplete, presetIntervals }: Props) => {
-  const profile = pickSwedishVoice && getIntervalProfile(exerciseName);
+  const profile = getIntervalProfile(exerciseName);
   const hasPreset = !!(presetIntervals && presetIntervals.length > 0);
   // Config (only used when no preset)
   const [numIntervals, setNumIntervals] = useState(hasPreset ? presetIntervals!.length : 6);
