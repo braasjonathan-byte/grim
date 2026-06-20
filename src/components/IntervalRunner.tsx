@@ -737,7 +737,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     } else {
       pauseStarted.current = Date.now();
       setPaused(true);
-      try { window.speechSynthesis?.cancel(); } catch {}
+      cancelVoice();
       if (gps.isTracking && !gps.isPaused) gps.pause();
     }
   };
@@ -781,7 +781,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const handleFinish = async () => {
-    try { window.speechSynthesis?.cancel(); } catch {}
+    cancelVoice();
     const result = buildResult();
     if (onComplete) {
       try { await onComplete(result); } catch (e) { console.error(e); }
@@ -793,7 +793,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const handleAbort = () => {
-    try { window.speechSynthesis?.cancel(); } catch {}
+    cancelVoice();
     if (gps.isTracking) gps.stop();
     setPhase("idle");
     onClose();
