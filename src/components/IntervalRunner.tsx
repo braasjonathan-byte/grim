@@ -321,7 +321,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         durSec = cur.durSec;
         setPlannedDurSec(durSec);
         if (voice && prefs.announceIntervalNumber) {
-          await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
+          await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 4000);
         }
         if (voice && prefs.announceTempo && cur.tempoStr) {
           const spokenDist = (n: number) => {
@@ -331,8 +331,11 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             return decPart ? `${intPart} komma ${decPart}` : `${intPart}`;
           };
           const distPart = cur.distKm > 0 ? `, distans ${spokenDist(cur.distKm)} kilometer` : "";
-          await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
+          await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 6000);
         }
+        // Wait for the speech queue to fully drain before the start-beep,
+        // so the pip never overlaps the spoken info.
+        if (voice) await waitForSpeechDone(8000);
         // Beep marks the exact moment the timer starts (no spoken countdown)
         beep(1000, 200);
         intervalStartMs.current = Date.now();
