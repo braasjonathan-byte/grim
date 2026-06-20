@@ -339,7 +339,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             </DialogTitle>
           </DialogHeader>
 
-          {!running && phase !== "done" && (
+          {!running && phase !== "done" && !hasPreset && (
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground">{exerciseName}</p>
               <div className="grid grid-cols-2 gap-3">
@@ -375,6 +375,36 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
               </div>
 
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
+                <MapPin className="w-4 h-4" /> Spela in med GPS
+              </label>
+            </div>
+          )}
+
+          {!running && phase !== "done" && hasPreset && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">{exerciseName}</p>
+              <div className="text-xs bg-muted/40 p-2 rounded space-y-1">
+                <div className="font-semibold">{totalIntervals} intervaller från din planering</div>
+                {effective.map((e, i) => (
+                  <div key={i} className="flex justify-between font-mono">
+                    <span>#{i + 1}</span>
+                    <span>{fmtClock(e.durSec)} @ {e.tempoStr || "—"}/km · {e.distKm ? e.distKm + " km" : "—"}</span>
+                  </div>
+                ))}
+                <div className="pt-1 border-t border-border/50">Vila mellan: {restSec}s</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Vila (sek)</Label>
+                  <Input type="number" min={0} step={5} value={restSec} onChange={(e) => setRestSec(Math.max(0, parseInt(e.target.value) || 0))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Uppvärmning (min)</Label>
+                  <Input type="number" min={0} value={warmupMin} onChange={(e) => setWarmupMin(Math.max(0, parseInt(e.target.value) || 0))} />
+                </div>
+              </div>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
                 <MapPin className="w-4 h-4" /> Spela in med GPS
