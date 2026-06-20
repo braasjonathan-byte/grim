@@ -62,6 +62,27 @@ const normalizeTempoInput = (value: string): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
+const intervalRowTimeMinutes = (row: Pick<IntervalRow, "h" | "m" | "s">): number => {
+  const h = parseInt(row.h) || 0;
+  const m = parseInt(row.m) || 0;
+  const s = parseInt(row.s) || 0;
+  return h * 60 + m + s / 60;
+};
+
+const formatIntervalMinutes = (minutes: number): string => {
+  const rounded = Math.round(minutes * 1000) / 1000;
+  return String(rounded);
+};
+
+const toSavedIntervalRows = (rows: IntervalRow[]) => rows.map((row) => {
+  const time = intervalRowTimeMinutes(row);
+  return {
+    time: time > 0 ? formatIntervalMinutes(time) : "",
+    tempo: row.tempo,
+    dist: row.distance,
+  };
+});
+
 interface WorkoutViewProps {
   userId: string;
   isAdmin?: boolean;
@@ -3657,6 +3678,9 @@ const estimateCalories = (
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
 
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
+    const savedIntervalRows = isInterval && condIntervalsInput.trim()
+      ? toSavedIntervalRows(condIntervalRows.slice(0, parseInt(condIntervalsInput.trim()) || 0))
+      : [];
 
     let newDetails: string;
     let wasReplace = false;
@@ -3678,6 +3702,12 @@ const estimateCalories = (
     }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    if (savedIntervalRows.length > 0) {
+      await updateCompletionWeights(plan.week, plan.day, (existing) => ({
+        ...existing,
+        [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify({ intervals: savedIntervalRows }),
+      }));
+    }
     if (wasReplace) skipDayResetRef.current = true;
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
@@ -6537,10 +6567,10 @@ const estimateCalories = (
                                 }
 
                                 // Check for interval pattern like "4×4 min i tröskeltempo (90 s joggvila)"
-                                const inlineIntervalMatch = line.match(/(\d+)\s*[×x]\s*(\d+)\s*min/i);
+                                const inlineIntervalMatch = line.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min/i);
                                 if (inlineIntervalMatch) {
                                   const iCount = parseInt(inlineIntervalMatch[1]);
-                                  const iDuration = parseInt(inlineIntervalMatch[2]);
+                                  const iDuration = parseFloat(inlineIntervalMatch[2].replace(",", "."));
                                    const iTempoM = line.match(/([\d:.]+)\s*\/km/);
                                    // Fall back to plan.tempo if the line doesn't contain tempo
                                    let iPlanTempo = iTempoM ? iTempoM[1] : "";
@@ -7393,9 +7423,9 @@ const estimateCalories = (
                           // Parse conditioning data from the part
                           const { name: condName } = parseExerciseWeight(part);
                           // Parse interval pattern like "3×10 min (2 min joggvila)" or "3×10 min, 2 min vila"
-                          const intervalMatch = part.match(/(\d+)\s*[×x]\s*(\d+)\s*min(?:\s*[,(]\s*(\d+)\s*(?:min\s*)?(?:jogg)?vila)?/i);
+                          const intervalMatch = part.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min(?:\s*[,(]\s*(\d+)\s*(?:min\s*)?(?:jogg)?vila)?/i);
                           const intervalCount = intervalMatch ? parseInt(intervalMatch[1]) : 0;
-                          const intervalDuration = intervalMatch ? parseInt(intervalMatch[2]) : 0;
+                          const intervalDuration = intervalMatch ? parseFloat(intervalMatch[2].replace(",", ".")) : 0;
                           const intervalRest = intervalMatch && intervalMatch[3] ? intervalMatch[3] : "";
                           
                           const condTimeM = !intervalMatch ? part.match(/(\d+)\s*min/) : null;
@@ -8079,13 +8109,13 @@ const estimateCalories = (
                         // Detect lines with round structure: "X rundor:", "X rundor à Y min:", "X cirklar:", "X min AMRAP:", "X×Y min ...", or "X rundor: exercise / exercise / ..."
                         const roundsHeaderMatch = part.trim().match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
                         const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
-                        const intervalHeaderMatch = !roundsHeaderMatch && !amrapHeaderMatch ? part.trim().match(/^(\d+)\s*[×x]\s*(\d+)\s*min\b(.*)/i) : null;
-                        const namedIntervalMatch = !roundsHeaderMatch && !amrapHeaderMatch && !intervalHeaderMatch ? part.trim().match(/^(intervallöpning|intervall)\s*:\s*(.+?)\s+(\d+)\s*[×x]\s*(\d+)\s*min\s*$/i) : null;
+                        const intervalHeaderMatch = !roundsHeaderMatch && !amrapHeaderMatch ? part.trim().match(/^(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min\b(.*)/i) : null;
+                        const namedIntervalMatch = !roundsHeaderMatch && !amrapHeaderMatch && !intervalHeaderMatch ? part.trim().match(/^(intervallöpning|intervall)\s*:\s*(.+?)\s+(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min\s*$/i) : null;
 
                         // Running interval session: show per-interval TID/TEMPO/DISTANS fields
                         if (intervalHeaderMatch && (plan.session_name.toLowerCase().includes("intervall") || plan.session_name.toLowerCase().includes("löpning"))) {
                           const iCount = parseInt(intervalHeaderMatch[1]);
-                          const iDuration = parseInt(intervalHeaderMatch[2]);
+                          const iDuration = parseFloat(intervalHeaderMatch[2].replace(",", "."));
                           const restOfText = intervalHeaderMatch[3]?.trim() || "";
 
                           // Get tempo from plan.tempo
