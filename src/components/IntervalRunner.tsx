@@ -11,12 +11,38 @@ import { toast } from "sonner";
 // ---------------- Voice helpers (Web Speech API) ----------------
 // Note: do NOT call cancel() before every speak — it kills queued utterances
 // and breaks the user-gesture chain on mobile, causing total silence.
+
+// Pick a female Swedish voice when available. Cached after first lookup.
+let _pickedVoice: SpeechSynthesisVoice | null | undefined = undefined;
+const pickSwedishFemaleVoice = (): SpeechSynthesisVoice | null => {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
+  if (_pickedVoice !== undefined) return _pickedVoice;
+  const voices = window.speechSynthesis.getVoices?.() || [];
+  if (!voices.length) return null; // not ready yet — try again next time
+  const sv = voices.filter(v => /sv(-|_)?se/i.test(v.lang) || /^sv$/i.test(v.lang));
+  const femaleHints = /(female|kvinn|alva|alice|astrid|elin|klara|maja|nora|saga|elsa|google.*svensk)/i;
+  const maleHints = /(male|man|oskar|magnus|carl|erik|filip|gustav)/i;
+  let pick = sv.find(v => femaleHints.test(v.name))
+    || sv.find(v => !maleHints.test(v.name))
+    || sv[0]
+    || null;
+  _pickedVoice = pick;
+  return pick;
+};
+
+const applyVoice = (u: SpeechSynthesisUtterance) => {
+  const v = pickSwedishFemaleVoice();
+  if (v) u.voice = v;
+  u.lang = "sv-SE";
+  u.pitch = 1.15; // nudge toward female timbre on engines without a named female voice
+};
+
 const speak = (text: string, opts: { flush?: boolean } = {}) => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
     if (opts.flush) window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "sv-SE";
+    applyVoice(u);
     u.rate = 1;
     window.speechSynthesis.speak(u);
   } catch (e) { console.warn("[voice] speak failed", e); }
@@ -31,7 +57,7 @@ const speakAndWait = (text: string, maxMs = 5000) =>
     }
     try {
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = "sv-SE";
+      applyVoice(u);
       u.rate = 1;
       let done = false;
       const finish = () => { if (done) return; done = true; resolve(); };
@@ -49,12 +75,46 @@ const primeSpeech = () => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
     window.speechSynthesis.cancel();
+    // Trigger voice list load so pickSwedishFemaleVoice() can resolve.
+    window.speechSynthesis.getVoices?.();
     const u = new SpeechSynthesisUtterance(" ");
     u.lang = "sv-SE";
     u.volume = 0;
     window.speechSynthesis.speak(u);
   } catch {}
 };
+
+// ---------------- Beep (WebAudio) ----------------
+let _audioCtx: AudioContext | null = null;
+const getAudioCtx = (): AudioContext | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctor) return null;
+    if (!_audioCtx) _audioCtx = new Ctor();
+    if (_audioCtx && _audioCtx.state === "suspended") _audioCtx.resume().catch(() => {});
+    return _audioCtx;
+  } catch { return null; }
+};
+const beep = (freq = 880, durMs = 180, volume = 0.25) => {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume, now + 0.01);
+    gain.gain.setValueAtTime(volume, now + durMs / 1000 - 0.03);
+    gain.gain.linearRampToValueAtTime(0, now + durMs / 1000);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + durMs / 1000 + 0.02);
+  } catch {}
+};
+
 
 // Normalize tempo to mm:ss display string. "4" -> "4:00", "4:5" -> "4:05".
 const fmtTempoDisplay = (tempo: string): string => {
