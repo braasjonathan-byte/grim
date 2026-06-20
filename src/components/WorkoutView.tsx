@@ -51,6 +51,17 @@ const SHOW_STRAVA_INTEGRATION = false;
 const toTitleCase = (str: string): string =>
   str.replace(/(^|\s)(\S)/g, (_, space, char) => space + char.toUpperCase());
 
+const normalizeTempoInput = (value: string): string => {
+  const raw = value.trim();
+  if (!raw || raw.includes(":")) return raw;
+  if (!/^\d+(?:[.,]\d+)?$/.test(raw)) return raw;
+  const minPerKm = parseFloat(raw.replace(",", "."));
+  if (!isFinite(minPerKm) || minPerKm <= 0) return raw;
+  const mins = Math.floor(minPerKm);
+  const secs = Math.round((minPerKm - mins) * 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
 interface WorkoutViewProps {
   userId: string;
   isAdmin?: boolean;
@@ -6591,7 +6602,7 @@ const estimateCalories = (
                                       </div>
                                       {Array.from({ length: activeCount }, (_, ii) => {
                                         const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
-                                        const rowTempo = row.tempo;
+                                         const rowTempo = normalizeTempoInput(row.tempo || "");
                                         const rowTime = parseFloat(row.time) || 0;
                                         let rowDist = '';
                                         if (rowTempo && rowTime > 0) {
@@ -6654,11 +6665,12 @@ const estimateCalories = (
                                               initialValue={rowTempo}
                                               onSave={(v) => {
                                                 const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
-                                                arr[ii] = { ...arr[ii], tempo: v };
-                                                if (ii === 0 && v.trim()) {
+                                                const normalizedTempo = normalizeTempoInput(v);
+                                                arr[ii] = { ...arr[ii], tempo: normalizedTempo };
+                                                if (ii === 0 && normalizedTempo.trim()) {
                                                   const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
                                                   if (allEmpty) {
-                                                    for (let j = 1; j < arr.length; j++) arr[j] = { ...arr[j], tempo: v };
+                                                    for (let j = 1; j < arr.length; j++) arr[j] = { ...arr[j], tempo: normalizedTempo };
                                                   }
                                                 }
                                                 // Auto-calc dist for all rows with tempo + time
@@ -6673,6 +6685,7 @@ const estimateCalories = (
                                                 }
                                                 saveInlineIntervalField('intervals', arr);
                                               }}
+                                              normalizeOnBlur={normalizeTempoInput}
                                               placeholder="5:30"
                                               className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground"
                                             />
@@ -7640,7 +7653,7 @@ const estimateCalories = (
                                     
                                     return Array.from({ length: activeCount }, (_, ii) => {
                                     const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: planTempo || '', dist: '' };
-                                    const rowTempo = row.tempo;
+                                    const rowTempo = normalizeTempoInput(row.tempo || "");
                                     const rowTime = parseFloat(row.time) || 0;
                                     // Auto-calc distance
                                     let rowDist = '';
@@ -7708,12 +7721,13 @@ const estimateCalories = (
                                           initialValue={rowTempo}
                                           onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
-                                            arr[ii] = { ...arr[ii], tempo: v };
-                                            if (ii === 0 && v.trim()) {
+                                              const normalizedTempo = normalizeTempoInput(v);
+                                              arr[ii] = { ...arr[ii], tempo: normalizedTempo };
+                                              if (ii === 0 && normalizedTempo.trim()) {
                                               const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
                                               if (allEmpty) {
                                                 for (let j = 1; j < arr.length; j++) {
-                                                  arr[j] = { ...arr[j], tempo: v };
+                                                    arr[j] = { ...arr[j], tempo: normalizedTempo };
                                                 }
                                               }
                                             }
@@ -7729,6 +7743,7 @@ const estimateCalories = (
                                             }
                                             saveCondField('intervals', arr as any);
                                           }}
+                                            normalizeOnBlur={normalizeTempoInput}
                                           placeholder="5:30"
                                           className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground"
                                         />
@@ -8137,7 +8152,7 @@ const estimateCalories = (
                               </div>
                               {Array.from({ length: activeCount }, (_, ii) => {
                                 const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
-                                const rowTempo = row.tempo;
+                                const rowTempo = normalizeTempoInput(row.tempo || "");
                                 const rowTime = parseFloat(row.time) || 0;
                                 let rowDist = '';
                                 if (rowTempo && rowTime > 0) {
@@ -8195,11 +8210,12 @@ const estimateCalories = (
                                       initialValue={rowTempo}
                                       onSave={(v) => {
                                         const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
-                                        arr[ii] = { ...arr[ii], tempo: v };
-                                        if (ii === 0 && v.trim()) {
+                                        const normalizedTempo = normalizeTempoInput(v);
+                                        arr[ii] = { ...arr[ii], tempo: normalizedTempo };
+                                        if (ii === 0 && normalizedTempo.trim()) {
                                           const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
                                           if (allEmpty) {
-                                            for (let j = 1; j < arr.length; j++) arr[j] = { ...arr[j], tempo: v };
+                                            for (let j = 1; j < arr.length; j++) arr[j] = { ...arr[j], tempo: normalizedTempo };
                                           }
                                         }
                                         for (let j = 0; j < arr.length; j++) {
@@ -8213,6 +8229,7 @@ const estimateCalories = (
                                         }
                                         saveIntervalField('intervals', arr);
                                       }}
+                                      normalizeOnBlur={normalizeTempoInput}
                                       placeholder="5:30"
                                       className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground"
                                     />
