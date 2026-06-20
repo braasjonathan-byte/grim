@@ -229,17 +229,20 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       // Announce achieved pace for the interval just finished
       const cur = effective[currentIdx];
       const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
-      let achievedSecPerKm = 0;
+      let achPace = 0;
       if (intervalStartKm.current != null && gps.isTracking) {
         const dKm = gps.distanceKm - intervalStartKm.current;
-        if (dKm > 0.01) achievedSecPerKm = elapsedSec / dKm;
+        if (dKm > 0.01) achPace = elapsedSec / dKm;
       }
-      if (achievedSecPerKm === 0 && cur && cur.distKm > 0) {
-        achievedSecPerKm = elapsedSec / cur.distKm;
+      if (achPace === 0 && cur && cur.distKm > 0) {
+        achPace = elapsedSec / cur.distKm;
       }
-      if (prefs.enabled && achievedSecPerKm > 0) {
-        const mm = Math.floor(achievedSecPerKm / 60);
-        const ss = Math.round(achievedSecPerKm % 60);
+      if (achPace > 0) {
+        achievedSecPerKm.current[currentIdx] = achPace;
+      }
+      if (prefs.enabled && achPace > 0) {
+        const mm = Math.floor(achPace / 60);
+        const ss = Math.round(achPace % 60);
         speak(`Du höll tempo ${mm} minuter ${ss} sekunder per kilometer.`);
       }
       if (currentIdx + 1 < totalIntervals) {
