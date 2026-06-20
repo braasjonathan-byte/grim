@@ -383,24 +383,10 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     } else if (phase === "interval") {
       // Stop-beep at end of interval
       beep(600, 220);
-      // Announce achieved pace for the interval just finished
-      const cur = effective[currentIdx];
-      const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
-      let achPace = 0;
-      if (intervalStartKm.current != null && gps.isTracking) {
-        const dKm = gps.distanceKm - intervalStartKm.current;
-        if (dKm > 0.01) achPace = elapsedSec / dKm;
-      }
-      if (achPace === 0 && cur && cur.distKm > 0) {
-        achPace = elapsedSec / cur.distKm;
-      }
-      if (achPace > 0) {
-        achievedSecPerKm.current[currentIdx] = achPace;
-      }
+      // Capture achieved pace for the interval just finished
+      const achPace = captureAchievedPace(currentIdx);
       if (prefs.enabled && achPace > 0) {
-        const mm = Math.floor(achPace / 60);
-        const ss = Math.round(achPace % 60);
-        speak(`Du höll tempo ${mm} minuter ${ss} sekunder per kilometer.`);
+        speak(`Du höll ${spokenAchievedPace(achPace)}.`);
       }
       if (currentIdx + 1 < totalIntervals) {
         void startPhase("rest", currentIdx);
