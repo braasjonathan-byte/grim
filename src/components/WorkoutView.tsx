@@ -7423,9 +7423,9 @@ const estimateCalories = (
                           // Parse conditioning data from the part
                           const { name: condName } = parseExerciseWeight(part);
                           // Parse interval pattern like "3×10 min (2 min joggvila)" or "3×10 min, 2 min vila"
-                          const intervalMatch = part.match(/(\d+)\s*[×x]\s*(\d+)\s*min(?:\s*[,(]\s*(\d+)\s*(?:min\s*)?(?:jogg)?vila)?/i);
+                          const intervalMatch = part.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min(?:\s*[,(]\s*(\d+)\s*(?:min\s*)?(?:jogg)?vila)?/i);
                           const intervalCount = intervalMatch ? parseInt(intervalMatch[1]) : 0;
-                          const intervalDuration = intervalMatch ? parseInt(intervalMatch[2]) : 0;
+                          const intervalDuration = intervalMatch ? parseFloat(intervalMatch[2].replace(",", ".")) : 0;
                           const intervalRest = intervalMatch && intervalMatch[3] ? intervalMatch[3] : "";
                           
                           const condTimeM = !intervalMatch ? part.match(/(\d+)\s*min/) : null;
