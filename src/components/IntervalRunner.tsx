@@ -534,20 +534,46 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
 
           {!running && phase !== "done" && !hasPreset && (
             <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">{exerciseName}</p>
+              <p className="text-xs text-muted-foreground">{exerciseName} <span className="opacity-60">· {profile.sport}</span></p>
+
+              <div>
+                <Label className="text-xs">Mät varje intervall i</Label>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {profile.availableUnits.map((u) => (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => {
+                        setUnit(u);
+                        // Reset to a sensible default value when changing unit
+                        if (u === "time") setUnitValue(60);
+                        else if (u === "distance_km") setUnitValue(1);
+                        else if (u === "distance_m") setUnitValue(profile.sport === "rodd" ? 500 : profile.sport === "simning" ? 100 : 400);
+                        else if (u === "calories") setUnitValue(10);
+                        else if (u === "reps") setUnitValue(50);
+                        else if (u === "laps") setUnitValue(2);
+                      }}
+                      className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${unit === u ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+                    >{UNIT_LABELS[u]}</button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Antal intervaller</Label>
                   <Input type="number" min={1} max={30} value={numIntervals} onChange={(e) => setNumIntervals(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} />
                 </div>
                 <div>
-                  <Label className="text-xs">Distans / intervall (m)</Label>
-                  <Input type="number" min={50} step={50} value={distM} onChange={(e) => setDistM(Math.max(50, parseInt(e.target.value) || 50))} />
+                  <Label className="text-xs">{UNIT_LABELS[unit]} / intervall</Label>
+                  <Input type="number" min={1} step={unit === "distance_km" ? 0.1 : 1} value={unitValue} onChange={(e) => setUnitValue(Math.max(1, parseFloat(e.target.value) || 1))} />
                 </div>
-                <div>
-                  <Label className="text-xs">Mål-tempo (min/km)</Label>
-                  <Input value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="4:30" />
-                </div>
+                {(unit === "distance_km" || unit === "distance_m") && (
+                  <div>
+                    <Label className="text-xs">{profile.paceLabel} ({profile.paceUnit})</Label>
+                    <Input value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="4:30" />
+                  </div>
+                )}
                 <div>
                   <Label className="text-xs">Vila (sek)</Label>
                   <Input type="number" min={0} step={5} value={restSec} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setRestSec(n); }} />
@@ -560,16 +586,25 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                   <Label className="text-xs">Nedvarvning (min)</Label>
                   <Input type="number" min={0} value={cooldownMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setCooldownMin(n); }} />
                 </div>
+                {profile.supportsGps && (
+                  <div className="col-span-2 flex items-center gap-2">
+                    <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} id="usegps" />
+                    <label htmlFor="usegps" className="text-xs">Spela in GPS-spår under passet</label>
+                  </div>
+                )}
               </div>
 
               <div className="text-xs text-muted-foreground bg-muted/40 p-2 rounded">
-                Pass: {numIntervals} × {distM} m @ {tempo}/km, vila {restSec}s
+                Pass: {numIntervals} × {unitValue} {UNIT_SHORT[unit]}
+                {(unit === "distance_km" || unit === "distance_m") && tempo ? <> @ {tempo}{profile.paceUnit}</> : null}
+                , vila {restSec}s
                 {(warmupMin > 0 || cooldownMin > 0) && <> · {warmupMin} min upp / {cooldownMin} min ner</>}
-                <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
+                <br />Mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
               </div>
 
             </div>
           )}
+
 
           {!running && phase !== "done" && hasPreset && (
             <div className="space-y-3">
