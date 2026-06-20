@@ -93,6 +93,20 @@ const speakAndWait = (text: string, maxMs = 5000) =>
     }
   });
 
+// Wait until the speech synthesis queue is fully drained (no longer speaking/pending).
+const waitForSpeechDone = (maxMs = 8000) =>
+  new Promise<void>((resolve) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return resolve();
+    const ss = window.speechSynthesis;
+    const start = Date.now();
+    const tick = () => {
+      if (!ss.speaking && !ss.pending) return resolve();
+      if (Date.now() - start > maxMs) return resolve();
+      setTimeout(tick, 80);
+    };
+    tick();
+  });
+
 // Prime the speech engine inside the user gesture (required on iOS/Android Chrome).
 const primeSpeech = () => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
