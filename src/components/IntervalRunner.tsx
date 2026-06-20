@@ -212,10 +212,18 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   }, [now, phase, paused, phaseEnd, currentIdx, numIntervals, cooldownMin]);
 
   const handleStart = () => {
+    // Prime synth inside the user gesture so audio is allowed later
+    if (prefs.enabled) primeSpeech();
     setShowVoicePrefs(true);
   };
 
   const actuallyStart = async () => {
+    // Prime again inside this click gesture (the "Starta passet" button)
+    if (prefs.enabled) {
+      primeSpeech();
+      // tiny audible nudge confirms voice works
+      speak("Redo.");
+    }
     setShowVoicePrefs(false);
     setPaused(false);
     setCurrentIdx(0);
