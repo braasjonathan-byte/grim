@@ -93,6 +93,20 @@ const speakAndWait = (text: string, maxMs = 5000) =>
     }
   });
 
+// Wait until the speech synthesis queue is fully drained (no longer speaking/pending).
+const waitForSpeechDone = (maxMs = 8000) =>
+  new Promise<void>((resolve) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return resolve();
+    const ss = window.speechSynthesis;
+    const start = Date.now();
+    const tick = () => {
+      if (!ss.speaking && !ss.pending) return resolve();
+      if (Date.now() - start > maxMs) return resolve();
+      setTimeout(tick, 80);
+    };
+    tick();
+  });
+
 // Prime the speech engine inside the user gesture (required on iOS/Android Chrome).
 const primeSpeech = () => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
@@ -307,7 +321,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         durSec = cur.durSec;
         setPlannedDurSec(durSec);
         if (voice && prefs.announceIntervalNumber) {
-          await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
+          await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 4000);
         }
         if (voice && prefs.announceTempo && cur.tempoStr) {
           const spokenDist = (n: number) => {
@@ -317,8 +331,11 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             return decPart ? `${intPart} komma ${decPart}` : `${intPart}`;
           };
           const distPart = cur.distKm > 0 ? `, distans ${spokenDist(cur.distKm)} kilometer` : "";
-          await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
+          await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 6000);
         }
+        // Wait for the speech queue to fully drain before the start-beep,
+        // so the pip never overlaps the spoken info.
+        if (voice) await waitForSpeechDone(8000);
         // Beep marks the exact moment the timer starts (no spoken countdown)
         beep(1000, 200);
         intervalStartMs.current = Date.now();
