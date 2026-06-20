@@ -9,43 +9,57 @@ import { useGpsTracker } from "@/hooks/useGpsTracker";
 import { toast } from "sonner";
 import { getIntervalProfile, UNIT_LABELS, UNIT_SHORT, valueToSeconds, spokenTarget, type IntervalUnit } from "@/lib/intervalSportProfiles";
 
-// ---------------- Voice helpers (Web Speech API) ----------------
-// Note: do NOT call cancel() before every speak — it kills queued utterances
-// and breaks the user-gesture chain on mobile, causing total silence.
+// ---------------- Voice helpers (Web Speech API + native Capacitor TTS) ----------------
+// On the native Android/iOS app the WebView's Web Speech API is unreliable
+// (often silent — the user only hears the beep). We dynamically use the
+// Capacitor TextToSpeech plugin when running natively, and fall back to
+// Web Speech API on the PWA / desktop browser.
 
-// Pick the most natural-sounding Swedish voice the device offers.
-// Cached after first lookup.
+let _isNative: boolean | undefined;
+const isNative = (): boolean => {
+  if (_isNative !== undefined) return _isNative;
+  try {
+    // @ts-ignore
+    const cap = (window as any).Capacitor;
+    _isNative = !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform());
+  } catch { _isNative = false; }
+  return !!_isNative;
+};
+
+let _ttsMod: any | null = null;
+const getNativeTts = async (): Promise<any | null> => {
+  if (!isNative()) return null;
+  if (_ttsMod) return _ttsMod;
+  try {
+    const mod = await import("@capacitor-community/text-to-speech");
+    _ttsMod = mod.TextToSpeech;
+    return _ttsMod;
+  } catch (e) { console.warn("[voice] native TTS import failed", e); return null; }
+};
+
+// Pick the most natural-sounding Swedish voice the device offers (web only).
 let _pickedVoice: SpeechSynthesisVoice | null | undefined = undefined;
 const pickSwedishVoice = (): SpeechSynthesisVoice | null => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
   if (_pickedVoice !== undefined) return _pickedVoice;
   const voices = window.speechSynthesis.getVoices?.() || [];
-  if (!voices.length) return null; // not ready yet — try again next time
+  if (!voices.length) return null;
   const sv = voices.filter(v => /sv(-|_)?se/i.test(v.lang) || /^sv$/i.test(v.lang));
   if (!sv.length) return null;
-
-  // Score each voice: higher = more natural. Prefer cloud/neural voices.
   const score = (v: SpeechSynthesisVoice): number => {
     const n = v.name.toLowerCase();
     let s = 0;
-    // Strong preference: Google's neural Swedish voice (Android/Chrome desktop)
     if (n.includes("google")) s += 100;
-    // Microsoft "Online (Natural)" neural voices — very natural on Edge/Win11
     if (n.includes("natural")) s += 90;
     if (n.includes("online")) s += 60;
-    // Named Microsoft neural Swedish voices
     if (/(hedvig|sofie|mattias)/.test(n)) s += 50;
-    // Apple "enhanced"/"premium" downloadable voices (macOS/iOS)
     if (n.includes("premium")) s += 70;
     if (n.includes("enhanced")) s += 55;
     if (/(alva|klara|oskar)/.test(n)) s += 20;
-    // Remote/network voices tend to be neural
     if (!v.localService) s += 40;
-    // Prefer female-sounding names slightly
     if (/(alva|hedvig|sofie|klara|elin|maja|saga|astrid)/.test(n)) s += 5;
     return s;
   };
-
   const pick = [...sv].sort((a, b) => score(b) - score(a))[0] || sv[0];
   _pickedVoice = pick;
   try { console.info("[voice] picked", pick?.name, pick?.lang, "local:", pick?.localService); } catch {}
@@ -60,8 +74,25 @@ const applyVoice = (u: SpeechSynthesisUtterance) => {
   u.rate = 1.0;
 };
 
+const speakNative = (text: string): Promise<void> =>
+  getNativeTts().then((tts) => {
+    if (!tts) return;
+    return tts.speak({ text, lang: "sv-SE", rate: 1.0, pitch: 1.0, volume: 1.0, category: "ambient" }).catch((e: any) => {
+      console.warn("[voice] native speak failed", e);
+    });
+  });
+
+const cancelNative = async () => {
+  const tts = await getNativeTts();
+  if (tts) { try { await tts.stop(); } catch {} }
+};
 
 const speak = (text: string, opts: { flush?: boolean } = {}) => {
+  if (isNative()) {
+    if (opts.flush) void cancelNative();
+    void speakNative(text);
+    return;
+  }
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
     if (opts.flush) window.speechSynthesis.cancel();
@@ -72,9 +103,15 @@ const speak = (text: string, opts: { flush?: boolean } = {}) => {
   } catch (e) { console.warn("[voice] speak failed", e); }
 };
 
-// Queue an utterance and resolve when it actually finishes (with a max fallback).
 const speakAndWait = (text: string, maxMs = 5000) =>
   new Promise<void>((resolve) => {
+    if (isNative()) {
+      let done = false;
+      const finish = () => { if (done) return; done = true; resolve(); };
+      const timer = setTimeout(finish, maxMs);
+      speakNative(text).finally(() => { clearTimeout(timer); finish(); });
+      return;
+    }
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       setTimeout(resolve, 150);
       return;
@@ -94,9 +131,12 @@ const speakAndWait = (text: string, maxMs = 5000) =>
     }
   });
 
-// Wait until the speech synthesis queue is fully drained (no longer speaking/pending).
 const waitForSpeechDone = (maxMs = 8000) =>
   new Promise<void>((resolve) => {
+    if (isNative()) {
+      // Native speakAndWait already awaits completion; nothing extra to drain.
+      return resolve();
+    }
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return resolve();
     const ss = window.speechSynthesis;
     const start = Date.now();
@@ -108,12 +148,15 @@ const waitForSpeechDone = (maxMs = 8000) =>
     tick();
   });
 
-// Prime the speech engine inside the user gesture (required on iOS/Android Chrome).
 const primeSpeech = () => {
+  if (isNative()) {
+    // Warm up the native engine so the first prompt isn't delayed.
+    void getNativeTts().then((tts) => { if (tts) { try { tts.speak({ text: " ", lang: "sv-SE", volume: 0 }); } catch {} } });
+    return;
+  }
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
     window.speechSynthesis.cancel();
-    // Trigger voice list load so pickSwedishFemaleVoice() can resolve.
     window.speechSynthesis.getVoices?.();
     const u = new SpeechSynthesisUtterance(" ");
     u.lang = "sv-SE";
@@ -168,23 +211,35 @@ const fmtTempoDisplay = (tempo: string): string => {
   return tempo;
 };
 
-const fmtTempoSpoken = (tempo: string): string => {
-  // Natural Swedish: "4:30" -> "fyra trettio per kilometer", "4:00" -> "fyra minuter per kilometer"
-  const m = tempo.trim().match(/^(\d+)[:.](\d+)$/);
-  if (m) {
-    const mm = parseInt(m[1]);
-    const ss = parseInt(m[2]);
-    if (ss === 0) return `${mm} minuter per kilometer`;
-    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
+// Sport-aware spoken pace string. For mm:ss-style paces (/km, /100m, /500m)
+// reads as "X minuter Y sekunder per <enhet>". For numeric-only rates
+// (km/h, /min, spm, W) reads the bare number followed by the spoken unit.
+const fmtTempoSpokenForProfile = (tempo: string, paceUnit: string, paceSpoken: string): string => {
+  const t = (tempo || "").trim();
+  if (!t) return "";
+  const isMmSs = /\/km|\/100m|\/500m/i.test(paceUnit);
+  if (isMmSs) {
+    const m = t.match(/^(\d+)[:.](\d+)$/);
+    let mm = 0, ss = 0;
+    if (m) { mm = parseInt(m[1]); ss = parseInt(m[2]); }
+    else {
+      const n = parseFloat(t.replace(",", "."));
+      if (!Number.isFinite(n)) return t;
+      mm = Math.floor(n); ss = Math.round((n - mm) * 60);
+    }
+    if (mm === 0) return `${ss} sekunder ${paceSpoken}`;
+    if (ss === 0) return `${mm} minuter ${paceSpoken}`;
+    return `${mm} minuter ${ss} sekunder ${paceSpoken}`;
   }
-  const n = parseFloat(tempo.replace(",", "."));
-  if (Number.isFinite(n)) {
-    const mm = Math.floor(n);
-    const ss = Math.round((n - mm) * 60);
-    if (ss === 0) return `${mm} minuter per kilometer`;
-    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
-  }
-  return tempo;
+  // Numeric rate (km/h, /min, spm, W) — speak the bare number.
+  const m = t.match(/^(\d+)[:.](\d+)$/);
+  let num: number;
+  if (m) num = parseInt(m[1]);
+  else num = parseFloat(t.replace(",", "."));
+  if (!Number.isFinite(num)) return t;
+  const rounded = Math.round(num * 10) / 10;
+  const str = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace(".", " komma ");
+  return `${str} ${paceSpoken}`;
 };
 
 // ---------------- Types ----------------
@@ -385,9 +440,9 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
           if (cur2.unit && cur2.value) {
             target = `Mål ${spokenTarget(cur2.value, cur2.unit, profile)}`;
           } else if (cur.distKm > 0) {
-            target = `Distans ${cur.distKm} kilometer`;
+            target = `Mål ${spokenTarget(cur.distKm, "distance_km", profile)}`;
           }
-          const paceSpoken = cur.tempoStr ? `, tempo ${fmtTempoSpoken(cur.tempoStr).replace("per kilometer", profile.paceSpoken)}` : "";
+          const paceSpoken = cur.tempoStr ? `, ${profile.paceLabel.toLowerCase()} ${fmtTempoSpokenForProfile(cur.tempoStr, profile.paceUnit, profile.paceSpoken)}` : "";
           if (target || paceSpoken) {
             await speakAndWait(`${target}${paceSpoken}.`, 6000);
           }
