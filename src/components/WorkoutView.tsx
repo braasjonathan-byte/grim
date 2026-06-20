@@ -523,9 +523,9 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   type BikeMode = "minkm" | "kmh" | "watt";
   const BIKE_MODE_KEY = "grim_bike_tempo_mode";
   const [bikeMode, setBikeModeState] = useState<BikeMode>(() => {
-    if (typeof window === "undefined") return "minkm";
+    if (typeof window === "undefined") return "kmh";
     const v = localStorage.getItem(BIKE_MODE_KEY);
-    return (v === "kmh" || v === "watt" || v === "minkm") ? v : "minkm";
+    return (v === "kmh" || v === "watt" || v === "minkm") ? v : "kmh";
   });
   const setBikeMode = (m: BikeMode) => {
     setBikeModeState(m);
