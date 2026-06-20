@@ -482,11 +482,11 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Vila (sek)</Label>
-                  <Input type="number" min={0} step={5} value={restSec} onChange={(e) => setRestSec(Math.max(0, parseInt(e.target.value) || 0))} />
+                  <Input type="number" min={0} step={5} value={restSec} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setRestSec(n); }} />
                 </div>
                 <div>
                   <Label className="text-xs">Uppvärmning (min)</Label>
-                  <Input type="number" min={0} value={warmupMin} onChange={(e) => setWarmupMin(Math.max(0, parseInt(e.target.value) || 0))} />
+                  <Input type="number" min={0} value={warmupMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setWarmupMin(n); }} />
                 </div>
               </div>
             </div>
