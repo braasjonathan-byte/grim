@@ -1114,6 +1114,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
+  const [inlineIntervalRunner, setInlineIntervalRunner] = useState<{
+    intervals: Array<{ time: string; tempo: string; dist: string }>;
+    exerciseName: string;
+    onComplete: (res: import("@/components/IntervalRunner").IntervalRunnerResult) => void | Promise<void>;
+  } | null>(null);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [activePlanWeek, setActivePlanWeek] = useState<number | null>(null);
   const [initialWeekSet, setInitialWeekSet] = useState(false);
