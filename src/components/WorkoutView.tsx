@@ -828,21 +828,26 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
         </div>
       </div>
-      {isBike && (
-        <div className="flex items-center gap-1">
+      {showModePicker && (
+        <div className="flex items-center gap-1 flex-wrap">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Enhet</span>
-          {([
-            { v: "kmh" as const, l: "km/h" },
-            { v: "minkm" as const, l: "min/km" },
-            { v: "watt" as const, l: "Watt" },
-          ]).map(opt => (
-            <button
-              key={opt.v}
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setBikeMode(opt.v); setTempo(""); setAutoField(null); }}
-              className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === opt.v ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
-            >{opt.l}</button>
-          ))}
+          {availableModes.map((m) => {
+            const label =
+              m === "kmh" ? "km/h" :
+              m === "minkm" ? "min/km" :
+              m === "watt" ? "Watt" :
+              m === "min100m" ? "min/100m" :
+              m === "min500m" ? "min/500m" :
+              m === "spm" ? "spm" : m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setBikeMode(m); setTempo(""); setAutoField(null); }}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === m ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+              >{label}</button>
+            );
+          })}
         </div>
       )}
       <GpsTrackerControl
@@ -918,17 +923,19 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           </div>
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{isBike && bikeMode === "watt" ? "Effekt (W)" : isBike && bikeMode === "kmh" ? "Hastighet (km/h)" : `Tempo (${tempoUnit})`}</label>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{bikeMode === "watt" ? "Effekt (W)" : bikeMode === "kmh" ? "Hastighet (km/h)" : bikeMode === "spm" ? "Frekvens (spm)" : `Tempo (${tempoUnit})`}</label>
           <input
             type="text"
-            inputMode={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "decimal" : "numeric"}
-            pattern={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "[0-9.,]*" : "[0-9:]*"}
+            inputMode={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "decimal" : "numeric"}
+            pattern={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "[0-9.,]*" : "[0-9:]*"}
             value={tempo}
             onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
             placeholder={
-              isSwim ? "t.ex. 1:50"
-                : isBike && bikeMode === "kmh" ? "t.ex. 25"
-                : isBike && bikeMode === "watt" ? "t.ex. 180"
+              bikeMode === "min100m" ? "t.ex. 1:50"
+                : bikeMode === "min500m" ? "t.ex. 2:00"
+                : bikeMode === "kmh" ? "t.ex. 25"
+                : bikeMode === "watt" ? "t.ex. 180"
+                : bikeMode === "spm" ? "t.ex. 120"
                 : "t.ex. 5:30"
             }
             className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
