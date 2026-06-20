@@ -176,7 +176,7 @@ export const exerciseLibrary: ExerciseInfo[] = [
   { name: "Löpning", category: "kondition", muscleGroup: "Helkropp" },
   { name: "Tröskellöpning", category: "kondition", muscleGroup: "Helkropp" },
   { name: "Tröskellöpning – Intervaller", category: "kondition", muscleGroup: "Helkropp" },
-  { name: "Intervallträning", category: "kondition", muscleGroup: "Helkropp" },
+  
   { name: "Löpning – Intervaller", category: "kondition", muscleGroup: "Helkropp" },
   { name: "Långpass", category: "kondition", muscleGroup: "Helkropp" },
   { name: "Långpass – Intervaller", category: "kondition", muscleGroup: "Helkropp" },
