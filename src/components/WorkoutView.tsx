@@ -666,11 +666,20 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
 
-  const distToTempoUnits = (d: number): number => isSwim ? d / 100 : d;
-  const tempoUnitsToDist = (u: number): number => isSwim ? u * 100 : u;
+  // Distance unit per tempo mode: min/100m → 0.1 km per "unit", min/500m → 0.5, others → 1
+  const kmPerTempoUnit = bikeMode === "min100m" ? 0.1 : bikeMode === "min500m" ? 0.5 : (isSwim ? 0.1 : 1);
+  const distToTempoUnits = (d: number): number => {
+    // Distance entered in km for most sports, in meters for swim
+    const dKm = isSwim ? d / 1000 : d;
+    return dKm / kmPerTempoUnit;
+  };
+  const tempoUnitsToDist = (u: number): number => {
+    const dKm = u * kmPerTempoUnit;
+    return isSwim ? dKm * 1000 : dKm;
+  };
 
-  // Watt mode: no relation between tempo and time/distance — skip auto-calc on tempo.
-  const tempoIsLinked = !(isBike && bikeMode === "watt");
+  // Watt / spm: no direct relation between tempo and time/distance — skip auto-calc on tempo.
+  const tempoIsLinked = bikeMode !== "watt" && bikeMode !== "spm";
 
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
     if (!tempoIsLinked) return;
