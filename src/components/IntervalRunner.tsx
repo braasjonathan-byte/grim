@@ -296,11 +296,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
           const distPart = cur.distKm > 0 ? `, distans ${spokenDist(cur.distKm)} kilometer` : "";
           await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
         }
-        if (voice && prefs.countdown) {
-          await speakAndWait("3", 900);
-          await speakAndWait("2", 900);
-          await speakAndWait("1", 900);
-        }
+        // Beep marks the exact moment the timer starts (no spoken countdown)
         beep(1000, 200);
         intervalStartMs.current = Date.now();
         intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
@@ -462,7 +458,8 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     onClose();
   };
 
-  const rawRemaining = Math.max(0, Math.ceil((phaseEnd - now) / 1000));
+  const displayNow = paused && pauseStarted.current ? pauseStarted.current : now;
+  const rawRemaining = Math.max(0, Math.ceil((phaseEnd - displayNow) / 1000));
   const remaining = plannedDurSec > 0 ? Math.min(rawRemaining, plannedDurSec) : rawRemaining;
   const running = phase !== "idle" && phase !== "done";
 
