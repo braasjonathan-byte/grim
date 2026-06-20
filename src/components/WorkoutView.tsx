@@ -8109,13 +8109,13 @@ const estimateCalories = (
                         // Detect lines with round structure: "X rundor:", "X rundor à Y min:", "X cirklar:", "X min AMRAP:", "X×Y min ...", or "X rundor: exercise / exercise / ..."
                         const roundsHeaderMatch = part.trim().match(/^(\d+)\s+(?:rundor|cirklar)(?:\s+à\s+\d+\s*min)?\s*:(.*)/i);
                         const amrapHeaderMatch = !roundsHeaderMatch ? part.trim().match(/^(\d+)\s*(min\s+)?amrap\s*:(.*)/i) : null;
-                        const intervalHeaderMatch = !roundsHeaderMatch && !amrapHeaderMatch ? part.trim().match(/^(\d+)\s*[×x]\s*(\d+)\s*min\b(.*)/i) : null;
-                        const namedIntervalMatch = !roundsHeaderMatch && !amrapHeaderMatch && !intervalHeaderMatch ? part.trim().match(/^(intervallöpning|intervall)\s*:\s*(.+?)\s+(\d+)\s*[×x]\s*(\d+)\s*min\s*$/i) : null;
+                        const intervalHeaderMatch = !roundsHeaderMatch && !amrapHeaderMatch ? part.trim().match(/^(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min\b(.*)/i) : null;
+                        const namedIntervalMatch = !roundsHeaderMatch && !amrapHeaderMatch && !intervalHeaderMatch ? part.trim().match(/^(intervallöpning|intervall)\s*:\s*(.+?)\s+(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min\s*$/i) : null;
 
                         // Running interval session: show per-interval TID/TEMPO/DISTANS fields
                         if (intervalHeaderMatch && (plan.session_name.toLowerCase().includes("intervall") || plan.session_name.toLowerCase().includes("löpning"))) {
                           const iCount = parseInt(intervalHeaderMatch[1]);
-                          const iDuration = parseInt(intervalHeaderMatch[2]);
+                          const iDuration = parseFloat(intervalHeaderMatch[2].replace(",", "."));
                           const restOfText = intervalHeaderMatch[3]?.trim() || "";
 
                           // Get tempo from plan.tempo
