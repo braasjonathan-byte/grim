@@ -307,6 +307,55 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   // awaiting speech (phase/phaseEnd aren't updated until the awaits finish).
   const advancingRef = useRef(false);
 
+  // Compute the achieved sec/km for an interval (uses GPS distance if available,
+  // otherwise the planned interval distance). Stores result in achievedSecPerKm
+  // and returns the value (0 if it couldn't be measured).
+  const captureAchievedPace = (idx: number): number => {
+    const cur = effective[idx];
+    if (!cur) return 0;
+    if (!intervalStartMs.current) return 0;
+    const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
+    let achPace = 0;
+    if (intervalStartKm.current != null && gps.isTracking) {
+      const dKm = gps.distanceKm - intervalStartKm.current;
+      if (dKm > 0.01) achPace = elapsedSec / dKm;
+    }
+    if (achPace === 0 && cur.distKm > 0) {
+      achPace = elapsedSec / cur.distKm;
+    }
+    if (achPace > 0) achievedSecPerKm.current[idx] = achPace;
+    return achPace;
+  };
+
+  // Spoken phrase for an achieved pace, adapted to the sport profile.
+  // achPace is always in seconds per kilometer.
+  const spokenAchievedPace = (achPace: number): string => {
+    const unit = profile.paceUnit;
+    if (unit === "km/h") {
+      const kmh = 3600 / achPace;
+      return `${kmh.toFixed(1).replace(".", " komma ")} kilometer i timmen`;
+    }
+    if (unit === "/100m") {
+      const sec = achPace / 10; // sec per 100 m
+      const mm = Math.floor(sec / 60);
+      const ss = Math.round(sec % 60);
+      if (mm === 0) return `tempo ${ss} sekunder per 100 meter`;
+      return `tempo ${mm} minuter ${ss} sekunder per 100 meter`;
+    }
+    if (unit === "/500m") {
+      const sec = achPace / 2; // sec per 500 m
+      const mm = Math.floor(sec / 60);
+      const ss = Math.round(sec % 60);
+      if (mm === 0) return `tempo ${ss} sekunder per 500 meter`;
+      return `tempo ${mm} minuter ${ss} sekunder per 500 meter`;
+    }
+    // default /km (löpning, promenad, skidåkning, skridsko, ...)
+    const mm = Math.floor(achPace / 60);
+    const ss = Math.round(achPace % 60);
+    return `tempo ${mm} minuter ${ss} sekunder per kilometer`;
+  };
+
+
   // Phase orchestration
   const startPhase = async (nextPhase: Phase, idx: number) => {
     if (advancingRef.current) return;
@@ -383,24 +432,10 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     } else if (phase === "interval") {
       // Stop-beep at end of interval
       beep(600, 220);
-      // Announce achieved pace for the interval just finished
-      const cur = effective[currentIdx];
-      const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
-      let achPace = 0;
-      if (intervalStartKm.current != null && gps.isTracking) {
-        const dKm = gps.distanceKm - intervalStartKm.current;
-        if (dKm > 0.01) achPace = elapsedSec / dKm;
-      }
-      if (achPace === 0 && cur && cur.distKm > 0) {
-        achPace = elapsedSec / cur.distKm;
-      }
-      if (achPace > 0) {
-        achievedSecPerKm.current[currentIdx] = achPace;
-      }
+      // Capture achieved pace for the interval just finished
+      const achPace = captureAchievedPace(currentIdx);
       if (prefs.enabled && achPace > 0) {
-        const mm = Math.floor(achPace / 60);
-        const ss = Math.round(achPace % 60);
-        speak(`Du höll tempo ${mm} minuter ${ss} sekunder per kilometer.`);
+        speak(`Du höll ${spokenAchievedPace(achPace)}.`);
       }
       if (currentIdx + 1 < totalIntervals) {
         void startPhase("rest", currentIdx);
@@ -458,6 +493,12 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const buildResult = (): IntervalRunnerResult => {
+    // If the user finishes mid-interval, capture the current one too so its
+    // measured tempo lands in the saved row.
+    if (phase === "interval") {
+      try { captureAchievedPace(currentIdx); } catch {}
+    }
+
     const intervals = effective.map((e, i) => {
       const ach = achievedSecPerKm.current[i];
       let tempoStr = e.tempoStr;
