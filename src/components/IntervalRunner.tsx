@@ -454,10 +454,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
-                <MapPin className="w-4 h-4" /> Spela in med GPS
-              </label>
             </div>
           )}
 
