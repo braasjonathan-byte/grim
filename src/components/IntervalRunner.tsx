@@ -12,30 +12,53 @@ import { toast } from "sonner";
 // Note: do NOT call cancel() before every speak — it kills queued utterances
 // and breaks the user-gesture chain on mobile, causing total silence.
 
-// Pick a female Swedish voice when available. Cached after first lookup.
+// Pick the most natural-sounding Swedish voice the device offers.
+// Cached after first lookup.
 let _pickedVoice: SpeechSynthesisVoice | null | undefined = undefined;
-const pickSwedishFemaleVoice = (): SpeechSynthesisVoice | null => {
+const pickSwedishVoice = (): SpeechSynthesisVoice | null => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
   if (_pickedVoice !== undefined) return _pickedVoice;
   const voices = window.speechSynthesis.getVoices?.() || [];
   if (!voices.length) return null; // not ready yet — try again next time
   const sv = voices.filter(v => /sv(-|_)?se/i.test(v.lang) || /^sv$/i.test(v.lang));
-  const femaleHints = /(female|kvinn|alva|alice|astrid|elin|klara|maja|nora|saga|elsa|google.*svensk)/i;
-  const maleHints = /(male|man|oskar|magnus|carl|erik|filip|gustav)/i;
-  let pick = sv.find(v => femaleHints.test(v.name))
-    || sv.find(v => !maleHints.test(v.name))
-    || sv[0]
-    || null;
+  if (!sv.length) return null;
+
+  // Score each voice: higher = more natural. Prefer cloud/neural voices.
+  const score = (v: SpeechSynthesisVoice): number => {
+    const n = v.name.toLowerCase();
+    let s = 0;
+    // Strong preference: Google's neural Swedish voice (Android/Chrome desktop)
+    if (n.includes("google")) s += 100;
+    // Microsoft "Online (Natural)" neural voices — very natural on Edge/Win11
+    if (n.includes("natural")) s += 90;
+    if (n.includes("online")) s += 60;
+    // Named Microsoft neural Swedish voices
+    if (/(hedvig|sofie|mattias)/.test(n)) s += 50;
+    // Apple "enhanced"/"premium" downloadable voices (macOS/iOS)
+    if (n.includes("premium")) s += 70;
+    if (n.includes("enhanced")) s += 55;
+    if (/(alva|klara|oskar)/.test(n)) s += 20;
+    // Remote/network voices tend to be neural
+    if (!v.localService) s += 40;
+    // Prefer female-sounding names slightly
+    if (/(alva|hedvig|sofie|klara|elin|maja|saga|astrid)/.test(n)) s += 5;
+    return s;
+  };
+
+  const pick = [...sv].sort((a, b) => score(b) - score(a))[0] || sv[0];
   _pickedVoice = pick;
+  try { console.info("[voice] picked", pick?.name, pick?.lang, "local:", pick?.localService); } catch {}
   return pick;
 };
 
 const applyVoice = (u: SpeechSynthesisUtterance) => {
-  const v = pickSwedishFemaleVoice();
+  const v = pickSwedishVoice();
   if (v) u.voice = v;
   u.lang = "sv-SE";
-  u.pitch = 1.15; // nudge toward female timbre on engines without a named female voice
+  u.pitch = 1.0;
+  u.rate = 1.0;
 };
+
 
 const speak = (text: string, opts: { flush?: boolean } = {}) => {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
