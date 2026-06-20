@@ -262,7 +262,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const handleStart = () => {
     // Prime synth inside the user gesture so audio is allowed later
     if (prefs.enabled) primeSpeech();
-    setShowVoicePrefs(true);
+    void actuallyStart();
   };
 
   const actuallyStart = async () => {
