@@ -38,4 +38,12 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android 11+ package visibility: required for @capacitor-community/text-to-speech
+         to bind to the installed TTS engine. Without this, tts.speak() is silent. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
 </manifest>
