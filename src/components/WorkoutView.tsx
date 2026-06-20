@@ -62,6 +62,27 @@ const normalizeTempoInput = (value: string): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
+const intervalRowTimeMinutes = (row: Pick<IntervalRow, "h" | "m" | "s">): number => {
+  const h = parseInt(row.h) || 0;
+  const m = parseInt(row.m) || 0;
+  const s = parseInt(row.s) || 0;
+  return h * 60 + m + s / 60;
+};
+
+const formatIntervalMinutes = (minutes: number): string => {
+  const rounded = Math.round(minutes * 1000) / 1000;
+  return String(rounded);
+};
+
+const toSavedIntervalRows = (rows: IntervalRow[]) => rows.map((row) => {
+  const time = intervalRowTimeMinutes(row);
+  return {
+    time: time > 0 ? formatIntervalMinutes(time) : "",
+    tempo: row.tempo,
+    dist: row.distance,
+  };
+});
+
 interface WorkoutViewProps {
   userId: string;
   isAdmin?: boolean;
