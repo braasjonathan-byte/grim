@@ -15,6 +15,11 @@ const clearAllCaches = async () => {
   await Promise.all(cacheNames.map((name) => caches.delete(name)));
 };
 
+// Defer PWA updates/reloads while a GPS recording is in progress to avoid losing data.
+const isGpsRecordingActive = () => {
+  try { return !!(window as any).__grimGpsActive; } catch { return false; }
+};
+
 const syncAppVersion = async () => {
   const previousVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
 
