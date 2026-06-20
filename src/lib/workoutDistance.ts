@@ -310,10 +310,21 @@ export const getWorkoutDistanceByCategory = ({
 
   // 1) Per-__cond__ entry — derive category from the exercise/line name in the key.
   if (weights) {
+    const seen = new Set<string>();
     for (const [key, value] of Object.entries(weights)) {
       if (!key.startsWith("__cond__")) continue;
       const data = parseConditioningPayload(value);
       if (!data) continue;
+
+      // Dedup identical payloads logged under multiple keys within the same workout.
+      const sig = JSON.stringify([
+        data.time ?? "",
+        data.dist ?? data.distance ?? "",
+        data.tempo ?? "",
+        data.intervals ?? null,
+      ]);
+      if (seen.has(sig)) continue;
+      seen.add(sig);
 
       let km = 0;
       const intervals = Array.isArray(data.intervals) ? data.intervals : [];
