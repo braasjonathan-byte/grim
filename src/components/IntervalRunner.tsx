@@ -178,13 +178,15 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       durSec = warmupMin * 60;
       if (voice) speak(`Uppvärmning ${warmupMin} minuter. Börja lugnt.`);
     } else if (nextPhase === "interval") {
-      durSec = intervalTargetSec;
+      const cur = effective[idx] || effective[0];
+      durSec = cur.durSec;
       // Read tempo BEFORE the start signal
       if (voice && prefs.announceIntervalNumber) {
-        await speakAndWait(`Intervall ${idx + 1} av ${numIntervals}.`, 1800);
+        await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
       }
-      if (voice && prefs.announceTempo) {
-        await speakAndWait(`Mål-tempo ${fmtTempoSpoken(tempo)}.`, 2600);
+      if (voice && prefs.announceTempo && cur.tempoStr) {
+        const distPart = cur.distKm > 0 ? `, distans ${cur.distKm} kilometer` : "";
+        await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
       }
       if (voice && prefs.countdown) {
         await speakAndWait("3, 2, 1, kör!", 1900);
