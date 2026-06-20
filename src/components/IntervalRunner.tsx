@@ -469,7 +469,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 {effective.map((e, i) => (
                   <div key={i} className="flex justify-between font-mono">
                     <span>#{i + 1}</span>
-                    <span>{fmtClock(e.durSec)} @ {e.tempoStr || "—"}/km · {e.distKm ? e.distKm + " km" : "—"}</span>
+                    <span>{fmtClock(e.durSec)} @ {e.tempoStr ? fmtTempoDisplay(e.tempoStr) : "—"}/km · {e.distKm ? e.distKm + " km" : "—"}</span>
                   </div>
                 ))}
                 <div className="pt-1 border-t border-border/50">Vila mellan: {restSec}s</div>
