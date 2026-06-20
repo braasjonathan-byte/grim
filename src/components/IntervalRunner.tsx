@@ -377,8 +377,9 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   }, [now, phase, paused, phaseEnd, currentIdx, totalIntervals, cooldownMin]);
 
   const handleStart = () => {
-    // Prime synth inside the user gesture so audio is allowed later
+    // Prime synth + audio inside the user gesture so audio is allowed later
     if (prefs.enabled) primeSpeech();
+    getAudioCtx();
     void actuallyStart();
   };
 
