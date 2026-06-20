@@ -118,9 +118,25 @@ export default function IntervalRowsEditor({ count, rows, onChange }: Props) {
 
   if (count <= 0) return null;
 
+  const isRowEmpty = (r: IntervalRow) =>
+    !r.h && !r.m && !r.s && !r.tempo.trim() && !r.distance.trim() && !r.pulse.trim();
+
   const update = (i: number, patch: Partial<IntervalRow>, changed?: "time" | "tempo" | "distance") => {
     const next = rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
     if (changed) next[i] = autoCalc(next[i], changed);
+    // Auto-replicate Intervall 1 to subsequent empty rows
+    if (i === 0) {
+      const src = next[0];
+      for (let j = 1; j < next.length; j++) {
+        if (isRowEmpty(rows[j])) {
+          next[j] = {
+            h: src.h, m: src.m, s: src.s,
+            tempo: src.tempo, distance: src.distance, pulse: src.pulse,
+            auto: src.auto ?? null,
+          };
+        }
+      }
+    }
     onChange(next);
   };
 
@@ -129,6 +145,11 @@ export default function IntervalRowsEditor({ count, rows, onChange }: Props) {
 
   return (
     <div className="space-y-3">
+      {count > 1 && (
+        <p className="text-[11px] text-muted-foreground italic">
+          Tips: fyll i Intervall 1 så kopieras värdena automatiskt till övriga tomma intervaller.
+        </p>
+      )}
       {rows.slice(0, count).map((r, i) => (
         <div key={i} className="bg-background/50 rounded-md p-2.5 border border-border space-y-2">
           <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
