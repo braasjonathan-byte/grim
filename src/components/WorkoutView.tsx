@@ -27,6 +27,7 @@ import { autoShareCompletion, removeAutoShareCompletion, previewWorkoutCaption }
 import { onPostInteraction } from "@/lib/postInteractionBus";
 import { fetchSocialWorkoutInteractions, mergeWorkoutComments, mergeWorkoutLikes, isSocialInteractionId, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import ExerciseInfoDialog from "@/components/ExerciseInfoDialog";
+import IntervalRunner from "@/components/IntervalRunner";
 import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
