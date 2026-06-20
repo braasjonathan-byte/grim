@@ -13,6 +13,10 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Opt out of Android 15+ forced edge-to-edge so the WebView does not
+             draw behind the system navigation/gesture bar. -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
+        <item name="android:fitsSystemWindows">true</item>
     </style>
 
 
