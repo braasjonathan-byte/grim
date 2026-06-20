@@ -7763,7 +7763,37 @@ const estimateCalories = (
                                     >
                                       <Plus className="w-3 h-3" /> Lägg till intervall
                                     </button>
-                                  </div>
+                                    {/^löpning.*intervall/i.test(condName || part) && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const intervals = (condSaved?.intervals || []) as Array<{ time: string; tempo: string; dist: string }>;
+                                          const valid = intervals.length > 0 && intervals.every((r) => {
+                                            const t = parseFloat(r.time) || 0;
+                                            const d = parseFloat((r.dist || '').replace(',', '.')) || 0;
+                                            const hasTempo = !!(r.tempo && r.tempo.trim());
+                                            return t > 0 && (hasTempo || d > 0);
+                                          });
+                                          if (!valid) {
+                                            toast.error("Fyll i tid + tempo (eller distans) för varje intervall först");
+                                            return;
+                                          }
+                                          setInlineIntervalRunner({
+                                            intervals,
+                                            exerciseName: condName || part,
+                                            onComplete: async (res) => {
+                                              if (res.intervals && res.intervals.length > 0) {
+                                                saveCondField('intervals', res.intervals as any);
+                                              }
+                                              setInlineIntervalRunner(null);
+                                            },
+                                          });
+                                        }}
+                                        className="flex items-center gap-1 text-[10px] font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors px-2 py-1 rounded-md ml-auto"
+                                      >
+                                        <Play className="w-3 h-3" /> Starta intervallträning
+                                      </button>
+                                    )}
                                   {/* Summary row */}
                                   {(() => {
                                     const intervalsData: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
