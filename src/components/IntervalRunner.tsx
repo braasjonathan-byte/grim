@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, Square, MapPin, Volume2, Settings as SettingsIcon } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
 import { toast } from "sonner";
+import { getIntervalProfile, UNIT_LABELS, UNIT_SHORT, valueToSeconds, spokenTarget, type IntervalUnit } from "@/lib/intervalSportProfiles";
 
 // ---------------- Voice helpers (Web Speech API) ----------------
 // Note: do NOT call cancel() before every speak — it kills queued utterances
@@ -231,15 +232,17 @@ const fmtClock = (sec: number) => {
 };
 
 export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Intervaller", onComplete, presetIntervals }: Props) => {
+  const profile = pickSwedishVoice && getIntervalProfile(exerciseName);
   const hasPreset = !!(presetIntervals && presetIntervals.length > 0);
   // Config (only used when no preset)
   const [numIntervals, setNumIntervals] = useState(hasPreset ? presetIntervals!.length : 6);
-  const [distM, setDistM] = useState(400); // meters per interval
-  const [tempo, setTempo] = useState("4:30"); // min/km
-  const [restSec, setRestSec] = useState(90);
-  const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : 10);
-  const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : 5);
-  const [useGps, setUseGps] = useState(true);
+  const [unit, setUnit] = useState<IntervalUnit>(profile.defaultUnit);
+  const [unitValue, setUnitValue] = useState<number>(profile.defaultValue);
+  const [tempo, setTempo] = useState("4:30"); // min/km (only used when unit is distance-based)
+  const [restSec, setRestSec] = useState(profile.defaultRestSec);
+  const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : profile.defaultWarmupMin);
+  const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : profile.defaultCooldownMin);
+  const [useGps, setUseGps] = useState(profile.supportsGps);
 
   // Voice settings dialog
   const [showVoicePrefs, setShowVoicePrefs] = useState(false);
@@ -288,11 +291,15 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         const tempoStr = (r.tempo || "").trim();
         let durSec = Math.round(tMin * 60);
         if (durSec <= 0 && dKm > 0 && tempoStr) durSec = Math.round(dKm * tempoToSecPerKm(tempoStr));
-        return { durSec: Math.max(5, durSec), tempoStr: tempoStr || tempo, distKm: dKm };
+        return { durSec: Math.max(5, durSec), tempoStr: tempoStr || tempo, distKm: dKm, unit: "time" as IntervalUnit, value: tMin };
       });
     }
-    const sec = Math.max(5, Math.round((distM / 1000) * tempoToSecPerKm(tempo)));
-    return Array.from({ length: numIntervals }, () => ({ durSec: sec, tempoStr: tempo, distKm: distM / 1000 }));
+    const paceMinPerKm = tempoToSecPerKm(tempo) / 60 || null;
+    const sec = valueToSeconds(unitValue, unit, paceMinPerKm);
+    const distKm =
+      unit === "distance_km" ? unitValue :
+      unit === "distance_m" ? unitValue / 1000 : 0;
+    return Array.from({ length: numIntervals }, () => ({ durSec: sec, tempoStr: tempo, distKm, unit, value: unitValue }));
   })();
   const totalIntervals = effective.length;
 
