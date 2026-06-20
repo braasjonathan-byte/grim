@@ -372,7 +372,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
               <div className="text-xs text-muted-foreground bg-muted/40 p-2 rounded">
                 Pass: {numIntervals} × {distM} m @ {tempo}/km, vila {restSec}s
                 {(warmupMin > 0 || cooldownMin > 0) && <> · {warmupMin} min upp / {cooldownMin} min ner</>}
-                <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(intervalTargetSec)}
+                <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
               </div>
 
               <label className="flex items-center gap-2 text-sm">
