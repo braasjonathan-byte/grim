@@ -457,6 +457,29 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
   };
 
   if (selectedName) {
+    const isInterval = /intervall/i.test(selectedName);
+    if (isInterval) {
+      return (
+        <div className="col-span-2 w-full space-y-1.5 mt-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <MapPin className="w-3 h-3" /> {selectedName}
+          </div>
+          <IntervalRunner
+            open
+            onClose={() => setSelectedName(null)}
+            exerciseName={selectedName}
+            onComplete={async (res) => {
+              const km = res.gpsDistanceKm && res.gpsDistanceKm > 0 ? res.gpsDistanceKm : res.totalDistKm;
+              const sec = Math.round(res.totalTimeMin * 60);
+              const route = res.route || [];
+              const name = selectedName;
+              setSelectedName(null);
+              await onSave(name, km, sec, route);
+            }}
+          />
+        </div>
+      );
+    }
     return (
       <div className="col-span-2 w-full space-y-1.5 mt-2">
         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -596,7 +619,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   });
   const [autoField, setAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
   const [showIntervalRunner, setShowIntervalRunner] = useState(false);
-  const isIntervalRun = /intervall/i.test(name) && !isBike && !isSwim;
+  const isIntervalRun = /intervall/i.test(name);
 
   const getTotalMin = () => {
     const h = parseInt(hours) || 0;

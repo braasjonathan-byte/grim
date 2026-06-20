@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, Square, MapPin, Volume2, Settings as SettingsIcon } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
 import { toast } from "sonner";
+import { getIntervalProfile, UNIT_LABELS, UNIT_SHORT, valueToSeconds, spokenTarget, type IntervalUnit } from "@/lib/intervalSportProfiles";
 
 // ---------------- Voice helpers (Web Speech API) ----------------
 // Note: do NOT call cancel() before every speak — it kills queued utterances
@@ -231,15 +232,17 @@ const fmtClock = (sec: number) => {
 };
 
 export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Intervaller", onComplete, presetIntervals }: Props) => {
+  const profile = getIntervalProfile(exerciseName);
   const hasPreset = !!(presetIntervals && presetIntervals.length > 0);
   // Config (only used when no preset)
   const [numIntervals, setNumIntervals] = useState(hasPreset ? presetIntervals!.length : 6);
-  const [distM, setDistM] = useState(400); // meters per interval
-  const [tempo, setTempo] = useState("4:30"); // min/km
-  const [restSec, setRestSec] = useState(90);
-  const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : 10);
-  const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : 5);
-  const [useGps, setUseGps] = useState(true);
+  const [unit, setUnit] = useState<IntervalUnit>(profile.defaultUnit);
+  const [unitValue, setUnitValue] = useState<number>(profile.defaultValue);
+  const [tempo, setTempo] = useState("4:30"); // min/km (only used when unit is distance-based)
+  const [restSec, setRestSec] = useState(profile.defaultRestSec);
+  const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : profile.defaultWarmupMin);
+  const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : profile.defaultCooldownMin);
+  const [useGps, setUseGps] = useState(profile.supportsGps);
 
   // Voice settings dialog
   const [showVoicePrefs, setShowVoicePrefs] = useState(false);
@@ -288,11 +291,15 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         const tempoStr = (r.tempo || "").trim();
         let durSec = Math.round(tMin * 60);
         if (durSec <= 0 && dKm > 0 && tempoStr) durSec = Math.round(dKm * tempoToSecPerKm(tempoStr));
-        return { durSec: Math.max(5, durSec), tempoStr: tempoStr || tempo, distKm: dKm };
+        return { durSec: Math.max(5, durSec), tempoStr: tempoStr || tempo, distKm: dKm, unit: "time" as IntervalUnit, value: tMin };
       });
     }
-    const sec = Math.max(5, Math.round((distM / 1000) * tempoToSecPerKm(tempo)));
-    return Array.from({ length: numIntervals }, () => ({ durSec: sec, tempoStr: tempo, distKm: distM / 1000 }));
+    const paceMinPerKm = tempoToSecPerKm(tempo) / 60 || null;
+    const sec = valueToSeconds(unitValue, unit, paceMinPerKm);
+    const distKm =
+      unit === "distance_km" ? unitValue :
+      unit === "distance_m" ? unitValue / 1000 : 0;
+    return Array.from({ length: numIntervals }, () => ({ durSec: sec, tempoStr: tempo, distKm, unit, value: unitValue }));
   })();
   const totalIntervals = effective.length;
 
@@ -323,15 +330,18 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         if (voice && prefs.announceIntervalNumber) {
           await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 4000);
         }
-        if (voice && prefs.announceTempo && cur.tempoStr) {
-          const spokenDist = (n: number) => {
-            const rounded = Math.round(n * 100) / 100;
-            if (rounded >= 1 && Number.isInteger(rounded)) return `${rounded}`;
-            const [intPart, decPart = ""] = rounded.toString().split(".");
-            return decPart ? `${intPart} komma ${decPart}` : `${intPart}`;
-          };
-          const distPart = cur.distKm > 0 ? `, distans ${spokenDist(cur.distKm)} kilometer` : "";
-          await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 6000);
+        if (voice && prefs.announceTempo) {
+          const cur2: any = cur;
+          let target = "";
+          if (cur2.unit && cur2.value) {
+            target = `Mål ${spokenTarget(cur2.value, cur2.unit, profile)}`;
+          } else if (cur.distKm > 0) {
+            target = `Distans ${cur.distKm} kilometer`;
+          }
+          const paceSpoken = cur.tempoStr ? `, tempo ${fmtTempoSpoken(cur.tempoStr).replace("per kilometer", profile.paceSpoken)}` : "";
+          if (target || paceSpoken) {
+            await speakAndWait(`${target}${paceSpoken}.`, 6000);
+          }
         }
         // Wait for the speech queue to fully drain before the start-beep,
         // so the pip never overlaps the spoken info.
@@ -527,20 +537,46 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
 
           {!running && phase !== "done" && !hasPreset && (
             <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">{exerciseName}</p>
+              <p className="text-xs text-muted-foreground">{exerciseName} <span className="opacity-60">· {profile.sport}</span></p>
+
+              <div>
+                <Label className="text-xs">Mät varje intervall i</Label>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {profile.availableUnits.map((u) => (
+                    <button
+                      key={u}
+                      type="button"
+                      onClick={() => {
+                        setUnit(u);
+                        // Reset to a sensible default value when changing unit
+                        if (u === "time") setUnitValue(60);
+                        else if (u === "distance_km") setUnitValue(1);
+                        else if (u === "distance_m") setUnitValue(profile.sport === "rodd" ? 500 : profile.sport === "simning" ? 100 : 400);
+                        else if (u === "calories") setUnitValue(10);
+                        else if (u === "reps") setUnitValue(50);
+                        else if (u === "laps") setUnitValue(2);
+                      }}
+                      className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${unit === u ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+                    >{UNIT_LABELS[u]}</button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Antal intervaller</Label>
                   <Input type="number" min={1} max={30} value={numIntervals} onChange={(e) => setNumIntervals(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} />
                 </div>
                 <div>
-                  <Label className="text-xs">Distans / intervall (m)</Label>
-                  <Input type="number" min={50} step={50} value={distM} onChange={(e) => setDistM(Math.max(50, parseInt(e.target.value) || 50))} />
+                  <Label className="text-xs">{UNIT_LABELS[unit]} / intervall</Label>
+                  <Input type="number" min={1} step={unit === "distance_km" ? 0.1 : 1} value={unitValue} onChange={(e) => setUnitValue(Math.max(1, parseFloat(e.target.value) || 1))} />
                 </div>
-                <div>
-                  <Label className="text-xs">Mål-tempo (min/km)</Label>
-                  <Input value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="4:30" />
-                </div>
+                {(unit === "distance_km" || unit === "distance_m") && (
+                  <div>
+                    <Label className="text-xs">{profile.paceLabel} ({profile.paceUnit})</Label>
+                    <Input value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="4:30" />
+                  </div>
+                )}
                 <div>
                   <Label className="text-xs">Vila (sek)</Label>
                   <Input type="number" min={0} step={5} value={restSec} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setRestSec(n); }} />
@@ -553,16 +589,25 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                   <Label className="text-xs">Nedvarvning (min)</Label>
                   <Input type="number" min={0} value={cooldownMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setCooldownMin(n); }} />
                 </div>
+                {profile.supportsGps && (
+                  <div className="col-span-2 flex items-center gap-2">
+                    <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} id="usegps" />
+                    <label htmlFor="usegps" className="text-xs">Spela in GPS-spår under passet</label>
+                  </div>
+                )}
               </div>
 
               <div className="text-xs text-muted-foreground bg-muted/40 p-2 rounded">
-                Pass: {numIntervals} × {distM} m @ {tempo}/km, vila {restSec}s
+                Pass: {numIntervals} × {unitValue} {UNIT_SHORT[unit]}
+                {(unit === "distance_km" || unit === "distance_m") && tempo ? <> @ {tempo}{profile.paceUnit}</> : null}
+                , vila {restSec}s
                 {(warmupMin > 0 || cooldownMin > 0) && <> · {warmupMin} min upp / {cooldownMin} min ner</>}
-                <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
+                <br />Mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
               </div>
 
             </div>
           )}
+
 
           {!running && phase !== "done" && hasPreset && (
             <div className="space-y-3">

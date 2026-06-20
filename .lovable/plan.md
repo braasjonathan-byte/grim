@@ -1,53 +1,81 @@
-## Funktion: Löpning – intervaller
+## Mål
+Utöka intervall-funktionen från enbart "Löpning – Intervaller" till alla konditionsformer i biblioteket, med sport-anpassade enheter (och fri enhet-väljare). När "Starta GPS-inspelning" trycks för en intervall-variant öppnas konfig-dialogen först.
 
-Ny övning som registreras som intervallpass, summeras in i löpningsstatistik, kan spelas in via GPS och spelar upp röstguidning under passet.
+## 1. Nya övningar i biblioteket
+I `src/data/exerciseLibrary.ts` läggs en "– Intervaller"-variant till för varje kondition-övning som inte redan har en:
 
-### 1. Övningen i biblioteket
-- Lägg till "Löpning – intervaller" i exercise-listan (kategori: kondition, typ: löpning) i samma fil där "Cykling" / "Löpning" definieras.
-- Aliasar matchar regex för löpning så att statistiken (km, tempo) räknas in i totalen för "Löpning".
+- Cykling – Intervaller
+- Simning – Intervaller
+- Roddmaskin – Intervaller
+- Crosstrainer – Intervaller
+- Trappmaskin – Intervaller
+- Promenad – Intervaller
+- Tröskellöpning – Intervaller (redan finns Löpning – Intervaller)
+- Långpass – Intervaller
+- Skidåkning – Intervaller (ny grundövning + variant)
+- Skridsko – Intervaller (ny)
+- Paddling/Kajak – Intervaller (ny)
+- Hopprep – Intervaller (ny)
+- Airbike – Intervaller (ny)
+- SkiErg – Intervaller (ny)
+- Vandring – Intervaller (ny)
+- Spinning – Intervaller (ny)
 
-### 2. Registrering av passet
-När övningen läggs till i ett pass öppnas en konfigurationsdialog där användaren väljer:
-- Antal intervaller (1–30)
-- Längd per intervall (sekunder eller meter)
-- Vila per intervall (sekunder)
-- Mål-tempo per intervall (min/km) – ett värde eller per-intervall lista
-- Ev. uppvärmning / nedvarvning (min)
+Alla får `category: "kondition"`, `muscleGroup: "Helkropp"`. Aliasar i `cardioVisibility.ts` och `workoutDistance.ts` utökas så statistik fortsätter mappa rätt (t.ex. "cykling – intervaller" → cykling-kategorin).
 
-Konfigen sparas i `workout_plans.details` som en strukturerad rad, t.ex.:
-`Löpning – intervaller: 6×400m @ 4:30/km, vila 90s`
+## 2. Sport-profil för intervall-enheter
+Ny modul `src/lib/intervalSportProfiles.ts` med en tabell:
 
-### 3. Statistik
-- Distansen (antal intervaller × distans + ev. uppvärmning/nedvarvning) summeras in i veckans/månadens "Löpning" i statistikvyn.
-- Loggas i `workout_completions.logged_distance_km` + `logged_tempo` som vanlig löpning.
+```
+{ matcher: regex, defaultUnit, availableUnits, paceLabel, paceUnit, distanceUnit }
+```
 
-### 4. GPS-inspelning
-- I `useGpsTracker` läggs stöd för intervall-läge: tracker tar emot intervall-konfig och markerar lap vid varje intervall/vila-byte.
-- Knapp "Spela in med GPS" visas på intervall-kortet precis som för vanlig löpning.
+Exempel:
+- Löpning/Promenad/Vandring → distans i meter ELLER tid, tempo i min/km
+- Cykling/Spinning → distans i km ELLER tid, fart i km/h, valbart watt-mål
+- Simning → distans i meter (25/50 m), tempo i min/100 m
+- Roddmaskin/SkiErg → distans i meter, tempo i /500 m
+- Airbike → kalorier ELLER tid
+- Crosstrainer/Trappmaskin → tid (+ valfri distans)
+- Hopprep → tid ELLER antal hopp
+- Skidåkning/Skridsko/Paddling → distans i km ELLER tid
 
-### 5. Röstguidning (Web Speech API – `speechSynthesis`)
-- Inställning per pass i en ny "Röstguidning"-meny som öppnas vid Start:
-  - På/av
-  - Läs upp: kommande tempo, intervallnummer, vila-start, vila kvar, nedräkning 3-2-1
-  - Språk: sv-SE
-- Flöde under passet:
-  1. "Intervall 1 av 6, mål-tempo 4:30 per kilometer" (tempo läses upp **före** startsignalen)
-  2. Kort paus → "3, 2, 1, kör"
-  3. När intervallen är klar: "Vila 90 sekunder"
-  4. Innan nästa: upprepa från 1 med nästa tempo
-- All TTS-kod i ny modul `src/lib/intervalVoice.ts`.
+En `getIntervalProfile(exerciseName)` returnerar profilen via första matchande regex; fallback = löpning. Användaren kan i konfig-dialogen även byta enhet manuellt via en dropdown ("Mät i: tid / distans / kalorier / hopp").
 
-### 6. UI-komponenter
-- `IntervalConfigDialog.tsx` – konfig vid tillägg/redigering.
-- `IntervalRunner.tsx` – run-time vy med timer, lap-räknare, GPS-status och röstkontroll.
-- Start-knappen på passet öppnar en liten "Röstinställningar"-popover innan timern startar.
+## 3. IntervalRunner generaliseras
+`src/components/IntervalRunner.tsx` är idag löpnings-centrerad. Ändringar:
+- Tar emot `exerciseName` (finns redan) och hämtar `profile` via `getIntervalProfile`.
+- Röstguidning, etiketter ("Tempo", "Distans") och enhet i HUD kommer från profilen.
+- Mål-typen per intervall blir `{ type: "time" | "distance" | "calories" | "reps", value, target? }` istället för dagens tid/tempo-par. Befintliga löpnings-preset mappas in via en migrations-funktion så inget existerande pass bryts.
 
-### Tekniska detaljer
-- Filer som ändras: `src/components/WorkoutView.tsx` (exercise-detektering, render), `src/hooks/useGpsTracker.ts` (lap-stöd), `src/lib/gpsSettings.ts` (voice-prefs).
-- Nya filer: `src/lib/intervalVoice.ts`, `src/components/IntervalConfigDialog.tsx`, `src/components/IntervalRunner.tsx`.
-- Inga schema-ändringar krävs – konfig sparas i text i `workout_plans.details`, loggar i befintliga `logged_distance_km/logged_tempo`.
+## 4. Konfig-dialog (`IntervalRowsEditor` + ny wrapper)
+`IntervalRowsEditor.tsx` byggs ut med:
+- Toppmeny för enhet (defaultar från profilen).
+- Kolumnrubriker/placeholders följer enheten.
+- Kalkylator-fält fyller i härledda värden där det går (samma logik som löpning idag, men generisk).
 
-### Att bekräfta innan jag bygger
-1. Ska distansen anges i **meter per intervall** (t.ex. 400 m) eller **tid per intervall** (t.ex. 60 s)? Eller båda som val?
-2. Ska röstguidningen alltid använda webbläsarens röst (gratis, fungerar offline) eller vill du ha en mer naturlig AI-röst via Lovable AI (kostar tokens)?
-3. Ska intervallpasset kunna sparas som mall i veckoplanen, eller bara läggas till i dagens pass?
+Ny komponent `IntervalConfigDialog.tsx` som wrappar editorn i en bottom-sheet och returnerar konfigen via `onConfirm`. Återanvänds från:
+- Plan-editorn när en "– Intervaller"-övning läggs till.
+- GPS-knappen (se nästa punkt).
+
+## 5. GPS-knappen i `WorkoutView.tsx`
+I `DayGpsRecorder` (rad ~436) och i pass-kortets "Starta GPS-inspelning" (~254):
+- När den valda övningen matchar `/intervall/i` öppnas `IntervalConfigDialog` istället för att starta GPS direkt.
+- När användaren bekräftar konfigen startas både GPS-inspelning OCH `IntervalRunner` (lap-markering vid varje intervall/vila-byte enligt befintliga lap-stöd i `useGpsTracker`).
+- Vid stopp sparas distans/tempo/laps som idag.
+- Vanliga (icke-intervall) övningar fortsätter starta GPS direkt – ingen ändring.
+
+## 6. Statistik & filter
+- `cardioVisibility.ts`: regex för varje kategori utökas med "– intervaller"-suffix där det behövs (löpning-regexen täcker redan "intervaller?löpning"; cykling/simning/rodd/trapp/promenad får motsvarande). Inga nya kategorier – intervall-pass räknas in i sin grundsport.
+- `workoutDistance.ts`: detektering uppdateras så cykling/rodd/etc. – intervaller summeras rätt.
+
+## Tekniska detaljer
+- Filer som ändras: `src/data/exerciseLibrary.ts`, `src/components/IntervalRunner.tsx`, `src/components/IntervalRowsEditor.tsx`, `src/components/WorkoutView.tsx`, `src/lib/cardioVisibility.ts`, `src/lib/workoutDistance.ts`.
+- Nya filer: `src/lib/intervalSportProfiles.ts`, `src/components/IntervalConfigDialog.tsx`.
+- Inga DB-ändringar – konfig ligger fortsatt i `workout_plans.details` som text, loggar i `workout_completions.logged_distance_km/logged_tempo`.
+- Röstguidning på svenska behålls; texten anpassas per sport ("Intervall 3 av 6, mål 500 meter på roddmaskinen").
+
+## Att bekräfta
+1. OK med listan ovan av 16 sporter, eller ska någon läggas till/tas bort?
+2. För simning – ska "längd" (bana) väljas som enhet (25 m / 50 m) eller bara meter generellt?
+3. Ska GPS-knappen på en intervall-variant där GPS inte ger värde (t.ex. Roddmaskin – Intervaller, Airbike – Intervaller) gömmas helt, eller visas men bara starta intervall-timern utan GPS?
