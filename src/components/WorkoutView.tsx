@@ -7770,8 +7770,10 @@ const estimateCalories = (
                                           const intervalSetsKey = `__sets__interval_${condName || part}`;
                                           const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
                                           const isDone = setsStr[ii] === "1";
+                                          const labelInfo = rowLabels[ii];
                                           return (
                                             <button
+                                              title={labelInfo.title}
                                               onClick={async (e) => {
                                                 e.stopPropagation();
                                                 const arr = Array.from({ length: activeCount }, (_, j) => setsStr[j] === "1");
@@ -7789,10 +7791,12 @@ const estimateCalories = (
                                               className={`w-7 h-7 rounded-md border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
                                                 isDone
                                                   ? "bg-success border-success text-success-foreground"
-                                                  : "border-primary/30 text-muted-foreground hover:border-primary"
+                                                  : labelInfo.isWork
+                                                    ? "border-primary/30 text-muted-foreground hover:border-primary"
+                                                    : "border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:border-amber-500"
                                               }`}
                                             >
-                                              {isDone ? <Check className="w-3.5 h-3.5" /> : ii + 1}
+                                              {isDone ? <Check className="w-3.5 h-3.5" /> : labelInfo.label}
                                             </button>
                                           );
                                         })()}
