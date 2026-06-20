@@ -227,7 +227,13 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
           await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
         }
         if (voice && prefs.announceTempo && cur.tempoStr) {
-          const distPart = cur.distKm > 0 ? `, distans ${cur.distKm} kilometer` : "";
+          const spokenDist = (n: number) => {
+            const rounded = Math.round(n * 100) / 100;
+            if (rounded >= 1 && Number.isInteger(rounded)) return `${rounded}`;
+            const [intPart, decPart = ""] = rounded.toString().split(".");
+            return decPart ? `${intPart} komma ${decPart}` : `${intPart}`;
+          };
+          const distPart = cur.distKm > 0 ? `, distans ${spokenDist(cur.distKm)} kilometer` : "";
           await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
         }
         if (voice && prefs.countdown) {
