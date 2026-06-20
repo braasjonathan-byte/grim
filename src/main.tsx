@@ -28,6 +28,8 @@ const syncAppVersion = async () => {
     return;
   }
 
+  if (isGpsRecordingActive()) return; // skip — GPS pass pågår
+
   if (previousVersion === APP_VERSION || sessionStorage.getItem(APP_VERSION_REFRESH_KEY) === "1") {
     localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
     return;
