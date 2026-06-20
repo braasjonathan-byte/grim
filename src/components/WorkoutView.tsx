@@ -577,28 +577,52 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
 }) => {
   const isSwim = /simning|simma|sim\b/i.test(name);
   const isBike = /cykling|cykel|cykla|spinning/i.test(name);
-  type BikeMode = "minkm" | "kmh" | "watt";
-  const BIKE_MODE_KEY = "grim_bike_tempo_mode";
-  const [bikeMode, setBikeModeState] = useState<BikeMode>(() => {
-    if (typeof window === "undefined") return "kmh";
-    const v = localStorage.getItem(BIKE_MODE_KEY);
-    return (v === "kmh" || v === "watt" || v === "minkm") ? v : "kmh";
+  const isRow = /roddmaskin|^rodd|skierg|ski erg|paddling|kajak|kanot/i.test(name);
+  const isAirbike = /airbike|air\s*bike|assault\s*bike/i.test(name);
+  const isCrosstrainer = /crosstrainer/i.test(name);
+  const isStair = /trappmaskin|stair\s*machine|stairclimber/i.test(name);
+  const isJumprope = /hopprep|jump rope/i.test(name);
+
+  // Per-sport tempo modes. First entry is the default.
+  type TempoMode = "minkm" | "kmh" | "watt" | "min100m" | "min500m" | "spm";
+  const availableModes: TempoMode[] = (() => {
+    if (isSwim) return ["min100m", "minkm", "kmh"];
+    if (isRow) return ["min500m", "minkm", "watt", "kmh"];
+    if (isBike) return ["kmh", "minkm", "watt"];
+    if (isAirbike) return ["watt", "kmh", "minkm"];
+    if (isCrosstrainer) return ["kmh", "minkm", "watt"];
+    if (isStair) return ["spm", "kmh"];
+    if (isJumprope) return ["spm", "minkm"];
+    // Default (löpning, promenad, vandring, skidåkning, skridsko, …)
+    return ["minkm", "kmh"];
+  })();
+  const TEMPO_MODE_KEY = `grim_tempo_mode__${(name || "default").toLowerCase().replace(/\s+/g, "_")}`;
+  const [bikeMode, setBikeModeState] = useState<TempoMode>(() => {
+    if (typeof window === "undefined") return availableModes[0];
+    const v = localStorage.getItem(TEMPO_MODE_KEY) as TempoMode | null;
+    return v && (availableModes as string[]).includes(v) ? v : availableModes[0];
   });
-  const setBikeMode = (m: BikeMode) => {
+  const setBikeMode = (m: TempoMode) => {
     setBikeModeState(m);
-    try { localStorage.setItem(BIKE_MODE_KEY, m); } catch {}
+    try { localStorage.setItem(TEMPO_MODE_KEY, m); } catch {}
   };
+  // Show the mode picker whenever the sport has >1 relevant choice
+  const showModePicker = availableModes.length > 1;
   // Effective unit semantics
-  const tempoUnit = isSwim
-    ? "min/100m"
-    : isBike
-      ? (bikeMode === "kmh" ? "km/h" : bikeMode === "watt" ? "W" : "min/km")
-      : "min/km";
-  const tempoDisplayUnit = isSwim
-    ? "/100m"
-    : isBike
-      ? (bikeMode === "kmh" ? " km/h" : bikeMode === "watt" ? " W" : "/km")
-      : "/km";
+  const tempoUnit =
+    bikeMode === "kmh" ? "km/h" :
+    bikeMode === "watt" ? "W" :
+    bikeMode === "min100m" ? "min/100m" :
+    bikeMode === "min500m" ? "min/500m" :
+    bikeMode === "spm" ? "spm" :
+    "min/km";
+  const tempoDisplayUnit =
+    bikeMode === "kmh" ? " km/h" :
+    bikeMode === "watt" ? " W" :
+    bikeMode === "min100m" ? "/100m" :
+    bikeMode === "min500m" ? "/500m" :
+    bikeMode === "spm" ? " spm" :
+    "/km";
   const distUnit = isSwim ? "m" : "km";
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
@@ -642,18 +666,27 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
 
-  const distToTempoUnits = (d: number): number => isSwim ? d / 100 : d;
-  const tempoUnitsToDist = (u: number): number => isSwim ? u * 100 : u;
+  // Distance unit per tempo mode: min/100m → 0.1 km per "unit", min/500m → 0.5, others → 1
+  const kmPerTempoUnit = bikeMode === "min100m" ? 0.1 : bikeMode === "min500m" ? 0.5 : (isSwim ? 0.1 : 1);
+  const distToTempoUnits = (d: number): number => {
+    // Distance entered in km for most sports, in meters for swim
+    const dKm = isSwim ? d / 1000 : d;
+    return dKm / kmPerTempoUnit;
+  };
+  const tempoUnitsToDist = (u: number): number => {
+    const dKm = u * kmPerTempoUnit;
+    return isSwim ? dKm * 1000 : dKm;
+  };
 
-  // Watt mode: no relation between tempo and time/distance — skip auto-calc on tempo.
-  const tempoIsLinked = !(isBike && bikeMode === "watt");
+  // Watt / spm: no direct relation between tempo and time/distance — skip auto-calc on tempo.
+  const tempoIsLinked = bikeMode !== "watt" && bikeMode !== "spm";
 
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
     if (!tempoIsLinked) return;
     const t = totalMin;
     const d = parseFloat(distVal.replace(",", "."));
     // For km/h mode, tempo is plain number
-    const isKmh = isBike && bikeMode === "kmh";
+    const isKmh = bikeMode === "kmh";
     const tempoNumeric = isKmh ? parseFloat(tempoVal.replace(",", ".")) : NaN;
     const p = isKmh ? (tempoNumeric > 0 ? tempoNumeric : null) : parseTempoToMin(tempoVal);
     const filled = {
@@ -722,7 +755,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       const tVal = parseFloat(data.time);
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
-        if (isBike && bikeMode === "kmh") {
+        if (bikeMode === "kmh") {
           data.tempo = String(Math.round((60 * dVal / tVal) * 10) / 10);
         } else {
           const dUnits = distToTempoUnits(dVal);
@@ -795,21 +828,26 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
         </div>
       </div>
-      {isBike && (
-        <div className="flex items-center gap-1">
+      {showModePicker && (
+        <div className="flex items-center gap-1 flex-wrap">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Enhet</span>
-          {([
-            { v: "kmh" as const, l: "km/h" },
-            { v: "minkm" as const, l: "min/km" },
-            { v: "watt" as const, l: "Watt" },
-          ]).map(opt => (
-            <button
-              key={opt.v}
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setBikeMode(opt.v); setTempo(""); setAutoField(null); }}
-              className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === opt.v ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
-            >{opt.l}</button>
-          ))}
+          {availableModes.map((m) => {
+            const label =
+              m === "kmh" ? "km/h" :
+              m === "minkm" ? "min/km" :
+              m === "watt" ? "Watt" :
+              m === "min100m" ? "min/100m" :
+              m === "min500m" ? "min/500m" :
+              m === "spm" ? "spm" : m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setBikeMode(m); setTempo(""); setAutoField(null); }}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === m ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+              >{label}</button>
+            );
+          })}
         </div>
       )}
       <GpsTrackerControl
@@ -885,17 +923,19 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           </div>
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{isBike && bikeMode === "watt" ? "Effekt (W)" : isBike && bikeMode === "kmh" ? "Hastighet (km/h)" : `Tempo (${tempoUnit})`}</label>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{bikeMode === "watt" ? "Effekt (W)" : bikeMode === "kmh" ? "Hastighet (km/h)" : bikeMode === "spm" ? "Frekvens (spm)" : `Tempo (${tempoUnit})`}</label>
           <input
             type="text"
-            inputMode={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "decimal" : "numeric"}
-            pattern={isBike && (bikeMode === "kmh" || bikeMode === "watt") ? "[0-9.,]*" : "[0-9:]*"}
+            inputMode={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "decimal" : "numeric"}
+            pattern={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "[0-9.,]*" : "[0-9:]*"}
             value={tempo}
             onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
             placeholder={
-              isSwim ? "t.ex. 1:50"
-                : isBike && bikeMode === "kmh" ? "t.ex. 25"
-                : isBike && bikeMode === "watt" ? "t.ex. 180"
+              bikeMode === "min100m" ? "t.ex. 1:50"
+                : bikeMode === "min500m" ? "t.ex. 2:00"
+                : bikeMode === "kmh" ? "t.ex. 25"
+                : bikeMode === "watt" ? "t.ex. 180"
+                : bikeMode === "spm" ? "t.ex. 120"
                 : "t.ex. 5:30"
             }
             className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
