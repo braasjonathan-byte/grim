@@ -3678,6 +3678,9 @@ const estimateCalories = (
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
 
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
+    const savedIntervalRows = isInterval && condIntervalsInput.trim()
+      ? toSavedIntervalRows(condIntervalRows.slice(0, parseInt(condIntervalsInput.trim()) || 0))
+      : [];
 
     let newDetails: string;
     let wasReplace = false;
@@ -3699,6 +3702,12 @@ const estimateCalories = (
     }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    if (savedIntervalRows.length > 0) {
+      await updateCompletionWeights(plan.week, plan.day, (existing) => ({
+        ...existing,
+        [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify({ intervals: savedIntervalRows }),
+      }));
+    }
     if (wasReplace) skipDayResetRef.current = true;
     setPlans((prev) => prev.map((p) => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
