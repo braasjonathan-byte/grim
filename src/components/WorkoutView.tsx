@@ -10327,6 +10327,15 @@ const estimateCalories = (
         </div>
       </div>
     )}
+    {inlineIntervalRunner && (
+      <IntervalRunner
+        open={true}
+        onClose={() => setInlineIntervalRunner(null)}
+        exerciseName={inlineIntervalRunner.exerciseName}
+        presetIntervals={inlineIntervalRunner.intervals}
+        onComplete={inlineIntervalRunner.onComplete}
+      />
+    )}
     </>);
 
 };
