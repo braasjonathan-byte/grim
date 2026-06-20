@@ -160,6 +160,14 @@ export default function IntervalRowsEditor({ count, rows, onChange }: Props) {
               <input
                 type="text" inputMode="numeric" pattern="[0-9:]*" value={r.tempo}
                 onChange={(e) => update(i, { tempo: e.target.value }, "tempo")}
+                onBlur={(e) => {
+                  const raw = e.target.value.trim();
+                  if (!raw || raw.includes(":")) return;
+                  if (!/^\d+(?:[.,]\d+)?$/.test(raw)) return;
+                  const v = parseFloat(raw.replace(",", "."));
+                  if (!isFinite(v) || v <= 0) return;
+                  update(i, { tempo: formatTempo(v) }, "tempo");
+                }}
                 placeholder="5:30" className={inputCls} />
               <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">min/km</span>
             </div>
