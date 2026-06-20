@@ -82,6 +82,8 @@ type Props = {
   onClose: () => void;
   exerciseName?: string;
   onComplete?: (data: IntervalRunnerResult) => void | Promise<void>;
+  /** Pre-filled intervals from the workout card. time = minutes, dist = km, tempo = min/km (e.g. "4:30"). */
+  presetIntervals?: Array<{ time: string; tempo: string; dist: string }>;
 };
 
 // ---------------- Voice prefs (persisted) ----------------
@@ -107,14 +109,15 @@ const fmtClock = (sec: number) => {
   return `${m}:${String(s).padStart(2, "0")}`;
 };
 
-export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Intervaller", onComplete }: Props) => {
-  // Config
-  const [numIntervals, setNumIntervals] = useState(6);
+export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Intervaller", onComplete, presetIntervals }: Props) => {
+  const hasPreset = !!(presetIntervals && presetIntervals.length > 0);
+  // Config (only used when no preset)
+  const [numIntervals, setNumIntervals] = useState(hasPreset ? presetIntervals!.length : 6);
   const [distM, setDistM] = useState(400); // meters per interval
   const [tempo, setTempo] = useState("4:30"); // min/km
   const [restSec, setRestSec] = useState(90);
-  const [warmupMin, setWarmupMin] = useState(10);
-  const [cooldownMin, setCooldownMin] = useState(5);
+  const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : 10);
+  const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : 5);
   const [useGps, setUseGps] = useState(false);
 
   // Voice settings dialog
@@ -148,7 +151,23 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     const n = parseFloat(t.replace(",", "."));
     return Number.isFinite(n) ? n * 60 : 0;
   };
-  const intervalTargetSec = Math.max(5, Math.round((distM / 1000) * tempoToSecPerKm(tempo)));
+
+  // Effective per-interval plan (preset wins, otherwise N copies of config)
+  const effective = (() => {
+    if (hasPreset) {
+      return presetIntervals!.map((r) => {
+        const tMin = parseFloat(r.time) || 0;
+        const dKm = parseFloat((r.dist || "").replace(",", ".")) || 0;
+        const tempoStr = (r.tempo || "").trim();
+        let durSec = Math.round(tMin * 60);
+        if (durSec <= 0 && dKm > 0 && tempoStr) durSec = Math.round(dKm * tempoToSecPerKm(tempoStr));
+        return { durSec: Math.max(5, durSec), tempoStr: tempoStr || tempo, distKm: dKm };
+      });
+    }
+    const sec = Math.max(5, Math.round((distM / 1000) * tempoToSecPerKm(tempo)));
+    return Array.from({ length: numIntervals }, () => ({ durSec: sec, tempoStr: tempo, distKm: distM / 1000 }));
+  })();
+  const totalIntervals = effective.length;
 
   // Phase orchestration
   const startPhase = async (nextPhase: Phase, idx: number) => {
@@ -159,13 +178,15 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       durSec = warmupMin * 60;
       if (voice) speak(`Uppvärmning ${warmupMin} minuter. Börja lugnt.`);
     } else if (nextPhase === "interval") {
-      durSec = intervalTargetSec;
+      const cur = effective[idx] || effective[0];
+      durSec = cur.durSec;
       // Read tempo BEFORE the start signal
       if (voice && prefs.announceIntervalNumber) {
-        await speakAndWait(`Intervall ${idx + 1} av ${numIntervals}.`, 1800);
+        await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
       }
-      if (voice && prefs.announceTempo) {
-        await speakAndWait(`Mål-tempo ${fmtTempoSpoken(tempo)}.`, 2600);
+      if (voice && prefs.announceTempo && cur.tempoStr) {
+        const distPart = cur.distKm > 0 ? `, distans ${cur.distKm} kilometer` : "";
+        await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
       }
       if (voice && prefs.countdown) {
         await speakAndWait("3, 2, 1, kör!", 1900);
@@ -197,7 +218,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (phase === "warmup") {
       void startPhase("interval", 0);
     } else if (phase === "interval") {
-      if (currentIdx + 1 < numIntervals) {
+      if (currentIdx + 1 < totalIntervals) {
         void startPhase("rest", currentIdx);
       } else if (cooldownMin > 0) {
         void startPhase("cooldown", currentIdx);
@@ -209,7 +230,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     } else if (phase === "cooldown") {
       void startPhase("done", currentIdx);
     }
-  }, [now, phase, paused, phaseEnd, currentIdx, numIntervals, cooldownMin]);
+  }, [now, phase, paused, phaseEnd, currentIdx, totalIntervals, cooldownMin]);
 
   const handleStart = () => {
     // Prime synth inside the user gesture so audio is allowed later
@@ -252,17 +273,18 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   };
 
   const buildResult = (): IntervalRunnerResult => {
-    const target = intervalTargetSec / 60; // minutes per interval
-    const intervals = Array.from({ length: numIntervals }, () => ({
-      time: String(Math.round(target * 100) / 100),
-      dist: String(Math.round((distM / 1000) * 1000) / 1000),
-      tempo,
+    const intervals = effective.map((e) => ({
+      time: String(Math.round((e.durSec / 60) * 100) / 100),
+      dist: e.distKm > 0 ? String(Math.round(e.distKm * 1000) / 1000) : "",
+      tempo: e.tempoStr,
     }));
     const warm = warmupMin > 0 ? { time: String(warmupMin), dist: "", tempo: "" } : null;
     const cool = cooldownMin > 0 ? { time: String(cooldownMin), dist: "", tempo: "" } : null;
     const all = [warm, ...intervals, cool].filter(Boolean) as { time: string; dist: string; tempo: string }[];
-    const totalDistKm = numIntervals * (distM / 1000);
-    const totalTimeMin = (warmupMin + cooldownMin) + numIntervals * target + (numIntervals - 1) * (restSec / 60);
+    const totalDistKm = effective.reduce((acc, e) => acc + (e.distKm || 0), 0);
+    const totalSec = effective.reduce((acc, e) => acc + e.durSec, 0);
+    const totalTimeMin = (warmupMin + cooldownMin) + totalSec / 60 + Math.max(0, effective.length - 1) * (restSec / 60);
+    const avgTempo = effective[0]?.tempoStr || tempo;
     let gpsDistanceKm: number | undefined;
     let route: [number, number][] | undefined;
     if (gps.isTracking) {
@@ -270,7 +292,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       gpsDistanceKm = res.distanceKm;
       route = res.route;
     }
-    return { intervals: all, totalDistKm, totalTimeMin, tempo, gpsDistanceKm, route };
+    return { intervals: all, totalDistKm, totalTimeMin, tempo: avgTempo, gpsDistanceKm, route };
   };
 
   const handleFinish = async () => {
@@ -317,7 +339,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             </DialogTitle>
           </DialogHeader>
 
-          {!running && phase !== "done" && (
+          {!running && phase !== "done" && !hasPreset && (
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground">{exerciseName}</p>
               <div className="grid grid-cols-2 gap-3">
@@ -350,9 +372,39 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
               <div className="text-xs text-muted-foreground bg-muted/40 p-2 rounded">
                 Pass: {numIntervals} × {distM} m @ {tempo}/km, vila {restSec}s
                 {(warmupMin > 0 || cooldownMin > 0) && <> · {warmupMin} min upp / {cooldownMin} min ner</>}
-                <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(intervalTargetSec)}
+                <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
               </div>
 
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
+                <MapPin className="w-4 h-4" /> Spela in med GPS
+              </label>
+            </div>
+          )}
+
+          {!running && phase !== "done" && hasPreset && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">{exerciseName}</p>
+              <div className="text-xs bg-muted/40 p-2 rounded space-y-1">
+                <div className="font-semibold">{totalIntervals} intervaller från din planering</div>
+                {effective.map((e, i) => (
+                  <div key={i} className="flex justify-between font-mono">
+                    <span>#{i + 1}</span>
+                    <span>{fmtClock(e.durSec)} @ {e.tempoStr || "—"}/km · {e.distKm ? e.distKm + " km" : "—"}</span>
+                  </div>
+                ))}
+                <div className="pt-1 border-t border-border/50">Vila mellan: {restSec}s</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Vila (sek)</Label>
+                  <Input type="number" min={0} step={5} value={restSec} onChange={(e) => setRestSec(Math.max(0, parseInt(e.target.value) || 0))} />
+                </div>
+                <div>
+                  <Label className="text-xs">Uppvärmning (min)</Label>
+                  <Input type="number" min={0} value={warmupMin} onChange={(e) => setWarmupMin(Math.max(0, parseInt(e.target.value) || 0))} />
+                </div>
+              </div>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
                 <MapPin className="w-4 h-4" /> Spela in med GPS
@@ -364,7 +416,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             <div className="space-y-4 text-center py-4">
               <div className="text-6xl font-bold tabular-nums">{fmtClock(remaining)}</div>
               <div className="text-sm text-muted-foreground">
-                {phase === "interval" && <>Mål-tempo: <strong>{tempo}/km</strong> · {distM} m</>}
+                {phase === "interval" && (() => { const cur = effective[currentIdx] || effective[0]; return <>Mål-tempo: <strong>{cur.tempoStr || tempo}/km</strong>{cur.distKm > 0 ? <> · {cur.distKm} km</> : null}</>; })()}
                 {phase === "rest" && <>Vila innan intervall {currentIdx + 2}</>}
               </div>
               {gps.isTracking && (

@@ -1114,6 +1114,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
+  const [inlineIntervalRunner, setInlineIntervalRunner] = useState<{
+    intervals: Array<{ time: string; tempo: string; dist: string }>;
+    exerciseName: string;
+    onComplete: (res: import("@/components/IntervalRunner").IntervalRunnerResult) => void | Promise<void>;
+  } | null>(null);
   const [currentWeek, setCurrentWeek] = useState(1);
   const [activePlanWeek, setActivePlanWeek] = useState<number | null>(null);
   const [initialWeekSet, setInitialWeekSet] = useState(false);
@@ -7758,6 +7763,37 @@ const estimateCalories = (
                                     >
                                       <Plus className="w-3 h-3" /> Lägg till intervall
                                     </button>
+                                    {/^löpning.*intervall/i.test(condName || part) && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const intervals = (condSaved?.intervals || []) as Array<{ time: string; tempo: string; dist: string }>;
+                                          const valid = intervals.length > 0 && intervals.every((r) => {
+                                            const t = parseFloat(r.time) || 0;
+                                            const d = parseFloat((r.dist || '').replace(',', '.')) || 0;
+                                            const hasTempo = !!(r.tempo && r.tempo.trim());
+                                            return t > 0 && (hasTempo || d > 0);
+                                          });
+                                          if (!valid) {
+                                            toast.error("Fyll i tid + tempo (eller distans) för varje intervall först");
+                                            return;
+                                          }
+                                          setInlineIntervalRunner({
+                                            intervals,
+                                            exerciseName: condName || part,
+                                            onComplete: async (res) => {
+                                              if (res.intervals && res.intervals.length > 0) {
+                                                saveCondField('intervals', res.intervals as any);
+                                              }
+                                              setInlineIntervalRunner(null);
+                                            },
+                                          });
+                                        }}
+                                        className="flex items-center gap-1 text-[10px] font-bold text-primary-foreground bg-primary hover:bg-primary/90 transition-colors px-2 py-1 rounded-md ml-auto"
+                                      >
+                                        <Play className="w-3 h-3" /> Starta intervallträning
+                                      </button>
+                                    )}
                                   </div>
                                   {/* Summary row */}
                                   {(() => {
@@ -10321,6 +10357,15 @@ const estimateCalories = (
           </button>
         </div>
       </div>
+    )}
+    {inlineIntervalRunner && (
+      <IntervalRunner
+        open={true}
+        onClose={() => setInlineIntervalRunner(null)}
+        exerciseName={inlineIntervalRunner.exerciseName}
+        presetIntervals={inlineIntervalRunner.intervals}
+        onComplete={inlineIntervalRunner.onComplete}
+      />
     )}
     </>);
 
