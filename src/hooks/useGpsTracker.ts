@@ -56,7 +56,15 @@ let snapshot: Snapshot = {
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 const emit = () => { listeners.forEach(l => l()); };
-const setSnap = (patch: Partial<Snapshot>) => { snapshot = { ...snapshot, ...patch }; emit(); };
+const setSnap = (patch: Partial<Snapshot>) => {
+  snapshot = { ...snapshot, ...patch };
+  // Expose global flag so the PWA update/reload logic in main.tsx can defer
+  // reloads while a GPS session is active (avoid losing recorded data).
+  try { (window as any).__grimGpsActive = snapshot.isTracking; } catch {}
+  emit();
+};
+
+export const isGpsRecordingActive = () => snapshot.isTracking;
 
 let watchId: number | null = null;
 let wakeLock: WakeLockSentinel | null = null;

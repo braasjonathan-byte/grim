@@ -15,6 +15,11 @@ const clearAllCaches = async () => {
   await Promise.all(cacheNames.map((name) => caches.delete(name)));
 };
 
+// Defer PWA updates/reloads while a GPS recording is in progress to avoid losing data.
+const isGpsRecordingActive = () => {
+  try { return !!(window as any).__grimGpsActive; } catch { return false; }
+};
+
 const syncAppVersion = async () => {
   const previousVersion = localStorage.getItem(APP_VERSION_STORAGE_KEY);
 
@@ -22,6 +27,8 @@ const syncAppVersion = async () => {
     localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
     return;
   }
+
+  if (isGpsRecordingActive()) return; // skip — GPS pass pågår
 
   if (previousVersion === APP_VERSION || sessionStorage.getItem(APP_VERSION_REFRESH_KEY) === "1") {
     localStorage.setItem(APP_VERSION_STORAGE_KEY, APP_VERSION);
@@ -48,6 +55,7 @@ if (!IS_NATIVE_CAPACITOR) {
 // clear caches and hard-reload so PWA users always get the freshest build.
 const REMOTE_VERSION_REFRESH_KEY = "grim_remote_refresh_at";
 const checkRemoteVersion = async () => {
+  if (isGpsRecordingActive()) return; // skip — GPS pass pågår
   try {
     // Bust any intermediate cache (SW, CDN, browser) by adding a timestamp.
     const res = await fetch(`/version.json?t=${Date.now()}`, {
@@ -116,6 +124,7 @@ document.addEventListener("visibilitychange", () => {
 // Force service worker update check on every app load + periodically
 if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   const checkForUpdate = () => {
+    if (isGpsRecordingActive()) return; // skip — GPS pass pågår
     navigator.serviceWorker.getRegistration().then((reg) => {
       if (reg) reg.update().catch(() => {});
     });
@@ -130,16 +139,30 @@ if (!IS_NATIVE_CAPACITOR && "serviceWorker" in navigator) {
   });
 
   let refreshing = false;
+  let pendingReload = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
-    const key = "grim_sw_reload";
-    const last = sessionStorage.getItem(key);
-    const now = Date.now();
-    if (!last || now - Number(last) > 10000) {
-      refreshing = true;
-      sessionStorage.setItem(key, String(now));
-      window.location.reload();
-    }
+    const doReload = () => {
+      if (isGpsRecordingActive()) {
+        // Re-check once GPS stops
+        if (!pendingReload) {
+          pendingReload = true;
+          const id = setInterval(() => {
+            if (!isGpsRecordingActive()) { clearInterval(id); doReload(); }
+          }, 5000);
+        }
+        return;
+      }
+      const key = "grim_sw_reload";
+      const last = sessionStorage.getItem(key);
+      const now = Date.now();
+      if (!last || now - Number(last) > 10000) {
+        refreshing = true;
+        sessionStorage.setItem(key, String(now));
+        window.location.reload();
+      }
+    };
+    doReload();
   });
 }
 
