@@ -300,9 +300,13 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
           await speakAndWait("3", 900);
           await speakAndWait("2", 900);
           await speakAndWait("1", 900);
+          beep(1000, 200);
           speak("Kör!", { flush: true });
         } else if (voice) {
+          beep(1000, 200);
           speak("Kör!", { flush: true });
+        } else {
+          beep(1000, 200);
         }
         intervalStartMs.current = Date.now();
         intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
