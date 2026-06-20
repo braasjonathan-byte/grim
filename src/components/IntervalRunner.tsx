@@ -224,6 +224,22 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (phase === "warmup") {
       void startPhase("interval", 0);
     } else if (phase === "interval") {
+      // Announce achieved pace for the interval just finished
+      const cur = effective[currentIdx];
+      const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
+      let achievedSecPerKm = 0;
+      if (intervalStartKm.current != null && gps.isTracking) {
+        const dKm = gps.distanceKm - intervalStartKm.current;
+        if (dKm > 0.01) achievedSecPerKm = elapsedSec / dKm;
+      }
+      if (achievedSecPerKm === 0 && cur && cur.distKm > 0) {
+        achievedSecPerKm = elapsedSec / cur.distKm;
+      }
+      if (prefs.enabled && achievedSecPerKm > 0) {
+        const mm = Math.floor(achievedSecPerKm / 60);
+        const ss = Math.round(achievedSecPerKm % 60);
+        speak(`Du höll tempo ${mm} minuter ${ss} sekunder per kilometer.`);
+      }
       if (currentIdx + 1 < totalIntervals) {
         void startPhase("rest", currentIdx);
       } else if (cooldownMin > 0) {
