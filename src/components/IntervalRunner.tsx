@@ -196,6 +196,9 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       } else if (voice) {
         await speakAndWait("Kör!", 700);
       }
+      // Mark start for achieved-pace calculation
+      intervalStartMs.current = Date.now();
+      intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
     } else if (nextPhase === "rest") {
       durSec = restSec;
       if (voice && prefs.announceRest) speak(`Vila ${restSec} sekunder.`);
