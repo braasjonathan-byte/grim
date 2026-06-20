@@ -3623,34 +3623,20 @@ const estimateCalories = (
     const isInterval = conditioningDialog.exerciseName.toLowerCase().includes("intervall");
     const isStair = isStairMachine(conditioningDialog.exerciseName);
     
-    let perRowEntries: string[] | null = null;
     if (isInterval && condIntervalsInput.trim()) {
       const n = parseInt(condIntervalsInput.trim()) || 0;
-      const rows = condIntervalRows.slice(0, n);
-      const summary = summarizeIntervalRows(rows);
+      const summary = summarizeIntervalRows(condIntervalRows.slice(0, n));
       if (summary.hasAny) {
-        // Emit one entry per interval row so each becomes its own row in the workout
-        const fmtRowTime = (r: IntervalRow): string => {
-          const h = parseInt(r.h) || 0;
-          const m = parseInt(r.m) || 0;
-          const s = parseInt(r.s) || 0;
-          const parts: string[] = [];
-          if (h > 0) parts.push(`${h}h`);
-          if (m > 0) parts.push(`${m}m`);
-          if (s > 0) parts.push(`${s}s`);
-          return parts.join(" ");
-        };
-        perRowEntries = rows.map((r, idx) => {
-          const parts: string[] = [];
-          const t = fmtRowTime(r);
-          if (t) parts.push(t);
-          if (r.tempo.trim()) parts.push(`${r.tempo.trim()}/km`);
-          if (r.distance.trim()) parts.push(`${r.distance.trim()} km`);
-          if (r.pulse.trim()) parts.push(`${r.pulse.trim()} bpm`);
-          if (condRestInput.trim() && idx < rows.length - 1) parts.push(`${condRestInput.trim()} min vila`);
-          const label = `${conditioningDialog.exerciseName} (Intervall ${idx + 1}/${n})`;
-          return parts.length ? `${label} — ${parts.join(", ")}` : label;
-        });
+        const timeStr = summary.totalTimeMin > 0
+          ? String(Math.round(summary.totalTimeMin * 100) / 100)
+          : "?";
+        infoParts.push(`${n}×${timeStr} min`);
+        if (summary.totalDistanceKm > 0) {
+          infoParts.push(`${Math.round(summary.totalDistanceKm * 100) / 100} km`);
+        }
+        if (summary.avgTempoStr) infoParts.push(`${summary.avgTempoStr}/km`);
+        if (summary.avgPulse > 0) infoParts.push(`${summary.avgPulse} bpm`);
+        if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
       } else {
         const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
         infoParts.push(intervalPart);
@@ -3664,13 +3650,13 @@ const estimateCalories = (
       const time = condTimeTotalMin;
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
-    } else if (!perRowEntries) {
+    } else {
       if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
       if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
     }
-    if (condPulseInput.trim() && !perRowEntries) infoParts.push(`${condPulseInput.trim()} bpm`);
+    if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
 
-    const singleEntry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
+    const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
 
     let newDetails: string;
     let wasReplace = false;
@@ -3678,12 +3664,7 @@ const estimateCalories = (
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
       const separator = plan.details.includes("\n") ? "\n" : "; ";
       const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-      if (perRowEntries && perRowEntries.length > 0) {
-        // Replace the target line with the first row, then splice the rest in after it
-        lines.splice(replaceExerciseTarget.lineIndex, 1, ...perRowEntries);
-      } else {
-        lines[replaceExerciseTarget.lineIndex] = singleEntry;
-      }
+      lines[replaceExerciseTarget.lineIndex] = entry;
       newDetails = lines.join(separator);
       wasReplace = true;
       oldName = replaceExerciseTarget.name;
@@ -3691,10 +3672,9 @@ const estimateCalories = (
       setShowExercisePicker(null);
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
-      const addBlock = perRowEntries && perRowEntries.length > 0 ? perRowEntries.join(joinSep) : singleEntry;
       newDetails = isWarmupMode
-        ? (plan.details ? `${addBlock}${joinSep}${plan.details}` : addBlock)
-        : (plan.details ? `${plan.details}${joinSep}${addBlock}` : addBlock);
+        ? (plan.details ? `${entry}${joinSep}${plan.details}` : entry)
+        : (plan.details ? `${plan.details}${joinSep}${entry}` : entry);
     }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
