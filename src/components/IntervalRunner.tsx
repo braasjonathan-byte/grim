@@ -56,12 +56,36 @@ const primeSpeech = () => {
   } catch {}
 };
 
-const fmtTempoSpoken = (tempo: string): string => {
-  // tempo like "4:30" -> "fyra minuter trettio sekunder per kilometer"
+// Normalize tempo to mm:ss display string. "4" -> "4:00", "4:5" -> "4:05".
+const fmtTempoDisplay = (tempo: string): string => {
+  if (!tempo) return "";
   const m = tempo.trim().match(/^(\d+)[:.](\d+)$/);
-  if (m) return `${parseInt(m[1])} minuter ${parseInt(m[2])} sekunder per kilometer`;
+  if (m) return `${parseInt(m[1])}:${String(parseInt(m[2])).padStart(2, "0")}`;
   const n = parseFloat(tempo.replace(",", "."));
-  if (Number.isFinite(n)) return `${n} per kilometer`;
+  if (Number.isFinite(n)) {
+    const mm = Math.floor(n);
+    const ss = Math.round((n - mm) * 60);
+    return `${mm}:${String(ss).padStart(2, "0")}`;
+  }
+  return tempo;
+};
+
+const fmtTempoSpoken = (tempo: string): string => {
+  // Natural Swedish: "4:30" -> "fyra trettio per kilometer", "4:00" -> "fyra minuter per kilometer"
+  const m = tempo.trim().match(/^(\d+)[:.](\d+)$/);
+  if (m) {
+    const mm = parseInt(m[1]);
+    const ss = parseInt(m[2]);
+    if (ss === 0) return `${mm} minuter per kilometer`;
+    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
+  }
+  const n = parseFloat(tempo.replace(",", "."));
+  if (Number.isFinite(n)) {
+    const mm = Math.floor(n);
+    const ss = Math.round((n - mm) * 60);
+    if (ss === 0) return `${mm} minuter per kilometer`;
+    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
+  }
   return tempo;
 };
 
