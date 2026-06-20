@@ -56,12 +56,36 @@ const primeSpeech = () => {
   } catch {}
 };
 
-const fmtTempoSpoken = (tempo: string): string => {
-  // tempo like "4:30" -> "fyra minuter trettio sekunder per kilometer"
+// Normalize tempo to mm:ss display string. "4" -> "4:00", "4:5" -> "4:05".
+const fmtTempoDisplay = (tempo: string): string => {
+  if (!tempo) return "";
   const m = tempo.trim().match(/^(\d+)[:.](\d+)$/);
-  if (m) return `${parseInt(m[1])} minuter ${parseInt(m[2])} sekunder per kilometer`;
+  if (m) return `${parseInt(m[1])}:${String(parseInt(m[2])).padStart(2, "0")}`;
   const n = parseFloat(tempo.replace(",", "."));
-  if (Number.isFinite(n)) return `${n} per kilometer`;
+  if (Number.isFinite(n)) {
+    const mm = Math.floor(n);
+    const ss = Math.round((n - mm) * 60);
+    return `${mm}:${String(ss).padStart(2, "0")}`;
+  }
+  return tempo;
+};
+
+const fmtTempoSpoken = (tempo: string): string => {
+  // Natural Swedish: "4:30" -> "fyra trettio per kilometer", "4:00" -> "fyra minuter per kilometer"
+  const m = tempo.trim().match(/^(\d+)[:.](\d+)$/);
+  if (m) {
+    const mm = parseInt(m[1]);
+    const ss = parseInt(m[2]);
+    if (ss === 0) return `${mm} minuter per kilometer`;
+    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
+  }
+  const n = parseFloat(tempo.replace(",", "."));
+  if (Number.isFinite(n)) {
+    const mm = Math.floor(n);
+    const ss = Math.round((n - mm) * 60);
+    if (ss === 0) return `${mm} minuter per kilometer`;
+    return `${mm} ${ss < 10 ? "noll " + ss : ss} per kilometer`;
+  }
   return tempo;
 };
 
@@ -118,7 +142,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const [restSec, setRestSec] = useState(90);
   const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : 10);
   const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : 5);
-  const [useGps, setUseGps] = useState(false);
+  const [useGps, setUseGps] = useState(true);
 
   // Voice settings dialog
   const [showVoicePrefs, setShowVoicePrefs] = useState(false);
@@ -430,10 +454,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 <br />Total löpdistans: <strong>{(numIntervals * distM / 1000).toFixed(2)} km</strong> · mål per intervall: {fmtClock(effective[0]?.durSec || 0)}
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
-                <MapPin className="w-4 h-4" /> Spela in med GPS
-              </label>
             </div>
           )}
 
@@ -445,7 +465,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 {effective.map((e, i) => (
                   <div key={i} className="flex justify-between font-mono">
                     <span>#{i + 1}</span>
-                    <span>{fmtClock(e.durSec)} @ {e.tempoStr || "—"}/km · {e.distKm ? e.distKm + " km" : "—"}</span>
+                    <span>{fmtClock(e.durSec)} @ {e.tempoStr ? fmtTempoDisplay(e.tempoStr) : "—"}/km · {e.distKm ? e.distKm + " km" : "—"}</span>
                   </div>
                 ))}
                 <div className="pt-1 border-t border-border/50">Vila mellan: {restSec}s</div>
@@ -460,10 +480,6 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                   <Input type="number" min={0} value={warmupMin} onChange={(e) => setWarmupMin(Math.max(0, parseInt(e.target.value) || 0))} />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={useGps} onCheckedChange={(v) => setUseGps(!!v)} />
-                <MapPin className="w-4 h-4" /> Spela in med GPS
-              </label>
             </div>
           )}
 
@@ -471,7 +487,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             <div className="space-y-4 text-center py-4">
               <div className="text-6xl font-bold tabular-nums">{fmtClock(remaining)}</div>
               <div className="text-sm text-muted-foreground">
-                {phase === "interval" && (() => { const cur = effective[currentIdx] || effective[0]; return <>Mål-tempo: <strong>{cur.tempoStr || tempo}/km</strong>{cur.distKm > 0 ? <> · {cur.distKm} km</> : null}</>; })()}
+                {phase === "interval" && (() => { const cur = effective[currentIdx] || effective[0]; return <>Mål-tempo: <strong>{fmtTempoDisplay(cur.tempoStr || tempo)}/km</strong>{cur.distKm > 0 ? <> · {cur.distKm} km</> : null}</>; })()}
                 {phase === "rest" && <>Vila innan intervall {currentIdx + 2}</>}
               </div>
               {gps.isTracking && (
