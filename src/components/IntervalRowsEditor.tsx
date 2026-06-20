@@ -121,14 +121,20 @@ export default function IntervalRowsEditor({ count, rows, onChange }: Props) {
   const isRowEmpty = (r: IntervalRow) =>
     !r.h && !r.m && !r.s && !r.tempo.trim() && !r.distance.trim() && !r.pulse.trim();
 
+  const rowsMatch = (a: IntervalRow, b: IntervalRow) =>
+    a.h === b.h && a.m === b.m && a.s === b.s &&
+    a.tempo === b.tempo && a.distance === b.distance && a.pulse === b.pulse;
+
   const update = (i: number, patch: Partial<IntervalRow>, changed?: "time" | "tempo" | "distance") => {
     const next = rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
     if (changed) next[i] = autoCalc(next[i], changed);
-    // Auto-replicate Intervall 1 to subsequent empty rows
+    // Auto-replicate Intervall 1 to subsequent rows that are still empty
+    // or that currently mirror the previous Intervall 1 (i.e. haven't been edited manually).
     if (i === 0) {
+      const prevSrc = rows[0];
       const src = next[0];
       for (let j = 1; j < next.length; j++) {
-        if (isRowEmpty(rows[j])) {
+        if (isRowEmpty(rows[j]) || rowsMatch(rows[j], prevSrc)) {
           next[j] = {
             h: src.h, m: src.m, s: src.s,
             tempo: src.tempo, distance: src.distance, pulse: src.pulse,
