@@ -4,19 +4,22 @@ interface AutoSaveInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   initialValue: string;
   onSave: (value: string) => void;
   debounceMs?: number;
+  normalizeOnBlur?: (value: string) => string;
 }
 
 /**
  * Input that auto-saves on every keystroke (debounced) and on blur.
  * Also saves before page unload to prevent data loss on app restart.
  */
-const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, ...props }: AutoSaveInputProps) => {
+const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur, ...props }: AutoSaveInputProps) => {
   const [value, setValue] = useState(initialValue);
   const valueRef = useRef(initialValue);
   const lastSaved = useRef(initialValue);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onSaveRef = useRef(onSave);
+  const normalizeOnBlurRef = useRef(normalizeOnBlur);
   onSaveRef.current = onSave;
+  normalizeOnBlurRef.current = normalizeOnBlur;
 
   // Sync from external initialValue ONLY when it represents a genuinely new value
   // (not a stale echo of what we already saved or what the user is currently typing).
@@ -62,7 +65,12 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, ...props }: Aut
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    doSave(value);
+    const normalized = normalizeOnBlurRef.current ? normalizeOnBlurRef.current(value) : value;
+    if (normalized !== value) {
+      setValue(normalized);
+      valueRef.current = normalized;
+    }
+    doSave(normalized);
   }, [value, doSave]);
 
   // Save on page unload / visibility hidden (mobile close) / component unmount
