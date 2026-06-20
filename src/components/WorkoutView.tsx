@@ -7738,9 +7738,17 @@ const estimateCalories = (
                                   </div>
                                   {/* Per-interval rows - use saved intervals length or plan count */}
                                   {(() => {
-                                    const savedIntervals: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
+                                    const savedIntervals: Array<{time: string; tempo: string; dist: string; kind?: "warmup" | "cooldown"}> = condSaved?.intervals || [];
                                     const activeCount = savedIntervals.length > 0 ? savedIntervals.length : intervalCount;
-                                    
+                                    // Precompute display labels: U for warmup, N for cooldown, sequential number for work intervals
+                                    let workNum = 0;
+                                    const rowLabels = Array.from({ length: activeCount }, (_, ii) => {
+                                      const k = savedIntervals[ii]?.kind;
+                                      if (k === "warmup") return { label: "U", title: "Uppvärmning", isWork: false };
+                                      if (k === "cooldown") return { label: "N", title: "Nedvarvning", isWork: false };
+                                      workNum += 1;
+                                      return { label: String(workNum), title: `Intervall ${workNum}`, isWork: true };
+                                    });
                                     return Array.from({ length: activeCount }, (_, ii) => {
                                     const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: planTempo || '', dist: '' };
                                     const rowTempo = normalizeTempoInput(row.tempo || "");
