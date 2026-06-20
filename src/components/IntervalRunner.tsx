@@ -368,7 +368,8 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     onClose();
   };
 
-  const remaining = Math.max(0, Math.ceil((phaseEnd - now) / 1000));
+  const rawRemaining = Math.max(0, Math.ceil((phaseEnd - now) / 1000));
+  const remaining = plannedDurSec > 0 ? Math.min(rawRemaining, plannedDurSec) : rawRemaining;
   const running = phase !== "idle" && phase !== "done";
 
   const phaseLabel = (() => {
