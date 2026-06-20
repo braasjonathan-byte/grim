@@ -774,6 +774,48 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           liveAutoCalc(totMin, tempo, distStr, "distance");
         }}
       />
+      {isIntervalRun && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowIntervalRunner(true); }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition"
+        >
+          <Play className="w-4 h-4" /> Starta intervallpass
+        </button>
+      )}
+      {isIntervalRun && (
+        <IntervalRunner
+          open={showIntervalRunner}
+          onClose={() => setShowIntervalRunner(false)}
+          exerciseName={name}
+          onComplete={async (res) => {
+            const km = res.gpsDistanceKm && res.gpsDistanceKm > 0 ? res.gpsDistanceKm : res.totalDistKm;
+            const totMin = res.totalTimeMin;
+            const hh = Math.floor(totMin / 60);
+            const rem = totMin - hh * 60;
+            const mm = Math.floor(rem);
+            const ss = Math.round((rem - mm) * 60);
+            setHours(hh > 0 ? String(hh) : "");
+            setMinutes(String(mm));
+            setSeconds(ss > 0 ? String(ss) : "");
+            const distStr = String(Math.round(km * 100) / 100);
+            setDistance(distStr);
+            setTempo(res.tempo);
+            if (res.route && res.route.length > 1) setRoute(res.route);
+            // Persist with intervals so per-interval stats work
+            await onSave({
+              time: String(Math.round(totMin * 100) / 100),
+              dist: distStr,
+              tempo: res.tempo,
+              pulse: pulse.trim() || undefined,
+              intervals: res.intervals,
+              route: res.route && res.route.length > 1 ? res.route : undefined,
+            });
+            setIsEditing(false);
+          }}
+        />
+      )}
+
       <div className="grid grid-cols-[1fr_auto] gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
