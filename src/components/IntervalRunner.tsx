@@ -131,6 +131,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const [phase, setPhase] = useState<Phase>("idle");
   const [currentIdx, setCurrentIdx] = useState(0); // 0-based current interval
   const [phaseEnd, setPhaseEnd] = useState<number>(0); // epoch ms
+  const [plannedDurSec, setPlannedDurSec] = useState<number>(0);
   const [now, setNow] = useState<number>(Date.now());
   const [paused, setPaused] = useState(false);
   const pauseAcc = useRef(0);
