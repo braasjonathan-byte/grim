@@ -55,6 +55,7 @@ if (!IS_NATIVE_CAPACITOR) {
 // clear caches and hard-reload so PWA users always get the freshest build.
 const REMOTE_VERSION_REFRESH_KEY = "grim_remote_refresh_at";
 const checkRemoteVersion = async () => {
+  if (isGpsRecordingActive()) return; // skip — GPS pass pågår
   try {
     // Bust any intermediate cache (SW, CDN, browser) by adding a timestamp.
     const res = await fetch(`/version.json?t=${Date.now()}`, {
