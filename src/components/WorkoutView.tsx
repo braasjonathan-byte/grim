@@ -3715,7 +3715,7 @@ const estimateCalories = (
 
     // Show propagation dialog if this was a replacement in plan mode
     if (wasReplace && mode === "plan" && plan.week > 0) {
-      setReplacePropagateDialog({ oldExerciseName: oldName, newEntry: entry, sourcePlanId: plan.id });
+      setReplacePropagateDialog({ oldExerciseName: oldName, newEntry: perRowEntries?.[0] ?? singleEntry, sourcePlanId: plan.id });
     }
   };
 
