@@ -237,9 +237,12 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
           await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
         }
         if (voice && prefs.countdown) {
-          await speakAndWait("3, 2, 1, kör!", 1900);
+          await speakAndWait("3", 900);
+          await speakAndWait("2", 900);
+          await speakAndWait("1", 900);
+          speak("Kör!", { flush: true });
         } else if (voice) {
-          await speakAndWait("Kör!", 700);
+          speak("Kör!", { flush: true });
         }
         intervalStartMs.current = Date.now();
         intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
