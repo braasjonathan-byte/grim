@@ -109,14 +109,15 @@ const fmtClock = (sec: number) => {
   return `${m}:${String(s).padStart(2, "0")}`;
 };
 
-export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Intervaller", onComplete }: Props) => {
-  // Config
-  const [numIntervals, setNumIntervals] = useState(6);
+export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Intervaller", onComplete, presetIntervals }: Props) => {
+  const hasPreset = !!(presetIntervals && presetIntervals.length > 0);
+  // Config (only used when no preset)
+  const [numIntervals, setNumIntervals] = useState(hasPreset ? presetIntervals!.length : 6);
   const [distM, setDistM] = useState(400); // meters per interval
   const [tempo, setTempo] = useState("4:30"); // min/km
   const [restSec, setRestSec] = useState(90);
-  const [warmupMin, setWarmupMin] = useState(10);
-  const [cooldownMin, setCooldownMin] = useState(5);
+  const [warmupMin, setWarmupMin] = useState(hasPreset ? 0 : 10);
+  const [cooldownMin, setCooldownMin] = useState(hasPreset ? 0 : 5);
   const [useGps, setUseGps] = useState(false);
 
   // Voice settings dialog
