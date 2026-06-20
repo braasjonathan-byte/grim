@@ -514,7 +514,7 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
           onClick={closePicker}
         >
           <div
-            className="w-full max-w-md bg-background border border-border rounded-md p-4 space-y-3 shadow-lg"
+            className="w-full max-w-md bg-background border border-border rounded-md p-4 space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
