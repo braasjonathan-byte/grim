@@ -189,7 +189,7 @@ const fmtTempoSpoken = (tempo: string): string => {
 
 // ---------------- Types ----------------
 export type IntervalRunnerResult = {
-  intervals: { time: string; dist: string; tempo: string }[];
+  intervals: { time: string; dist: string; tempo: string; kind?: "warmup" | "cooldown" }[];
   totalDistKm: number;
   totalTimeMin: number;
   tempo: string; // average / target tempo string
