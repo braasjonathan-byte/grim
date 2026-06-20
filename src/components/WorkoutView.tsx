@@ -2166,6 +2166,21 @@ const estimateCalories = (
         }
       } catch { /* ignore */ }
     }
+
+    // Notify friends when a workout is marked done (server dedups per user+week+day)
+    if (payload.done === true) {
+      try {
+        const { notifyFriendsOfCompletion } = await import("@/hooks/usePushNotifications");
+        const [{ data: plans }, { data: prof }] = await Promise.all([
+          supabase.from("workout_plans").select("session_name").eq("user_id", userId).eq("week", week).eq("day", day),
+          supabase.from("profiles").select("plan_start_date").eq("user_id", userId).maybeSingle(),
+        ]);
+        const sessionName = (plans || []).map((p: any) => p.session_name).filter(Boolean).join(" + ");
+        void notifyFriendsOfCompletion(day, week, sessionName, (prof as any)?.plan_start_date ?? null);
+      } catch (e) {
+        console.warn("notifyFriendsOfCompletion failed", e);
+      }
+    }
     triggerSave();
   };
 
