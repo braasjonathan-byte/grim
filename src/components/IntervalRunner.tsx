@@ -131,6 +131,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const [phase, setPhase] = useState<Phase>("idle");
   const [currentIdx, setCurrentIdx] = useState(0); // 0-based current interval
   const [phaseEnd, setPhaseEnd] = useState<number>(0); // epoch ms
+  const [plannedDurSec, setPlannedDurSec] = useState<number>(0);
   const [now, setNow] = useState<number>(Date.now());
   const [paused, setPaused] = useState(false);
   const pauseAcc = useRef(0);
@@ -192,10 +193,12 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     try {
       if (nextPhase === "warmup") {
         durSec = warmupMin * 60;
+        setPlannedDurSec(durSec);
         if (voice) speak(`Uppvärmning ${warmupMin} minuter. Börja lugnt.`);
       } else if (nextPhase === "interval") {
         const cur = effective[idx] || effective[0];
         durSec = cur.durSec;
+        setPlannedDurSec(durSec);
         if (voice && prefs.announceIntervalNumber) {
           await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
         }
@@ -212,11 +215,14 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
       } else if (nextPhase === "rest") {
         durSec = restSec;
+        setPlannedDurSec(durSec);
         if (voice && prefs.announceRest) speak(`Vila ${restSec} sekunder.`);
       } else if (nextPhase === "cooldown") {
         durSec = cooldownMin * 60;
+        setPlannedDurSec(durSec);
         if (voice) speak(`Nedvarvning ${cooldownMin} minuter. Bra jobbat.`);
       } else if (nextPhase === "done") {
+        setPlannedDurSec(0);
         if (voice) speak("Passet är klart. Snyggt jobbat!");
       }
       pauseAcc.current = 0;
@@ -362,7 +368,8 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     onClose();
   };
 
-  const remaining = Math.max(0, Math.ceil((phaseEnd - now) / 1000));
+  const rawRemaining = Math.max(0, Math.ceil((phaseEnd - now) / 1000));
+  const remaining = plannedDurSec > 0 ? Math.min(rawRemaining, plannedDurSec) : rawRemaining;
   const running = phase !== "idle" && phase !== "done";
 
   const phaseLabel = (() => {
