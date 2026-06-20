@@ -151,7 +151,23 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     const n = parseFloat(t.replace(",", "."));
     return Number.isFinite(n) ? n * 60 : 0;
   };
-  const intervalTargetSec = Math.max(5, Math.round((distM / 1000) * tempoToSecPerKm(tempo)));
+
+  // Effective per-interval plan (preset wins, otherwise N copies of config)
+  const effective = (() => {
+    if (hasPreset) {
+      return presetIntervals!.map((r) => {
+        const tMin = parseFloat(r.time) || 0;
+        const dKm = parseFloat((r.dist || "").replace(",", ".")) || 0;
+        const tempoStr = (r.tempo || "").trim();
+        let durSec = Math.round(tMin * 60);
+        if (durSec <= 0 && dKm > 0 && tempoStr) durSec = Math.round(dKm * tempoToSecPerKm(tempoStr));
+        return { durSec: Math.max(5, durSec), tempoStr: tempoStr || tempo, distKm: dKm };
+      });
+    }
+    const sec = Math.max(5, Math.round((distM / 1000) * tempoToSecPerKm(tempo)));
+    return Array.from({ length: numIntervals }, () => ({ durSec: sec, tempoStr: tempo, distKm: distM / 1000 }));
+  })();
+  const totalIntervals = effective.length;
 
   // Phase orchestration
   const startPhase = async (nextPhase: Phase, idx: number) => {
