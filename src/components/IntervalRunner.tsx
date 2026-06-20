@@ -416,7 +416,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
             <div className="space-y-4 text-center py-4">
               <div className="text-6xl font-bold tabular-nums">{fmtClock(remaining)}</div>
               <div className="text-sm text-muted-foreground">
-                {phase === "interval" && <>Mål-tempo: <strong>{tempo}/km</strong> · {distM} m</>}
+                {phase === "interval" && (() => { const cur = effective[currentIdx] || effective[0]; return <>Mål-tempo: <strong>{cur.tempoStr || tempo}/km</strong>{cur.distKm > 0 ? <> · {cur.distKm} km</> : null}</>; })()}
                 {phase === "rest" && <>Vila innan intervall {currentIdx + 2}</>}
               </div>
               {gps.isTracking && (
