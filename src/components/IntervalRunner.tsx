@@ -193,10 +193,12 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     try {
       if (nextPhase === "warmup") {
         durSec = warmupMin * 60;
+        setPlannedDurSec(durSec);
         if (voice) speak(`Uppvärmning ${warmupMin} minuter. Börja lugnt.`);
       } else if (nextPhase === "interval") {
         const cur = effective[idx] || effective[0];
         durSec = cur.durSec;
+        setPlannedDurSec(durSec);
         if (voice && prefs.announceIntervalNumber) {
           await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
         }
@@ -213,11 +215,14 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
       } else if (nextPhase === "rest") {
         durSec = restSec;
+        setPlannedDurSec(durSec);
         if (voice && prefs.announceRest) speak(`Vila ${restSec} sekunder.`);
       } else if (nextPhase === "cooldown") {
         durSec = cooldownMin * 60;
+        setPlannedDurSec(durSec);
         if (voice) speak(`Nedvarvning ${cooldownMin} minuter. Bra jobbat.`);
       } else if (nextPhase === "done") {
+        setPlannedDurSec(0);
         if (voice) speak("Passet är klart. Snyggt jobbat!");
       }
       pauseAcc.current = 0;
