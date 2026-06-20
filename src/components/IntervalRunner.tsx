@@ -174,48 +174,60 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   })();
   const totalIntervals = effective.length;
 
+  // Guard against the auto-advance effect re-firing while startPhase is still
+  // awaiting speech (phase/phaseEnd aren't updated until the awaits finish).
+  const advancingRef = useRef(false);
+
   // Phase orchestration
   const startPhase = async (nextPhase: Phase, idx: number) => {
+    if (advancingRef.current) return;
+    advancingRef.current = true;
+    // Set phase + a far-future phaseEnd immediately so the auto-advance effect
+    // stops firing while we play the voice prompts.
+    setPhase(nextPhase);
+    setPhaseEnd(Date.now() + 24 * 60 * 60 * 1000);
     setCurrentIdx(idx);
     const voice = prefs.enabled;
     let durSec = 0;
-    if (nextPhase === "warmup") {
-      durSec = warmupMin * 60;
-      if (voice) speak(`Uppvärmning ${warmupMin} minuter. Börja lugnt.`);
-    } else if (nextPhase === "interval") {
-      const cur = effective[idx] || effective[0];
-      durSec = cur.durSec;
-      // Read tempo BEFORE the start signal
-      if (voice && prefs.announceIntervalNumber) {
-        await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
+    try {
+      if (nextPhase === "warmup") {
+        durSec = warmupMin * 60;
+        if (voice) speak(`Uppvärmning ${warmupMin} minuter. Börja lugnt.`);
+      } else if (nextPhase === "interval") {
+        const cur = effective[idx] || effective[0];
+        durSec = cur.durSec;
+        if (voice && prefs.announceIntervalNumber) {
+          await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 1800);
+        }
+        if (voice && prefs.announceTempo && cur.tempoStr) {
+          const distPart = cur.distKm > 0 ? `, distans ${cur.distKm} kilometer` : "";
+          await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
+        }
+        if (voice && prefs.countdown) {
+          await speakAndWait("3, 2, 1, kör!", 1900);
+        } else if (voice) {
+          await speakAndWait("Kör!", 700);
+        }
+        intervalStartMs.current = Date.now();
+        intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
+      } else if (nextPhase === "rest") {
+        durSec = restSec;
+        if (voice && prefs.announceRest) speak(`Vila ${restSec} sekunder.`);
+      } else if (nextPhase === "cooldown") {
+        durSec = cooldownMin * 60;
+        if (voice) speak(`Nedvarvning ${cooldownMin} minuter. Bra jobbat.`);
+      } else if (nextPhase === "done") {
+        if (voice) speak("Passet är klart. Snyggt jobbat!");
       }
-      if (voice && prefs.announceTempo && cur.tempoStr) {
-        const distPart = cur.distKm > 0 ? `, distans ${cur.distKm} kilometer` : "";
-        await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 3200);
-      }
-      if (voice && prefs.countdown) {
-        await speakAndWait("3, 2, 1, kör!", 1900);
-      } else if (voice) {
-        await speakAndWait("Kör!", 700);
-      }
-      // Mark start for achieved-pace calculation
-      intervalStartMs.current = Date.now();
-      intervalStartKm.current = gps.isTracking ? gps.distanceKm : null;
-    } else if (nextPhase === "rest") {
-      durSec = restSec;
-      if (voice && prefs.announceRest) speak(`Vila ${restSec} sekunder.`);
-    } else if (nextPhase === "cooldown") {
-      durSec = cooldownMin * 60;
-      if (voice) speak(`Nedvarvning ${cooldownMin} minuter. Bra jobbat.`);
-    } else if (nextPhase === "done") {
-      if (voice) speak("Passet är klart. Snyggt jobbat!");
+      pauseAcc.current = 0;
+      pauseStarted.current = null;
+      if (durSec > 0) setPhaseEnd(Date.now() + durSec * 1000);
+      else setPhaseEnd(Date.now());
+    } finally {
+      advancingRef.current = false;
     }
-    pauseAcc.current = 0;
-    pauseStarted.current = null;
-    setPhase(nextPhase);
-    if (durSec > 0) setPhaseEnd(Date.now() + durSec * 1000);
-    else setPhaseEnd(Date.now());
   };
+
 
   // Auto-advance when phase ends (unless paused)
   useEffect(() => {
