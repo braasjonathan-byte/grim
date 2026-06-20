@@ -330,15 +330,18 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         if (voice && prefs.announceIntervalNumber) {
           await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 4000);
         }
-        if (voice && prefs.announceTempo && cur.tempoStr) {
-          const spokenDist = (n: number) => {
-            const rounded = Math.round(n * 100) / 100;
-            if (rounded >= 1 && Number.isInteger(rounded)) return `${rounded}`;
-            const [intPart, decPart = ""] = rounded.toString().split(".");
-            return decPart ? `${intPart} komma ${decPart}` : `${intPart}`;
-          };
-          const distPart = cur.distKm > 0 ? `, distans ${spokenDist(cur.distKm)} kilometer` : "";
-          await speakAndWait(`Mål-tempo ${fmtTempoSpoken(cur.tempoStr)}${distPart}.`, 6000);
+        if (voice && prefs.announceTempo) {
+          const cur2: any = cur;
+          let target = "";
+          if (cur2.unit && cur2.value) {
+            target = `Mål ${spokenTarget(cur2.value, cur2.unit, profile)}`;
+          } else if (cur.distKm > 0) {
+            target = `Distans ${cur.distKm} kilometer`;
+          }
+          const paceSpoken = cur.tempoStr ? `, tempo ${fmtTempoSpoken(cur.tempoStr).replace("per kilometer", profile.paceSpoken)}` : "";
+          if (target || paceSpoken) {
+            await speakAndWait(`${target}${paceSpoken}.`, 6000);
+          }
         }
         // Wait for the speech queue to fully drain before the start-beep,
         // so the pip never overlaps the spoken info.
