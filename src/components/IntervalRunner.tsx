@@ -82,6 +82,8 @@ type Props = {
   onClose: () => void;
   exerciseName?: string;
   onComplete?: (data: IntervalRunnerResult) => void | Promise<void>;
+  /** Pre-filled intervals from the workout card. time = minutes, dist = km, tempo = min/km (e.g. "4:30"). */
+  presetIntervals?: Array<{ time: string; tempo: string; dist: string }>;
 };
 
 // ---------------- Voice prefs (persisted) ----------------
