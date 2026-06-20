@@ -113,12 +113,23 @@ const getConditioningDistanceKm = (loggedWeights: LoggedWeights): number => {
   }
 
   let total = 0;
+  const seen = new Set<string>();
 
   for (const [key, value] of Object.entries(loggedWeights)) {
     if (!key.startsWith("__cond__")) continue;
 
     const data = parseConditioningPayload(value);
     if (!data) continue;
+
+    // Dedup identical payloads under multiple keys (e.g. "Cykling" + plan-description).
+    const sig = JSON.stringify([
+      data.time ?? "",
+      data.dist ?? data.distance ?? "",
+      data.tempo ?? "",
+      data.intervals ?? null,
+    ]);
+    if (seen.has(sig)) continue;
+    seen.add(sig);
 
     const intervals = Array.isArray(data.intervals) ? data.intervals : [];
     const intervalTotal = intervals.reduce((sum, interval) => sum + getIntervalDistanceKm(interval), 0);
