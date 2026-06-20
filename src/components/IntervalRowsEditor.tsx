@@ -158,7 +158,7 @@ export default function IntervalRowsEditor({ count, rows, onChange }: Props) {
             <div>
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Tempo</label>
               <input
-                type="text" value={r.tempo}
+                type="text" inputMode="numeric" pattern="[0-9:]*" value={r.tempo}
                 onChange={(e) => update(i, { tempo: e.target.value }, "tempo")}
                 placeholder="5:30" className={inputCls} />
               <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">min/km</span>
