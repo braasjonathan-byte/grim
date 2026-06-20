@@ -341,6 +341,8 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (phase === "warmup") {
       void startPhase("interval", 0);
     } else if (phase === "interval") {
+      // Stop-beep at end of interval
+      beep(600, 220);
       // Announce achieved pace for the interval just finished
       const cur = effective[currentIdx];
       const elapsedSec = Math.max(1, (Date.now() - intervalStartMs.current) / 1000);
