@@ -6567,10 +6567,10 @@ const estimateCalories = (
                                 }
 
                                 // Check for interval pattern like "4×4 min i tröskeltempo (90 s joggvila)"
-                                const inlineIntervalMatch = line.match(/(\d+)\s*[×x]\s*(\d+)\s*min/i);
+                                const inlineIntervalMatch = line.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min/i);
                                 if (inlineIntervalMatch) {
                                   const iCount = parseInt(inlineIntervalMatch[1]);
-                                  const iDuration = parseInt(inlineIntervalMatch[2]);
+                                  const iDuration = parseFloat(inlineIntervalMatch[2].replace(",", "."));
                                    const iTempoM = line.match(/([\d:.]+)\s*\/km/);
                                    // Fall back to plan.tempo if the line doesn't contain tempo
                                    let iPlanTempo = iTempoM ? iTempoM[1] : "";
