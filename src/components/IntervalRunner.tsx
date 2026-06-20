@@ -8,12 +8,11 @@ import { Play, Pause, Square, MapPin, Volume2, Settings as SettingsIcon } from "
 import { useGpsTracker } from "@/hooks/useGpsTracker";
 import { toast } from "sonner";
 import { getIntervalProfile, UNIT_LABELS, UNIT_SHORT, valueToSeconds, spokenTarget, type IntervalUnit } from "@/lib/intervalSportProfiles";
+import { supabase } from "@/integrations/supabase/client";
 
-// ---------------- Voice helpers (Web Speech API + native Capacitor TTS) ----------------
-// On the native Android/iOS app the WebView's Web Speech API is unreliable
-// (often silent — the user only hears the beep). We dynamically use the
-// Capacitor TextToSpeech plugin when running natively, and fall back to
-// Web Speech API on the PWA / desktop browser.
+// ---------------- Voice helpers (AI speech + native/web fallback) ----------------
+// Primary speech is generated through the backend and played through WebAudio,
+// so the AAB no longer depends on each phone's installed Swedish TTS data.
 
 let _isNative: boolean | undefined;
 const isNative = (): boolean => {
@@ -35,6 +34,168 @@ const getNativeTts = async (): Promise<any | null> => {
     _ttsMod = mod.TextToSpeech;
     return _ttsMod;
   } catch (e) { console.warn("[voice] native TTS import failed", e); return null; }
+};
+
+const AI_TTS_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/interval-tts`;
+const AI_TTS_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+let _voicePlayhead = 0;
+let _voicePendingBytes = new Uint8Array(0);
+const _voiceSources = new Set<AudioBufferSourceNode>();
+const _aiSpeechCache = new Map<string, Uint8Array>();
+
+const concatBytes = (parts: Uint8Array[]): Uint8Array => {
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) { out.set(part, offset); offset += part.length; }
+  return out;
+};
+
+const decodeBase64 = (base64: string): Uint8Array => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
+
+const stopAiSpeech = () => {
+  for (const source of _voiceSources) {
+    try { source.stop(); } catch {}
+  }
+  _voiceSources.clear();
+  _voicePlayhead = 0;
+  _voicePendingBytes = new Uint8Array(0);
+};
+
+const playPcmBytes = async (incoming: Uint8Array): Promise<number> => {
+  const ctx = getAudioCtx();
+  if (!ctx || incoming.length === 0) return 0;
+  if (ctx.state === "suspended") await ctx.resume().catch(() => {});
+  const bytes = new Uint8Array(_voicePendingBytes.length + incoming.length);
+  bytes.set(_voicePendingBytes);
+  bytes.set(incoming, _voicePendingBytes.length);
+  const usable = bytes.length - (bytes.length % 2);
+  _voicePendingBytes = bytes.slice(usable);
+  if (usable === 0) return 0;
+
+  const samples = usable / 2;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, usable);
+  const floats = new Float32Array(samples);
+  for (let i = 0; i < samples; i++) floats[i] = view.getInt16(i * 2, true) / 32768;
+
+  const buffer = ctx.createBuffer(1, floats.length, 24000);
+  buffer.copyToChannel(floats, 0);
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.onended = () => _voiceSources.delete(source);
+  _voiceSources.add(source);
+  if (_voicePlayhead === 0) _voicePlayhead = ctx.currentTime + 0.05;
+  else _voicePlayhead = Math.max(_voicePlayhead, ctx.currentTime);
+  source.start(_voicePlayhead);
+  _voicePlayhead += buffer.duration;
+  return Math.max(0, (_voicePlayhead - ctx.currentTime) * 1000);
+};
+
+const parseSseData = (block: string): string | null => {
+  const data = block
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+  return data || null;
+};
+
+const speakAi = async (text: string): Promise<boolean> => {
+  const cleanText = text.trim();
+  if (!cleanText || !AI_TTS_ENDPOINT || !AI_TTS_ANON_KEY) return false;
+  try {
+    const cached = _aiSpeechCache.get(cleanText);
+    if (cached) {
+      stopAiSpeech();
+      const waitMs = await playPcmBytes(cached);
+      if (waitMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, waitMs + 60));
+      return true;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(AI_TTS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: AI_TTS_ANON_KEY,
+        Authorization: `Bearer ${session?.access_token || AI_TTS_ANON_KEY}`,
+      },
+      body: JSON.stringify({ text: cleanText }),
+    });
+    if (!res.ok || !res.body) throw new Error(`AI TTS ${res.status}`);
+
+    stopAiSpeech();
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    const chunks: Uint8Array[] = [];
+    let pending = "";
+    let lastWaitMs = 0;
+
+    const consumeBlock = async (block: string) => {
+      const data = parseSseData(block);
+      if (!data || data === "[DONE]") return;
+      let payload: { type?: string; audio?: string };
+      try { payload = JSON.parse(data); } catch { return; }
+      if (payload.type !== "speech.audio.delta" || !payload.audio) return;
+      const bytes = decodeBase64(payload.audio);
+      chunks.push(bytes);
+      lastWaitMs = await playPcmBytes(bytes);
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      pending += value;
+      const blocks = pending.split(/\r?\n\r?\n/);
+      pending = blocks.pop() || "";
+      for (const block of blocks) await consumeBlock(block);
+    }
+    if (pending.trim()) await consumeBlock(pending);
+    if (chunks.length > 0) _aiSpeechCache.set(cleanText, concatBytes(chunks));
+    if (lastWaitMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, lastWaitMs + 60));
+    return chunks.length > 0;
+  } catch (e) {
+    console.warn("[voice] AI speech failed, falling back", e);
+    return false;
+  }
+};
+
+let _nativeLang = "sv-SE";
+let _nativeVoice: number | undefined;
+let _nativeReadyPromise: Promise<boolean> | null = null;
+
+const ensureNativeTtsReady = async (): Promise<boolean> => {
+  if (!isNative()) return false;
+  if (_nativeReadyPromise) return _nativeReadyPromise;
+  _nativeReadyPromise = (async () => {
+    const tts = await getNativeTts();
+    if (!tts) return false;
+    const started = Date.now();
+    while (Date.now() - started < 3500) {
+      try {
+        const voicesResult = await tts.getSupportedVoices();
+        const voices = Array.isArray(voicesResult?.voices) ? voicesResult.voices : [];
+        const svIndex = voices.findIndex((v: any) => /^sv(-|$)/i.test(v?.lang || ""));
+        const enIndex = voices.findIndex((v: any) => /^en(-|$)/i.test(v?.lang || ""));
+        const pickedIndex = svIndex >= 0 ? svIndex : enIndex;
+        if (pickedIndex >= 0) {
+          _nativeVoice = pickedIndex;
+          _nativeLang = voices[pickedIndex]?.lang || (svIndex >= 0 ? "sv-SE" : "en-US");
+        }
+        const check = await tts.isLanguageSupported({ lang: _nativeLang });
+        if (check?.supported) return true;
+      } catch {}
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    return false;
+  })();
+  return _nativeReadyPromise;
 };
 
 // Pick the most natural-sounding Swedish voice the device offers (web only).
@@ -74,65 +235,100 @@ const applyVoice = (u: SpeechSynthesisUtterance) => {
   u.rate = 1.0;
 };
 
-const speakNative = (text: string): Promise<void> =>
-  getNativeTts().then((tts) => {
-    if (!tts) return;
-    return tts.speak({ text, lang: "sv-SE", rate: 1.0, pitch: 1.0, volume: 1.0, category: "ambient" }).catch((e: any) => {
-      console.warn("[voice] native speak failed", e);
+const speakNative = async (text: string, queueStrategy = 0): Promise<boolean> => {
+  if (!(await ensureNativeTtsReady())) return false;
+  const tts = await getNativeTts();
+  if (!tts) return false;
+  try {
+    await tts.speak({
+      text,
+      lang: _nativeLang,
+      rate: 1.0,
+      pitch: 1.0,
+      volume: 1.0,
+      category: "playback",
+      queueStrategy,
+      ...(_nativeVoice !== undefined ? { voice: _nativeVoice } : {}),
     });
-  });
+    return true;
+  } catch (e) {
+    console.warn("[voice] native speak failed", e);
+    return false;
+  }
+};
 
 const cancelNative = async () => {
   const tts = await getNativeTts();
   if (tts) { try { await tts.stop(); } catch {} }
 };
 
-const speak = (text: string, opts: { flush?: boolean } = {}) => {
+const cancelVoice = () => {
+  stopAiSpeech();
+  void cancelNative();
+  try { window.speechSynthesis?.cancel(); } catch {}
+};
+
+const speakSystem = async (text: string, opts: { flush?: boolean } = {}): Promise<boolean> => {
   if (isNative()) {
     if (opts.flush) void cancelNative();
-    void speakNative(text);
-    return;
+    return speakNative(text, opts.flush ? 0 : 1);
   }
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
   try {
     if (opts.flush) window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     applyVoice(u);
     u.rate = 1;
     window.speechSynthesis.speak(u);
+    return true;
   } catch (e) { console.warn("[voice] speak failed", e); }
+  return false;
+};
+
+const speak = (text: string, opts: { flush?: boolean } = {}) => {
+  if (opts.flush) cancelVoice();
+  void speakAi(text).then((ok) => { if (!ok) void speakSystem(text, opts); });
 };
 
 const speakAndWait = (text: string, maxMs = 5000) =>
   new Promise<void>((resolve) => {
-    if (isNative()) {
-      let done = false;
-      const finish = () => { if (done) return; done = true; resolve(); };
-      const timer = setTimeout(finish, maxMs);
-      speakNative(text).finally(() => { clearTimeout(timer); finish(); });
-      return;
-    }
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      setTimeout(resolve, 150);
-      return;
-    }
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      applyVoice(u);
-      u.rate = 1;
-      let done = false;
-      const finish = () => { if (done) return; done = true; resolve(); };
-      u.onend = finish;
-      u.onerror = finish;
-      window.speechSynthesis.speak(u);
-      setTimeout(finish, maxMs);
-    } catch {
-      setTimeout(resolve, 150);
-    }
+    let done = false;
+    const finish = () => { if (done) return; done = true; resolve(); };
+    const timer = setTimeout(finish, maxMs);
+    speakAi(text).then((ok) => {
+      if (done) return;
+      if (ok) { clearTimeout(timer); finish(); return; }
+      if (isNative()) {
+        speakNative(text, 1).finally(() => { clearTimeout(timer); finish(); });
+        return;
+      }
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+        clearTimeout(timer);
+        setTimeout(finish, 150);
+        return;
+      }
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        applyVoice(u);
+        u.rate = 1;
+        u.onend = () => { clearTimeout(timer); finish(); };
+        u.onerror = () => { clearTimeout(timer); finish(); };
+        window.speechSynthesis.speak(u);
+      } catch {
+        clearTimeout(timer);
+        setTimeout(finish, 150);
+      }
+    }).catch(() => { clearTimeout(timer); finish(); });
   });
 
 const waitForSpeechDone = (maxMs = 8000) =>
   new Promise<void>((resolve) => {
+    if (_voicePlayhead > 0) {
+      const ctx = getAudioCtx();
+      const waitMs = ctx ? Math.max(0, (_voicePlayhead - ctx.currentTime) * 1000) : 0;
+      setTimeout(resolve, Math.min(waitMs + 80, maxMs));
+      return;
+    }
     if (isNative()) {
       // Native speakAndWait already awaits completion; nothing extra to drain.
       return resolve();
@@ -149,11 +345,8 @@ const waitForSpeechDone = (maxMs = 8000) =>
   });
 
 const primeSpeech = () => {
-  if (isNative()) {
-    // Warm up the native engine so the first prompt isn't delayed.
-    void getNativeTts().then((tts) => { if (tts) { try { tts.speak({ text: " ", lang: "sv-SE", volume: 0 }); } catch {} } });
-    return;
-  }
+  getAudioCtx();
+  void ensureNativeTtsReady();
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
     window.speechSynthesis.cancel();
