@@ -34,6 +34,7 @@ import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import AutoSaveInput from "@/components/AutoSaveInput";
+import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import IntervalRowsEditor, { IntervalRow, emptyIntervalRow, summarizeIntervalRows } from "@/components/IntervalRowsEditor";
 import EventProgressBar from "@/components/EventProgressBar";
@@ -8174,9 +8175,8 @@ const estimateCalories = (
                                     >
                                       {isDoneI ? <Check className="w-3.5 h-3.5" /> : ii + 1}
                                     </button>
-                                    <AutoSaveInput
-                                      type="number" inputMode="numeric"
-                                      initialValue={row.time || String(iDuration)}
+                                    <IntervalTimeMSInput
+                                      valueMinDecimal={row.time || String(iDuration)}
                                       onSave={(v) => {
                                         const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
                                         arr[ii] = { ...arr[ii], time: v };
@@ -8189,7 +8189,6 @@ const estimateCalories = (
                                         if (t > 0 && mpk > 0) arr[ii].dist = String(Math.round((t / mpk) * 100) / 100);
                                         saveIntervalField('intervals', arr);
                                       }}
-                                      className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none"
                                     />
                                     <AutoSaveInput
                                       type="text"
