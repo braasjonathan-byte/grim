@@ -368,7 +368,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const phaseLabel = (() => {
     switch (phase) {
       case "warmup": return "Uppvärmning";
-      case "interval": return `Intervall ${currentIdx + 1} / ${numIntervals}`;
+      case "interval": return `Intervall ${currentIdx + 1} / ${totalIntervals}`;
       case "rest": return "Vila";
       case "cooldown": return "Nedvarvning";
       case "done": return "Klart!";
