@@ -7938,7 +7938,7 @@ const estimateCalories = (
                                       <div className="flex items-center justify-between bg-primary/5 rounded-md px-3 py-1.5 text-[11px]">
                                         <span className="text-muted-foreground">Totalt</span>
                                         <div className="flex gap-3 font-semibold font-mono text-foreground">
-                                          <span>{totTime} min</span>
+                                          <span>{Math.round(totTime * 100) / 100} min</span>
                                           <span>{avgMins}:{String(avgSecs).padStart(2, '0')} /km</span>
                                           <span>{Math.round(totDist * 100) / 100} km</span>
                                         </div>
