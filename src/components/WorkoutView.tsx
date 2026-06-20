@@ -7794,6 +7794,7 @@ const estimateCalories = (
                                         <Play className="w-3 h-3" /> Starta intervallträning
                                       </button>
                                     )}
+                                  </div>
                                   {/* Summary row */}
                                   {(() => {
                                     const intervalsData: Array<{time: string; tempo: string; dist: string}> = condSaved?.intervals || [];
