@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CapacitorHttp } from "@capacitor/core";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,6 @@ import { Play, Pause, Square, MapPin, Volume2, Settings as SettingsIcon } from "
 import { useGpsTracker } from "@/hooks/useGpsTracker";
 import { toast } from "sonner";
 import { getIntervalProfile, UNIT_LABELS, UNIT_SHORT, valueToSeconds, spokenTarget, type IntervalUnit } from "@/lib/intervalSportProfiles";
-import { supabase } from "@/integrations/supabase/client";
 
 // ---------------- Voice helpers (AI speech + native/web fallback) ----------------
 // Primary speech is generated through the backend and played through WebAudio,
@@ -108,6 +108,42 @@ const parseSseData = (block: string): string | null => {
   return data || null;
 };
 
+const parseAiSpeechChunks = (sseText: string): Uint8Array[] => {
+  const chunks: Uint8Array[] = [];
+  for (const block of sseText.split(/\r?\n\r?\n/)) {
+    const data = parseSseData(block);
+    if (!data || data === "[DONE]") continue;
+    let payload: { type?: string; audio?: string };
+    try { payload = JSON.parse(data); } catch { continue; }
+    if (payload.type === "speech.audio.delta" && payload.audio) chunks.push(decodeBase64(payload.audio));
+  }
+  return chunks;
+};
+
+const speakAiNative = async (cleanText: string, serial: number): Promise<boolean> => {
+  const response = await CapacitorHttp.post({
+    url: AI_TTS_ENDPOINT,
+    headers: {
+      "Content-Type": "application/json",
+      apikey: AI_TTS_ANON_KEY,
+    },
+    data: { text: cleanText },
+    responseType: "text",
+    connectTimeout: 12000,
+    readTimeout: 25000,
+  });
+  if (response.status < 200 || response.status >= 300) throw new Error(`AI TTS ${response.status}`);
+  if (serial !== _speechSerial) return true;
+  const chunks = parseAiSpeechChunks(typeof response.data === "string" ? response.data : String(response.data || ""));
+  if (!chunks.length) return false;
+  const bytes = concatBytes(chunks);
+  _aiSpeechCache.set(cleanText, bytes);
+  stopAiSpeech();
+  const waitMs = await playPcmBytes(bytes);
+  if (waitMs > 0) await new Promise<void>((resolve) => setTimeout(resolve, waitMs + 60));
+  return true;
+};
+
 const speakAi = async (text: string): Promise<boolean> => {
   const cleanText = text.trim();
   if (!cleanText || !AI_TTS_ENDPOINT || !AI_TTS_ANON_KEY) return false;
@@ -122,13 +158,13 @@ const speakAi = async (text: string): Promise<boolean> => {
       return true;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
+    if (isNative()) return await speakAiNative(cleanText, serial);
+
     const res = await fetch(AI_TTS_ENDPOINT, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: AI_TTS_ANON_KEY,
-        Authorization: `Bearer ${session?.access_token || AI_TTS_ANON_KEY}`,
       },
       body: JSON.stringify({ text: cleanText }),
     });
