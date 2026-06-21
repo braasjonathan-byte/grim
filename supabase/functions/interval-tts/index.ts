@@ -17,15 +17,6 @@ serve(async (req) => {
       });
     }
 
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    const requestKey = req.headers.get("apikey");
-    if (!anonKey || requestKey !== anonKey) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { text } = await req.json().catch(() => ({ text: "" }));
     const input = typeof text === "string" ? text.trim().slice(0, 260) : "";
     if (!input) {
