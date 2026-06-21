@@ -334,7 +334,7 @@ const speak = (text: string, opts: { flush?: boolean } = {}) => {
   void speakAi(text).then((ok) => { if (!ok) void speakSystem(text, opts); });
 };
 
-const speakAndWait = (text: string, maxMs = 5000) =>
+const speakAndWait = (text: string, maxMs = 15000) =>
   new Promise<void>((resolve) => {
     let done = false;
     const finish = () => { if (done) return; done = true; resolve(); };
@@ -672,9 +672,8 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
         const cur = effective[idx] || effective[0];
         durSec = cur.durSec;
         setPlannedDurSec(durSec);
-        if (voice && prefs.announceIntervalNumber) {
-          await speakAndWait(`Intervall ${idx + 1} av ${totalIntervals}.`, 4000);
-        }
+        const intervalPrompt: string[] = [];
+        if (voice && prefs.announceIntervalNumber) intervalPrompt.push(`Intervall ${idx + 1} av ${totalIntervals}.`);
         if (voice && prefs.announceTempo) {
           const cur2: any = cur;
           let target = "";
@@ -685,9 +684,10 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
           }
           const paceSpoken = cur.tempoStr ? `, ${profile.paceLabel.toLowerCase()} ${fmtTempoSpokenForProfile(cur.tempoStr, profile.paceUnit, profile.paceSpoken)}` : "";
           if (target || paceSpoken) {
-            await speakAndWait(`${target}${paceSpoken}.`, 6000);
+            intervalPrompt.push(`${target}${paceSpoken}.`);
           }
         }
+        if (intervalPrompt.length > 0) await speakAndWait(intervalPrompt.join(" "), 18000);
         // Wait for the speech queue to fully drain before the start-beep,
         // so the pip never overlaps the spoken info.
         if (voice) await waitForSpeechDone(8000);
