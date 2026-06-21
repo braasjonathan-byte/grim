@@ -19,15 +19,15 @@ const config: CapacitorConfig = {
       '@capacitor-firebase/app',
       '@capacitor-firebase/crashlytics',
     ],
-    CapacitorHttp: {
-      enabled: true,
-    },
   },
   ios: {
     // Lock to portrait on iOS
     contentInset: 'always',
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
     ScreenOrientation: {
       lockOrientation: 'portrait',
     },
