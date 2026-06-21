@@ -55,6 +55,27 @@ export function buildWorkoutSummaryCaption(
   if (completion.logged_tempo) stats.push(`⏱ ${completion.logged_tempo}/km`);
   if (completion.logged_pulse) stats.push(`❤️ ${completion.logged_pulse} bpm`);
 
+  // Build the set of exercise names that still exist in the plan at the moment
+  // of completion. Anything not in this set has been removed by the user and
+  // must NOT be included in the share caption.
+  const allowedNames: Set<string> | null = (() => {
+    if (!plan.details || !plan.details.trim()) return null;
+    const names = new Set<string>();
+    for (const raw of plan.details.split(/[;\n]+/)) {
+      const line = raw.trim();
+      if (!line) continue;
+      // Exercise name is the part before " — " / " - " (sets/reps follow).
+      const name = line.split(/\s+[—-]\s+/)[0].trim();
+      if (!name) continue;
+      names.add(name.toLowerCase());
+    }
+    return names.size > 0 ? names : null;
+  })();
+  const isAllowed = (exName: string) => {
+    if (!allowedNames) return true; // cardio/imported pass – keep current behaviour
+    return allowedNames.has(exName.trim().toLowerCase());
+  };
+
   // Strength volume + sets + per-exercise breakdown
   let totalVolume = 0;
   let completedSets = 0;
@@ -63,6 +84,8 @@ export function buildWorkoutSummaryCaption(
   if (lw && typeof lw === "object") {
     for (const [key, val] of Object.entries(lw)) {
       if (key.startsWith("__sets__") && typeof val === "string") {
+        const exName = key.replace("__sets__", "");
+        if (!isAllowed(exName)) continue;
         completedSets += val.split("").filter((c) => c === "1").length;
       }
     }
@@ -73,6 +96,7 @@ export function buildWorkoutSummaryCaption(
     for (const [key, val] of Object.entries(lw)) {
       if (key.startsWith("__setdata__")) {
         const exName = key.replace("__setdata__", "");
+        if (!isAllowed(exName)) continue;
         const setsKey = `__sets__${exName}`;
         const setsStr = (lw[setsKey] as string) || "";
         try {
