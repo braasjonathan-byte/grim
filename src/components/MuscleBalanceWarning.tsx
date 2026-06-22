@@ -39,16 +39,28 @@ const MuscleBalanceWarning = ({ userId }: Props) => {
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
+      const groupToCat = (group?: string | null): Category | null => {
+        if (!group) return null;
+        if (PUSH_GROUPS.has(group)) return "push";
+        if (PULL_GROUPS.has(group)) return "pull";
+        if (LEG_GROUPS.has(group)) return "ben";
+        return null;
+      };
+
       // Build exercise -> category map from library
       const exToCat = new Map<string, Category>();
       for (const e of exerciseLibrary) {
-        const group = (e as any).muscleGroup as string | undefined;
-        if (!group) continue;
-        let cat: Category | null = null;
-        if (PUSH_GROUPS.has(group)) cat = "push";
-        else if (PULL_GROUPS.has(group)) cat = "pull";
-        else if (LEG_GROUPS.has(group)) cat = "ben";
+        const cat = groupToCat((e as any).muscleGroup);
         if (cat) exToCat.set(normalize(e.name), cat);
+      }
+
+      // Add user's custom exercises so they aren't ignored
+      const { data: customs } = await supabase
+        .from("custom_exercises")
+        .select("name, muscle_group");
+      for (const c of customs || []) {
+        const cat = groupToCat((c as any).muscle_group);
+        if (cat) exToCat.set(normalize((c as any).name), cat);
       }
 
       const cutoff = new Date(Date.now() - FOUR_WEEKS_MS).toISOString();
@@ -62,7 +74,7 @@ const MuscleBalanceWarning = ({ userId }: Props) => {
 
       const tally: Record<Category, number> = { push: 0, pull: 0, ben: 0 };
       for (const row of data || []) {
-        const weights = row.logged_weights;
+        const weights = row.logged_weights as Record<string, any> | null;
         if (!weights || typeof weights !== "object") continue;
         for (const [key, value] of Object.entries(weights)) {
           if (!key.startsWith("__setdata__")) continue;
@@ -70,10 +82,20 @@ const MuscleBalanceWarning = ({ userId }: Props) => {
           const cat = exToCat.get(normalize(name));
           if (!cat) continue;
           const sets = safelyParseSets(value);
-          // Count completed sets (any reps > 0)
-          for (const s of sets) {
-            if ((Number(s?.reps) || 0) > 0) tally[cat] += 1;
+          // Prefer __sets__ marker string ("1"/"0" per set) when present.
+          const marker = weights[`__sets__${name}`];
+          const markerStr = typeof marker === "string" ? marker : "";
+          let done = 0;
+          if (markerStr) {
+            for (let i = 0; i < sets.length; i++) {
+              if (markerStr[i] === "1") done += 1;
+            }
+          } else {
+            for (const s of sets) {
+              if ((Number(s?.reps) || 0) > 0 || (Number(s?.kg) || 0) > 0) done += 1;
+            }
           }
+          tally[cat] += done;
         }
       }
       if (!cancelled) {
