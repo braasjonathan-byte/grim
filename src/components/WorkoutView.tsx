@@ -170,13 +170,80 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   const didAutoStart = useRef(false);
   const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  // "Primed" = användaren har öppnat GPS-vyn men inte tryckt Starta än.
+  // Vi söker GPS-signal i bakgrunden men startar inte tid/distans-räknaren.
+  const [primed, setPrimed] = useState(false);
+  const [fixAccuracy, setFixAccuracy] = useState<number | null>(null);
+  const [primeError, setPrimeError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const fixWatchId = useRef<number | null>(null);
+
+  const stopPrimeWatch = () => {
+    if (fixWatchId.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(fixWatchId.current);
+      fixWatchId.current = null;
+    }
+  };
+
+  // Starta lokal positionssökning så snart vyn är "primed" men ej ägare ännu.
+  useEffect(() => {
+    if (!primed || isOwner) return;
+    if (!navigator.geolocation) {
+      setPrimeError("GPS stöds inte i denna enhet");
+      return;
+    }
+    setPrimeError(null);
+    if (fixWatchId.current != null) return;
+    fixWatchId.current = navigator.geolocation.watchPosition(
+      (pos) => setFixAccuracy(pos.coords.accuracy ?? null),
+      (err) => {
+        if (err.code === 1) setPrimeError("Platstillstånd nekades – tillåt plats och försök igen.");
+        else if (err.code === 2) setPrimeError("GPS-signal hittades inte. Gå utomhus.");
+        else if (err.code === 3) setPrimeError("GPS-signalen tog för lång tid. Försök utomhus med fri sikt.");
+        else setPrimeError(err.message || "GPS-fel");
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
+    );
+    return () => { stopPrimeWatch(); };
+  }, [primed, isOwner]);
+
+  // Stoppa lokal sökning så fort vi blir ägare (riktig inspelning igång).
+  useEffect(() => {
+    if (isOwner) stopPrimeWatch();
+  }, [isOwner]);
+
+  useEffect(() => () => { stopPrimeWatch(); }, []);
+
+  const hasFix = fixAccuracy != null && fixAccuracy <= 50;
+  const canStart = hasFix && !starting && !otherActive;
+
+  const beginRecording = async () => {
+    if (!canStart) return;
+    setStarting(true);
+    try {
+      await gps.start(myId);
+      setFullscreen(true);
+      setPrimed(false);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const cancelPrime = () => {
+    stopPrimeWatch();
+    setPrimed(false);
+    setFixAccuracy(null);
+    setPrimeError(null);
+    setFullscreen(false);
+  };
 
   useEffect(() => {
     if (autoStart && !didAutoStart.current && !gps.isTracking) {
       didAutoStart.current = true;
-      gps.start(myId).then(() => setFullscreen(true));
+      setPrimed(true);
+      setFullscreen(true);
     }
-  }, [autoStart, gps, myId]);
+  }, [autoStart, gps.isTracking]);
 
   // Auto-open fullscreen when this control becomes the owner of a fresh recording
   useEffect(() => {
@@ -261,10 +328,10 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           <button
             type="button"
             disabled={otherActive}
-            onClick={async (e) => {
+            onClick={(e) => {
               e.stopPropagation();
               if (otherActive) return;
-              await gps.start(myId);
+              setPrimed(true);
               setFullscreen(true);
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-50"
@@ -369,7 +436,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           </button>
         </div>
       )}
-      {fullscreen && isOwner && (
+      {fullscreen && (isOwner || primed) && (
         <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
           <div className="flex-1 relative">
             {gps.route.length > 1 ? (
@@ -381,40 +448,46 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
             )}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setFullscreen(false); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isOwner) setFullscreen(false);
+                else cancelPrime();
+              }}
               className="absolute top-3 right-3 z-[1000] bg-background/95 border border-border rounded-md p-2 shadow"
-              aria-label="Stäng helskärm"
+              aria-label={isOwner ? "Stäng helskärm" : "Avbryt"}
             >
-              <Minimize2 className="w-5 h-5 text-foreground" />
+              {isOwner ? <Minimize2 className="w-5 h-5 text-foreground" /> : <X className="w-5 h-5 text-foreground" />}
             </button>
-            <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-4 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
-                <span className="font-mono font-bold text-base text-foreground">{fmtTime(gps.elapsedSec)}</span>
+            {isOwner && (
+              <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-4 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
+                  <span className="font-mono font-bold text-base text-foreground">{fmtTime(gps.elapsedSec)}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Distans</span>
+                  <span className="font-mono font-bold text-base text-foreground">{(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tempo</span>
+                  <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); if (hr.connected) hr.disconnect(); else hr.connect(); }}
+                  disabled={hr.connecting}
+                  className="flex flex-col items-center"
+                  aria-label={hr.connected ? "Koppla från pulsmätare" : "Anslut pulsmätare"}
+                >
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1">
+                    <Heart className={`w-2.5 h-2.5 ${hr.connected ? "text-destructive fill-current" : ""}`} /> Puls
+                  </span>
+                  <span className={`font-mono font-bold text-base ${hr.connected ? "text-destructive" : "text-muted-foreground"}`}>
+                    {hr.connected ? (hr.bpm ?? "--") : (hr.connecting ? "…" : "anslut")}
+                  </span>
+                </button>
               </div>
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Distans</span>
-                <span className="font-mono font-bold text-base text-foreground">{(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tempo</span>
-                <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); if (hr.connected) hr.disconnect(); else hr.connect(); }}
-                disabled={hr.connecting}
-                className="flex flex-col items-center"
-                aria-label={hr.connected ? "Koppla från pulsmätare" : "Anslut pulsmätare"}
-              >
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1">
-                  <Heart className={`w-2.5 h-2.5 ${hr.connected ? "text-destructive fill-current" : ""}`} /> Puls
-                </span>
-                <span className={`font-mono font-bold text-base ${hr.connected ? "text-destructive" : "text-muted-foreground"}`}>
-                  {hr.connected ? (hr.bpm ?? "--") : (hr.connecting ? "…" : "anslut")}
-                </span>
-              </button>
-            </div>
+            )}
             {hr.connected && hr.bpm != null && (
               <div className="absolute top-24 right-3 z-[1000] flex items-center gap-2 bg-destructive text-destructive-foreground rounded-md px-3 py-2 shadow-lg">
                 <Heart className="w-6 h-6 fill-current animate-pulse" />
@@ -422,29 +495,57 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
                 <span className="text-[10px] font-bold uppercase opacity-80">bpm</span>
               </div>
             )}
-            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (gps.isPaused) gps.resume(); else gps.pause();
-                }}
-                className="flex items-center gap-2 px-5 py-3 bg-secondary text-secondary-foreground text-sm font-bold rounded-md border border-border shadow"
-              >
-                {gps.isPaused ? (<><Play className="w-4 h-4 fill-current" /> Fortsätt</>) : (<><Pause className="w-4 h-4 fill-current" /> Pausa</>)}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const r = gps.stop();
-                  setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
-                  setFullscreen(false);
-                }}
-                className="flex items-center gap-2 px-5 py-3 bg-destructive text-destructive-foreground text-sm font-bold rounded-md shadow"
-              >
-                <Square className="w-4 h-4 fill-current" /> Stoppa
-              </button>
+            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex flex-col items-center gap-2">
+              {!isOwner ? (
+                <>
+                  {primeError && (
+                    <div className="bg-destructive text-destructive-foreground rounded-md px-3 py-2 text-xs font-semibold shadow max-w-full text-center">
+                      {primeError}
+                    </div>
+                  )}
+                  <div className="bg-background/95 border border-border rounded-md px-3 py-1.5 text-xs font-semibold shadow">
+                    {hasFix
+                      ? `GPS-kontakt ±${Math.round(fixAccuracy!)}m`
+                      : fixAccuracy != null
+                        ? `Söker bättre signal… ±${Math.round(fixAccuracy)}m`
+                        : "Söker GPS-signal…"}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!canStart}
+                    onClick={(e) => { e.stopPropagation(); beginRecording(); }}
+                    className="flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground text-base font-black rounded-md shadow ring-4 ring-primary/30 disabled:opacity-50 disabled:ring-0"
+                  >
+                    <Play className="w-5 h-5 fill-current" />
+                    {starting ? "Startar…" : "Starta"}
+                  </button>
+                </>
+              ) : (
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (gps.isPaused) gps.resume(); else gps.pause();
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 bg-secondary text-secondary-foreground text-sm font-bold rounded-md border border-border shadow"
+                  >
+                    {gps.isPaused ? (<><Play className="w-4 h-4 fill-current" /> Fortsätt</>) : (<><Pause className="w-4 h-4 fill-current" /> Pausa</>)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const r = gps.stop();
+                      setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
+                      setFullscreen(false);
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 bg-destructive text-destructive-foreground text-sm font-bold rounded-md shadow"
+                  >
+                    <Square className="w-4 h-4 fill-current" /> Stoppa
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
