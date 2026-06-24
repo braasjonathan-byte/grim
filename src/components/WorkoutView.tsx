@@ -432,7 +432,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           ⚠️ Släck inte skärmen – inspelningen pausas om skärmen släcks.
         </p>
       )}
-      {isOwner && gps.route.length > 1 && (
+      {isOwner && gps.route.length > 0 && (
         <div className="relative">
           <RouteMap route={gps.route} height={280} />
           <button
@@ -448,7 +448,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
       {fullscreen && (isOwner || primed) && (
         <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
           <div className="flex-1 relative">
-            {gps.route.length > 1 ? (
+            {gps.route.length > 0 ? (
               <RouteMap route={gps.route} height={9999} className="!h-full !rounded-none !border-0" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
