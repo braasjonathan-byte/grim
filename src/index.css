@@ -177,7 +177,8 @@
   }
 
   html.native-capacitor {
-    --grim-header-safe-top: 0px;
+    /* Keep header clear of the status bar (notch / clock / icons) */
+    --grim-header-safe-top: max(env(safe-area-inset-top), 24px);
     /* Keep bottom safe area so the footer clears the Android navigation bar */
     --grim-bottom-safe: max(env(safe-area-inset-bottom), 24px);
   }
