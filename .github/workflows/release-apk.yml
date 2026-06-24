@@ -134,6 +134,9 @@ jobs:
       - name: Patch AndroidManifest
         run: node scripts/patch-android-manifest.cjs
 
+      - name: Patch Android system insets
+        run: node scripts/patch-android-system-insets.cjs
+
       - name: Write Android Developer Verification (adi-registration.properties)
         run: |
           mkdir -p android/app/src/main/assets

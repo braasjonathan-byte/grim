@@ -127,6 +127,10 @@ jobs:
           echo "---- Final AndroidManifest.xml ----"
           cat "$MANIFEST"
 
+      - name: Patch Android system insets
+        if: always()
+        run: node scripts/patch-android-system-insets.cjs || echo "::warning::system inset patch failed"
+
       - name: Make gradlew executable
         if: always()
         run: chmod +x android/gradlew || true

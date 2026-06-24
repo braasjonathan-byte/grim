@@ -9,6 +9,13 @@ const APP_VERSION_STORAGE_KEY = "grim_app_version";
 const APP_VERSION_REFRESH_KEY = `grim_version_refresh_${APP_VERSION}`;
 const IS_NATIVE_CAPACITOR = Capacitor.isNativePlatform();
 
+// Native Android/iOS already place the WebView inside the system-safe area.
+// Mark the document immediately so CSS does not add an extra env(safe-area-*)
+// padding layer on top of the native inset handling.
+if (IS_NATIVE_CAPACITOR) {
+  document.documentElement.classList.add("native-capacitor");
+}
+
 const clearAllCaches = async () => {
   if (!("caches" in window)) return;
   const cacheNames = await caches.keys();

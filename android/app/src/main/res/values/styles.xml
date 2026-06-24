@@ -13,6 +13,9 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <!-- Opt out of Android 15+ forced edge-to-edge so the WebView does not
              draw behind the system navigation/gesture bar. -->
         <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>

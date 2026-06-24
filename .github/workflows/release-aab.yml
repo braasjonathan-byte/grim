@@ -65,6 +65,9 @@ jobs:
       - name: Patch AndroidManifest
         run: node scripts/patch-android-manifest.cjs
 
+      - name: Patch Android system insets
+        run: node scripts/patch-android-system-insets.cjs
+
       - name: Install Grim app icons
         run: node scripts/patch-android-icons.cjs
 

@@ -172,6 +172,15 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
+  html.native-capacitor body {
+    padding: 0;
+  }
+
+  html.native-capacitor {
+    --grim-header-safe-top: 0px;
+    --grim-bottom-safe: 0px;
+  }
+
   html.light body {
     color-scheme: light;
   }

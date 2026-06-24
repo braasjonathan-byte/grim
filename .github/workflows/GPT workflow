@@ -64,6 +64,9 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: Patch Android system insets
+        run: node scripts/patch-android-system-insets.cjs
+
       # ------------------------
       # Copy google-services.json (optional)
       # ------------------------
