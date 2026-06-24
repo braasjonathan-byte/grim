@@ -177,6 +177,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   const [primeError, setPrimeError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const fixWatchId = useRef<number | null>(null);
+  const goodFixSamples = useRef(0);
 
   const stopPrimeWatch = () => {
     if (fixWatchId.current != null && navigator.geolocation) {
@@ -195,7 +196,12 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
     setPrimeError(null);
     if (fixWatchId.current != null) return;
     fixWatchId.current = navigator.geolocation.watchPosition(
-      (pos) => setFixAccuracy(pos.coords.accuracy ?? null),
+      (pos) => {
+        const accuracy = pos.coords.accuracy ?? null;
+        setFixAccuracy(accuracy);
+        if (accuracy != null && accuracy <= GPS_FIX_MAX_ACCURACY_M) goodFixSamples.current += 1;
+        else goodFixSamples.current = 0;
+      },
       (err) => {
         if (err.code === 1) setPrimeError("Platstillstånd nekades – tillåt plats och försök igen.");
         else if (err.code === 2) setPrimeError("GPS-signal hittades inte. Gå utomhus.");
@@ -215,7 +221,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   useEffect(() => () => { stopPrimeWatch(); }, []);
 
   const hasFix = fixAccuracy != null && fixAccuracy <= GPS_FIX_MAX_ACCURACY_M;
-  const canStart = hasFix && !starting && !otherActive;
+  const canStart = hasFix && goodFixSamples.current >= 2 && !starting && !otherActive;
 
   const beginRecording = async () => {
     if (!canStart) return;
@@ -236,6 +242,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
     setPrimed(false);
     setFixAccuracy(null);
     setPrimeError(null);
+    goodFixSamples.current = 0;
     setFullscreen(false);
   };
 
@@ -445,7 +452,9 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
               <RouteMap route={gps.route} height={9999} className="!h-full !rounded-none !border-0" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
-                Söker GPS-signal…
+                {isOwner && gps.accuracy != null && gps.accuracy <= GPS_FIX_MAX_ACCURACY_M
+                  ? `GPS-kontakt ±${Math.round(gps.accuracy)}m – väntar på rörelse…`
+                  : "Söker GPS-signal…"}
               </div>
             )}
             <button
@@ -507,7 +516,9 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
                   )}
                   <div className="bg-background/95 border border-border rounded-md px-3 py-1.5 text-xs font-semibold shadow">
                     {hasFix
-                      ? `GPS-kontakt ±${Math.round(fixAccuracy!)}m`
+                      ? goodFixSamples.current >= 2
+                        ? `GPS-kontakt ±${Math.round(fixAccuracy!)}m`
+                        : `Bekräftar GPS-kontakt… ±${Math.round(fixAccuracy!)}m`
                       : fixAccuracy != null
                         ? `Söker bättre signal… ±${Math.round(fixAccuracy)}m`
                         : "Söker GPS-signal…"}

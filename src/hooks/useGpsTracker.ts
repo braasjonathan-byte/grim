@@ -73,6 +73,49 @@ const setSnap = (patch: Partial<Snapshot>) => {
 
 export const isGpsRecordingActive = () => snapshot.isTracking;
 
+const waitForFreshGpsFix = (requiredGoodSamples = 2, timeoutMs = 30000): Promise<GeolocationPosition> => {
+  return new Promise((resolve, reject) => {
+    let watch: number | null = null;
+    let timeout: number | null = null;
+    let goodSamples = 0;
+    let bestAccuracy: number | null = null;
+    let settled = false;
+
+    const done = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      if (watch !== null && navigator.geolocation) navigator.geolocation.clearWatch(watch);
+      if (timeout !== null) window.clearTimeout(timeout);
+      callback();
+    };
+
+    timeout = window.setTimeout(() => {
+      done(() => reject({
+        code: 3,
+        message: bestAccuracy != null
+          ? `GPS-kontakt krävs innan start. Bästa noggrannhet var ±${Math.round(bestAccuracy)}m.`
+          : "GPS-signalen tog för lång tid.",
+      }));
+    }, timeoutMs);
+
+    watch = navigator.geolocation.watchPosition(
+      (pos) => {
+        const accuracy = pos.coords.accuracy ?? Number.POSITIVE_INFINITY;
+        bestAccuracy = bestAccuracy == null ? accuracy : Math.min(bestAccuracy, accuracy);
+        setSnap({ accuracy });
+        if (accuracy <= GPS_FIX_MAX_ACCURACY_M) {
+          goodSamples += 1;
+          if (goodSamples >= requiredGoodSamples) done(() => resolve(pos));
+        } else {
+          goodSamples = 0;
+        }
+      },
+      (err) => done(() => reject(err)),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
+    );
+  });
+};
+
 let watchId: number | null = null;
 let wakeLock: WakeLockSentinel | null = null;
 let tickInterval: number | null = null;
@@ -212,24 +255,10 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
     }
   }
 
-  // Trigger the native permission prompt explicitly and require a real GPS fix
-  // before the timer/distance recording is allowed to start.
+  // Require a fresh, stable GPS fix before the timer/distance recording starts.
   let initialPosition: GeolocationPosition;
   try {
-    initialPosition = await new Promise<GeolocationPosition>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(pos),
-        (err) => reject(err),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-      );
-    });
-    if (initialPosition.coords.accuracy > GPS_FIX_MAX_ACCURACY_M) {
-      setSnap({
-        accuracy: initialPosition.coords.accuracy,
-        error: `GPS-kontakt krävs innan start. Nuvarande noggrannhet är ±${Math.round(initialPosition.coords.accuracy)}m. Gå utomhus och vänta på bättre signal.`,
-      });
-      return false;
-    }
+    initialPosition = await waitForFreshGpsFix();
   } catch (err: any) {
     if (err?.code === 1 /* PERMISSION_DENIED */) {
       setSnap({
