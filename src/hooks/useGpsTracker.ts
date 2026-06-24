@@ -25,11 +25,13 @@ export type GpsState = {
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
-  start: () => Promise<void>;
+  ownerId: string | null;
+  start: (ownerId?: string) => Promise<void>;
   pause: () => void;
   resume: () => void;
   stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
 };
+
 
 // ---------------- Singleton store (persists across tab/component unmounts) ----------------
 
@@ -41,6 +43,7 @@ type Snapshot = {
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
+  ownerId: string | null;
 };
 
 let snapshot: Snapshot = {
@@ -51,7 +54,9 @@ let snapshot: Snapshot = {
   accuracy: null,
   error: null,
   route: [],
+  ownerId: null,
 };
+
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
@@ -153,7 +158,7 @@ const cleanup = () => {
   closeStatusNotification();
 };
 
-const startTracking = async () => {
+const startTracking = async (ownerId?: string) => {
   if (snapshot.isTracking) return;
   if (!navigator.geolocation) {
     setSnap({ error: "GPS stöds inte i denna webbläsare" });
@@ -240,7 +245,7 @@ const startTracking = async () => {
   distAnnounceMarkKm = 0;
   distAnnounceMarkSec = 0;
   startTime = Date.now();
-  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null });
+  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null, ownerId: ownerId ?? null });
 
   try {
     // @ts-ignore
@@ -385,7 +390,7 @@ const stopTracking = () => {
     route: routeAcc,
   };
   cleanup();
-  setSnap({ isTracking: false, isPaused: false });
+  setSnap({ isTracking: false, isPaused: false, ownerId: null });
   return result;
 };
 
@@ -400,6 +405,8 @@ export const useGpsTracker = (): GpsState => {
     accuracy: snapshot.accuracy,
     error: snapshot.error,
     route: snapshot.route,
+    ownerId: snapshot.ownerId,
+
     start: startTracking,
     pause: pauseTracking,
     resume: resumeTracking,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -164,16 +164,28 @@ interface CustomExercise {
 const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean }) => {
   const gps = useGpsTracker();
   const hr = useHeartRate();
+  const myId = useId();
+  const isOwner = gps.ownerId === myId;
+  const otherActive = gps.isTracking && !isOwner;
   const didAutoStart = useRef(false);
+  const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
   useEffect(() => {
     if (autoStart && !didAutoStart.current && !gps.isTracking) {
       didAutoStart.current = true;
-      gps.start();
+      gps.start(myId).then(() => setFullscreen(true));
     }
-  }, [autoStart, gps]);
+  }, [autoStart, gps, myId]);
 
-  const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
-  const [fullscreen, setFullscreen] = useState(false);
+  // Auto-open fullscreen when this control becomes the owner of a fresh recording
+  useEffect(() => {
+    if (isOwner && gps.isTracking && !summary) {
+      setFullscreen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner, gps.isTracking]);
+
 
   const fmtTime = (s: number) => {
     const h = Math.floor(s / 3600);
@@ -243,13 +255,20 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   }
 
   return (
-    <div className={`space-y-2 bg-background border border-border rounded-md p-1 max-w-full ${gps.isTracking ? "w-full" : "w-fit"}`}>
+    <div className={`space-y-2 bg-background border border-border rounded-md p-1 max-w-full ${isOwner ? "w-full" : "w-fit"}`}>
       <div className="flex items-center gap-2 flex-wrap">
-        {!gps.isTracking ? (
+        {!isOwner ? (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); gps.start(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+            disabled={otherActive}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (otherActive) return;
+              await gps.start(myId);
+              setFullscreen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-50"
+            title={otherActive ? "En GPS-inspelning pågår redan på en annan övning" : undefined}
           >
             <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
           </button>
@@ -285,7 +304,8 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           </>
         )}
       </div>
-      {gps.isTracking && (
+
+      {isOwner && (
         <div className="grid grid-cols-3 gap-2 bg-secondary border border-border rounded-md p-2">
           <div className="flex flex-col items-center">
             <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
@@ -331,12 +351,12 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           )}
         </div>
       )}
-      {gps.isTracking && !Capacitor.isNativePlatform() && (
+      {isOwner && !Capacitor.isNativePlatform() && (
         <p className="text-[10px] text-warning font-semibold">
           ⚠️ Släck inte skärmen – inspelningen pausas om skärmen släcks.
         </p>
       )}
-      {gps.isTracking && gps.route.length > 1 && (
+      {isOwner && gps.route.length > 1 && (
         <div className="relative">
           <RouteMap route={gps.route} height={280} />
           <button
@@ -349,7 +369,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           </button>
         </div>
       )}
-      {fullscreen && gps.isTracking && (
+      {fullscreen && isOwner && (
         <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
           <div className="flex-1 relative">
             {gps.route.length > 1 ? (
