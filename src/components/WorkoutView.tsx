@@ -174,6 +174,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   // Vi söker GPS-signal i bakgrunden men startar inte tid/distans-räknaren.
   const [primed, setPrimed] = useState(false);
   const [fixAccuracy, setFixAccuracy] = useState<number | null>(null);
+  const [primePoint, setPrimePoint] = useState<[number, number] | null>(null);
   const [primeError, setPrimeError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const fixWatchId = useRef<number | null>(null);
@@ -199,8 +200,13 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
       (pos) => {
         const accuracy = pos.coords.accuracy ?? null;
         setFixAccuracy(accuracy);
-        if (accuracy != null && accuracy <= GPS_FIX_MAX_ACCURACY_M) goodFixSamples.current += 1;
-        else goodFixSamples.current = 0;
+        if (accuracy != null && accuracy <= GPS_FIX_MAX_ACCURACY_M) {
+          goodFixSamples.current += 1;
+          setPrimePoint([pos.coords.latitude, pos.coords.longitude]);
+        } else {
+          goodFixSamples.current = 0;
+          setPrimePoint(null);
+        }
       },
       (err) => {
         if (err.code === 1) setPrimeError("Platstillstånd nekades – tillåt plats och försök igen.");
@@ -222,6 +228,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
 
   const hasFix = fixAccuracy != null && fixAccuracy <= GPS_FIX_MAX_ACCURACY_M;
   const canStart = hasFix && goodFixSamples.current >= 2 && !starting && !otherActive;
+  const fullscreenRoute = isOwner ? gps.route : primePoint ? [primePoint] : [];
 
   const beginRecording = async () => {
     if (!canStart) return;
@@ -241,6 +248,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
     stopPrimeWatch();
     setPrimed(false);
     setFixAccuracy(null);
+    setPrimePoint(null);
     setPrimeError(null);
     goodFixSamples.current = 0;
     setFullscreen(false);
@@ -448,8 +456,8 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
       {fullscreen && (isOwner || primed) && (
         <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
           <div className="flex-1 relative">
-            {gps.route.length > 0 ? (
-              <RouteMap route={gps.route} height={9999} className="!h-full !rounded-none !border-0" />
+            {fullscreenRoute.length > 0 ? (
+              <RouteMap route={fullscreenRoute} height={9999} className="!h-full !rounded-none !border-0" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
                 {isOwner && gps.accuracy != null && gps.accuracy <= GPS_FIX_MAX_ACCURACY_M
