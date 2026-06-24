@@ -176,6 +176,11 @@
     padding: 0;
   }
 
+  html.native-capacitor {
+    --grim-header-safe-top: 0px;
+    --grim-bottom-safe: 0px;
+  }
+
   html.light body {
     color-scheme: light;
   }
