@@ -448,11 +448,15 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
             )}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setFullscreen(false); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isOwner) setFullscreen(false);
+                else cancelPrime();
+              }}
               className="absolute top-3 right-3 z-[1000] bg-background/95 border border-border rounded-md p-2 shadow"
-              aria-label="Stäng helskärm"
+              aria-label={isOwner ? "Stäng helskärm" : "Avbryt"}
             >
-              <Minimize2 className="w-5 h-5 text-foreground" />
+              {isOwner ? <Minimize2 className="w-5 h-5 text-foreground" /> : <X className="w-5 h-5 text-foreground" />}
             </button>
             <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-4 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
               <div className="flex flex-col items-center">
