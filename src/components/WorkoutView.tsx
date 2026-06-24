@@ -221,7 +221,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   useEffect(() => () => { stopPrimeWatch(); }, []);
 
   const hasFix = fixAccuracy != null && fixAccuracy <= GPS_FIX_MAX_ACCURACY_M;
-  const canStart = hasFix && !starting && !otherActive;
+  const canStart = hasFix && goodFixSamples.current >= 2 && !starting && !otherActive;
 
   const beginRecording = async () => {
     if (!canStart) return;
