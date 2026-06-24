@@ -305,7 +305,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
         )}
       </div>
 
-      {gps.isTracking && (
+      {isOwner && (
         <div className="grid grid-cols-3 gap-2 bg-secondary border border-border rounded-md p-2">
           <div className="flex flex-col items-center">
             <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
@@ -351,12 +351,12 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           )}
         </div>
       )}
-      {gps.isTracking && !Capacitor.isNativePlatform() && (
+      {isOwner && !Capacitor.isNativePlatform() && (
         <p className="text-[10px] text-warning font-semibold">
           ⚠️ Släck inte skärmen – inspelningen pausas om skärmen släcks.
         </p>
       )}
-      {gps.isTracking && gps.route.length > 1 && (
+      {isOwner && gps.route.length > 1 && (
         <div className="relative">
           <RouteMap route={gps.route} height={280} />
           <button
@@ -369,7 +369,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           </button>
         </div>
       )}
-      {fullscreen && gps.isTracking && (
+      {fullscreen && isOwner && (
         <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
           <div className="flex-1 relative">
             {gps.route.length > 1 ? (
