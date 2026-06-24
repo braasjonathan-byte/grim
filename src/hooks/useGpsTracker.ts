@@ -390,7 +390,7 @@ const stopTracking = () => {
     route: routeAcc,
   };
   cleanup();
-  setSnap({ isTracking: false, isPaused: false });
+  setSnap({ isTracking: false, isPaused: false, ownerId: null });
   return result;
 };
 
@@ -405,6 +405,8 @@ export const useGpsTracker = (): GpsState => {
     accuracy: snapshot.accuracy,
     error: snapshot.error,
     route: snapshot.route,
+    ownerId: snapshot.ownerId,
+
     start: startTracking,
     pause: pauseTracking,
     resume: resumeTracking,
