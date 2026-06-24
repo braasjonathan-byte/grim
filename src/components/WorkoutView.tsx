@@ -436,7 +436,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           </button>
         </div>
       )}
-      {fullscreen && isOwner && (
+      {fullscreen && (isOwner || primed) && (
         <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
           <div className="flex-1 relative">
             {gps.route.length > 1 ? (
