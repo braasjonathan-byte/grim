@@ -493,29 +493,57 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
                 <span className="text-[10px] font-bold uppercase opacity-80">bpm</span>
               </div>
             )}
-            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex justify-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (gps.isPaused) gps.resume(); else gps.pause();
-                }}
-                className="flex items-center gap-2 px-5 py-3 bg-secondary text-secondary-foreground text-sm font-bold rounded-md border border-border shadow"
-              >
-                {gps.isPaused ? (<><Play className="w-4 h-4 fill-current" /> Fortsätt</>) : (<><Pause className="w-4 h-4 fill-current" /> Pausa</>)}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const r = gps.stop();
-                  setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
-                  setFullscreen(false);
-                }}
-                className="flex items-center gap-2 px-5 py-3 bg-destructive text-destructive-foreground text-sm font-bold rounded-md shadow"
-              >
-                <Square className="w-4 h-4 fill-current" /> Stoppa
-              </button>
+            <div className="absolute bottom-4 left-3 right-3 z-[1000] flex flex-col items-center gap-2">
+              {!isOwner ? (
+                <>
+                  {primeError && (
+                    <div className="bg-destructive text-destructive-foreground rounded-md px-3 py-2 text-xs font-semibold shadow max-w-full text-center">
+                      {primeError}
+                    </div>
+                  )}
+                  <div className="bg-background/95 border border-border rounded-md px-3 py-1.5 text-xs font-semibold shadow">
+                    {hasFix
+                      ? `GPS-kontakt ±${Math.round(fixAccuracy!)}m`
+                      : fixAccuracy != null
+                        ? `Söker bättre signal… ±${Math.round(fixAccuracy)}m`
+                        : "Söker GPS-signal…"}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={!canStart}
+                    onClick={(e) => { e.stopPropagation(); beginRecording(); }}
+                    className="flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground text-base font-black rounded-md shadow ring-4 ring-primary/30 disabled:opacity-50 disabled:ring-0"
+                  >
+                    <Play className="w-5 h-5 fill-current" />
+                    {starting ? "Startar…" : "Starta"}
+                  </button>
+                </>
+              ) : (
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (gps.isPaused) gps.resume(); else gps.pause();
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 bg-secondary text-secondary-foreground text-sm font-bold rounded-md border border-border shadow"
+                  >
+                    {gps.isPaused ? (<><Play className="w-4 h-4 fill-current" /> Fortsätt</>) : (<><Pause className="w-4 h-4 fill-current" /> Pausa</>)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const r = gps.stop();
+                      setSummary({ km: r.distanceKm, sec: r.elapsedSec, route: r.route });
+                      setFullscreen(false);
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 bg-destructive text-destructive-foreground text-sm font-bold rounded-md shadow"
+                  >
+                    <Square className="w-4 h-4 fill-current" /> Stoppa
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
