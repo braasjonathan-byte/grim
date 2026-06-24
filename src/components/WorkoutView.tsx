@@ -452,7 +452,9 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
               <RouteMap route={gps.route} height={9999} className="!h-full !rounded-none !border-0" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">
-                Söker GPS-signal…
+                {isOwner && gps.accuracy != null && gps.accuracy <= GPS_FIX_MAX_ACCURACY_M
+                  ? `GPS-kontakt ±${Math.round(gps.accuracy)}m – väntar på rörelse…`
+                  : "Söker GPS-signal…"}
               </div>
             )}
             <button
