@@ -170,13 +170,80 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   const didAutoStart = useRef(false);
   const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  // "Primed" = användaren har öppnat GPS-vyn men inte tryckt Starta än.
+  // Vi söker GPS-signal i bakgrunden men startar inte tid/distans-räknaren.
+  const [primed, setPrimed] = useState(false);
+  const [fixAccuracy, setFixAccuracy] = useState<number | null>(null);
+  const [primeError, setPrimeError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const fixWatchId = useRef<number | null>(null);
+
+  const stopPrimeWatch = () => {
+    if (fixWatchId.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(fixWatchId.current);
+      fixWatchId.current = null;
+    }
+  };
+
+  // Starta lokal positionssökning så snart vyn är "primed" men ej ägare ännu.
+  useEffect(() => {
+    if (!primed || isOwner) return;
+    if (!navigator.geolocation) {
+      setPrimeError("GPS stöds inte i denna enhet");
+      return;
+    }
+    setPrimeError(null);
+    if (fixWatchId.current != null) return;
+    fixWatchId.current = navigator.geolocation.watchPosition(
+      (pos) => setFixAccuracy(pos.coords.accuracy ?? null),
+      (err) => {
+        if (err.code === 1) setPrimeError("Platstillstånd nekades – tillåt plats och försök igen.");
+        else if (err.code === 2) setPrimeError("GPS-signal hittades inte. Gå utomhus.");
+        else if (err.code === 3) setPrimeError("GPS-signalen tog för lång tid. Försök utomhus med fri sikt.");
+        else setPrimeError(err.message || "GPS-fel");
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
+    );
+    return () => { stopPrimeWatch(); };
+  }, [primed, isOwner]);
+
+  // Stoppa lokal sökning så fort vi blir ägare (riktig inspelning igång).
+  useEffect(() => {
+    if (isOwner) stopPrimeWatch();
+  }, [isOwner]);
+
+  useEffect(() => () => { stopPrimeWatch(); }, []);
+
+  const hasFix = fixAccuracy != null && fixAccuracy <= 50;
+  const canStart = hasFix && !starting && !otherActive;
+
+  const beginRecording = async () => {
+    if (!canStart) return;
+    setStarting(true);
+    try {
+      await gps.start(myId);
+      setFullscreen(true);
+      setPrimed(false);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const cancelPrime = () => {
+    stopPrimeWatch();
+    setPrimed(false);
+    setFixAccuracy(null);
+    setPrimeError(null);
+    setFullscreen(false);
+  };
 
   useEffect(() => {
     if (autoStart && !didAutoStart.current && !gps.isTracking) {
       didAutoStart.current = true;
-      gps.start(myId).then(() => setFullscreen(true));
+      setPrimed(true);
+      setFullscreen(true);
     }
-  }, [autoStart, gps, myId]);
+  }, [autoStart, gps.isTracking]);
 
   // Auto-open fullscreen when this control becomes the owner of a fresh recording
   useEffect(() => {
