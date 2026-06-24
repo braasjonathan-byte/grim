@@ -158,7 +158,7 @@ const cleanup = () => {
   closeStatusNotification();
 };
 
-const startTracking = async () => {
+const startTracking = async (ownerId?: string) => {
   if (snapshot.isTracking) return;
   if (!navigator.geolocation) {
     setSnap({ error: "GPS stöds inte i denna webbläsare" });
