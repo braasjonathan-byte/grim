@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff } from "lucide-react";
-import { useGpsTracker } from "@/hooks/useGpsTracker";
+import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
 import { Capacitor } from "@capacitor/core";
@@ -214,16 +214,18 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
 
   useEffect(() => () => { stopPrimeWatch(); }, []);
 
-  const hasFix = fixAccuracy != null && fixAccuracy <= 50;
+  const hasFix = fixAccuracy != null && fixAccuracy <= GPS_FIX_MAX_ACCURACY_M;
   const canStart = hasFix && !starting && !otherActive;
 
   const beginRecording = async () => {
     if (!canStart) return;
     setStarting(true);
     try {
-      await gps.start(myId);
-      setFullscreen(true);
-      setPrimed(false);
+      const started = await gps.start(myId);
+      if (started) {
+        setFullscreen(true);
+        setPrimed(false);
+      }
     } finally {
       setStarting(false);
     }

@@ -17,6 +17,8 @@ const haversineKm = (a: GeolocationCoordinates, b: GeolocationCoordinates) => {
 
 export type RoutePoint = [number, number]; // [lat, lng]
 
+export const GPS_FIX_MAX_ACCURACY_M = 50;
+
 export type GpsState = {
   isTracking: boolean;
   isPaused: boolean;
@@ -26,7 +28,7 @@ export type GpsState = {
   error: string | null;
   route: RoutePoint[];
   ownerId: string | null;
-  start: (ownerId?: string) => Promise<void>;
+  start: (ownerId?: string) => Promise<boolean>;
   pause: () => void;
   resume: () => void;
   stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
@@ -158,11 +160,11 @@ const cleanup = () => {
   closeStatusNotification();
 };
 
-const startTracking = async (ownerId?: string) => {
-  if (snapshot.isTracking) return;
+const startTracking = async (ownerId?: string): Promise<boolean> => {
+  if (snapshot.isTracking) return true;
   if (!navigator.geolocation) {
     setSnap({ error: "GPS stöds inte i denna webbläsare" });
-    return;
+    return false;
   }
 
   // Check permission state up-front so we can prompt clearly
@@ -181,7 +183,7 @@ const startTracking = async (ownerId?: string) => {
         setSnap({
           error: "Platstillstånd nekades. Aktivera plats för appen i enhetens inställningar och försök igen.",
         });
-        return;
+        return false;
       }
       // After foreground is granted, nudge the OS to prompt for "Allow all the time"
       // (background location) so recording survives the screen turning off.
@@ -203,22 +205,31 @@ const startTracking = async (ownerId?: string) => {
           error:
             "Platstillstånd är blockerat. Aktivera plats för denna sida i webbläsarens inställningar (lås-ikonen i adressfältet → Behörigheter → Plats → Tillåt) och försök igen.",
         });
-        return;
+        return false;
       }
     } catch {
       // permissions API not supported — fall through to getCurrentPosition prompt
     }
   }
 
-  // Trigger the native permission prompt explicitly before starting watchPosition
+  // Trigger the native permission prompt explicitly and require a real GPS fix
+  // before the timer/distance recording is allowed to start.
+  let initialPosition: GeolocationPosition;
   try {
-    await new Promise<void>((resolve, reject) => {
+    initialPosition = await new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(
-        () => resolve(),
+        (pos) => resolve(pos),
         (err) => reject(err),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
       );
     });
+    if (initialPosition.coords.accuracy > GPS_FIX_MAX_ACCURACY_M) {
+      setSnap({
+        accuracy: initialPosition.coords.accuracy,
+        error: `GPS-kontakt krävs innan start. Nuvarande noggrannhet är ±${Math.round(initialPosition.coords.accuracy)}m. Gå utomhus och vänta på bättre signal.`,
+      });
+      return false;
+    }
   } catch (err: any) {
     if (err?.code === 1 /* PERMISSION_DENIED */) {
       setSnap({
@@ -232,20 +243,20 @@ const startTracking = async (ownerId?: string) => {
     } else {
       setSnap({ error: err?.message || "Kunde inte starta GPS" });
     }
-    return;
+    return false;
   }
 
   installVisibilityHandler();
   distAcc = 0;
-  lastCoord = null;
-  routeAcc = [];
+  lastCoord = initialPosition.coords;
+  routeAcc = [[initialPosition.coords.latitude, initialPosition.coords.longitude]];
   kmCount = 0;
   kmMarkSec = 0;
   lastKmSec = null;
   distAnnounceMarkKm = 0;
   distAnnounceMarkSec = 0;
   startTime = Date.now();
-  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: [], error: null, accuracy: null, ownerId: ownerId ?? null });
+  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: routeAcc, error: null, accuracy: initialPosition.coords.accuracy, ownerId: ownerId ?? null });
 
   try {
     // @ts-ignore
@@ -265,7 +276,7 @@ const startTracking = async (ownerId?: string) => {
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
       setSnap({ accuracy: pos.coords.accuracy });
-      if (pos.coords.accuracy > 50) return;
+      if (pos.coords.accuracy > GPS_FIX_MAX_ACCURACY_M) return;
       const pt: RoutePoint = [pos.coords.latitude, pos.coords.longitude];
       if (lastCoord) {
         const d = haversineKm(lastCoord, pos.coords);
@@ -321,6 +332,7 @@ const startTracking = async (ownerId?: string) => {
   // Persistent status notification while tracking — updates every 15s
   showStatusNotification();
   notifInterval = window.setInterval(() => { showStatusNotification(); }, 15000);
+  return true;
 };
 
 const pauseTracking = () => {
@@ -350,7 +362,7 @@ const resumeTracking = async () => {
   watchId = navigator.geolocation.watchPosition(
     (pos) => {
       setSnap({ accuracy: pos.coords.accuracy });
-      if (pos.coords.accuracy > 50) return;
+      if (pos.coords.accuracy > GPS_FIX_MAX_ACCURACY_M) return;
       const pt: RoutePoint = [pos.coords.latitude, pos.coords.longitude];
       if (lastCoord) {
         const d = haversineKm(lastCoord, pos.coords);

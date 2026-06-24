@@ -759,12 +759,21 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
     if (prefs.enabled) {
       primeSpeech();
     }
+    if (useGps) {
+      try {
+        const started = await gps.start();
+        if (!started) {
+          toast.error("GPS-kontakt krävs innan passet kan starta.");
+          return;
+        }
+      } catch {
+        toast.error("GPS-kontakt krävs innan passet kan starta.");
+        return;
+      }
+    }
     setShowVoicePrefs(false);
     setPaused(false);
     setCurrentIdx(0);
-    if (useGps) {
-      try { await gps.start(); } catch {}
-    }
     if (warmupMin > 0) void startPhase("warmup", 0);
     else void startPhase("interval", 0);
   };
