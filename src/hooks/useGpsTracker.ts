@@ -43,6 +43,7 @@ type Snapshot = {
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
+  ownerId: string | null;
 };
 
 let snapshot: Snapshot = {
@@ -53,7 +54,9 @@ let snapshot: Snapshot = {
   accuracy: null,
   error: null,
   route: [],
+  ownerId: null,
 };
+
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
