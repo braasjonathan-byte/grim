@@ -178,7 +178,8 @@
 
   html.native-capacitor {
     --grim-header-safe-top: 0px;
-    --grim-bottom-safe: 0px;
+    /* Keep bottom safe area so the footer clears the Android navigation bar */
+    --grim-bottom-safe: max(env(safe-area-inset-bottom), 24px);
   }
 
   html.light body {
