@@ -164,16 +164,28 @@ interface CustomExercise {
 const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean }) => {
   const gps = useGpsTracker();
   const hr = useHeartRate();
+  const myId = useId();
+  const isOwner = gps.ownerId === myId;
+  const otherActive = gps.isTracking && !isOwner;
   const didAutoStart = useRef(false);
+  const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
   useEffect(() => {
     if (autoStart && !didAutoStart.current && !gps.isTracking) {
       didAutoStart.current = true;
-      gps.start();
+      gps.start(myId).then(() => setFullscreen(true));
     }
-  }, [autoStart, gps]);
+  }, [autoStart, gps, myId]);
 
-  const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
-  const [fullscreen, setFullscreen] = useState(false);
+  // Auto-open fullscreen when this control becomes the owner of a fresh recording
+  useEffect(() => {
+    if (isOwner && gps.isTracking && !summary) {
+      setFullscreen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner, gps.isTracking]);
+
 
   const fmtTime = (s: number) => {
     const h = Math.floor(s / 3600);
