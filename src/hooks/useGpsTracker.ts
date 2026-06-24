@@ -25,11 +25,13 @@ export type GpsState = {
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
-  start: () => Promise<void>;
+  ownerId: string | null;
+  start: (ownerId?: string) => Promise<void>;
   pause: () => void;
   resume: () => void;
   stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
 };
+
 
 // ---------------- Singleton store (persists across tab/component unmounts) ----------------
 
