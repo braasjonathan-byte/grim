@@ -328,10 +328,10 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           <button
             type="button"
             disabled={otherActive}
-            onClick={async (e) => {
+            onClick={(e) => {
               e.stopPropagation();
               if (otherActive) return;
-              await gps.start(myId);
+              setPrimed(true);
               setFullscreen(true);
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-50"
