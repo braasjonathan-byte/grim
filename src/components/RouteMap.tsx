@@ -47,22 +47,24 @@ const RouteMap = ({ route, height = 200, className = "", collapsible = false, de
 
     const primaryVar = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
     const lineColor = primaryVar ? `hsl(${primaryVar})` : "#2563eb";
-    // Outer halo for contrast on the map
-    L.polyline(route, { color: "#ffffff", weight: 8, opacity: 0.85, lineCap: "round", lineJoin: "round" }).addTo(map);
-    const line = L.polyline(route, {
-      color: lineColor,
-      weight: 5,
-      opacity: 0.95,
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(map);
-
     const start = route[0];
     const end = route[route.length - 1];
     L.circleMarker(start, { radius: 6, color: "#16a34a", fillColor: "#16a34a", fillOpacity: 1, weight: 2 }).addTo(map);
-    L.circleMarker(end, { radius: 6, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1, weight: 2 }).addTo(map);
-
-    map.fitBounds(line.getBounds(), { padding: [16, 16] });
+    if (route.length > 1) {
+      // Outer halo for contrast on the map
+      L.polyline(route, { color: "#ffffff", weight: 8, opacity: 0.85, lineCap: "round", lineJoin: "round" }).addTo(map);
+      const line = L.polyline(route, {
+        color: lineColor,
+        weight: 5,
+        opacity: 0.95,
+        lineCap: "round",
+        lineJoin: "round",
+      }).addTo(map);
+      L.circleMarker(end, { radius: 6, color: "#dc2626", fillColor: "#dc2626", fillOpacity: 1, weight: 2 }).addTo(map);
+      map.fitBounds(line.getBounds(), { padding: [16, 16] });
+    } else {
+      map.setView(start, 17);
+    }
   }, [route, open]);
 
   useEffect(() => {
