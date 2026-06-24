@@ -458,34 +458,36 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
             >
               {isOwner ? <Minimize2 className="w-5 h-5 text-foreground" /> : <X className="w-5 h-5 text-foreground" />}
             </button>
-            <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-4 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
-                <span className="font-mono font-bold text-base text-foreground">{fmtTime(gps.elapsedSec)}</span>
+            {isOwner && (
+              <div className="absolute top-3 left-3 right-16 z-[1000] grid grid-cols-4 gap-2 bg-background/95 border border-border rounded-md p-2 shadow">
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tid</span>
+                  <span className="font-mono font-bold text-base text-foreground">{fmtTime(gps.elapsedSec)}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Distans</span>
+                  <span className="font-mono font-bold text-base text-foreground">{(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tempo</span>
+                  <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); if (hr.connected) hr.disconnect(); else hr.connect(); }}
+                  disabled={hr.connecting}
+                  className="flex flex-col items-center"
+                  aria-label={hr.connected ? "Koppla från pulsmätare" : "Anslut pulsmätare"}
+                >
+                  <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1">
+                    <Heart className={`w-2.5 h-2.5 ${hr.connected ? "text-destructive fill-current" : ""}`} /> Puls
+                  </span>
+                  <span className={`font-mono font-bold text-base ${hr.connected ? "text-destructive" : "text-muted-foreground"}`}>
+                    {hr.connected ? (hr.bpm ?? "--") : (hr.connecting ? "…" : "anslut")}
+                  </span>
+                </button>
               </div>
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Distans</span>
-                <span className="font-mono font-bold text-base text-foreground">{(Math.round(gps.distanceKm * 100) / 100).toFixed(2)} km</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">Tempo</span>
-                <span className="font-mono font-bold text-base text-foreground">{fmtPace(gps.distanceKm, gps.elapsedSec)}</span>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); if (hr.connected) hr.disconnect(); else hr.connect(); }}
-                disabled={hr.connecting}
-                className="flex flex-col items-center"
-                aria-label={hr.connected ? "Koppla från pulsmätare" : "Anslut pulsmätare"}
-              >
-                <span className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold flex items-center gap-1">
-                  <Heart className={`w-2.5 h-2.5 ${hr.connected ? "text-destructive fill-current" : ""}`} /> Puls
-                </span>
-                <span className={`font-mono font-bold text-base ${hr.connected ? "text-destructive" : "text-muted-foreground"}`}>
-                  {hr.connected ? (hr.bpm ?? "--") : (hr.connecting ? "…" : "anslut")}
-                </span>
-              </button>
-            </div>
+            )}
             {hr.connected && hr.bpm != null && (
               <div className="absolute top-24 right-3 z-[1000] flex items-center gap-2 bg-destructive text-destructive-foreground rounded-md px-3 py-2 shadow-lg">
                 <Heart className="w-6 h-6 fill-current animate-pulse" />
