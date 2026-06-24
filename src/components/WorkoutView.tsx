@@ -255,13 +255,20 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   }
 
   return (
-    <div className={`space-y-2 bg-background border border-border rounded-md p-1 max-w-full ${gps.isTracking ? "w-full" : "w-fit"}`}>
+    <div className={`space-y-2 bg-background border border-border rounded-md p-1 max-w-full ${isOwner ? "w-full" : "w-fit"}`}>
       <div className="flex items-center gap-2 flex-wrap">
-        {!gps.isTracking ? (
+        {!isOwner ? (
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); gps.start(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md"
+            disabled={otherActive}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (otherActive) return;
+              await gps.start(myId);
+              setFullscreen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-50"
+            title={otherActive ? "En GPS-inspelning pågår redan på en annan övning" : undefined}
           >
             <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
           </button>
@@ -297,6 +304,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           </>
         )}
       </div>
+
       {gps.isTracking && (
         <div className="grid grid-cols-3 gap-2 bg-secondary border border-border rounded-md p-2">
           <div className="flex flex-col items-center">
