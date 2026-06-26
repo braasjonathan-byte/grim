@@ -76,6 +76,8 @@ jobs:
       # Build web
       # -------------------------
       - name: Build web
+        env:
+          VITE_ENABLE_NATIVE_PUSH: "true"
         run: npm run build
 
       # -------------------------
