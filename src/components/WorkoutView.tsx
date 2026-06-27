@@ -8177,8 +8177,9 @@ const estimateCalories = (
                           );
                         }
 
-                        // Extract exercise name using the shared parser (handles em dash, en dash, and plain separators)
-                        const exerciseName = parseExerciseWeight(part).name;
+                        // Extract exercise name (text before the first digit, tolerates em dash and en dash separators)
+                        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
+                        const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
                         const isLoggable = exerciseName && exerciseName.length > 2 && !exerciseName.toLowerCase().includes("vila") && !exerciseName.toLowerCase().includes("vilodag");
 
                         // Extract reps from part for progression calculation
