@@ -2055,11 +2055,11 @@ const estimateCalories = (
 
         // Use the same name extraction logic as the rendering code
         const { clean: cleanPart } = extractRpe(part);
-        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+        const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
         const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
-        const exerciseName = nameMatch ? nameMatch[1].trim() : null;
-        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
+        const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
+        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, '') : exerciseName || cleanPart;
 
         const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
         const setsVal = getSetsDone(k, pName);
@@ -2083,11 +2083,11 @@ const estimateCalories = (
         if (isCondExercise) continue;
         if (/^(vila|vilodag)/i.test(part)) continue;
         const { clean: cleanPart } = extractRpe(part);
-        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+        const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
         const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
-        const exerciseName = nameMatch ? nameMatch[1].trim() : null;
-        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
+        const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
+        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, '') : exerciseName || cleanPart;
         const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
         const k = `${week}-${day}`;
         const currentSets = getSetsDone(k, pName);
@@ -6080,11 +6080,11 @@ const estimateCalories = (
                           if (isCondExercise) continue;
                           if (/^(vila|vilodag)/i.test(part)) continue;
                           const { clean: cleanPart } = extractRpe(part);
-                          const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                          const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
                           const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-                          const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
-                          const exerciseName = nameMatch ? nameMatch[1].trim() : null;
-                          const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+                          const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
+                          const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
+                          const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, '') : exerciseName || cleanPart;
                           const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
                           const allChecked = "1".repeat(sc);
                           acc[`__sets__${pName}`] = allChecked;
@@ -9995,11 +9995,11 @@ const estimateCalories = (
                         if (isCondExercise) continue;
                         if (/^(vila|vilodag)/i.test(part)) continue;
                         const { clean: cleanPart } = extractRpe(part);
-                        const partStructMatch = cleanPart.match(/^(.+?)\s+(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+                        const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
                         const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-                        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s+\d)/);
-                        const exerciseName = nameMatch ? nameMatch[1].trim() : null;
-                        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*—\s*$/, '') : exerciseName || cleanPart;
+                        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
+                        const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
+                        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, '') : exerciseName || cleanPart;
                         const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
                         const allChecked = "1".repeat(sc);
                         acc[`__sets__${pName}`] = allChecked;
