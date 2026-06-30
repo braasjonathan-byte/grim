@@ -182,6 +182,10 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   const [starting, setStarting] = useState(false);
   const fixWatchId = useRef<number | null>(null);
   const goodFixSamples = useRef(0);
+  const summaryCardRef = useRef<HTMLDivElement | null>(null);
+  const [heatmap, setHeatmap] = useState<[number, number][][]>([]);
+  useEffect(() => { setHeatmap(loadRouteHistory()); }, []);
+
 
   const stopPrimeWatch = () => {
     if (fixWatchId.current != null && navigator.geolocation) {
