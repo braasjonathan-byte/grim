@@ -22,17 +22,20 @@ export const GPS_FIX_MAX_ACCURACY_M = 50;
 export type GpsState = {
   isTracking: boolean;
   isPaused: boolean;
+  autoPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
   ownerId: string | null;
+  kmSplits: number[];
   start: (ownerId?: string) => Promise<boolean>;
   pause: () => void;
   resume: () => void;
-  stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
+  stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[]; kmSplits: number[] };
 };
+
 
 
 // ---------------- Singleton store (persists across tab/component unmounts) ----------------
