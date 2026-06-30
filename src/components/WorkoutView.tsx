@@ -299,31 +299,63 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   };
 
   if (summary) {
+    const shareImage = async () => {
+      if (!summaryCardRef.current) return;
+      try {
+        const dataUrl = await toPng(summaryCardRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: getComputedStyle(document.body).backgroundColor || "#0a0a0a" });
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], `pass-${Date.now()}.png`, { type: "image/png" });
+        const nav = navigator as Navigator & { canShare?: (data: { files: File[] }) => boolean; share?: (data: { files: File[]; title?: string; text?: string }) => Promise<void> };
+        if (nav.canShare?.({ files: [file] }) && nav.share) {
+          await nav.share({ files: [file], title: "Mitt pass", text: `${summary.km.toFixed(2)} km på ${fmtTime(summary.sec)}` });
+        } else {
+          const a = document.createElement("a");
+          a.href = dataUrl; a.download = file.name; a.click();
+        }
+      } catch {
+        toast.error("Kunde inte skapa delningsbild");
+      }
+    };
     return (
-      <div className="space-y-2 bg-background border border-primary rounded-md p-3">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
-          <MapPin className="w-3.5 h-3.5" /> Pass slutfört
-        </div>
-        {summary.route.length > 1 && (
-          <RouteMap route={summary.route} height={180} />
-        )}
-        <div className="grid grid-cols-2 gap-1.5">
-          <div className="border border-border rounded-md p-2 text-center bg-secondary">
-            <p className="text-lg font-black leading-tight">{(Math.round(summary.km * 100) / 100).toFixed(2)}</p>
-            <p className="text-[10px] text-muted-foreground">km</p>
+      <div className="space-y-2">
+        <div ref={summaryCardRef} className="space-y-2 bg-background border border-primary rounded-md p-3">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
+            <MapPin className="w-3.5 h-3.5" /> Pass slutfört
           </div>
-          <div className="border border-border rounded-md p-2 text-center bg-secondary">
-            <p className="text-lg font-black leading-tight font-mono">{fmtTime(summary.sec)}</p>
-            <p className="text-[10px] text-muted-foreground">tid</p>
+          {summary.route.length > 1 && (
+            <RouteMap route={summary.route} height={180} heatmap={heatmap} />
+          )}
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="border border-border rounded-md p-2 text-center bg-secondary">
+              <p className="text-lg font-black leading-tight">{(Math.round(summary.km * 100) / 100).toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">km</p>
+            </div>
+            <div className="border border-border rounded-md p-2 text-center bg-secondary">
+              <p className="text-lg font-black leading-tight font-mono">{fmtTime(summary.sec)}</p>
+              <p className="text-[10px] text-muted-foreground">tid</p>
+            </div>
+            <div className="border border-border rounded-md p-2 text-center bg-secondary">
+              <p className="text-lg font-black leading-tight font-mono">{fmtPace(summary.km, summary.sec)}</p>
+              <p className="text-[10px] text-muted-foreground">snittempo</p>
+            </div>
+            <div className="border border-border rounded-md p-2 text-center bg-secondary">
+              <p className="text-lg font-black leading-tight font-mono">{fmtKmh(summary.km, summary.sec)}</p>
+              <p className="text-[10px] text-muted-foreground">snitthastighet</p>
+            </div>
           </div>
-          <div className="border border-border rounded-md p-2 text-center bg-secondary">
-            <p className="text-lg font-black leading-tight font-mono">{fmtPace(summary.km, summary.sec)}</p>
-            <p className="text-[10px] text-muted-foreground">snittempo</p>
-          </div>
-          <div className="border border-border rounded-md p-2 text-center bg-secondary">
-            <p className="text-lg font-black leading-tight font-mono">{fmtKmh(summary.km, summary.sec)}</p>
-            <p className="text-[10px] text-muted-foreground">snitthastighet</p>
-          </div>
+          {summary.splits && summary.splits.length > 0 && (
+            <div className="border border-border rounded-md p-2 bg-secondary/50">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Splits</p>
+              <div className="grid grid-cols-5 gap-1">
+                {summary.splits.map((sec, i) => (
+                  <div key={i} className="text-center">
+                    <div className="text-[9px] opacity-70">km {i + 1}</div>
+                    <div className="font-mono text-[11px] font-black tabular-nums">{fmtTime(Math.round(sec))}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex gap-1.5">
           <button
@@ -335,6 +367,13 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
           </button>
           <button
             type="button"
+            onClick={(e) => { e.stopPropagation(); shareImage(); }}
+            className="px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-md border border-border flex items-center gap-1"
+          >
+            <Share2 className="w-3.5 h-3.5" /> Dela
+          </button>
+          <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); setSummary(null); }}
             className="px-3 py-2 bg-secondary text-foreground text-xs font-semibold rounded-md border border-border"
           >
@@ -343,6 +382,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
         </div>
       </div>
     );
+
   }
 
   return (
