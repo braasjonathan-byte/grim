@@ -10,6 +10,9 @@ import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
 import { Capacitor } from "@capacitor/core";
 import RouteMap from "@/components/RouteMap";
+import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
+import { toPng } from "html-to-image";
+
 import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
 import PlanPicker from "@/components/PlanPicker";
