@@ -22,17 +22,20 @@ export const GPS_FIX_MAX_ACCURACY_M = 50;
 export type GpsState = {
   isTracking: boolean;
   isPaused: boolean;
+  autoPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
   ownerId: string | null;
+  kmSplits: number[];
   start: (ownerId?: string) => Promise<boolean>;
   pause: () => void;
   resume: () => void;
-  stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[] };
+  stop: () => { distanceKm: number; elapsedSec: number; route: RoutePoint[]; kmSplits: number[] };
 };
+
 
 
 // ---------------- Singleton store (persists across tab/component unmounts) ----------------
@@ -40,24 +43,30 @@ export type GpsState = {
 type Snapshot = {
   isTracking: boolean;
   isPaused: boolean;
+  autoPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
   ownerId: string | null;
+  /** Seconds it took to complete each finished km, indexed by km number. */
+  kmSplits: number[];
 };
 
 let snapshot: Snapshot = {
   isTracking: false,
   isPaused: false,
+  autoPaused: false,
   distanceKm: 0,
   elapsedSec: 0,
   accuracy: null,
   error: null,
   route: [],
   ownerId: null,
+  kmSplits: [],
 };
+
 
 
 const listeners = new Set<() => void>();
@@ -127,10 +136,17 @@ let routeAcc: RoutePoint[] = [];
 let kmCount = 0;
 let kmMarkSec = 0;
 let lastKmSec: number | null = null;
+let kmSplitsAcc: number[] = [];
 let distAnnounceMarkKm = 0;
 let distAnnounceMarkSec = 0;
 let visibilityHandlerInstalled = false;
 let notifInterval: number | null = null;
+let lastMoveAt = 0;
+let autoPauseOffsetMs = 0; // accumulated paused time to subtract from elapsed
+let autoPauseStartedAt: number | null = null;
+const AUTO_PAUSE_IDLE_MS = 12000; // pause after 12s without movement
+const AUTO_PAUSE_RESUME_M = 5; // resume on >5m movement
+
 
 const installVisibilityHandler = () => {
   if (visibilityHandlerInstalled || typeof document === "undefined") return;
@@ -282,10 +298,14 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
   kmCount = 0;
   kmMarkSec = 0;
   lastKmSec = null;
+  kmSplitsAcc = [];
   distAnnounceMarkKm = 0;
   distAnnounceMarkSec = 0;
   startTime = Date.now();
-  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: routeAcc, error: null, accuracy: initialPosition.coords.accuracy, ownerId: ownerId ?? null });
+  lastMoveAt = Date.now();
+  autoPauseOffsetMs = 0;
+  autoPauseStartedAt = null;
+  setSnap({ isTracking: true, isPaused: false, autoPaused: false, distanceKm: 0, elapsedSec: 0, route: routeAcc, error: null, accuracy: initialPosition.coords.accuracy, ownerId: ownerId ?? null, kmSplits: [] });
 
   try {
     // @ts-ignore
@@ -310,21 +330,30 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
       if (lastCoord) {
         const d = haversineKm(lastCoord, pos.coords);
         if (d > 0.003) {
+          if (snapshot.autoPaused && d * 1000 >= AUTO_PAUSE_RESUME_M) {
+            if (autoPauseStartedAt != null) {
+              autoPauseOffsetMs += Date.now() - autoPauseStartedAt;
+              autoPauseStartedAt = null;
+            }
+            setSnap({ autoPaused: false });
+          }
+          lastMoveAt = Date.now();
           distAcc += d;
           lastCoord = pos.coords;
           routeAcc = [...routeAcc, pt];
           setSnap({ distanceKm: distAcc, route: routeAcc });
           const newKmCount = Math.floor(distAcc);
           if (newKmCount > kmCount) {
-            const nowSec = (Date.now() - startTime) / 1000;
+            const nowSec = (Date.now() - startTime - autoPauseOffsetMs) / 1000;
             lastKmSec = nowSec - kmMarkSec;
+            kmSplitsAcc = [...kmSplitsAcc, lastKmSec];
             kmMarkSec = nowSec;
             kmCount = newKmCount;
+            setSnap({ kmSplits: kmSplitsAcc });
           }
-          // Distance-based voice announcement
           const distInterval = getGpsVoiceIntervalKm();
           if (distInterval > 0 && distAcc - distAnnounceMarkKm >= distInterval) {
-            const nowSec = (Date.now() - startTime) / 1000;
+            const nowSec = (Date.now() - startTime - autoPauseOffsetMs) / 1000;
             const segKm = distAcc - distAnnounceMarkKm;
             const segSec = nowSec - distAnnounceMarkSec;
             const segPace = segSec / segKm;
@@ -347,8 +376,17 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
   );
 
   tickInterval = window.setInterval(() => {
-    setSnap({ elapsedSec: Math.floor((Date.now() - startTime) / 1000) });
+    if (snapshot.isTracking && !snapshot.isPaused) {
+      const idle = Date.now() - lastMoveAt;
+      if (!snapshot.autoPaused && idle > AUTO_PAUSE_IDLE_MS) {
+        autoPauseStartedAt = Date.now() - AUTO_PAUSE_IDLE_MS;
+        setSnap({ autoPaused: true });
+      }
+    }
+    if (snapshot.autoPaused) return;
+    setSnap({ elapsedSec: Math.floor((Date.now() - startTime - autoPauseOffsetMs) / 1000) });
   }, 1000);
+
 
   const voiceMin = getGpsVoiceIntervalMin();
   if (voiceMin > 0) {
@@ -427,11 +465,14 @@ const resumeTracking = async () => {
 const stopTracking = () => {
   const result = {
     distanceKm: distAcc,
-    elapsedSec: snapshot.isPaused ? snapshot.elapsedSec : Math.floor((Date.now() - startTime) / 1000),
+    elapsedSec: snapshot.isPaused
+      ? snapshot.elapsedSec
+      : Math.floor((Date.now() - startTime - autoPauseOffsetMs) / 1000),
     route: routeAcc,
+    kmSplits: kmSplitsAcc,
   };
   cleanup();
-  setSnap({ isTracking: false, isPaused: false, ownerId: null });
+  setSnap({ isTracking: false, isPaused: false, autoPaused: false, ownerId: null });
   return result;
 };
 
@@ -441,16 +482,19 @@ export const useGpsTracker = (): GpsState => {
   return {
     isTracking: snapshot.isTracking,
     isPaused: snapshot.isPaused,
+    autoPaused: snapshot.autoPaused,
     distanceKm: snapshot.distanceKm,
     elapsedSec: snapshot.elapsedSec,
     accuracy: snapshot.accuracy,
     error: snapshot.error,
     route: snapshot.route,
     ownerId: snapshot.ownerId,
+    kmSplits: snapshot.kmSplits,
 
     start: startTracking,
     pause: pauseTracking,
     resume: resumeTracking,
     stop: stopTracking,
   };
+
 };
