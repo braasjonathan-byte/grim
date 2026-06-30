@@ -465,11 +465,14 @@ const resumeTracking = async () => {
 const stopTracking = () => {
   const result = {
     distanceKm: distAcc,
-    elapsedSec: snapshot.isPaused ? snapshot.elapsedSec : Math.floor((Date.now() - startTime) / 1000),
+    elapsedSec: snapshot.isPaused
+      ? snapshot.elapsedSec
+      : Math.floor((Date.now() - startTime - autoPauseOffsetMs) / 1000),
     route: routeAcc,
+    kmSplits: kmSplitsAcc,
   };
   cleanup();
-  setSnap({ isTracking: false, isPaused: false, ownerId: null });
+  setSnap({ isTracking: false, isPaused: false, autoPaused: false, ownerId: null });
   return result;
 };
 
@@ -479,16 +482,19 @@ export const useGpsTracker = (): GpsState => {
   return {
     isTracking: snapshot.isTracking,
     isPaused: snapshot.isPaused,
+    autoPaused: snapshot.autoPaused,
     distanceKm: snapshot.distanceKm,
     elapsedSec: snapshot.elapsedSec,
     accuracy: snapshot.accuracy,
     error: snapshot.error,
     route: snapshot.route,
     ownerId: snapshot.ownerId,
+    kmSplits: snapshot.kmSplits,
 
     start: startTracking,
     pause: pauseTracking,
     resume: resumeTracking,
     stop: stopTracking,
   };
+
 };
