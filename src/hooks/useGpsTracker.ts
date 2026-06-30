@@ -133,10 +133,17 @@ let routeAcc: RoutePoint[] = [];
 let kmCount = 0;
 let kmMarkSec = 0;
 let lastKmSec: number | null = null;
+let kmSplitsAcc: number[] = [];
 let distAnnounceMarkKm = 0;
 let distAnnounceMarkSec = 0;
 let visibilityHandlerInstalled = false;
 let notifInterval: number | null = null;
+let lastMoveAt = 0;
+let autoPauseOffsetMs = 0; // accumulated paused time to subtract from elapsed
+let autoPauseStartedAt: number | null = null;
+const AUTO_PAUSE_IDLE_MS = 12000; // pause after 12s without movement
+const AUTO_PAUSE_RESUME_M = 5; // resume on >5m movement
+
 
 const installVisibilityHandler = () => {
   if (visibilityHandlerInstalled || typeof document === "undefined") return;
