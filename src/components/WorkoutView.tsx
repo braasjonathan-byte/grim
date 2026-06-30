@@ -171,7 +171,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
   const isOwner = gps.ownerId === myId;
   const otherActive = gps.isTracking && !isOwner;
   const didAutoStart = useRef(false);
-  const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][] } | null>(null);
+  const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][]; splits?: number[] } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   // "Primed" = användaren har öppnat GPS-vyn men inte tryckt Starta än.
   // Vi söker GPS-signal i bakgrunden men startar inte tid/distans-räknaren.
