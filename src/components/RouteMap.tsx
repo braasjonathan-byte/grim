@@ -148,7 +148,7 @@ const RouteMap = ({
             geometry: { type: "LineString", coordinates: r.map((p) => [p[1], p[0]]) },
             properties: {},
           })),
-      } as GeoJSON.FeatureCollection;
+      } as any;
       if (!map.getSource("heat")) {
         map.addSource("heat", { type: "geojson", data: fc });
         map.addLayer({
@@ -169,7 +169,7 @@ const RouteMap = ({
       type: "Feature",
       geometry: { type: "LineString", coordinates: coords },
       properties: {},
-    } as GeoJSON.Feature;
+    } as any;
     if (!map.getSource("route")) {
       map.addSource("route", { type: "geojson", data: routeFc });
       map.addLayer({
@@ -200,7 +200,7 @@ const RouteMap = ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [start[1], start[0]] },
         properties: {},
-      } as GeoJSON.Feature;
+      } as any;
       if (!map.getSource(startId)) {
         map.addSource(startId, { type: "geojson", data: startFc });
         map.addLayer({
@@ -227,7 +227,7 @@ const RouteMap = ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [end[1], end[0]] },
         properties: {},
-      } as GeoJSON.Feature;
+      } as any;
       if (!map.getSource(endId)) {
         map.addSource(endId, { type: "geojson", data: endFc });
         map.addLayer({
