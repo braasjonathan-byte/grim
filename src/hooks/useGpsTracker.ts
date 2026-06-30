@@ -40,24 +40,30 @@ export type GpsState = {
 type Snapshot = {
   isTracking: boolean;
   isPaused: boolean;
+  autoPaused: boolean;
   distanceKm: number;
   elapsedSec: number;
   accuracy: number | null;
   error: string | null;
   route: RoutePoint[];
   ownerId: string | null;
+  /** Seconds it took to complete each finished km, indexed by km number. */
+  kmSplits: number[];
 };
 
 let snapshot: Snapshot = {
   isTracking: false,
   isPaused: false,
+  autoPaused: false,
   distanceKm: 0,
   elapsedSec: 0,
   accuracy: null,
   error: null,
   route: [],
   ownerId: null,
+  kmSplits: [],
 };
+
 
 
 const listeners = new Set<() => void>();
