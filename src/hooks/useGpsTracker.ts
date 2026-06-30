@@ -295,10 +295,14 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
   kmCount = 0;
   kmMarkSec = 0;
   lastKmSec = null;
+  kmSplitsAcc = [];
   distAnnounceMarkKm = 0;
   distAnnounceMarkSec = 0;
   startTime = Date.now();
-  setSnap({ isTracking: true, isPaused: false, distanceKm: 0, elapsedSec: 0, route: routeAcc, error: null, accuracy: initialPosition.coords.accuracy, ownerId: ownerId ?? null });
+  lastMoveAt = Date.now();
+  autoPauseOffsetMs = 0;
+  autoPauseStartedAt = null;
+  setSnap({ isTracking: true, isPaused: false, autoPaused: false, distanceKm: 0, elapsedSec: 0, route: routeAcc, error: null, accuracy: initialPosition.coords.accuracy, ownerId: ownerId ?? null, kmSplits: [] });
 
   try {
     // @ts-ignore
@@ -323,21 +327,30 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
       if (lastCoord) {
         const d = haversineKm(lastCoord, pos.coords);
         if (d > 0.003) {
+          if (snapshot.autoPaused && d * 1000 >= AUTO_PAUSE_RESUME_M) {
+            if (autoPauseStartedAt != null) {
+              autoPauseOffsetMs += Date.now() - autoPauseStartedAt;
+              autoPauseStartedAt = null;
+            }
+            setSnap({ autoPaused: false });
+          }
+          lastMoveAt = Date.now();
           distAcc += d;
           lastCoord = pos.coords;
           routeAcc = [...routeAcc, pt];
           setSnap({ distanceKm: distAcc, route: routeAcc });
           const newKmCount = Math.floor(distAcc);
           if (newKmCount > kmCount) {
-            const nowSec = (Date.now() - startTime) / 1000;
+            const nowSec = (Date.now() - startTime - autoPauseOffsetMs) / 1000;
             lastKmSec = nowSec - kmMarkSec;
+            kmSplitsAcc = [...kmSplitsAcc, lastKmSec];
             kmMarkSec = nowSec;
             kmCount = newKmCount;
+            setSnap({ kmSplits: kmSplitsAcc });
           }
-          // Distance-based voice announcement
           const distInterval = getGpsVoiceIntervalKm();
           if (distInterval > 0 && distAcc - distAnnounceMarkKm >= distInterval) {
-            const nowSec = (Date.now() - startTime) / 1000;
+            const nowSec = (Date.now() - startTime - autoPauseOffsetMs) / 1000;
             const segKm = distAcc - distAnnounceMarkKm;
             const segSec = nowSec - distAnnounceMarkSec;
             const segPace = segSec / segKm;
@@ -360,8 +373,17 @@ const startTracking = async (ownerId?: string): Promise<boolean> => {
   );
 
   tickInterval = window.setInterval(() => {
-    setSnap({ elapsedSec: Math.floor((Date.now() - startTime) / 1000) });
+    if (snapshot.isTracking && !snapshot.isPaused) {
+      const idle = Date.now() - lastMoveAt;
+      if (!snapshot.autoPaused && idle > AUTO_PAUSE_IDLE_MS) {
+        autoPauseStartedAt = Date.now() - AUTO_PAUSE_IDLE_MS;
+        setSnap({ autoPaused: true });
+      }
+    }
+    if (snapshot.autoPaused) return;
+    setSnap({ elapsedSec: Math.floor((Date.now() - startTime - autoPauseOffsetMs) / 1000) });
   }, 1000);
+
 
   const voiceMin = getGpsVoiceIntervalMin();
   if (voiceMin > 0) {
