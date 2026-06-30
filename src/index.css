@@ -286,3 +286,37 @@
 .driver-active-element:hover {
   z-index: 10000 !important;
 }
+
+/* GPS live position pulse marker (MapLibre custom marker) */
+.grim-gps-pulse {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--pulse-color, hsl(var(--primary)));
+  box-shadow: 0 0 0 3px hsl(var(--background));
+  position: relative;
+}
+.grim-gps-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  background: var(--pulse-color, hsl(var(--primary)));
+  opacity: 0.5;
+  animation: grim-gps-pulse 1.6s ease-out infinite;
+}
+@keyframes grim-gps-pulse {
+  0%   { transform: scale(0.6); opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* MapLibre attribution/control polish to match flat theme */
+.maplibregl-ctrl-group {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+.maplibregl-ctrl-group button {
+  background-color: transparent !important;
+}
