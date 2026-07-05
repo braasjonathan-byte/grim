@@ -53,7 +53,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
     if (needsTitle && !title.trim()) return;
     setSubmitting(true);
     try {
-      await onConfirm(finalCaption.trim());
+      await onConfirm(finalCaption.trim(), needsTitle ? title.trim() : undefined);
     } finally {
       setSubmitting(false);
     }
