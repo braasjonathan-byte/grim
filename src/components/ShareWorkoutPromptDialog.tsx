@@ -9,7 +9,7 @@ interface ShareWorkoutPromptDialogProps {
   loading?: boolean;
   nickname?: string | null;
   avatarUrl?: string | null;
-  onConfirm: (caption: string) => void | Promise<void>;
+  onConfirm: (caption: string, newTitle?: string) => void | Promise<void>;
   onSkip: () => void;
 }
 
