@@ -37,8 +37,13 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    target: ["es2017", "safari11", "chrome64", "firefox60", "edge79"],
+    target: ["es2020", "safari14", "chrome87", "firefox78", "edge88"],
     cssTarget: ["safari11", "chrome64"],
+  },
+  esbuild: {
+    supported: {
+      bigint: true,
+    },
   },
   plugins: [
     react(),
