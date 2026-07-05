@@ -9,7 +9,7 @@ interface ShareWorkoutPromptDialogProps {
   loading?: boolean;
   nickname?: string | null;
   avatarUrl?: string | null;
-  onConfirm: (caption: string) => void | Promise<void>;
+  onConfirm: (caption: string, newTitle?: string) => void | Promise<void>;
   onSkip: () => void;
 }
 
@@ -53,7 +53,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
     if (needsTitle && !title.trim()) return;
     setSubmitting(true);
     try {
-      await onConfirm(finalCaption.trim());
+      await onConfirm(finalCaption.trim(), needsTitle ? title.trim() : undefined);
     } finally {
       setSubmitting(false);
     }
