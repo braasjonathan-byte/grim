@@ -6121,13 +6121,35 @@ const estimateCalories = (
         initialCaption={sharePromptDialog?.caption ?? ""}
         loading={!!sharePromptDialog?.loading}
         nickname={userNickname}
-        onConfirm={async (caption) => {
-          const target = sharePromptDialog;
-          setSharePromptDialog(null);
-          if (!target) return;
-          await autoShareCompletion(userId, target.week, target.day, caption);
-          toast.success("Passet publicerades för dina vänner");
-        }}
+          onConfirm={async (caption, newTitle) => {
+            const target = sharePromptDialog;
+            setSharePromptDialog(null);
+            if (!target) return;
+            if (newTitle) {
+              try {
+                const { data: rows } = await supabase
+                  .from("workout_plans")
+                  .select("id, session_name")
+                  .eq("user_id", userId)
+                  .eq("week", target.week)
+                  .eq("day", target.day);
+                const emptyRows = (rows || []).filter((r: any) => !(r.session_name || "").trim());
+                if (emptyRows.length > 0) {
+                  await supabase
+                    .from("workout_plans")
+                    .update({ session_name: newTitle })
+                    .in("id", emptyRows.map((r: any) => r.id));
+                  setPlans((prev) => prev.map((p) => (
+                    p.week === target.week && p.day === target.day && !(p.session_name || "").trim()
+                      ? { ...p, session_name: newTitle }
+                      : p
+                  )));
+                }
+              } catch {}
+            }
+            await autoShareCompletion(userId, target.week, target.day, caption);
+            toast.success("Passet publicerades för dina vänner");
+          }}
         onSkip={() => {
           setSharePromptDialog(null);
         }}
