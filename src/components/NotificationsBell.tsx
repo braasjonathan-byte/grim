@@ -57,7 +57,11 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
   const [open, setOpen] = useState(false);
   const [lastSeen, setLastSeen] = useState<number>(() => {
     const v = localStorage.getItem(`grim_notif_last_seen_${userId}`);
-    return v ? parseInt(v, 10) : 0;
+    if (v) return parseInt(v, 10);
+    // First time on this device/login: don't flag existing items as unread
+    const now = Date.now();
+    try { localStorage.setItem(`grim_notif_last_seen_${userId}`, String(now)); } catch {}
+    return now;
   });
 
   const load = useCallback(async () => {
@@ -188,7 +192,17 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
   useEffect(() => { load(); }, [load]);
 
   // Refresh when popover opens, or when post interactions happen elsewhere
-  useEffect(() => { if (open) load(); }, [open, load]);
+  useEffect(() => {
+    if (!open) return;
+    load();
+    // Mark all as read shortly after opening so the badge clears
+    const t = setTimeout(() => {
+      const now = Date.now();
+      try { localStorage.setItem(`grim_notif_last_seen_${userId}`, String(now)); } catch {}
+      setLastSeen(now);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [open, load, userId]);
   useEffect(() => onPostInteraction(() => load()), [load]);
 
   // Realtime: refresh on incoming friend requests, comments, likes, achievements
