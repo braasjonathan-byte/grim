@@ -111,6 +111,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
     
     { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
+    { key: "admin-completions", label: "Senaste klarmarkerade", adminOnly: true, render: () => <AdminCompletionsList /> },
     { key: "settings-group", label: "Inställningar", render: () => (
       <button
         type="button"
