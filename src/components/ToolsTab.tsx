@@ -21,6 +21,7 @@ const SupporterButton = lazy(() => import("@/components/SupporterButton"));
 const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
+const AdminCompletionsList = lazy(() => import("@/components/AdminCompletionsList"));
 
 const ReadyWorkoutManager = lazy(() => import("@/components/ReadyWorkoutManager"));
 const TriathlonView = lazy(() => import("@/components/TriathlonView"));
