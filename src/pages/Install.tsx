@@ -153,6 +153,7 @@ const ChromeBarMock = () => (
 );
 
 const Install = () => {
+  const navigate = useNavigate();
   const appUrl = "https://grim.lovable.app";
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
