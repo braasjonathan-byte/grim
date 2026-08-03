@@ -98,7 +98,7 @@ const SwipeableSetRow = ({ done, onToggle, isPR, children }: SwipeableSetRowProp
         onTouchEnd={finish}
         onTouchCancel={finish}
         style={{ transform: `translateX(${dx}px)` }}
-        className={`relative touch-pan-y ${dx === 0 ? "transition-transform duration-200" : ""} ${
+        className={`relative touch-pan-y ${dx !== 0 ? "bg-secondary" : "transition-transform duration-200"} ${
           pulse ? "set-complete-pulse" : ""
         }`}
       >
