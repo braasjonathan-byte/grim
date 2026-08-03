@@ -336,3 +336,30 @@
   100% { transform: scale(1); opacity: 1; }
 }
 .pr-badge-pop { animation: pr-badge-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Flame reaction: pop + spark particles */
+@keyframes flame-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.45); }
+  60% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.flame-pop { animation: flame-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes flame-spark {
+  0% { transform: rotate(var(--spark-angle, 0deg)) translateY(0) scale(1); opacity: 1; }
+  100% { transform: rotate(var(--spark-angle, 0deg)) translateY(-18px) scale(0.2); opacity: 0; }
+}
+.flame-spark {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: hsl(var(--warning));
+  animation: flame-spark 0.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flame-pop, .flame-spark { animation: none; }
+  .flame-spark { display: none; }
+}

@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import ImageCarousel from "./ImageCarousel";
 import WorkoutCheerButton from "./WorkoutCheerButton";
+import FlameReaction from "./FlameReaction";
+import { parseWorkoutCaption } from "@/lib/parseWorkoutCaption";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
@@ -793,15 +795,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             });
 
             return sortedPosts.map(post => (
-            <div key={post.id} data-post-id={post.id} className={`border rounded-xl overflow-hidden bg-card transition-all ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"} ${highlightedPostId === post.id ? "ring-2 ring-primary shadow-lg" : ""}`}>
+            <div key={post.id} data-post-id={post.id} className={`border rounded-2xl overflow-hidden bg-card shadow-sm transition-all ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"} ${highlightedPostId === post.id ? "ring-2 ring-primary shadow-lg" : ""}`}>
               {/* Pinned indicator */}
               {post.pinned && (
-                <div className="px-4 py-1.5 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
+                <div className="px-3 py-1 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
                   <Pin className="w-3 h-3" /> Nålat inlägg
                 </div>
               )}
               {/* Post header */}
-              <div className="px-4 py-3 flex items-center justify-between">
+              <div className="px-3 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -859,20 +861,51 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 return null;
               })()}
 
-              {/* Caption */}
-              {post.caption && (
-                <p className="px-4 py-2 text-sm whitespace-pre-line">{post.caption}</p>
-              )}
+              {/* Caption + stat chips */}
+              {(() => {
+                const parsed = parseWorkoutCaption(post.caption);
+                if (!parsed.text && parsed.chips.length === 0) return null;
+                return (
+                  <div className="px-3 pt-2 pb-1 space-y-1.5">
+                    {parsed.text && <p className="text-sm whitespace-pre-line leading-snug">{parsed.text}</p>}
+                    {parsed.chips.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {parsed.chips.map((chip, i) => {
+                          const ChipIcon = chip.icon;
+                          return (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-foreground/80"
+                            >
+                              <ChipIcon className="w-3 h-3 text-muted-foreground" />
+                              {chip.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Like + comment buttons */}
-              <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
-                <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
-                  <Flame className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
-                  <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
-                </button>
-                <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 text-sm">
-                  <MessageCircle className={`w-4 h-4 transition-colors ${openComments.has(post.id) ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className="text-xs text-muted-foreground">{commentCounts[post.id] || 0}</span>
+              <div className="px-3 py-2 border-t border-border/40 flex items-center gap-2">
+                <FlameReaction
+                  active={myLikes.has(post.id)}
+                  count={likes[post.id] || 0}
+                  onToggle={() => toggleLike(post.id)}
+                />
+                <button
+                  onClick={() => toggleComments(post.id)}
+                  aria-pressed={openComments.has(post.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                    openComments.has(post.id)
+                      ? "border-primary/40 bg-primary/15 text-primary"
+                      : "border-border bg-secondary/60 text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="tabular-nums">{commentCounts[post.id] || 0}</span>
                 </button>
                 {post.user_id !== userId && (
                   <WorkoutCheerButton
@@ -886,7 +919,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
               {/* Comments */}
               {openComments.has(post.id) && (
-                <div className="px-4 py-3 border-t border-border/50 space-y-3 bg-secondary/20">
+                <div className="px-3 py-2.5 border-t border-border/40 space-y-2 bg-secondary/20">
                   {(comments[post.id] || []).length === 0 && (
                     <p className="text-xs text-muted-foreground text-center">Inga kommentarer än. Var först!</p>
                   )}
