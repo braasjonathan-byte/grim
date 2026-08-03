@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import AchievementsPanel from "@/components/AchievementsPanel";
+import AchievementsView from "@/components/AchievementsView";
 import { calculateAchievementMetrics, getEarnedAchievements } from "@/lib/achievements";
 
 interface FriendProfileViewProps {
@@ -198,6 +199,8 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [achievementIds, setAchievementIds] = useState<string[]>([]);
+  const [achievementUnlockedAt, setAchievementUnlockedAt] = useState<Record<string, string>>({});
+  const [showAchievements, setShowAchievements] = useState(false);
 
   // Theme is now managed by FriendsView
 
@@ -214,7 +217,7 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
         supabase.from("workout_plans").select("week, day, details, tempo, created_at").eq("user_id", friendUserId),
         supabase.from("user_roles").select("role").eq("user_id", friendUserId).eq("role", "admin").maybeSingle(),
         supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", friendUserId),
-        supabase.from("user_achievements" as any).select("achievement_id").eq("user_id", friendUserId).order("unlocked_at", { ascending: false }),
+        supabase.from("user_achievements" as any).select("achievement_id, unlocked_at").eq("user_id", friendUserId).order("unlocked_at", { ascending: false }),
       ]);
 
       setAvatarUrl(profileData?.avatar_url || null);
@@ -256,6 +259,11 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
       setAllCompletions(friendCompletions);
 
       const storedAchievementIds = ((achievementData || []) as any[]).map((row) => row.achievement_id);
+      const friendStamps: Record<string, string> = {};
+      for (const row of ((achievementData || []) as any[])) {
+        if (row?.achievement_id && row?.unlocked_at) friendStamps[row.achievement_id] = row.unlocked_at;
+      }
+      setAchievementUnlockedAt(friendStamps);
       const visibleMetrics = calculateAchievementMetrics(
         friendCompletions.map((completion) => ({
           ...completion,
@@ -454,7 +462,19 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
             <p className="text-xs text-muted-foreground text-center py-2">Inga stjärnmärkta PB ännu</p>
           )}
 
-          <AchievementsPanel unlockedIds={achievementIds} compact />
+          <AchievementsPanel
+            unlockedIds={achievementIds}
+            unlockedAt={achievementUnlockedAt}
+            compact
+            onOpen={() => setShowAchievements(true)}
+          />
+          {showAchievements && (
+            <AchievementsView
+              unlockedIds={achievementIds}
+              title="Achievements"
+              onClose={() => setShowAchievements(false)}
+            />
+          )}
 
           {/* Social links & anthem */}
           {(social.instagram || social.tiktok || social.snapchat || social.spotify_anthem_name) && (
