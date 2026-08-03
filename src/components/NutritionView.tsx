@@ -12,6 +12,7 @@ import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import MealTemplatesDialog from "./MealTemplatesDialog";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
+import { showUndoToast } from "@/lib/undoToast";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -215,15 +216,29 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     supabase.from("meal_logs").update({ meal_type: name }).eq("user_id", userId).eq("meal_type", current).then(() => load());
   }
 
-  function deleteSlot(idx: number) {
+  async function deleteSlot(idx: number) {
     const name = slots[idx];
     const hasLogs = logs.some((l) => l.meal_type === name);
     if (hasLogs && !window.confirm(`Ta bort "${name}"? Alla loggade livsmedel under denna måltid tas också bort.`)) return;
     if (!hasLogs && !window.confirm(`Ta bort "${name}"?`)) return;
+    const prevSlots = slots;
+    let removedRows: any[] = [];
+    if (hasLogs) {
+      const { data } = await supabase.from("meal_logs").select("*").eq("user_id", userId).eq("meal_type", name);
+      removedRows = data || [];
+    }
     persistSlots(slots.filter((_, i) => i !== idx));
     if (hasLogs) {
-      supabase.from("meal_logs").delete().eq("user_id", userId).eq("meal_type", name).then(() => load());
+      await supabase.from("meal_logs").delete().eq("user_id", userId).eq("meal_type", name);
+      load();
     }
+    showUndoToast(`Måltiden "${name}" borttagen`, async () => {
+      persistSlots(prevSlots);
+      if (removedRows.length > 0) {
+        await supabase.from("meal_logs").insert(removedRows);
+        load();
+      }
+    });
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -251,8 +266,16 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   }
 
   async function removeLog(id: string) {
+    const { data: rows } = await supabase.from("meal_logs").select("*").eq("id", id);
+    const row: any = rows?.[0];
     await supabase.from("meal_logs").delete().eq("id", id);
     load();
+    if (row) {
+      showUndoToast(`"${row.item_name}" borttagen`, async () => {
+        await supabase.from("meal_logs").insert(row);
+        load();
+      });
+    }
   }
 
   function shiftDay(n: number) {

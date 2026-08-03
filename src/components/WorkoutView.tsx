@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react"
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
+import { showUndoToast } from "@/lib/undoToast";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff } from "lucide-react";
@@ -3359,6 +3360,19 @@ const estimateCalories = (
       eq("week", plan.week).
       eq("day", plan.day);
       fetchData();
+      const snapshot = plan;
+      showUndoToast("Pass borttaget", async () => {
+        await supabase.from("workout_plans").insert({
+          user_id: userId,
+          week: snapshot.week,
+          day: snapshot.day,
+          session_name: snapshot.session_name ?? null,
+          details: snapshot.details ?? "",
+          tempo: snapshot.tempo ?? null,
+          is_circuit: (snapshot as any).is_circuit ?? false,
+        });
+        fetchData();
+      });
     }
   };
 
@@ -4341,6 +4355,14 @@ const estimateCalories = (
         return next;
       });
     }
+
+    const prevDetails = plan.details;
+    const planId = plan.id;
+    showUndoToast("Övning borttagen", async () => {
+      await supabase.from("workout_plans").update({ details: prevDetails }).eq("id", planId);
+      skipDayResetRef.current = true;
+      setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: prevDetails } : p));
+    });
 
     setDeleteExerciseConfirm(null);
   };
