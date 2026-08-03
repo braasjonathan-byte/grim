@@ -298,46 +298,52 @@ const MiniTimer = () => {
   if (!expanded) {
     return (
       <div
-        className="fixed left-0 right-0 z-50 flex items-center justify-center gap-3 px-4 py-1.5 bg-card/95 backdrop-blur border-t border-primary/20 cursor-pointer"
+        className="fixed left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
         style={{
-          bottom: `calc(60px + env(safe-area-inset-bottom, 0px))`,
+          bottom: `calc(72px + env(safe-area-inset-bottom, 0px))`,
           transform: "translate3d(0,0,0)",
           WebkitTransform: "translate3d(0,0,0)",
           willChange: "transform",
         }}
-        onClick={() => setExpanded(true)}
       >
-        <button
-          onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-          className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center"
+        <div
+          className="pointer-events-auto w-full max-w-md flex items-center gap-3 px-3 py-2 rounded-full bg-card/95 backdrop-blur border border-border shadow-lg shadow-black/20 cursor-pointer transition-shadow"
+          onClick={() => setExpanded(true)}
         >
-          {running ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-px" />}
-        </button>
-        <span className={`font-mono text-sm font-bold tracking-wider ${running ? "text-primary" : "text-foreground"}`}>
-          {fmt(seconds)}
-        </span>
-        <span className="text-[10px] font-semibold uppercase text-muted-foreground">
-          {mode === "countdown" ? label : "Stoppur"}
-        </span>
-        {hr.connected && (
-          <span className="ml-auto flex items-center gap-1 text-destructive">
-            <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
-            <span className="font-mono text-sm font-bold tabular-nums">
-              {hr.bpm ?? "--"}
-            </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
+            className={`w-8 h-8 shrink-0 rounded-full bg-primary/20 text-primary flex items-center justify-center transition-colors ${running ? "timer-play-pulse" : ""}`}
+            aria-label={running ? "Pausa timer" : "Starta timer"}
+          >
+            {running ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-px" />}
+          </button>
+          <span className={`font-mono text-sm font-bold tracking-wider tabular-nums ${running ? "text-primary" : "text-foreground"}`}>
+            {fmt(seconds)}
           </span>
-        )}
-        <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-[10px] font-semibold uppercase text-muted-foreground truncate">
+            {mode === "countdown" ? label : "Stoppur"}
+          </span>
+          {hr.connected && (
+            <span className="ml-auto flex items-center gap-1 text-destructive">
+              <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
+              <span className="font-mono text-sm font-bold tabular-nums">
+                {hr.bpm ?? "--"}
+              </span>
+            </span>
+          )}
+          <ChevronUp className={`w-3.5 h-3.5 text-muted-foreground ${hr.connected ? "" : "ml-auto"}`} />
+        </div>
       </div>
+
     );
   }
 
   // Expanded
   return (
     <div
-      className="fixed left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-primary/20 px-4 py-3 cursor-pointer"
+      className="fixed left-0 right-0 z-50 mx-auto max-w-lg w-[calc(100%-2rem)] rounded-2xl bg-card/95 backdrop-blur border border-border shadow-lg shadow-black/20 px-4 py-3 cursor-pointer"
       style={{
-        bottom: `calc(60px + env(safe-area-inset-bottom, 0px))`,
+        bottom: `calc(72px + env(safe-area-inset-bottom, 0px))`,
         transform: "translate3d(0,0,0)",
         WebkitTransform: "translate3d(0,0,0)",
         willChange: "transform",
@@ -345,6 +351,7 @@ const MiniTimer = () => {
       onClick={() => setExpanded(false)}
     >
       <div className="max-w-lg mx-auto space-y-2">
+
         <div className="flex items-center justify-between">
           <div className="text-muted-foreground p-1">
             <ChevronDown className="w-4 h-4" />
@@ -353,8 +360,8 @@ const MiniTimer = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-              className={`w-12 h-12 flex items-center justify-center transition-colors ${
-                running ? "bg-primary/20 text-primary" : "bg-primary text-primary-foreground"
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                running ? "bg-primary/20 text-primary timer-play-pulse" : "bg-primary text-primary-foreground"
               }`}
             >
               {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}

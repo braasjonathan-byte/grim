@@ -144,6 +144,9 @@ const Index = () => {
     return saved === "workout" || saved === "social" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
   });
 
+  // Bottom nav press animation
+  const [bouncingTab, setBouncingTab] = useState<string | null>(null);
+
   // Listen for timer running state to show pulse on bottom nav
   const [timerRunning, setTimerRunning] = useState(false);
   useEffect(() => {
@@ -1014,6 +1017,9 @@ const Index = () => {
             key={key}
             data-tour={`tab-${key}`}
             onClick={async () => {
+              setBouncingTab(key);
+              window.setTimeout(() => setBouncingTab((c) => c === key ? null : c), 400);
+              hapticLight();
               setTab(key);
               if (key === "social" && unreadAnnouncements > 0) {
                 const { data: latestAnn } = await supabase.
@@ -1035,21 +1041,27 @@ const Index = () => {
                 localStorage.setItem("grim_last_read_suggestions", latestSug?.created_at || new Date().toISOString());
               }
             }}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors relative ${
+            className={`flex-1 flex flex-col items-center gap-1 pt-2 pb-2 text-xs relative transition-colors duration-300 ease-out ${
             tab === key ?
             "text-primary" :
             "text-muted-foreground hover:text-foreground"}`
             }>
 
-              <div className="relative">
+              <div className={`relative flex items-center justify-center h-8 w-14 rounded-full transition-all duration-300 ease-out ${
+              tab === key ? "bg-primary/15" : "bg-transparent"} ${
+              bouncingTab === key ? "tab-bounce" : ""}`
+              }>
                 <Icon className="w-5 h-5" />
                 {badge &&
-              <span className="absolute -top-1.5 -right-2.5 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center [border-radius:9999px!important]">
+              <span className="absolute top-0 right-2 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center [border-radius:9999px!important]">
                     {badge > 9 ? "9+" : badge}
                   </span>
               }
               </div>
-              <span className="font-medium">{label}</span>
+              <span className="font-medium leading-none">{label}</span>
+              <span className={`h-1 w-1 rounded-full transition-all duration-300 ease-out ${
+              tab === key ? "bg-primary opacity-100 scale-100" : "bg-transparent opacity-0 scale-50"}`
+              } />
             </button>
           )}
         </div>
