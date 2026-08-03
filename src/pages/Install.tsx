@@ -1,8 +1,9 @@
 import { QRCodeSVG } from "qrcode.react";
 import grimIcon from "@/assets/grim-icon.webp";
-import { Download, Monitor, Share, MoreVertical, Plus, ChevronRight, ArrowUp, CheckCircle2 } from "lucide-react";
+import { Download, Monitor, Share, MoreVertical, Plus, ChevronRight, ArrowUp, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 
 type Platform = "ios" | "android" | "desktop";
 
