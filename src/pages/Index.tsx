@@ -1062,9 +1062,6 @@ const Index = () => {
             </button>
           )}
         </div>
-
-          )}
-        </div>
       </nav>
     </div>);
 
