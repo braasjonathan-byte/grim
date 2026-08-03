@@ -288,24 +288,65 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
             const isPending = pendingDates.has(dateStr);
             const isToday = dateStr === today;
 
+            const stats = isDone ? dayStats[dateStr] : undefined;
+            const hasStats = !!stats && (stats.sets > 0 || stats.volume > 0);
+            const isActive = activeDate === dateStr;
+
+            const cell = (
+              <div
+                className={`w-full aspect-square icon-round text-xs transition-colors relative ${
+                  isToday
+                    ? "bg-primary text-primary-foreground font-bold shadow-soft"
+                    : isDone
+                    ? "bg-success/20 text-success font-bold"
+                    : isSkipped
+                    ? "bg-destructive/15 text-destructive font-bold"
+                    : isPending
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground/70"
+                } ${hasStats ? "group-hover:bg-success/35" : ""}`}
+              >
+                {hasStats ? (
+                  <>
+                    <span className={`${isActive ? "hidden" : "group-hover:hidden"}`}>{date.getDate()}</span>
+                    <span className={`text-[10px] font-bold leading-none ${isActive ? "" : "hidden group-hover:inline"}`}>
+                      {stats!.sets > 0 ? `${stats!.sets} set` : formatVolume(stats!.volume)}
+                    </span>
+                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-success" />
+                  </>
+                ) : (
+                  date.getDate()
+                )}
+              </div>
+            );
+
+            if (!hasStats) {
+              return (
+                <div key={dateStr} className="aspect-square flex items-center justify-center">
+                  {cell}
+                </div>
+              );
+            }
+
             return (
-              <div key={dateStr} className="aspect-square flex items-center justify-center">
-                <div
-                  className={`w-full aspect-square icon-round text-xs transition-colors ${
-                    isToday
-                      ? "bg-primary text-primary-foreground font-bold shadow-soft"
-                      : isDone
-                      ? "bg-success/20 text-success font-bold"
-                      : isSkipped
-                      ? "bg-destructive/15 text-destructive font-bold"
-                      : isPending
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-muted-foreground/70"
+              <button
+                key={dateStr}
+                type="button"
+                onClick={() => setActiveDate(isActive ? null : dateStr)}
+                aria-label={`${date.getDate()} ${MONTH_NAMES[month]}: ${stats!.sets} set${stats!.volume > 0 ? `, ${formatVolume(stats!.volume)}` : ""}`}
+                className="group relative aspect-square flex items-center justify-center"
+              >
+                {cell}
+                <span
+                  className={`pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full z-20 whitespace-nowrap rounded-lg bg-foreground text-background text-[10px] font-semibold px-2 py-1 shadow-soft transition-opacity ${
+                    isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
-                  {date.getDate()}
-                </div>
-              </div>
+                  {stats!.sets > 0 ? `${stats!.sets} set` : ""}
+                  {stats!.sets > 0 && stats!.volume > 0 ? " · " : ""}
+                  {stats!.volume > 0 ? formatVolume(stats!.volume) : ""}
+                </span>
+              </button>
             );
           })}
         </div>
