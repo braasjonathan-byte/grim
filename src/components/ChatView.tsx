@@ -53,6 +53,7 @@ interface SupportConversation {
 
 const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId }: ChatViewProps) => {
   const [friends, setFriends] = useState<Friend[]>([]);
+  const { isTyping } = useTypingListener(userId);
   const [lastMessages, setLastMessages] = useState<Map<string, LastMessage>>(new Map());
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [loading, setLoading] = useState(true);
