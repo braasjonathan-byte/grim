@@ -137,6 +137,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       message_type: "text",
     });
     setNewMessage("");
+    stopTyping();
     setSending(false);
     inputRef.current?.focus();
 
