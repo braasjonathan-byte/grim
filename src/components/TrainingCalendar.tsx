@@ -204,7 +204,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
         <h3 className="text-lg font-bold tracking-tight">Träningskalender</h3>
       </div>
 
-      <div className="border border-border rounded-lg p-3 bg-secondary">
+      <div className="rounded-2xl p-3 bg-card shadow-soft">
         <div className="flex items-center justify-between mb-3">
           <button onClick={prevMonth} className="p-1 text-muted-foreground hover:text-foreground">
             <ChevronLeft className="w-4 h-4" />

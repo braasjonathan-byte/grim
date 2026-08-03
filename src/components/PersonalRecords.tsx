@@ -281,7 +281,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           return (
             <div
               key={pr.exercise}
-              className="border border-border rounded-lg p-3 space-y-1 relative bg-secondary">
+              className="rounded-2xl p-3 space-y-1 relative bg-card shadow-soft">
 
               {/* Star button */}
               <button

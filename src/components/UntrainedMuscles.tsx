@@ -135,7 +135,7 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
   if (loading || untrainedRegions.length === 0) return null;
 
   return (
-    <div className="border border-border rounded-lg p-4 bg-secondary">
+    <div className="rounded-2xl p-4 bg-card shadow-soft">
       <Collapsible>
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between">

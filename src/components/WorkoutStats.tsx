@@ -135,7 +135,7 @@ const DailyQuoteCard = () => {
   );
   const quote = motivationalQuotes[dayOfYear % motivationalQuotes.length];
   return (
-    <div className="border border-border rounded-lg p-4 text-center flex flex-col items-center justify-center min-h-[120px] bg-secondary">
+    <div className="rounded-2xl p-4 text-center flex flex-col items-center justify-center min-h-[120px] bg-card shadow-soft">
       <Flame className="w-6 h-6 text-primary mx-auto mb-2" />
       <p className="text-sm font-medium leading-relaxed">{quote}</p>
     </div>);
@@ -691,12 +691,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="border border-border rounded-lg p-3 text-center bg-secondary">
+        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
           <CheckCircle className="w-5 h-5 text-success mx-auto mb-1" />
           <p className="text-2xl font-black">{totalDone}</p>
           <p className="text-[10px] text-muted-foreground">Genomförda</p>
         </div>
-        <div className="border border-border rounded-lg p-3 text-center bg-secondary">
+        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
           <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
           <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
@@ -706,14 +706,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
         <button
           onClick={() => setShowChallengeList(true)}
-          className="border border-border rounded-lg p-3 text-center transition-colors cursor-pointer bg-secondary"
+          className="rounded-2xl p-3 text-center transition-colors cursor-pointer bg-card shadow-soft"
         >
           <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
         {perCategoryStats.map(({ meta, km, passes }) => (
-          <div key={meta.key} className="border border-border rounded-lg p-3 text-center bg-secondary">
+          <div key={meta.key} className="rounded-2xl p-3 text-center bg-card shadow-soft">
             <div className="text-2xl leading-none mb-1">{meta.icon}</div>
             <p className="text-2xl font-black">
               {Math.round(km * 10) / 10} <span className="text-xs font-normal text-muted-foreground">km</span>
@@ -765,7 +765,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           const pctDone = scheduled > 0 ? Math.round(b.doneWithExercise / scheduled * 100) : 0;
           const pctSkipped = scheduled > 0 ? Math.round(b.skipped / scheduled * 100) : 0;
           return (
-            <div key={b.label} className="border border-border rounded-lg p-3 bg-secondary">
+            <div key={b.label} className="rounded-2xl p-3 bg-card shadow-soft">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold">{b.label}</span>
                   <div className="flex items-center gap-2">
