@@ -5118,6 +5118,7 @@ const estimateCalories = (
                                        const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defaultKg;
                                        return (
                                          <div key={si}>
+                                           <SwipeableSetRow done={isSetDone} isPR={isPrWeight(prIndex, name, saved?.kg)} onToggle={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)}>
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
@@ -5126,6 +5127,8 @@ const estimateCalories = (
                                            <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                           </div>
+                                          </SwipeableSetRow>
+
                                           {(() => {
                                             const currentKg = parseFloat(saved?.kg || defaultKg);
                                             if (!isNaN(currentKg) && currentKg < 0) {
