@@ -1,7 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { User, Camera, Loader2, Instagram, Music, Crown, Shield } from "lucide-react";
+import { User, Camera, Loader2, Instagram, Music, Crown, Shield, Ruler, Trash2, AlertTriangle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import HonoraryBadge from "./HonoraryBadge";
 import AvatarCropDialog from "./AvatarCropDialog";
+import SettingsSection from "./SettingsSection";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { pickImage } from "@/lib/pickImage";
 
@@ -16,6 +28,9 @@ const GENDER_OPTIONS = [
   { value: "kvinna", label: "Kvinna" },
   { value: "annat", label: "Annat" },
 ];
+
+const inputClass =
+  "w-full rounded-xl bg-secondary/60 border border-border/60 text-foreground text-sm px-3 py-2.5 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground";
 
 // Extract username from a full URL or plain handle
 const extractUsername = (input: string, domain: string): string => {
@@ -32,6 +47,7 @@ const extractUsername = (input: string, domain: string): string => {
 };
 
 const ProfileSection = ({ userId }: ProfileSectionProps) => {
+  const navigate = useNavigate();
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [weightKg, setWeightKg] = useState<string>("");
@@ -43,10 +59,12 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [snapchat, setSnapchat] = useState("");
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [spotifyName, setSpotifyName] = useState("");
+  const [spotifyThumb, setSpotifyThumb] = useState<string | null>(null);
   const [fetchingSpotify, setFetchingSpotify] = useState(false);
   const [isHonorary, setIsHonorary] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const dirty = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,10 +138,11 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     };
   }, [loaded, doSave]);
 
-  // Auto-fetch Spotify track name from oEmbed
+  // Auto-fetch Spotify track name + artwork from oEmbed
   useEffect(() => {
     const url = spotifyUrl.trim();
     if (!url || !url.includes("open.spotify.com/track/")) {
+      setSpotifyThumb(null);
       return;
     }
     const controller = new AbortController();
@@ -133,6 +152,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         const res = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`, { signal: controller.signal });
         if (res.ok) {
           const data = await res.json();
+          if (data.thumbnail_url) setSpotifyThumb(data.thumbnail_url);
           if (data.title) {
             dirty.current = true;
             setSpotifyName(data.title);
@@ -195,180 +215,170 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <User className="w-4 h-4 text-primary" />
-        <span className="text-sm font-semibold">Profil</span>
-      </div>
+      {/* Profil: foto + medlemskap */}
+      <SettingsSection title="Profil" icon={User}>
+        <div className="space-y-4">
+          {isAdmin ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold bg-primary/15 text-primary">
+              <Shield className="w-4 h-4" /> Admin
+            </div>
+          ) : isHonorary ? (
+            <HonoraryBadge size="md" />
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold bg-secondary/60 text-muted-foreground">
+              <User className="w-4 h-4" /> Medlem
+            </div>
+          )}
 
-      {/* Membership status */}
-      {isAdmin ? (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-primary/15 text-primary">
-          <Shield className="w-4 h-4" /> Admin
-        </div>
-      ) : isHonorary ? (
-        <HonoraryBadge size="md" />
-      ) : (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-secondary text-muted-foreground">
-          <User className="w-4 h-4" /> Medlem
-        </div>
-      )}
-
-      {/* Avatar */}
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full bg-secondary border-2 border-border overflow-hidden flex items-center justify-center">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Profilbild"
-                className="w-full h-full object-cover"
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-secondary/60 border border-border/60 overflow-hidden flex items-center justify-center shadow-soft">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profilbild" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-10 h-10 text-muted-foreground" />
+                )}
+              </div>
+              <button
+                onClick={handlePickAvatar}
+                disabled={uploading}
+                aria-label="Byt profilbild"
+                className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-soft border-2 border-card hover:opacity-90 transition-opacity disabled:opacity-40"
+              >
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
               />
-            ) : (
-              <User className="w-8 h-8 text-muted-foreground" />
-            )}
+            </div>
+            <p className="text-[11px] text-muted-foreground text-center">
+              Tryck på kameran för att byta bild · max 2 MB, JPG/PNG
+            </p>
           </div>
-          <button
-            onClick={handlePickAvatar}
-            disabled={uploading}
-            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40"
-          >
-            {uploading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Camera className="w-3.5 h-3.5" />
-            )}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
         </div>
-        <div className="text-xs text-muted-foreground">
-          <p>Klicka på kameran för att ladda upp.</p>
-          <p>Max 2 MB, JPG/PNG.</p>
+      </SettingsSection>
+
+      {/* Kroppsdata */}
+      <SettingsSection title="Kroppsdata" icon={Ruler}>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">Ålder</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={age}
+              onChange={(e) => { dirty.current = true; setAge(e.target.value); }}
+              placeholder="Ange din ålder"
+              min={1}
+              max={120}
+              className={inputClass}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">Kön</label>
+            <select
+              value={gender}
+              onChange={(e) => { dirty.current = true; setGender(e.target.value); }}
+              className={inputClass}
+            >
+              {GENDER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">Vikt (kg)</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={weightKg}
+              onChange={(e) => { dirty.current = true; setWeightKg(e.target.value); }}
+              placeholder="Ange din vikt"
+              min={30}
+              max={300}
+              className={inputClass}
+            />
+            <p className="text-[10px] text-muted-foreground">Används för att beräkna kaloriförbrukning</p>
+          </div>
         </div>
-      </div>
+      </SettingsSection>
 
-      {/* Age */}
-      <div className="space-y-1">
-        <label className="text-xs text-muted-foreground block">Ålder</label>
-        <input
-          type="number"
-          inputMode="numeric"
-          value={age}
-          onChange={(e) => { dirty.current = true; setAge(e.target.value); }}
-          placeholder="Ange din ålder"
-          min={1}
-          max={120}
-          className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-        />
-      </div>
-
-      {/* Gender */}
-      <div className="space-y-1">
-        <label className="text-xs text-muted-foreground block">Kön</label>
-        <select
-          value={gender}
-          onChange={(e) => { dirty.current = true; setGender(e.target.value); }}
-          className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary"
-        >
-          {GENDER_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+      {/* Sociala medier */}
+      <SettingsSection title="Sociala medier" icon={Instagram} defaultOpen={false}>
+        <div className="space-y-3">
+          {([
+            { label: "Instagram", value: instagram, set: setInstagram, icon: <Instagram className="w-4 h-4" /> },
+            { label: "TikTok", value: tiktok, set: setTiktok, icon: <Music className="w-4 h-4" /> },
+            { label: "Snapchat", value: snapchat, set: setSnapchat, icon: <Camera className="w-4 h-4" /> },
+          ] as const).map((f) => (
+            <div key={f.label} className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                {f.icon}
+              </span>
+              <input
+                type="text"
+                value={f.value}
+                onChange={(e) => { dirty.current = true; f.set(e.target.value); }}
+                placeholder={`${f.label} – användarnamn`}
+                aria-label={f.label}
+                className={`${inputClass} pl-10`}
+              />
+            </div>
           ))}
-        </select>
-      </div>
-
-      {/* Weight */}
-      <div className="space-y-1">
-        <label className="text-xs text-muted-foreground block">Vikt (kg)</label>
-        <input
-          type="number"
-          inputMode="decimal"
-          value={weightKg}
-          onChange={(e) => { dirty.current = true; setWeightKg(e.target.value); }}
-          placeholder="Ange din vikt"
-          min={30}
-          max={300}
-          className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-        />
-        <p className="text-[10px] text-muted-foreground">Används för att beräkna kaloriförbrukning</p>
-      </div>
-
-      <div className="pt-2 space-y-1">
-        <div className="flex items-center gap-2 mb-2">
-          <Instagram className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">Sociala medier</span>
         </div>
+      </SettingsSection>
 
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">Instagram (användarnamn)</label>
-          <input
-            type="text"
-            value={instagram}
-            onChange={(e) => { dirty.current = true; setInstagram(e.target.value); }}
-            placeholder="t.ex. mittnamn"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
-        </div>
+      {/* Anthem */}
+      <SettingsSection title="Anthem" icon={Music} defaultOpen={false}>
+        <div className="space-y-3">
+          {(spotifyThumb || spotifyName) && (
+            <div className="flex items-center gap-3 rounded-xl bg-secondary/60 border border-border/60 p-2.5 shadow-soft">
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-background flex items-center justify-center shrink-0">
+                {spotifyThumb ? (
+                  <img src={spotifyThumb} alt={spotifyName || "Albumomslag"} className="w-full h-full object-cover" />
+                ) : (
+                  <Music className="w-5 h-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Din anthem</p>
+                <p className="text-sm font-semibold truncate">{spotifyName || "Okänd låt"}</p>
+              </div>
+            </div>
+          )}
 
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">TikTok (användarnamn)</label>
-          <input
-            type="text"
-            value={tiktok}
-            onChange={(e) => { dirty.current = true; setTiktok(e.target.value); }}
-            placeholder="t.ex. mittnamn"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
-        </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">Spotify-länk</label>
+            <input
+              type="url"
+              value={spotifyUrl}
+              onChange={(e) => { dirty.current = true; setSpotifyUrl(e.target.value); }}
+              placeholder="https://open.spotify.com/track/..."
+              className={inputClass}
+            />
+          </div>
 
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">Snapchat (användarnamn)</label>
-          <input
-            type="text"
-            value={snapchat}
-            onChange={(e) => { dirty.current = true; setSnapchat(e.target.value); }}
-            placeholder="t.ex. mittnamn"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">
+              Låtnamn & artist {fetchingSpotify && <Loader2 className="w-3 h-3 inline animate-spin ml-1" />}
+            </label>
+            <input
+              type="text"
+              value={spotifyName}
+              onChange={(e) => { dirty.current = true; setSpotifyName(e.target.value); }}
+              placeholder="Fylls i automatiskt från länken"
+              className={inputClass}
+            />
+          </div>
         </div>
-      </div>
+      </SettingsSection>
 
-      {/* Spotify Anthem */}
-      <div className="pt-2 space-y-1">
-        <div className="flex items-center gap-2 mb-2">
-          <Music className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">Anthem</span>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">Spotify-länk</label>
-          <input
-            type="url"
-            value={spotifyUrl}
-            onChange={(e) => { dirty.current = true; setSpotifyUrl(e.target.value); }}
-            placeholder="https://open.spotify.com/track/..."
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground block">Låtnamn & artist {fetchingSpotify && <Loader2 className="w-3 h-3 inline animate-spin ml-1" />}</label>
-          <input
-            type="text"
-            value={spotifyName}
-            onChange={(e) => { dirty.current = true; setSpotifyName(e.target.value); }}
-            placeholder="Fylls i automatiskt från länken"
-            className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
-          />
-        </div>
-      </div>
       <AvatarCropDialog
         open={cropOpen}
         imageFile={cropFile}
@@ -377,14 +387,43 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         saving={uploading}
       />
 
-      <div className="pt-4 border-t border-border">
-        <a
-          href="/delete-account"
-          className="text-xs text-destructive underline hover:opacity-80"
-        >
-          Radera mitt konto permanent
-        </a>
+      {/* Farozon */}
+      <div className="pt-2">
+        <SettingsSection title="Farozon" icon={AlertTriangle} tone="danger" defaultOpen={false}>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Radering låser kontot direkt och all data tas bort permanent efter 90 dagar.
+            </p>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold py-2.5 shadow-soft hover:opacity-90 transition-opacity"
+            >
+              <Trash2 className="w-4 h-4" /> Radera mitt konto permanent
+            </button>
+          </div>
+        </SettingsSection>
       </div>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Är du säker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Detta går inte att ångra. Du fortsätter till bekräftelsesidan där du skriver "RADERA" för att slutföra raderingen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => navigate("/delete-account")}
+              className="bg-destructive text-destructive-foreground hover:opacity-90"
+            >
+              Fortsätt
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

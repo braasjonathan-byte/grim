@@ -46,7 +46,7 @@ const IdentityTitleCard = ({ userId }: IdentityTitleCardProps) => {
   };
 
   return (
-    <div className="rounded-2xl bg-card border border-border/60 p-4 space-y-4">
+    <div className="rounded-2xl bg-card border border-border/40 shadow-soft p-4 space-y-4">
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-bold">Din titel</h3>
@@ -81,8 +81,8 @@ const IdentityTitleCard = ({ userId }: IdentityTitleCardProps) => {
                       onClick={() => choose(t.id)}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors flex items-center gap-1.5 ${
                         isActive
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-secondary text-foreground border-border/60"
+                          ? "bg-primary text-primary-foreground border-primary shadow-soft"
+                          : "bg-secondary/60 text-foreground border-border/60 hover:bg-secondary"
                       }`}
                     >
                       <span>{t.emoji}</span>
@@ -107,7 +107,7 @@ const IdentityTitleCard = ({ userId }: IdentityTitleCardProps) => {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold flex items-center gap-1.5">
                         {t.label}
-                        <Lock className="w-3 h-3 text-muted-foreground" />
+                        <Lock className="w-2.5 h-2.5 text-muted-foreground/50" />
                       </p>
                       <p className="text-[11px] text-muted-foreground">{t.requirement}</p>
                     </div>
@@ -115,8 +115,11 @@ const IdentityTitleCard = ({ userId }: IdentityTitleCardProps) => {
                       {Math.round(t.progress * 100)} %
                     </span>
                   </div>
-                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-background overflow-hidden">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${Math.round(t.progress * 100)}%` }} />
+                  <div className="mt-1.5 h-2 w-full rounded-full bg-background overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out"
+                      style={{ width: `${Math.max(4, Math.round(t.progress * 100))}%` }}
+                    />
                   </div>
                 </div>
               ))}
