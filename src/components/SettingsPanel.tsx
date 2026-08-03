@@ -346,7 +346,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
       {userId && (
         <ThemePicker
           userId={userId}
-          isHonorary={isHonorary}
+          isHonorary={honorary}
           currentTheme={colorTheme}
           onThemeChange={setColorTheme}
         />
