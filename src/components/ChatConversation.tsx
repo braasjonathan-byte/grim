@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { avatarGradient } from "@/lib/avatarGradient";
+import { useTypingListener, useTypingSender } from "@/hooks/useTypingIndicator";
+import TypingDots from "@/components/TypingDots";
 import { toast } from "sonner";
 
 interface Friend {
