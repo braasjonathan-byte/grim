@@ -102,16 +102,13 @@ function computeStats(rows: any[]): IdentityStats {
     }
   }
 
-  // Current streak of consecutive days with a completed workout
+  // Current streak of consecutive days with a completed workout (today or yesterday anchors it)
   let streak = 0;
   const cursor = new Date();
-  for (let i = 0; i < 400; i++) {
-    const key = cursor.toISOString().slice(0, 10);
-    if (dateSet.has(key)) streak += 1;
-    else if (i > 0 || !dateSet.has(key)) {
-      if (i === 0) { cursor.setDate(cursor.getDate() - 1); continue; }
-      break;
-    }
+  const key = (d: Date) => d.toISOString().slice(0, 10);
+  if (!dateSet.has(key(cursor))) cursor.setDate(cursor.getDate() - 1);
+  while (dateSet.has(key(cursor)) && streak < 400) {
+    streak += 1;
     cursor.setDate(cursor.getDate() - 1);
   }
 
