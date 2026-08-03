@@ -676,18 +676,19 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
 
       {/* Period toggle */}
-      <div className="flex gap-1 bg-secondary rounded-lg p-1">
+      <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
         {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
         <button
           key={p}
           onClick={() => setSummaryPeriod(p)}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-          summaryPeriod === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
+          summaryPeriod === p ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
           }>
             {summaryPeriodLabels[p]}
           </button>
         )}
       </div>
+
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2">
