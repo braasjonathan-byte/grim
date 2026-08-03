@@ -1,76 +1,58 @@
-# 10 alternativa funktionsförslag
+# Mer nativ känsla på Träning-sidan
 
-Eftersom föregående plan avvisades kommer här 10 andra konkreta förslag på funktioner och förbättringar som gör appen enklare att använda. De är sorterade efter impact och byggbarhet.
+Fyra förbättringar i träningsvyn: swipebar veckocarousel, tydligare dagsväljare, swipebara set-rader med feedback-animation, och automatisk PR-badge.
 
-## Förslag 1 — Smart övningsbyte i passet
-Låt användaren trycka på en övning i ett pågående pass och få förslag på liknande övningar baserat på utrustning, mål och muskelgrupp. Sparas direkt i planen.
+## 1. Veckoväljare som swipebar carousel
 
-- Ny komponent: `ExerciseSwapSheet`
-- Använda befintligt övningsbibliotek + metadata om utrustning/muskelgrupp
-- Uppdatera `plan.details` på plats
+Idag visas V6/V7/V8 som knappar med pilar och en enkel swipe-gest på hela raden (max 2 veckor synliga åt varje håll).
 
-## Förslag 2 — Viktskivekalkylator
-Visa visuellt vilka viktskivor som ska läggas på stången för att nå en målvikt, med hänsyn till tillgängliga skivor och stångvikt.
+Ny lösning:
+- Horisontellt scrollande rad med alla veckor, `scroll-snap` per vecka så att varje svep landar exakt på en vecka.
+- Aktiv vecka centreras automatiskt vid byte (scroll-into-view, smooth).
+- Aktiv vecka är större/fylld, grannveckor mindre och nedtonade — mjuk skalning istället för hårda klipp.
+- "Lägg till vecka"-knappen ligger kvar sist i carousellen.
+- Pilarna behålls som fallback på desktop men döljs på mobil.
+- Progressbar och "X% avklarat" ligger kvar under.
 
-- Ny komponent: `PlateCalculator`
-- Inställning för tillgängliga skivor och stångvikt
-- Kan öppnas från viktfältet i `WorkoutView`
+## 2. Tydligare dagsväljare (Mån–Sön)
 
-## Förslag 3 — 1RM-uppskattning per övning
-Beräkna uppskattat ett-reps-max från loggade set och visa trend över tid. Använd t.ex. Epley-formeln.
+Varje dagschip byggs om till en liten vertikal pelare: dagbokstav överst, statusindikator under.
 
-- Ny vy eller kort: `OneRepMaxCard`
-- Läsa från `logged_weights` per övning
-- Sparas inte som ny data, beräknas on-the-fly
+- **Idag**: fylld prick under bokstaven + tydlig ring runt chipet.
+- **Genomförd dag**: liten grön bock istället för prick.
+- **Kommande dag med pass**: tom/streckad prick.
+- **Vilodag**: ingen prick, nedtonad (behåller nuvarande klick för att lägga till pass).
+- **Före planstart**: fortsatt disabled/gråad.
+- Valt dagschip markeras med fylld bakgrund som idag.
 
-## Förslag 4 — Träningsstreak och kalender
-Visa en månadskalender på startsidan med markerade träningsdagar och aktuell streak.
+Statusen läses från befintlig `completions[week-day]?.done` och `sameWorkoutDay`-logiken.
 
-- Ny komponent: `WorkoutCalendar`
-- Data från `completed_workouts` eller `workout_plans` med `completed_at`
-- Uppdatera `Index.tsx` med kalenderkort
+## 3. Swipebara set-rader med feedback-animation
 
-## Förslag 5 — Volym per muskelgrupp
-Veckovis översikt över träningsvolym per muskelgrupp så användaren ser om vissa muskler tränas för mycket eller för lite.
+Set-raderna (S1, S2 …) finns på två ställen i vyn (dagens pass och veckoplan) och får båda samma beteende via en ny delad komponent.
 
-- Ny vy: `MuscleVolumeOverview`
-- Summera sets × reps × vikt från `logged_weights`
-- Mappa övningar till muskelgrupper via övningsbiblioteket
+- Svep raden åt höger → sättet bockas av som klart (anropar befintlig `toggleSetDone`).
+- Svep åt vänster på ett avbockat set → ångrar markeringen.
+- Under svepet visas en grön bakgrund med bock som "avslöjas" bakom raden.
+- Vid markering: skala-puls (kort 1.0 → 1.03 → 1.0) och grön färgpuls över raden.
+- Haptisk vibration via projektets befintliga `src/lib/haptics.ts`.
+- Checkboxen finns kvar — svepet är ett komplement, inte en ersättning.
+- Inmatningsfälten för reps/kg påverkas inte: svep-gesten aktiveras bara vid tydlig horisontell rörelse och ignoreras när gesten startar i ett inputfält.
 
-## Förslag 6 — Övningsanteckningar och taggar
-Möjlighet att lägga till snabbanteckningar per set eller övning, t.ex. "smärta i vänster axel", "bra form", "energi låg".
+## 4. Automatisk PR-badge
 
-- Utöka `logged_weights` eller `plan.details` med `notes`
-- Nytt fält i `WorkoutView`
-- Sökbar historik över anteckningar
+När ett set sparas eller bockas av jämförs det mot användarens tidigare bästa för övningen.
 
-## Förslag 7 — Kroppsmått och framstegsbilder
-Logga vikt, kroppsmått och bilder över tid med trendkurvor.
+- Bästa tidigare värde per övning tas fram från loggad historik (samma källa som personliga rekord-vyn) plus eventuella manuella rekordöverstyrningar.
+- Slår setet det tidigare rekordet visas en liten "PR"-badge på set-raden.
+- Badgen animeras in med en kort puls när den dyker upp.
+- Rekordjämförelsen görs på vikt, med reps som utslagsgivare vid samma vikt.
+- Endast styrkeövningar med kg-värde får badge; tids-/distansbaserade rader hoppas över.
 
-- Ny tabell: `body_measurements`
-- Ny vy: `BodyProgressView`
-- RLS: användare ser bara egna data
+## Teknisk sammanfattning
 
-## Förslag 8 — Övningsdemo direkt i passet
-Visa en kort teknikvideo, gif eller bild med rätt utförande bredvid övningen under passet.
-
-- Länka övningar i biblioteket till demo-media
-- Ny komponent: `ExerciseDemo`
-- Kan visas i `WorkoutView` bredvid varje övning
-
-## Förslag 9 — Snabb kostregistrering
-Favoritmåltider och möjlighet att återanvända gårdagens måltider med ett klick.
-
-- Ny tabell: `meals` och `meal_favorites`
-- Enkel vy för att logga måltid
-- Favoriter sparas per användare
-
-## Förslag 10 — Vilotimer med ljudsignal
-Starta en vilotimer mellan set med valbar tid och ett pip när det är dags att köra nästa set.
-
-- Ny komponent: `RestTimer`
-- Inställning för standardvilotid
-- Ljud via Web Audio (befintlig beep-funktion kan återanvändas)
-
-## Rekommendation
-Börja med **förslag 4 (kalender/streak)** och **förslag 10 (vilotimer)** — båda är snabba att bygga, ger tydligt värde under passet, och kräver ingen ny backend-tabell. Därefter lägg till **förslag 2 (viktskivekalkylator)** för att underlätta styrkepassen.
+- `src/components/WorkoutView.tsx` — bygg om veckocarousellen och dagschipsen; byt ut de två inlinade set-rads-blocken mot den nya komponenten.
+- Ny `src/components/SetRow.tsx` — set-rad med swipe-gest, animation, checkbox, reps/kg-fält och PR-badge.
+- Ny hjälpmodul för PR-uppslag per övning (bästa vikt/reps), återanvänder samma parsing som `PersonalRecords.tsx`.
+- Animationer via Tailwind-keyframes (skala + grön färgpuls) i temats tokens — inga hårdkodade färger.
+- Ingen databasändring krävs; all data finns redan i `workout_completions.logged_weights`.
