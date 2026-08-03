@@ -4351,6 +4351,32 @@ const estimateCalories = (
     setIsWarmupMode(false);
   };
 
+  // External request (e.g. "Ej tränade muskler") to open the exercise picker
+  // for today's session, pre-filtered on a muscle group.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      const muscleGroup: string | null = detail.muscleGroup || null;
+      const weekPlans = plans.filter(p => p.week === currentWeek);
+      const currentWeekDays = DAYS
+        .map((dayName) => weekPlans.find((p) => sameWorkoutDay(p.day, dayName)))
+        .filter(Boolean) as PlanDay[];
+      const { index } = resolveTodayDayIndex(currentWeekDays, currentWeek, planStartDate);
+      const target = currentWeekDays[index] || currentWeekDays[0] || weekPlans[0] || plans[0];
+      if (!target) return;
+      skipDayResetRef.current = true;
+      setActiveDayIndex(Math.max(0, currentWeekDays.findIndex(p => p.id === target.id)));
+      setExpandedDay(`${target.week}-${target.day}`);
+      setReplaceExerciseTarget(null);
+      setIsWarmupMode(false);
+      setExerciseSearch("");
+      setSelectedMuscle(muscleGroup);
+      setShowExercisePicker(target.id);
+    };
+    window.addEventListener("grim:open-exercise-picker", handler as EventListener);
+    return () => window.removeEventListener("grim:open-exercise-picker", handler as EventListener);
+  }, [plans, currentWeek, planStartDate]);
+
   const moveExercise = async (planId: string, lineIndex: number, direction: "up" | "down") => {
     const plan = plans.find(p => p.id === planId);
     if (!plan) return;
