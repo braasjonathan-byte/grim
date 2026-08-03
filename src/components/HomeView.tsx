@@ -11,9 +11,12 @@ import {
   CheckCircle2,
   CalendarDays,
   Sparkles,
+  Lightbulb,
+  Plus,
 } from "lucide-react";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { toLocalDateKey } from "@/lib/dateUtils";
+import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
@@ -83,6 +86,17 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const [completions, setCompletions] = useState<CompletionRow[]>([]);
   const [latestAchievement, setLatestAchievement] = useState<{ id: string; unlocked_at: string } | null>(null);
   const [achievementCount, setAchievementCount] = useState(0);
+  const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadUntrainedRegions(userId)
+      .then((regions) => { if (!cancelled) setUntrainedRegions(regions); })
+      .catch(() => { if (!cancelled) setUntrainedRegions([]); });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+
 
   useEffect(() => {
     let cancelled = false;
@@ -200,6 +214,21 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
 
   const achievementDef = latestAchievement ? getAchievementById(latestAchievement.id) : undefined;
 
+  // "Vad ska jag göra idag?" — only when nothing is scheduled (and nothing done yet)
+  const hasScheduledToday = todaysPlans.some((p) => hasContent(p.details));
+  const suggestion = useMemo(
+    () => (untrainedRegions ? buildSuggestion(untrainedRegions) : null),
+    [untrainedRegions],
+  );
+  const showSuggestion = !hasScheduledToday && !todayDone && !!suggestion;
+
+  const openPickerForGroup = (muscleGroup: string | null) => {
+    onNavigate("workout");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("grim:open-exercise-picker", { detail: { muscleGroup } }));
+    }, 250);
+  };
+
   const greeting = `${greetingFor(now.getHours())}${nickname ? `, ${nickname}` : ""}!`;
 
   const dateLabel = now.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
@@ -282,6 +311,53 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
           <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </section>
+
+      {/* 1b. Suggestion when nothing is scheduled */}
+      {showSuggestion && suggestion && (
+        <section
+          className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3"
+          aria-label="Vad ska jag göra idag?"
+        >
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <Lightbulb className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Vad ska jag göra idag?
+              </p>
+              <p className="text-sm font-semibold truncate">Förslag: {suggestion.title}</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            Du har inte tränat {suggestion.labels.join(", ")} de senaste 7 dagarna. Ett pass med fokus på{" "}
+            {suggestion.title.toLowerCase()} balanserar veckan.
+          </p>
+
+          <div className="flex flex-wrap gap-1.5">
+            {suggestion.exercises.map((ex) => (
+              <span key={ex} className="text-[11px] font-medium bg-card border border-border/60 rounded-full px-2.5 py-1">
+                {ex}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button className="flex-1 min-w-[160px]" onClick={() => openPickerForGroup(suggestion.primaryGroup)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Lägg till {suggestion.primaryGroup ?? "pass"}
+            </Button>
+            {suggestion.groups.slice(1).map((group) => (
+              <Button key={group} variant="outline" className="min-w-[110px]" onClick={() => openPickerForGroup(group)}>
+                {group}
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
+
+
 
       {/* 2. Streak + weekly progress */}
       <div className="grid grid-cols-2 gap-3">
