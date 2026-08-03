@@ -78,19 +78,21 @@ const SwipeableSetRow = ({ done, onToggle, isPR, children }: SwipeableSetRowProp
 
   return (
     <div className="relative overflow-hidden rounded">
-      {/* Reveal layer behind the row */}
-      <div
-        className={`absolute inset-0 flex items-center px-3 transition-colors ${
-          done ? "justify-end bg-muted" : "justify-start bg-success/25"
-        } ${active ? (done ? "bg-muted" : "bg-success/45") : ""}`}
-        aria-hidden
-      >
-        {done ? (
-          <Undo2 className={`w-4 h-4 text-muted-foreground transition-transform ${active ? "scale-110" : "scale-90"}`} />
-        ) : (
-          <Check className={`w-4 h-4 text-success transition-transform ${active ? "scale-125" : "scale-90"}`} />
-        )}
-      </div>
+      {/* Reveal layer behind the row – only visible while swiping */}
+      {dx !== 0 && (
+        <div
+          className={`absolute inset-0 flex items-center px-3 transition-colors ${
+            done ? "justify-end bg-muted" : "justify-start bg-success/25"
+          } ${active ? (done ? "bg-muted" : "bg-success/45") : ""}`}
+          aria-hidden
+        >
+          {done ? (
+            <Undo2 className={`w-4 h-4 text-muted-foreground transition-transform ${active ? "scale-110" : "scale-90"}`} />
+          ) : (
+            <Check className={`w-4 h-4 text-success transition-transform ${active ? "scale-125" : "scale-90"}`} />
+          )}
+        </div>
+      )}
 
       <div
         onTouchStart={onTouchStart}
