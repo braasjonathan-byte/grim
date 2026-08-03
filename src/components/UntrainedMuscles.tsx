@@ -132,6 +132,14 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
     return allRegions.filter(r => !trainedRegions.has(r));
   }, [trainedRegions]);
 
+  const openPickerFor = (region: string) => {
+    const muscleGroup = REGION_TO_GROUP[region] || null;
+    window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "workout" }));
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("grim:open-exercise-picker", { detail: { muscleGroup } }));
+    }, 250);
+  };
+
   if (loading || untrainedRegions.length === 0) return null;
 
   return (
