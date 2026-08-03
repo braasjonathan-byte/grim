@@ -247,6 +247,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const loadFeed = async () => {
+    try {
+      await loadFeedInner();
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+
+  const loadFeedInner = async () => {
     const { data: postsData } = await supabase
       .from("social_posts")
       .select("*")
