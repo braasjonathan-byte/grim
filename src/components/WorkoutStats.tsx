@@ -413,7 +413,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           year: isoStart.year
         });
       }
-    });
+    }).finally(() => setStatsLoading(false));
   }, [userId]);
 
   const hasLoggedData = (c: CompletionRecord) => {
