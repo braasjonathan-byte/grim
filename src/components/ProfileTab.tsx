@@ -15,13 +15,13 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
       {/* Identity title */}
       <IdentityTitleCard userId={userId} />
 
-      {/* Profile, body data, socials, anthem, danger zone */}
-      <ProfileSection userId={userId} />
-
       {/* Archived plans */}
       <SettingsSection title="Arkiv" icon={Archive} defaultOpen={false}>
         <ArchivedPlans userId={userId} />
       </SettingsSection>
+
+      {/* Profile, body data, socials, anthem, danger zone */}
+      <ProfileSection userId={userId} />
     </div>
   );
 };
