@@ -861,20 +861,51 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 return null;
               })()}
 
-              {/* Caption */}
-              {post.caption && (
-                <p className="px-3 pt-2 text-sm whitespace-pre-line leading-snug">{post.caption}</p>
-              )}
+              {/* Caption + stat chips */}
+              {(() => {
+                const parsed = parseWorkoutCaption(post.caption);
+                if (!parsed.text && parsed.chips.length === 0) return null;
+                return (
+                  <div className="px-3 pt-2 pb-1 space-y-1.5">
+                    {parsed.text && <p className="text-sm whitespace-pre-line leading-snug">{parsed.text}</p>}
+                    {parsed.chips.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {parsed.chips.map((chip, i) => {
+                          const ChipIcon = chip.icon;
+                          return (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-foreground/80"
+                            >
+                              <ChipIcon className="w-3 h-3 text-muted-foreground" />
+                              {chip.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Like + comment buttons */}
-              <div className="px-4 py-2 border-t border-border/50 flex items-center gap-4">
-                <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1.5 text-sm">
-                  <Flame className={`w-4 h-4 transition-colors ${myLikes.has(post.id) ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
-                  <span className="text-xs text-muted-foreground">{likes[post.id] || 0}</span>
-                </button>
-                <button onClick={() => toggleComments(post.id)} className="flex items-center gap-1.5 text-sm">
-                  <MessageCircle className={`w-4 h-4 transition-colors ${openComments.has(post.id) ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className="text-xs text-muted-foreground">{commentCounts[post.id] || 0}</span>
+              <div className="px-3 py-2 border-t border-border/40 flex items-center gap-2">
+                <FlameReaction
+                  active={myLikes.has(post.id)}
+                  count={likes[post.id] || 0}
+                  onToggle={() => toggleLike(post.id)}
+                />
+                <button
+                  onClick={() => toggleComments(post.id)}
+                  aria-pressed={openComments.has(post.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                    openComments.has(post.id)
+                      ? "border-primary/40 bg-primary/15 text-primary"
+                      : "border-border bg-secondary/60 text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="tabular-nums">{commentCounts[post.id] || 0}</span>
                 </button>
                 {post.user_id !== userId && (
                   <WorkoutCheerButton
