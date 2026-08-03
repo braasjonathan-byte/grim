@@ -1440,6 +1440,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
+  const weekScrollRef = useRef<HTMLDivElement>(null);
   const [inlineIntervalRunner, setInlineIntervalRunner] = useState<{
     intervals: Array<{ time: string; tempo: string; dist: string }>;
     exerciseName: string;
