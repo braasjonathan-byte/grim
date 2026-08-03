@@ -560,8 +560,10 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
             <EmptyState
               icon={MessageCircle}
               title="Inga chattar ännu"
-              description="Lägg till vänner under Vänner-fliken för att börja chatta!"
+              description="Lägg till en vän så kan ni börja skicka meddelanden och dela pass."
               emoji="💬"
+              actionLabel="Hitta vänner"
+              onAction={() => window.dispatchEvent(new CustomEvent("grim:social-subtab", { detail: "friends" }))}
             />
           ) : (
             <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">

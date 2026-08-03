@@ -18,6 +18,7 @@ import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus
 import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 import { FeedSkeleton } from "@/components/LoadingSkeletons";
+import EmptyState from "@/components/EmptyState";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -841,12 +842,18 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             
             
             if (filteredPosts.length === 0) return (
-              <div className="text-center py-8">
-                <Camera className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  {feedFilter === "friends" ? "Inga inlägg från vänner ännu." : "Inga inlägg ännu. Var den första!"}
-                </p>
-              </div>
+              <EmptyState
+                icon={Camera}
+                emoji="📸"
+                title={feedFilter === "friends" ? "Inga inlägg från vänner ännu" : "Inga inlägg ännu"}
+                description={feedFilter === "friends"
+                  ? "Lägg till fler vänner – eller dela ditt eget pass så syns det här."
+                  : "Var den första att dela ett pass med gänget!"}
+                actionLabel="Dela ditt första inlägg"
+                onAction={() => setShowCompose(true)}
+                secondaryLabel={feedFilter === "friends" ? "Hitta vänner" : undefined}
+                onSecondary={feedFilter === "friends" ? () => setSubTab("friends") : undefined}
+              />
             );
 
             const sortedPosts = [...filteredPosts].sort((a, b) => {
