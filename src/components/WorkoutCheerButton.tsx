@@ -8,11 +8,12 @@ interface WorkoutCheerButtonProps {
   fromUserId: string;
   week: number | null;
   day: string | null;
+  fullWidth?: boolean;
 }
 
 const EMOJIS = ["💪", "🔥", "👏", "🚀", "🦾"];
 
-const WorkoutCheerButton = ({ toUserId, fromUserId, week, day }: WorkoutCheerButtonProps) => {
+const WorkoutCheerButton = ({ toUserId, fromUserId, week, day, fullWidth = false }: WorkoutCheerButtonProps) => {
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentEmoji, setSentEmoji] = useState<string | null>(null);
@@ -41,15 +42,17 @@ const WorkoutCheerButton = ({ toUserId, fromUserId, week, day }: WorkoutCheerBut
   };
 
   return (
-    <div className="relative inline-flex">
+    <div className={`relative inline-flex ${fullWidth ? "flex-1" : ""}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={sending}
-        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 ${
+        className={`inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 ${
+          fullWidth ? "w-full" : ""
+        } ${
           sentEmoji
             ? "border-success/40 bg-success/15 text-success"
-            : "border-border bg-secondary/60 text-muted-foreground hover:bg-accent"
+            : "border-border/60 bg-secondary/50 text-muted-foreground hover:bg-accent"
         }`}
         aria-label="Skicka hejarop"
       >
