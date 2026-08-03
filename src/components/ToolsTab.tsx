@@ -117,10 +117,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         type="button"
         data-tour="tools-profile"
         onClick={() => setSubView("settings")}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <SlidersHorizontal className="h-4 w-4" />
           </span>
           <span className="min-w-0">
@@ -136,10 +136,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         type="button"
         data-tour="tools-helpers"
         onClick={() => setSubView("helpers")}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Wrench className="h-4 w-4" />
           </span>
           <span className="min-w-0">
