@@ -9,6 +9,17 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const authClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const { data: userData } = await authClient.auth.getUser(token);
+    if (!userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const { barcode } = await req.json();
     if (!barcode || typeof barcode !== "string" || !/^\d{6,14}$/.test(barcode)) {
       return new Response(JSON.stringify({ error: "Ogiltig streckkod" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
