@@ -257,13 +257,14 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   };
 
   return (
-    <div className="space-y-3 bg-secondary">
+    <div className="space-y-3">
       {/* Clickable header */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 group w-full text-left">
 
-        <Trophy className="w-5 h-5 text-warning" />
+        <span className="w-8 h-8 icon-round bg-warning/15"><Trophy className="w-4 h-4 text-warning" /></span>
+
         <h3 className="text-lg font-bold tracking-tight group-hover:text-primary transition-colors">
           Personliga rekord
         </h3>
