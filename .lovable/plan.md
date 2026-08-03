@@ -1,81 +1,76 @@
-## Mål
-Utöka intervall-funktionen från enbart "Löpning – Intervaller" till alla konditionsformer i biblioteket, med sport-anpassade enheter (och fri enhet-väljare). När "Starta GPS-inspelning" trycks för en intervall-variant öppnas konfig-dialogen först.
+# 10 alternativa funktionsförslag
 
-## 1. Nya övningar i biblioteket
-I `src/data/exerciseLibrary.ts` läggs en "– Intervaller"-variant till för varje kondition-övning som inte redan har en:
+Eftersom föregående plan avvisades kommer här 10 andra konkreta förslag på funktioner och förbättringar som gör appen enklare att använda. De är sorterade efter impact och byggbarhet.
 
-- Cykling – Intervaller
-- Simning – Intervaller
-- Roddmaskin – Intervaller
-- Crosstrainer – Intervaller
-- Trappmaskin – Intervaller
-- Promenad – Intervaller
-- Tröskellöpning – Intervaller (redan finns Löpning – Intervaller)
-- Långpass – Intervaller
-- Skidåkning – Intervaller (ny grundövning + variant)
-- Skridsko – Intervaller (ny)
-- Paddling/Kajak – Intervaller (ny)
-- Hopprep – Intervaller (ny)
-- Airbike – Intervaller (ny)
-- SkiErg – Intervaller (ny)
-- Vandring – Intervaller (ny)
-- Spinning – Intervaller (ny)
+## Förslag 1 — Smart övningsbyte i passet
+Låt användaren trycka på en övning i ett pågående pass och få förslag på liknande övningar baserat på utrustning, mål och muskelgrupp. Sparas direkt i planen.
 
-Alla får `category: "kondition"`, `muscleGroup: "Helkropp"`. Aliasar i `cardioVisibility.ts` och `workoutDistance.ts` utökas så statistik fortsätter mappa rätt (t.ex. "cykling – intervaller" → cykling-kategorin).
+- Ny komponent: `ExerciseSwapSheet`
+- Använda befintligt övningsbibliotek + metadata om utrustning/muskelgrupp
+- Uppdatera `plan.details` på plats
 
-## 2. Sport-profil för intervall-enheter
-Ny modul `src/lib/intervalSportProfiles.ts` med en tabell:
+## Förslag 2 — Viktskivekalkylator
+Visa visuellt vilka viktskivor som ska läggas på stången för att nå en målvikt, med hänsyn till tillgängliga skivor och stångvikt.
 
-```
-{ matcher: regex, defaultUnit, availableUnits, paceLabel, paceUnit, distanceUnit }
-```
+- Ny komponent: `PlateCalculator`
+- Inställning för tillgängliga skivor och stångvikt
+- Kan öppnas från viktfältet i `WorkoutView`
 
-Exempel:
-- Löpning/Promenad/Vandring → distans i meter ELLER tid, tempo i min/km
-- Cykling/Spinning → distans i km ELLER tid, fart i km/h, valbart watt-mål
-- Simning → distans i meter (25/50 m), tempo i min/100 m
-- Roddmaskin/SkiErg → distans i meter, tempo i /500 m
-- Airbike → kalorier ELLER tid
-- Crosstrainer/Trappmaskin → tid (+ valfri distans)
-- Hopprep → tid ELLER antal hopp
-- Skidåkning/Skridsko/Paddling → distans i km ELLER tid
+## Förslag 3 — 1RM-uppskattning per övning
+Beräkna uppskattat ett-reps-max från loggade set och visa trend över tid. Använd t.ex. Epley-formeln.
 
-En `getIntervalProfile(exerciseName)` returnerar profilen via första matchande regex; fallback = löpning. Användaren kan i konfig-dialogen även byta enhet manuellt via en dropdown ("Mät i: tid / distans / kalorier / hopp").
+- Ny vy eller kort: `OneRepMaxCard`
+- Läsa från `logged_weights` per övning
+- Sparas inte som ny data, beräknas on-the-fly
 
-## 3. IntervalRunner generaliseras
-`src/components/IntervalRunner.tsx` är idag löpnings-centrerad. Ändringar:
-- Tar emot `exerciseName` (finns redan) och hämtar `profile` via `getIntervalProfile`.
-- Röstguidning, etiketter ("Tempo", "Distans") och enhet i HUD kommer från profilen.
-- Mål-typen per intervall blir `{ type: "time" | "distance" | "calories" | "reps", value, target? }` istället för dagens tid/tempo-par. Befintliga löpnings-preset mappas in via en migrations-funktion så inget existerande pass bryts.
+## Förslag 4 — Träningsstreak och kalender
+Visa en månadskalender på startsidan med markerade träningsdagar och aktuell streak.
 
-## 4. Konfig-dialog (`IntervalRowsEditor` + ny wrapper)
-`IntervalRowsEditor.tsx` byggs ut med:
-- Toppmeny för enhet (defaultar från profilen).
-- Kolumnrubriker/placeholders följer enheten.
-- Kalkylator-fält fyller i härledda värden där det går (samma logik som löpning idag, men generisk).
+- Ny komponent: `WorkoutCalendar`
+- Data från `completed_workouts` eller `workout_plans` med `completed_at`
+- Uppdatera `Index.tsx` med kalenderkort
 
-Ny komponent `IntervalConfigDialog.tsx` som wrappar editorn i en bottom-sheet och returnerar konfigen via `onConfirm`. Återanvänds från:
-- Plan-editorn när en "– Intervaller"-övning läggs till.
-- GPS-knappen (se nästa punkt).
+## Förslag 5 — Volym per muskelgrupp
+Veckovis översikt över träningsvolym per muskelgrupp så användaren ser om vissa muskler tränas för mycket eller för lite.
 
-## 5. GPS-knappen i `WorkoutView.tsx`
-I `DayGpsRecorder` (rad ~436) och i pass-kortets "Starta GPS-inspelning" (~254):
-- När den valda övningen matchar `/intervall/i` öppnas `IntervalConfigDialog` istället för att starta GPS direkt.
-- När användaren bekräftar konfigen startas både GPS-inspelning OCH `IntervalRunner` (lap-markering vid varje intervall/vila-byte enligt befintliga lap-stöd i `useGpsTracker`).
-- Vid stopp sparas distans/tempo/laps som idag.
-- Vanliga (icke-intervall) övningar fortsätter starta GPS direkt – ingen ändring.
+- Ny vy: `MuscleVolumeOverview`
+- Summera sets × reps × vikt från `logged_weights`
+- Mappa övningar till muskelgrupper via övningsbiblioteket
 
-## 6. Statistik & filter
-- `cardioVisibility.ts`: regex för varje kategori utökas med "– intervaller"-suffix där det behövs (löpning-regexen täcker redan "intervaller?löpning"; cykling/simning/rodd/trapp/promenad får motsvarande). Inga nya kategorier – intervall-pass räknas in i sin grundsport.
-- `workoutDistance.ts`: detektering uppdateras så cykling/rodd/etc. – intervaller summeras rätt.
+## Förslag 6 — Övningsanteckningar och taggar
+Möjlighet att lägga till snabbanteckningar per set eller övning, t.ex. "smärta i vänster axel", "bra form", "energi låg".
 
-## Tekniska detaljer
-- Filer som ändras: `src/data/exerciseLibrary.ts`, `src/components/IntervalRunner.tsx`, `src/components/IntervalRowsEditor.tsx`, `src/components/WorkoutView.tsx`, `src/lib/cardioVisibility.ts`, `src/lib/workoutDistance.ts`.
-- Nya filer: `src/lib/intervalSportProfiles.ts`, `src/components/IntervalConfigDialog.tsx`.
-- Inga DB-ändringar – konfig ligger fortsatt i `workout_plans.details` som text, loggar i `workout_completions.logged_distance_km/logged_tempo`.
-- Röstguidning på svenska behålls; texten anpassas per sport ("Intervall 3 av 6, mål 500 meter på roddmaskinen").
+- Utöka `logged_weights` eller `plan.details` med `notes`
+- Nytt fält i `WorkoutView`
+- Sökbar historik över anteckningar
 
-## Att bekräfta
-1. OK med listan ovan av 16 sporter, eller ska någon läggas till/tas bort?
-2. För simning – ska "längd" (bana) väljas som enhet (25 m / 50 m) eller bara meter generellt?
-3. Ska GPS-knappen på en intervall-variant där GPS inte ger värde (t.ex. Roddmaskin – Intervaller, Airbike – Intervaller) gömmas helt, eller visas men bara starta intervall-timern utan GPS?
+## Förslag 7 — Kroppsmått och framstegsbilder
+Logga vikt, kroppsmått och bilder över tid med trendkurvor.
+
+- Ny tabell: `body_measurements`
+- Ny vy: `BodyProgressView`
+- RLS: användare ser bara egna data
+
+## Förslag 8 — Övningsdemo direkt i passet
+Visa en kort teknikvideo, gif eller bild med rätt utförande bredvid övningen under passet.
+
+- Länka övningar i biblioteket till demo-media
+- Ny komponent: `ExerciseDemo`
+- Kan visas i `WorkoutView` bredvid varje övning
+
+## Förslag 9 — Snabb kostregistrering
+Favoritmåltider och möjlighet att återanvända gårdagens måltider med ett klick.
+
+- Ny tabell: `meals` och `meal_favorites`
+- Enkel vy för att logga måltid
+- Favoriter sparas per användare
+
+## Förslag 10 — Vilotimer med ljudsignal
+Starta en vilotimer mellan set med valbar tid och ett pip när det är dags att köra nästa set.
+
+- Ny komponent: `RestTimer`
+- Inställning för standardvilotid
+- Ljud via Web Audio (befintlig beep-funktion kan återanvändas)
+
+## Rekommendation
+Börja med **förslag 4 (kalender/streak)** och **förslag 10 (vilotimer)** — båda är snabba att bygga, ger tydligt värde under passet, och kräver ingen ny backend-tabell. Därefter lägg till **förslag 2 (viktskivekalkylator)** för att underlätta styrkepassen.
