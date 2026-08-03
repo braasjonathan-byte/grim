@@ -560,50 +560,62 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
               emoji="💬"
             />
           ) : (
-            sortedFriends.map(friend => {
-              const lastMsg = lastMessages.get(friend.user_id);
-              return (
-                <button
-                  key={friend.user_id}
-                  onClick={() => setSelectedFriend(friend)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {friend.avatar_url ? (
-                      <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-sm font-bold text-primary">
-                        {friend.nickname.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold truncate">{friend.nickname}</span>
-                      {friend.is_honorary && <HonoraryBadge size="xs" nickname={friend.nickname} />}
-                      {lastMsg && (
-                        <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                          {formatTime(lastMsg.created_at)}
-                        </span>
+            <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
+              {sortedFriends.map(friend => {
+                const lastMsg = lastMessages.get(friend.user_id);
+                const unread = lastMsg?.unread_count || 0;
+                const av = avatarGradient(friend.nickname);
+                return (
+                  <button
+                    key={friend.user_id}
+                    onClick={() => setSelectedFriend(friend)}
+                    className={`w-full flex items-center gap-3 p-3.5 transition-colors text-left active:bg-muted/70 ${unread > 0 ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/40'}`}
+                  >
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden" style={av.style}>
+                        {friend.avatar_url ? (
+                          <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-bold" style={av.textStyle}>{av.initial}</span>
+                        )}
+                      </div>
+                      {unread > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-primary" />
                       )}
                     </div>
-                    {lastMsg ? (
-                      <p className={`text-xs truncate ${lastMsg.unread_count > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                        {lastMsg.message || '🏋️ Delade ett pass'}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground italic">Starta en konversation</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-semibold truncate">{friend.nickname}</span>
+                        {friend.is_honorary && (
+                          <span className="shrink-0 rounded-full bg-warning/15 px-1.5 py-0.5 text-[9px] font-semibold text-warning">
+                            Heders
+                          </span>
+                        )}
+                        {lastMsg && (
+                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/70">
+                            {formatTime(lastMsg.created_at)}
+                          </span>
+                        )}
+                      </div>
+                      {lastMsg ? (
+                        <p className={`text-xs truncate ${unread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                          {lastMsg.message || '🏋️ Delade ett pass'}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground/80 italic truncate">Starta en konversation</p>
+                      )}
+                    </div>
+                    {unread > 0 && (
+                      <span className="w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
+                        {unread > 9 ? '9+' : unread}
+                      </span>
                     )}
-                  </div>
-                  {lastMsg && lastMsg.unread_count > 0 && (
-                    <span className="w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
-                      {lastMsg.unread_count > 9 ? '9+' : lastMsg.unread_count}
-                    </span>
-                  )}
-                </button>
-              );
-            })
+                  </button>
+                );
+              })}
+            </div>
           )}
+
         </div>
       )}
     </div>
