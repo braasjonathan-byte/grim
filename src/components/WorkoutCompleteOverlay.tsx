@@ -86,7 +86,7 @@ const WorkoutCompleteOverlay = ({ open, title, summary, userId, onClose }: Worko
           <p className="text-sm text-muted-foreground">{title?.trim() ? title : "Passet är klarmarkerat"}</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {stats.map((s) => (
             <div key={s.label} className="rounded-2xl bg-card border border-border/60 p-3">
               <p className="text-lg font-bold tabular-nums leading-tight">{s.value}</p>
