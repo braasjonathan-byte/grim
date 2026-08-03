@@ -278,6 +278,21 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
         </div>
 
+        {logs.length === 0 && (
+          <div className="rounded-2xl bg-primary/5 border border-primary/25 p-3 text-center space-y-2">
+            <p className="text-sm font-semibold">Inget loggat {isToday ? "idag" : "denna dag"} än</p>
+            <p className="text-xs text-muted-foreground">
+              Lägg till din första måltid så räknar vi kalorier och makros åt dig.
+            </p>
+            <button
+              onClick={() => setPicker(allSlots[0] || slots[0] || "frukost")}
+              className="pill-btn bg-primary text-primary-foreground px-4 py-2 text-xs font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" /> Logga din första måltid
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-2">
           <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <Target className="w-3 h-3" /> Mål

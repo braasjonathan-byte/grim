@@ -352,6 +352,17 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           })}
         </div>
 
+        {doneDates.size === 0 && skippedDates.size === 0 && pendingDates.size === 0 && (
+          <EmptyState
+            icon={CalendarDays}
+            emoji="📅"
+            title="Kalendern är tom"
+            description="Planera in ett pass så fylls kalendern med dina träningsdagar."
+            actionLabel="Planera ditt första pass"
+            onAction={() => window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "workout" }))}
+          />
+        )}
+
         <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1.5 mt-4 pt-3 border-t border-border/40">
           {[
             ["bg-success/25", "Tränat"],
