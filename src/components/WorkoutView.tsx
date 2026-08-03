@@ -1080,7 +1080,9 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
               >{label}</button>
             );
           })}
+          </div>
         </div>
+
       )}
       <GpsTrackerControl
         onStop={(km, sec, gpsRoute) => {
