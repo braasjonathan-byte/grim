@@ -33,6 +33,10 @@ export interface TemplatePlan {
   isEventPrep?: boolean;
   /** Default event type for event_countdowns table */
   defaultEventType?: string;
+  /** If true, user picks sessions/week and plan length before the plan is generated */
+  isFlexible?: boolean;
+  /** Generator for flexible plans (frequency + length chosen by the user) */
+  generateFlexible?: (profile: FitnessProfile, opts: FlexibleRunOptions) => TemplatePlanDay[];
 }
 
 export interface TemplatePlanDay {
@@ -1251,7 +1255,8 @@ export function generateFlexibleRunning(
     });
 
     if (isDeload) {
-      days.push({ week: w, day: "Ons", session_name: "Vila", details: "", tempo: "" });
+      const restDay = ALL_DAYS.find((d) => !dayList.includes(d));
+      if (restDay) days.push({ week: w, day: restDay, session_name: "Vila", details: "Deload-vecka – ta det lugnt.", tempo: "" });
     }
   }
   return days;
@@ -1570,6 +1575,16 @@ export const planTemplates: TemplatePlan[] = [
     category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateRunningPlan,
+  },
+  {
+    name: "🏃 Löpning – Flexibel",
+    description: "Du väljer själv hur många löppass per vecka (2–6) och hur många veckor planen ska pågå (4–20). Pass, tempo och distanser anpassas efter din löpnivå.",
+    weeks: 8,
+    category: "löpning",
+    requiredLifts: [],
+    isFlexible: true,
+    generateFlexible: generateFlexibleRunning,
+    generateFromProfile: (p) => generateFlexibleRunning(p, { sessionsPerWeek: p.training_days_per_week || 3, weeks: 8 }),
   },
   {
     name: "🏃 5K Nybörjare – Börja springa",
