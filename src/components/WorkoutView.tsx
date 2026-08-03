@@ -2291,7 +2291,8 @@ const estimateCalories = (
         const lw = (completions[key] as any)?.logged_weights;
         setCompleteCelebration({
           title: plan?.session_name?.trim() || "",
-          summary: summarizeCompletion(lw, prIndex),
+          summary: summarizeCompletion(lw, prIndex, new Date()),
+
         });
       } catch {}
 
@@ -2576,6 +2577,11 @@ const estimateCalories = (
 
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
     const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
+    // Timestamp of the first checked set — used to measure session length
+    if (arr[setIndex] && !updated["__first_set_at__"]) {
+      updated["__first_set_at__"] = new Date().toISOString();
+    }
+
 
     // Circuit sync: if this exercise belongs to a circuit, check if all exercises' set at setIndex are done
     const plan0 = plans.find(p => p.week === week && p.day === day);

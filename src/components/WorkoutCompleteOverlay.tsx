@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ConfettiBurst from "@/components/ConfettiBurst";
-import { formatVolumeKg, type WorkoutSummary } from "@/lib/workoutSummary";
+import { formatVolumeKg, formatDurationMin, type WorkoutSummary } from "@/lib/workoutSummary";
 import { hapticLight } from "@/lib/haptics";
 import { buildSurpriseReward, type SurpriseReward } from "@/lib/surpriseRewards";
 
@@ -54,6 +54,7 @@ const WorkoutCompleteOverlay = ({ open, title, summary, userId, onClose }: Worko
     { label: "Set", value: String(summary?.sets ?? 0) },
     { label: "Övningar", value: String(summary?.exercises.length ?? 0) },
     { label: "Volym", value: summary?.volumeKg ? formatVolumeKg(summary.volumeKg) : "–" },
+    { label: "Tid", value: summary?.durationMin ? formatDurationMin(summary.durationMin) : "–" },
   ];
   const prs = summary?.prExercises ?? [];
 
@@ -85,7 +86,7 @@ const WorkoutCompleteOverlay = ({ open, title, summary, userId, onClose }: Worko
           <p className="text-sm text-muted-foreground">{title?.trim() ? title : "Passet är klarmarkerat"}</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {stats.map((s) => (
             <div key={s.label} className="rounded-2xl bg-card border border-border/60 p-3">
               <p className="text-lg font-bold tabular-nums leading-tight">{s.value}</p>
