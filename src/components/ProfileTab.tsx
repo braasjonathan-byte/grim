@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, User, Archive } from "lucide-react";
 import ProfileSection from "@/components/ProfileSection";
 import ArchivedPlans from "@/components/ArchivedPlans";
+import IdentityTitleCard from "@/components/IdentityTitleCard";
 
 interface ProfileTabProps {
   userId: string;
@@ -14,6 +15,9 @@ const ProfileTab = ({ userId, isAdmin }: ProfileTabProps) => {
 
   return (
     <div className="py-2 space-y-4">
+      {/* Identity title */}
+      <IdentityTitleCard userId={userId} />
+
       {/* Profile settings */}
       <div className="bg-background border border-border rounded-lg p-4">
         <button
