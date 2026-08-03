@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary } from "@/data/exerciseLibrary";
-import { Dumbbell, ChevronDown } from "lucide-react";
+import { Dumbbell, ChevronDown, Plus } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface UntrainedMusclesProps {
@@ -57,6 +57,13 @@ const REGION_LABELS: Record<string, string> = {
   delts: "Axlar", biceps: "Biceps", triceps: "Triceps", forearms: "Underarmar",
   abs: "Mage", obliques: "Sneda bukmuskler", quads: "Quadriceps",
   hamstrings: "Baksida lår", glutes: "Rumpa", calves: "Vader",
+};
+
+const REGION_TO_GROUP: Record<string, string> = {
+  chest: "Bröst", traps: "Rygg", lats: "Rygg", lowerBack: "Rygg",
+  delts: "Axlar", biceps: "Armar", triceps: "Armar", forearms: "Armar",
+  abs: "Core", obliques: "Core", quads: "Ben", hamstrings: "Ben",
+  glutes: "Rumpa", calves: "Ben",
 };
 
 const REGION_EXERCISES: Record<string, string[]> = {
@@ -132,6 +139,14 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
     return allRegions.filter(r => !trainedRegions.has(r));
   }, [trainedRegions]);
 
+  const openPickerFor = (region: string) => {
+    const muscleGroup = REGION_TO_GROUP[region] || null;
+    window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "workout" }));
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("grim:open-exercise-picker", { detail: { muscleGroup } }));
+    }, 250);
+  };
+
   if (loading || untrainedRegions.length === 0) return null;
 
   return (
@@ -151,16 +166,34 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
         <CollapsibleContent className="pt-3">
           <div className="space-y-1.5">
             {untrainedRegions.map(region => (
-              <div key={region} className="bg-muted/40 rounded-xl px-3 py-2.5">
-
-                <p className="text-xs font-bold text-foreground">{REGION_LABELS[region]}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {(REGION_EXERCISES[region] || []).join(" · ")}
-                </p>
-              </div>
+              <button
+                key={region}
+                type="button"
+                onClick={() => openPickerFor(region)}
+                className="w-full text-left bg-muted/40 hover:bg-muted/70 active:scale-[0.99] transition-all rounded-xl px-3 py-2.5 flex items-center gap-2"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-foreground">{REGION_LABELS[region]}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                    {(REGION_EXERCISES[region] || []).join(" · ")}
+                  </p>
+                </div>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Lägg till pass för ${REGION_LABELS[region]}`}
+                  onClick={(e) => { e.stopPropagation(); openPickerFor(region); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); openPickerFor(region); } }}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-[11px] font-semibold px-2.5 py-1 hover:bg-primary/20 transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  Lägg till
+                </span>
+              </button>
             ))}
           </div>
         </CollapsibleContent>
+
       </Collapsible>
     </div>
   );
