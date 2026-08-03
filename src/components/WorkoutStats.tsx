@@ -263,6 +263,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [achievementIds, setAchievementIds] = useState<string[]>([]);
   const [achievementUnlockedAt, setAchievementUnlockedAt] = useState<Record<string, string>>({});
   const [showAchievements, setShowAchievements] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
