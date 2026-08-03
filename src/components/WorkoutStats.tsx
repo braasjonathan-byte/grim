@@ -671,6 +671,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         <h2 className="text-xl font-black tracking-tight">Statistik</h2>
       </div>
 
+      {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
+
+
       {/* Period toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">
         {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
