@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary } from "@/data/exerciseLibrary";
-import { Dumbbell, ChevronDown } from "lucide-react";
+import { Dumbbell, ChevronDown, Plus } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface UntrainedMusclesProps {
