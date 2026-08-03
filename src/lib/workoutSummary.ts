@@ -124,6 +124,8 @@ export function summarizeCompletion(
     volumeKg: Math.round(volumeKg),
     exercises: [...exercises],
     prExercises: [...prExercises],
+    durationMin: computeDuration(lw, endAt),
+
   };
 }
 
