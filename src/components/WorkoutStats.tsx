@@ -839,6 +839,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+      </>}
     </div>);
 
 };
