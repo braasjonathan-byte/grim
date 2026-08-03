@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { toLocalDateKey } from "@/lib/dateUtils";
-import { loadUntrainedRegions, buildSuggestion, REGION_TO_GROUP } from "@/lib/untrainedMuscles";
+import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
@@ -348,14 +348,9 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
               <Plus className="w-4 h-4 mr-1" />
               Lägg till {suggestion.primaryGroup ?? "pass"}
             </Button>
-            {suggestion.regions.slice(1).map((region) => (
-              <Button
-                key={region}
-                variant="outline"
-                className="min-w-[110px]"
-                onClick={() => openPickerForGroup(REGION_TO_GROUP[region] || null)}
-              >
-                {REGION_TO_GROUP[region]}
+            {suggestion.groups.slice(1).map((group) => (
+              <Button key={group} variant="outline" className="min-w-[110px]" onClick={() => openPickerForGroup(group)}>
+                {group}
               </Button>
             ))}
           </div>
