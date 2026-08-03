@@ -742,19 +742,20 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       )}
 
       {/* View toggle */}
-      <div className="flex gap-1 bg-secondary rounded-lg p-1">
+      <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
         {([["week", "Vecka"], ["month", "Månad"], ["year", "År"]] as const).map(([v, label]) =>
         <button
           key={v}
           onClick={() => setView(v)}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-          view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
+          view === v ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
           }>
 
             {label}
           </button>
         )}
       </div>
+
 
       {/* Stats list */}
       {stats.length === 0 ?
