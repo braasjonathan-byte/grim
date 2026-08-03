@@ -405,3 +405,65 @@ button:not([data-no-press]),
 }
 
 
+
+/* ============================================================
+   Shared design-system utilities (soft cards, pills, inputs)
+   ============================================================ */
+@layer components {
+  /* Soft card: no hard border, rounded 16px, diffuse shadow */
+  .card-soft {
+    @apply bg-card rounded-2xl shadow-soft border border-border/40;
+  }
+  .card-soft-muted {
+    @apply bg-secondary/60 rounded-2xl shadow-soft border border-transparent;
+  }
+
+  /* Round icon container – single consistent shape app-wide */
+  .icon-round {
+    @apply rounded-full flex items-center justify-center flex-shrink-0;
+  }
+
+  /* Pill buttons */
+  .pill-btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-full font-semibold
+           transition-all active:scale-[0.97];
+  }
+  .pill-btn-primary {
+    @apply pill-btn bg-primary text-primary-foreground shadow-soft hover:opacity-90;
+  }
+  .pill-btn-ghost {
+    @apply pill-btn bg-secondary text-foreground hover:bg-muted;
+  }
+  .pill-btn-soft {
+    @apply pill-btn bg-primary/10 text-primary hover:bg-primary/20;
+  }
+
+  /* Rounded soft input */
+  .input-soft {
+    @apply bg-muted/50 rounded-xl border border-transparent px-3 py-2 text-sm outline-none
+           focus:border-primary/40 focus:bg-background focus:ring-2 focus:ring-primary/20
+           transition-colors placeholder:text-muted-foreground;
+  }
+
+  /* Segmented control with sliding indicator */
+  .segmented {
+    @apply relative flex items-center gap-1 rounded-full bg-muted/60 p-1;
+  }
+  .segmented-item {
+    @apply relative z-10 flex-1 rounded-full px-3 py-1.5 text-xs font-semibold
+           text-muted-foreground transition-colors;
+  }
+  .segmented-indicator {
+    @apply absolute top-1 bottom-1 z-0 rounded-full bg-background shadow-soft
+           transition-all duration-300 ease-out;
+  }
+
+  /* Soft list rows (Vänner-style) */
+  .row-soft {
+    @apply w-full flex items-center gap-3 px-3 py-3 transition-colors
+           hover:bg-muted/50 active:bg-muted/70;
+  }
+  .row-divider {
+    @apply divide-y divide-border/40;
+  }
+}
