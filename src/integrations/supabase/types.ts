@@ -2161,6 +2161,10 @@ export type Database = {
         Returns: Json
       }
       are_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
+      bulk_import_exercise_instructions: {
+        Args: { p_author: string; p_data: Json }
+        Returns: number
+      }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
