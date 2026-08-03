@@ -341,9 +341,9 @@ const MiniTimer = () => {
   // Expanded
   return (
     <div
-      className="fixed left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-primary/20 px-4 py-3 cursor-pointer"
+      className="fixed left-0 right-0 z-50 mx-auto max-w-lg w-[calc(100%-2rem)] rounded-2xl bg-card/95 backdrop-blur border border-border shadow-lg shadow-black/20 px-4 py-3 cursor-pointer"
       style={{
-        bottom: `calc(60px + env(safe-area-inset-bottom, 0px))`,
+        bottom: `calc(72px + env(safe-area-inset-bottom, 0px))`,
         transform: "translate3d(0,0,0)",
         WebkitTransform: "translate3d(0,0,0)",
         willChange: "transform",
@@ -351,6 +351,7 @@ const MiniTimer = () => {
       onClick={() => setExpanded(false)}
     >
       <div className="max-w-lg mx-auto space-y-2">
+
         <div className="flex items-center justify-between">
           <div className="text-muted-foreground p-1">
             <ChevronDown className="w-4 h-4" />
