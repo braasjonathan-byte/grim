@@ -132,7 +132,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       ] = await Promise.all([
         supabase
           .from("workout_completions")
-          .select("week, day, done, skipped, updated_at")
+          .select("week, day, done, skipped, updated_at, logged_weights")
           .eq("user_id", userId),
         supabase
           .from("workout_plans")
