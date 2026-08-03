@@ -91,6 +91,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     try { localStorage.setItem("grim_social_subtab", t); } catch {}
   };
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
   const [groups, setGroups] = useState<EventGroup[]>([]);
   const [myGroups, setMyGroups] = useState<string[]>([]);
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
