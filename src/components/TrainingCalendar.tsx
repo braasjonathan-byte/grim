@@ -208,7 +208,10 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
               c.updated_at || null,
               archiveStart,
             ) ?? timestampToDateKey(c.updated_at || null);
-            if (dateStr) done.add(dateStr);
+            if (dateStr) {
+              done.add(dateStr);
+              addStats(dateStr, c.logged_weights ?? c.loggedWeights);
+            }
           }
         }
       }
@@ -216,6 +219,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       setDoneDates(done);
       setSkippedDates(skipped);
       setPendingDates(pending);
+      setDayStats(stats);
     };
 
     load();
