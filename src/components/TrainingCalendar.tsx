@@ -185,6 +185,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           if (c.done && (hasExercise || c.week === 0)) {
             done.add(dateStr);
             pending.delete(dateStr);
+            addStats(dateStr, (c as any).logged_weights);
           } else if (c.skipped) {
             skipped.add(dateStr);
             pending.delete(dateStr);
