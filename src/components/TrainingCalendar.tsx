@@ -153,6 +153,13 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       const done = new Set<string>();
       const skipped = new Set<string>();
       const pending = new Set<string>();
+      const stats: Record<string, DayStats> = {};
+      const addStats = (dateStr: string, lw: any) => {
+        const s = summarizeLoggedWeights(lw);
+        if (s.sets === 0 && s.volume === 0) return;
+        const prev = stats[dateStr] || { sets: 0, volume: 0 };
+        stats[dateStr] = { sets: prev.sets + s.sets, volume: prev.volume + s.volume };
+      };
 
       // --- Active plan completions ---
       const planHasExercises = new Set(
