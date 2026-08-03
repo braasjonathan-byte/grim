@@ -2722,6 +2722,9 @@ const estimateCalories = (
     }
   };
 
+  // Best/second-best logged weight per exercise — used for the automatic PR badge
+  const prIndex = useMemo(() => buildPrIndex(Object.values(completions)), [completions]);
+
   // Get per-set logged data (kg/reps)
   const getSetData = (weekDayKey: string, exerciseName: string): Array<{kg: string; reps: string}> => {
     const comp = completions[weekDayKey];
