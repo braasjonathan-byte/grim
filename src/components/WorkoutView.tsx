@@ -1607,6 +1607,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Ask the user after marking a workout done whether to share to friends feed.
   const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   const [completeCelebration, setCompleteCelebration] = useState<{ title: string; summary: WorkoutSummary } | null>(null);
+  const [pendingShare, setPendingShare] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
+  const closeCelebration = () => {
+    setCompleteCelebration(null);
+    setPendingShare((p) => { if (p) setSharePromptDialog(p); return null; });
+  };
 
   // Share card
   const [shareTarget, setShareTarget] = useState<{
@@ -2285,10 +2290,10 @@ const estimateCalories = (
         });
       } catch {}
 
-      // Open share dialog first; only create the post if the user confirms.
-      setSharePromptDialog({ week, day, caption: null, loading: true });
+      // Prepare the share dialog; it opens once the celebration is dismissed.
+      setPendingShare({ week, day, caption: null, loading: true });
       previewWorkoutCaption(userId, week, day).then((caption) => {
-        setSharePromptDialog((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
+        setPendingShare((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
       });
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
@@ -6176,7 +6181,7 @@ const estimateCalories = (
         open={!!completeCelebration}
         title={completeCelebration?.title}
         summary={completeCelebration?.summary ?? null}
-        onClose={() => setCompleteCelebration(null)}
+        onClose={closeCelebration}
       />
       <ShareWorkoutPromptDialog
         open={!!sharePromptDialog}
@@ -10211,7 +10216,7 @@ const estimateCalories = (
       open={!!completeCelebration}
       title={completeCelebration?.title}
       summary={completeCelebration?.summary ?? null}
-      onClose={() => setCompleteCelebration(null)}
+      onClose={closeCelebration}
     />
     <ShareWorkoutPromptDialog
       open={!!sharePromptDialog}
