@@ -252,8 +252,16 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   }
 
   async function removeLog(id: string) {
+    const { data: rows } = await supabase.from("meal_logs").select("*").eq("id", id);
+    const row: any = rows?.[0];
     await supabase.from("meal_logs").delete().eq("id", id);
     load();
+    if (row) {
+      showUndoToast(`"${row.item_name}" borttagen`, async () => {
+        await supabase.from("meal_logs").insert(row);
+        load();
+      });
+    }
   }
 
   function shiftDay(n: number) {
