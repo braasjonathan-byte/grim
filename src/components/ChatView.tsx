@@ -601,7 +601,9 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
                           </span>
                         )}
                       </div>
-                      {lastMsg ? (
+                      {isTyping(friend.user_id) ? (
+                        <TypingDots className="text-xs font-medium" />
+                      ) : lastMsg ? (
                         <p className={`text-xs truncate ${unread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                           {lastMsg.message || '🏋️ Delade ett pass'}
                         </p>
