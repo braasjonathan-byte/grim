@@ -22,6 +22,7 @@ interface PlanRow {
   day: string;
   details: string | null;
   session_name?: string | null;
+  created_at?: string | null;
 }
 interface CompletionRow {
   week: number;
