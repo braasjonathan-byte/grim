@@ -1,3 +1,4 @@
+import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords } from "lucide-react";
@@ -263,6 +264,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [achievementIds, setAchievementIds] = useState<string[]>([]);
   const [achievementUnlockedAt, setAchievementUnlockedAt] = useState<Record<string, string>>({});
   const [showAchievements, setShowAchievements] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -413,7 +415,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           year: isoStart.year
         });
       }
-    });
+    }).finally(() => setStatsLoading(false));
   }, [userId]);
 
   const hasLoggedData = (c: CompletionRecord) => {
@@ -670,6 +672,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         <h2 className="text-xl font-black tracking-tight">Statistik</h2>
       </div>
 
+      {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
+
+
       {/* Period toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">
         {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
@@ -835,6 +840,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+      </>}
     </div>);
 
 };

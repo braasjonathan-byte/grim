@@ -16,6 +16,7 @@ import { checkInteractionAchievements } from "@/lib/achievements";
 import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
 import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
+import { FeedSkeleton } from "@/components/LoadingSkeletons";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -91,6 +92,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     try { localStorage.setItem("grim_social_subtab", t); } catch {}
   };
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
   const [groups, setGroups] = useState<EventGroup[]>([]);
   const [myGroups, setMyGroups] = useState<string[]>([]);
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
@@ -247,6 +249,14 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   };
 
   const loadFeed = async () => {
+    try {
+      await loadFeedInner();
+    } finally {
+      setFeedLoading(false);
+    }
+  };
+
+  const loadFeedInner = async () => {
     const { data: postsData } = await supabase
       .from("social_posts")
       .select("*")
@@ -775,9 +785,12 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
           {/* Posts feed */}
           {(() => {
+            if (feedLoading && posts.length === 0) return <FeedSkeleton count={3} />;
+
             const filteredPosts = feedFilter === "friends"
               ? posts.filter(p => friendIds.has(p.user_id) || p.user_id === userId)
               : posts;
+            
             
             if (filteredPosts.length === 0) return (
               <div className="text-center py-8">

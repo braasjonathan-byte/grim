@@ -4,6 +4,7 @@ export interface ThemeDefinition {
   emoji: string;
   premium: boolean; // requires honorary status
   forceDark: boolean; // forces dark mode (all except "light")
+  followSystem?: boolean; // follows prefers-color-scheme instead of forceDark
   preview: { bg: string; card: string; accent: string };
   dark: Record<string, string>; // CSS var overrides (applied on top of base dark/light)
   light: Record<string, string>;
@@ -21,6 +22,42 @@ export const THEMES: ThemeDefinition[] = [
     dark: {},
   },
   {
+    id: "system",
+    name: "System",
+    emoji: "🌗",
+    premium: false,
+    forceDark: false,
+    followSystem: true,
+    preview: { bg: "#121212", card: "#1e1e1e", accent: "#ffffff" },
+    light: {},
+    dark: {
+      // Neutral "true dark" palette (#121212-ish) with preserved accent contrast
+      "--background": "0 0% 7%",
+      "--foreground": "0 0% 98%",
+      "--card": "0 0% 12%",
+      "--card-foreground": "0 0% 98%",
+      "--popover": "0 0% 10%",
+      "--popover-foreground": "0 0% 98%",
+      "--primary": "0 0% 100%",
+      "--primary-foreground": "0 0% 7%",
+      "--secondary": "0 0% 16%",
+      "--secondary-foreground": "0 0% 98%",
+      "--muted": "0 0% 16%",
+      "--muted-foreground": "0 0% 68%",
+      "--accent": "0 0% 20%",
+      "--accent-foreground": "0 0% 98%",
+      "--border": "0 0% 26%",
+      "--input": "0 0% 26%",
+      "--ring": "0 0% 80%",
+      "--success": "142 70% 50%",
+      "--success-foreground": "0 0% 7%",
+      "--warning": "38 95% 58%",
+      "--warning-foreground": "0 0% 7%",
+      "--destructive": "0 72% 55%",
+      "--destructive-foreground": "0 0% 98%",
+    },
+  },
+  {
     id: "light",
     name: "Ljust",
     emoji: "☀️",
@@ -30,6 +67,7 @@ export const THEMES: ThemeDefinition[] = [
     light: {},
     dark: {},
   },
+
   {
     id: "neon",
     name: "Neon",
@@ -523,19 +561,41 @@ export function storeThemeId(id: string) {
   localStorage.setItem(THEME_STORAGE_KEY, id);
 }
 
+export function prefersSystemDark(): boolean {
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } catch {
+    return true;
+  }
+}
+
+/** Re-applies the active theme whenever the OS light/dark setting changes. */
+export function watchSystemTheme() {
+  try {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      const active = THEMES.find((t) => t.id === getStoredThemeId());
+      if (active?.followSystem) applyTheme(active.id);
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+  } catch { /* ignore */ }
+}
+
 export function applyTheme(themeId: string) {
   const theme = THEMES.find((t) => t.id === themeId);
   if (!theme) return;
 
   const root = document.documentElement;
+  const isDark = theme.followSystem ? prefersSystemDark() : theme.forceDark;
 
   // Set dark/light mode based on theme
-  if (theme.forceDark) {
+  if (isDark) {
     root.classList.add("dark");
     root.classList.remove("light");
     localStorage.setItem("gymberget_theme", "dark");
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", "#000000");
+    if (meta) meta.setAttribute("content", theme.followSystem ? "#121212" : "#000000");
   } else {
     root.classList.remove("dark");
     root.classList.add("light");
@@ -555,7 +615,8 @@ export function applyTheme(themeId: string) {
   allKeys.forEach((k) => root.style.removeProperty(k));
 
   // Apply overrides for the current mode
-  const overrides = theme.forceDark ? theme.dark : theme.light;
+  const overrides = isDark ? theme.dark : theme.light;
+
   Object.entries(overrides).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });

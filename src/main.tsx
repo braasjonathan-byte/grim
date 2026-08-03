@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { applyTheme, getStoredThemeId } from "./lib/themes";
+import { applyTheme, getStoredThemeId, watchSystemTheme } from "./lib/themes";
 import { APP_VERSION } from "./lib/version";
 import { Capacitor } from "@capacitor/core";
 
@@ -113,6 +113,7 @@ if (shouldBeDark) {
 
 // Apply stored color theme immediately
 applyTheme(getStoredThemeId());
+watchSystemTheme();
 
 // Clear app icon badge when app is opened — try both main thread and SW
 const clearBadge = () => {

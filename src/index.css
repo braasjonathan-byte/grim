@@ -376,9 +376,30 @@
 }
 .timer-play-pulse { animation: timer-play-pulse 1.8s ease-out infinite; }
 
+/* Tab switching: soft fade + slide */
+@keyframes tab-fade-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.tab-transition-in { animation: tab-fade-in 0.22s ease-out; }
+.tab-transition-out { opacity: 0; transform: translateY(-6px); transition: opacity 0.12s ease-in, transform 0.12s ease-in; }
+
+/* Global press feedback on all interactive controls */
+button:not(:disabled):not([data-no-press]):active,
+[role="button"]:not([aria-disabled="true"]):not([data-no-press]):active {
+  transform: scale(0.97);
+}
+button:not([data-no-press]),
+[role="button"]:not([data-no-press]) {
+  transition: transform 0.12s ease-out, background-color 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flame-pop, .flame-spark { animation: none; }
   .flame-spark { display: none; }
-  .tab-bounce, .timer-play-pulse { animation: none; }
+  .tab-bounce, .timer-play-pulse, .tab-transition-in { animation: none; }
+  .tab-transition-out { transition: none; }
+  button:active, [role="button"]:active { transform: none; }
 }
+
 
