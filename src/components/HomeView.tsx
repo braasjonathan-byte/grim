@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   CalendarDays,
   Sparkles,
+  Lightbulb,
+  Plus,
 } from "lucide-react";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { toLocalDateKey } from "@/lib/dateUtils";
