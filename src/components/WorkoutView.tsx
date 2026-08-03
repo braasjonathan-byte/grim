@@ -4343,6 +4343,14 @@ const estimateCalories = (
       });
     }
 
+    const prevDetails = plan.details;
+    const planId = plan.id;
+    showUndoToast("Övning borttagen", async () => {
+      await supabase.from("workout_plans").update({ details: prevDetails }).eq("id", planId);
+      skipDayResetRef.current = true;
+      setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: prevDetails } : p));
+    });
+
     setDeleteExerciseConfirm(null);
   };
 
