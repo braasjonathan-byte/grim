@@ -784,9 +784,12 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
           {/* Posts feed */}
           {(() => {
+            if (feedLoading && posts.length === 0) return <FeedSkeleton count={3} />;
+
             const filteredPosts = feedFilter === "friends"
               ? posts.filter(p => friendIds.has(p.user_id) || p.user_id === userId)
               : posts;
+            
             
             if (filteredPosts.length === 0) return (
               <div className="text-center py-8">
