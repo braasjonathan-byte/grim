@@ -1450,6 +1450,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [activePlanWeek, setActivePlanWeek] = useState<number | null>(null);
   const [initialWeekSet, setInitialWeekSet] = useState(false);
   const [weeks, setWeeks] = useState<number[]>([]);
+  // Keep the selected week centered in the horizontal week carousel
+  useEffect(() => {
+    const el = weekScrollRef.current?.querySelector('[data-week-active="true"]') as HTMLElement | null;
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [currentWeek, weeks.length]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   // Archived completions for weight history lookup
