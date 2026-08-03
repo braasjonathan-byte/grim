@@ -8987,6 +8987,7 @@ const estimateCalories = (
                                             </>
                                           )}
                                           </div>
+                                          </SwipeableSetRow>
                                           {!isBodyweight && (() => {
                                             const currentKg = parseFloat(saved?.kg || defKg);
                                             if (isWeightedBw && !isNaN(currentKg) && currentKg !== 0) {
