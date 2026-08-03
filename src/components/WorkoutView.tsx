@@ -3360,6 +3360,19 @@ const estimateCalories = (
       eq("week", plan.week).
       eq("day", plan.day);
       fetchData();
+      const snapshot = plan;
+      showUndoToast("Pass borttaget", async () => {
+        await supabase.from("workout_plans").insert({
+          user_id: userId,
+          week: snapshot.week,
+          day: snapshot.day,
+          session_name: snapshot.session_name ?? null,
+          details: snapshot.details ?? "",
+          tempo: snapshot.tempo ?? null,
+          is_circuit: (snapshot as any).is_circuit ?? false,
+        });
+        fetchData();
+      });
     }
   };
 
