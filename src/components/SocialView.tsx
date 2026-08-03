@@ -1175,62 +1175,95 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
           {/* My groups */}
           {groups.filter(g => myGroups.includes(g.id)).length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mina grupper</h4>
-              {groups.filter(g => myGroups.includes(g.id)).map(g => (
-                <div key={g.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                  <button onClick={() => setOpenGroupId(g.id)} className="flex-1 text-left min-w-0">
-                    <p className="text-sm font-bold truncate">{g.event_name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
-                      {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
-                    </p>
-                  </button>
-                  <div className="flex items-center gap-1">
-                    {isAdmin && (
-                      <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="ghost" size="sm" className="text-destructive hover:text-destructive px-2">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                    <Button onClick={(e) => { e.stopPropagation(); leaveGroup(g.id); }} variant="ghost" size="sm" className="text-xs text-destructive">
-                      Lämna
-                    </Button>
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-semibold text-muted-foreground">Mina grupper</h3>
+              <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
+                {groups.filter(g => myGroups.includes(g.id)).map(g => (
+                  <div key={g.id} className="p-3.5 flex items-center gap-3 transition-colors hover:bg-muted/40">
+                    <button onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                      <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                        <UsersRound className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{g.event_name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
+                          {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
+                        </p>
+                      </div>
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button aria-label="Fler val" className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => leaveGroup(g.id)}>Lämna grupp</DropdownMenuItem>
+                        {isAdmin && (
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteGroup(g.id)}>
+                            Radera grupp
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
           {/* All groups */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Alla grupper</h4>
-            {groups.filter(g => !myGroups.includes(g.id)).length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-3">
-                Inga fler grupper tillgängliga. Lägg till ett event i verktygsfliken så skapas en grupp automatiskt!
-              </p>
-            )}
-            {groups.filter(g => !myGroups.includes(g.id)).map(g => (
-              <div key={g.id} className="bg-card border border-border rounded-lg p-3 flex items-center justify-between">
-                <button onClick={() => setOpenGroupId(g.id)} className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-bold truncate">{g.event_name}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
-                    {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
-                  </p>
-                </button>
-                <div className="flex items-center gap-1">
-                  {isAdmin && (
-                    <Button onClick={(e) => { e.stopPropagation(); deleteGroup(g.id); }} variant="ghost" size="sm" className="text-destructive hover:text-destructive px-2">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                  <Button onClick={(e) => { e.stopPropagation(); joinGroup(g.id); }} size="sm" className="text-xs">
-                    Gå med
-                  </Button>
+          <div className="space-y-1.5">
+            <h3 className="text-sm font-semibold text-muted-foreground">Alla grupper</h3>
+            {groups.filter(g => !myGroups.includes(g.id)).length === 0 ? (
+              <div className="rounded-2xl bg-card shadow-soft px-4 py-6 text-center">
+                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  <UsersRound className="h-5 w-5 text-muted-foreground" />
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Inga fler grupper tillgängliga. Lägg till ett event i verktygsfliken så skapas en grupp automatiskt!
+                </p>
               </div>
-            ))}
+            ) : (
+              <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
+                {groups.filter(g => !myGroups.includes(g.id)).map(g => (
+                  <div key={g.id} className="p-3.5 flex items-center gap-3 transition-colors hover:bg-muted/40">
+                    <button onClick={() => setOpenGroupId(g.id)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                      <div className="h-10 w-10 shrink-0 rounded-full bg-muted flex items-center justify-center">
+                        <UsersRound className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate">{g.event_name}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {g.event_date && format(new Date(g.event_date), "d MMM yyyy", { locale: sv })}
+                          {" • "}{g.member_count || 0} {(g.member_count || 0) === 1 ? "medlem" : "medlemmar"}
+                        </p>
+                      </div>
+                    </button>
+                    <Button onClick={(e) => { e.stopPropagation(); joinGroup(g.id); }} size="sm" className="rounded-full text-xs">
+                      Gå med
+                    </Button>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button aria-label="Fler val" className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteGroup(g.id)}>
+                            Radera grupp
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
         </div>
         )
       )}
