@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Dumbbell, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Send, Dumbbell, X, Check, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { avatarGradient } from "@/lib/avatarGradient";
 import { toast } from "sonner";
 
 interface Friend {
