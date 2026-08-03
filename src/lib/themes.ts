@@ -561,19 +561,41 @@ export function storeThemeId(id: string) {
   localStorage.setItem(THEME_STORAGE_KEY, id);
 }
 
+export function prefersSystemDark(): boolean {
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } catch {
+    return true;
+  }
+}
+
+/** Re-applies the active theme whenever the OS light/dark setting changes. */
+export function watchSystemTheme() {
+  try {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      const active = THEMES.find((t) => t.id === getStoredThemeId());
+      if (active?.followSystem) applyTheme(active.id);
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+  } catch { /* ignore */ }
+}
+
 export function applyTheme(themeId: string) {
   const theme = THEMES.find((t) => t.id === themeId);
   if (!theme) return;
 
   const root = document.documentElement;
+  const isDark = theme.followSystem ? prefersSystemDark() : theme.forceDark;
 
   // Set dark/light mode based on theme
-  if (theme.forceDark) {
+  if (isDark) {
     root.classList.add("dark");
     root.classList.remove("light");
     localStorage.setItem("gymberget_theme", "dark");
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", "#000000");
+    if (meta) meta.setAttribute("content", theme.followSystem ? "#121212" : "#000000");
   } else {
     root.classList.remove("dark");
     root.classList.add("light");
@@ -593,7 +615,8 @@ export function applyTheme(themeId: string) {
   allKeys.forEach((k) => root.style.removeProperty(k));
 
   // Apply overrides for the current mode
-  const overrides = theme.forceDark ? theme.dark : theme.light;
+  const overrides = isDark ? theme.dark : theme.light;
+
   Object.entries(overrides).forEach(([key, value]) => {
     root.style.setProperty(key, value);
   });
