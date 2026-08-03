@@ -216,15 +216,29 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     supabase.from("meal_logs").update({ meal_type: name }).eq("user_id", userId).eq("meal_type", current).then(() => load());
   }
 
-  function deleteSlot(idx: number) {
+  async function deleteSlot(idx: number) {
     const name = slots[idx];
     const hasLogs = logs.some((l) => l.meal_type === name);
     if (hasLogs && !window.confirm(`Ta bort "${name}"? Alla loggade livsmedel under denna måltid tas också bort.`)) return;
     if (!hasLogs && !window.confirm(`Ta bort "${name}"?`)) return;
+    const prevSlots = slots;
+    let removedRows: any[] = [];
+    if (hasLogs) {
+      const { data } = await supabase.from("meal_logs").select("*").eq("user_id", userId).eq("meal_type", name);
+      removedRows = data || [];
+    }
     persistSlots(slots.filter((_, i) => i !== idx));
     if (hasLogs) {
-      supabase.from("meal_logs").delete().eq("user_id", userId).eq("meal_type", name).then(() => load());
+      await supabase.from("meal_logs").delete().eq("user_id", userId).eq("meal_type", name);
+      load();
     }
+    showUndoToast(`Måltiden "${name}" borttagen`, async () => {
+      persistSlots(prevSlots);
+      if (removedRows.length > 0) {
+        await supabase.from("meal_logs").insert(removedRows);
+        load();
+      }
+    });
   }
 
   function onDragEnd(e: DragEndEvent) {
