@@ -315,6 +315,24 @@ export type Database = {
           },
         ]
       }
+      cron_secrets: {
+        Row: {
+          created_at: string
+          name: string
+          secret: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          secret: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          secret?: string
+        }
+        Relationships: []
+      }
       custom_exercises: {
         Row: {
           category: string
@@ -2143,6 +2161,7 @@ export type Database = {
         Returns: Json
       }
       are_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
+      can_view_post: { Args: { _post_id: string }; Returns: boolean }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
         Returns: {
