@@ -263,58 +263,78 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 border-primary shadow-none">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+      <PopoverContent
+        align="end"
+        sideOffset={10}
+        collisionPadding={12}
+        className="w-[min(20rem,calc(100vw-1.5rem))] p-0 border-0 rounded-2xl bg-card shadow-soft overflow-hidden origin-top-right data-[state=open]:animate-scale-in"
+      >
+        <PopoverArrow width={14} height={7} className="fill-card" />
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <span className="text-sm font-semibold text-foreground">Aviseringar</span>
           {unread > 0 && (
-            <button onClick={markAllRead} className="text-xs text-primary hover:underline">
+            <button onClick={markAllRead} className="text-xs font-medium text-primary hover:underline">
               Markera alla som lästa
             </button>
           )}
         </div>
-        <ul className="max-h-96 overflow-y-auto">
+        <ul className="max-h-96 overflow-y-auto px-2 pb-1">
           {notifs.slice(0, 10).map(n => {
             const Icon = iconFor(n.type);
             const isUnread = new Date(n.createdAt).getTime() > lastSeen;
+            const grad = avatarGradient(n.initial || (n.type === "achievement" ? "Achievement" : "?"));
+            const badgeTone =
+              n.type === "like" ? "bg-destructive text-destructive-foreground"
+              : n.type === "achievement" ? "bg-warning text-warning-foreground"
+              : n.type === "friend_request" ? "bg-success text-success-foreground"
+              : "bg-primary text-primary-foreground";
             return (
               <li key={n.id}>
                 <button
                   type="button"
                   onClick={() => handleClick(n)}
-                  className={`w-full text-left flex items-start gap-3 px-3 py-2 border-b border-border/50 hover:bg-primary/10 transition-colors ${isUnread ? "bg-primary/5" : ""}`}
+                  className={`w-full text-left flex items-start gap-3 rounded-xl px-2.5 py-2.5 transition-colors active:bg-muted/70 hover:bg-muted/50 ${isUnread ? "bg-primary/5" : ""}`}
                 >
-                  <div className="relative flex items-center justify-center w-8 h-8 bg-muted text-primary shrink-0 mt-0.5 rounded-full overflow-hidden">
-                    {n.avatarUrl ? (
-                      <img src={n.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xs font-bold">{n.initial || <Icon className="w-4 h-4" />}</span>
-                    )}
-                    <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-background flex items-center justify-center">
-                      <Icon className="w-3 h-3 text-primary" />
+                  <div className="relative shrink-0 mt-0.5">
+                    <div
+                      className="flex items-center justify-center w-9 h-9 rounded-full overflow-hidden"
+                      style={n.avatarUrl ? undefined : grad.style}
+                    >
+                      {n.avatarUrl ? (
+                        <img src={n.avatarUrl} alt="" className="w-full h-full object-cover" />
+                      ) : n.initial ? (
+                        <span className="text-xs font-bold" style={grad.textStyle}>{n.initial}</span>
+                      ) : (
+                        <Icon className="w-4 h-4" style={grad.textStyle} />
+                      )}
+                    </div>
+                    <span className={`absolute -bottom-0.5 -right-0.5 w-[18px] h-[18px] rounded-full flex items-center justify-center ring-2 ring-card ${badgeTone}`}>
+                      <Icon className="w-2.5 h-2.5" />
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground leading-snug">{n.text}</p>
                     <span className="text-[11px] text-muted-foreground">{relativeTime(n.createdAt)}</span>
                   </div>
-                  {isUnread && <span className="w-2 h-2 bg-destructive shrink-0 mt-2 rounded-full" aria-hidden="true" />}
+                  {isUnread && <span className="w-2 h-2 bg-primary shrink-0 mt-2 rounded-full" aria-hidden="true" />}
                 </button>
               </li>
             );
           })}
           {notifs.length === 0 && (
-            <li className="px-3 py-6 text-center text-sm text-muted-foreground">Inga aviseringar än</li>
+            <li className="px-3 py-8 text-center text-sm text-muted-foreground">Inga aviseringar än</li>
           )}
         </ul>
-        <div className="px-3 py-2 border-t border-border text-center">
+        <div className="px-3 pb-3 pt-1">
           <button
             onClick={() => { setOpen(false); onViewAll?.(); }}
-            className="text-xs font-semibold text-primary hover:underline"
+            className="w-full rounded-full bg-muted/60 py-2 text-xs font-semibold text-primary transition-colors hover:bg-muted active:scale-[0.98]"
           >
             Visa alla aviseringar
           </button>
         </div>
       </PopoverContent>
+
     </Popover>
   );
 }
