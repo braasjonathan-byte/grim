@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2, Settings, Hourglass, TimerReset, Heart, HeartOff } from "lucide-react";
+import { Play, Pause, RotateCcw, ChevronUp, ChevronDown, Maximize2, Minimize2, Settings, Hourglass, TimerReset, Heart, HeartOff, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { hapticAlarm } from "@/lib/haptics";
 import { useHeartRate } from "@/hooks/useHeartRate";
 
@@ -189,7 +190,7 @@ const MiniTimer = () => {
       setSettingsOpen(false);
     };
     return (
-      <div className="space-y-3 border border-border bg-card p-3" onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3 rounded-2xl bg-muted/40 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <button
             onClick={() => switchMode("stopwatch")}
@@ -239,53 +240,84 @@ const MiniTimer = () => {
     );
   };
 
+  const total = mode === "countdown" ? Math.max(1, countdownDefault) : 60;
+  const progress = mode === "countdown"
+    ? Math.min(1, Math.max(0, 1 - seconds / total))
+    : (seconds % 60) / 60;
+
+  const isIdle = !running && (mode === "countdown" ? seconds === countdownDefault : seconds === 0);
+  const dockStyle = {
+    bottom: `calc(80px + env(safe-area-inset-bottom, 0px))`,
+    transform: "translate3d(0,0,0)",
+    WebkitTransform: "translate3d(0,0,0)",
+    willChange: "transform",
+  } as React.CSSProperties;
+
   if (fullscreen) {
+    const R = 120;
+    const C = 2 * Math.PI * R;
     return (
-      <div className="fixed inset-0 z-[100] flex flex-col bg-background text-foreground">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="fixed inset-0 z-[100] flex flex-col bg-background text-foreground animate-fade-in">
+        <div className="flex items-center justify-between px-5 py-4">
           <div>
-            <p className="text-xs font-bold uppercase text-muted-foreground">{mode === "countdown" ? label : "Stoppur"}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {mode === "countdown" ? label : "Stoppur"}
+            </p>
             <p className="text-sm font-semibold text-primary">{running ? "Aktiv" : "Pausad"}</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setSettingsOpen((v) => !v)}
-              className="flex h-12 w-12 items-center justify-center border border-border bg-secondary text-foreground"
+              className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors active:scale-95 ${settingsOpen ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground hover:bg-muted"}`}
               aria-label="Inställningar"
             >
               <Settings className="h-5 w-5" />
             </button>
             <button
               onClick={() => setFullscreen(false)}
-              className="flex h-12 w-12 items-center justify-center border border-border bg-secondary text-foreground"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-muted/60 text-foreground hover:bg-muted transition-colors active:scale-95"
               aria-label="Minimera timer"
             >
-              <Minimize2 className="h-6 w-6" />
+              <Minimize2 className="h-5 w-5" />
             </button>
           </div>
         </div>
         {settingsOpen && (
-          <div className="px-4 pt-3"><SettingsPanel /></div>
+          <div className="px-5 pt-1 animate-fade-in"><SettingsPanel /></div>
         )}
-        <div className="flex flex-1 flex-col items-center justify-center gap-10 px-5 pb-[calc(24px+env(safe-area-inset-bottom,0px))]">
-          <span className={`font-mono text-7xl font-black tracking-wider sm:text-8xl ${running ? "text-primary" : "text-foreground"}`}>
-            {fmt(seconds)}
-          </span>
-          <div className="grid w-full max-w-sm grid-cols-2 gap-3">
+        <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6 pb-[calc(24px+env(safe-area-inset-bottom,0px))]">
+          <div className="relative flex items-center justify-center">
+            <svg width={2 * R + 20} height={2 * R + 20} className="-rotate-90">
+              <circle
+                cx={R + 10} cy={R + 10} r={R} fill="none" strokeWidth={6}
+                className="stroke-muted"
+              />
+              <circle
+                cx={R + 10} cy={R + 10} r={R} fill="none" strokeWidth={6} strokeLinecap="round"
+                className="stroke-primary transition-[stroke-dashoffset] duration-500 ease-linear"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - progress)}
+              />
+            </svg>
+            <span className={`absolute font-sans text-6xl font-semibold tabular-nums tracking-tight ${running ? "text-primary" : "text-foreground"}`}>
+              {fmt(seconds)}
+            </span>
+          </div>
+          <div className="flex w-full max-w-sm flex-col gap-3">
             <button
               onClick={() => setRunning(!running)}
-              className={`flex h-24 flex-col items-center justify-center gap-2 border text-lg font-black ${
-                running ? "border-primary bg-primary/20 text-primary" : "border-primary bg-primary text-primary-foreground"
+              className={`flex h-14 items-center justify-center gap-2 rounded-2xl text-base font-semibold shadow-soft transition-transform active:scale-[0.97] ${
+                running ? "bg-primary/15 text-primary" : "bg-primary text-primary-foreground"
               }`}
             >
-              {running ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
+              {running ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
               {running ? "Pausa" : "Starta"}
             </button>
             <button
               onClick={resetTimer}
-              className="flex h-24 flex-col items-center justify-center gap-2 border border-border bg-secondary text-lg font-black text-foreground"
+              className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-border/70 bg-transparent text-sm font-semibold text-muted-foreground transition-transform active:scale-[0.97] hover:text-foreground"
             >
-              <RotateCcw className="h-8 w-8" />
+              <RotateCcw className="h-4 w-4" />
               Nollställ
             </button>
           </div>
@@ -294,149 +326,135 @@ const MiniTimer = () => {
     );
   }
 
-  // Collapsed: single thin bar
+  // Collapsed & idle: tiny floating round button
+  if (!expanded && isIdle) {
+    return (
+      <div className="fixed right-4 z-50 pointer-events-none" style={dockStyle}>
+        <button
+          onClick={() => setExpanded(true)}
+          aria-label="Öppna stoppur"
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-soft text-primary transition-transform active:scale-95 animate-fade-in"
+        >
+          <TimerReset className="h-5 w-5" />
+        </button>
+      </div>
+    );
+  }
+
+  // Collapsed: slim floating pill
   if (!expanded) {
     return (
       <div
         className="fixed left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
-        style={{
-          bottom: `calc(72px + env(safe-area-inset-bottom, 0px))`,
-          transform: "translate3d(0,0,0)",
-          WebkitTransform: "translate3d(0,0,0)",
-          willChange: "transform",
-        }}
+        style={dockStyle}
       >
         <div
-          className="pointer-events-auto w-full max-w-md flex items-center gap-3 px-3 py-2 rounded-full bg-card/95 backdrop-blur border border-border shadow-lg shadow-black/20 cursor-pointer transition-shadow"
+          className="pointer-events-auto flex items-center gap-2.5 rounded-full bg-card/95 backdrop-blur px-2.5 py-1.5 shadow-soft cursor-pointer animate-fade-in"
           onClick={() => setExpanded(true)}
         >
           <button
             onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-            className={`w-8 h-8 shrink-0 rounded-full bg-primary/20 text-primary flex items-center justify-center transition-colors ${running ? "timer-play-pulse" : ""}`}
+            className={`w-8 h-8 shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center transition-colors ${running ? "timer-play-pulse" : ""}`}
             aria-label={running ? "Pausa timer" : "Starta timer"}
           >
             {running ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-px" />}
           </button>
-          <span className={`font-mono text-sm font-bold tracking-wider tabular-nums ${running ? "text-primary" : "text-foreground"}`}>
+          <span className={`font-sans text-sm font-semibold tabular-nums ${running ? "text-primary" : "text-foreground"}`}>
             {fmt(seconds)}
           </span>
-          <span className="text-[10px] font-semibold uppercase text-muted-foreground truncate">
-            {mode === "countdown" ? label : "Stoppur"}
-          </span>
-          {hr.connected && (
-            <span className="ml-auto flex items-center gap-1 text-destructive">
-              <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
-              <span className="font-mono text-sm font-bold tabular-nums">
-                {hr.bpm ?? "--"}
-              </span>
+          {!running && (
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 truncate">
+              {mode === "countdown" ? label : "Stoppur"}
             </span>
           )}
-          <ChevronUp className={`w-3.5 h-3.5 text-muted-foreground ${hr.connected ? "" : "ml-auto"}`} />
+          {hr.connected && (
+            <span className="flex items-center gap-1 text-destructive">
+              <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
+              <span className="font-sans text-sm font-semibold tabular-nums">{hr.bpm ?? "--"}</span>
+            </span>
+          )}
+          <ChevronUp className="w-4 h-4 text-muted-foreground/70" />
         </div>
       </div>
-
     );
   }
 
-  // Expanded
+  // Mid state: compact rounded card, max 2 rows
   return (
     <div
-      className="fixed left-0 right-0 z-50 mx-auto max-w-lg w-[calc(100%-2rem)] rounded-2xl bg-card/95 backdrop-blur border border-border shadow-lg shadow-black/20 px-4 py-3 cursor-pointer"
-      style={{
-        bottom: `calc(72px + env(safe-area-inset-bottom, 0px))`,
-        transform: "translate3d(0,0,0)",
-        WebkitTransform: "translate3d(0,0,0)",
-        willChange: "transform",
-      }}
-      onClick={() => setExpanded(false)}
+      className="fixed left-0 right-0 z-50 mx-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-card/95 backdrop-blur px-3 py-2.5 shadow-soft animate-fade-in"
+      style={dockStyle}
     >
-      <div className="max-w-lg mx-auto space-y-2">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setRunning(!running)}
+          className={`h-11 w-11 shrink-0 rounded-full flex items-center justify-center transition-transform active:scale-95 ${
+            running ? "bg-primary/15 text-primary timer-play-pulse" : "bg-primary text-primary-foreground"
+          }`}
+          aria-label={running ? "Pausa timer" : "Starta timer"}
+        >
+          {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+        </button>
 
-        <div className="flex items-center justify-between">
-          <div className="text-muted-foreground p-1">
-            <ChevronDown className="w-4 h-4" />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                running ? "bg-primary/20 text-primary timer-play-pulse" : "bg-primary text-primary-foreground"
-              }`}
-            >
-              {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-            </button>
-
-            <div className="text-center">
-              <div className="text-[10px] font-semibold uppercase text-muted-foreground">
-                {mode === "countdown" ? label : "Stoppur"}
-              </div>
-              <span className={`font-mono text-2xl font-black tracking-wider ${running ? "text-primary" : "text-foreground"}`}>
-                {fmt(seconds)}
-              </span>
-            </div>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); resetTimer(); }}
-              className="w-10 h-10 bg-secondary text-muted-foreground flex items-center justify-center hover:text-foreground transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); setSettingsOpen((v) => !v); }}
-              className={`flex h-10 w-10 items-center justify-center ${settingsOpen ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
-              aria-label="Timer-inställningar"
-            >
-              <Settings className="h-4 w-4" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setFullscreen(true); }}
-              className="flex h-10 w-10 items-center justify-center bg-secondary text-muted-foreground hover:text-foreground"
-              aria-label="Maximera timer"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </button>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 truncate">
+            {mode === "countdown" ? label : "Stoppur"}
+          </p>
+          <span className={`font-sans text-2xl font-semibold tabular-nums tracking-tight ${running ? "text-primary" : "text-foreground"}`}>
+            {fmt(seconds)}
+          </span>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (hr.connected) hr.disconnect();
-            else hr.connect();
-          }}
-          disabled={hr.connecting}
-          className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold border ${
-            hr.connected
-              ? "bg-destructive/10 text-destructive border-destructive"
-              : "bg-secondary text-foreground border-border"
-          }`}
-        >
-          {hr.connected ? (
-            <>
-              <Heart className="w-3.5 h-3.5 fill-current animate-pulse" />
-              <span className="font-mono">{hr.bpm ?? "--"} bpm</span>
-              <span className="text-muted-foreground font-normal">· {hr.deviceName}</span>
-              <HeartOff className="w-3 h-3 ml-1" />
-            </>
-          ) : (
-            <>
-              <Heart className="w-3.5 h-3.5" />
-              {hr.connecting ? "Söker pulsmätare…" : "Anslut pulsmätare"}
-            </>
-          )}
-        </button>
-        {hr.error && !hr.connected && (
-          <p className="text-[10px] text-destructive font-semibold">{hr.error}</p>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label="Fler val"
+              className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top">
+            <DropdownMenuItem onClick={resetTimer}>
+              <RotateCcw className="w-4 h-4 mr-2" /> Nollställ
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSettingsOpen(v => !v)}>
+              <Settings className="w-4 h-4 mr-2" /> Inställningar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => (hr.connected ? hr.disconnect() : hr.connect())}>
+              {hr.connected ? <HeartOff className="w-4 h-4 mr-2" /> : <Heart className="w-4 h-4 mr-2" />}
+              {hr.connected ? `Koppla ifrån (${hr.bpm ?? "--"} bpm)` : hr.connecting ? "Söker pulsmätare…" : "Anslut pulsmätare"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {settingsOpen && <SettingsPanel />}
+        <button
+          onClick={() => setFullscreen(true)}
+          className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+          aria-label="Maximera timer"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setExpanded(false)}
+          className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+          aria-label="Minimera timer"
+        >
+          <ChevronDown className="w-4 h-4" />
+        </button>
       </div>
+
+      {settingsOpen && (
+        <div className="pt-2 animate-fade-in">
+          <SettingsPanel />
+        </div>
+      )}
+      {hr.error && !hr.connected && (
+        <p className="pt-1 text-[10px] font-semibold text-destructive">{hr.error}</p>
+      )}
     </div>
   );
 };
 
 export default MiniTimer;
+
