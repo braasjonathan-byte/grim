@@ -73,10 +73,52 @@ const resolveCompletionDate = (
   return null;
 };
 
+interface DayStats {
+  sets: number;
+  volume: number;
+}
+
+/** Summarise completed sets + total volume (kg) from a logged_weights object */
+const summarizeLoggedWeights = (lw: any): DayStats => {
+  const stats: DayStats = { sets: 0, volume: 0 };
+  if (!lw || typeof lw !== "object") return stats;
+  let markerSets = 0;
+  for (const [key, val] of Object.entries(lw)) {
+    if (key.startsWith("__sets__") && typeof val === "string") {
+      markerSets += val.split("").filter((c) => c === "1").length;
+    }
+  }
+  const hadMarkers = markerSets > 0;
+  stats.sets = markerSets;
+  for (const [key, val] of Object.entries(lw)) {
+    if (!key.startsWith("__setdata__")) continue;
+    const exName = key.replace("__setdata__", "");
+    const setsStr = (lw[`__sets__${exName}`] as string) || "";
+    try {
+      const data = typeof val === "string" ? JSON.parse(val) : val;
+      if (!Array.isArray(data)) continue;
+      const done = setsStr
+        ? data.filter((_: any, i: number) => setsStr[i] === "1")
+        : data.filter((s: any) => (parseFloat(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0);
+      if (!hadMarkers) stats.sets += done.length;
+      for (const s of done) {
+        stats.volume += (parseFloat(s?.kg) || 0) * (parseInt(s?.reps) || 0);
+      }
+    } catch {
+      // ignore malformed set data
+    }
+  }
+  return stats;
+};
+
+const formatVolume = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k kg` : `${Math.round(v)} kg`);
+
 const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
   const [doneDates, setDoneDates] = useState<Set<string>>(new Set());
   const [skippedDates, setSkippedDates] = useState<Set<string>>(new Set());
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set());
+  const [dayStats, setDayStats] = useState<Record<string, DayStats>>({});
+  const [activeDate, setActiveDate] = useState<string | null>(null);
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [year, setYear] = useState(() => new Date().getFullYear());
 
