@@ -105,7 +105,21 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       .eq("sender_id", friend.user_id)
       .eq("receiver_id", userId)
       .eq("read", false);
+    setMessages(prev => prev.map(m => (m.sender_id === friend.user_id && !m.read ? { ...m, read: true } : m)));
   };
+
+  // Re-mark as read when the user returns to the conversation
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") markAsRead(); };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [friend.user_id]);
+
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
