@@ -38,6 +38,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
+import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
+import { summarizeCompletion, type WorkoutSummary } from "@/lib/workoutSummary";
 import AutoSaveInput from "@/components/AutoSaveInput";
 import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
@@ -1604,6 +1606,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Ask the user after marking a workout done whether to share to friends feed.
   const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
+  const [completeCelebration, setCompleteCelebration] = useState<{ title: string; summary: WorkoutSummary } | null>(null);
+  const [pendingShare, setPendingShare] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
+  const pendingShareRef = useRef<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
+  useEffect(() => { pendingShareRef.current = pendingShare; }, [pendingShare]);
+  const closeCelebration = () => {
+    setCompleteCelebration(null);
+    const p = pendingShareRef.current;
+    if (p) setSharePromptDialog(p);
+    setPendingShare(null);
+  };
 
   // Share card
   const [shareTarget, setShareTarget] = useState<{
@@ -2273,10 +2285,19 @@ const estimateCalories = (
         }
       } catch {}
 
-      // Open share dialog first; only create the post if the user confirms.
-      setSharePromptDialog({ week, day, caption: null, loading: true });
+      // Short "Bra jobbat!" celebration with a summary of the session
+      try {
+        const lw = (completions[key] as any)?.logged_weights;
+        setCompleteCelebration({
+          title: plan?.session_name?.trim() || "",
+          summary: summarizeCompletion(lw, prIndex),
+        });
+      } catch {}
+
+      // Prepare the share dialog; it opens once the celebration is dismissed.
+      setPendingShare({ week, day, caption: null, loading: true });
       previewWorkoutCaption(userId, week, day).then((caption) => {
-        setSharePromptDialog((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
+        setPendingShare((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
       });
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
@@ -5148,7 +5169,7 @@ const estimateCalories = (
                                        const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defaultKg;
                                        return (
                                          <div key={si}>
-                                           <SwipeableSetRow done={isSetDone} isPR={isPrWeight(prIndex, name, saved?.kg)} onToggle={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)}>
+                                           <SwipeableSetRow done={isSetDone} isPR={isPrWeight(prIndex, name, saved?.kg)} celebrationKey={`${name}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)}>
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
@@ -6160,6 +6181,12 @@ const estimateCalories = (
           }}
         />
       )}
+      <WorkoutCompleteOverlay
+        open={!!completeCelebration}
+        title={completeCelebration?.title}
+        summary={completeCelebration?.summary ?? null}
+        onClose={closeCelebration}
+      />
       <ShareWorkoutPromptDialog
         open={!!sharePromptDialog}
         initialCaption={sharePromptDialog?.caption ?? ""}
@@ -8985,7 +9012,7 @@ const estimateCalories = (
                                        const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defKg;
                                        return (
                                          <div key={si}>
-                                           <SwipeableSetRow done={isSetDone} isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)} onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)}>
+                                           <SwipeableSetRow done={isSetDone} isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)} celebrationKey={`${partName}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)}>
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
@@ -10189,6 +10216,12 @@ const estimateCalories = (
         </div>
       </div>
     )}
+    <WorkoutCompleteOverlay
+      open={!!completeCelebration}
+      title={completeCelebration?.title}
+      summary={completeCelebration?.summary ?? null}
+      onClose={closeCelebration}
+    />
     <ShareWorkoutPromptDialog
       open={!!sharePromptDialog}
       initialCaption={sharePromptDialog?.caption ?? ""}

@@ -1,11 +1,14 @@
 import { ReactNode, useRef, useState, useEffect } from "react";
 import { Check, Trophy, Undo2 } from "lucide-react";
 import { hapticLight } from "@/lib/haptics";
+import ConfettiBurst from "@/components/ConfettiBurst";
 
 interface SwipeableSetRowProps {
   done: boolean;
   onToggle: () => void;
   isPR?: boolean;
+  /** Changes when the underlying weight changes, so a new PR re-triggers the celebration */
+  celebrationKey?: string;
   children: ReactNode;
 }
 
@@ -17,14 +20,17 @@ const THRESHOLD = 64;
  *  - swipe left on a done set    -> undo
  * Triggers a scale + green colour pulse and haptic feedback on completion.
  */
-const SwipeableSetRow = ({ done, onToggle, isPR, children }: SwipeableSetRowProps) => {
+const SwipeableSetRow = ({ done, onToggle, isPR, celebrationKey, children }: SwipeableSetRowProps) => {
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const locked = useRef<null | "x" | "y">(null);
   const [dx, setDx] = useState(0);
   const [pulse, setPulse] = useState(false);
   const [prPulse, setPrPulse] = useState(false);
+  const [celebrate, setCelebrate] = useState(false);
   const prevPr = useRef(!!isPR);
+  const prevDone = useRef(!!done);
+  const celebratedFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (isPR && !prevPr.current) {
@@ -35,6 +41,23 @@ const SwipeableSetRow = ({ done, onToggle, isPR, children }: SwipeableSetRowProp
     }
     prevPr.current = !!isPR;
   }, [isPR]);
+
+  // Micro-celebration: confetti + gold glow the moment a PR set is ticked off
+  useEffect(() => {
+    const key = celebrationKey ?? "default";
+    if (isPR && done && (!prevDone.current || celebratedFor.current !== key)) {
+      if (celebratedFor.current !== key) {
+        celebratedFor.current = key;
+        setCelebrate(true);
+        hapticLight();
+        const t = setTimeout(() => setCelebrate(false), 1200);
+        prevDone.current = true;
+        return () => clearTimeout(t);
+      }
+    }
+    if (!done) celebratedFor.current = null;
+    prevDone.current = !!done;
+  }, [isPR, done, celebrationKey]);
 
   const isInteractive = (target: EventTarget | null) => {
     const el = target as HTMLElement | null;
@@ -77,7 +100,7 @@ const SwipeableSetRow = ({ done, onToggle, isPR, children }: SwipeableSetRowProp
   const active = Math.abs(dx) >= THRESHOLD;
 
   return (
-    <div className="relative overflow-hidden rounded">
+    <div className={`relative rounded ${celebrate ? "overflow-visible" : "overflow-hidden"}`}>
       {/* Reveal layer behind the row – only visible while swiping */}
       {dx !== 0 && (
         <div
@@ -102,8 +125,9 @@ const SwipeableSetRow = ({ done, onToggle, isPR, children }: SwipeableSetRowProp
         style={{ transform: `translateX(${dx}px)` }}
         className={`relative touch-pan-y ${dx !== 0 ? "bg-secondary" : "transition-transform duration-200"} ${
           pulse ? "set-complete-pulse" : ""
-        }`}
+        } ${celebrate ? "pr-gold-glow" : ""}`}
       >
+        {celebrate && <ConfettiBurst count={16} />}
         <div className="flex items-center">
           <div className="flex-1 min-w-0">{children}</div>
           {isPR && (
