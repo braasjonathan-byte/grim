@@ -323,9 +323,9 @@
 
 /* Set row completion feedback: scale + green colour pulse */
 @keyframes set-complete-pulse {
-  0% { transform: scale(1); background-color: hsl(var(--background)); }
+  0% { transform: scale(1); background-color: transparent; }
   35% { transform: scale(1.03); background-color: hsl(var(--success) / 0.35); }
-  100% { transform: scale(1); background-color: hsl(var(--background)); }
+  100% { transform: scale(1); background-color: transparent; }
 }
 .set-complete-pulse { animation: set-complete-pulse 0.45s ease-out; }
 
