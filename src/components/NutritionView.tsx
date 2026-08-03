@@ -53,8 +53,8 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
     zIndex: isDragging ? 50 : "auto" as const,
   };
   return (
-    <div ref={setNodeRef} style={style} className="border border-border bg-card">
-      <div className="flex items-center justify-between bg-muted/40 px-2 py-2 gap-2">
+    <div ref={setNodeRef} style={style} className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden">
+      <div className="flex items-center justify-between bg-muted/30 px-2.5 py-2.5 gap-2">
         {isCustom && (
           <button {...attributes} {...listeners} className="p-1 -ml-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground" aria-label="Dra för att flytta">
             <GripVertical className="w-4 h-4" />
@@ -64,34 +64,46 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           <p className="text-sm font-bold capitalize font-serif truncate">{meal}</p>
           <p className="text-[10px] text-muted-foreground">{Math.round(mealKcal)} kcal</p>
         </div>
-        <div className="flex items-center gap-1">
-          {isCustom && (
-            <>
-              <button onClick={onRename} className="p-1.5" aria-label="Byt namn"><Pencil className="w-3.5 h-3.5" /></button>
-              <button onClick={onDelete} className="p-1.5 text-destructive" aria-label="Ta bort"><Trash2 className="w-3.5 h-3.5" /></button>
-            </>
-          )}
-          <button onClick={onAdd} className="flex items-center gap-1 text-xs font-bold text-primary ml-1 px-1">
+        <div className="flex items-center gap-1.5">
+          <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5">
             <Plus className="w-3.5 h-3.5" /> Lägg till
           </button>
+          {isCustom && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Fler val">
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl">
+                <DropdownMenuItem onClick={onRename}>
+                  <Pencil className="w-3.5 h-3.5 mr-2" /> Byt namn
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Ta bort
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       {logs.length > 0 && (
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-border/40">
           {logs.map((l) => (
-            <li key={l.id} className="flex items-center justify-between px-3 py-2">
+            <li key={l.id} className="flex items-center justify-between px-3 py-2.5">
               <div className="min-w-0">
                 <p className="text-sm truncate">{l.item_name}</p>
                 <p className="text-[10px] text-muted-foreground tabular-nums">
                   {l.amount} {l.unit} · {Math.round(Number(l.kcal))} kcal · P{Number(l.protein_g).toFixed(0)} F{Number(l.fat_g).toFixed(0)} K{Number(l.carbs_g).toFixed(0)}
                 </p>
               </div>
-              <button onClick={() => onEditLog(l)} className="p-1" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
+              <button onClick={() => onEditLog(l)} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>
       )}
     </div>
+
   );
 }
 
