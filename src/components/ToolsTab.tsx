@@ -342,7 +342,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       {isAdmin && !editMode && (
         <button
           onClick={handleStartEdit}
-          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary bg-primary/10 rounded-full shadow-soft active:scale-[0.97] hover:bg-primary/20 transition-colors"
         >
           <Pencil className="w-4 h-4" />
           Redigera ordning
@@ -354,13 +354,13 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary-foreground bg-primary rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary-foreground bg-primary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <><Check className="w-4 h-4" /> Sparat!</> : <><Save className="w-4 h-4" /> Spara för alla</>}
           </button>
           <button
             onClick={() => setEditMode(false)}
-            className="py-2 px-4 text-sm font-semibold text-muted-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+            className="py-2 px-4 text-sm font-semibold text-muted-foreground bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:bg-secondary/80 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -400,14 +400,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         <>
           <button
             onClick={() => setConfirmDelete1(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-lg hover:opacity-90 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
           >
             <Trash2 className="w-4 h-4" />
             Radera konto
           </button>
           <button
             onClick={() => setConfirmLogout(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-lg hover:opacity-90 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
           >
             <LogOut className="w-4 h-4" />
             Logga ut
