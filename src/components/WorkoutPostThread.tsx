@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Flame, MessageCircle, Send, Trash2 } from "lucide-react";
+import { MessageCircle, Send, Trash2 } from "lucide-react";
+import FlameReaction from "./FlameReaction";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 import { toast } from "sonner";
@@ -188,19 +189,11 @@ const WorkoutPostThread = ({ userId, viewerId, week, day }: WorkoutPostThreadPro
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-4 px-1">
-        <button
-          onClick={toggleLike}
-          className="flex items-center gap-1.5 text-sm transition-transform active:scale-95"
-        >
-          <Flame className={`w-5 h-5 ${iLiked ? "fill-orange-500 text-orange-500" : "text-muted-foreground"}`} />
-          <span className="text-xs font-semibold text-foreground">{likeCount}</span>
-          <span className="text-xs text-muted-foreground">elda</span>
-        </button>
-        <div className="flex items-center gap-1.5 text-sm">
-          <MessageCircle className="w-5 h-5 text-muted-foreground" />
-          <span className="text-xs font-semibold text-foreground">{comments.length}</span>
-          <span className="text-xs text-muted-foreground">kommentarer</span>
+      <div className="flex items-center gap-2 px-1">
+        <FlameReaction active={iLiked} count={likeCount} onToggle={toggleLike} />
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+          <MessageCircle className="w-4 h-4" />
+          <span className="tabular-nums">{comments.length}</span>
         </div>
       </div>
 

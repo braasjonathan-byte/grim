@@ -46,16 +46,20 @@ const WorkoutCheerButton = ({ toUserId, fromUserId, week, day }: WorkoutCheerBut
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={sending}
-        className="flex items-center gap-1.5 text-sm disabled:opacity-50"
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 ${
+          sentEmoji
+            ? "border-success/40 bg-success/15 text-success"
+            : "border-border bg-secondary/60 text-muted-foreground hover:bg-accent"
+        }`}
         aria-label="Skicka hejarop"
       >
-        <span className="text-base leading-none">{sentEmoji || "💪"}</span>
-        <span className="text-xs text-muted-foreground">Hejarop</span>
+        <span className="text-sm leading-none">{sentEmoji || "💪"}</span>
+        <span>Hejarop</span>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full left-0 mb-2 z-[100] bg-card border-2 border-border p-2 flex gap-1 shadow-lg">
+          <div className="absolute bottom-full left-0 mb-2 z-[100] bg-card border border-border rounded-2xl p-2 flex gap-1 shadow-lg">
             {EMOJIS.map((e) => (
               <button
                 key={e}
