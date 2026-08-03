@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.bulk_import_exercise_instructions(jsonb, uuid);
