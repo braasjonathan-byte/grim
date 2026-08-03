@@ -6,11 +6,12 @@ interface FlameReactionProps {
   active: boolean;
   count: number;
   onToggle: () => void;
+  fullWidth?: boolean;
 }
 
 const PARTICLES = [-70, -45, -20, 0, 20, 45, 70];
 
-const FlameReaction = ({ active, count, onToggle }: FlameReactionProps) => {
+const FlameReaction = ({ active, count, onToggle, fullWidth = false }: FlameReactionProps) => {
   const [burst, setBurst] = useState(0);
 
   const handleClick = () => {
@@ -32,10 +33,12 @@ const FlameReaction = ({ active, count, onToggle }: FlameReactionProps) => {
       onClick={handleClick}
       aria-pressed={active}
       aria-label="Elda passet"
-      className={`relative inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+      className={`relative inline-flex items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all active:scale-95 ${
+        fullWidth ? "flex-1" : ""
+      } ${
         active
           ? "border-warning/40 bg-warning/15 text-warning"
-          : "border-border bg-secondary/60 text-muted-foreground hover:bg-accent"
+          : "border-border/60 bg-secondary/50 text-muted-foreground hover:bg-accent"
       }`}
     >
       <span className="relative inline-flex">

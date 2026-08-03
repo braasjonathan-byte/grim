@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Flame, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin } from "lucide-react";
+import { Users, Flame, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin, MoreHorizontal, Dumbbell } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { sv } from "date-fns/locale";
@@ -9,7 +10,7 @@ import HonoraryBadge from "./HonoraryBadge";
 import ImageCarousel from "./ImageCarousel";
 import WorkoutCheerButton from "./WorkoutCheerButton";
 import FlameReaction from "./FlameReaction";
-import { parseWorkoutCaption } from "@/lib/parseWorkoutCaption";
+import { parseWorkoutCaption, WORKOUT_KIND_META, CHIP_TONE_CLASS } from "@/lib/parseWorkoutCaption";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
@@ -99,6 +100,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const [likes, setLikes] = useState<Record<string, number>>({});
   const [myLikes, setMyLikes] = useState<Set<string>>(new Set());
+  const [likeUsers, setLikeUsers] = useState<Record<string, string[]>>({});
   const [showCompose, setShowCompose] = useState(false);
   const [caption, setCaption] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -302,12 +304,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         }
         if (likesData) {
           const countMap: Record<string, number> = {};
+          const userMap: Record<string, string[]> = {};
           const mySet = new Set<string>();
           likesData.forEach((l: { post_id: string; user_id: string }) => {
             countMap[l.post_id] = (countMap[l.post_id] || 0) + 1;
+            (userMap[l.post_id] ||= []).push(l.user_id);
             if (l.user_id === userId) mySet.add(l.post_id);
           });
           setLikes(countMap);
+          setLikeUsers(userMap);
           setMyLikes(mySet);
         }
         if (imgData) {
@@ -480,6 +485,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       ]);
       setMyLikes(prev => { const s = new Set(prev); s.delete(postId); return s; });
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 1) - 1 }));
+      setLikeUsers(prev => ({ ...prev, [postId]: (prev[postId] || []).filter(u => u !== userId) }));
     } else {
       await Promise.all([
         supabase.from("social_post_likes").insert({ post_id: postId, user_id: userId }),
@@ -487,6 +493,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       ]);
       setMyLikes(prev => new Set(prev).add(postId));
       setLikes(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }));
+      setLikeUsers(prev => ({ ...prev, [postId]: [...(prev[postId] || []).filter(u => u !== userId), userId] }));
       const fresh = await checkInteractionAchievements(userId);
       if (fresh.length > 0) toast.success(`Achievement upplåst: ${fresh[0].title}`);
     }
@@ -621,64 +628,100 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     >
       <h2 className="sr-only">Socialt – flöde, vänner, chatt och grupper</h2>
       {/* Sub-tab navigation */}
-      <div className="flex shrink-0 gap-1 bg-muted/50 rounded-lg p-1 touch-none">
-        {([
+      {(() => {
+        const tabs = [
           { key: "feed" as SubTab, label: "Flöde", icon: Globe },
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
           { key: "chat" as SubTab, label: "Chatt", icon: MessageCircle, badge: unreadChats },
           { key: "groups" as SubTab, label: "Grupper", icon: UsersRound },
-        ]).map(st => (
-          <button
-            key={st.key}
-            onClick={() => setSubTab(st.key)}
-            data-tour={st.key === "friends" ? "social-friends" : st.key === "groups" ? "social-groups" : undefined}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-colors ${
-              subTab === st.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            <st.icon className="w-3.5 h-3.5" />
-            {st.label}
-            {st.key === "friends" && friendActivities.length > 0 && (
-              <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                {friendActivities.length > 9 ? "9+" : friendActivities.length}
-              </span>
-            )}
-            {st.key === "chat" && (st.badge || 0) > 0 && (
-              <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                {(st.badge || 0) > 9 ? "9+" : st.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+        ];
+        const activeIndex = Math.max(0, tabs.findIndex(t => t.key === subTab));
+        return (
+          <div className="relative shrink-0 border-b border-border/60 touch-none">
+            <div className="flex">
+              {tabs.map(st => (
+                <button
+                  key={st.key}
+                  onClick={() => setSubTab(st.key)}
+                  data-tour={st.key === "friends" ? "social-friends" : st.key === "groups" ? "social-groups" : undefined}
+                  className={`flex-1 flex items-center justify-center gap-1.5 pb-2 pt-1 text-xs font-semibold transition-colors ${
+                    subTab === st.key ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <st.icon className="w-3.5 h-3.5" />
+                  {st.label}
+                  {st.key === "friends" && friendActivities.length > 0 && (
+                    <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {friendActivities.length > 9 ? "9+" : friendActivities.length}
+                    </span>
+                  )}
+                  {st.key === "chat" && (st.badge || 0) > 0 && (
+                    <span className="w-4 h-4 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {(st.badge || 0) > 9 ? "9+" : st.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <span
+              aria-hidden
+              className="absolute bottom-0 left-0 h-0.5 rounded-full bg-primary transition-transform duration-300 ease-out"
+              style={{ width: `${100 / tabs.length}%`, transform: `translateX(${activeIndex * 100}%)` }}
+            />
+          </div>
+        );
+      })()}
 
       {/* FEED TAB */}
       {subTab === "feed" && (
         <div className="space-y-4">
-          {/* Feed filter toggle */}
-          <div className="flex gap-1 bg-muted/30 rounded-lg p-0.5">
-            <button
-              onClick={() => setFeedFilter("all")}
-              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                feedFilter === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              Alla
-            </button>
-            <button
-              onClick={() => setFeedFilter("friends")}
-              className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                feedFilter === "friends" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              Vänner
-            </button>
+          {/* Feed filter – compact segment */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="inline-flex rounded-full bg-muted/50 p-0.5">
+              {(["all", "friends"] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFeedFilter(f)}
+                  className={`rounded-full px-3.5 py-1 text-[11px] font-semibold transition-colors ${
+                    feedFilter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  }`}
+                >
+                  {f === "all" ? "Alla" : "Vänner"}
+                </button>
+              ))}
+            </div>
+            {feedLoading && posts.length > 0 && (
+              <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+                Uppdaterar
+              </span>
+            )}
           </div>
-          {/* Compose button */}
+
+          {/* Compose – compact pill row */}
           {!showCompose && (
-            <Button onClick={() => setShowCompose(true)} className="w-full" variant="outline">
-              <Camera className="w-4 h-4 mr-2" /> Skapa inlägg
-            </Button>
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center text-sm font-bold">
+                {avatarUrls[userId] ? (
+                  <img src={avatarUrls[userId]!} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  (nicknames[userId] || "?")[0]?.toUpperCase()
+                )}
+              </div>
+              <button
+                onClick={() => setShowCompose(true)}
+                className="flex-1 rounded-full border border-border/60 bg-muted/40 px-4 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/70"
+              >
+                Vad tränade du idag?
+              </button>
+              <button
+                onClick={() => setShowCompose(true)}
+                aria-label="Skapa inlägg med bild"
+                className="h-9 w-9 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center transition-colors hover:bg-primary/20"
+              >
+                <Camera className="h-4 w-4" />
+              </button>
+            </div>
           )}
 
           {/* Compose form */}
@@ -807,103 +850,188 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
               return 0;
             });
 
-            return sortedPosts.map(post => (
-            <div key={post.id} data-post-id={post.id} className={`border rounded-2xl overflow-hidden bg-card shadow-sm transition-all ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"} ${highlightedPostId === post.id ? "ring-2 ring-primary shadow-lg" : ""}`}>
+            return sortedPosts.map(post => {
+            const parsed = parseWorkoutCaption(post.caption);
+            const kindMeta = WORKOUT_KIND_META[parsed.kind];
+            const KindIcon = kindMeta.icon;
+            const isWorkoutPost = !!parsed.title;
+            const likerIds = (likeUsers[post.id] || []).filter(id => id !== userId);
+            const likerNames = likerIds.map(id => nicknames[id]).filter(Boolean) as string[];
+            const totalLikes = likes[post.id] || 0;
+            const canManage = isAdmin || post.user_id === userId;
+            return (
+            <div key={post.id} data-post-id={post.id} className={`relative overflow-hidden rounded-2xl border bg-card shadow-soft transition-all ${post.pinned ? "border-primary/40" : "border-border/50"} ${highlightedPostId === post.id ? "ring-2 ring-primary" : ""}`}>
+              {/* Type accent line */}
+              {isWorkoutPost && <span aria-hidden className={`absolute inset-x-0 top-0 h-1 ${kindMeta.accent}`} />}
               {/* Pinned indicator */}
               {post.pinned && (
-                <div className="px-3 py-1 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
+                <div className="px-4 pt-3 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
                   <Pin className="w-3 h-3" /> Nålat inlägg
                 </div>
               )}
               {/* Post header */}
-              <div className="px-3 py-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (post.user_id === userId) return;
-                      setPendingFriendId(post.user_id);
-                      setSubTab("friends");
-                    }}
-                    className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
-                    aria-label={`Visa ${nicknames[post.user_id] || "användarens"} profil`}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-bold overflow-hidden">
-                      {avatarUrls[post.user_id] ? (
-                        <img src={avatarUrls[post.user_id]!} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        (nicknames[post.user_id] || "?")[0]?.toUpperCase()
+              <div className={`px-4 flex items-center justify-between ${isWorkoutPost && !post.pinned ? "pt-3.5" : "pt-3"} pb-2.5`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (post.user_id === userId) return;
+                    setPendingFriendId(post.user_id);
+                    setSubTab("friends");
+                  }}
+                  className="flex min-w-0 items-center gap-2.5 text-left transition-opacity hover:opacity-80"
+                  aria-label={`Visa ${nicknames[post.user_id] || "användarens"} profil`}
+                >
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border/50 flex items-center justify-center text-sm font-bold">
+                    {avatarUrls[post.user_id] ? (
+                      <img src={avatarUrls[post.user_id]!} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      (nicknames[post.user_id] || "?")[0]?.toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0 leading-tight">
+                    <span className="block truncate text-sm font-bold">{nicknames[post.user_id] || "Anonym"}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {(() => {
+                        const workoutDate = resolveWorkoutPostDate(post, planStartDates[post.user_id]);
+                        if (workoutDate) return format(workoutDate, "d MMM", { locale: sv });
+                        return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
+                      })()}
+                      {post.visibility === "group" && " · 👥 Grupp"}
+                    </span>
+                  </div>
+                </button>
+                {canManage && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button aria-label="Fler alternativ" className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => togglePin(post.id, post.pinned)}>
+                          <Pin className="mr-2 h-4 w-4" /> {post.pinned ? "Lossa" : "Nåla fast"}
+                        </DropdownMenuItem>
                       )}
-                    </div>
-                    <div>
-                      <span className="text-sm font-semibold">{nicknames[post.user_id] || "Anonym"}</span>
-                      <p className="text-[10px] text-muted-foreground">
-                        {(() => {
-                          const workoutDate = resolveWorkoutPostDate(post, planStartDates[post.user_id]);
-                          if (workoutDate) return format(workoutDate, "d MMM", { locale: sv });
-                          return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
-                        })()}
-                        {post.visibility === "group" && " • 👥 Grupp"}
-                      </p>
-                    </div>
-                  </button>
-                </div>
-                <div className="flex items-center gap-1">
-                  {isAdmin && (
-                    <button onClick={() => togglePin(post.id, post.pinned)} className={`p-1 transition-colors ${post.pinned ? "text-primary" : "text-muted-foreground hover:text-primary"}`} title={post.pinned ? "Lossa" : "Nåla fast"}>
-                      <Pin className="w-4 h-4" />
-                    </button>
-                  )}
-                  {(post.user_id === userId || isAdmin) && (
-                    <button onClick={() => deletePost(post.id)} className="text-muted-foreground hover:text-destructive p-1">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                      {(post.user_id === userId || isAdmin) && (
+                        <DropdownMenuItem onClick={() => deletePost(post.id)} className="text-destructive focus:text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" /> Ta bort inlägg
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
 
-              {/* Images - carousel for multi-image, fallback to legacy image_url */}
+              {/* Media – full width above the text */}
               {(() => {
                 const imgs = postImages[post.id];
                 if (imgs && imgs.length > 0) {
-                  return <ImageCarousel images={imgs} />;
+                  return (
+                    <div className="px-3 pb-3 [&_img]:rounded-2xl">
+                      <div className="overflow-hidden rounded-2xl">
+                        <ImageCarousel images={imgs} />
+                      </div>
+                    </div>
+                  );
                 }
                 if (post.image_url) {
-                  return <img src={post.image_url} alt="" className="w-full max-h-96 object-cover" loading="lazy" />;
+                  return (
+                    <div className="px-3 pb-3">
+                      <img src={post.image_url} alt="" className="max-h-96 w-full rounded-2xl object-cover" loading="lazy" />
+                    </div>
+                  );
                 }
                 return null;
               })()}
 
-              {/* Caption + stat chips */}
-              {(() => {
-                const parsed = parseWorkoutCaption(post.caption);
-                if (!parsed.text && parsed.chips.length === 0) return null;
-                return (
-                  <div className="px-3 pt-2 pb-1 space-y-1.5">
-                    {parsed.text && <p className="text-sm whitespace-pre-line leading-snug">{parsed.text}</p>}
-                    {parsed.chips.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {parsed.chips.map((chip, i) => {
-                          const ChipIcon = chip.icon;
-                          return (
-                            <span
-                              key={i}
-                              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-foreground/80"
-                            >
-                              <ChipIcon className="w-3 h-3 text-muted-foreground" />
-                              {chip.label}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              {/* Title + stat chips */}
+              {(parsed.title || parsed.chips.length > 0) && (
+                <div className="px-4 pb-2 space-y-2">
+                  {parsed.title && (
+                    <div className="flex items-start gap-2.5">
+                      <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${kindMeta.badge}`}>
+                        <KindIcon className="h-4 w-4" />
+                      </span>
+                      <h3 className="font-sans text-[15px] font-bold leading-snug tracking-normal">{parsed.title}</h3>
+                    </div>
+                  )}
+                  {parsed.chips.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {parsed.chips.map((chip, i) => {
+                        const ChipIcon = chip.icon;
+                        return (
+                          <span
+                            key={i}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${CHIP_TONE_CLASS[chip.tone]}`}
+                          >
+                            <ChipIcon className="h-3.5 w-3.5" />
+                            {chip.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {/* Like + comment buttons */}
-              <div className="px-3 py-2 border-t border-border/40 flex items-center gap-2">
+              {/* Träningslogg */}
+              {parsed.exercises.length > 0 && (
+                <div className="px-4 pb-2">
+                  <div className="rounded-xl border border-border/50 bg-muted/30 p-3">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Träningslogg</p>
+                    <ul className="space-y-2">
+                      {parsed.exercises.map((ex, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[13px] leading-snug">
+                          <Dumbbell className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary/70" />
+                          <span className="min-w-0 flex-1">
+                            <span className="font-semibold">{ex.name}</span>
+                            {ex.detail && <span className="text-muted-foreground"> · {ex.detail}</span>}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Free text */}
+              {parsed.text && (
+                <div className="px-4 pb-2">
+                  <p className="whitespace-pre-line text-sm leading-snug">{parsed.text}</p>
+                </div>
+              )}
+
+              {/* Who reacted */}
+              {totalLikes > 0 && (
+                <div className="flex items-center gap-2 px-4 pb-1.5">
+                  <div className="flex -space-x-2">
+                    {(myLikes.has(post.id) ? [userId, ...likerIds] : likerIds).slice(0, 3).map(id => (
+                      <span key={id} className="h-5 w-5 overflow-hidden rounded-full bg-muted ring-2 ring-card flex items-center justify-center text-[9px] font-bold">
+                        {avatarUrls[id] ? (
+                          <img src={avatarUrls[id]!} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          (nicknames[id] || "?")[0]?.toUpperCase()
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {(() => {
+                      const names = myLikes.has(post.id) ? ["Du", ...likerNames] : likerNames;
+                      if (names.length === 0) return `${totalLikes} eldade passet`;
+                      const shown = names.slice(0, 2).join(", ");
+                      const rest = totalLikes - Math.min(2, names.length);
+                      return `${shown}${rest > 0 ? ` +${rest}` : ""} eldade detta`;
+                    })()}
+                  </p>
+                </div>
+              )}
+
+              {/* Reactions */}
+              <div className="flex items-center gap-2 border-t border-border/40 px-3 py-2.5">
                 <FlameReaction
+                  fullWidth
                   active={myLikes.has(post.id)}
                   count={likes[post.id] || 0}
                   onToggle={() => toggleLike(post.id)}
@@ -911,17 +1039,18 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 <button
                   onClick={() => toggleComments(post.id)}
                   aria-pressed={openComments.has(post.id)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                  className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition-all active:scale-95 ${
                     openComments.has(post.id)
                       ? "border-primary/40 bg-primary/15 text-primary"
-                      : "border-border bg-secondary/60 text-muted-foreground hover:bg-accent"
+                      : "border-border/60 bg-secondary/50 text-muted-foreground hover:bg-accent"
                   }`}
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="h-4 w-4" />
                   <span className="tabular-nums">{commentCounts[post.id] || 0}</span>
                 </button>
                 {post.user_id !== userId && (
                   <WorkoutCheerButton
+                    fullWidth
                     toUserId={post.user_id}
                     fromUserId={userId}
                     week={post.workout_week}
@@ -929,6 +1058,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   />
                 )}
               </div>
+
 
               {/* Comments */}
               {openComments.has(post.id) && (
@@ -990,7 +1120,8 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                 </div>
               )}
             </div>
-          ));
+            );
+            });
           })()}
         </div>
       )}
