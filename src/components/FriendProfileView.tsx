@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import AchievementsPanel from "@/components/AchievementsPanel";
+import IdentityTitleBadge from "@/components/IdentityTitleBadge";
 import AchievementsView from "@/components/AchievementsView";
 import { calculateAchievementMetrics, getEarnedAchievements } from "@/lib/achievements";
 
