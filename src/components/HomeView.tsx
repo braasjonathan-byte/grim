@@ -88,7 +88,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
     let cancelled = false;
     Promise.all([
       supabase.from("profiles").select("nickname, plan_start_date").eq("user_id", userId).maybeSingle(),
-      supabase.from("workout_plans").select("week, day, details").eq("user_id", userId),
+      supabase.from("workout_plans").select("week, day, details, session_name, created_at").eq("user_id", userId),
       supabase.from("workout_completions").select("week, day, done, skipped, updated_at, logged_distance_km, logged_weights").eq("user_id", userId),
       supabase.from("user_achievements" as any).select("achievement_id, unlocked_at").eq("user_id", userId).order("unlocked_at", { ascending: false }),
     ])
@@ -116,48 +116,79 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const now = new Date();
   const todayIdx = (now.getDay() + 6) % 7; // 0 = Monday
   const todayAbbr = DAYS[todayIdx];
+  const todayKey = toLocalDateKey(now);
+
+  /** "Tors_ab12" -> "tors", "Tor" -> "tors" so plan/completion keys line up. */
+  const normalizeDay = (value: string) => {
+    const base = value.trim().replace(/_[a-z0-9]+$/i, "").toLowerCase();
+    return base === "tor" ? "tors" : base;
+  };
+  const isToday = (value: string) =>
+    normalizeDay(value) === normalizeDay(todayAbbr) || value.trim().startsWith(todayKey);
+  const hasContent = (details: string | null | undefined) => !!details && details.trim().length > 0;
 
   const currentWeek = useMemo(() => {
     const weeks = plans.map((p) => p.week).filter((w) => w > 0);
     if (weeks.length === 0) return 1;
     const maxWeek = Math.max(...weeks);
-    if (!planStartDate) return 1;
-    const start = parseDateKey(planStartDate);
-    if (!start) return 1;
-    const monday = getMondayUtc(start);
-    const today = parseDateKey(toLocalDateKey(now));
+
+    // Prefer the calibrated plan start, otherwise fall back to the oldest plan row.
+    let startMonday: Date | null = null;
+    if (planStartDate) {
+      const start = parseDateKey(planStartDate);
+      if (start) startMonday = getMondayUtc(start);
+    }
+    if (!startMonday) {
+      const created = plans
+        .filter((p) => p.week > 0 && p.created_at)
+        .map((p) => new Date(p.created_at as string).getTime())
+        .filter((t) => !Number.isNaN(t));
+      if (created.length > 0) startMonday = getMondayUtc(new Date(Math.min(...created)));
+    }
+    if (!startMonday) return 1;
+
+    const today = parseDateKey(todayKey);
     if (!today) return 1;
-    const week = Math.floor(daysBetween(monday, today) / 7) + 1;
+    const week = Math.floor(daysBetween(startMonday, today) / 7) + 1;
     return Math.min(Math.max(week, 1), maxWeek);
-  }, [plans, planStartDate, now]);
+  }, [plans, planStartDate, todayKey]);
 
   const todaysPlans = useMemo(
-    () => plans.filter((p) => p.week === currentWeek && p.day.trim().toLowerCase() === todayAbbr.toLowerCase()),
-    [plans, currentWeek, todayAbbr],
+    () =>
+      plans.filter(
+        (p) => (p.week === currentWeek && isToday(p.day)) || (p.week === 0 && p.day.trim().startsWith(todayKey)),
+      ),
+    [plans, currentWeek, todayKey, todayAbbr],
   );
 
-  const isSameDay = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
   const todayDone = useMemo(
-    () => completions.some((c) => c.week === currentWeek && isSameDay(c.day, todayAbbr) && c.done),
-    [completions, currentWeek, todayAbbr],
+    () =>
+      completions.some(
+        (c) =>
+          c.done &&
+          ((c.week === currentWeek && isToday(c.day)) || (c.week === 0 && c.day.trim().startsWith(todayKey))),
+      ),
+    [completions, currentWeek, todayKey, todayAbbr],
   );
 
   const weekPlanned = useMemo(() => {
     const dayKeys = new Set(
-      plans.filter((p) => p.week === currentWeek).map((p) => p.day.trim().toLowerCase()),
+      plans.filter((p) => p.week === currentWeek && hasContent(p.details)).map((p) => normalizeDay(p.day)),
     );
     return dayKeys.size;
   }, [plans, currentWeek]);
 
   const weekCompleted = useMemo(() => {
+    const plannedDays = new Set(
+      plans.filter((p) => p.week === currentWeek && hasContent(p.details)).map((p) => normalizeDay(p.day)),
+    );
     const dayKeys = new Set(
       completions
-        .filter((c) => c.week === currentWeek && c.done)
-        .map((c) => c.day.trim().toLowerCase()),
+        .filter((c) => c.week === currentWeek && c.done && plannedDays.has(normalizeDay(c.day)))
+        .map((c) => normalizeDay(c.day)),
     );
     return dayKeys.size;
-  }, [completions, currentWeek]);
+  }, [completions, plans, currentWeek]);
 
   const goal = weekPlanned > 0 ? weekPlanned : 3;
   const progressPct = goal > 0 ? Math.min(100, Math.round((weekCompleted / goal) * 100)) : 0;
