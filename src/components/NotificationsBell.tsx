@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { Bell, Trophy, MessageCircle, Flame, UserPlus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PopoverArrow } from "@radix-ui/react-popover";
+import { avatarGradient } from "@/lib/avatarGradient";
 import { supabase } from "@/integrations/supabase/client";
 import { getAchievementById } from "@/lib/achievements";
 import { onPostInteraction } from "@/lib/postInteractionBus";
