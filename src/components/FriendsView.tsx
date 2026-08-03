@@ -144,6 +144,11 @@ const getSessionColor = (session: string) => {
 
 const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearActivitiesForFriend, initialFriendId }: FriendsViewProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const focusFriendSearch = () => {
+    searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => searchInputRef.current?.focus(), 300);
+  };
   const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [friends, setFriends] = useState<(Friendship & { profile: FriendProfile })[]>([]);
   const [pendingRequests, setPendingRequests] = useState<(Friendship & { profile: FriendProfile })[]>([]);
@@ -1366,6 +1371,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         <div className="relative">
           <input
             type="text"
+            ref={searchInputRef}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && searchUsers()}
@@ -1439,8 +1445,10 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
           <EmptyState
             icon={Users}
             title="Inga vänner ännu"
-            description="Sök efter användarnamn ovan för att hitta och lägga till vänner!"
+            description="Sök efter ett användarnamn så kan ni följa varandras pass och peppa varandra."
             emoji="🤝"
+            actionLabel="Hitta vänner"
+            onAction={focusFriendSearch}
           />
         ) : (
           <div className="relative">

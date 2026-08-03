@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import EmptyState from "./EmptyState";
 
 interface TrainingCalendarProps {
   userId: string;

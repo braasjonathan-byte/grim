@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Medal, Crown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Medal, Crown, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
+import EmptyState from "./EmptyState";
 
 interface LeaderboardProps {
   userId: string;
@@ -115,7 +116,14 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
       {loading ? (
         <p className="text-sm text-muted-foreground text-center py-4">Laddar...</p>
       ) : entries.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-4">Inga registrerade pass</p>
+        <EmptyState
+          icon={Trophy}
+          emoji="🏅"
+          title="Inga pass registrerade än"
+          description="Så fort du klarmarkerar ditt första pass hamnar du på topplistan."
+          actionLabel="Starta ditt första pass"
+          onAction={() => window.dispatchEvent(new CustomEvent("grim:set-tab", { detail: "workout" }))}
+        />
       ) : (
         <div className="space-y-2">
           {entries.map((entry, i) => (
