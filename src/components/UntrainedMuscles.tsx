@@ -59,6 +59,13 @@ const REGION_LABELS: Record<string, string> = {
   hamstrings: "Baksida lår", glutes: "Rumpa", calves: "Vader",
 };
 
+const REGION_TO_GROUP: Record<string, string> = {
+  chest: "Bröst", traps: "Rygg", lats: "Rygg", lowerBack: "Rygg",
+  delts: "Axlar", biceps: "Armar", triceps: "Armar", forearms: "Armar",
+  abs: "Core", obliques: "Core", quads: "Ben", hamstrings: "Ben",
+  glutes: "Rumpa", calves: "Ben",
+};
+
 const REGION_EXERCISES: Record<string, string[]> = {
   chest: ["Bänkpress", "Hantlar Flyes", "Armhävningar"],
   traps: ["Shrugs", "Face Pulls"],
