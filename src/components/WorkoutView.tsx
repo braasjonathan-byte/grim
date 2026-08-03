@@ -6376,7 +6376,7 @@ const estimateCalories = (
         const todayName = todayDayNames[new Date().getDay()];
         return (
         <div className="flex flex-col gap-2">
-          {/* Day tabs — show all 7 weekdays, rest days are non-clickable */}
+          {/* Day tabs — letter + status indicator (today / done / upcoming) */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
             {DAYS.map((dayName) => {
               const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(p.day, dayName));
@@ -6388,28 +6388,33 @@ const estimateCalories = (
               if (isRest) {
                 if (isBeforeStart) {
                   return (
-                    <button
+                    <div
                       key={dayName}
-                      disabled
-                      className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
+                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
                       title="Innan träningsplanen startade"
                     >
-                      {dayName}
-                    </button>
+                      <span className="text-xs font-medium">{dayName}</span>
+                      <span className="h-1.5 w-1.5" />
+                    </div>
                   );
                 }
                 return (
                   <button
                     key={dayName}
                     onClick={() => { setEmptyDayName(""); setEmptyDayChoice({ week: currentWeek, day: dayName }); }}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition-all ${
                       isToday
-                        ? "bg-warning/10 text-warning/80 border border-warning/30 hover:bg-warning/20"
+                        ? "bg-warning/10 text-warning/80 ring-2 ring-warning/50 hover:bg-warning/20"
                         : "bg-secondary/40 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
                     }`}
                     title="Vilodag — tryck för att lägga till pass"
                   >
-                    {dayName}
+                    <span className="text-xs font-medium">{dayName}</span>
+                    {isToday ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+                    ) : (
+                      <span className="h-1.5 w-1.5" />
+                    )}
                   </button>
                 );
               }
@@ -6424,12 +6429,14 @@ const estimateCalories = (
                 <button
                   key={k}
                   onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl text-xs font-medium transition-all ${
+                    isToday ? "ring-2 ring-warning/60" : ""
+                  } ${
                     isActive
                       ? done
                         ? "bg-success text-success-foreground"
                         : isToday
-                        ? "bg-warning/10 text-warning border border-warning/30"
+                        ? "bg-warning/10 text-warning"
                         : "bg-primary text-primary-foreground"
                       : done
                       ? "bg-success/20 text-success"
@@ -6439,12 +6446,23 @@ const estimateCalories = (
                       ? "bg-warning/20 text-warning"
                       : "bg-secondary text-muted-foreground"
                   }`}
+                  title={done ? "Genomfört" : skipped ? "Överhoppat" : isToday ? "Idag" : "Kommande pass"}
                 >
-                  {getBaseDay(plan.day)}
+                  <span>{getBaseDay(plan.day)}</span>
+                  {done ? (
+                    <Check className={`h-2.5 w-2.5 ${isActive ? "text-success-foreground" : "text-success"}`} strokeWidth={4} />
+                  ) : skipped ? (
+                    <XCircle className="h-2.5 w-2.5 text-destructive" />
+                  ) : isToday ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full border border-current opacity-50" />
+                  )}
                 </button>
               );
             })}
           </div>
+
         </div>
         );
       })()}
