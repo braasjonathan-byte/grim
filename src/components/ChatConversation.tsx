@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Dumbbell, X, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Send, Dumbbell, X, Check, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { avatarGradient } from "@/lib/avatarGradient";
 import { toast } from "sonner";
 
 interface Friend {
@@ -223,15 +224,27 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-border pb-3">
-        <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border/50 pb-3">
+        <button onClick={onBack} className="p-1.5 hover:bg-muted rounded-full transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-          {friend.avatar_url ? (
-            <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-xs font-bold text-primary">{friend.nickname.charAt(0).toUpperCase()}</span>
+        <div className="relative w-9 h-9 shrink-0">
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
+            style={avatarGradient(friend.nickname).style}
+          >
+            {friend.avatar_url ? (
+              <img src={friend.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xs font-bold" style={avatarGradient(friend.nickname).textStyle}>
+                {avatarGradient(friend.nickname).initial}
+              </span>
+            )}
+          </div>
+          {(friend as any).is_honorary && (
+            <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card flex items-center justify-center">
+              <Crown className="w-2.5 h-2.5 text-warning" />
+            </span>
           )}
         </div>
         <span className="font-semibold text-sm">{friend.nickname}</span>
@@ -247,18 +260,18 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         {groupedMessages.map(group => (
           <div key={group.date}>
             <div className="text-center my-3">
-              <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-medium text-muted-foreground/80 bg-muted/60 px-2.5 py-1 rounded-full">
                 {group.date}
               </span>
             </div>
             {group.msgs.map(msg => {
               const isMine = msg.sender_id === userId;
               return (
-                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1`}>
-                  <div className={`max-w-[80%] rounded-2xl px-3 py-2 ${
+                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1.5`}>
+                  <div className={`max-w-[80%] px-3.5 py-2 ${
                     isMine
-                      ? 'bg-primary text-primary-foreground rounded-br-md'
-                      : 'bg-muted text-foreground rounded-bl-md'
+                      ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
+                      : 'bg-card text-foreground rounded-2xl rounded-bl-sm shadow-soft'
                   }`}>
                     {msg.message_type === 'workout' && msg.shared_workout ? (
                       <WorkoutBubble
@@ -278,6 +291,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             })}
           </div>
         ))}
+
 
         {messages.length === 0 && (
           <p className="text-center text-sm text-muted-foreground py-12">
