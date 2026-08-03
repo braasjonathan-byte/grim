@@ -359,7 +359,26 @@
   animation: flame-spark 0.6s ease-out forwards;
 }
 
+/* Bottom tab: press bounce */
+@keyframes tab-bounce {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.86); }
+  70% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.tab-bounce { animation: tab-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Mini timer: breathing pulse ring on active play button */
+@keyframes timer-play-pulse {
+  0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.45); }
+  70% { box-shadow: 0 0 0 8px hsl(var(--primary) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+}
+.timer-play-pulse { animation: timer-play-pulse 1.8s ease-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   .flame-pop, .flame-spark { animation: none; }
   .flame-spark { display: none; }
+  .tab-bounce, .timer-play-pulse { animation: none; }
 }
+
