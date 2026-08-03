@@ -125,7 +125,7 @@ const SwipeableSetRow = ({ done, onToggle, isPR, celebrationKey, children }: Swi
         style={{ transform: `translateX(${dx}px)` }}
         className={`relative touch-pan-y ${dx !== 0 ? "bg-secondary" : "transition-transform duration-200"} ${
           pulse ? "set-complete-pulse" : ""
-        }`}
+        } ${celebrate ? "pr-gold-glow" : ""}`}
       >
         {celebrate && <ConfettiBurst count={16} />}
         <div className="flex items-center">
