@@ -400,7 +400,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
               setPrimed(true);
               setFullscreen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all disabled:opacity-50"
             title={otherActive ? "En GPS-inspelning pågår redan på en annan övning" : undefined}
           >
             <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
@@ -1074,7 +1074,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
                 key={m}
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setBikeMode(m); setTempo(""); setAutoField(null); }}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === m ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+                className={`px-3 py-1.5 text-[10px] font-semibold rounded-full transition-all ${bikeMode === m ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`}
               >{label}</button>
             );
           })}
@@ -6393,7 +6393,7 @@ const estimateCalories = (
                   return (
                     <div
                       key={dayName}
-                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
+                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
                       title="Innan träningsplanen startade"
                     >
                       <span className="text-xs font-medium">{dayName}</span>
@@ -6405,7 +6405,7 @@ const estimateCalories = (
                   <button
                     key={dayName}
                     onClick={() => { setEmptyDayName(""); setEmptyDayChoice({ week: currentWeek, day: dayName }); }}
-                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition-all ${
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full transition-all ${
                       isToday
                         ? "bg-warning/10 text-warning/80 ring-2 ring-warning/50 hover:bg-warning/20"
                         : "bg-secondary/40 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
@@ -6432,7 +6432,7 @@ const estimateCalories = (
                 <button
                   key={k}
                   onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
-                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl text-xs font-medium transition-all ${
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isToday ? "ring-2 ring-warning/60" : ""
                   } ${
                     isActive
