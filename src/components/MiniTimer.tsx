@@ -190,7 +190,7 @@ const MiniTimer = () => {
       setSettingsOpen(false);
     };
     return (
-      <div className="space-y-3 border border-border bg-card p-3" onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-3 rounded-2xl bg-muted/40 p-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           <button
             onClick={() => switchMode("stopwatch")}
