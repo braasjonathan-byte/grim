@@ -500,7 +500,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         <input
           ref={inputRef}
           value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
+          onChange={e => { setNewMessage(e.target.value); if (e.target.value.trim()) notifyTyping(); else stopTyping(); }}
           onKeyDown={handleKeyDown}
           placeholder="Skriv ett meddelande..."
           className="flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
