@@ -214,6 +214,21 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
 
   const achievementDef = latestAchievement ? getAchievementById(latestAchievement.id) : undefined;
 
+  // "Vad ska jag göra idag?" — only when nothing is scheduled (and nothing done yet)
+  const hasScheduledToday = todaysPlans.some((p) => hasContent(p.details));
+  const suggestion = useMemo(
+    () => (untrainedRegions ? buildSuggestion(untrainedRegions) : null),
+    [untrainedRegions],
+  );
+  const showSuggestion = !hasScheduledToday && !todayDone && !!suggestion;
+
+  const openPickerForGroup = (muscleGroup: string | null) => {
+    onNavigate("workout");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("grim:open-exercise-picker", { detail: { muscleGroup } }));
+    }, 250);
+  };
+
   const greeting = `${greetingFor(now.getHours())}${nickname ? `, ${nickname}` : ""}!`;
 
   const dateLabel = now.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
