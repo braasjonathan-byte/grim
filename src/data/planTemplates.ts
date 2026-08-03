@@ -33,6 +33,10 @@ export interface TemplatePlan {
   isEventPrep?: boolean;
   /** Default event type for event_countdowns table */
   defaultEventType?: string;
+  /** If true, user picks sessions/week and plan length before the plan is generated */
+  isFlexible?: boolean;
+  /** Generator for flexible plans (frequency + length chosen by the user) */
+  generateFlexible?: (profile: FitnessProfile, opts: FlexibleRunOptions) => TemplatePlanDay[];
 }
 
 export interface TemplatePlanDay {
@@ -1169,6 +1173,97 @@ function generateIntervalRunning(profile: FitnessProfile): TemplatePlanDay[] {
   return days;
 }
 
+// ─── Löpning – Flexibel (valfri frekvens & längd) ───────────────────────────
+export interface FlexibleRunOptions {
+  sessionsPerWeek: number;
+  weeks: number;
+}
+
+export function generateFlexibleRunning(
+  profile: FitnessProfile,
+  opts: FlexibleRunOptions,
+): TemplatePlanDay[] {
+  const weeks = Math.max(2, Math.min(24, Math.round(opts.weeks || 8)));
+  const sessions = Math.max(2, Math.min(6, Math.round(opts.sessionsPerWeek || 3)));
+  const exp = profile.experience_level;
+  const expFactor = exp === "nybörjare" ? 0.8 : exp === "avancerad" ? 1.15 : 1;
+  const maxDist = profile.max_distance_km && profile.max_distance_km > 0 ? profile.max_distance_km : 8;
+
+  // Weekday layout per frequency (spread out to allow recovery)
+  const layouts: Record<number, string[]> = {
+    2: ["Tis", "Lör"],
+    3: ["Tis", "Tors", "Sön"],
+    4: ["Mån", "Ons", "Fre", "Sön"],
+    5: ["Mån", "Tis", "Tors", "Lör", "Sön"],
+    6: ["Mån", "Tis", "Ons", "Tors", "Lör", "Sön"],
+  };
+  // Session type order added as frequency grows
+  const typeOrder = ["lugn", "långpass", "intervall", "tröskel", "lugn2", "backe"] as const;
+  const types = typeOrder.slice(0, sessions);
+  const dayList = layouts[sessions];
+
+  const days: TemplatePlanDay[] = [];
+  for (let w = 1; w <= weeks; w++) {
+    const prog = weeks > 1 ? (w - 1) / (weeks - 1) : 0;
+    const isDeload = weeks >= 6 && w % 4 === 0 && w !== weeks;
+    const isTaper = w === weeks && weeks >= 6;
+    const soft = isDeload || isTaper;
+    const pace = calcPaceForWeek(profile.time_10km_min, w, weeks);
+
+    const easyMin = Math.round((28 + prog * 17) * expFactor * (soft ? 0.7 : 1));
+    const startKm = Math.max(3, Math.round(maxDist * 0.6));
+    const endKm = Math.max(startKm + 2, Math.round(maxDist * 1.35));
+    const longKm = Math.max(3, Math.round((startKm + (endKm - startKm) * prog) * (soft ? 0.6 : 1)));
+    const intervalCount = soft ? 4 : 4 + Math.round(prog * 5);
+    const thresholdMin = soft ? 10 : Math.round((12 + prog * 13) * expFactor);
+    const hillCount = soft ? 5 : 6 + Math.round(prog * 6);
+
+    types.forEach((type, i) => {
+      const day = dayList[i];
+      switch (type) {
+        case "lugn":
+          days.push({ week: w, day, session_name: "Löpning – Lugn", details: `Löpning — ${easyMin} min`, tempo: `${pace.easy} min/km` });
+          break;
+        case "lugn2":
+          days.push({ week: w, day, session_name: "Löpning – Lugn kort", details: `Löpning — ${Math.round(easyMin * 0.7)} min`, tempo: `${pace.easy} min/km` });
+          break;
+        case "långpass":
+          days.push({ week: w, day, session_name: "Löpning – Långpass", details: `Löpning — ${longKm} km`, tempo: `${pace.long} min/km` });
+          break;
+        case "intervall":
+          days.push({
+            week: w, day, session_name: "Löpning – Intervaller",
+            details: `Uppvärmning — 10 min\n${intervalCount}×400 m (90 s joggvila)\nNedvarvning — 10 min`,
+            tempo: `${pace.threshold} min/km`,
+          });
+          break;
+        case "tröskel":
+          days.push({
+            week: w, day, session_name: "Löpning – Tröskellopp",
+            details: `Uppvärmning — 10 min\n1×${thresholdMin} min i tröskeltempo\nNedvarvning — 10 min`,
+            tempo: `${pace.threshold} min/km`,
+          });
+          break;
+        case "backe":
+          days.push({
+            week: w, day, session_name: "Löpning – Backintervaller",
+            details: `Uppvärmning — 10 min\n${hillCount}×45 s uppför i hög fart (jogga ned som vila)\nNedvarvning — 10 min`,
+            tempo: "Hög ansträngning",
+          });
+          break;
+      }
+    });
+
+    if (isDeload) {
+      const restDay = ALL_DAYS.find((d) => !dayList.includes(d));
+      if (restDay) days.push({ week: w, day: restDay, session_name: "Vila", details: "Deload-vecka – ta det lugnt.", tempo: "" });
+    }
+  }
+  return days;
+}
+
+
+
 // ─── Aktiv Återhämtning – Deload/Återställning (4v) ────────────────────────
 function generateActiveRecovery(profile: FitnessProfile): TemplatePlanDay[] {
   const days: TemplatePlanDay[] = [];
@@ -1480,6 +1575,16 @@ export const planTemplates: TemplatePlan[] = [
     category: "löpning",
     requiredLifts: [],
     generateFromProfile: generateRunningPlan,
+  },
+  {
+    name: "🏃 Löpning – Flexibel",
+    description: "Du väljer själv hur många löppass per vecka (2–6) och hur många veckor planen ska pågå (4–20). Pass, tempo och distanser anpassas efter din löpnivå.",
+    weeks: 8,
+    category: "löpning",
+    requiredLifts: [],
+    isFlexible: true,
+    generateFlexible: generateFlexibleRunning,
+    generateFromProfile: (p) => generateFlexibleRunning(p, { sessionsPerWeek: p.training_days_per_week || 3, weeks: 8 }),
   },
   {
     name: "🏃 5K Nybörjare – Börja springa",
