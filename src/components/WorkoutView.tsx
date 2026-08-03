@@ -6273,80 +6273,64 @@ const estimateCalories = (
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
-      {/* Week navigation - swipe to change week */}
+      {/* Week navigation — horizontally swipeable carousel */}
       <div className="flex flex-col gap-2">
-        <div
-          className="flex items-center justify-center py-2 select-none touch-pan-x"
-          onTouchStart={(e) => {
-            (e.currentTarget as any)._swipeX = e.touches[0].clientX;
-          }}
-          onTouchEnd={(e) => {
-            const startX = (e.currentTarget as any)._swipeX;
-            if (startX == null) return;
-            const dx = e.changedTouches[0].clientX - startX;
-            if (Math.abs(dx) > 40) {
-              if (dx < 0 && weekIdx < weeks.length - 1) setCurrentWeek(weeks[weekIdx + 1]);
-              else if (dx > 0 && weekIdx > 0) setCurrentWeek(weeks[weekIdx - 1]);
-            }
-            (e.currentTarget as any)._swipeX = null;
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => weekIdx > 0 && setCurrentWeek(weeks[weekIdx - 1])}
-              disabled={weekIdx <= 0}
-              className="p-1 text-muted-foreground disabled:opacity-20"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-1.5 min-w-[120px] justify-center">
-              {weeks.map((w) => {
-                const isCurrent = w === currentWeek;
-                const isActive = w === activePlanWeek;
-                const distance = Math.abs(weeks.indexOf(w) - weekIdx);
-                if (distance > 2) return null;
-                return (
-                  <button
-                    key={w}
-                    onClick={() => setCurrentWeek(w)}
-                    className={`flex-shrink-0 rounded-full text-xs font-semibold transition-all ${
-                      isCurrent
-                        ? "px-4 py-1.5 bg-primary text-primary-foreground"
-                        : isActive
-                        ? "px-3 py-1 bg-muted text-foreground border border-primary/30"
-                        : distance === 1
-                        ? "px-3 py-1 text-muted-foreground hover:bg-muted"
-                        : "px-2.5 py-1 text-muted-foreground/50 text-[10px]"
-                    }`}
-                  >
-                    V{w}
-                  </button>
-                );
-              })}
-              {weekIdx >= weeks.length - 2 && (
+        <div className="flex items-center gap-1 py-1 select-none">
+          <button
+            onClick={() => weekIdx > 0 && setCurrentWeek(weeks[weekIdx - 1])}
+            disabled={weekIdx <= 0}
+            className="hidden sm:flex p-1 text-muted-foreground disabled:opacity-20 flex-shrink-0"
+            aria-label="Föregående vecka"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div
+            ref={weekScrollRef}
+            className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory px-[40%] py-1 touch-pan-x"
+          >
+            {weeks.map((w) => {
+              const isCurrent = w === currentWeek;
+              const isActive = w === activePlanWeek;
+              return (
                 <button
-                  onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
-                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground/50 border border-dashed border-border hover:bg-muted"
-                  title="Lägg till vecka"
+                  key={w}
+                  data-week-active={isCurrent ? "true" : "false"}
+                  onClick={() => setCurrentWeek(w)}
+                  className={`flex-shrink-0 snap-center rounded-full font-semibold transition-all duration-200 ${
+                    isCurrent
+                      ? "px-5 py-2 text-sm bg-primary text-primary-foreground scale-100"
+                      : isActive
+                      ? "px-3.5 py-1.5 text-xs bg-muted text-foreground border border-primary/30 scale-95 opacity-80"
+                      : "px-3.5 py-1.5 text-xs text-muted-foreground bg-secondary/50 scale-90 opacity-60"
+                  }`}
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  V{w}
                 </button>
-              )}
-            </div>
+              );
+            })}
             <button
-              onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
-              disabled={weekIdx >= weeks.length - 1}
-              className="p-1 text-muted-foreground disabled:opacity-20"
+              onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
+              className="flex-shrink-0 snap-center w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground/60 border border-dashed border-border hover:bg-muted"
+              title="Lägg till vecka"
             >
-              <ChevronRight className="w-5 h-5" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
+          <button
+            onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
+            disabled={weekIdx >= weeks.length - 1}
+            className="hidden sm:flex p-1 text-muted-foreground disabled:opacity-20 flex-shrink-0"
+            aria-label="Nästa vecka"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
         <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
           <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
         <p className="text-[10px] text-muted-foreground text-center">{progress}% avklarat · Vecka {currentWeek} av {weeks.length}</p>
       </div>
+
 
       {/* Warning when viewing non-active week */}
       {activePlanWeek && currentWeek !== activePlanWeek && (
