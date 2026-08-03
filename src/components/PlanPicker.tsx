@@ -16,7 +16,7 @@ interface PlanPickerProps {
   onBack?: () => void;
 }
 
-type Step = "select" | "profile" | "1rm" | "preferred-days" | "start-date" | "loading" | "builder" | "triathlon";
+type Step = "select" | "profile" | "flexible" | "1rm" | "preferred-days" | "start-date" | "loading" | "builder" | "triathlon";
 
 
 const defaultProfile: FitnessProfile = {
@@ -40,6 +40,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
   const [preferredDays, setPreferredDays] = useState<string[]>([]);
+  const [flexSessions, setFlexSessions] = useState(3);
+  const [flexWeeks, setFlexWeeks] = useState(8);
 
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
@@ -121,7 +123,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     } else {
       setPendingRmValues(undefined);
       setPendingProfile(profile);
-      setStep("preferred-days");
+      setStep(selectedTemplate?.isFlexible ? "flexible" : "preferred-days");
     }
 
   };
@@ -140,7 +142,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     const profile = profileOverride || fitnessProfile;
 
     let days = template.days;
-    if (template.generateFromProfile) {
+    if (template.isFlexible && template.generateFlexible) {
+      days = template.generateFlexible(profile, { sessionsPerWeek: flexSessions, weeks: flexWeeks });
+    } else if (template.generateFromProfile) {
       days = template.generateFromProfile(profile);
     } else if (template.generateDays && rmValues) {
       days = template.generateDays(rmValues, profile);
@@ -235,6 +239,79 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     );
   }
 
+  if (step === "flexible") {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <button
+          onClick={() => setStep("profile")}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Tillbaka
+        </button>
+
+        <div className="text-center space-y-2">
+          <CalendarDays className="w-10 h-10 text-primary mx-auto" />
+          <h2 className="text-xl font-black tracking-tight">Bygg din löpplan</h2>
+          <p className="text-sm text-muted-foreground">
+            Välj hur ofta du vill springa och hur länge planen ska pågå. Tempo och distanser anpassas efter din nivå.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground block">Löppass per vecka</label>
+          <div className="grid grid-cols-5 gap-2">
+            {[2, 3, 4, 5, 6].map((n) => (
+              <button
+                key={n}
+                onClick={() => setFlexSessions(n)}
+                className={`py-3 rounded-lg text-sm font-bold transition-all ${
+                  flexSessions === n
+                    ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    : "bg-secondary text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground block">Antal veckor</label>
+          <div className="grid grid-cols-5 gap-2">
+            {[4, 6, 8, 10, 12, 14, 16, 18, 20].map((n) => (
+              <button
+                key={n}
+                onClick={() => setFlexWeeks(n)}
+                className={`py-3 rounded-lg text-sm font-bold transition-all ${
+                  flexWeeks === n
+                    ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    : "bg-secondary text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-secondary/50 border border-border rounded-lg p-3 flex gap-2">
+          <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            {flexSessions} pass/vecka i {flexWeeks} veckor. Planen innehåller lugna pass, långpass{flexSessions >= 3 ? ", intervaller" : ""}{flexSessions >= 4 ? " och tröskelpass" : ""} med automatiska deload-veckor.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setStep("preferred-days")}
+          className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
+        >
+          Fortsätt
+        </button>
+      </div>
+    );
+  }
+
   if (step === "preferred-days") {
     const dayLabels: Record<string, string> = {
       "Mån": "Måndag", "Tis": "Tisdag", "Ons": "Onsdag", "Tors": "Torsdag",
@@ -249,7 +326,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       const profile = pendingProfile || fitnessProfile;
       let probeDays = selectedTemplate.days;
       try {
-        if (selectedTemplate.generateFromProfile) probeDays = selectedTemplate.generateFromProfile(profile);
+        if (selectedTemplate.isFlexible && selectedTemplate.generateFlexible) probeDays = selectedTemplate.generateFlexible(profile, { sessionsPerWeek: flexSessions, weeks: flexWeeks });
+        else if (selectedTemplate.generateFromProfile) probeDays = selectedTemplate.generateFromProfile(profile);
         else if (selectedTemplate.generateDays && pendingRmValues) probeDays = selectedTemplate.generateDays(pendingRmValues, profile);
       } catch { /* ignore */ }
       if (probeDays) {
@@ -258,7 +336,8 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       }
     }
     const back = () => {
-      if (needs1RM) setStep("1rm");
+      if (selectedTemplate?.isFlexible) setStep("flexible");
+      else if (needs1RM) setStep("1rm");
       else if (needsProfile) setStep("profile");
       else setStep("select");
     };
@@ -361,7 +440,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
         <div className="bg-card border border-border rounded-lg p-4 space-y-1">
           <p className="font-semibold text-sm">{selectedTemplate?.name}</p>
-          <p className="text-xs text-muted-foreground">{selectedTemplate?.weeks} veckor</p>
+          <p className="text-xs text-muted-foreground">{selectedTemplate?.isFlexible ? flexWeeks : selectedTemplate?.weeks} veckor</p>
         </div>
 
         {isEvent ? (
@@ -533,7 +612,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
         <div className="bg-card border border-border rounded-lg p-4 space-y-1">
           <p className="font-semibold text-sm">{selectedTemplate?.name}</p>
-          <p className="text-xs text-muted-foreground">{selectedTemplate?.weeks} veckor</p>
+          <p className="text-xs text-muted-foreground">{selectedTemplate?.isFlexible ? flexWeeks : selectedTemplate?.weeks} veckor</p>
         </div>
 
         <div className="space-y-3">
