@@ -860,7 +860,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             const totalLikes = likes[post.id] || 0;
             const canManage = isAdmin || post.user_id === userId;
             return (
-            <div key={post.id} data-post-id={post.id} className={`relative overflow-hidden rounded-2xl border bg-card shadow-md shadow-foreground/5 transition-all ${post.pinned ? "border-primary/40" : "border-border/50"} ${highlightedPostId === post.id ? "ring-2 ring-primary" : ""}`}>
+            <div key={post.id} data-post-id={post.id} className={`relative overflow-hidden rounded-2xl border bg-card shadow-soft transition-all ${post.pinned ? "border-primary/40" : "border-border/50"} ${highlightedPostId === post.id ? "ring-2 ring-primary" : ""}`}>
               {/* Type accent line */}
               {isWorkoutPost && <span aria-hidden className={`absolute inset-x-0 top-0 h-1 ${kindMeta.accent}`} />}
               {/* Pinned indicator */}
@@ -953,7 +953,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                       <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${kindMeta.badge}`}>
                         <KindIcon className="h-4 w-4" />
                       </span>
-                      <h3 className="text-[15px] font-bold leading-snug">{parsed.title}</h3>
+                      <h3 className="font-sans text-[15px] font-bold leading-snug tracking-normal">{parsed.title}</h3>
                     </div>
                   )}
                   {parsed.chips.length > 0 && (
