@@ -1608,9 +1608,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   const [completeCelebration, setCompleteCelebration] = useState<{ title: string; summary: WorkoutSummary } | null>(null);
   const [pendingShare, setPendingShare] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
+  const pendingShareRef = useRef<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
+  useEffect(() => { pendingShareRef.current = pendingShare; }, [pendingShare]);
   const closeCelebration = () => {
     setCompleteCelebration(null);
-    setPendingShare((p) => { if (p) setSharePromptDialog(p); return null; });
+    const p = pendingShareRef.current;
+    if (p) setSharePromptDialog(p);
+    setPendingShare(null);
   };
 
   // Share card
