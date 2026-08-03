@@ -86,6 +86,17 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const [completions, setCompletions] = useState<CompletionRow[]>([]);
   const [latestAchievement, setLatestAchievement] = useState<{ id: string; unlocked_at: string } | null>(null);
   const [achievementCount, setAchievementCount] = useState(0);
+  const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadUntrainedRegions(userId)
+      .then((regions) => { if (!cancelled) setUntrainedRegions(regions); })
+      .catch(() => { if (!cancelled) setUntrainedRegions([]); });
+    return () => { cancelled = true; };
+  }, [userId]);
+
+
 
   useEffect(() => {
     let cancelled = false;
