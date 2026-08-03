@@ -334,7 +334,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                       </span>
                   }
                   </div>
-                  <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-muted/60 rounded-full h-1.5 overflow-hidden">
                     <div
                     className={`h-full rounded-full transition-all duration-300 ${
                     goalProgress! >= 100 ? "bg-success" : "bg-primary"}`
