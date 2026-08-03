@@ -8,6 +8,7 @@ import TrainingCalendar from "@/components/TrainingCalendar";
 import Leaderboard from "@/components/Leaderboard";
 import UntrainedMuscles from "@/components/UntrainedMuscles";
 import AchievementsPanel from "@/components/AchievementsPanel";
+import AchievementsView from "@/components/AchievementsView";
 import MuscleBalanceWarning from "@/components/MuscleBalanceWarning";
 import { getWorkoutDistanceKm, getWorkoutDistanceByCategory } from "@/lib/workoutDistance";
 import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
@@ -260,6 +261,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [allChallenges, setAllChallenges] = useState<{ challenge_text: string; completed_at: string; challenge_date: string }[]>([]);
   const [showChallengeList, setShowChallengeList] = useState(false);
   const [achievementIds, setAchievementIds] = useState<string[]>([]);
+  const [achievementUnlockedAt, setAchievementUnlockedAt] = useState<Record<string, string>>({});
+  const [showAchievements, setShowAchievements] = useState(false);
   const getISOWeek = (d: Date) => {
     const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -286,7 +289,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         .select("plan_start_date, completion_data, plan_data")
         .eq("user_id", userId),
       supabase.from("user_achievements" as any)
-        .select("achievement_id")
+        .select("achievement_id, unlocked_at")
         .eq("user_id", userId)
         .order("unlocked_at", { ascending: false }),
     ]).then(async ([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
@@ -363,6 +366,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const storedAchievementIds = ((achievementData || []) as any[]).map((row) => row.achievement_id);
       const historicalAchievementMetrics = calculateAchievementMetrics([...achievementActiveCompletions, ...archivedCompletions], cCounts.all);
       const newlyUnlocked = await unlockEarnedAchievements(userId, historicalAchievementMetrics);
+      const stamps: Record<string, string> = {};
+      for (const row of ((achievementData || []) as any[])) {
+        if (row?.achievement_id && row?.unlocked_at) stamps[row.achievement_id] = row.unlocked_at;
+      }
+      const nowIso = new Date().toISOString();
+      for (const achievement of newlyUnlocked) stamps[achievement.id] = stamps[achievement.id] ?? nowIso;
+      setAchievementUnlockedAt(stamps);
       setAchievementIds([...new Set([...newlyUnlocked.map((achievement) => achievement.id), ...storedAchievementIds])]);
 
       const detailsMap = new Map<string, string>();
@@ -712,7 +722,18 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       <MuscleBalanceWarning userId={userId} />
       <DailyQuoteCard />
-      <AchievementsPanel unlockedIds={achievementIds} />
+      <AchievementsPanel
+        unlockedIds={achievementIds}
+        unlockedAt={achievementUnlockedAt}
+        onOpen={() => setShowAchievements(true)}
+      />
+      {showAchievements && (
+        <AchievementsView
+          unlockedIds={achievementIds}
+          unlockedAt={achievementUnlockedAt}
+          onClose={() => setShowAchievements(false)}
+        />
+      )}
 
       {/* View toggle */}
       <div className="flex gap-1 bg-secondary rounded-lg p-1">
