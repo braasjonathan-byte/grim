@@ -18,6 +18,7 @@ import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus
 import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 import { FeedSkeleton } from "@/components/LoadingSkeletons";
+import EmptyState from "@/components/EmptyState";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
@@ -849,7 +850,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                   ? "Lägg till fler vänner – eller dela ditt eget pass så syns det här."
                   : "Var den första att dela ett pass med gänget!"}
                 actionLabel="Dela ditt första inlägg"
-                onAction={() => setShowUpload(true)}
+                onAction={() => setShowCompose(true)}
                 secondaryLabel={feedFilter === "friends" ? "Hitta vänner" : undefined}
                 onSecondary={feedFilter === "friends" ? () => setSubTab("friends") : undefined}
               />
