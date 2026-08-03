@@ -176,7 +176,7 @@ export async function buildSurpriseReward(
   if (Math.random() > chance) return null;
 
   try {
-    const [completionsRes, achievementsRes, challengesRes] = await Promise.all([
+    const [completionsRes, achievementsRes, challengesRes, archivedRes] = await Promise.all([
       supabase
         .from("workout_completions")
         .select("done, updated_at, logged_weights, logged_distance_km")
@@ -184,7 +184,16 @@ export async function buildSurpriseReward(
         .eq("done", true),
       supabase.from("user_achievements").select("achievement_id").eq("user_id", userId),
       supabase.from("daily_challenge_completions").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("archived_plans").select("completion_data").eq("user_id", userId),
     ]);
+
+    // Archived plans hold historical completions that are no longer in
+    // workout_completions — they still count as logged workouts.
+    let archivedWorkouts = 0;
+    for (const row of (archivedRes.data || []) as any[]) {
+      const data = row?.completion_data;
+      if (Array.isArray(data)) archivedWorkouts += data.filter((c: any) => c?.done === true).length;
+    }
 
     const completions = (completionsRes.data || []) as any[];
     if (completions.length === 0) return null;
@@ -207,7 +216,7 @@ export async function buildSurpriseReward(
       monthWorkouts: monthMetrics.workouts,
       monthDistanceKm: monthMetrics.distanceKm,
       avgSessionVolumeKg,
-      totalWorkouts: metrics.workouts,
+      totalWorkouts: metrics.workouts + archivedWorkouts,
       summary,
     });
 
