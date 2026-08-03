@@ -16,6 +16,7 @@ import { checkInteractionAchievements } from "@/lib/achievements";
 import { emitPostInteraction, onPostInteraction } from "@/lib/postInteractionBus";
 import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId } from "@/lib/workoutSocialSync";
 import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
+import { FeedSkeleton } from "@/components/LoadingSkeletons";
 
 const FriendsView = lazy(() => import("./FriendsView"));
 const ChatView = lazy(() => import("./ChatView"));
