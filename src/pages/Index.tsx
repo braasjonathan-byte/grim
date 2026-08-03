@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple } from "lucide-react";
+import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple, Home } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 import { applyTheme, getStoredThemeId, storeThemeId, isThemeLocked } from "@/lib/themes";
 import grimIcon from "@/assets/grim-icon.webp";
@@ -38,8 +38,9 @@ const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
 const ToolsTab = lazy(() => import("@/components/ToolsTab"));
 const ChatView = lazy(() => import("@/components/ChatView"));
 const NutritionView = lazy(() => import("@/components/NutritionView"));
+const HomeView = lazy(() => import("@/components/HomeView"));
 
-type Tab = "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
+type Tab = "home" | "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
 
 interface FriendActivity {
   nickname: string;
@@ -129,7 +130,7 @@ const Index = () => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
     const urlTab = params.get("tab");
-    if (urlTab === "workout" || urlTab === "nutrition" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
+    if (urlTab === "home" || urlTab === "workout" || urlTab === "nutrition" || urlTab === "social" || urlTab === "friends" || urlTab === "chat" || urlTab === "calc" || urlTab === "stats" || urlTab === "settings") {
       const resolvedTab = (urlTab === "friends" || urlTab === "chat") ? "social" : urlTab;
       localStorage.setItem("grim_active_tab", resolvedTab);
       return resolvedTab as Tab;
@@ -141,7 +142,7 @@ const Index = () => {
     const saved = localStorage.getItem("grim_active_tab");
     if (saved === "profile" || saved === "settings") return "calc";
     if (saved === "friends" || saved === "chat") return "social";
-    return saved === "workout" || saved === "social" || saved === "calc" || saved === "stats" ? saved as Tab : "workout";
+    return saved === "home" || saved === "workout" || saved === "social" || saved === "calc" || saved === "stats" || saved === "nutrition" ? saved as Tab : "home";
   });
 
   // Bottom nav press animation
@@ -185,7 +186,7 @@ const Index = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as Tab;
-      if (detail === "workout" || detail === "nutrition" || detail === "stats" || detail === "social" || detail === "calc") {
+      if (detail === "home" || detail === "workout" || detail === "nutrition" || detail === "stats" || detail === "social" || detail === "calc") {
         setTab(detail);
       }
     };
@@ -787,6 +788,7 @@ const Index = () => {
 
   const socialBadge = friendActivityCount + unreadChats + unreadPosts + unreadAnnouncements;
   const tabs: {key: Tab;icon: typeof Dumbbell;label: string;badge?: number;}[] = [
+  { key: "home", icon: Home, label: "Hem" },
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "nutrition", icon: Apple, label: "Kost" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
@@ -909,6 +911,7 @@ const Index = () => {
       <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4" style={{ paddingBottom: bottomNavOffset }}>
         <PageTransition tabKey={tab}>
+          {tab === "home" && <HomeView userId={user.id} onNavigate={(t) => setTab(t as Tab)} />}
           {tab === "workout" && <>
             <OnboardingTutorial />
             <WorkoutView key={adminViewUserId || workoutRefreshKey} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
