@@ -17,8 +17,7 @@ Deno.serve(async (req) => {
 
   try {
     const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
-    const opSecret = req.headers.get("x-op-secret") || "";
-    if (!jwt && !opSecret) return json({ error: "Ej inloggad" }, 401);
+    if (!jwt) return json({ error: "Ej inloggad" }, 401);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -26,18 +25,11 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    let authorized = false;
-    if (opSecret) {
-      const { data: row } = await admin.from("cron_secrets").select("secret").eq("name", "cron").maybeSingle();
-      authorized = !!row?.secret && row.secret === opSecret;
-      if (!authorized) return json({ error: "Ogiltig hemlighet" }, 403);
-    } else {
-      const { data: userData } = await admin.auth.getUser(jwt);
-      const caller = userData?.user;
-      if (!caller) return json({ error: "Ej autentiserad" }, 401);
-      const { data: isAdmin } = await admin.rpc("has_role", { _user_id: caller.id, _role: "admin" });
-      if (!isAdmin) return json({ error: "Endast admin" }, 403);
-    }
+    const { data: userData } = await admin.auth.getUser(jwt);
+    const caller = userData?.user;
+    if (!caller) return json({ error: "Ej autentiserad" }, 401);
+    const { data: isAdmin } = await admin.rpc("has_role", { _user_id: caller.id, _role: "admin" });
+    if (!isAdmin) return json({ error: "Endast admin" }, 403);
 
     const { nickname, password } = await req.json();
     if (typeof nickname !== "string" || typeof password !== "string" || password.length < 8) {
