@@ -12,6 +12,8 @@ import { Capacitor } from "@capacitor/core";
 import RouteMap from "@/components/RouteMap";
 import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 import { toPng } from "html-to-image";
+import SwipeableSetRow from "@/components/SwipeableSetRow";
+import { buildPrIndex, isPrWeight } from "@/lib/prBadges";
 
 import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
