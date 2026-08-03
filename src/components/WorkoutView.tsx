@@ -12,6 +12,8 @@ import { Capacitor } from "@capacitor/core";
 import RouteMap from "@/components/RouteMap";
 import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 import { toPng } from "html-to-image";
+import SwipeableSetRow from "@/components/SwipeableSetRow";
+import { buildPrIndex, isPrWeight } from "@/lib/prBadges";
 
 import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
@@ -1438,6 +1440,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
   const [completions, setCompletions] = useState<Record<string, Completion>>({});
+  const weekScrollRef = useRef<HTMLDivElement>(null);
   const [inlineIntervalRunner, setInlineIntervalRunner] = useState<{
     intervals: Array<{ time: string; tempo: string; dist: string }>;
     exerciseName: string;
@@ -1447,6 +1450,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [activePlanWeek, setActivePlanWeek] = useState<number | null>(null);
   const [initialWeekSet, setInitialWeekSet] = useState(false);
   const [weeks, setWeeks] = useState<number[]>([]);
+  // Keep the selected week centered in the horizontal week carousel
+  useEffect(() => {
+    const el = weekScrollRef.current?.querySelector('[data-week-active="true"]') as HTMLElement | null;
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [currentWeek, weeks.length]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   // Archived completions for weight history lookup
@@ -2719,6 +2727,9 @@ const estimateCalories = (
       await safeUpsertCompletion(week, day, { logged_weights: updated });
     }
   };
+
+  // Best/second-best logged weight per exercise — used for the automatic PR badge
+  const prIndex = useMemo(() => buildPrIndex(Object.values(completions)), [completions]);
 
   // Get per-set logged data (kg/reps)
   const getSetData = (weekDayKey: string, exerciseName: string): Array<{kg: string; reps: string}> => {
@@ -5107,6 +5118,7 @@ const estimateCalories = (
                                        const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defaultKg;
                                        return (
                                          <div key={si}>
+                                           <SwipeableSetRow done={isSetDone} isPR={isPrWeight(prIndex, name, saved?.kg)} onToggle={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)}>
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
@@ -5115,6 +5127,8 @@ const estimateCalories = (
                                            <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                           </div>
+                                          </SwipeableSetRow>
+
                                           {(() => {
                                             const currentKg = parseFloat(saved?.kg || defaultKg);
                                             if (!isNaN(currentKg) && currentKg < 0) {
@@ -6262,80 +6276,64 @@ const estimateCalories = (
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
-      {/* Week navigation - swipe to change week */}
+      {/* Week navigation — horizontally swipeable carousel */}
       <div className="flex flex-col gap-2">
-        <div
-          className="flex items-center justify-center py-2 select-none touch-pan-x"
-          onTouchStart={(e) => {
-            (e.currentTarget as any)._swipeX = e.touches[0].clientX;
-          }}
-          onTouchEnd={(e) => {
-            const startX = (e.currentTarget as any)._swipeX;
-            if (startX == null) return;
-            const dx = e.changedTouches[0].clientX - startX;
-            if (Math.abs(dx) > 40) {
-              if (dx < 0 && weekIdx < weeks.length - 1) setCurrentWeek(weeks[weekIdx + 1]);
-              else if (dx > 0 && weekIdx > 0) setCurrentWeek(weeks[weekIdx - 1]);
-            }
-            (e.currentTarget as any)._swipeX = null;
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => weekIdx > 0 && setCurrentWeek(weeks[weekIdx - 1])}
-              disabled={weekIdx <= 0}
-              className="p-1 text-muted-foreground disabled:opacity-20"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-1.5 min-w-[120px] justify-center">
-              {weeks.map((w) => {
-                const isCurrent = w === currentWeek;
-                const isActive = w === activePlanWeek;
-                const distance = Math.abs(weeks.indexOf(w) - weekIdx);
-                if (distance > 2) return null;
-                return (
-                  <button
-                    key={w}
-                    onClick={() => setCurrentWeek(w)}
-                    className={`flex-shrink-0 rounded-full text-xs font-semibold transition-all ${
-                      isCurrent
-                        ? "px-4 py-1.5 bg-primary text-primary-foreground"
-                        : isActive
-                        ? "px-3 py-1 bg-muted text-foreground border border-primary/30"
-                        : distance === 1
-                        ? "px-3 py-1 text-muted-foreground hover:bg-muted"
-                        : "px-2.5 py-1 text-muted-foreground/50 text-[10px]"
-                    }`}
-                  >
-                    V{w}
-                  </button>
-                );
-              })}
-              {weekIdx >= weeks.length - 2 && (
+        <div className="flex items-center gap-1 py-1 select-none">
+          <button
+            onClick={() => weekIdx > 0 && setCurrentWeek(weeks[weekIdx - 1])}
+            disabled={weekIdx <= 0}
+            className="hidden sm:flex p-1 text-muted-foreground disabled:opacity-20 flex-shrink-0"
+            aria-label="Föregående vecka"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div
+            ref={weekScrollRef}
+            className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-none snap-x snap-mandatory px-[40%] py-1 touch-pan-x"
+          >
+            {weeks.map((w) => {
+              const isCurrent = w === currentWeek;
+              const isActive = w === activePlanWeek;
+              return (
                 <button
-                  onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
-                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground/50 border border-dashed border-border hover:bg-muted"
-                  title="Lägg till vecka"
+                  key={w}
+                  data-week-active={isCurrent ? "true" : "false"}
+                  onClick={() => setCurrentWeek(w)}
+                  className={`flex-shrink-0 snap-center rounded-full font-semibold transition-all duration-200 ${
+                    isCurrent
+                      ? "px-5 py-2 text-sm bg-primary text-primary-foreground scale-100"
+                      : isActive
+                      ? "px-3.5 py-1.5 text-xs bg-muted text-foreground border border-primary/30 scale-95 opacity-80"
+                      : "px-3.5 py-1.5 text-xs text-muted-foreground bg-secondary/50 scale-90 opacity-60"
+                  }`}
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  V{w}
                 </button>
-              )}
-            </div>
+              );
+            })}
             <button
-              onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
-              disabled={weekIdx >= weeks.length - 1}
-              className="p-1 text-muted-foreground disabled:opacity-20"
+              onClick={() => { setAddWeekSourceWeek(weeks.filter(w => w > 0).slice(-1)[0] || 1); setShowAddWeekDialog(true); }}
+              className="flex-shrink-0 snap-center w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground/60 border border-dashed border-border hover:bg-muted"
+              title="Lägg till vecka"
             >
-              <ChevronRight className="w-5 h-5" />
+              <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
+          <button
+            onClick={() => weekIdx < weeks.length - 1 && setCurrentWeek(weeks[weekIdx + 1])}
+            disabled={weekIdx >= weeks.length - 1}
+            className="hidden sm:flex p-1 text-muted-foreground disabled:opacity-20 flex-shrink-0"
+            aria-label="Nästa vecka"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
         <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
           <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
         <p className="text-[10px] text-muted-foreground text-center">{progress}% avklarat · Vecka {currentWeek} av {weeks.length}</p>
       </div>
+
 
       {/* Warning when viewing non-active week */}
       {activePlanWeek && currentWeek !== activePlanWeek && (
@@ -6381,7 +6379,7 @@ const estimateCalories = (
         const todayName = todayDayNames[new Date().getDay()];
         return (
         <div className="flex flex-col gap-2">
-          {/* Day tabs — show all 7 weekdays, rest days are non-clickable */}
+          {/* Day tabs — letter + status indicator (today / done / upcoming) */}
           <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
             {DAYS.map((dayName) => {
               const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(p.day, dayName));
@@ -6393,28 +6391,33 @@ const estimateCalories = (
               if (isRest) {
                 if (isBeforeStart) {
                   return (
-                    <button
+                    <div
                       key={dayName}
-                      disabled
-                      className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
+                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
                       title="Innan träningsplanen startade"
                     >
-                      {dayName}
-                    </button>
+                      <span className="text-xs font-medium">{dayName}</span>
+                      <span className="h-1.5 w-1.5" />
+                    </div>
                   );
                 }
                 return (
                   <button
                     key={dayName}
                     onClick={() => { setEmptyDayName(""); setEmptyDayChoice({ week: currentWeek, day: dayName }); }}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition-all ${
                       isToday
-                        ? "bg-warning/10 text-warning/80 border border-warning/30 hover:bg-warning/20"
+                        ? "bg-warning/10 text-warning/80 ring-2 ring-warning/50 hover:bg-warning/20"
                         : "bg-secondary/40 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
                     }`}
                     title="Vilodag — tryck för att lägga till pass"
                   >
-                    {dayName}
+                    <span className="text-xs font-medium">{dayName}</span>
+                    {isToday ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+                    ) : (
+                      <span className="h-1.5 w-1.5" />
+                    )}
                   </button>
                 );
               }
@@ -6429,12 +6432,14 @@ const estimateCalories = (
                 <button
                   key={k}
                   onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl text-xs font-medium transition-all ${
+                    isToday ? "ring-2 ring-warning/60" : ""
+                  } ${
                     isActive
                       ? done
                         ? "bg-success text-success-foreground"
                         : isToday
-                        ? "bg-warning/10 text-warning border border-warning/30"
+                        ? "bg-warning/10 text-warning"
                         : "bg-primary text-primary-foreground"
                       : done
                       ? "bg-success/20 text-success"
@@ -6444,12 +6449,23 @@ const estimateCalories = (
                       ? "bg-warning/20 text-warning"
                       : "bg-secondary text-muted-foreground"
                   }`}
+                  title={done ? "Genomfört" : skipped ? "Överhoppat" : isToday ? "Idag" : "Kommande pass"}
                 >
-                  {getBaseDay(plan.day)}
+                  <span>{getBaseDay(plan.day)}</span>
+                  {done ? (
+                    <Check className={`h-2.5 w-2.5 ${isActive ? "text-success-foreground" : "text-success"}`} strokeWidth={4} />
+                  ) : skipped ? (
+                    <XCircle className="h-2.5 w-2.5 text-destructive" />
+                  ) : isToday ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full border border-current opacity-50" />
+                  )}
                 </button>
               );
             })}
           </div>
+
         </div>
         );
       })()}
@@ -8939,6 +8955,7 @@ const estimateCalories = (
                                        const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defKg;
                                        return (
                                          <div key={si}>
+                                           <SwipeableSetRow done={isSetDone} isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)} onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)}>
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
@@ -8971,6 +8988,7 @@ const estimateCalories = (
                                             </>
                                           )}
                                           </div>
+                                          </SwipeableSetRow>
                                           {!isBodyweight && (() => {
                                             const currentKg = parseFloat(saved?.kg || defKg);
                                             if (isWeightedBw && !isNaN(currentKg) && currentKg !== 0) {
