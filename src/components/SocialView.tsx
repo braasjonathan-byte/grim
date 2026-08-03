@@ -677,13 +677,18 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         <div className="space-y-4">
           {/* Feed filter – compact segment */}
           <div className="flex items-center justify-between gap-2">
-            <div className="inline-flex rounded-full bg-muted/50 p-0.5">
+            <div className="relative inline-flex rounded-full bg-muted/40 p-1">
+              <span
+                aria-hidden
+                className="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-card transition-transform duration-300 ease-out"
+                style={{ transform: `translateX(${feedFilter === "all" ? 0 : 100}%)` }}
+              />
               {(["all", "friends"] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFeedFilter(f)}
-                  className={`rounded-full px-3.5 py-1 text-[11px] font-semibold transition-colors ${
-                    feedFilter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  className={`relative z-10 w-[72px] rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                    feedFilter === f ? "text-foreground" : "text-muted-foreground"
                   }`}
                 >
                   {f === "all" ? "Alla" : "Vänner"}

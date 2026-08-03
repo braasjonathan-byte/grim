@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon, CheckCircle } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon, CheckCircle, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { format, parseISO } from "date-fns";
@@ -1362,26 +1363,25 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
 
       {/* Search */}
       <div className="space-y-2">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && searchUsers()}
-              placeholder="Sök efter användarnamn..."
-              className="w-full bg-secondary text-foreground text-sm pl-9 pr-3 py-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-            />
-          </div>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && searchUsers()}
+            placeholder="Sök efter användarnamn..."
+            className="w-full bg-muted/50 text-foreground text-sm pl-4 pr-12 py-2.5 rounded-2xl border-none outline-none focus:ring-2 focus:ring-primary/40 placeholder:text-muted-foreground"
+          />
           <button
             onClick={searchUsers}
             disabled={searching}
-            className="px-4 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-md"
+            aria-label="Sök"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60"
           >
-            Sök
+            <Search className="w-4 h-4" />
           </button>
         </div>
+
 
         {searchResults.length > 0 && (
           <div className="bg-card border border-border rounded-lg divide-y divide-border animate-fade-in">
@@ -1430,10 +1430,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
         </div>
       )}
 
-      {/* Friends list - moved before suggested friends */}
-
       {/* Friends list */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <h3 className="text-sm font-semibold text-muted-foreground">
           Dina vänner ({friends.length})
         </h3>
@@ -1445,58 +1443,96 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
             emoji="🤝"
           />
         ) : (
-          friends.map((friend) => {
-            const recentCount = friendActivities.filter(a => a.nickname === friend.profile.nickname).length;
-            return (
-              <div
-                key={friend.id}
-                className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors"
-              >
-                <button
-                  onClick={() => viewFriendWorkouts(friend)}
-                  className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                >
-                  <div className="relative w-9 h-9 flex-shrink-0">
-                    <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
-                      {friend.profile.avatar_url ? (
-                        <img src={friend.profile.avatar_url} alt={friend.profile.nickname} className="w-full h-full object-cover" />
+          <div className="relative">
+            <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
+              {friends.map((friend) => {
+                const recentCount = friendActivities.filter(a => a.nickname === friend.profile.nickname).length;
+                const initial = friend.profile.nickname[0]?.toUpperCase() || "?";
+                const hue = (initial.charCodeAt(0) * 37) % 360;
+                return (
+                  <div
+                    key={friend.id}
+                    id={`friend-${initial}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => viewFriendWorkouts(friend)}
+                    onKeyDown={(e) => e.key === "Enter" && viewFriendWorkouts(friend)}
+                    className="w-full flex items-center gap-3 p-3.5 cursor-pointer transition-colors hover:bg-muted/40 active:bg-muted/70"
+                  >
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden"
+                        style={{ background: `linear-gradient(135deg, hsl(${hue} 70% 88%), hsl(${(hue + 40) % 360} 70% 78%))` }}
+                      >
+                        {friend.profile.avatar_url ? (
+                          <img src={friend.profile.avatar_url} alt={friend.profile.nickname} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-bold" style={{ color: `hsl(${hue} 60% 28%)` }}>{initial}</span>
+                        )}
+                      </div>
+                      {recentCount > 0 ? (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-card flex items-center justify-center text-[9px]">
+                          🔥
+                        </span>
                       ) : (
-                        <span className="text-sm font-bold text-primary">{friend.profile.nickname[0]?.toUpperCase()}</span>
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-muted-foreground/40" />
+                      )}
+                      {friend.profile.is_honorary && (
+                        <div className="absolute -top-1 -left-1 z-10 -rotate-[22deg]">
+                          <Crown className="w-4 h-4 text-warning" />
+                        </div>
                       )}
                     </div>
-                    {friend.profile.is_honorary && (
-                      <div className="absolute -top-1 -left-1 z-10 -rotate-[22deg]">
-                        <Crown className="w-4 h-4 text-warning" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-semibold text-sm truncate">{friend.profile.nickname}</span>
+                        {friend.profile.is_honorary && <HonoraryBadge size="xs" nickname={friend.profile.nickname} />}
                       </div>
+                      {recentCount > 0 && (
+                        <span className="text-[11px] font-medium text-success">{recentCount} pass senaste tiden</span>
+                      )}
+                    </div>
+                    {isAdmin ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Fler val"
+                            className="p-1.5 rounded-full text-muted-foreground hover:bg-muted transition-colors"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); viewFriendWorkouts(friend); }}>
+                            <Pencil className="w-4 h-4 mr-2" /> Redigera pass
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/60" />
                     )}
                   </div>
-                  <span className="font-semibold text-sm">{friend.profile.nickname}</span>
-                  {friend.profile.is_honorary && <HonoraryBadge size="xs" nickname={friend.profile.nickname} />}
-                  {recentCount > 0 && (
-                    <span className="px-1.5 py-0.5 bg-success/20 text-success text-[10px] font-bold rounded-full">
-                      🔥 {recentCount} pass
-                    </span>
-                  )}
-                </button>
-                <div className="flex items-center gap-2">
-                  {isAdmin && (
-                    <button
-                      onClick={() => viewFriendWorkouts(friend)}
-                      className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-colors"
-                      title="Redigera pass"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button onClick={() => viewFriendWorkouts(friend)} className="text-muted-foreground">
-                    <ChevronRight className="w-4 h-4" />
+                );
+              })}
+            </div>
+            {friends.length > 15 && (
+              <div className="pointer-events-auto absolute right-0 top-0 flex h-full flex-col justify-center gap-[1px] pr-0.5 text-[9px] font-semibold text-muted-foreground">
+                {Array.from(new Set(friends.map(f => (f.profile.nickname[0] || "?").toUpperCase()))).sort().map(letter => (
+                  <button
+                    key={letter}
+                    onClick={() => document.getElementById(`friend-${letter}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                    className="leading-none hover:text-primary"
+                  >
+                    {letter}
                   </button>
-                </div>
+                ))}
               </div>
-            );
-          })
+            )}
+          </div>
         )}
       </div>
+
 
       {/* Suggested friends */}
       {suggestedFriends.length > 0 && (
