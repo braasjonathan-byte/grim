@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check, Users, Plus } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { avatarGradient } from "@/lib/avatarGradient";
+import { useTypingListener } from "@/hooks/useTypingIndicator";
+import TypingDots from "@/components/TypingDots";
 import ChatConversation from "./ChatConversation";
 import GroupChatConversation from "./GroupChatConversation";
 import CreateGroupDialog from "./CreateGroupDialog";
@@ -51,6 +53,7 @@ interface SupportConversation {
 
 const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId }: ChatViewProps) => {
   const [friends, setFriends] = useState<Friend[]>([]);
+  const { isTyping } = useTypingListener(userId);
   const [lastMessages, setLastMessages] = useState<Map<string, LastMessage>>(new Map());
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
   const [loading, setLoading] = useState(true);
@@ -598,7 +601,9 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
                           </span>
                         )}
                       </div>
-                      {lastMsg ? (
+                      {isTyping(friend.user_id) ? (
+                        <TypingDots className="text-xs font-medium" />
+                      ) : lastMsg ? (
                         <p className={`text-xs truncate ${unread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                           {lastMsg.message || '🏋️ Delade ett pass'}
                         </p>

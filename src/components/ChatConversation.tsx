@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { avatarGradient } from "@/lib/avatarGradient";
+import { useTypingListener, useTypingSender } from "@/hooks/useTypingIndicator";
+import TypingDots from "@/components/TypingDots";
 import { toast } from "sonner";
 
 interface Friend {
@@ -40,6 +42,9 @@ const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const { isTyping } = useTypingListener(userId);
+  const { notifyTyping, stopTyping } = useTypingSender(userId, friend.user_id);
+  const friendIsTyping = isTyping(friend.user_id);
   const [sending, setSending] = useState(false);
   const [importingWorkout, setImportingWorkout] = useState<any>(null);
   const [importing, setImporting] = useState(false);
@@ -132,6 +137,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       message_type: "text",
     });
     setNewMessage("");
+    stopTyping();
     setSending(false);
     inputRef.current?.focus();
 
@@ -269,7 +275,11 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             </span>
           )}
         </div>
-        <span className="font-semibold text-sm">{friend.nickname}</span>
+        <div className="min-w-0">
+          <span className="block font-semibold text-sm truncate">{friend.nickname}</span>
+          {friendIsTyping && <TypingDots className="text-[11px]" />}
+        </div>
+
       </div>
 
       {/* Messages */}
@@ -490,7 +500,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         <input
           ref={inputRef}
           value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
+          onChange={e => { setNewMessage(e.target.value); if (e.target.value.trim()) notifyTyping(); else stopTyping(); }}
           onKeyDown={handleKeyDown}
           placeholder="Skriv ett meddelande..."
           className="flex-1 text-sm bg-muted rounded-full px-4 py-2.5 outline-none focus:ring-2 focus:ring-primary/30"
