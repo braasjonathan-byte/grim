@@ -265,27 +265,27 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => shiftDay(-1)} className="p-2 hover:bg-accent"><ChevronLeft className="w-5 h-5" /></button>
+        <button onClick={() => shiftDay(-1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
         <div className="text-center">
           <p className="font-serif text-lg capitalize">{dateLabel}</p>
           {!isToday && <button onClick={() => setDate(new Date())} className="text-[10px] text-primary font-bold">Gå till idag</button>}
         </div>
-        <button onClick={() => shiftDay(1)} className="p-2 hover:bg-accent"><ChevronRight className="w-5 h-5" /></button>
+        <button onClick={() => shiftDay(1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
       </div>
 
-      <div className="border border-border bg-card p-4 space-y-4">
+      <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
           <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <Target className="w-3 h-3" /> Mål
           </button>
-          <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <ChefHat className="w-3 h-3" /> Recept
           </button>
-          <button onClick={() => setTemplatesOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <Bookmark className="w-3 h-3" /> Mallar
           </button>
         </div>
@@ -318,7 +318,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </SortableContext>
         </DndContext>
 
-        <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full flex items-center justify-center gap-1 py-2 border border-dashed border-input text-xs font-bold">
+        <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full pill-btn bg-primary/10 text-primary py-2.5 text-xs hover:bg-primary/20">
           <Plus className="w-3 h-3" /> Lägg till måltid
         </button>
 
