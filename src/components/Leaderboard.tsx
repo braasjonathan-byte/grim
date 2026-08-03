@@ -88,7 +88,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
       <div className="flex items-center justify-between">
         <button
           onClick={handlePrevMonth}
-          className="p-1.5 rounded-lg bg-secondary text-foreground hover:bg-muted transition-colors"
+          className="w-8 h-8 icon-round bg-secondary text-foreground hover:bg-muted transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -105,7 +105,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
         </div>
         <button
           onClick={handleNextMonth}
-          className="p-1.5 rounded-lg bg-secondary text-foreground hover:bg-muted transition-colors"
+          className="w-8 h-8 icon-round bg-secondary text-foreground hover:bg-muted transition-colors"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -117,28 +117,28 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
       ) : entries.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4">Inga registrerade pass</p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {entries.map((entry, i) => (
             <div
               key={entry.user_id}
-              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+              className={`flex items-center gap-3 p-3 rounded-2xl shadow-soft transition-colors ${
                 entry.user_id === userId
-                  ? "bg-primary/5 border-primary/30"
-                  : "border-border bg-secondary"
+                  ? "bg-primary/5 ring-1 ring-primary/30"
+                  : "bg-card border border-border/40"
               }`}
             >
               {/* Rank */}
-              <div className="w-7 text-center flex-shrink-0">
+              <div className="w-7 flex-shrink-0 flex items-center justify-center">
                 {i < 3 ? (
-                  <Medal className={`w-5 h-5 mx-auto ${getMedalColor(i)}`} />
+                  <Medal className={`w-5 h-5 ${getMedalColor(i)}`} strokeWidth={2} />
                 ) : (
                   <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>
                 )}
               </div>
 
               {/* Avatar */}
-              <div className="relative w-8 h-8 flex-shrink-0">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+              <div className="relative w-9 h-9 flex-shrink-0">
+                <div className="w-9 h-9 icon-round bg-primary/15 overflow-hidden">
                   {entry.avatar_url ? (
                     <img src={entry.avatar_url} alt={entry.nickname} className="w-full h-full object-cover" />
                   ) : (
@@ -146,8 +146,8 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
                   )}
                 </div>
                 {entry.is_honorary && (
-                  <div className="absolute -top-1.5 -left-1.5 z-10 -rotate-[22deg]">
-                    <Crown className="w-4 h-4 text-warning" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 icon-round bg-warning ring-2 ring-card">
+                    <Crown className="w-2.5 h-2.5 text-warning-foreground" />
                   </div>
                 )}
               </div>
@@ -165,6 +165,7 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
           ))}
         </div>
       )}
+
     </div>
   );
 };

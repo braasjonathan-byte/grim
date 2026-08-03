@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 import MacroRings from "./MacroRings";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
@@ -53,8 +55,8 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
     zIndex: isDragging ? 50 : "auto" as const,
   };
   return (
-    <div ref={setNodeRef} style={style} className="border border-border bg-card">
-      <div className="flex items-center justify-between bg-muted/40 px-2 py-2 gap-2">
+    <div ref={setNodeRef} style={style} className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden">
+      <div className="flex items-center justify-between bg-muted/30 px-2.5 py-2.5 gap-2">
         {isCustom && (
           <button {...attributes} {...listeners} className="p-1 -ml-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground" aria-label="Dra för att flytta">
             <GripVertical className="w-4 h-4" />
@@ -64,34 +66,46 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           <p className="text-sm font-bold capitalize font-serif truncate">{meal}</p>
           <p className="text-[10px] text-muted-foreground">{Math.round(mealKcal)} kcal</p>
         </div>
-        <div className="flex items-center gap-1">
-          {isCustom && (
-            <>
-              <button onClick={onRename} className="p-1.5" aria-label="Byt namn"><Pencil className="w-3.5 h-3.5" /></button>
-              <button onClick={onDelete} className="p-1.5 text-destructive" aria-label="Ta bort"><Trash2 className="w-3.5 h-3.5" /></button>
-            </>
-          )}
-          <button onClick={onAdd} className="flex items-center gap-1 text-xs font-bold text-primary ml-1 px-1">
+        <div className="flex items-center gap-1.5">
+          <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5">
             <Plus className="w-3.5 h-3.5" /> Lägg till
           </button>
+          {isCustom && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Fler val">
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl">
+                <DropdownMenuItem onClick={onRename}>
+                  <Pencil className="w-3.5 h-3.5 mr-2" /> Byt namn
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Ta bort
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       {logs.length > 0 && (
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-border/40">
           {logs.map((l) => (
-            <li key={l.id} className="flex items-center justify-between px-3 py-2">
+            <li key={l.id} className="flex items-center justify-between px-3 py-2.5">
               <div className="min-w-0">
                 <p className="text-sm truncate">{l.item_name}</p>
                 <p className="text-[10px] text-muted-foreground tabular-nums">
                   {l.amount} {l.unit} · {Math.round(Number(l.kcal))} kcal · P{Number(l.protein_g).toFixed(0)} F{Number(l.fat_g).toFixed(0)} K{Number(l.carbs_g).toFixed(0)}
                 </p>
               </div>
-              <button onClick={() => onEditLog(l)} className="p-1" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
+              <button onClick={() => onEditLog(l)} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>
       )}
     </div>
+
   );
 }
 
@@ -251,27 +265,27 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => shiftDay(-1)} className="p-2 hover:bg-accent"><ChevronLeft className="w-5 h-5" /></button>
+        <button onClick={() => shiftDay(-1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
         <div className="text-center">
           <p className="font-serif text-lg capitalize">{dateLabel}</p>
           {!isToday && <button onClick={() => setDate(new Date())} className="text-[10px] text-primary font-bold">Gå till idag</button>}
         </div>
-        <button onClick={() => shiftDay(1)} className="p-2 hover:bg-accent"><ChevronRight className="w-5 h-5" /></button>
+        <button onClick={() => shiftDay(1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
       </div>
 
-      <div className="border border-border bg-card p-4 space-y-4">
+      <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
           <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <Target className="w-3 h-3" /> Mål
           </button>
-          <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <ChefHat className="w-3 h-3" /> Recept
           </button>
-          <button onClick={() => setTemplatesOpen(true)} className="flex items-center justify-center gap-1 py-2 border border-input text-xs font-bold">
+          <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <Bookmark className="w-3 h-3" /> Mallar
           </button>
         </div>
@@ -304,7 +318,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </SortableContext>
         </DndContext>
 
-        <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full flex items-center justify-center gap-1 py-2 border border-dashed border-input text-xs font-bold">
+        <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full pill-btn bg-primary/10 text-primary py-2.5 text-xs hover:bg-primary/20">
           <Plus className="w-3 h-3" /> Lägg till måltid
         </button>
 

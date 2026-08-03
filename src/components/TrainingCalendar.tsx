@@ -204,15 +204,15 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
         <h3 className="text-lg font-bold tracking-tight">Träningskalender</h3>
       </div>
 
-      <div className="border border-border rounded-lg p-3 bg-secondary">
+      <div className="rounded-2xl p-4 bg-card shadow-soft border border-border/40">
         <div className="flex items-center justify-between mb-3">
-          <button onClick={prevMonth} className="p-1 text-muted-foreground hover:text-foreground">
+          <button onClick={prevMonth} className="w-8 h-8 icon-round bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-sm font-bold">
             {MONTH_NAMES[month]} {year}
           </span>
-          <button onClick={nextMonth} className="p-1 text-muted-foreground hover:text-foreground">
+          <button onClick={nextMonth} className="w-8 h-8 icon-round bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -225,7 +225,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5">
           {calendarDays.map((date, i) => {
             if (!date) return <div key={`empty-${i}`} />;
             const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -235,43 +235,43 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
             const isToday = dateStr === today;
 
             return (
-              <div
-                key={dateStr}
-                className={`aspect-square flex items-center justify-center rounded-md text-xs font-medium transition-colors ${
-                  isDone
-                    ? "bg-success/20 text-success font-bold"
-                    : isSkipped
-                    ? "bg-destructive/20 text-destructive font-bold"
-                    : isPending
-                    ? "bg-primary/10 text-primary border border-primary/30 font-bold"
-                    : "text-muted-foreground"
-                } ${isToday ? "ring-1 ring-primary" : ""}`}
-              >
-                {date.getDate()}
+              <div key={dateStr} className="aspect-square flex items-center justify-center">
+                <div
+                  className={`w-full aspect-square icon-round text-xs transition-colors ${
+                    isToday
+                      ? "bg-primary text-primary-foreground font-bold shadow-soft"
+                      : isDone
+                      ? "bg-success/20 text-success font-bold"
+                      : isSkipped
+                      ? "bg-destructive/15 text-destructive font-bold"
+                      : isPending
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-muted-foreground/70"
+                  }`}
+                >
+                  {date.getDate()}
+                </div>
               </div>
             );
           })}
         </div>
 
-        <div className="flex items-center justify-center gap-4 mt-3 pt-2 border-t border-border">
-          <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 rounded-sm bg-success/20 border border-success/40" />
-            <span className="text-[10px] text-muted-foreground">Tränat</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 rounded-sm bg-destructive/20 border border-destructive/40" />
-            <span className="text-[10px] text-muted-foreground">Missat</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 rounded-sm bg-primary/10 border border-primary/30" />
-            <span className="text-[10px] text-muted-foreground">Planerat</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2.5 rounded-sm border border-border" />
-            <span className="text-[10px] text-muted-foreground">Vilodag</span>
-          </div>
+        <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1.5 mt-4 pt-3 border-t border-border/40">
+          {[
+            ["bg-success/25", "Tränat"],
+            ["bg-primary", "Idag"],
+            ["bg-primary/15", "Planerat"],
+            ["bg-destructive/20", "Missat"],
+            ["bg-muted", "Vilodag"],
+          ].map(([cls, label]) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div className={`w-2.5 h-2.5 rounded-full ${cls}`} />
+              <span className="text-[10px] text-muted-foreground">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
+
     </div>
   );
 };

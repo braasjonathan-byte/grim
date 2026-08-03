@@ -400,7 +400,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
               setPrimed(true);
               setFullscreen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-md disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all disabled:opacity-50"
             title={otherActive ? "En GPS-inspelning pågår redan på en annan övning" : undefined}
           >
             <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
@@ -763,7 +763,7 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Sök övning…"
-              className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary"
+              className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors"
               autoFocus
             />
             <div className="max-h-72 overflow-y-auto space-y-1">
@@ -1059,9 +1059,11 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
       </div>
       {showModePicker && (
-        <div className="flex items-center gap-1 flex-wrap">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Enhet</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Enhet</span>
+          <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1">
           {availableModes.map((m) => {
+
             const label =
               m === "kmh" ? "km/h" :
               m === "minkm" ? "min/km" :
@@ -1074,11 +1076,13 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
                 key={m}
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setBikeMode(m); setTempo(""); setAutoField(null); }}
-                className={`px-2 py-1 text-[10px] font-semibold rounded-md border transition-colors ${bikeMode === m ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary"}`}
+                className={`px-3 py-1.5 text-[10px] font-semibold rounded-full transition-all ${bikeMode === m ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`}
               >{label}</button>
             );
           })}
+          </div>
         </div>
+
       )}
       <GpsTrackerControl
         onStop={(km, sec, gpsRoute) => {
@@ -1175,11 +1179,11 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans ({distUnit})</label>
-          <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || "—"} className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || "—"} className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
         <div>
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
         </div>
       </div>
       <div className="flex gap-2">
@@ -5380,7 +5384,7 @@ const estimateCalories = (
                                 min="1"
                                 value={setsInput}
                                 onChange={(e) => setSetsInput(e.target.value)}
-                                className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold" />
+                                className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold" />
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
@@ -5390,7 +5394,7 @@ const estimateCalories = (
                                 min="1"
                                 value={repsInput}
                                 onChange={(e) => setRepsInput(e.target.value)}
-                                className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold" />
+                                className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold" />
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vikt (kg)</label>
@@ -5400,7 +5404,7 @@ const estimateCalories = (
                                 onChange={(e) => setWeightInput(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && addExerciseWithWeight(weightInput.trim() || null)}
                                 placeholder="—"
-                                className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </div>
                           <div className="flex gap-2">
@@ -5466,11 +5470,11 @@ const estimateCalories = (
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Antal intervaller</label>
-                              <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vila (min)</label>
-                              <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </div>
                         )}
@@ -5498,7 +5502,7 @@ const estimateCalories = (
                               </div>
                               <div>
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
-                                <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               </div>
                             </div>
                             {(() => {
@@ -5516,7 +5520,7 @@ const estimateCalories = (
                             })()}
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                              <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </>
                         ) : conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (parseInt(condIntervalsInput) || 0) > 0 ? (
@@ -6393,7 +6397,7 @@ const estimateCalories = (
                   return (
                     <div
                       key={dayName}
-                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
+                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
                       title="Innan träningsplanen startade"
                     >
                       <span className="text-xs font-medium">{dayName}</span>
@@ -6405,7 +6409,7 @@ const estimateCalories = (
                   <button
                     key={dayName}
                     onClick={() => { setEmptyDayName(""); setEmptyDayChoice({ week: currentWeek, day: dayName }); }}
-                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl transition-all ${
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full transition-all ${
                       isToday
                         ? "bg-warning/10 text-warning/80 ring-2 ring-warning/50 hover:bg-warning/20"
                         : "bg-secondary/40 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
@@ -6432,7 +6436,7 @@ const estimateCalories = (
                 <button
                   key={k}
                   onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
-                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-1 rounded-2xl text-xs font-medium transition-all ${
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isToday ? "ring-2 ring-warning/60" : ""
                   } ${
                     isActive
@@ -7418,7 +7422,7 @@ const estimateCalories = (
                                         </div>
                                         <div>
                                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
-                                          <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                          <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                         </div>
                                       </div>
                                       {(() => {
@@ -7436,7 +7440,7 @@ const estimateCalories = (
                                       })()}
                                       <div>
                                         <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                                        <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                        <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                       </div>
                                     </>
                                   ) : (
@@ -7455,17 +7459,17 @@ const estimateCalories = (
                                     </div>
                                     <div>
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                                      <input type="text" inputMode="numeric" pattern="[0-9:]*" value={condTempoInput} onChange={(e) => setCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                      <input type="text" inputMode="numeric" pattern="[0-9:]*" value={condTempoInput} onChange={(e) => setCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                     </div>
                                   </div>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div>
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                                      <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => setCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                      <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => setCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                     </div>
                                     <div>
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                                      <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                      <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                     </div>
                                   </div>
                                     </>
@@ -9134,11 +9138,11 @@ const estimateCalories = (
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Antal intervaller</label>
-                            <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vila (min)</label>
-                            <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                         </div>
                       )}
@@ -9158,7 +9162,7 @@ const estimateCalories = (
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
-                              <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </div>
                           {(() => {
@@ -9176,7 +9180,7 @@ const estimateCalories = (
                           })()}
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                            <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-background text-foreground text-sm px-3 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                         </>
                       ) : conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (parseInt(condIntervalsInput) || 0) > 0 ? (

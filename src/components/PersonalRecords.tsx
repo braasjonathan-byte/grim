@@ -257,13 +257,14 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   };
 
   return (
-    <div className="space-y-3 bg-secondary">
+    <div className="space-y-3">
       {/* Clickable header */}
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 group w-full text-left">
 
-        <Trophy className="w-5 h-5 text-warning" />
+        <span className="w-8 h-8 icon-round bg-warning/15"><Trophy className="w-4 h-4 text-warning" /></span>
+
         <h3 className="text-lg font-bold tracking-tight group-hover:text-primary transition-colors">
           Personliga rekord
         </h3>
@@ -281,12 +282,12 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           return (
             <div
               key={pr.exercise}
-              className="border border-border rounded-lg p-3 space-y-1 relative bg-secondary">
+              className="rounded-2xl p-3 space-y-1 relative bg-card shadow-soft border border-border/40">
 
               {/* Star button */}
               <button
                 onClick={(e) => {e.stopPropagation();toggleStar(pr.exercise);}}
-                className="absolute top-2 right-2">
+                className="absolute top-2 right-2 w-6 h-6 icon-round hover:bg-muted/60 transition-colors">
 
                 <Star
                   className={`w-3.5 h-3.5 transition-colors ${
@@ -296,6 +297,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                   } />
 
               </button>
+
 
               <div className="flex items-center gap-1 pr-5">
                 <span className="text-[10px] text-muted-foreground font-medium truncate flex-1">
@@ -332,7 +334,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                       </span>
                   }
                   </div>
-                  <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-muted/60 rounded-full h-1.5 overflow-hidden">
                     <div
                     className={`h-full rounded-full transition-all duration-300 ${
                     goalProgress! >= 100 ? "bg-success" : "bg-primary"}`

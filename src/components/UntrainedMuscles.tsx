@@ -135,12 +135,14 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
   if (loading || untrainedRegions.length === 0) return null;
 
   return (
-    <div className="border border-border rounded-lg p-4 bg-secondary">
+    <div className="rounded-2xl p-4 bg-card shadow-soft border border-border/40">
       <Collapsible>
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Dumbbell className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 icon-round bg-primary/10">
+                <Dumbbell className="w-4 h-4 text-primary" />
+              </div>
               <h3 className="text-sm font-bold font-sans">Ej tränade muskler (7 dagar)</h3>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
@@ -149,7 +151,8 @@ const UntrainedMuscles = ({ userId }: UntrainedMusclesProps) => {
         <CollapsibleContent className="pt-3">
           <div className="space-y-1.5">
             {untrainedRegions.map(region => (
-              <div key={region} className="bg-secondary/50 rounded-md px-3 py-2">
+              <div key={region} className="bg-muted/40 rounded-xl px-3 py-2.5">
+
                 <p className="text-xs font-bold text-foreground">{REGION_LABELS[region]}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {(REGION_EXERCISES[region] || []).join(" · ")}

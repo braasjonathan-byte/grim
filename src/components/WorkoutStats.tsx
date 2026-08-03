@@ -135,7 +135,7 @@ const DailyQuoteCard = () => {
   );
   const quote = motivationalQuotes[dayOfYear % motivationalQuotes.length];
   return (
-    <div className="border border-border rounded-lg p-4 text-center flex flex-col items-center justify-center min-h-[120px] bg-secondary">
+    <div className="rounded-2xl p-4 text-center flex flex-col items-center justify-center min-h-[120px] bg-card shadow-soft">
       <Flame className="w-6 h-6 text-primary mx-auto mb-2" />
       <p className="text-sm font-medium leading-relaxed">{quote}</p>
     </div>);
@@ -676,27 +676,28 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
 
       {/* Period toggle */}
-      <div className="flex gap-1 bg-secondary rounded-lg p-1">
+      <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
         {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
         <button
           key={p}
           onClick={() => setSummaryPeriod(p)}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-          summaryPeriod === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
+          summaryPeriod === p ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
           }>
             {summaryPeriodLabels[p]}
           </button>
         )}
       </div>
 
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="border border-border rounded-lg p-3 text-center bg-secondary">
+        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
           <CheckCircle className="w-5 h-5 text-success mx-auto mb-1" />
           <p className="text-2xl font-black">{totalDone}</p>
           <p className="text-[10px] text-muted-foreground">Genomförda</p>
         </div>
-        <div className="border border-border rounded-lg p-3 text-center bg-secondary">
+        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
           <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
           <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
@@ -706,14 +707,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </div>
         <button
           onClick={() => setShowChallengeList(true)}
-          className="border border-border rounded-lg p-3 text-center transition-colors cursor-pointer bg-secondary"
+          className="rounded-2xl p-3 text-center transition-colors cursor-pointer bg-card shadow-soft"
         >
           <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
         {perCategoryStats.map(({ meta, km, passes }) => (
-          <div key={meta.key} className="border border-border rounded-lg p-3 text-center bg-secondary">
+          <div key={meta.key} className="rounded-2xl p-3 text-center bg-card shadow-soft">
             <div className="text-2xl leading-none mb-1">{meta.icon}</div>
             <p className="text-2xl font-black">
               {Math.round(km * 10) / 10} <span className="text-xs font-normal text-muted-foreground">km</span>
@@ -741,19 +742,20 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       )}
 
       {/* View toggle */}
-      <div className="flex gap-1 bg-secondary rounded-lg p-1">
+      <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
         {([["week", "Vecka"], ["month", "Månad"], ["year", "År"]] as const).map(([v, label]) =>
         <button
           key={v}
           onClick={() => setView(v)}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
-          view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`
+          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
+          view === v ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
           }>
 
             {label}
           </button>
         )}
       </div>
+
 
       {/* Stats list */}
       {stats.length === 0 ?
@@ -765,7 +767,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           const pctDone = scheduled > 0 ? Math.round(b.doneWithExercise / scheduled * 100) : 0;
           const pctSkipped = scheduled > 0 ? Math.round(b.skipped / scheduled * 100) : 0;
           return (
-            <div key={b.label} className="border border-border rounded-lg p-3 bg-secondary">
+            <div key={b.label} className="rounded-2xl p-3 bg-card shadow-soft">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold">{b.label}</span>
                   <div className="flex items-center gap-2">
@@ -780,16 +782,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-secondary rounded-full h-2 overflow-hidden flex">
+                <div className="w-full bg-muted/60 rounded-full h-2.5 overflow-hidden flex gap-0.5 p-0">
                   <div
-                  className="h-full bg-success transition-all duration-300"
+                  className="h-full bg-success rounded-full transition-all duration-300"
                   style={{ width: `${pctDone}%` }} />
 
                   <div
-                  className="h-full bg-destructive transition-all duration-300"
+                  className="h-full bg-destructive rounded-full transition-all duration-300"
                   style={{ width: `${pctSkipped}%` }} />
 
                 </div>
+
               </div>);
 
         })}

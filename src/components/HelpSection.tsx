@@ -200,14 +200,14 @@ const HelpSection = () => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   return (
-    <div id="help-section" data-tour="tools-help" className="border border-border bg-secondary overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+    <div id="help-section" data-tour="tools-help" className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
         <HelpCircle className="w-4 h-4 text-primary" />
         <h3 className="text-sm font-bold">Hjälp & tips</h3>
       </div>
 
       {/* Tour triggers */}
-      <div className="px-4 py-3 border-b border-border space-y-2 bg-card">
+      <div className="px-4 py-3 border-b border-border/40 space-y-2 bg-card">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rundtur</span>
@@ -216,13 +216,13 @@ const HelpSection = () => {
         <div className="flex gap-2">
           <button
             onClick={() => startTour("short")}
-            className="flex-1 bg-primary text-primary-foreground text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
+            className="flex-1 rounded-full bg-primary text-primary-foreground text-xs font-bold px-3 py-2 shadow-soft active:scale-95 transition-transform"
           >
             Kort rundtur
           </button>
           <button
             onClick={() => startTour("long")}
-            className="flex-1 bg-secondary text-foreground border border-border text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
+            className="flex-1 rounded-full bg-secondary text-foreground text-xs font-bold px-3 py-2 shadow-soft active:scale-95 transition-transform"
           >
             Lång rundtur
           </button>
@@ -239,7 +239,7 @@ const HelpSection = () => {
             <button
               key={v}
               onClick={() => startTour(v)}
-              className="flex items-center justify-center gap-1.5 border border-border text-foreground text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
+              className="flex items-center justify-center gap-1.5 rounded-full bg-muted/50 text-foreground text-xs font-bold px-3 py-2 active:scale-95 transition-transform"
             >
               <Icon className="w-3.5 h-3.5" /> {label}
             </button>
@@ -248,7 +248,7 @@ const HelpSection = () => {
 
       </div>
 
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border/40">
         {categories.map((cat) => {
           const isOpen = expandedCategory === cat.title;
           const Icon = cat.icon;

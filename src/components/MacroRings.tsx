@@ -39,7 +39,7 @@ export default function MacroRings({ kcal, protein, fat, carbs, targets, compact
           <div key={ring.label} className="flex flex-col items-center">
             <div className="relative" style={{ width: size, height: size }}>
               <svg width={size} height={size} className="-rotate-90">
-                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
+                <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted) / 0.6)" strokeWidth={stroke} />
                 <circle
                   cx={size / 2}
                   cy={size / 2}
@@ -48,7 +48,7 @@ export default function MacroRings({ kcal, protein, fat, carbs, targets, compact
                   stroke={ring.color}
                   strokeWidth={stroke}
                   strokeDasharray={`${dash} ${c}`}
-                  strokeLinecap="butt"
+                  strokeLinecap="round"
                   style={{ transition: "stroke-dasharray 0.4s ease" }}
                 />
               </svg>

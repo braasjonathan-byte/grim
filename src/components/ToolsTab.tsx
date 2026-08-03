@@ -117,10 +117,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         type="button"
         data-tour="tools-profile"
         onClick={() => setSubView("settings")}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <SlidersHorizontal className="h-4 w-4" />
           </span>
           <span className="min-w-0">
@@ -136,10 +136,10 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         type="button"
         data-tour="tools-helpers"
         onClick={() => setSubView("helpers")}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-lg border border-border bg-secondary hover:bg-secondary/70 transition-colors"
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Wrench className="h-4 w-4" />
           </span>
           <span className="min-w-0">
@@ -342,7 +342,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       {isAdmin && !editMode && (
         <button
           onClick={handleStartEdit}
-          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary bg-primary/10 rounded-full shadow-soft active:scale-[0.97] hover:bg-primary/20 transition-colors"
         >
           <Pencil className="w-4 h-4" />
           Redigera ordning
@@ -354,13 +354,13 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary-foreground bg-primary rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary-foreground bg-primary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <><Check className="w-4 h-4" /> Sparat!</> : <><Save className="w-4 h-4" /> Spara för alla</>}
           </button>
           <button
             onClick={() => setEditMode(false)}
-            className="py-2 px-4 text-sm font-semibold text-muted-foreground bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+            className="py-2 px-4 text-sm font-semibold text-muted-foreground bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:bg-secondary/80 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -400,14 +400,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         <>
           <button
             onClick={() => setConfirmDelete1(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-lg hover:opacity-90 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
           >
             <Trash2 className="w-4 h-4" />
             Radera konto
           </button>
           <button
             onClick={() => setConfirmLogout(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-lg hover:opacity-90 transition-opacity"
+            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
           >
             <LogOut className="w-4 h-4" />
             Logga ut
