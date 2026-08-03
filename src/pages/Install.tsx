@@ -1,8 +1,9 @@
 import { QRCodeSVG } from "qrcode.react";
 import grimIcon from "@/assets/grim-icon.webp";
-import { Download, Monitor, Share, MoreVertical, Plus, ChevronRight, ArrowUp, CheckCircle2 } from "lucide-react";
+import { Download, Monitor, Share, MoreVertical, Plus, ChevronRight, ArrowUp, CheckCircle2, ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 
 type Platform = "ios" | "android" | "desktop";
 
@@ -152,6 +153,7 @@ const ChromeBarMock = () => (
 );
 
 const Install = () => {
+  const navigate = useNavigate();
   const appUrl = "https://grim.lovable.app";
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -224,7 +226,7 @@ const Install = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-6 text-center">
+    <div className="relative min-h-[100dvh] bg-background flex flex-col items-center justify-center p-6 text-center">
       <Helmet>
         <title>Installera Grim – Träningsapp på iPhone & Android</title>
         <meta name="description" content="Installera Grim som app på din iPhone eller Android-telefon på under en minut – samma upplevelse som en native app." />
@@ -233,8 +235,18 @@ const Install = () => {
         <meta property="og:description" content="Lägg till Grim på din hemskärm – fungerar precis som en native app." />
         <meta property="og:url" content="https://grim.lovable.app/install" />
       </Helmet>
+
+      {/* Back button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute top-4 left-4 inline-flex items-center justify-center w-10 h-10 rounded-xl bg-card border border-border text-foreground active:scale-95 transition-transform"
+        aria-label="Tillbaka"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </button>
+
       {/* Header */}
-      <img src={grimIcon} alt="Grim app icon" className="w-16 h-16 rounded-2xl mb-3 shadow-lg" />
+      <img src={grimIcon} alt="Grim app icon" className="w-16 h-16 rounded-2xl mb-3" />
       <h1 className="text-xl font-bold text-foreground mb-0.5">Installera Grim</h1>
       <p className="text-muted-foreground text-xs mb-6 max-w-xs">
         Lägg till appen på din hemskärm – den fungerar precis som en vanlig app.
