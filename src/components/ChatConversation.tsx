@@ -266,8 +266,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             </div>
             {group.msgs.map(msg => {
               const isMine = msg.sender_id === userId;
+              const showSeen = isMine && msg.read && msg.id === lastReadMineId;
               return (
-                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1.5`}>
+                <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} mb-1.5`}>
                   <div className={`max-w-[80%] px-3.5 py-2 ${
                     isMine
                       ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
@@ -282,13 +283,20 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                     ) : (
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                     )}
-                    <p className={`text-[10px] mt-0.5 ${isMine ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                    <p className={`flex items-center gap-1 text-[10px] mt-0.5 ${isMine ? 'justify-end text-primary-foreground/60' : 'text-muted-foreground'}`}>
                       {new Date(msg.created_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
+                      {isMine && (msg.read
+                        ? <CheckCheck className="w-3 h-3" aria-label="Sedd" />
+                        : <Check className="w-3 h-3" aria-label="Skickad" />)}
                     </p>
                   </div>
+                  {showSeen && (
+                    <span className="mt-0.5 mr-1 text-[10px] text-muted-foreground animate-fade-in">Sedd</span>
+                  )}
                 </div>
               );
             })}
+
           </div>
         ))}
 
