@@ -1059,9 +1059,11 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
       </div>
       {showModePicker && (
-        <div className="flex items-center gap-1 flex-wrap">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Enhet</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Enhet</span>
+          <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1">
           {availableModes.map((m) => {
+
             const label =
               m === "kmh" ? "km/h" :
               m === "minkm" ? "min/km" :
