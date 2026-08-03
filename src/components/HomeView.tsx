@@ -82,7 +82,6 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const [completions, setCompletions] = useState<CompletionRow[]>([]);
   const [latestAchievement, setLatestAchievement] = useState<{ id: string; unlocked_at: string } | null>(null);
   const [achievementCount, setAchievementCount] = useState(0);
-  const [weeklyGoal, setWeeklyGoal] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -159,7 +158,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
     return dayKeys.size;
   }, [completions, currentWeek]);
 
-  const goal = weeklyGoal ?? (weekPlanned > 0 ? weekPlanned : 3);
+  const goal = weekPlanned > 0 ? weekPlanned : 3;
   const progressPct = goal > 0 ? Math.min(100, Math.round((weekCompleted / goal) * 100)) : 0;
 
   const streak = useMemo(
