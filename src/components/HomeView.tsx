@@ -240,10 +240,15 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
             <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
               {todayDone ? <CheckCircle2 className="w-5 h-5" /> : <Dumbbell className="w-5 h-5" />}
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Dagens pass</p>
-              <p className="text-sm font-semibold">
-                {todaysPlans.length === 0 ? "Vilodag" : todayDone ? "Klarmarkerat" : "Redo att köra"}
+              <p className="text-sm font-semibold truncate">
+                {todaysPlans.length === 0
+                  ? "Vilodag"
+                  : todaysPlans
+                      .map((p) => p.session_name?.trim())
+                      .filter(Boolean)
+                      .join(" + ") || (todayDone ? "Klarmarkerat" : "Redo att köra")}
               </p>
             </div>
           </div>
