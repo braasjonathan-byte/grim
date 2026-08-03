@@ -370,7 +370,7 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
         <button
           onClick={() => setShowCreateGroup(true)}
           data-tour="social-chat"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-primary text-primary-foreground text-xs font-bold active:scale-95 transition-transform"
+          className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 bg-primary text-primary-foreground text-xs font-bold active:scale-95 transition-transform"
         >
           <Plus className="w-3.5 h-3.5" />
           Grupp
@@ -391,22 +391,25 @@ const ChatView = ({ userId, isAdmin = false, isPremium = false, initialFriendId 
       )}
 
       {groups.length > 0 && (
-        <div className="mb-2 shrink-0 space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Grupper</p>
-          {groups.map(g => (
-            <button
-              key={g.id}
-              onClick={() => setSelectedGroup({ id: g.id, name: g.name })}
-              className="w-full flex items-center gap-3 p-2 hover:bg-muted/50 transition-colors text-left border border-border"
-            >
-              <div className="w-8 h-8 bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 text-primary" />
-              </div>
-              <span className="flex-1 text-sm font-semibold truncate">{g.name}</span>
-            </button>
-          ))}
+        <div className="mb-3 shrink-0 space-y-1.5">
+          <h3 className="text-sm font-semibold text-muted-foreground px-0.5">Grupper</h3>
+          <div className="rounded-2xl bg-card shadow-soft overflow-hidden divide-y divide-border/50">
+            {groups.map(g => (
+              <button
+                key={g.id}
+                onClick={() => setSelectedGroup({ id: g.id, name: g.name })}
+                className="w-full flex items-center gap-3 p-3 transition-colors text-left hover:bg-muted/40 active:bg-muted/70"
+              >
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 text-primary" />
+                </div>
+                <span className="flex-1 text-sm font-semibold truncate">{g.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center py-8">
