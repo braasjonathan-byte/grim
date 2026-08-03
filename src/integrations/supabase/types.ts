@@ -1000,6 +1000,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           deletion_scheduled_at: string | null
+          display_title: string | null
           experience_level: string | null
           gender: string | null
           height_cm: number | null
@@ -1031,6 +1032,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           deletion_scheduled_at?: string | null
+          display_title?: string | null
           experience_level?: string | null
           gender?: string | null
           height_cm?: number | null
@@ -1062,6 +1064,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           deletion_scheduled_at?: string | null
+          display_title?: string | null
           experience_level?: string | null
           gender?: string | null
           height_cm?: number | null
