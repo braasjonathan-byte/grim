@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check, Users, Plus } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
+import { avatarGradient } from "@/lib/avatarGradient";
 import ChatConversation from "./ChatConversation";
 import GroupChatConversation from "./GroupChatConversation";
 import CreateGroupDialog from "./CreateGroupDialog";
