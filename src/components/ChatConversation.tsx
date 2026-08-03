@@ -42,6 +42,9 @@ const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const { isTyping } = useTypingListener(userId);
+  const { notifyTyping, stopTyping } = useTypingSender(userId, friend.user_id);
+  const friendIsTyping = isTyping(friend.user_id);
   const [sending, setSending] = useState(false);
   const [importingWorkout, setImportingWorkout] = useState<any>(null);
   const [importing, setImporting] = useState(false);
