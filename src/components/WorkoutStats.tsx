@@ -782,16 +782,17 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
                     </span>
                   </div>
                 </div>
-                <div className="w-full bg-secondary rounded-full h-2 overflow-hidden flex">
+                <div className="w-full bg-muted/60 rounded-full h-2.5 overflow-hidden flex gap-0.5 p-0">
                   <div
-                  className="h-full bg-success transition-all duration-300"
+                  className="h-full bg-success rounded-full transition-all duration-300"
                   style={{ width: `${pctDone}%` }} />
 
                   <div
-                  className="h-full bg-destructive transition-all duration-300"
+                  className="h-full bg-destructive rounded-full transition-all duration-300"
                   style={{ width: `${pctSkipped}%` }} />
 
                 </div>
+
               </div>);
 
         })}
