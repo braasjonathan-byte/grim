@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Dumbbell, X, Check, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { avatarGradient } from "@/lib/avatarGradient";
 import { toast } from "sonner";
 
@@ -52,6 +52,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   const [selectedImportWeek, setSelectedImportWeek] = useState(1);
   const [confirmTarget, setConfirmTarget] = useState<{ week: number; day: string; hasExisting: boolean } | null>(null);
 
+  // Last message I sent that the friend has read → carries the "Sedd" label
+  const lastReadMineId = [...messages].reverse().find(m => m.sender_id === userId && m.read)?.id;
+
   useEffect(() => {
     fetchMessages();
     markAsRead();
@@ -68,10 +71,15 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
           if (msg.receiver_id === userId) markAsRead();
         }
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages" }, (payload) => {
+        const msg = payload.new as ChatMessage;
+        setMessages(prev => prev.map(m => (m.id === msg.id ? { ...m, ...msg } : m)));
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [friend.user_id]);
+
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -97,7 +105,21 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       .eq("sender_id", friend.user_id)
       .eq("receiver_id", userId)
       .eq("read", false);
+    setMessages(prev => prev.map(m => (m.sender_id === friend.user_id && !m.read ? { ...m, read: true } : m)));
   };
+
+  // Re-mark as read when the user returns to the conversation
+  useEffect(() => {
+    const onFocus = () => { if (document.visibilityState === "visible") markAsRead(); };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [friend.user_id]);
+
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -266,8 +288,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             </div>
             {group.msgs.map(msg => {
               const isMine = msg.sender_id === userId;
+              const showSeen = isMine && msg.read && msg.id === lastReadMineId;
               return (
-                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} mb-1.5`}>
+                <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} mb-1.5`}>
                   <div className={`max-w-[80%] px-3.5 py-2 ${
                     isMine
                       ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
@@ -282,13 +305,20 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                     ) : (
                       <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                     )}
-                    <p className={`text-[10px] mt-0.5 ${isMine ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                    <p className={`flex items-center gap-1 text-[10px] mt-0.5 ${isMine ? 'justify-end text-primary-foreground/60' : 'text-muted-foreground'}`}>
                       {new Date(msg.created_at).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}
+                      {isMine && (msg.read
+                        ? <CheckCheck className="w-3 h-3" aria-label="Sedd" />
+                        : <Check className="w-3 h-3" aria-label="Skickad" />)}
                     </p>
                   </div>
+                  {showSeen && (
+                    <span className="mt-0.5 mr-1 text-[10px] text-muted-foreground animate-fade-in">Sedd</span>
+                  )}
                 </div>
               );
             })}
+
           </div>
         ))}
 
