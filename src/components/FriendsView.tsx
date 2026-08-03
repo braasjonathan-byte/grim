@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon, CheckCircle } from "lucide-react";
+import { Search, UserPlus, Check, X, ChevronDown, ChevronUp, Users, MessageSquare, Send, Dumbbell, Footprints, Moon, Bike, ChevronLeft, ChevronRight, Sparkles, Pencil, Save, Plus, Crown, User, CalendarIcon, CheckCircle, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
 import { format, parseISO } from "date-fns";
