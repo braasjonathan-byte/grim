@@ -52,6 +52,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   const [selectedImportWeek, setSelectedImportWeek] = useState(1);
   const [confirmTarget, setConfirmTarget] = useState<{ week: number; day: string; hasExisting: boolean } | null>(null);
 
+  // Last message I sent that the friend has read → carries the "Sedd" label
+  const lastReadMineId = [...messages].reverse().find(m => m.sender_id === userId && m.read)?.id;
+
   useEffect(() => {
     fetchMessages();
     markAsRead();
@@ -68,10 +71,15 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
           if (msg.receiver_id === userId) markAsRead();
         }
       })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_messages" }, (payload) => {
+        const msg = payload.new as ChatMessage;
+        setMessages(prev => prev.map(m => (m.id === msg.id ? { ...m, ...msg } : m)));
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [friend.user_id]);
+
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
