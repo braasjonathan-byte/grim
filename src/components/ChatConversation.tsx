@@ -275,7 +275,11 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             </span>
           )}
         </div>
-        <span className="font-semibold text-sm">{friend.nickname}</span>
+        <div className="min-w-0">
+          <span className="block font-semibold text-sm truncate">{friend.nickname}</span>
+          {friendIsTyping && <TypingDots className="text-[11px]" />}
+        </div>
+
       </div>
 
       {/* Messages */}
