@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import HonoraryBadge from "./HonoraryBadge";
 import ImageCarousel from "./ImageCarousel";
 import WorkoutCheerButton from "./WorkoutCheerButton";
+import FlameReaction from "./FlameReaction";
+import { parseWorkoutCaption } from "@/lib/parseWorkoutCaption";
 import { lazy, Suspense } from "react";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { checkInteractionAchievements } from "@/lib/achievements";
@@ -793,15 +795,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
             });
 
             return sortedPosts.map(post => (
-            <div key={post.id} data-post-id={post.id} className={`border rounded-xl overflow-hidden bg-card transition-all ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"} ${highlightedPostId === post.id ? "ring-2 ring-primary shadow-lg" : ""}`}>
+            <div key={post.id} data-post-id={post.id} className={`border rounded-2xl overflow-hidden bg-card shadow-sm transition-all ${post.pinned ? "border-primary/50 ring-1 ring-primary/20" : "border-border"} ${highlightedPostId === post.id ? "ring-2 ring-primary shadow-lg" : ""}`}>
               {/* Pinned indicator */}
               {post.pinned && (
-                <div className="px-4 py-1.5 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
+                <div className="px-3 py-1 bg-primary/10 flex items-center gap-1.5 text-[10px] font-semibold text-primary">
                   <Pin className="w-3 h-3" /> Nålat inlägg
                 </div>
               )}
               {/* Post header */}
-              <div className="px-4 py-3 flex items-center justify-between">
+              <div className="px-3 py-2 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -861,7 +863,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
               {/* Caption */}
               {post.caption && (
-                <p className="px-4 py-2 text-sm whitespace-pre-line">{post.caption}</p>
+                <p className="px-3 pt-2 text-sm whitespace-pre-line leading-snug">{post.caption}</p>
               )}
 
               {/* Like + comment buttons */}
@@ -886,7 +888,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
 
               {/* Comments */}
               {openComments.has(post.id) && (
-                <div className="px-4 py-3 border-t border-border/50 space-y-3 bg-secondary/20">
+                <div className="px-3 py-2.5 border-t border-border/40 space-y-2 bg-secondary/20">
                   {(comments[post.id] || []).length === 0 && (
                     <p className="text-xs text-muted-foreground text-center">Inga kommentarer än. Var först!</p>
                   )}
