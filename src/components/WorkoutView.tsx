@@ -6207,6 +6207,7 @@ const estimateCalories = (
         open={!!completeCelebration}
         title={completeCelebration?.title}
         summary={completeCelebration?.summary ?? null}
+        userId={userId}
         onClose={closeCelebration}
       />
       <ShareWorkoutPromptDialog
@@ -10242,6 +10243,7 @@ const estimateCalories = (
       open={!!completeCelebration}
       title={completeCelebration?.title}
       summary={completeCelebration?.summary ?? null}
+      userId={userId}
       onClose={closeCelebration}
     />
     <ShareWorkoutPromptDialog

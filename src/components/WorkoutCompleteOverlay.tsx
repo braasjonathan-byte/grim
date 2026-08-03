@@ -1,14 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ConfettiBurst from "@/components/ConfettiBurst";
 import { formatVolumeKg, type WorkoutSummary } from "@/lib/workoutSummary";
 import { hapticLight } from "@/lib/haptics";
+import { buildSurpriseReward, type SurpriseReward } from "@/lib/surpriseRewards";
 
 interface WorkoutCompleteOverlayProps {
   open: boolean;
   title?: string;
   summary: WorkoutSummary | null;
+  userId?: string;
   onClose: () => void;
 }
 
@@ -16,10 +18,35 @@ interface WorkoutCompleteOverlayProps {
  * Short "Bra jobbat!" celebration shown right after a workout is completed,
  * with a summary of sets, volume, exercises and any personal records.
  */
-const WorkoutCompleteOverlay = ({ open, title, summary, onClose }: WorkoutCompleteOverlayProps) => {
+const WorkoutCompleteOverlay = ({ open, title, summary, userId, onClose }: WorkoutCompleteOverlayProps) => {
+  const [surprise, setSurprise] = useState<SurpriseReward | null>(null);
+
   useEffect(() => {
     if (open) hapticLight();
   }, [open]);
+
+  // Random but genuine "surprise" reward, revealed a beat after the summary
+  useEffect(() => {
+    if (!open) {
+      setSurprise(null);
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    buildSurpriseReward(userId || "", summary).then((reward) => {
+      if (cancelled || !reward) return;
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        setSurprise(reward);
+        hapticLight();
+      }, 900);
+    });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId]);
 
   if (!open) return null;
 
@@ -74,6 +101,29 @@ const WorkoutCompleteOverlay = ({ open, title, summary, onClose }: WorkoutComple
               {prs.length === 1 ? "Nytt personligt rekord" : `${prs.length} nya personliga rekord`}
             </p>
             <p className="text-sm mt-1">{prs.join(", ")}</p>
+          </div>
+        )}
+
+        {surprise && (
+          <div className="relative rounded-2xl bg-primary/10 border border-primary/25 p-3.5 text-left animate-scale-in">
+            {surprise.confetti && <ConfettiBurst count={16} className="top-0" />}
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 shrink-0 rounded-full bg-primary/15 flex items-center justify-center text-lg">
+                {surprise.emoji}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">{surprise.title}</p>
+                <p className="text-sm mt-0.5 leading-snug">{surprise.text}</p>
+                {typeof surprise.progress === "number" && (
+                  <div className="mt-2 h-1.5 w-full rounded-full bg-primary/15 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-700"
+                      style={{ width: `${Math.min(100, Math.round(surprise.progress * 100))}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
