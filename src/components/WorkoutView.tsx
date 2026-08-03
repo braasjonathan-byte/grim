@@ -2291,7 +2291,8 @@ const estimateCalories = (
         const lw = (completions[key] as any)?.logged_weights;
         setCompleteCelebration({
           title: plan?.session_name?.trim() || "",
-          summary: summarizeCompletion(lw, prIndex),
+          summary: summarizeCompletion(lw, prIndex, new Date()),
+
         });
       } catch {}
 
