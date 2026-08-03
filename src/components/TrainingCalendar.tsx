@@ -73,10 +73,52 @@ const resolveCompletionDate = (
   return null;
 };
 
+interface DayStats {
+  sets: number;
+  volume: number;
+}
+
+/** Summarise completed sets + total volume (kg) from a logged_weights object */
+const summarizeLoggedWeights = (lw: any): DayStats => {
+  const stats: DayStats = { sets: 0, volume: 0 };
+  if (!lw || typeof lw !== "object") return stats;
+  let markerSets = 0;
+  for (const [key, val] of Object.entries(lw)) {
+    if (key.startsWith("__sets__") && typeof val === "string") {
+      markerSets += val.split("").filter((c) => c === "1").length;
+    }
+  }
+  const hadMarkers = markerSets > 0;
+  stats.sets = markerSets;
+  for (const [key, val] of Object.entries(lw)) {
+    if (!key.startsWith("__setdata__")) continue;
+    const exName = key.replace("__setdata__", "");
+    const setsStr = (lw[`__sets__${exName}`] as string) || "";
+    try {
+      const data = typeof val === "string" ? JSON.parse(val) : val;
+      if (!Array.isArray(data)) continue;
+      const done = setsStr
+        ? data.filter((_: any, i: number) => setsStr[i] === "1")
+        : data.filter((s: any) => (parseFloat(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0);
+      if (!hadMarkers) stats.sets += done.length;
+      for (const s of done) {
+        stats.volume += (parseFloat(s?.kg) || 0) * (parseInt(s?.reps) || 0);
+      }
+    } catch {
+      // ignore malformed set data
+    }
+  }
+  return stats;
+};
+
+const formatVolume = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k kg` : `${Math.round(v)} kg`);
+
 const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
   const [doneDates, setDoneDates] = useState<Set<string>>(new Set());
   const [skippedDates, setSkippedDates] = useState<Set<string>>(new Set());
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set());
+  const [dayStats, setDayStats] = useState<Record<string, DayStats>>({});
+  const [activeDate, setActiveDate] = useState<string | null>(null);
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [year, setYear] = useState(() => new Date().getFullYear());
 
@@ -90,7 +132,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       ] = await Promise.all([
         supabase
           .from("workout_completions")
-          .select("week, day, done, skipped, updated_at")
+          .select("week, day, done, skipped, updated_at, logged_weights")
           .eq("user_id", userId),
         supabase
           .from("workout_plans")
@@ -111,6 +153,13 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       const done = new Set<string>();
       const skipped = new Set<string>();
       const pending = new Set<string>();
+      const stats: Record<string, DayStats> = {};
+      const addStats = (dateStr: string, lw: any) => {
+        const s = summarizeLoggedWeights(lw);
+        if (s.sets === 0 && s.volume === 0) return;
+        const prev = stats[dateStr] || { sets: 0, volume: 0 };
+        stats[dateStr] = { sets: prev.sets + s.sets, volume: prev.volume + s.volume };
+      };
 
       // --- Active plan completions ---
       const planHasExercises = new Set(
@@ -136,6 +185,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           if (c.done && (hasExercise || c.week === 0)) {
             done.add(dateStr);
             pending.delete(dateStr);
+            addStats(dateStr, (c as any).logged_weights);
           } else if (c.skipped) {
             skipped.add(dateStr);
             pending.delete(dateStr);
@@ -158,7 +208,10 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
               c.updated_at || null,
               archiveStart,
             ) ?? timestampToDateKey(c.updated_at || null);
-            if (dateStr) done.add(dateStr);
+            if (dateStr) {
+              done.add(dateStr);
+              addStats(dateStr, c.logged_weights ?? c.loggedWeights);
+            }
           }
         }
       }
@@ -166,6 +219,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       setDoneDates(done);
       setSkippedDates(skipped);
       setPendingDates(pending);
+      setDayStats(stats);
     };
 
     load();
@@ -234,24 +288,65 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
             const isPending = pendingDates.has(dateStr);
             const isToday = dateStr === today;
 
+            const stats = isDone ? dayStats[dateStr] : undefined;
+            const hasStats = !!stats && (stats.sets > 0 || stats.volume > 0);
+            const isActive = activeDate === dateStr;
+
+            const cell = (
+              <div
+                className={`w-full aspect-square icon-round text-xs transition-colors relative ${
+                  isToday
+                    ? "bg-primary text-primary-foreground font-bold shadow-soft"
+                    : isDone
+                    ? "bg-success/20 text-success font-bold"
+                    : isSkipped
+                    ? "bg-destructive/15 text-destructive font-bold"
+                    : isPending
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground/70"
+                } ${hasStats ? "group-hover:bg-success/35" : ""}`}
+              >
+                {hasStats ? (
+                  <>
+                    <span className={`${isActive ? "hidden" : "group-hover:hidden"}`}>{date.getDate()}</span>
+                    <span className={`text-[10px] font-bold leading-none ${isActive ? "" : "hidden group-hover:inline"}`}>
+                      {stats!.sets > 0 ? `${stats!.sets} set` : formatVolume(stats!.volume)}
+                    </span>
+                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-success" />
+                  </>
+                ) : (
+                  date.getDate()
+                )}
+              </div>
+            );
+
+            if (!hasStats) {
+              return (
+                <div key={dateStr} className="aspect-square flex items-center justify-center">
+                  {cell}
+                </div>
+              );
+            }
+
             return (
-              <div key={dateStr} className="aspect-square flex items-center justify-center">
-                <div
-                  className={`w-full aspect-square icon-round text-xs transition-colors ${
-                    isToday
-                      ? "bg-primary text-primary-foreground font-bold shadow-soft"
-                      : isDone
-                      ? "bg-success/20 text-success font-bold"
-                      : isSkipped
-                      ? "bg-destructive/15 text-destructive font-bold"
-                      : isPending
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-muted-foreground/70"
+              <button
+                key={dateStr}
+                type="button"
+                onClick={() => setActiveDate(isActive ? null : dateStr)}
+                aria-label={`${date.getDate()} ${MONTH_NAMES[month]}: ${stats!.sets} set${stats!.volume > 0 ? `, ${formatVolume(stats!.volume)}` : ""}`}
+                className="group relative aspect-square flex items-center justify-center"
+              >
+                {cell}
+                <span
+                  className={`pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full z-20 whitespace-nowrap rounded-lg bg-foreground text-background text-[10px] font-semibold px-2 py-1 shadow-soft transition-opacity ${
+                    isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
                 >
-                  {date.getDate()}
-                </div>
-              </div>
+                  {stats!.sets > 0 ? `${stats!.sets} set` : ""}
+                  {stats!.sets > 0 && stats!.volume > 0 ? " · " : ""}
+                  {stats!.volume > 0 ? formatVolume(stats!.volume) : ""}
+                </span>
+              </button>
             );
           })}
         </div>
