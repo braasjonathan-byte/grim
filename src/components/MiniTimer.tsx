@@ -360,8 +360,8 @@ const MiniTimer = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={(e) => { e.stopPropagation(); setRunning(!running); }}
-              className={`w-12 h-12 flex items-center justify-center transition-colors ${
-                running ? "bg-primary/20 text-primary" : "bg-primary text-primary-foreground"
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                running ? "bg-primary/20 text-primary timer-play-pulse" : "bg-primary text-primary-foreground"
               }`}
             >
               {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
