@@ -4,6 +4,7 @@ import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRi
 import { avatarGradient } from "@/lib/avatarGradient";
 import { useTypingListener, useTypingSender } from "@/hooks/useTypingIndicator";
 import TypingDots from "@/components/TypingDots";
+import RouteBubble from "@/components/RouteBubble";
 import { toast } from "sonner";
 
 interface Friend {
@@ -306,7 +307,9 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                       ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
                       : 'bg-card text-foreground rounded-2xl rounded-bl-sm shadow-soft'
                   }`}>
-                    {msg.message_type === 'workout' && msg.shared_workout ? (
+                    {msg.message_type === 'route' && msg.shared_workout ? (
+                      <RouteBubble payload={msg.shared_workout} isMine={isMine} />
+                    ) : msg.message_type === 'workout' && msg.shared_workout ? (
                       <WorkoutBubble
                         workout={msg.shared_workout}
                         isMine={isMine}
