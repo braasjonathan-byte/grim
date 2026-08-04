@@ -9,6 +9,7 @@ import {
   type SvgStats,
   type SvgExercise,
   type ShareCardVariant,
+  type SportKey,
 } from "@/lib/buildWorkoutCardSvg";
 import { pickImage } from "@/lib/pickImage";
 import WorkoutPostThread from "./WorkoutPostThread";
