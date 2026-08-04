@@ -809,26 +809,10 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
   const isSwim = /simning|simma|sim\b/i.test(name);
-  const isBike = /cykling|cykel|cykla|spinning/i.test(name);
-  const isRow = /roddmaskin|^rodd|skierg|ski erg|paddling|kajak|kanot/i.test(name);
-  const isAirbike = /airbike|air\s*bike|assault\s*bike/i.test(name);
-  const isCrosstrainer = /crosstrainer/i.test(name);
-  const isStair = /trappmaskin|stair\s*machine|stairclimber/i.test(name);
-  const isJumprope = /hopprep|jump rope/i.test(name);
 
-  // Per-sport tempo modes. First entry is the default.
-  type TempoMode = "minkm" | "kmh" | "watt" | "min100m" | "min500m" | "spm";
-  const availableModes: TempoMode[] = (() => {
-    if (isSwim) return ["min100m", "minkm", "kmh"];
-    if (isRow) return ["min500m", "minkm", "watt", "kmh"];
-    if (isBike) return ["kmh", "minkm", "watt"];
-    if (isAirbike) return ["watt", "kmh", "minkm"];
-    if (isCrosstrainer) return ["kmh", "minkm", "watt"];
-    if (isStair) return ["spm", "kmh"];
-    if (isJumprope) return ["spm"];
-    // Default (löpning, promenad, vandring, skidåkning, skridsko, …)
-    return ["minkm", "kmh"];
-  })();
+  // Per-sport tempo modes (presentation only). First entry is the default.
+  type TempoMode = CardioMode;
+  const availableModes: TempoMode[] = getCardioModes(name);
   const TEMPO_MODE_KEY = `grim_tempo_mode__${(name || "default").toLowerCase().replace(/\s+/g, "_")}`;
   const [bikeMode, setBikeModeState] = useState<TempoMode>(() => {
     if (typeof window === "undefined") return availableModes[0];
@@ -842,21 +826,12 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   // Show the mode picker whenever the sport has >1 relevant choice
   const showModePicker = availableModes.length > 1;
   // Effective unit semantics
-  const tempoUnit =
-    bikeMode === "kmh" ? "km/h" :
-    bikeMode === "watt" ? "W" :
-    bikeMode === "min100m" ? "min/100m" :
-    bikeMode === "min500m" ? "min/500m" :
-    bikeMode === "spm" ? "spm" :
-    "min/km";
-  const tempoDisplayUnit =
-    bikeMode === "kmh" ? " km/h" :
-    bikeMode === "watt" ? " W" :
-    bikeMode === "min100m" ? "/100m" :
-    bikeMode === "min500m" ? "/500m" :
-    bikeMode === "spm" ? " spm" :
-    "/km";
-  const distUnit = isSwim ? "m" : "km";
+  const tempoUnit = modeLabel(bikeMode);
+  const tempoDisplayUnit = modeDisplaySuffix(bikeMode);
+  const distUnitRaw = getCardioDistUnit(name);
+  const showDistance = distUnitRaw !== null;
+  const distUnit = distUnitRaw ?? "km";
+
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
