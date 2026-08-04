@@ -25,7 +25,7 @@ const rowToRoute = (r: any): SavedRoute => ({
   createdAt: r.created_at,
   distanceKm: Number(r.distance_km),
   points: (r.points ?? []) as RoutePoint[],
-  pavedRatio: r.paved_ratio == null ? 0 : Number(r.paved_ratio),
+  pavedRatio: r.paved_ratio == null ? null : Number(r.paved_ratio),
   surfaces: r.surfaces ?? [],
   elevationGainM: r.elevation_gain_m == null ? null : Number(r.elevation_gain_m),
   elevationLossM: r.elevation_loss_m == null ? null : Number(r.elevation_loss_m),
