@@ -5533,24 +5533,24 @@ const estimateCalories = (
                         {isStairMachine(conditioningDialog.exerciseName) ? (
                           <>
                             <div className="space-y-3">
-                              <div className="mb-4">
+                              <div>
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
-                            <div className="flex items-center gap-1.5">
-                              <div className="flex-1 relative">
-                                <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">tim</span>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="min-w-0">
+                                <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <span className={condUnitCls}>tim</span>
                               </div>
-                              <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                              <div className="flex-1 relative">
-                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">min</span>
+                              <div className="min-w-0">
+                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <span className={condUnitCls}>min</span>
                               </div>
-                              <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                              <div className="flex-1 relative">
-                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">sek</span>
+                              <div className="min-w-0">
+                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <span className={condUnitCls}>sek</span>
                               </div>
                             </div>
+                              </div>
+
                               </div>
                               <div>
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
