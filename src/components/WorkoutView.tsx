@@ -1277,6 +1277,35 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
+/** True när passet innehåller minst en riktig övning (bortsett från vila/utmaningar). */
+const planHasAnyExercise = (plan: { details?: string | null }) =>
+  (plan.details || "")
+    .split(/[;\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .some((l) => !l.startsWith("⚔️") && !/^(vila|vilodag)/i.test(l));
+
+/** Föreslår ett passnamn utifrån övningarna i dagens pass. */
+const suggestSessionName = (details: string): string => {
+  const names = (details || "")
+    .split(/[;\n]/)
+    .map((s) => s.trim())
+    .filter((l) => l && !l.startsWith("⚔️") && !/^(vila|vilodag)/i.test(l))
+    .map((l) => l.split(/\s+[—–]\s+|\s+\d/)[0].trim())
+    .filter(Boolean);
+  if (names.length === 0) return "Pass";
+  const uniq = Array.from(new Set(names));
+  if (uniq.length === 1) return uniq[0];
+  if (uniq.length === 2) return `${uniq[0]} & ${uniq[1]}`;
+  const joined = uniq.join(" ").toLowerCase();
+  const cardio = /löpning|cykl|simning|rodd|promenad|crosstrainer|airbike|hopprep|stair|skid/.test(joined);
+  const strength = /press|böj|squat|mark|curl|rodd\s|drag|lyft|dips|chins/.test(joined);
+  if (cardio && !strength) return "Konditionspass";
+  if (strength && !cardio) return "Styrkepass";
+  return `${uniq[0]} + ${uniq.length - 1} till`;
+};
+
+
 
 // Format a day key for display - if it looks like an ISO date, format it nicely
 const formatDayDisplay = (day: string) => {
