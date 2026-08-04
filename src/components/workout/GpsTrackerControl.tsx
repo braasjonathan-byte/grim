@@ -1,14 +1,16 @@
-import { useState, useEffect, useRef, useId } from "react";
+import { useState, useEffect, useRef, useId, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { toPng } from "html-to-image";
-import { Heart, MapPin, Maximize2, Minimize2, Pause, Play, Settings, Share2, Square, X } from "lucide-react";
+import { Heart, MapPin, Maximize2, Minimize2, Pause, Play, Route as RouteIcon, Settings, Share2, Square, X } from "lucide-react";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
 import RouteMap from "@/components/RouteMap";
 import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
+
+const RouteBuilderDialog = lazy(() => import("@/components/RouteBuilderDialog"));
 
 // Inline conditioning editing card (green, open by default)
 export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean }) => {
@@ -27,6 +29,7 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
   const [primePoint, setPrimePoint] = useState<[number, number] | null>(null);
   const [primeError, setPrimeError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
   const fixWatchId = useRef<number | null>(null);
   const goodFixSamples = useRef(0);
   const summaryCardRef = useRef<HTMLDivElement | null>(null);
@@ -515,6 +518,13 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
                   <Play className="w-6 h-6 fill-current" />
                   {starting ? "Startar…" : "Starta"}
                 </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setRouteBuilderOpen(true); }}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-secondary text-secondary-foreground text-sm font-bold rounded-full border border-border"
+                >
+                  <RouteIcon className="w-4 h-4" /> Skapa runda
+                </button>
                 <p className="text-[11px] text-muted-foreground text-center max-w-xs">
                   Träningen startar först när GPS-signalen är stabil. Gå gärna utomhus för bästa precision.
                 </p>
@@ -524,6 +534,12 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
         </div>
         ) : null,
         document.body,
+      )}
+
+      {routeBuilderOpen && (
+        <Suspense fallback={null}>
+          <RouteBuilderDialog open={routeBuilderOpen} onOpenChange={setRouteBuilderOpen} />
+        </Suspense>
       )}
 
     </div>
