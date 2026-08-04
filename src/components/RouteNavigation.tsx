@@ -70,6 +70,7 @@ const RouteNavigation = ({
   const [speedMs, setSpeedMs] = useState<number | null>(null);
   const lastFixRef = useRef<{ p: RoutePoint; t: number } | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  const [confirmExit, setConfirmExit] = useState(false);
   const [voice, setVoice] = useState(true);
   const spokenRef = useRef<number>(-1);
   const watchRef = useRef<number | null>(null);
@@ -201,7 +202,7 @@ const RouteNavigation = ({
       {/* Instruktionsbanner */}
       <div className="shrink-0 bg-primary text-primary-foreground px-4 py-3">
         <div className="flex items-start gap-3">
-          <button onClick={onClose} className="mt-0.5 rounded-full p-1.5 hover:bg-primary-foreground/15" aria-label="Stäng">
+          <button onClick={() => setConfirmExit(true)} className="mt-0.5 rounded-full p-1.5 hover:bg-primary-foreground/15" aria-label="Stäng">
             <ArrowLeft className="h-5 w-5" />
           </button>
           {loading ? (
@@ -295,13 +296,30 @@ const RouteNavigation = ({
                 <ChevronUp className={`mr-1 h-4 w-4 transition-transform ${listOpen ? "rotate-180" : ""}`} /> Steg
               </Button>
             )}
-            <Button size="sm" variant="destructive" className="rounded-full" onClick={onClose}>
+            <Button size="sm" variant="destructive" className="rounded-full" onClick={() => setConfirmExit(true)}>
               <X className="mr-1 h-4 w-4" /> Avsluta
             </Button>
           </div>
         </div>
 
       </div>
+
+      {confirmExit && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-4 text-center shadow-soft">
+            <p className="text-sm font-bold text-foreground">Avsluta navigeringen?</p>
+            <p className="mt-1 text-xs text-muted-foreground">Kartan och vägbeskrivningen stängs.</p>
+            <div className="mt-4 flex gap-2">
+              <Button variant="secondary" className="flex-1 rounded-full" onClick={() => setConfirmExit(false)}>
+                Fortsätt
+              </Button>
+              <Button variant="destructive" className="flex-1 rounded-full" onClick={onClose}>
+                Avsluta
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );
