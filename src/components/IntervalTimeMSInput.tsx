@@ -43,33 +43,37 @@ export default function IntervalTimeMSInput({ valueMinDecimal, onSave, className
 
   const cls =
     className ||
-    "w-full bg-primary/10 text-foreground text-xs px-1.5 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground";
+    "w-full min-w-0 bg-primary/10 text-foreground text-xs px-1 py-1.5 rounded-md border border-primary/20 text-center font-mono tabular-nums focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:font-normal";
 
   return (
-    <div className="flex items-center gap-1">
-      <input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        value={mm}
-        placeholder="min"
-        onChange={(e) => setMm(e.target.value)}
-        onBlur={() => commit(mm, ss)}
-        className={cls}
-      />
-      <span className="text-[9px] text-muted-foreground">m</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        max={59}
-        value={ss}
-        placeholder="sek"
-        onChange={(e) => setSs(e.target.value)}
-        onBlur={() => commit(mm, ss)}
-        className={cls}
-      />
-      <span className="text-[9px] text-muted-foreground">s</span>
+    <div className="grid grid-cols-2 gap-1 min-w-0">
+      <div className="min-w-0 flex flex-col items-center">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={mm}
+          placeholder="0"
+          onChange={(e) => setMm(e.target.value)}
+          onBlur={() => commit(mm, ss)}
+          className={cls}
+        />
+        <span className="text-[9px] leading-tight text-muted-foreground mt-0.5">min</span>
+      </div>
+      <div className="min-w-0 flex flex-col items-center">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={59}
+          value={ss}
+          placeholder="0"
+          onChange={(e) => setSs(e.target.value)}
+          onBlur={() => commit(mm, ss)}
+          className={cls}
+        />
+        <span className="text-[9px] leading-tight text-muted-foreground mt-0.5">sek</span>
+      </div>
     </div>
   );
 }

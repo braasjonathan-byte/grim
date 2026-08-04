@@ -46,6 +46,7 @@ import AutoSaveInput from "@/components/AutoSaveInput";
 import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import IntervalRowsEditor, { IntervalRow, emptyIntervalRow, summarizeIntervalRows } from "@/components/IntervalRowsEditor";
+import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, formatPaceDisplay } from "@/lib/cardioUnits";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
@@ -404,7 +405,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
               setPrimed(true);
               setFullscreen(true);
             }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all disabled:opacity-50"
+            className="w-full h-11 flex items-center justify-center gap-1.5 px-4 bg-primary text-primary-foreground text-sm font-semibold rounded-xl shadow-soft active:scale-[0.98] transition-all disabled:opacity-50"
             title={otherActive ? "En GPS-inspelning pågår redan på en annan övning" : undefined}
           >
             <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
@@ -796,7 +797,9 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
 
 
-
+// Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
+const condInputCls = "w-full min-w-0 bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
+const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
 
 const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
@@ -809,26 +812,10 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   onSave: (data: Record<string, any>) => Promise<void>;
 }) => {
   const isSwim = /simning|simma|sim\b/i.test(name);
-  const isBike = /cykling|cykel|cykla|spinning/i.test(name);
-  const isRow = /roddmaskin|^rodd|skierg|ski erg|paddling|kajak|kanot/i.test(name);
-  const isAirbike = /airbike|air\s*bike|assault\s*bike/i.test(name);
-  const isCrosstrainer = /crosstrainer/i.test(name);
-  const isStair = /trappmaskin|stair\s*machine|stairclimber/i.test(name);
-  const isJumprope = /hopprep|jump rope/i.test(name);
 
-  // Per-sport tempo modes. First entry is the default.
-  type TempoMode = "minkm" | "kmh" | "watt" | "min100m" | "min500m" | "spm";
-  const availableModes: TempoMode[] = (() => {
-    if (isSwim) return ["min100m", "minkm", "kmh"];
-    if (isRow) return ["min500m", "minkm", "watt", "kmh"];
-    if (isBike) return ["kmh", "minkm", "watt"];
-    if (isAirbike) return ["watt", "kmh", "minkm"];
-    if (isCrosstrainer) return ["kmh", "minkm", "watt"];
-    if (isStair) return ["spm", "kmh"];
-    if (isJumprope) return ["spm"];
-    // Default (löpning, promenad, vandring, skidåkning, skridsko, …)
-    return ["minkm", "kmh"];
-  })();
+  // Per-sport tempo modes (presentation only). First entry is the default.
+  type TempoMode = CardioMode;
+  const availableModes: TempoMode[] = getCardioModes(name);
   const TEMPO_MODE_KEY = `grim_tempo_mode__${(name || "default").toLowerCase().replace(/\s+/g, "_")}`;
   const [bikeMode, setBikeModeState] = useState<TempoMode>(() => {
     if (typeof window === "undefined") return availableModes[0];
@@ -842,21 +829,12 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   // Show the mode picker whenever the sport has >1 relevant choice
   const showModePicker = availableModes.length > 1;
   // Effective unit semantics
-  const tempoUnit =
-    bikeMode === "kmh" ? "km/h" :
-    bikeMode === "watt" ? "W" :
-    bikeMode === "min100m" ? "min/100m" :
-    bikeMode === "min500m" ? "min/500m" :
-    bikeMode === "spm" ? "spm" :
-    "min/km";
-  const tempoDisplayUnit =
-    bikeMode === "kmh" ? " km/h" :
-    bikeMode === "watt" ? " W" :
-    bikeMode === "min100m" ? "/100m" :
-    bikeMode === "min500m" ? "/500m" :
-    bikeMode === "spm" ? " spm" :
-    "/km";
-  const distUnit = isSwim ? "m" : "km";
+  const tempoUnit = modeLabel(bikeMode);
+  const tempoDisplayUnit = modeDisplaySuffix(bikeMode);
+  const distUnitRaw = getCardioDistUnit(name);
+  const showDistance = distUnitRaw !== null;
+  const distUnit = distUnitRaw ?? "km";
+
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
@@ -1030,8 +1008,9 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
           {displayTime && <p className="text-xs">⏱ <span className="font-mono font-semibold">{displayTime} min</span></p>}
-          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{displayTempo}{tempoDisplayUnit}</span></p>}
-          {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
+          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{formatPaceDisplay(displayTempo, bikeMode)}{tempoDisplayUnit}</span></p>}
+          {displayDist && showDistance && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
+
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
         {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
@@ -1066,14 +1045,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Enhet</span>
           <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1">
           {availableModes.map((m) => {
+            const label = modeLabel(m);
 
-            const label =
-              m === "kmh" ? "km/h" :
-              m === "minkm" ? "min/km" :
-              m === "watt" ? "Watt" :
-              m === "min100m" ? "min/100m" :
-              m === "min500m" ? "min/500m" :
-              m === "spm" ? "spm" : m;
             return (
               <button
                 key={m}
@@ -1109,7 +1082,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowIntervalRunner(true); }}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition"
+          className="w-full h-11 flex items-center justify-center gap-2 px-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-soft hover:bg-primary/90 transition-colors"
         >
           <Play className="w-4 h-4" /> Starta intervallpass
         </button>
@@ -1147,52 +1120,55 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         />
       )}
 
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+      <div className="space-y-3">
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-          <div className="flex items-center gap-1">
-            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-            <span className="text-[10px] text-muted-foreground font-medium">h</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-            <span className="text-[10px] text-muted-foreground font-medium">m</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-            <span className="text-[10px] text-muted-foreground font-medium">s</span>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="min-w-0">
+              <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <span className={condUnitCls}>tim</span>
+            </div>
+            <div className="min-w-0">
+              <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <span className={condUnitCls}>min</span>
+            </div>
+            <div className="min-w-0">
+              <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <span className={condUnitCls}>sek</span>
+            </div>
           </div>
         </div>
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{bikeMode === "watt" ? "Effekt (W)" : bikeMode === "kmh" ? "Hastighet (km/h)" : bikeMode === "spm" ? "Frekvens (spm)" : `Tempo (${tempoUnit})`}</label>
-          <input
-            type="text"
-            inputMode={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "decimal" : "numeric"}
-            pattern={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "[0-9.,]*" : "[0-9:]*"}
-            value={tempo}
-            onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
-            placeholder={
-              bikeMode === "min100m" ? "t.ex. 1:50"
-                : bikeMode === "min500m" ? "t.ex. 2:00"
-                : bikeMode === "kmh" ? "t.ex. 25"
-                : bikeMode === "watt" ? "t.ex. 180"
-                : bikeMode === "spm" ? "t.ex. 120"
-                : "t.ex. 5:30"
-            }
-            className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans ({distUnit})</label>
-          <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || "—"} className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+        <div className={`grid gap-2 ${showDistance ? "grid-cols-2" : "grid-cols-1"}`}>
+          <div className="min-w-0">
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">{modeFieldLabel(bikeMode, name)}</label>
+            <input
+              type="text"
+              inputMode={isPaceMode(bikeMode) ? "numeric" : "decimal"}
+              pattern={isPaceMode(bikeMode) ? "[0-9:]*" : "[0-9.,]*"}
+              value={tempo}
+              onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
+              onBlur={() => { if (isPaceMode(bikeMode)) { const f = formatPaceDisplay(tempo, bikeMode); if (f && f !== tempo) setTempo(f); } }}
+              placeholder={modePlaceholder(bikeMode)}
+              className={condInputCls}
+            />
+          </div>
+          {showDistance && (
+            <div className="min-w-0">
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Distans ({distUnit})</label>
+              <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || (distUnit === "m" ? "400" : "5.0")} className={condInputCls} />
+            </div>
+          )}
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Snittspuls (bpm)</label>
+          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className={condInputCls} />
         </div>
       </div>
-      <div className="flex gap-2">
-        <button onClick={handleSave} className="flex-1 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
-        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">Avbryt</button>}
+      <div className="flex gap-2 pt-1">
+        <button onClick={handleSave} className="flex-1 h-11 bg-primary text-primary-foreground rounded-xl text-sm font-semibold shadow-soft hover:bg-primary/90 transition-colors">Spara</button>
+        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-xl transition-colors">Avbryt</button>}
       </div>
+
     </div>
   );
 };
@@ -5538,9 +5514,10 @@ const estimateCalories = (
                         )}
                         {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{condTempoInput}/km</span>
+                            <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{formatPaceDisplay(condTempoInput, getCardioModes(conditioningDialog.exerciseName)[0])}{modeDisplaySuffix(getCardioModes(conditioningDialog.exerciseName)[0])}</span>
                           </p>
                         )}
+
                         {conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (
                           <div className="grid grid-cols-2 gap-2">
                             <div>
@@ -5556,25 +5533,24 @@ const estimateCalories = (
                         {isStairMachine(conditioningDialog.exerciseName) ? (
                           <>
                             <div className="space-y-3">
-                              <div className="mb-4">
+                              <div>
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
-                            <div className="flex items-center gap-1.5">
-                              <div className="flex-1 relative">
-                                <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">tim</span>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="min-w-0">
+                                <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <span className={condUnitCls}>tim</span>
                               </div>
-                              <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                              <div className="flex-1 relative">
-                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">min</span>
+                              <div className="min-w-0">
+                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <span className={condUnitCls}>min</span>
                               </div>
-                              <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                              <div className="flex-1 relative">
-                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">sek</span>
+                              <div className="min-w-0">
+                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <span className={condUnitCls}>sek</span>
                               </div>
                             </div>
                               </div>
+
                               <div>
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
                                 <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
@@ -5603,31 +5579,33 @@ const estimateCalories = (
                             count={parseInt(condIntervalsInput) || 0}
                             rows={condIntervalRows}
                             onChange={setCondIntervalRows}
+                            paceUnit={modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}
+                            distUnit={getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}
+                            hideDistance={getCardioDistUnit(conditioningDialog.exerciseName) === null}
                           />
+
                         ) : (
                           <>
-                        <div className="mb-4">
+                        <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
-                          <div className="flex items-center gap-1.5">
-                            <div className="flex-1 relative">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">tim</span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="min-w-0">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className={condInputCls} />
+                              <span className={condUnitCls}>tim</span>
                             </div>
-                            <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                            <div className="flex-1 relative">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">min</span>
+                            <div className="min-w-0">
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className={condInputCls} />
+                              <span className={condUnitCls}>min</span>
                             </div>
-                            <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                            <div className="flex-1 relative">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">sek</span>
+                            <div className="min-w-0">
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className={condInputCls} />
+                              <span className={condUnitCls}>sek</span>
                             </div>
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Tempo</label>
+                          <div className="min-w-0">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Tempo</label>
                             <input
                           type="text"
                           value={condTempoInput}
@@ -5636,12 +5614,12 @@ const estimateCalories = (
                             setCondTempoInput(v);
                             autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo");
                           }}
-                          placeholder="5:30"
-                          className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                            <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">min/km</span>
+                          placeholder={modePlaceholder(getCardioModes(conditioningDialog.exerciseName)[0]).replace("t.ex. ", "")}
+                          className={condInputCls} />
+                            <span className={condUnitCls}>{modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}</span>
                           </div>
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-0.5">
+                          <div className="min-w-0">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center justify-center gap-0.5">
                               <Route className="w-3 h-3" /> Distans
                             </label>
                             <input
@@ -5653,36 +5631,37 @@ const estimateCalories = (
                             setCondDistanceInput(v);
                             autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance");
                           }}
-                          placeholder="5"
-                          className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                            <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">km</span>
+                          placeholder={getCardioDistUnit(conditioningDialog.exerciseName) === "m" ? "400" : "5"}
+                          className={condInputCls} />
+                            <span className={condUnitCls}>{getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}</span>
                           </div>
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Puls</label>
+                          <div className="min-w-0">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Puls</label>
                             <input
                           type="number"
                           inputMode="numeric"
                           value={condPulseInput}
                           onChange={(e) => setCondPulseInput(e.target.value)}
                           placeholder="155"
-                          className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                            <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">bpm</span>
+                          className={condInputCls} />
+                            <span className={condUnitCls}>bpm</span>
                           </div>
                         </div>
                           </>
                         )}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 pt-1">
                           <button
                         onClick={addConditioningExercise}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-warning text-warning-foreground rounded-md text-xs font-semibold">
-                            <Plus className="w-3.5 h-3.5" /> Lägg till
+                        className="flex-1 h-11 flex items-center justify-center gap-1.5 bg-warning text-warning-foreground rounded-xl text-sm font-semibold shadow-soft hover:bg-warning/90 transition-colors">
+                            <Plus className="w-4 h-4" /> Lägg till
                           </button>
                           <button
                         onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondAutoField(null);setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");setCondIntervalRows([]);}}
-                        className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                        className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-xl transition-colors">
                             Avbryt
                           </button>
                         </div>
+
                       </div>
                   }
 
@@ -7039,11 +7018,12 @@ const estimateCalories = (
                                         </div>
                                       </div>
                                       {/* Per-interval header */}
-                                      <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                                      <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-end">
                                         <span className="w-7" />
                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
-                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans</span>
+                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo ({modeLabel(getCardioModes(line)[0])})</span>
+                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans ({getCardioDistUnit(line) ?? "km"})</span>
+
                                       </div>
                                       {Array.from({ length: activeCount }, (_, ii) => {
                                         const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
@@ -7065,7 +7045,7 @@ const estimateCalories = (
                                         const isDoneI = setsStr[ii] === "1";
 
                                         return (
-                                          <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                          <div key={ii} className={`grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center rounded-lg px-1 py-1 ${ii % 2 === 0 ? "bg-muted/30" : "bg-transparent"}`}>
                                             <button
                                               onClick={async (e) => {
                                                 e.stopPropagation();
@@ -7157,7 +7137,7 @@ const estimateCalories = (
                                         }
                                         if (totalDist > 0) {
                                           return (
-                                            <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center pt-1 border-t border-warning/20 mt-1">
+                                            <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center pt-1 border-t border-warning/20 mt-1">
                                               <span className="w-7" />
                                               <span />
                                               <span className="text-[10px] text-muted-foreground uppercase tracking-wider text-center font-semibold">Totalt</span>
@@ -8082,11 +8062,12 @@ const estimateCalories = (
                               {intervalCount > 0 ? (
                                 <div className="space-y-2">
                                   {/* Per-interval header */}
-                                  <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                                  <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-end">
                                     <span className="w-7" />
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo ({modeLabel(getCardioModes(condName || part)[0])})</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans ({getCardioDistUnit(condName || part) ?? "km"})</span>
+
                                   </div>
                                   {/* Per-interval rows - use saved intervals length or plan count */}
                                   {(() => {
@@ -8117,7 +8098,7 @@ const estimateCalories = (
                                     }
                                     if (row.dist && !rowDist) rowDist = row.dist;
                                     return (
-                                      <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                      <div key={ii} className={`grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center rounded-lg px-1 py-1 ${ii % 2 === 0 ? "bg-muted/30" : "bg-transparent"}`}>
                                         {(() => {
                                           const intervalSetsKey = `__sets__interval_${condName || part}`;
                                           const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
@@ -8595,11 +8576,12 @@ const estimateCalories = (
                                 </button>
                               </div>
                               {/* Per-interval header */}
-                              <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                              <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-end">
                                 <span className="w-7" />
                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans</span>
+                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo ({modeLabel(getCardioModes(part)[0])})</span>
+                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans ({getCardioDistUnit(part) ?? "km"})</span>
+
                               </div>
                               {Array.from({ length: activeCount }, (_, ii) => {
                                 const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
@@ -8619,7 +8601,7 @@ const estimateCalories = (
                                 const isDoneI = setsStr[ii] === "1";
 
                                 return (
-                                  <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                  <div key={ii} className={`grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center rounded-lg px-1 py-1 ${ii % 2 === 0 ? "bg-muted/30" : "bg-transparent"}`}>
                                     <button
                                       onClick={async (e) => {
                                         e.stopPropagation();
@@ -9270,7 +9252,11 @@ const estimateCalories = (
                           count={parseInt(condIntervalsInput) || 0}
                           rows={condIntervalRows}
                           onChange={setCondIntervalRows}
+                          paceUnit={modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}
+                          distUnit={getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}
+                          hideDistance={getCardioDistUnit(conditioningDialog.exerciseName) === null}
                         />
+
                       ) : (
                         <>
                       <div>
