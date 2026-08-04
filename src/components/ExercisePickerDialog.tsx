@@ -1,3 +1,4 @@
+import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
@@ -126,11 +127,11 @@ const ExercisePickerDialog = ({
       .sort((a, b) => a.name.localeCompare(b.name, "sv"));
   })();
 
-  const filtered = allExercises.filter(e => {
-    const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase());
-    const matchMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
-    return matchSearch && matchMuscle;
-  });
+  const filtered = fuzzyFilterSort(
+    allExercises.filter(e => !selectedMuscle || e.muscleGroup === selectedMuscle),
+    search,
+    (e) => [e.name, e.muscleGroup, e.category]
+  );
 
   const handleSelect = (name: string) => {
     pushRecent(name);

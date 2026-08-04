@@ -1,3 +1,4 @@
+import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Trash2, Search, X, Info } from "lucide-react";
@@ -104,11 +105,11 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
     ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, id: e.id, isCustom: true, created_by: e.created_by })),
   ];
 
-  const filteredExercises = allExercises.filter((e) => {
-    const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
-    const matchesMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
-    return !startsWithTimeNotation(e.name) && matchesSearch && matchesMuscle;
-  });
+  const filteredExercises = fuzzyFilterSort(
+    allExercises.filter((e) => !startsWithTimeNotation(e.name) && (!selectedMuscle || e.muscleGroup === selectedMuscle)),
+    exerciseSearch,
+    (e) => [e.name, e.muscleGroup, e.category]
+  );
 
   const weekDays = plans
     .filter((p) => p.week === selectedWeek)

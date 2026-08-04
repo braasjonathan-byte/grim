@@ -1,3 +1,5 @@
+import { fuzzyFilterSort } from "@/lib/fuzzySearch";
+
 export interface ExerciseInfo {
   name: string;
   category: "styrka" | "kondition" | "rörlighet" | "core";
@@ -367,17 +369,14 @@ export const getExercisesByMuscle = (muscle: string) =>
   exerciseLibrary.filter((e) => e.muscleGroup === muscle);
 
 export const searchExercises = (query: string) => {
-  const q = query.toLowerCase().trim();
+  const q = query.trim();
   if (!q) return exerciseLibrary;
-  return exerciseLibrary.filter((e) => {
-    const english = (exerciseTranslations[e.name] ?? "").toLowerCase();
-    return (
-      e.name.toLowerCase().includes(q) ||
-      english.includes(q) ||
-      e.category.toLowerCase().includes(q) ||
-      e.muscleGroup.toLowerCase().includes(q)
-    );
-  });
+  return fuzzyFilterSort(exerciseLibrary, q, (e) => [
+    e.name,
+    exerciseTranslations[e.name] ?? "",
+    e.category,
+    e.muscleGroup,
+  ]);
 };
 
 export const muscleGroups = [

@@ -1,3 +1,4 @@
+import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, Link2, Trash2, Loader2, ChevronDown, Check, FileText, Image, X, Pencil, Save, Eye, BookOpen, AlertCircle } from "lucide-react";
@@ -596,7 +597,7 @@ const ExerciseGifManager = () => {
         mapping: mappingsByName.get(ex.name.toLowerCase()) || null,
       }))
       .filter((item) => {
-        if (filterLower && !item.name.toLowerCase().includes(filterLower) && !item.mapping?.exercisedb_name.toLowerCase().includes(filterLower)) return false;
+        if (filterLower && fuzzyScoreMulti([item.name, item.mapping?.exercisedb_name], filterLower) === 0) return false;
         if (showOnlyMapped && !item.mapping) return false;
         if (showOnlyUnmapped && item.mapping) return false;
         if (muscleGroupFilter && item.muscleGroup !== muscleGroupFilter) return false;

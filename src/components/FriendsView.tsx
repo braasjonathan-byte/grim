@@ -1,3 +1,4 @@
+import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { useState, useEffect, useRef } from "react";
 import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -256,11 +257,11 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
     ...customExercises.map((e) => ({ name: e.name, category: e.category, muscleGroup: e.muscle_group, isCustom: true })),
   ]);
 
-  const filteredAdminExercises = allExercises.filter((e) => {
-    const matchesSearch = !adminExerciseSearch || e.name.toLowerCase().includes(adminExerciseSearch.toLowerCase());
-    const matchesMuscle = !adminSelectedMuscle || e.muscleGroup === adminSelectedMuscle;
-    return matchesSearch && matchesMuscle;
-  });
+  const filteredAdminExercises = fuzzyFilterSort(
+    allExercises.filter((e) => !adminSelectedMuscle || e.muscleGroup === adminSelectedMuscle),
+    adminExerciseSearch,
+    (e) => [e.name, e.muscleGroup, e.category]
+  );
 
   const fetchFriends = async () => {
     const { data: friendships } = await supabase
