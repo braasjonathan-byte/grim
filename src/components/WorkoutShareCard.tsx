@@ -92,10 +92,12 @@ const WorkoutShareCard = ({
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const sportLabel = useMemo(() => {
+  const sport = useMemo(() => {
     const hit = SPORT_RULES.find((r) => r.re.test(sessionName) || r.re.test(details));
-    return hit ? hit.label : "Styrka";
+    return hit ?? { label: "Styrka", key: "strength" as SportKey };
   }, [sessionName, details]);
+  const sportLabel = sport.label;
+  const sportKey = sport.key;
 
   const isRunning = CARDIO_LABELS.has(sportLabel);
 
