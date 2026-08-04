@@ -260,7 +260,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const ip = 44;
   const headH = 96;
   const minRow = 92;
-  const maxRow = 138;
+  const maxRow = 176;
   const avail = panelH - headH - ip;
   const maxRows = Math.max(0, Math.floor(avail / minRow));
   const visible = input.exercises.slice(0, maxRows);
