@@ -103,9 +103,16 @@ interface Props {
   count: number;
   rows: IntervalRow[];
   onChange: (rows: IntervalRow[]) => void;
+  /** Etikett för tempo-kolumnen, t.ex. "min/500m". Default "min/km". */
+  paceUnit?: string;
+  /** Distansenhet, t.ex. "m" för simning. Default "km". */
+  distUnit?: string;
+  /** Dölj distanskolumnen (t.ex. hopprep). */
+  hideDistance?: boolean;
 }
 
-export default function IntervalRowsEditor({ count, rows, onChange }: Props) {
+export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "min/km", distUnit = "km", hideDistance = false }: Props) {
+
   useEffect(() => {
     if (count <= 0) return;
     if (rows.length === count) return;
