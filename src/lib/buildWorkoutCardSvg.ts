@@ -150,20 +150,30 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const CW = W - 2 * P;
   const t = SHARE_CARD_THEMES[input.variant] ?? SHARE_CARD_THEMES.light;
 
+  // Unique suffix so multiple cards on the same page never share gradient IDs
+  const uid = `c${Math.random().toString(36).slice(2, 8)}`;
+  const ID = {
+    bg: `bg-${uid}`,
+    dots: `dots-${uid}`,
+    logo: `logo-${uid}`,
+    glow: `glow-${uid}`,
+  };
+
   const defs = [
-    `<linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0%" stop-color="${t.bgFrom}"/><stop offset="100%" stop-color="${t.bgTo}"/></linearGradient>`,
-    `<pattern id="dots" width="48" height="48" patternUnits="userSpaceOnUse"><circle cx="6" cy="6" r="3" fill="${t.text}" fill-opacity="0.05"/></pattern>`,
-    `<clipPath id="logoClip"><rect x="${P}" y="${P}" width="104" height="104" rx="30"/></clipPath>`,
-    `<radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0%" stop-color="${t.accent}" stop-opacity="0.28"/><stop offset="100%" stop-color="${t.accent}" stop-opacity="0"/></radialGradient>`,
+    `<linearGradient id="${ID.bg}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0%" stop-color="${t.bgFrom}"/><stop offset="100%" stop-color="${t.bgTo}"/></linearGradient>`,
+    `<pattern id="${ID.dots}" width="48" height="48" patternUnits="userSpaceOnUse"><circle cx="6" cy="6" r="3" fill="${t.text}" fill-opacity="0.05"/></pattern>`,
+    `<clipPath id="${ID.logo}"><rect x="${P}" y="${P}" width="104" height="104" rx="30"/></clipPath>`,
+    `<radialGradient id="${ID.glow}" cx="0.5" cy="0.5" r="0.5"><stop offset="0%" stop-color="${t.accent}" stop-opacity="0.28"/><stop offset="100%" stop-color="${t.accent}" stop-opacity="0"/></radialGradient>`,
   ].join("\n");
 
   const els: string[] = [];
 
   /* Background */
-  els.push(`<rect width="${W}" height="${H}" fill="url(#bg)"/>`);
-  els.push(`<rect width="${W}" height="${H}" fill="url(#dots)"/>`);
-  els.push(`<circle cx="${W - 120}" cy="330" r="520" fill="url(#glow)"/>`);
-  els.push(`<circle cx="60" cy="${H - 240}" r="440" fill="url(#glow)"/>`);
+  els.push(`<rect width="${W}" height="${H}" fill="url(#${ID.bg})"/>`);
+  els.push(`<rect width="${W}" height="${H}" fill="url(#${ID.dots})"/>`);
+  els.push(`<circle cx="${W - 120}" cy="330" r="520" fill="url(#${ID.glow})"/>`);
+  els.push(`<circle cx="60" cy="${H - 240}" r="440" fill="url(#${ID.glow})"/>`);
+
   if (input.userPhotoBase64) {
     els.push(
       `<image href="${input.userPhotoBase64}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice" opacity="0.5"/>`
