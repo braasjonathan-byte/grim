@@ -238,10 +238,18 @@ export function summarizeCompletion(
     });
   }
 
+  // Names that are cardio entries – they're summarised separately, not as sets
+  const cardioNames = new Set<string>();
+  for (const key of Object.keys(lw)) {
+    if (key.startsWith("__cond__") && !key.startsWith("__cond_done__")) {
+      cardioNames.add(cleanName(key.substring("__cond__".length)));
+    }
+  }
+
   // Exercises tracked only via the done flags (bodyweight / conditioning)
   for (const [name, flags] of doneByExercise) {
     const doneCount = (flags.match(/1/g) || []).length;
-    if (doneCount > 0 && !exercises.has(name)) {
+    if (doneCount > 0 && !exercises.has(name) && !cardioNames.has(name.replace(/^interval_/, ""))) {
       exercises.add(name);
       if (!Object.prototype.hasOwnProperty.call(lw, `__setdata__${name}`)) sets += doneCount;
     }
