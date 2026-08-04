@@ -1008,8 +1008,9 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
           {displayTime && <p className="text-xs">⏱ <span className="font-mono font-semibold">{displayTime} min</span></p>}
-          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{displayTempo}{tempoDisplayUnit}</span></p>}
-          {displayDist && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
+          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{formatPaceDisplay(displayTempo, bikeMode)}{tempoDisplayUnit}</span></p>}
+          {displayDist && showDistance && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
+
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
         {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
