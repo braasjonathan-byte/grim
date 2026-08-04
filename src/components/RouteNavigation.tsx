@@ -67,6 +67,8 @@ const RouteNavigation = ({
   const [error, setError] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [position, setPosition] = useState<RoutePoint | null>(null);
+  const [speedMs, setSpeedMs] = useState<number | null>(null);
+  const lastFixRef = useRef<{ p: RoutePoint; t: number } | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [voice, setVoice] = useState(true);
   const spokenRef = useRef<number>(-1);
@@ -104,7 +106,18 @@ const RouteNavigation = ({
   useEffect(() => {
     if (!navigator.geolocation) return;
     watchRef.current = navigator.geolocation.watchPosition(
-      (p) => setPosition([p.coords.latitude, p.coords.longitude]),
+      (p) => {
+        const point: RoutePoint = [p.coords.latitude, p.coords.longitude];
+        setPosition(point);
+        const now = p.timestamp || Date.now();
+        if (typeof p.coords.speed === "number" && !Number.isNaN(p.coords.speed) && p.coords.speed >= 0) {
+          setSpeedMs(p.coords.speed);
+        } else if (lastFixRef.current) {
+          const dt = (now - lastFixRef.current.t) / 1000;
+          if (dt > 0.5) setSpeedMs(distanceM(lastFixRef.current.p, point) / dt);
+        }
+        lastFixRef.current = { p: point, t: now };
+      },
       () => {},
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
     );
@@ -151,11 +164,25 @@ const RouteNavigation = ({
     return steps.slice(stepIndex).reduce((s, st) => s + st.distanceM, 0);
   }, [steps, stepIndex, route.distanceKm]);
 
+  const paceMode = activity === "running" || activity === "walking" || activity === "hiking";
+  const speedLabel = (() => {
+    if (speedMs == null) return "–";
+    if (paceMode) {
+      if (speedMs < 0.3) return "–";
+      const secPerKm = 1000 / speedMs;
+      const m = Math.floor(secPerKm / 60);
+      const s = Math.round(secPerKm % 60);
+      return `${m}:${String(s).padStart(2, "0")}`;
+    }
+    return (speedMs * 3.6).toFixed(1);
+  })();
+  const speedUnit = paceMode ? "min/km" : "km/h";
+
   const Icon = maneuverIcon(current?.maneuver ?? null);
   const mapRoute = position ? [...polyline] : polyline;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col bg-background" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div className="fixed inset-0 z-[10100] flex flex-col bg-background" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Instruktionsbanner */}
       <div className="shrink-0 bg-primary text-primary-foreground px-4 py-3">
         <div className="flex items-start gap-3">
@@ -205,12 +232,19 @@ const RouteNavigation = ({
       {/* Botten */}
       <div className="shrink-0 border-t border-border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-2xl font-black tabular-nums leading-none text-foreground">{speedLabel}</p>
+              <p className="text-[11px] text-muted-foreground">{speedUnit}</p>
+            </div>
+            <div className="h-8 w-px bg-border" />
+            <div>
             <p className="text-lg font-black tabular-nums text-foreground">{fmtDist(remainingM)}</p>
             <p className="text-[11px] text-muted-foreground">
               {name ? `${name} · ` : ""}kvar av rundan
               {route.elevationGainM != null ? ` · ↑ ${Math.round(route.elevationGainM)} m` : ""}
             </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {steps && (
