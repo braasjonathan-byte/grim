@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Map as MapIcon, Navigation } from "lucide-react";
+import { ChevronDown, ChevronUp, Map as MapIcon, MapPinOff, Navigation, RefreshCw, WifiOff } from "lucide-react";
 
 type Point = [number, number]; // [lat, lng]
 
@@ -33,18 +33,57 @@ const useIsDark = () => {
 /* ---------- Google Maps JS API loader (singleton) ---------- */
 let mapsPromise: Promise<void> | null = null;
 
+/** Fel som gör att kartan inte kan visas – används för att välja rätt meddelande. */
+export type MapLoadErrorKind = "offline" | "auth" | "network" | "config";
+
+export class MapLoadError extends Error {
+  kind: MapLoadErrorKind;
+  constructor(kind: MapLoadErrorKind, message: string) {
+    super(message);
+    this.kind = kind;
+  }
+}
+
+const MAPS_LOAD_TIMEOUT_MS = 15000;
+
 const loadGoogleMaps = (): Promise<void> => {
-  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  if (typeof window === "undefined") return Promise.reject(new MapLoadError("network", "Ingen webbläsarmiljö"));
   if ((window as any).google?.maps?.Map) return Promise.resolve();
   if (mapsPromise) return mapsPromise;
 
   const key = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
   const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined;
-  if (!key) return Promise.reject(new Error("Google Maps browser key saknas"));
+  if (!key) return Promise.reject(new MapLoadError("config", "Google Maps-nyckel saknas"));
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return Promise.reject(new MapLoadError("offline", "Ingen internetanslutning"));
+  }
 
   mapsPromise = new Promise<void>((resolve, reject) => {
     const cbName = "__grimInitGoogleMaps";
-    (window as any)[cbName] = () => resolve();
+    let settled = false;
+    const fail = (err: MapLoadError) => {
+      if (settled) return;
+      settled = true;
+      mapsPromise = null;
+      reject(err);
+    };
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    // Google anropar denna globalt vid nyckel-/kvotfel (t.ex. OverQuotaMapError).
+    (window as any).gm_authFailure = () => {
+      fail(new MapLoadError("auth", "Google Maps nekade begäran (nyckel eller kvot)"));
+    };
+    (window as any)[cbName] = () => done();
+
+    const timer = window.setTimeout(
+      () => fail(new MapLoadError("network", "Kartan tog för lång tid att ladda")),
+      MAPS_LOAD_TIMEOUT_MS,
+    );
+    const clear = () => window.clearTimeout(timer);
     const s = document.createElement("script");
     s.src =
       `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}` +
@@ -52,11 +91,24 @@ const loadGoogleMaps = (): Promise<void> => {
       (channel ? `&channel=${encodeURIComponent(channel)}` : "");
     s.async = true;
     s.onerror = () => {
-      mapsPromise = null;
-      reject(new Error("Kunde inte ladda Google Maps"));
+      clear();
+      s.remove();
+      fail(
+        new MapLoadError(
+          typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "network",
+          "Kunde inte ladda Google Maps",
+        ),
+      );
+    };
+    s.onload = () => {
+      // Skriptet laddades – vänta på callback, men rensa timeouten när den kommit.
+      window.setTimeout(() => clear(), MAPS_LOAD_TIMEOUT_MS);
     };
     document.head.appendChild(s);
-  });
+  })
+    .then(() => {
+      // låt callback rensa
+    });
   return mapsPromise;
 };
 
