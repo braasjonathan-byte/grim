@@ -223,19 +223,20 @@ const getCompletionStatsDate = (
   }
 
   if (completion.done || completion.skipped) {
-    // Prefer the actual completion timestamp — the plan's start date may have
-    // been recalibrated since this session was completed, which would otherwise
-    // shift historical completions onto the wrong calendar day.
-    const updatedDate = getUpdatedAtDate(completion.updated_at);
-    if (updatedDate) return updatedDate;
+    // Use the session's scheduled calendar day (plan week + weekday), not the
+    // completion timestamp. Users often back-mark older sessions; using
+    // updated_at would pile them all onto today and inflate "this week"/"this month".
+    // This also keeps stats in sync with the training calendar, which is plan-based.
     const archivedStart = completion.archived_plan_start_date
       ? getStandaloneDate(completion.archived_plan_start_date)
       : null;
     const resolvedPlanStart = archivedStart ?? planStartDate;
-    return resolvedPlanStart
-      ? getWorkoutCalendarDate(completion.week, completion.day, resolvedPlanStart)
-      : null;
+    if (resolvedPlanStart && completion.week > 0) {
+      return getWorkoutCalendarDate(completion.week, completion.day, resolvedPlanStart);
+    }
+    return getUpdatedAtDate(completion.updated_at);
   }
+
 
   if (planStartDate) {
     return getWorkoutCalendarDate(completion.week, completion.day, planStartDate);
@@ -536,9 +537,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     if (summaryPeriod === "week") {
       return completions.filter((c) => {
         const d = getCompletionStatsDate(c, planStartDate);
+        if (!d) return false;
         return d >= currentMonday && d < endOfWeek;
       });
     }
+
 
     const startOfMonth = getStartOfMonth(now);
     const startOfYear = getStartOfYear(now);
