@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useAccessLevel } from "@/hooks/useAccessLevel";
 
 interface SupporterButtonProps {
   userId: string;
@@ -15,7 +16,9 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
-  const [isHonorary, setIsHonorary] = useState(false);
+  const [honoraryFromDb, setHonoraryFromDb] = useState(false);
+  const access = useAccessLevel();
+  const isHonorary = honoraryFromDb || access.isHonorary;
   const [nickname, setNickname] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
@@ -40,7 +43,7 @@ const SupporterButton = ({ userId }: SupporterButtonProps) => {
       ]);
       if (subResult.error) throw subResult.error;
       setSubscribed(subResult.data?.subscribed ?? false);
-      setIsHonorary(profileResult.data?.is_honorary ?? false);
+      setHonoraryFromDb(profileResult.data?.is_honorary ?? false);
       setNickname(profileResult.data?.nickname ?? null);
     } catch {
       // silently fail

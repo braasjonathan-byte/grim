@@ -361,6 +361,30 @@ const Index = () => {
     await logCrashlyticsMessage("loadUserData:done");
   }, []);
 
+  // Auto-sync Stripe subscription -> Hedersmedlem on every session start.
+  // Previously this only ran when the user opened the supporter section in
+  // settings, so a paying user could stay a plain "Medlem" indefinitely.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const syncSubscription = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("check-subscription");
+        if (error || cancelled) return;
+        if (data?.is_honorary || data?.subscribed) {
+          setIsHonorary(true);
+          void loadUserData(user.id);
+        }
+      } catch {
+        // offline / transient — access level stays as loaded from the DB
+      }
+    };
+    void syncSubscription();
+    const interval = setInterval(syncSubscription, 10 * 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user, loadUserData]);
+
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {

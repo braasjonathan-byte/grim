@@ -2160,6 +2160,14 @@ export type Database = {
         Args: { p_from: string[]; p_to: string }
         Returns: Json
       }
+      admin_set_user_access: {
+        Args: {
+          _honorary: boolean
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       are_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       get_inactive_users_for_nudge: {
