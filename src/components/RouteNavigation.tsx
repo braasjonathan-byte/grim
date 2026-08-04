@@ -70,6 +70,7 @@ const RouteNavigation = ({
   const [speedMs, setSpeedMs] = useState<number | null>(null);
   const lastFixRef = useRef<{ p: RoutePoint; t: number } | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  const [confirmExit, setConfirmExit] = useState(false);
   const [voice, setVoice] = useState(true);
   const spokenRef = useRef<number>(-1);
   const watchRef = useRef<number | null>(null);
@@ -179,14 +180,29 @@ const RouteNavigation = ({
   const speedUnit = paceMode ? "min/km" : "km/h";
 
   const Icon = maneuverIcon(current?.maneuver ?? null);
-  const mapRoute = position ? [...polyline] : polyline;
+
+  // Hur långt längs rundan man kommit – används för att gråmarkera avverkad sträcka.
+  const [traveledCount, setTraveledCount] = useState(0);
+  useEffect(() => {
+    if (!position || polyline.length < 2) return;
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < polyline.length; i++) {
+      const d = distanceM(position, polyline[i]);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    if (bestD < 60) setTraveledCount((c) => Math.max(c, best + 1));
+  }, [position, polyline]);
 
   return createPortal(
     <div className="fixed inset-0 z-[10100] flex flex-col bg-background" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Instruktionsbanner */}
       <div className="shrink-0 bg-primary text-primary-foreground px-4 py-3">
         <div className="flex items-start gap-3">
-          <button onClick={onClose} className="mt-0.5 rounded-full p-1.5 hover:bg-primary-foreground/15" aria-label="Stäng">
+          <button onClick={() => setConfirmExit(true)} className="mt-0.5 rounded-full p-1.5 hover:bg-primary-foreground/15" aria-label="Stäng">
             <ArrowLeft className="h-5 w-5" />
           </button>
           {loading ? (
@@ -226,7 +242,35 @@ const RouteNavigation = ({
 
       {/* Karta */}
       <div className="relative min-h-0 flex-1">
-        <RouteMap route={mapRoute} height={0} className="absolute inset-0 h-full" live={!!position} />
+        <RouteMap
+          route={polyline}
+          height={0}
+          className="absolute inset-0 h-full rounded-none border-0"
+          live
+          livePosition={position}
+          traveledCount={traveledCount}
+        />
+        {listOpen && steps && (
+          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[55%] overflow-y-auto border-t border-border bg-card/95 backdrop-blur px-3 py-2">
+            <ol className="space-y-1">
+              {steps.map((s, i) => {
+                const SIcon = maneuverIcon(s.maneuver);
+                return (
+                  <li
+                    key={i}
+                    className={`flex items-start gap-2 rounded-xl px-3 py-2 text-xs ${
+                      i === stepIndex ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <SIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1">{s.instruction}</span>
+                    <span className="tabular-nums">{fmtDist(s.distanceM)}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
       </div>
 
       {/* Botten */}
@@ -252,32 +296,30 @@ const RouteNavigation = ({
                 <ChevronUp className={`mr-1 h-4 w-4 transition-transform ${listOpen ? "rotate-180" : ""}`} /> Steg
               </Button>
             )}
-            <Button size="sm" variant="destructive" className="rounded-full" onClick={onClose}>
+            <Button size="sm" variant="destructive" className="rounded-full" onClick={() => setConfirmExit(true)}>
               <X className="mr-1 h-4 w-4" /> Avsluta
             </Button>
           </div>
         </div>
 
-        {listOpen && steps && (
-          <ol className="mt-3 max-h-56 space-y-1 overflow-y-auto">
-            {steps.map((s, i) => {
-              const SIcon = maneuverIcon(s.maneuver);
-              return (
-                <li
-                  key={i}
-                  className={`flex items-start gap-2 rounded-xl px-3 py-2 text-xs ${
-                    i === stepIndex ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  <SIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="flex-1">{s.instruction}</span>
-                  <span className="tabular-nums">{fmtDist(s.distanceM)}</span>
-                </li>
-              );
-            })}
-          </ol>
-        )}
       </div>
+
+      {confirmExit && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-4 text-center shadow-soft">
+            <p className="text-sm font-bold text-foreground">Avsluta navigeringen?</p>
+            <p className="mt-1 text-xs text-muted-foreground">Kartan och vägbeskrivningen stängs.</p>
+            <div className="mt-4 flex gap-2">
+              <Button variant="secondary" className="flex-1 rounded-full" onClick={() => setConfirmExit(false)}>
+                Fortsätt
+              </Button>
+              <Button variant="destructive" className="flex-1 rounded-full" onClick={onClose}>
+                Avsluta
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
     document.body,
   );

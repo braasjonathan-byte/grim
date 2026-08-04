@@ -13,7 +13,12 @@ interface Props {
   live?: boolean;
   /** Optional historic routes drawn as a faint heatmap-style overlay underneath the main line. */
   heatmap?: Point[][];
+  /** Antal punkter i början av rutten som redan avverkats – ritas grå. */
+  traveledCount?: number;
+  /** Aktuell GPS-position (för navigering där route är den planerade rundan). */
+  livePosition?: Point | null;
 }
+
 
 const useIsDark = () => {
   const [dark, setDark] = useState<boolean>(() =>
@@ -268,16 +273,22 @@ const RouteMap = ({
   defaultOpen = false,
   live = false,
   heatmap,
+  traveledCount = 0,
+  livePosition = null,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any | null>(null);
   const routeLineRef = useRef<any | null>(null);
+  const doneLineRef = useRef<any | null>(null);
   const haloLineRef = useRef<any | null>(null);
   const heatLinesRef = useRef<any[]>([]);
   const startMarkerRef = useRef<any | null>(null);
   const endMarkerRef = useRef<any | null>(null);
   const pulseRef = useRef<ReturnType<typeof createPulseOverlay> | null>(null);
   const fittedOnceRef = useRef(false);
+  const followPausedRef = useRef(false);
+  const followTimerRef = useRef<number | null>(null);
+
 
   const [open, setOpen] = useState(collapsible ? defaultOpen : true);
   const [mapReady, setMapReady] = useState(false);
@@ -312,7 +323,18 @@ const RouteMap = ({
           styles: dark ? DARK_STYLE : LIGHT_STYLE,
         });
         mapRef.current = map;
+        // Användaren får panorera fritt – auto-centrering pausas i 5 s efter senaste interaktion.
+        const pauseFollow = () => {
+          followPausedRef.current = true;
+          if (followTimerRef.current) window.clearTimeout(followTimerRef.current);
+          followTimerRef.current = window.setTimeout(() => {
+            followPausedRef.current = false;
+          }, 5000);
+        };
+        map.addListener("dragstart", pauseFollow);
+        map.addListener("dragend", pauseFollow);
         setMapReady(true);
+
       })
       .catch((e) => {
         if (cancelled) return;
@@ -326,6 +348,7 @@ const RouteMap = ({
     return () => {
       cancelled = true;
       routeLineRef.current?.setMap(null);
+      doneLineRef.current?.setMap(null);
       haloLineRef.current?.setMap(null);
       heatLinesRef.current.forEach((l) => l.setMap(null));
       heatLinesRef.current = [];
@@ -333,6 +356,8 @@ const RouteMap = ({
       endMarkerRef.current?.setMap(null);
       pulseRef.current?.setMap(null);
       routeLineRef.current = null;
+      doneLineRef.current = null;
+
       haloLineRef.current = null;
       startMarkerRef.current = null;
       endMarkerRef.current = null;
@@ -376,7 +401,10 @@ const RouteMap = ({
         );
     }
 
-    // Main route + halo
+    // Main route + halo. Avverkad del ritas grå, återstående i temats färg.
+    const cut = Math.max(0, Math.min(traveledCount, path.length));
+    const donePath = cut > 1 ? path.slice(0, cut) : [];
+    const remainingPath = cut > 0 ? path.slice(Math.max(0, cut - 1)) : path;
     if (!haloLineRef.current) {
       haloLineRef.current = new gm.Polyline({
         map,
@@ -387,21 +415,32 @@ const RouteMap = ({
         clickable: false,
         zIndex: 2,
       });
-      routeLineRef.current = new gm.Polyline({
+      doneLineRef.current = new gm.Polyline({
         map,
-        path,
-        strokeColor: primary,
+        path: donePath,
+        strokeColor: "#9ca3af",
         strokeOpacity: 1,
         strokeWeight: 5,
         clickable: false,
         zIndex: 3,
       });
+      routeLineRef.current = new gm.Polyline({
+        map,
+        path: remainingPath,
+        strokeColor: primary,
+        strokeOpacity: 1,
+        strokeWeight: 5,
+        clickable: false,
+        zIndex: 4,
+      });
     } else {
       haloLineRef.current.setPath(path);
       haloLineRef.current.setOptions({ strokeColor: dark ? "#000000" : "#ffffff" });
-      routeLineRef.current?.setPath(path);
+      doneLineRef.current?.setPath(donePath);
+      routeLineRef.current?.setPath(remainingPath);
       routeLineRef.current?.setOptions({ strokeColor: primary });
     }
+
 
     // Start marker
     if (path.length > 0) {
@@ -439,8 +478,9 @@ const RouteMap = ({
     }
 
     // Live pulsing dot
-    if (live && path.length > 0) {
-      const cur = path[path.length - 1];
+    const livePoint = livePosition ? { lat: livePosition[0], lng: livePosition[1] } : null;
+    if (live && (livePoint || path.length > 0)) {
+      const cur = livePoint ?? path[path.length - 1];
       if (!pulseRef.current) {
         pulseRef.current = createPulseOverlay(map, cur, primary);
       } else {
@@ -450,21 +490,22 @@ const RouteMap = ({
     }
 
     // Camera
-    if (path.length === 1) {
+    if (path.length === 1 && !livePoint) {
       map.setCenter(path[0]);
       map.setZoom(16);
-    } else if (path.length > 1) {
-      if (live) {
-        map.panTo(path[path.length - 1]);
+    } else if (live && (livePoint || path.length > 1)) {
+      if (!followPausedRef.current) {
+        map.panTo(livePoint ?? path[path.length - 1]);
         if ((map.getZoom() ?? 0) < 15) map.setZoom(15);
-      } else if (!fittedOnceRef.current) {
-        const bounds = new gm.LatLngBounds();
-        path.forEach((p) => bounds.extend(p));
-        map.fitBounds(bounds, 30);
-        fittedOnceRef.current = true;
       }
+    } else if (path.length > 1 && !fittedOnceRef.current) {
+      const bounds = new gm.LatLngBounds();
+      path.forEach((p) => bounds.extend(p));
+      map.fitBounds(bounds, 30);
+      fittedOnceRef.current = true;
     }
-  }, [mapReady, route, heatmap, live, primary, dark]);
+  }, [mapReady, route, heatmap, live, primary, dark, traveledCount, livePosition]);
+
 
   // Return-to-start data
   const returnInfo = useMemo(() => {
@@ -521,7 +562,7 @@ const RouteMap = ({
   return (
     <div
       className={`w-full rounded-md overflow-hidden border border-border ${className}`}
-      style={{ height, position: "relative", zIndex: 0, isolation: "isolate" }}
+      style={{ height: height === 0 ? "100%" : height, position: "relative", zIndex: 0, isolation: "isolate" }}
     >
       {mapInner}
     </div>
