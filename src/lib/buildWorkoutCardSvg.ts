@@ -244,16 +244,33 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
 
   let y = P + 190;
 
-  /* ── Sport chip ── */
+  /* ── Sport chip (icon + label) ── */
   const chipLabel = input.sportLabel.toUpperCase();
   const chipFs = 26;
-  const chipW = Math.max(150, textWidth(chipLabel, chipFs, 0.68) + 64);
+  const iconSize = 30;
+  const hasIcon = !!sportVisual;
+  const chipPadL = hasIcon ? 30 : 32;
+  const labelW = textWidth(chipLabel, chipFs, 0.68);
+  const chipW = Math.max(150, chipPadL + (hasIcon ? iconSize + 16 : 0) + labelW + 32);
   els.push(
     `<rect x="${P}" y="${y}" width="${chipW}" height="58" rx="29" fill="${t.accent}"/>`
   );
+  if (sportVisual) {
+    const s = iconSize / 24;
+    els.push(
+      `<g transform="translate(${P + chipPadL} ${y + (58 - iconSize) / 2}) scale(${s})" fill="none" stroke="${t.onAccent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${sportVisual.path}"/></g>`
+    );
+  }
   els.push(
-    `<text x="${P + chipW / 2}" y="${y + 29}" fill="${t.onAccent}" font-size="${chipFs}" font-family="${SANS}" font-weight="700" letter-spacing="3" text-anchor="middle" dy="0.35em">${esc(chipLabel)}</text>`
+    `<text x="${P + chipPadL + (hasIcon ? iconSize + 16 : 0)}" y="${y + 29}" fill="${t.onAccent}" font-size="${chipFs}" font-family="${SANS}" font-weight="700" letter-spacing="3" dy="0.35em">${esc(chipLabel)}</text>`
   );
+  // Oversized, very faint sport glyph as a background watermark
+  if (sportVisual) {
+    const wm = 520;
+    els.push(
+      `<g transform="translate(${W - wm - 20} ${y - 90}) scale(${wm / 24})" fill="none" stroke="${t.accent}" stroke-opacity="0.10" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="${sportVisual.path}"/></g>`
+    );
+  }
   y += 58 + 40;
 
   /* ── Session title (marker font, branding/heading only) ── */
