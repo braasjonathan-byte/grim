@@ -158,6 +158,64 @@ const distanceM = (a: Point, b: Point) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
+/** Statisk minikarta av rutten (SVG) – visas när Google Maps inte kan laddas. */
+const RouteSketch = ({ route }: { route: Point[] }) => {
+  if (route.length < 2) return null;
+  const lats = route.map((p) => p[0]);
+  const lngs = route.map((p) => p[1]);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const spanLat = Math.max(maxLat - minLat, 1e-5);
+  const spanLng = Math.max(maxLng - minLng, 1e-5);
+  const pts = route
+    .map((p) => `${(((p[1] - minLng) / spanLng) * 96 + 2).toFixed(2)},${((1 - (p[0] - minLat) / spanLat) * 56 + 2).toFixed(2)}`)
+    .join(" ");
+  return (
+    <svg viewBox="0 0 100 60" className="w-32 h-20 opacity-70" aria-hidden="true">
+      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+};
+
+const FALLBACK_TEXT: Record<MapLoadErrorKind, { title: string; body: string }> = {
+  offline: { title: "Ingen internetanslutning", body: "Kartan kan inte laddas offline. Din rutt sparas ändå och visas när du är online igen." },
+  auth: { title: "Kartan är inte tillgänglig", body: "Google Maps nekade begäran – kvoten kan vara slut eller nyckeln ogiltig. Försök igen senare." },
+  network: { title: "Kartan kunde inte laddas", body: "Anslutningen till Google Maps misslyckades. Kontrollera nätet och försök igen." },
+  config: { title: "Kartan är inte konfigurerad", body: "Ingen Google Maps-nyckel är kopplad till appen." },
+};
+
+const MapFallback = ({
+  error,
+  route,
+  onRetry,
+}: {
+  error: MapLoadError;
+  route: Point[];
+  onRetry: () => void;
+}) => {
+  const t = FALLBACK_TEXT[error.kind] ?? FALLBACK_TEXT.network;
+  const Icon = error.kind === "offline" ? WifiOff : MapPinOff;
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-muted/60 backdrop-blur-sm px-4 text-center text-muted-foreground">
+      <Icon className="w-6 h-6" />
+      <p className="text-xs font-bold text-foreground">{t.title}</p>
+      <p className="text-[11px] leading-snug max-w-[36ch]">{t.body}</p>
+      <RouteSketch route={route} />
+      {error.kind !== "config" && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRetry(); }}
+          className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted"
+        >
+          <RefreshCw className="w-3.5 h-3.5" /> Försök igen
+        </button>
+      )}
+    </div>
+  );
+};
+
 /** DOM overlay for the pulsing live-position dot (keeps the existing CSS animation). */
 const createPulseOverlay = (map: any, position: any, color: string) => {
   class PulseOverlay extends (gm.OverlayView as { new (): any }) {
@@ -223,7 +281,8 @@ const RouteMap = ({
 
   const [open, setOpen] = useState(collapsible ? defaultOpen : true);
   const [mapReady, setMapReady] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<MapLoadError | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const dark = useIsDark();
 
   const primary = useMemo(() => {
@@ -236,6 +295,7 @@ const RouteMap = ({
   useEffect(() => {
     if (!open || !containerRef.current || mapRef.current) return;
     let cancelled = false;
+    setLoadError(null);
     loadGoogleMaps()
       .then(() => {
         if (cancelled || !containerRef.current || mapRef.current) return;
@@ -254,7 +314,14 @@ const RouteMap = ({
         mapRef.current = map;
         setMapReady(true);
       })
-      .catch((e) => !cancelled && setLoadError(e?.message ?? "Kartan kunde inte laddas"));
+      .catch((e) => {
+        if (cancelled) return;
+        setLoadError(
+          e instanceof MapLoadError
+            ? e
+            : new MapLoadError("network", e?.message ?? "Kartan kunde inte laddas"),
+        );
+      });
 
     return () => {
       cancelled = true;
@@ -275,7 +342,7 @@ const RouteMap = ({
       fittedOnceRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, retryKey]);
 
   // Theme changes
   useEffect(() => {
@@ -414,11 +481,7 @@ const RouteMap = ({
   const mapInner = (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
-      {loadError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/40 text-[11px] font-semibold text-muted-foreground px-3 text-center">
-          {loadError}
-        </div>
-      )}
+      {loadError && <MapFallback error={loadError} route={route} onRetry={() => { mapsPromise = null; setRetryKey((k) => k + 1); }} />}
       {returnInfo && (
         <div className="absolute top-2 left-2 z-10 flex items-center gap-2 bg-background/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-sm">
           <Navigation
