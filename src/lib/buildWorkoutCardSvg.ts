@@ -189,7 +189,13 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const H = CARD_H;
   const P = 84;
   const CW = W - 2 * P;
-  const t = SHARE_CARD_THEMES[input.variant] ?? SHARE_CARD_THEMES.light;
+  const baseTheme = SHARE_CARD_THEMES[input.variant] ?? SHARE_CARD_THEMES.light;
+  const sportVisual = input.sportKey ? SPORT_VISUALS[input.sportKey] : undefined;
+  // Sport accent tints light/dark cards; the primary card keeps its white accent
+  const t: SvgCardTheme =
+    sportVisual && input.variant !== "primary"
+      ? { ...baseTheme, accent: sportVisual.accent }
+      : baseTheme;
 
   // Unique suffix so multiple cards on the same page never share gradient IDs
   const uid = `c${Math.random().toString(36).slice(2, 8)}`;
