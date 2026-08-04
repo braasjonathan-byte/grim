@@ -5565,7 +5565,7 @@ const estimateCalories = (
                         )}
                         {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{formatPaceDisplay(condTempoInput, getCardioModes(conditioningDialog.exerciseName)[0])}{modeDisplaySuffix(getCardioModes(conditioningDialog.exerciseName)[0])}</span>
+                            <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{formatPaceDisplay(condTempoInput, condMode)}{modeDisplaySuffix(condMode)}</span>
                           </p>
                         )}
 
