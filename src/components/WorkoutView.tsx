@@ -797,7 +797,9 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
 
 
-
+// Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
+const condInputCls = "w-full min-w-0 bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
+const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
 
 const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
