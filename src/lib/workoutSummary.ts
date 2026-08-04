@@ -195,7 +195,7 @@ export function summarizeCompletion(
   prIndex?: PrIndex,
   endAt?: Date | number | string | null,
 ): WorkoutSummary {
-  const empty: WorkoutSummary = { sets: 0, volumeKg: 0, exercises: [], prExercises: [], durationMin: null };
+  const empty: WorkoutSummary = { sets: 0, volumeKg: 0, exercises: [], prExercises: [], durationMin: null, cardio: null };
   if (!loggedWeights || typeof loggedWeights !== "object") return empty;
 
 
