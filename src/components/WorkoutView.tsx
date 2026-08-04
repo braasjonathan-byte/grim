@@ -1185,8 +1185,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
       </div>
       <div className="flex gap-2 pt-1">
-        <button onClick={handleSave} className="flex-1 h-11 bg-primary text-primary-foreground rounded-xl text-sm font-semibold shadow-soft hover:bg-primary/90 transition-colors">Spara</button>
-        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-xl transition-colors">Avbryt</button>}
+        <button onClick={handleSave} className="flex-1 h-11 bg-primary text-primary-foreground rounded-full text-sm font-semibold shadow-soft hover:bg-primary/90 active:scale-[0.98] transition-all">Spara</button>
+        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-full transition-colors">Avbryt</button>}
       </div>
 
     </div>
