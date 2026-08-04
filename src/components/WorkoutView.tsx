@@ -4046,8 +4046,8 @@ const estimateCalories = (
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
     } else {
-      if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
-      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+      if (condTempoInput.trim()) infoParts.push(`${formatPaceDisplay(condTempoInput.trim(), condMode)}${modeDisplaySuffix(condMode)}`);
+      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} ${condDistUnit}`);
     }
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
 
@@ -4184,8 +4184,8 @@ const estimateCalories = (
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
     } else {
-      if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
-      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+      if (condTempoInput.trim()) infoParts.push(`${formatPaceDisplay(condTempoInput.trim(), condMode)}${modeDisplaySuffix(condMode)}`);
+      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} ${condDistUnit}`);
     }
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
     const entry = infoParts.length > 0 ? `${editingCondLine.name} — ${infoParts.join(", ")}` : editingCondLine.name;
