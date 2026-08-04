@@ -15,6 +15,8 @@ interface Props {
   heatmap?: Point[][];
   /** Antal punkter i början av rutten som redan avverkats – ritas grå. */
   traveledCount?: number;
+  /** Aktuell GPS-position (för navigering där route är den planerade rundan). */
+  livePosition?: Point | null;
 }
 
 
@@ -272,6 +274,7 @@ const RouteMap = ({
   live = false,
   heatmap,
   traveledCount = 0,
+  livePosition = null,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any | null>(null);
