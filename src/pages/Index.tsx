@@ -28,6 +28,7 @@ import { hapticLight } from "@/lib/haptics";
 import { ensureUnlocked } from "@/lib/biometric";
 import { Capacitor } from "@capacitor/core";
 import { logCrashlyticsMessage, recordError, setCrashlyticsUserId } from "@/lib/crashlytics";
+import { refreshAccessLevel } from "@/hooks/useAccessLevel";
 
 
 // Lazy-loaded tab components for code splitting
@@ -364,10 +365,15 @@ const Index = () => {
   // Auto-sync Stripe subscription -> Hedersmedlem on every session start.
   // Previously this only ran when the user opened the supporter section in
   // settings, so a paying user could stay a plain "Medlem" indefinitely.
+  // The shared access-level cache (useAccessLevel) must be refreshed too,
+  // otherwise components reading it keep the stale value from first load.
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    let lastRun = 0;
     const syncSubscription = async () => {
+      if (Date.now() - lastRun < 30_000) return;
+      lastRun = Date.now();
       try {
         const { data, error } = await supabase.functions.invoke("check-subscription");
         if (error || cancelled) return;
@@ -375,14 +381,25 @@ const Index = () => {
           setIsHonorary(true);
           void loadUserData(user.id);
         }
+        void refreshAccessLevel();
       } catch {
         // offline / transient — access level stays as loaded from the DB
       }
     };
     void syncSubscription();
     const interval = setInterval(syncSubscription, 10 * 60_000);
-    return () => { cancelled = true; clearInterval(interval); };
+    // Returning from Stripe Checkout in a new tab should grant access at once.
+    const onFocus = () => { if (document.visibilityState === "visible") void syncSubscription(); };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [user, loadUserData]);
+
 
 
   useEffect(() => {
