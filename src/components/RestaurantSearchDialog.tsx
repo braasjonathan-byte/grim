@@ -228,7 +228,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
                   placeholder="Sök maträtt (t.ex. Big Mac)"
                   className="pl-9 rounded-none"
                   autoFocus
-                  onKeyDown={(e) => e.key === "Enter" && search(brand, item)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
                 />
               </div>
               <Input
@@ -236,10 +236,19 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="Restaurang (valfritt)"
                 className="rounded-none"
-                onKeyDown={(e) => e.key === "Enter" && search(brand, item)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
               />
-              <button onClick={() => search(brand, item)} className="w-full py-2 bg-primary text-primary-foreground text-sm font-bold">
-                Sök
+              <button
+                type="button"
+                disabled={loading}
+                // pointerdown + preventDefault: på mobil skulle annars första tryckningen
+                // bara stänga tangentbordet (blur → layoutskifte) och klicket tappas bort.
+                onPointerDown={(e) => { e.preventDefault(); search(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); search(); } }}
+                className="w-full py-2 bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Söker…" : "Sök"}
               </button>
             </div>
 
@@ -248,7 +257,12 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Populära</p>
                 <div className="flex flex-wrap gap-1.5">
                   {POPULAR.map((b) => (
-                    <button key={b} onClick={() => { setBrand(b); search(b, item); }} className="px-2 py-1 border border-input text-xs">
+                    <button
+                      key={b}
+                      type="button"
+                      onPointerDown={(e) => { e.preventDefault(); setBrand(b); search(b); }}
+                      className="px-2 py-1 border border-input text-xs"
+                    >
                       {b}
                     </button>
                   ))}
