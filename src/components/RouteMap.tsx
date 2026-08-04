@@ -345,6 +345,7 @@ const RouteMap = ({
     return () => {
       cancelled = true;
       routeLineRef.current?.setMap(null);
+      doneLineRef.current?.setMap(null);
       haloLineRef.current?.setMap(null);
       heatLinesRef.current.forEach((l) => l.setMap(null));
       heatLinesRef.current = [];
@@ -352,6 +353,8 @@ const RouteMap = ({
       endMarkerRef.current?.setMap(null);
       pulseRef.current?.setMap(null);
       routeLineRef.current = null;
+      doneLineRef.current = null;
+
       haloLineRef.current = null;
       startMarkerRef.current = null;
       endMarkerRef.current = null;
