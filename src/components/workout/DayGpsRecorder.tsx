@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { MapPin, X } from "lucide-react";
 import { sv } from "date-fns/locale";
