@@ -178,24 +178,66 @@ Deno.serve(async (req) => {
     const start: LatLng = [lat, lng];
     const targetKm = distanceKm;
 
-    // Fyra riktningar → fyra olika slingor. Vägnätet gör rundan längre än cirkeln,
-    // därför en dämpningsfaktor på radien.
+    // Sex riktningar per slinga → jämnare, mer "rund" bana med bättre flyt.
     const baseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.78;
-    const dirs = [Math.random() * 360, 0, 0, 0].map((_, i) => (Math.random() * 40 + i * 90) % 360);
+    const dirs = [0, 1, 2, 3].map((i) => (Math.random() * 40 + i * 90) % 360);
 
     const buildWaypoints = (dir: number, radiusM: number): LatLng[] =>
-      [dir, dir + 90, dir + 180, dir + 270].map((b, i) => offset(start, b, radiusM * (i % 2 === 0 ? 1 : 0.85)));
+      [0, 60, 120, 180, 240, 300].map((d, i) =>
+        offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.9)),
+      );
+
+    /** Andel av rutten som körs fram och tillbaka på samma sträcka (0 = perfekt flyt). */
+    const overlapRatio = (points: LatLng[]): number => {
+      const cell = 40; // meter
+      const seen = new Map<string, number>();
+      let repeats = 0;
+      for (const p of points) {
+        const key = `${Math.round((p[0] * 111320) / cell)}:${Math.round(
+          (p[1] * 111320 * Math.cos((p[0] * Math.PI) / 180)) / cell,
+        )}`;
+        const n = (seen.get(key) ?? 0) + 1;
+        seen.set(key, n);
+        if (n > 1) repeats++;
+      }
+      return repeats / Math.max(points.length, 1);
+    };
+
+    /** Antal skarpa vändningar (>150°) – typiskt återvändsgränder. */
+    const uTurns = (points: LatLng[]): number => {
+      const bearing = (a: LatLng, b: LatLng) =>
+        (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+      let count = 0;
+      const step = Math.max(1, Math.floor(points.length / 200));
+      for (let i = step; i < points.length - step; i += step) {
+        const a = points[i - step];
+        const b = points[i];
+        const c = points[i + step];
+        if (haversine(a, b) < 15 || haversine(b, c) < 15) continue;
+        let diff = Math.abs(bearing(a, b) - bearing(b, c)) % 360;
+        if (diff > 180) diff = 360 - diff;
+        if (diff > 150) count++;
+      }
+      return count;
+    };
+
+    /** Lägre = bättre: längdavvikelse + straff för överlapp och vändningar. */
+    const score = (r: RouteResult): number =>
+      Math.abs(r.distanceKm - targetKm) / targetKm +
+      overlapRatio(r.points) * 2.5 +
+      Math.min(uTurns(r.points), 10) * 0.05;
 
     const attempt = async (dir: number): Promise<RouteResult | null> => {
       let radius = baseRadius;
       let best: RouteResult | null = null;
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 3; i++) {
         const r = await computeLoop(start, buildWaypoints(dir, radius), activity, asphaltOnly);
         if (!r) return best;
-        if (!best || Math.abs(r.distanceKm - targetKm) < Math.abs(best.distanceKm - targetKm)) best = r;
+        if (!best || score(r) < score(best)) best = r;
         const ratio = targetKm / Math.max(r.distanceKm, 0.1);
-        if (ratio > 0.85 && ratio < 1.15) break;
-        radius = Math.max(150, Math.min(radius * ratio, 40000));
+        const good = ratio > 0.85 && ratio < 1.15 && overlapRatio(r.points) < 0.15;
+        if (good) break;
+        radius = Math.max(150, Math.min(radius * (ratio > 0.85 && ratio < 1.15 ? 1.05 : ratio), 40000));
       }
       return best;
     };
@@ -203,15 +245,23 @@ Deno.serve(async (req) => {
     const settled = await Promise.all(dirs.map((d) => attempt(d).catch(() => null)));
     console.log("routes ms", Date.now() - t0);
 
-    const found = settled.filter((r): r is RouteResult => !!r);
-    // Ta bort dubbletter (liknande längd + liknande mittpunkt)
+    const found = settled
+      .filter((r): r is RouteResult => !!r)
+      // Släng uppenbara ut-och-tillbaka-rutter om vi har bättre alternativ
+      .sort((a, b) => score(a) - score(b));
+
+    const clean = found.filter((r) => overlapRatio(r.points) < 0.4);
+    const pool = clean.length > 0 ? clean : found;
+
+    // Ta bort dubbletter (liknande mittpunkt)
     const unique: RouteResult[] = [];
-    for (const r of found.sort((a, b) => Math.abs(a.distanceKm - targetKm) - Math.abs(b.distanceKm - targetKm))) {
+    for (const r of pool) {
       const mid = r.points[Math.floor(r.points.length / 2)];
       const dup = unique.some((u) => haversine(u.points[Math.floor(u.points.length / 2)], mid) < 300);
       if (!dup) unique.push(r);
       if (unique.length >= 4) break;
     }
+
 
     if (unique.length === 0) {
       return new Response(
