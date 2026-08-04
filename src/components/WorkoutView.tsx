@@ -6580,9 +6580,14 @@ const estimateCalories = (
           const isDone = completion?.done || false;
           const isSkipped = completion?.skipped || false;
           const expanded = true;
-          const Icon = getSessionIcon(plan.session_name);
-          const colorClass = getSessionColor(plan.session_name);
-          const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
+          const planHasExercises = planHasAnyExercise(plan);
+          const restName = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
+          const isRest = restName && !planHasExercises;
+          const baseIcon = getSessionIcon(plan.session_name);
+          const Icon = !isRest && baseIcon === Moon && planHasExercises ? Dumbbell : baseIcon;
+          const baseColor = getSessionColor(plan.session_name);
+          const colorClass = !isRest && baseColor === "text-muted-foreground" ? "text-primary" : baseColor;
+
           const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
           const isCardToday = sameWorkoutDay(plan.day, cardTodayNames[new Date().getDay()]) && plan.week === activePlanWeek;
 
