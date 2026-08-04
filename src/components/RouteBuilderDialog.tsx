@@ -202,7 +202,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open && !navRoute} onOpenChange={onOpenChange}>
         <DialogContent className="z-[10050] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
@@ -311,7 +311,6 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
                         className="w-full rounded-xl font-bold"
                         onClick={() => {
                           setNavRoute({ route: active, activity, name: savingName });
-                          onOpenChange(false);
                         }}
                       >
                         <Navigation className="mr-2 h-4 w-4" /> Starta runda
@@ -431,7 +430,10 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
           route={navRoute.route}
           activity={navRoute.activity}
           name={navRoute.name}
-          onClose={() => setNavRoute(null)}
+          onClose={() => {
+            setNavRoute(null);
+            onOpenChange(false);
+          }}
         />
       )}
     </>
