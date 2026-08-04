@@ -202,7 +202,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open && !navRoute} onOpenChange={onOpenChange}>
         <DialogContent className="z-[10050] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
