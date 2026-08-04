@@ -398,7 +398,10 @@ const RouteMap = ({
         );
     }
 
-    // Main route + halo
+    // Main route + halo. Avverkad del ritas grå, återstående i temats färg.
+    const cut = Math.max(0, Math.min(traveledCount, path.length));
+    const donePath = cut > 1 ? path.slice(0, cut) : [];
+    const remainingPath = cut > 0 ? path.slice(Math.max(0, cut - 1)) : path;
     if (!haloLineRef.current) {
       haloLineRef.current = new gm.Polyline({
         map,
@@ -409,21 +412,32 @@ const RouteMap = ({
         clickable: false,
         zIndex: 2,
       });
-      routeLineRef.current = new gm.Polyline({
+      doneLineRef.current = new gm.Polyline({
         map,
-        path,
-        strokeColor: primary,
+        path: donePath,
+        strokeColor: "#9ca3af",
         strokeOpacity: 1,
         strokeWeight: 5,
         clickable: false,
         zIndex: 3,
       });
+      routeLineRef.current = new gm.Polyline({
+        map,
+        path: remainingPath,
+        strokeColor: primary,
+        strokeOpacity: 1,
+        strokeWeight: 5,
+        clickable: false,
+        zIndex: 4,
+      });
     } else {
       haloLineRef.current.setPath(path);
       haloLineRef.current.setOptions({ strokeColor: dark ? "#000000" : "#ffffff" });
-      routeLineRef.current?.setPath(path);
+      doneLineRef.current?.setPath(donePath);
+      routeLineRef.current?.setPath(remainingPath);
       routeLineRef.current?.setOptions({ strokeColor: primary });
     }
+
 
     // Start marker
     if (path.length > 0) {
