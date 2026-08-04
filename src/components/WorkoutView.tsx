@@ -5636,70 +5636,23 @@ const estimateCalories = (
                           />
 
                         ) : (
-                          <>
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="min-w-0">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className={condInputCls} />
-                              <span className={condUnitCls}>tim</span>
-                            </div>
-                            <div className="min-w-0">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className={condInputCls} />
-                              <span className={condUnitCls}>min</span>
-                            </div>
-                            <div className="min-w-0">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className={condInputCls} />
-                              <span className={condUnitCls}>sek</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="min-w-0">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Tempo</label>
-                            <input
-                          type="text"
-                          value={condTempoInput}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setCondTempoInput(v);
-                            autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo");
-                          }}
-                          placeholder={modePlaceholder(getCardioModes(conditioningDialog.exerciseName)[0]).replace("t.ex. ", "")}
-                          className={condInputCls} />
-                            <span className={condUnitCls}>{modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center justify-center gap-0.5">
-                              <Route className="w-3 h-3" /> Distans
-                            </label>
-                            <input
-                          type="number"
-                          inputMode="decimal"
-                          value={condDistanceInput}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setCondDistanceInput(v);
-                            autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance");
-                          }}
-                          placeholder={getCardioDistUnit(conditioningDialog.exerciseName) === "m" ? "400" : "5"}
-                          className={condInputCls} />
-                            <span className={condUnitCls}>{getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Puls</label>
-                            <input
-                          type="number"
-                          inputMode="numeric"
-                          value={condPulseInput}
-                          onChange={(e) => setCondPulseInput(e.target.value)}
-                          placeholder="155"
-                          className={condInputCls} />
-                            <span className={condUnitCls}>bpm</span>
-                          </div>
-                        </div>
-                          </>
+                          <CardioLogFields
+                            exerciseName={conditioningDialog.exerciseName}
+                            mode={condMode}
+                            onModeChange={changeCondMode}
+                            hours={condTimeHours}
+                            minutes={condTimeMinutes}
+                            seconds={condTimeSeconds}
+                            onTimeChange={(part, v) => handleCondTimeChange(part, v)}
+                            tempo={condTempoInput}
+                            onTempoChange={(v) => { setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }}
+                            distance={condDistanceInput}
+                            onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
+                            pulse={condPulseInput}
+                            onPulseChange={setCondPulseInput}
+                          />
                         )}
+
                         <div className="flex gap-2 pt-1">
                           <button
                         onClick={addConditioningExercise}
