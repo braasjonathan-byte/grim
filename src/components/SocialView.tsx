@@ -1,3 +1,4 @@
+import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Flame, ImagePlus, Send, Trash2, MessageCircle, Globe, UsersRound, X, Camera, Pin, MoreHorizontal, Dumbbell } from "lucide-react";
@@ -20,10 +21,10 @@ import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 import { FeedSkeleton } from "@/components/LoadingSkeletons";
 import EmptyState from "@/components/EmptyState";
 
-const FriendsView = lazy(() => import("./FriendsView"));
-const ChatView = lazy(() => import("./ChatView"));
-const EventGroupPage = lazy(() => import("./EventGroupPage"));
-const AnnouncementInbox = lazy(() => import("./AnnouncementInbox"));
+const FriendsView = lazyRetry(() => import("./FriendsView"));
+const ChatView = lazyRetry(() => import("./ChatView"));
+const EventGroupPage = lazyRetry(() => import("./EventGroupPage"));
+const AnnouncementInbox = lazyRetry(() => import("./AnnouncementInbox"));
 
 interface SocialViewProps {
   userId: string;

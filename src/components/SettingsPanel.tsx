@@ -1,3 +1,4 @@
+import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin } from "lucide-react";
@@ -9,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiometric } from "@/lib/biometric";
 import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
 
-const ChangePassword = lazy(() => import("@/components/ChangePassword"));
+const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
 
 const SHOW_STRAVA_INTEGRATION = false;

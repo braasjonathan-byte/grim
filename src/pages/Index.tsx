@@ -1,3 +1,4 @@
+import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, Bell, BarChart3, MessageCircle, Dumbbell, Calculator, HelpCircle, Apple, Home } from "lucide-react";
@@ -32,14 +33,14 @@ import { refreshAccessLevel } from "@/hooks/useAccessLevel";
 
 
 // Lazy-loaded tab components for code splitting
-const WorkoutView = lazy(() => import("@/components/WorkoutView"));
-const SocialView = lazy(() => import("@/components/SocialView"));
-const ChangePassword = lazy(() => import("@/components/ChangePassword"));
-const WorkoutStats = lazy(() => import("@/components/WorkoutStats"));
-const ToolsTab = lazy(() => import("@/components/ToolsTab"));
-const ChatView = lazy(() => import("@/components/ChatView"));
-const NutritionView = lazy(() => import("@/components/NutritionView"));
-const HomeView = lazy(() => import("@/components/HomeView"));
+const WorkoutView = lazyRetry(() => import("@/components/WorkoutView"));
+const SocialView = lazyRetry(() => import("@/components/SocialView"));
+const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
+const WorkoutStats = lazyRetry(() => import("@/components/WorkoutStats"));
+const ToolsTab = lazyRetry(() => import("@/components/ToolsTab"));
+const ChatView = lazyRetry(() => import("@/components/ChatView"));
+const NutritionView = lazyRetry(() => import("@/components/NutritionView"));
+const HomeView = lazyRetry(() => import("@/components/HomeView"));
 
 type Tab = "home" | "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
 
