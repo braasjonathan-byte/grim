@@ -147,3 +147,85 @@ export function formatMinutesAsClock(minutes: number): string {
   const s = Math.round((minutes - m) * 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
+
+/** Hur många km en "tempo-enhet" motsvarar (min/100m → 0.1 km, min/500m → 0.5 km). */
+export function kmPerTempoUnit(mode: CardioMode): number {
+  if (mode === "min100m") return 0.1;
+  if (mode === "min500m") return 0.5;
+  return 1;
+}
+
+/** localStorage-nyckel för vald enhet per övning (delas av alla vyer). */
+export function tempoModeStorageKey(name: string): string {
+  return `grim_tempo_mode__${(name || "default").toLowerCase().replace(/\s+/g, "_")}`;
+}
+
+/** Läser sparad enhet för en övning, annars sportens standardenhet. */
+export function getStoredCardioMode(name: string): CardioMode {
+  const modes = getCardioModes(name);
+  if (typeof window === "undefined") return modes[0];
+  try {
+    const v = localStorage.getItem(tempoModeStorageKey(name)) as CardioMode | null;
+    return v && (modes as string[]).includes(v) ? v : modes[0];
+  } catch {
+    return modes[0];
+  }
+}
+
+export function storeCardioMode(name: string, mode: CardioMode) {
+  try { localStorage.setItem(tempoModeStorageKey(name), mode); } catch {}
+}
+
+/** Tolkar tempoinmatning: pace → minuter per enhet, km/h → tal. Övriga → tal. */
+export function parseTempoInput(mode: CardioMode, raw: string): number | null {
+  const t = (raw || "").trim();
+  if (!t) return null;
+  if (isPaceMode(mode)) {
+    const m = t.match(/^(\d+)[:.,](\d{1,2})$/);
+    if (m) return parseInt(m[1], 10) + parseInt(m[2].padEnd(2, "0"), 10) / 60;
+    const n = parseFloat(t.replace(",", "."));
+    return isFinite(n) && n > 0 ? n : null;
+  }
+  const n = parseFloat(t.replace(",", "."));
+  return isFinite(n) && n > 0 ? n : null;
+}
+
+/** Räknar ut tempovärdet (som sträng) från tid i minuter och distans i km. */
+export function computeTempoValue(mode: CardioMode, totalMin: number, distKm: number): string {
+  if (!(totalMin > 0) || !(distKm > 0)) return "";
+  if (mode === "kmh") return (60 * distKm / totalMin).toFixed(1);
+  if (!isPaceMode(mode)) return "";
+  const perUnit = totalMin / (distKm / kmPerTempoUnit(mode));
+  return formatMinutesAsClock(perUnit);
+}
+
+/** Räknar ut distans i km från tid (min) och tempovärde. */
+export function computeDistanceKm(mode: CardioMode, totalMin: number, tempoRaw: string): number | null {
+  const v = parseTempoInput(mode, tempoRaw);
+  if (!v || !(totalMin > 0)) return null;
+  if (mode === "kmh") return (v * totalMin) / 60;
+  if (!isPaceMode(mode)) return null;
+  return (totalMin / v) * kmPerTempoUnit(mode);
+}
+
+/** Räknar ut tid i minuter från tempovärde och distans i km. */
+export function computeTimeMin(mode: CardioMode, tempoRaw: string, distKm: number): number | null {
+  const v = parseTempoInput(mode, tempoRaw);
+  if (!v || !(distKm > 0)) return null;
+  if (mode === "kmh") return (distKm / v) * 60;
+  if (!isPaceMode(mode)) return null;
+  return v * (distKm / kmPerTempoUnit(mode));
+}
+
+/** Konverterar ett tempovärde mellan två enheter (behåller "känslan" av farten). */
+export function convertTempoValue(from: CardioMode, to: CardioMode, raw: string): string {
+  if (from === to) return raw;
+  if (!isLinkedMode(from) || !isLinkedMode(to)) return "";
+  const v = parseTempoInput(from, raw);
+  if (!v) return "";
+  // Normalisera till km/h
+  const kmh = from === "kmh" ? v : (60 * kmPerTempoUnit(from)) / v;
+  if (!(kmh > 0)) return "";
+  if (to === "kmh") return kmh.toFixed(1);
+  return formatMinutesAsClock((60 * kmPerTempoUnit(to)) / kmh);
+}
