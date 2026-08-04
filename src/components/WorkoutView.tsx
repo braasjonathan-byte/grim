@@ -1657,6 +1657,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     uncheckedCount: number;
   } | null>(null);
 
+  // Ask for a session name when completing an unnamed workout (shown before all other dialogs)
+  const [namePromptDialog, setNamePromptDialog] = useState<{
+    week: number;
+    day: string;
+    planId: string;
+    suggestion: string;
+  } | null>(null);
+  const [namePromptInput, setNamePromptInput] = useState("");
+
+
+
   // Ask the user after marking a workout done whether to share to friends feed.
   const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   const [completeCelebration, setCompleteCelebration] = useState<{ title: string; summary: WorkoutSummary } | null>(null);
