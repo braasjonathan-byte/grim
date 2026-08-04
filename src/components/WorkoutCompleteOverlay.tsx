@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ConfettiBurst from "@/components/ConfettiBurst";
-import { formatVolumeKg, formatDurationMin, type WorkoutSummary } from "@/lib/workoutSummary";
+import { formatVolumeKg, formatDurationMin, formatCardioDistance, formatCardioPace, type WorkoutSummary } from "@/lib/workoutSummary";
 import { hapticLight } from "@/lib/haptics";
 import { buildSurpriseReward, type SurpriseReward } from "@/lib/surpriseRewards";
 
