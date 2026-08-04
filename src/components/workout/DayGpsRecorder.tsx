@@ -28,59 +28,56 @@ export const DayGpsRecorder = ({ konditionExercises, onSave }: {
     setSelectedName(name);
   };
 
-  if (selectedName) {
-    const isInterval = /intervall/i.test(selectedName);
-    if (isInterval) {
-      return (
-        <div className="col-span-2 w-full space-y-1.5 mt-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-            <MapPin className="w-3 h-3" /> {selectedName}
-          </div>
-          <IntervalRunner
-            open
-            onClose={() => setSelectedName(null)}
-            exerciseName={selectedName}
-            onComplete={async (res) => {
-              const km = res.gpsDistanceKm && res.gpsDistanceKm > 0 ? res.gpsDistanceKm : res.totalDistKm;
-              const sec = Math.round(res.totalTimeMin * 60);
-              const route = res.route || [];
-              const name = selectedName;
-              setSelectedName(null);
-              await onSave(name, km, sec, route);
-            }}
-          />
-        </div>
-      );
-    }
-    return (
-      <div className="col-span-2 w-full space-y-1.5 mt-2">
-        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-          <MapPin className="w-3 h-3" /> {selectedName}
-        </div>
-        <GpsTrackerControl
-          autoStart
-          onCancel={() => setSelectedName(null)}
-          onStop={async (km, sec, route) => {
-            const name = selectedName;
-            setSelectedName(null);
-            await onSave(name, km, sec, route);
-          }}
-        />
-      </div>
-    );
-  }
+  const isInterval = selectedName ? /intervall/i.test(selectedName) : false;
 
   return (
     <>
+      {/* Knappen ligger alltid kvar på sin plats i rutnätet så att övriga
+          knappar aldrig kastas om när GPS-vyn öppnas/stängs. */}
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setPickerOpen(true); }}
-        className="min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+        disabled={!!selectedName}
+        className="min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center disabled:opacity-50"
         title="Starta GPS-inspelning"
       >
         <MapPin className="w-3.5 h-3.5 shrink-0" />
         <span className="whitespace-nowrap">Spela in GPS</span>
       </button>
+
+      {selectedName && (
+        <div className="col-span-full order-last w-full space-y-1.5 mt-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <MapPin className="w-3 h-3" /> {selectedName}
+          </div>
+          {isInterval ? (
+            <IntervalRunner
+              open
+              onClose={() => setSelectedName(null)}
+              exerciseName={selectedName}
+              onComplete={async (res) => {
+                const km = res.gpsDistanceKm && res.gpsDistanceKm > 0 ? res.gpsDistanceKm : res.totalDistKm;
+                const sec = Math.round(res.totalTimeMin * 60);
+                const route = res.route || [];
+                const name = selectedName;
+                setSelectedName(null);
+                await onSave(name, km, sec, route);
+              }}
+            />
+          ) : (
+            <GpsTrackerControl
+              autoStart
+              onCancel={() => setSelectedName(null)}
+              onStop={async (km, sec, route) => {
+                const name = selectedName;
+                setSelectedName(null);
+                await onSave(name, km, sec, route);
+              }}
+            />
+          )}
+        </div>
+      )}
+
       {pickerOpen && createPortal(
         <div
           className="fixed inset-0 z-[10000] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
