@@ -1045,14 +1045,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Enhet</span>
           <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1">
           {availableModes.map((m) => {
+            const label = modeLabel(m);
 
-            const label =
-              m === "kmh" ? "km/h" :
-              m === "minkm" ? "min/km" :
-              m === "watt" ? "Watt" :
-              m === "min100m" ? "min/100m" :
-              m === "min500m" ? "min/500m" :
-              m === "spm" ? "spm" : m;
             return (
               <button
                 key={m}
