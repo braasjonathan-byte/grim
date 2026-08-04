@@ -1,66 +1,17 @@
-import { useRef, useState } from "react";
-import { X, Download, Share2, Palette, Send, CalendarIcon, Copy, Image as ImageIcon, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { X, Download, Share2, Palette, Send, Copy, Image as ImageIcon, Trash2 } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
-import { buildWorkoutCardSvg, type SvgStats, type SvgExercise } from "@/lib/buildWorkoutCardSvg";
+import {
+  buildWorkoutCardSvg,
+  SHARE_CARD_THEMES,
+  CARD_W,
+  CARD_H,
+  type SvgStats,
+  type SvgExercise,
+  type ShareCardVariant,
+} from "@/lib/buildWorkoutCardSvg";
 import { pickImage } from "@/lib/pickImage";
 import WorkoutPostThread from "./WorkoutPostThread";
-
-
-type Theme = "colorful" | "light" | "dark";
-
-const themes: Record<Theme, {
-  bg: string;
-  cardBg: string;
-  text: string;
-  subtext: string;
-  muted: string;
-  statBg: string;
-  accent: string;
-  badgeBg: string;
-  exerciseBg: string;
-  border: string;
-  label: string;
-}> = {
-  colorful: {
-    bg: "linear-gradient(145deg, #1a1a2e 0%, #16213e 30%, #0f3460 60%, #533483 100%)",
-    cardBg: "rgba(255,255,255,0.08)",
-    text: "#ffffff",
-    subtext: "#c4b5fd",
-    muted: "#a78bfa",
-    statBg: "rgba(139,92,246,0.2)",
-    accent: "linear-gradient(135deg, #8b5cf6, #ec4899)",
-    badgeBg: "linear-gradient(135deg, #22c55e, #10b981)",
-    exerciseBg: "rgba(139,92,246,0.1)",
-    border: "rgba(139,92,246,0.3)",
-    label: "Färgglatt"
-  },
-  light: {
-    bg: "linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%)",
-    cardBg: "rgba(0,0,0,0.03)",
-    text: "#0f172a",
-    subtext: "#475569",
-    muted: "#64748b",
-    statBg: "rgba(0,0,0,0.05)",
-    accent: "linear-gradient(135deg, #0f172a, #334155)",
-    badgeBg: "linear-gradient(135deg, #22c55e, #16a34a)",
-    exerciseBg: "rgba(0,0,0,0.03)",
-    border: "rgba(0,0,0,0.1)",
-    label: "Ljust"
-  },
-  dark: {
-    bg: "linear-gradient(145deg, #0a0a0a 0%, #171717 50%, #1c1c1c 100%)",
-    cardBg: "rgba(255,255,255,0.05)",
-    text: "#ffffff",
-    subtext: "#a1a1aa",
-    muted: "#71717a",
-    statBg: "rgba(255,255,255,0.06)",
-    accent: "linear-gradient(135deg, #fafafa, #a1a1aa)",
-    badgeBg: "linear-gradient(135deg, #22c55e, #16a34a)",
-    exerciseBg: "rgba(255,255,255,0.04)",
-    border: "rgba(255,255,255,0.1)",
-    label: "Mörkt"
-  }
-};
 
 interface WorkoutShareCardProps {
   sessionName: string;
@@ -81,12 +32,35 @@ interface WorkoutShareCardProps {
   onSaveWorkout?: () => void;
 }
 
+/** Sport identity: short label per workout type, consistent with app terminology. */
+const SPORT_RULES: { re: RegExp; label: string }[] = [
+  { re: /(löpning|jogg|långpass|tröskel|intervall\s*löp|terräng)/i, label: "Löpning" },
+  { re: /(cykel|cykling|spinning)/i, label: "Cykling" },
+  { re: /(sim|simning|crawl)/i, label: "Simning" },
+  { re: /(rodd|roddmaskin)/i, label: "Rodd" },
+  { re: /(skidor|skidåkning|längdskidor)/i, label: "Skidor" },
+  { re: /(gång|promenad|vandring)/i, label: "Gång" },
+  { re: /(triathlon|duathlon)/i, label: "Triathlon" },
+  { re: /(yoga|mobilitet|rörlighet|stretch)/i, label: "Rörlighet" },
+  { re: /(hiit|cirkel|crossfit|kondition)/i, label: "Kondition" },
+];
+
+const CARDIO_LABELS = new Set([
+  "Löpning",
+  "Cykling",
+  "Simning",
+  "Rodd",
+  "Skidor",
+  "Gång",
+  "Triathlon",
+  "Kondition",
+]);
+
 const WorkoutShareCard = ({
   sessionName,
   day,
   week,
   details,
-  tempo,
   loggedTempo,
   loggedPulse,
   loggedDistanceKm,
@@ -97,12 +71,13 @@ const WorkoutShareCard = ({
   onClose,
   onChatShare,
   onCopyToDate,
-  onSaveWorkout
+  onSaveWorkout,
 }: WorkoutShareCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
-  const [theme, setTheme] = useState<Theme>("colorful");
+  const [variant, setVariant] = useState<ShareCardVariant>("light");
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
+  const [logoBase64, setLogoBase64] = useState<string>("");
 
   const handlePickPhoto = async () => {
     const picked = await pickImage({ source: "prompt", quality: 80 });
@@ -110,44 +85,48 @@ const WorkoutShareCard = ({
     setUserPhoto(picked.dataUrl);
   };
 
+  const exercises = details
+    .split(/[;\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-  const t = themes[theme];
+  const sportLabel = useMemo(() => {
+    const hit = SPORT_RULES.find((r) => r.re.test(sessionName) || r.re.test(details));
+    return hit ? hit.label : "Styrka";
+  }, [sessionName, details]);
 
-  const exercises = details.
-  split(/[;\n]/).
-  map((s) => s.trim()).
-  filter(Boolean);
-
-  const isRunning =
-  sessionName.toLowerCase().includes("löpning") ||
-  sessionName.toLowerCase().includes("jogg") ||
-  sessionName.toLowerCase().includes("långpass") ||
-  sessionName.toLowerCase().includes("tröskel");
+  const isRunning = CARDIO_LABELS.has(sportLabel);
 
   const formatDay = (d: string) => {
     try {
       const dateMatch = d.match(/^(\d{4}-\d{2}-\d{2})/);
       if (dateMatch) {
         const date = new Date(dateMatch[1]);
-        return date.toLocaleDateString("sv-SE", {
-          day: "numeric",
-          month: "short",
-          year: "numeric"
-        });
+        return date.toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" });
       }
     } catch {}
     return d.replace(/_[a-z0-9]+$/i, "");
   };
 
+  const formatSets = (sets: { kg: string; reps: string }[]) => {
+    if (sets.length === 0) return null;
+    const groups: { kg: string; reps: string; count: number }[] = [];
+    sets.forEach((s) => {
+      const last = groups[groups.length - 1];
+      if (last && last.kg === s.kg && last.reps === s.reps) last.count++;
+      else groups.push({ ...s, count: 1 });
+    });
+    return groups.map((g) => `${g.count}×${g.reps} @ ${g.kg}kg`).join(", ");
+  };
+
   // Build detailed exercise summaries
-  const exerciseSummaries = exercises.
-  map((line) => {
+  const exerciseSummaries = exercises.map((line) => {
     const match = line.match(/^(.+?)\s*—\s*(.+)$/);
     const name = match ? match[1].trim() : line;
     const info = match ? match[2].trim() : "";
 
     if (info.includes("min") || info.includes("/km")) {
-      return { name, info, type: "cardio" as const, sets: [] as {kg: string;reps: string;}[] };
+      return { name, info, type: "cardio" as const, sets: [] as { kg: string; reps: string }[] };
     }
 
     const setDataKey = `__setdata__${name}`;
@@ -155,13 +134,11 @@ const WorkoutShareCard = ({
     if (loggedWeights?.[setDataKey]) {
       try {
         const data =
-        typeof loggedWeights[setDataKey] === "string" ?
-        JSON.parse(loggedWeights[setDataKey]) :
-        loggedWeights[setDataKey];
-        const setsStr = loggedWeights[setsKey] as string || "";
-        const completedData = (data as any[]).filter(
-          (_: any, i: number) => setsStr[i] === "1"
-        );
+          typeof loggedWeights[setDataKey] === "string"
+            ? JSON.parse(loggedWeights[setDataKey])
+            : loggedWeights[setDataKey];
+        const setsStr = (loggedWeights[setsKey] as string) || "";
+        const completedData = (data as any[]).filter((_: any, i: number) => setsStr[i] === "1");
         if (completedData.length > 0) {
           return {
             name,
@@ -169,18 +146,16 @@ const WorkoutShareCard = ({
             type: "strength" as const,
             sets: completedData.map((s: any) => ({
               kg: String(parseFloat(s.kg) || 0),
-              reps: String(parseInt(s.reps) || 0)
-            }))
+              reps: String(parseInt(s.reps) || 0),
+            })),
           };
         }
       } catch {}
     }
 
-    return { name, info, type: "strength" as const, sets: [] as {kg: string;reps: string;}[] };
-  }).
-  filter(Boolean);
+    return { name, info, type: "strength" as const, sets: [] as { kg: string; reps: string }[] };
+  });
 
-  // Stats
   const completedSets = (() => {
     let total = 0;
     if (!loggedWeights) return 0;
@@ -201,11 +176,9 @@ const WorkoutShareCard = ({
           const data = typeof val === "string" ? JSON.parse(val) : val;
           if (Array.isArray(data)) {
             const setsKey = key.replace("__setdata__", "__sets__");
-            const setsStr = loggedWeights[setsKey] as string || "";
+            const setsStr = (loggedWeights[setsKey] as string) || "";
             data.forEach((s: any, i: number) => {
-              if (setsStr[i] === "1") {
-                vol += (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0);
-              }
+              if (setsStr[i] === "1") vol += (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0);
             });
           }
         } catch {}
@@ -214,59 +187,85 @@ const WorkoutShareCard = ({
     return Math.round(vol);
   })();
 
+  const stats: SvgStats[] = useMemo(() => {
+    const out: SvgStats[] = [];
+    if (isRunning) {
+      if (loggedDistanceKm) out.push({ label: "Distans", value: `${loggedDistanceKm} km` });
+      if (loggedTempo) out.push({ label: "Tempo", value: loggedTempo });
+      if (loggedPulse) out.push({ label: "Snittpuls", value: `${loggedPulse} bpm` });
+    }
+    if (completedSets > 0) out.push({ label: "Set", value: String(completedSets) });
+    if (totalVolume > 0)
+      out.push({
+        label: "Volym",
+        value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k kg` : `${totalVolume} kg`,
+      });
+    if (out.length < 4 && exercises.length > 0 && !isRunning)
+      out.push({ label: "Övningar", value: String(exercises.length) });
+    return out.slice(0, 4);
+  }, [isRunning, loggedDistanceKm, loggedTempo, loggedPulse, completedSets, totalVolume, exercises.length]);
+
+  const svgExercises: SvgExercise[] = exerciseSummaries.map((ex) => ({
+    name: ex.name,
+    detail: ex.type === "cardio" ? ex.info : ex.sets.length > 0 ? formatSets(ex.sets) || "" : ex.info,
+  }));
+
   const loadImageAsBase64 = (src: string): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      c.width = img.naturalWidth;
-      c.height = img.naturalHeight;
-      c.getContext("2d")!.drawImage(img, 0, 0);
-      resolve(c.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = src;
-  });
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext("2d")!.drawImage(img, 0, 0);
+        resolve(c.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      img.src = src;
+    });
+
+  useEffect(() => {
+    loadImageAsBase64(grimIcon).then(setLogoBase64).catch(() => setLogoBase64(""));
+  }, []);
+
+  const metaLine = `${week > 0 ? `Vecka ${week} · ` : ""}${formatDay(day)}`;
+
+  const svgMarkup = useMemo(
+    () =>
+      buildWorkoutCardSvg({
+        sessionName,
+        metaLine,
+        nickname,
+        sportLabel,
+        stats,
+        exercises: svgExercises,
+        isRunning,
+        logoBase64,
+        variant,
+        userPhotoBase64: userPhoto || undefined,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessionName, metaLine, nickname, sportLabel, stats, JSON.stringify(svgExercises), isRunning, logoBase64, variant, userPhoto]
+  );
 
   const generateImage = async (): Promise<Blob | null> => {
     setGenerating(true);
     try {
-      const logoBase64 = await loadImageAsBase64(grimIcon);
-      const subtitle = `${week > 0 ? `Vecka ${week} · ` : ""}${formatDay(day)} · ${nickname}`;
-
-      const svgStats: SvgStats[] = [];
-      if (isRunning && loggedDistanceKm) svgStats.push({ label: "km", value: String(loggedDistanceKm) });
-      if (isRunning && loggedTempo) svgStats.push({ label: "min/km", value: loggedTempo });
-      if (isRunning && loggedPulse) svgStats.push({ label: "bpm", value: String(loggedPulse) });
-      if (!isRunning && completedSets > 0) svgStats.push({ label: "set", value: String(completedSets) });
-      if (!isRunning && totalVolume > 0) svgStats.push({ label: "kg volym", value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(totalVolume) });
-      if (!isRunning && exercises.length > 0) svgStats.push({ label: "övningar", value: String(exercises.length) });
-
-      const svgExercises: SvgExercise[] = exerciseSummaries.map((ex) => ({
-        name: ex!.name,
-        detail:
-        ex!.type === "cardio" ?
-        ex!.info :
-        ex!.sets.length > 0 ?
-        formatSets(ex!.sets) || "" :
-        ex!.info
-      }));
-
+      const logo = logoBase64 || (await loadImageAsBase64(grimIcon));
       const svgStr = buildWorkoutCardSvg({
         sessionName,
-        subtitle,
-        stats: svgStats,
+        metaLine,
+        nickname,
+        sportLabel,
+        stats,
         exercises: svgExercises,
         isRunning,
-        logoBase64,
-        theme: t,
+        logoBase64: logo,
+        variant,
         userPhotoBase64: userPhoto || undefined,
       });
 
-
-      // SVG → Canvas → PNG
-      const scale = 3;
       const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
       const url = URL.createObjectURL(svgBlob);
 
@@ -278,8 +277,8 @@ const WorkoutShareCard = ({
       });
 
       const canvas = document.createElement("canvas");
-      canvas.width = 360 * scale;
-      canvas.height = 640 * scale;
+      canvas.width = CARD_W;
+      canvas.height = CARD_H;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(url);
@@ -317,29 +316,12 @@ const WorkoutShareCard = ({
         await navigator.share({
           title: `${sessionName} ✅`,
           text: `${nickname} slutförde ${sessionName}! 💪`,
-          files: [file]
+          files: [file],
         });
       } catch {}
     } else {
       handleDownload();
     }
-  };
-
-  const formatSets = (sets: {kg: string;reps: string;}[]) => {
-    if (sets.length === 0) return null;
-    // Group identical sets
-    const groups: {kg: string;reps: string;count: number;}[] = [];
-    sets.forEach((s) => {
-      const last = groups[groups.length - 1];
-      if (last && last.kg === s.kg && last.reps === s.reps) {
-        last.count++;
-      } else {
-        groups.push({ ...s, count: 1 });
-      }
-    });
-    return groups.
-    map((g) => `${g.count}×${g.reps} @ ${g.kg}kg`).
-    join(", ");
   };
 
   return (
@@ -349,227 +331,46 @@ const WorkoutShareCard = ({
         {/* Theme selector */}
         <div className="flex items-center justify-center gap-2">
           <Palette className="w-4 h-4 text-muted-foreground" />
-          {(Object.keys(themes) as Theme[]).map((key) =>
-          <button
-            key={key}
-            onClick={() => setTheme(key)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all ${
-            theme === key ?
-            "bg-primary text-primary-foreground scale-105" :
-            "bg-secondary text-secondary-foreground hover:bg-accent"}`
-            }>
-
-              {themes[key].label}
+          {(Object.keys(SHARE_CARD_THEMES) as ShareCardVariant[]).map((key) => (
+            <button
+              key={key}
+              onClick={() => setVariant(key)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                variant === key
+                  ? "bg-primary text-primary-foreground scale-105"
+                  : "bg-secondary text-secondary-foreground hover:bg-accent"
+              }`}
+            >
+              {SHARE_CARD_THEMES[key].label}
             </button>
-          )}
+          ))}
         </div>
 
         {/* Photo picker */}
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={handlePickPhoto}
-            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-accent transition-colors flex items-center gap-1.5">
+            className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-accent transition-colors flex items-center gap-1.5"
+          >
             <ImageIcon className="w-3.5 h-3.5" />
             {userPhoto ? "Byt foto" : "Lägg till foto"}
           </button>
           {userPhoto && (
             <button
               onClick={() => setUserPhoto(null)}
-              className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/20 transition-colors flex items-center gap-1.5">
+              className="px-3 py-1.5 text-xs font-semibold rounded-full bg-secondary text-secondary-foreground hover:bg-destructive/20 transition-colors flex items-center gap-1.5"
+            >
               <Trash2 className="w-3.5 h-3.5" /> Ta bort
             </button>
           )}
         </div>
 
-
-        {/* The card */}
+        {/* Live preview — identical markup to the exported PNG */}
         <div
           ref={cardRef}
-          className="rounded-2xl overflow-hidden"
-          style={{
-            background: t.bg,
-            padding: "24px",
-            fontFamily: "'Space Grotesk', sans-serif",
-            width: "100%",
-            boxSizing: "border-box",
-            aspectRatio: "9 / 16",
-            position: "relative"
-          }}>
-
-          {userPhoto && (
-            <>
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundImage: `url(${userPhoto})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  opacity: 0.45,
-                  pointerEvents: "none",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.35)",
-                  pointerEvents: "none",
-                }}
-              />
-            </>
-          )}
-          <div style={{ position: "relative", zIndex: 1 }}>
-
-
-          {/* Header with logo */}
-          <div style={{ marginBottom: "18px", display: "table", width: "100%" }}>
-            <div style={{ display: "table-cell", width: "60px", verticalAlign: "middle" }}>
-              <img
-                src={grimIcon}
-                alt="Grim"
-                style={{ width: 56, height: 56, borderRadius: 14 }}
-                crossOrigin="anonymous" />
-            </div>
-            <div style={{ display: "table-cell", verticalAlign: "middle", paddingLeft: "12px" }}>
-              <div
-                style={{
-                  color: t.text,
-                  fontFamily: "'Permanent Marker', cursive",
-                  fontWeight: 400,
-                  fontSize: "24px",
-                  lineHeight: "1.1",
-                  margin: 0,
-                  letterSpacing: "0.01em"
-                }}>
-                {sessionName}
-              </div>
-              <div style={{ color: t.subtext, fontSize: "12px", marginTop: "4px" }}>
-                {week > 0 ? `Vecka ${week} · ` : ""}{formatDay(day)} · {nickname}
-              </div>
-            </div>
-          </div>
-
-          {/* Stats row */}
-          <div style={{ marginBottom: "16px", display: "table", width: "100%", tableLayout: "fixed", borderSpacing: "8px 0" }}>
-            {(() => {
-              const stats: {label: string;value: string;}[] = [];
-              if (isRunning && loggedDistanceKm) stats.push({ label: "km", value: String(loggedDistanceKm) });
-              if (isRunning && loggedTempo) stats.push({ label: "min/km", value: loggedTempo });
-              if (isRunning && loggedPulse) stats.push({ label: "bpm", value: String(loggedPulse) });
-              if (!isRunning && completedSets > 0) stats.push({ label: "set", value: String(completedSets) });
-              if (!isRunning && totalVolume > 0) stats.push({ label: "kg volym", value: totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(totalVolume) });
-              if (!isRunning && exercises.length > 0) stats.push({ label: "övningar", value: String(exercises.length) });
-              return stats.map((s, i) =>
-              <div key={i} style={{ display: "table-cell", borderRadius: "12px", padding: "12px 4px", textAlign: "center", background: t.statBg, verticalAlign: "middle" }}>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: t.text, lineHeight: "1.2", textAlign: "center", fontFamily: "'Permanent Marker', cursive" }}>{s.value}</div>
-                  <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: t.muted, marginTop: "4px", textAlign: "center" }}>{s.label}</div>
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* Exercise details — bigger text, more space, weights shown */}
-          {exerciseSummaries.length > 0 &&
-          <div
-            style={{
-              background: t.exerciseBg,
-              border: `1px solid ${t.border}`,
-              borderRadius: "14px",
-              padding: "16px 14px",
-              marginBottom: "16px"
-            }}>
-              <div style={{
-                color: t.muted,
-                fontSize: "11px",
-                fontWeight: 400,
-                textTransform: "uppercase",
-                letterSpacing: "0.15em",
-                marginBottom: "12px",
-                fontFamily: "'Permanent Marker', cursive"
-              }}>
-                {isRunning ? "Kondition" : "Övningar"}
-              </div>
-              {exerciseSummaries.map((ex, i) =>
-            <div key={i} style={{ marginBottom: i < exerciseSummaries.length - 1 ? "14px" : "0" }}>
-                  {ex!.type === "cardio" ?
-              <div>
-                      <div style={{ color: t.text, fontSize: "15px", fontWeight: 600, lineHeight: "1.25" }}>
-                        {ex!.name}
-                      </div>
-                      <div style={{ color: t.subtext, fontSize: "12px", fontFamily: "monospace", marginTop: "3px" }}>
-                        {ex!.info}
-                      </div>
-                    </div> :
-
-              <div>
-                      <div style={{
-                        color: t.text,
-                        fontSize: "15px",
-                        fontWeight: 700,
-                        lineHeight: "1.25",
-                        fontFamily: "'Permanent Marker', cursive",
-                        letterSpacing: "0.01em"
-                      }}>
-                        {ex!.name}
-                      </div>
-                      {ex!.sets.length > 0 ?
-                <div style={{ color: t.subtext, fontSize: "12px", fontFamily: "'Space Mono', monospace", marginTop: "4px", lineHeight: "1.4" }}>
-                          {formatSets(ex!.sets)}
-                        </div> :
-
-                <div style={{ color: t.muted, fontSize: "12px", fontFamily: "'Space Mono', monospace", marginTop: "4px" }}>
-                          {ex!.info}
-                        </div>
-                }
-                    </div>
-              }
-                </div>
-            )}
-            </div>
-          }
-
-          {/* #BeGrim badge */}
-          <div style={{ display: "table", width: "100%", marginBottom: "16px" }}>
-            <div style={{ display: "table-cell", textAlign: "center" }}>
-              <div
-                style={{
-                  display: "inline-block",
-                  background: "transparent",
-                  color: t.text,
-                  fontSize: "16px",
-                  fontWeight: 400,
-                  padding: "8px 20px",
-                  borderRadius: "9999px",
-                  lineHeight: "1.4",
-                  fontFamily: "'Permanent Marker', cursive",
-                  letterSpacing: "0.02em"
-                }}>
-                #BeGrim
-              </div>
-            </div>
-          </div>
-
-          {/* Footer / branding */}
-          <div style={{ position: "absolute", bottom: "20px", left: "24px", right: "24px", display: "table", width: "calc(100% - 48px)" }}>
-            <div style={{
-              display: "table-cell",
-              color: t.muted,
-              fontSize: "14px",
-              fontWeight: 400,
-              letterSpacing: "0.05em",
-              textAlign: "left",
-              fontFamily: "'Permanent Marker', cursive"
-            }}>
-              Grim
-            </div>
-            <div style={{ display: "table-cell", color: t.muted, fontSize: "11px", fontWeight: 500, textAlign: "right", verticalAlign: "middle" }}>
-              grim.lovable.app
-            </div>
-          </div>
-          </div>
-        </div>
-
+          className="rounded-2xl overflow-hidden shadow-soft [&>svg]:block [&>svg]:w-full [&>svg]:h-auto"
+          dangerouslySetInnerHTML={{ __html: svgMarkup }}
+        />
 
         {/* Friend reactions on the auto-shared post */}
         {ownerUserId && viewerUserId && (
@@ -577,12 +378,7 @@ const WorkoutShareCard = ({
             <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wide">
               Vänner · 🔥 & kommentarer
             </div>
-            <WorkoutPostThread
-              userId={ownerUserId}
-              viewerId={viewerUserId}
-              week={week}
-              day={day}
-            />
+            <WorkoutPostThread userId={ownerUserId} viewerId={viewerUserId} week={week} day={day} />
           </div>
         )}
 
@@ -590,47 +386,52 @@ const WorkoutShareCard = ({
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
+            className="flex-1 py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5"
+          >
             <X className="w-4 h-4" /> Stäng
           </button>
           <button
             onClick={handleDownload}
             disabled={generating}
-            className="flex-1 py-3 bg-card text-card-foreground border border-border font-semibold rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
+            className="flex-1 py-3 bg-card text-card-foreground border border-border font-semibold rounded-lg hover:bg-accent transition-colors text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
             <Download className="w-4 h-4" /> Ladda ner
           </button>
           <button
             onClick={handleShare}
             disabled={generating}
-            className="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
+            className="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
             <Share2 className="w-4 h-4" /> Dela
           </button>
         </div>
         {onChatShare && (
           <button
             onClick={onChatShare}
-            className="w-full py-3 bg-accent text-accent-foreground font-semibold rounded-lg hover:bg-accent/80 transition-colors text-sm flex items-center justify-center gap-1.5">
-           <Send className="w-4 h-4" /> Dela via chatt
-           </button>
+            className="w-full py-3 bg-accent text-accent-foreground font-semibold rounded-lg hover:bg-accent/80 transition-colors text-sm flex items-center justify-center gap-1.5"
+          >
+            <Send className="w-4 h-4" /> Dela via chatt
+          </button>
         )}
         {onCopyToDate && (
           <button
             onClick={onCopyToDate}
-            className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
+            className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5"
+          >
             <Copy className="w-4 h-4" /> Kopiera till datum
           </button>
         )}
         {onSaveWorkout && (
           <button
             onClick={onSaveWorkout}
-            className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5">
+            className="w-full py-3 bg-secondary text-secondary-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm flex items-center justify-center gap-1.5"
+          >
             <Download className="w-4 h-4" /> Spara pass
           </button>
         )}
       </div>
-    </div>);
-
+    </div>
+  );
 };
-
 
 export default WorkoutShareCard;

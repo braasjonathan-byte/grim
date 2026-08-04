@@ -8,29 +8,93 @@ export interface SvgStats {
   value: string;
 }
 
+export type ShareCardVariant = "light" | "primary" | "dark";
+
 export interface SvgCardTheme {
-  bg: string;
+  bgFrom: string;
+  bgTo: string;
   text: string;
   subtext: string;
   muted: string;
-  statBg: string;
-  exerciseBg: string;
+  panel: string;
+  panelOpacity: number;
   border: string;
-  badgeBg: string;
+  borderOpacity: number;
+  accent: string;
+  onAccent: string;
 }
 
 export interface SvgCardInput {
   sessionName: string;
-  subtitle: string;
+  /** e.g. "Vecka 3 · 5 jun" */
+  metaLine: string;
+  nickname: string;
+  /** Short sport/type label, e.g. "LÖPNING" or "STYRKA" */
+  sportLabel: string;
   stats: SvgStats[];
   exercises: SvgExercise[];
   isRunning: boolean;
   logoBase64: string;
-  theme: SvgCardTheme;
+  variant: ShareCardVariant;
   /** Optional user-supplied background photo (base64 data URL). */
   userPhotoBase64?: string;
 }
 
+/* ── canvas constants ─────────────────────────────── */
+
+export const CARD_W = 1080;
+export const CARD_H = 1920;
+
+const MARKER = `'Permanent Marker', cursive`;
+const SANS = `'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`;
+const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;500;600;700&display=swap');`;
+
+/* ── themes ───────────────────────────────────────── */
+
+export const SHARE_CARD_THEMES: Record<ShareCardVariant, SvgCardTheme & { label: string }> = {
+  light: {
+    label: "Ljust",
+    bgFrom: "#ffffff",
+    bgTo: "#e8eefc",
+    text: "#0b1220",
+    subtext: "#41506b",
+    muted: "#7b89a3",
+    panel: "#ffffff",
+    panelOpacity: 0.78,
+    border: "#0b1220",
+    borderOpacity: 0.08,
+    accent: "#2563eb",
+    onAccent: "#ffffff",
+  },
+  primary: {
+    label: "Blått",
+    bgFrom: "#1d4ed8",
+    bgTo: "#0b1e4d",
+    text: "#ffffff",
+    subtext: "#cddcff",
+    muted: "#9db4ea",
+    panel: "#ffffff",
+    panelOpacity: 0.12,
+    border: "#ffffff",
+    borderOpacity: 0.22,
+    accent: "#ffffff",
+    onAccent: "#1d4ed8",
+  },
+  dark: {
+    label: "Mörkt",
+    bgFrom: "#12151c",
+    bgTo: "#05070b",
+    text: "#ffffff",
+    subtext: "#b8c2d4",
+    muted: "#7c879b",
+    panel: "#ffffff",
+    panelOpacity: 0.07,
+    border: "#ffffff",
+    borderOpacity: 0.14,
+    accent: "#4f8dff",
+    onAccent: "#06101f",
+  },
+};
 
 /* ── helpers ─────────────────────────────────────── */
 
@@ -42,198 +106,218 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function parseGradient(css: string, id: string): string {
-  const angleMatch = css.match(/(\d+)deg/);
-  const angle = angleMatch ? parseInt(angleMatch[1]) : 180;
-  const rad = ((angle - 90) * Math.PI) / 180;
-  const x1 = (0.5 - 0.5 * Math.cos(rad)).toFixed(3);
-  const y1 = (0.5 - 0.5 * Math.sin(rad)).toFixed(3);
-  const x2 = (0.5 + 0.5 * Math.cos(rad)).toFixed(3);
-  const y2 = (0.5 + 0.5 * Math.sin(rad)).toFixed(3);
-
-  const colors: { color: string; offset: string }[] = [];
-  const re = /(#[0-9a-fA-F]{3,8})\s*(\d+%)?/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(css))) {
-    colors.push({ color: m[1], offset: m[2] || "" });
-  }
-  colors.forEach((c, i) => {
-    if (!c.offset) {
-      c.offset =
-        colors.length === 1
-          ? "0%"
-          : `${Math.round((i / (colors.length - 1)) * 100)}%`;
-    }
-  });
-
-  const stops = colors
-    .map((c) => `<stop offset="${c.offset}" stop-color="${c.color}"/>`)
-    .join("");
-  return `<linearGradient id="${id}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}">${stops}</linearGradient>`;
+/** Rough width estimate so long titles can be scaled/wrapped without measuring. */
+function textWidth(s: string, fontSize: number, factor = 0.56): number {
+  return s.length * fontSize * factor;
 }
 
-/** Parse rgba(r,g,b,a) → {fill, opacity} for SVG attributes */
-function rgbaToSvg(rgba: string): { fill: string; opacity: number } {
-  const m = rgba.match(
-    /rgba?\(\s*(\d+),\s*(\d+),\s*(\d+),?\s*([\d.]+)?\s*\)/
-  );
-  if (m) {
-    const hex = `#${parseInt(m[1]).toString(16).padStart(2, "0")}${parseInt(m[2]).toString(16).padStart(2, "0")}${parseInt(m[3]).toString(16).padStart(2, "0")}`;
-    return { fill: hex, opacity: m[4] ? parseFloat(m[4]) : 1 };
+function wrap(s: string, fontSize: number, maxWidth: number, maxLines: number, factor = 0.56): string[] {
+  const words = s.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (textWidth(next, fontSize, factor) > maxWidth && cur) {
+      lines.push(cur);
+      cur = w;
+      if (lines.length === maxLines) break;
+    } else {
+      cur = next;
+    }
   }
-  return { fill: rgba, opacity: 1 };
+  if (cur && lines.length < maxLines) lines.push(cur);
+  if (lines.length === maxLines) {
+    let last = lines[maxLines - 1];
+    while (textWidth(last, fontSize, factor) > maxWidth && last.length > 1) last = last.slice(0, -1);
+    if (last !== lines[maxLines - 1]) lines[maxLines - 1] = last.replace(/\s+\S*$/, "") + "…";
+  }
+  return lines;
+}
+
+function ellipsize(s: string, fontSize: number, maxWidth: number, factor = 0.56): string {
+  if (textWidth(s, fontSize, factor) <= maxWidth) return s;
+  let out = s;
+  while (out.length > 2 && textWidth(out + "…", fontSize, factor) > maxWidth) out = out.slice(0, -1);
+  return out.trimEnd() + "…";
 }
 
 /* ── main builder ────────────────────────────────── */
 
 export function buildWorkoutCardSvg(input: SvgCardInput): string {
-  const W = 360;
-  const H = 640;
-  const P = 24;
-  const t = input.theme;
+  const W = CARD_W;
+  const H = CARD_H;
+  const P = 84;
+  const CW = W - 2 * P;
+  const t = SHARE_CARD_THEMES[input.variant] ?? SHARE_CARD_THEMES.light;
 
-  // Permanent Marker via Google Fonts (loaded inside SVG via <style>)
-  const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;600;700&family=Space+Mono&display=swap');`;
-  const MARKER = `'Permanent Marker', cursive`;
-  const SANS = `'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`;
-  const MONO = `'Space Mono', monospace`;
+  // Unique suffix so multiple cards on the same page never share gradient IDs
+  const uid = `c${Math.random().toString(36).slice(2, 8)}`;
+  const ID = {
+    bg: `bg-${uid}`,
+    dots: `dots-${uid}`,
+    logo: `logo-${uid}`,
+    glow: `glow-${uid}`,
+  };
 
-  // ── Gradient defs ──
   const defs = [
-    parseGradient(t.bg, "bg-grad"),
-    parseGradient(t.badgeBg, "badge-grad"),
-    `<clipPath id="logo-clip"><rect x="${P}" y="${P}" width="56" height="56" rx="14"/></clipPath>`,
+    `<linearGradient id="${ID.bg}" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0%" stop-color="${t.bgFrom}"/><stop offset="100%" stop-color="${t.bgTo}"/></linearGradient>`,
+    `<pattern id="${ID.dots}" width="48" height="48" patternUnits="userSpaceOnUse"><circle cx="6" cy="6" r="3" fill="${t.text}" fill-opacity="0.05"/></pattern>`,
+    `<clipPath id="${ID.logo}"><rect x="${P}" y="${P}" width="104" height="104" rx="30"/></clipPath>`,
+    `<radialGradient id="${ID.glow}" cx="0.5" cy="0.5" r="0.5"><stop offset="0%" stop-color="${t.accent}" stop-opacity="0.28"/><stop offset="100%" stop-color="${t.accent}" stop-opacity="0"/></radialGradient>`,
   ].join("\n");
 
   const els: string[] = [];
 
-  // ── Background ──
-  els.push(`<rect width="${W}" height="${H}" rx="16" fill="url(#bg-grad)"/>`);
+  /* Background */
+  els.push(`<rect width="${W}" height="${H}" fill="url(#${ID.bg})"/>`);
+  els.push(`<rect width="${W}" height="${H}" fill="url(#${ID.dots})"/>`);
+  els.push(`<circle cx="${W - 120}" cy="330" r="520" fill="url(#${ID.glow})"/>`);
+  els.push(`<circle cx="60" cy="${H - 240}" r="440" fill="url(#${ID.glow})"/>`);
+
   if (input.userPhotoBase64) {
     els.push(
-      `<image href="${input.userPhotoBase64}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice" opacity="0.45"/>`
+      `<image href="${input.userPhotoBase64}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice" opacity="0.5"/>`
     );
-    els.push(
-      `<rect width="${W}" height="${H}" fill="#000" fill-opacity="0.35"/>`
-    );
+    els.push(`<rect width="${W}" height="${H}" fill="${t.bgTo}" fill-opacity="0.55"/>`);
   }
 
-
-  // ── Logo ──
+  /* ── Header row: logo + wordmark + meta ── */
   els.push(
-    `<image href="${input.logoBase64}" x="${P}" y="${P}" width="56" height="56" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid slice"/>`
-  );
-
-  // ── Title & subtitle ──
-  const txX = P + 68;
-  els.push(
-    `<text x="${txX}" y="${P + 28}" fill="${t.text}" font-size="22" font-family="${MARKER}">${esc(input.sessionName)}</text>`
+    `<image href="${input.logoBase64}" x="${P}" y="${P}" width="104" height="104" clip-path="url(#${ID.logo})" preserveAspectRatio="xMidYMid slice"/>`
   );
   els.push(
-    `<text x="${txX}" y="${P + 48}" fill="${t.subtext}" font-size="12" font-family="${SANS}">${esc(input.subtitle)}</text>`
+    `<text x="${P + 128}" y="${P + 46}" fill="${t.text}" font-size="40" font-family="${MARKER}">Grim</text>`
+  );
+  els.push(
+    `<text x="${P + 128}" y="${P + 84}" fill="${t.muted}" font-size="24" font-family="${SANS}" font-weight="500" letter-spacing="2">@${esc(input.nickname)}</text>`
+  );
+  els.push(
+    `<text x="${W - P}" y="${P + 66}" fill="${t.subtext}" font-size="26" font-family="${SANS}" font-weight="500" text-anchor="end">${esc(input.metaLine)}</text>`
   );
 
-  let y = P + 80;
+  let y = P + 190;
 
-  // ── Stats row ──
-  const { stats } = input;
+  /* ── Sport chip ── */
+  const chipLabel = input.sportLabel.toUpperCase();
+  const chipFs = 26;
+  const chipW = Math.max(150, textWidth(chipLabel, chipFs, 0.68) + 64);
+  els.push(
+    `<rect x="${P}" y="${y}" width="${chipW}" height="58" rx="29" fill="${t.accent}"/>`
+  );
+  els.push(
+    `<text x="${P + chipW / 2}" y="${y + 29}" fill="${t.onAccent}" font-size="${chipFs}" font-family="${SANS}" font-weight="700" letter-spacing="3" text-anchor="middle" dy="0.35em">${esc(chipLabel)}</text>`
+  );
+  y += 58 + 40;
+
+  /* ── Session title (marker font, branding/heading only) ── */
+  let titleFs = 104;
+  let titleLines = wrap(input.sessionName, titleFs, CW, 2, 0.6);
+  while (titleLines.length > 1 && titleFs > 62 && textWidth(input.sessionName, titleFs, 0.6) > CW * 1.9) {
+    titleFs -= 8;
+    titleLines = wrap(input.sessionName, titleFs, CW, 2, 0.6);
+  }
+  titleLines.forEach((line, i) => {
+    els.push(
+      `<text x="${P}" y="${y + titleFs * 0.78 + i * titleFs * 1.08}" fill="${t.text}" font-size="${titleFs}" font-family="${MARKER}">${esc(line)}</text>`
+    );
+  });
+  y += titleLines.length * titleFs * 1.08 + 56;
+
+  /* ── Hero stats ── */
+  const stats = input.stats.slice(0, 4);
   if (stats.length > 0) {
-    const gap = 8;
-    const n = stats.length;
-    const cw = (W - 2 * P - (n - 1) * gap) / n;
-    const ch = 56;
-    const { fill: sf, opacity: so } = rgbaToSvg(t.statBg);
+    const gap = 20;
+    const perRow = stats.length <= 2 ? stats.length : 2;
+    const rows = Math.ceil(stats.length / perRow);
+    const cw = (CW - (perRow - 1) * gap) / perRow;
+    const ch = rows === 1 ? 220 : 190;
 
     stats.forEach((s, i) => {
-      const cx = P + i * (cw + gap);
+      const r = Math.floor(i / perRow);
+      const c = i % perRow;
+      const rowCount = Math.min(perRow, stats.length - r * perRow);
+      const rowW = (CW - (rowCount - 1) * gap) / rowCount;
+      const cx = P + c * (rowW + gap);
+      const cy = y + r * (ch + gap);
       els.push(
-        `<rect x="${cx}" y="${y}" width="${cw}" height="${ch}" rx="12" fill="${sf}" fill-opacity="${so}"/>`
+        `<rect x="${cx}" y="${cy}" width="${rowW}" height="${ch}" rx="34" fill="${t.panel}" fill-opacity="${t.panelOpacity}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
+      );
+      const valFs = Math.min(84, Math.max(46, Math.floor((rowW - 80) / Math.max(3, s.value.length) * 1.7)));
+      els.push(
+        `<text x="${cx + 40}" y="${cy + ch - 78}" fill="${t.text}" font-size="${valFs}" font-family="${SANS}" font-weight="700" letter-spacing="-1">${esc(ellipsize(s.value, valFs, rowW - 80, 0.58))}</text>`
       );
       els.push(
-        `<text x="${cx + cw / 2}" y="${y + 22}" fill="${t.text}" font-size="22" font-family="${MARKER}" text-anchor="middle" dy="0.35em">${esc(s.value)}</text>`
-      );
-      els.push(
-        `<text x="${cx + cw / 2}" y="${y + 44}" fill="${t.muted}" font-size="9" font-family="${SANS}" text-anchor="middle" dy="0.35em" letter-spacing="1">${esc(s.label.toUpperCase())}</text>`
+        `<text x="${cx + 40}" y="${cy + ch - 38}" fill="${t.muted}" font-size="24" font-family="${SANS}" font-weight="600" letter-spacing="3">${esc(s.label.toUpperCase())}</text>`
       );
     });
-
-    y += ch + 12;
+    y += rows * ch + (rows - 1) * gap + 34;
   }
 
-  // ── Exercises ──
-  const maxEx = 7;
-  const visibleExercises = input.exercises.slice(0, maxEx);
-  const hiddenCount = input.exercises.length - visibleExercises.length;
+  /* ── Exercise panel (fills remaining space down to footer) ── */
+  const footerY = H - P - 40;
+  const panelBottom = footerY - 56;
+  const panelH = panelBottom - y;
+  const ip = 44;
+  const headH = 96;
+  const minRow = 92;
+  const maxRow = 176;
+  const avail = panelH - headH - ip;
+  const maxRows = Math.max(0, Math.floor(avail / minRow));
+  const visible = input.exercises.slice(0, maxRows);
+  const hidden = input.exercises.length - visible.length;
+  // Spread rows evenly so the panel never looks half empty
+  const rowH = visible.length > 0
+    ? Math.min(maxRow, Math.max(minRow, avail / (visible.length + (hidden > 0 ? 1 : 0))))
+    : minRow;
 
-  if (visibleExercises.length > 0) {
-    const ep = 14;
-    const headerH = 24;
-    const nameH = 22;
-    const detailH = 18;
-    const exGap = 8;
-
-    let contentH = ep + headerH;
-    visibleExercises.forEach((ex, idx) => {
-      contentH += nameH;
-      if (ex.detail) contentH += detailH;
-      if (idx < visibleExercises.length - 1) contentH += exGap;
-    });
-    if (hiddenCount > 0) contentH += nameH;
-    contentH += ep;
-
-    const bx = P;
-    const bw = W - 2 * P;
-    const { fill: ef, opacity: eo } = rgbaToSvg(t.exerciseBg);
-    const { fill: bf, opacity: bo } = rgbaToSvg(t.border);
-
+  if (panelH > 200) {
     els.push(
-      `<rect x="${bx}" y="${y}" width="${bw}" height="${contentH}" rx="14" fill="${ef}" fill-opacity="${eo}" stroke="${bf}" stroke-opacity="${bo}" stroke-width="1"/>`
+      `<rect x="${P}" y="${y}" width="${CW}" height="${panelH}" rx="40" fill="${t.panel}" fill-opacity="${t.panelOpacity}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
     );
-
-    let ty = y + ep + 12;
+    let ty = y + ip + 34;
     els.push(
-      `<text x="${bx + ep}" y="${ty}" fill="${t.muted}" font-size="11" font-family="${MARKER}" letter-spacing="1.5">${input.isRunning ? "KONDITION" : "ÖVNINGAR"}</text>`
+      `<text x="${P + ip}" y="${ty}" fill="${t.muted}" font-size="24" font-family="${SANS}" font-weight="700" letter-spacing="4">${input.isRunning ? "PASSET" : "ÖVNINGAR"}</text>`
     );
-    ty += headerH;
+    ty += 62;
 
-    visibleExercises.forEach((ex, idx) => {
+    visible.forEach((ex, idx) => {
+      els.push(`<circle cx="${P + ip + 7}" cy="${ty - 11}" r="7" fill="${t.accent}"/>`);
       els.push(
-        `<text x="${bx + ep}" y="${ty}" fill="${t.text}" font-size="15" font-family="${MARKER}" letter-spacing="0.02em">${esc(ex.name)}</text>`
+        `<text x="${P + ip + 34}" y="${ty}" fill="${t.text}" font-size="34" font-family="${SANS}" font-weight="600">${esc(ellipsize(ex.name, 34, CW - 2 * ip - 44, 0.55))}</text>`
       );
-      ty += nameH - 6;
       if (ex.detail) {
         els.push(
-          `<text x="${bx + ep}" y="${ty}" fill="${t.subtext}" font-size="12" font-family="${MONO}">${esc(ex.detail)}</text>`
+          `<text x="${P + ip + 34}" y="${ty + 38}" fill="${t.subtext}" font-size="26" font-family="${SANS}" font-weight="500">${esc(ellipsize(ex.detail, 26, CW - 2 * ip - 44, 0.55))}</text>`
         );
-        ty += detailH;
-      } else {
-        ty += 6;
       }
-      if (idx < visibleExercises.length - 1) ty += exGap;
+      if (idx < visible.length - 1) {
+        els.push(
+          `<line x1="${P + ip}" y1="${ty + rowH - 44}" x2="${P + CW - ip}" y2="${ty + rowH - 44}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
+        );
+      }
+      ty += rowH;
     });
 
-    if (hiddenCount > 0) {
+    if (hidden > 0) {
       els.push(
-        `<text x="${bx + ep}" y="${ty + 4}" fill="${t.muted}" font-size="12" font-family="${SANS}" font-style="italic">+ ${hiddenCount} till</text>`
+        `<text x="${P + ip + 34}" y="${Math.min(ty + 6, y + panelH - 40)}" fill="${t.muted}" font-size="26" font-family="${SANS}" font-weight="600">+ ${hidden} till</text>`
       );
     }
-
-    y += contentH + 14;
   }
 
-  // ── #BeGrim badge ──
-  const bh = 32;
-  els.push(
-    `<text x="${W / 2}" y="${y + bh / 2}" fill="${t.text}" font-size="18" font-family="${MARKER}" letter-spacing="0.05em" text-anchor="middle" dy="0.35em">#BeGrim</text>`
-  );
-  y += bh + 12;
 
-  // ── Footer ──
+  /* ── Footer ── */
   els.push(
-    `<text x="${P}" y="${H - P}" fill="${t.muted}" font-size="16" font-family="${MARKER}" letter-spacing="0.05em">Grim</text>`
+    `<line x1="${P}" y1="${footerY - 34}" x2="${W - P}" y2="${footerY - 34}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
   );
   els.push(
-    `<text x="${W - P}" y="${H - P}" fill="${t.muted}" font-size="11" font-family="${SANS}" font-weight="500" text-anchor="end">grim.lovable.app</text>`
+    `<text x="${P}" y="${footerY + 20}" fill="${t.text}" font-size="38" font-family="${MARKER}">Grim</text>`
+  );
+  els.push(
+    `<text x="${W / 2}" y="${footerY + 20}" fill="${t.accent}" font-size="28" font-family="${SANS}" font-weight="700" letter-spacing="2" text-anchor="middle">#BeGrim</text>`
+  );
+  els.push(
+    `<text x="${W - P}" y="${footerY + 18}" fill="${t.muted}" font-size="26" font-family="${SANS}" font-weight="500" text-anchor="end">grim.lovable.app</text>`
   );
 
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
