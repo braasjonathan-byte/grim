@@ -1123,52 +1123,55 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         />
       )}
 
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+      <div className="space-y-3">
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-          <div className="flex items-center gap-1">
-            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-            <span className="text-[10px] text-muted-foreground font-medium">h</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-            <span className="text-[10px] text-muted-foreground font-medium">m</span>
-            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className="w-12 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-            <span className="text-[10px] text-muted-foreground font-medium">s</span>
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="min-w-0">
+              <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <span className={condUnitCls}>tim</span>
+            </div>
+            <div className="min-w-0">
+              <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <span className={condUnitCls}>min</span>
+            </div>
+            <div className="min-w-0">
+              <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <span className={condUnitCls}>sek</span>
+            </div>
           </div>
         </div>
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{bikeMode === "watt" ? "Effekt (W)" : bikeMode === "kmh" ? "Hastighet (km/h)" : bikeMode === "spm" ? "Frekvens (spm)" : `Tempo (${tempoUnit})`}</label>
-          <input
-            type="text"
-            inputMode={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "decimal" : "numeric"}
-            pattern={bikeMode === "kmh" || bikeMode === "watt" || bikeMode === "spm" ? "[0-9.,]*" : "[0-9:]*"}
-            value={tempo}
-            onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
-            placeholder={
-              bikeMode === "min100m" ? "t.ex. 1:50"
-                : bikeMode === "min500m" ? "t.ex. 2:00"
-                : bikeMode === "kmh" ? "t.ex. 25"
-                : bikeMode === "watt" ? "t.ex. 180"
-                : bikeMode === "spm" ? "t.ex. 120"
-                : "t.ex. 5:30"
-            }
-            className="w-24 bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans ({distUnit})</label>
-          <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || "—"} className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+        <div className={`grid gap-2 ${showDistance ? "grid-cols-2" : "grid-cols-1"}`}>
+          <div className="min-w-0">
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">{modeFieldLabel(bikeMode, name)}</label>
+            <input
+              type="text"
+              inputMode={isPaceMode(bikeMode) ? "numeric" : "decimal"}
+              pattern={isPaceMode(bikeMode) ? "[0-9:]*" : "[0-9.,]*"}
+              value={tempo}
+              onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
+              onBlur={() => { if (isPaceMode(bikeMode)) { const f = formatPaceDisplay(tempo, bikeMode); if (f && f !== tempo) setTempo(f); } }}
+              placeholder={modePlaceholder(bikeMode)}
+              className={condInputCls}
+            />
+          </div>
+          {showDistance && (
+            <div className="min-w-0">
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Distans ({distUnit})</label>
+              <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || (distUnit === "m" ? "400" : "5.0")} className={condInputCls} />
+            </div>
+          )}
         </div>
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Snittspuls (bpm)</label>
+          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className={condInputCls} />
         </div>
       </div>
-      <div className="flex gap-2">
-        <button onClick={handleSave} className="flex-1 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
-        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">Avbryt</button>}
+      <div className="flex gap-2 pt-1">
+        <button onClick={handleSave} className="flex-1 h-11 bg-primary text-primary-foreground rounded-xl text-sm font-semibold shadow-soft hover:bg-primary/90 transition-colors">Spara</button>
+        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-xl transition-colors">Avbryt</button>}
       </div>
+
     </div>
   );
 };
