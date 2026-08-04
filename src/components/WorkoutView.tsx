@@ -1938,6 +1938,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         };
       }
       setCompletions(map);
+      // Seed the data-loss guard with what the backend actually holds
+      seedCheckmarkCounts(userId, compData as any);
       const commentMap: Record<string, string> = {};
       for (const c of compData) {
         commentMap[`${c.week}-${c.day}`] = c.user_comment || "";
