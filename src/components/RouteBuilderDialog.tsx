@@ -430,7 +430,10 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
           route={navRoute.route}
           activity={navRoute.activity}
           name={navRoute.name}
-          onClose={() => setNavRoute(null)}
+          onClose={() => {
+            setNavRoute(null);
+            onOpenChange(false);
+          }}
         />
       )}
     </>
