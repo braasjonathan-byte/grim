@@ -154,43 +154,55 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
   };
 
   const inputCls =
-    "w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal";
+    "w-full min-w-0 bg-background text-foreground text-sm px-2 py-2 rounded-xl border border-border outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
+
+  const unitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
+  const labelCls = "text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {count > 1 && (
         <p className="text-[11px] text-muted-foreground italic">
           Tips: fyll i Intervall 1 så kopieras värdena automatiskt till övriga tomma intervaller.
         </p>
       )}
       {rows.slice(0, count).map((r, i) => (
-        <div key={i} className="bg-background/50 rounded-md p-2.5 border border-border space-y-2">
+        <div
+          key={i}
+          className={`rounded-xl p-3 border border-border/60 space-y-3 ${i % 2 === 0 ? "bg-muted/40" : "bg-background/60"}`}
+        >
           <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
             Intervall {i + 1}
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-            <div className="flex items-center gap-1">
-              <input
-                type="number" inputMode="numeric" min="0" value={r.h}
-                onChange={(e) => update(i, { h: e.target.value }, "time")}
-                placeholder="0" className={inputCls} />
-              <span className="text-[10px] text-muted-foreground font-medium">h</span>
-              <input
-                type="number" inputMode="numeric" min="0" max="59" value={r.m}
-                onChange={(e) => update(i, { m: e.target.value }, "time")}
-                placeholder="0" className={inputCls} />
-              <span className="text-[10px] text-muted-foreground font-medium">m</span>
-              <input
-                type="number" inputMode="numeric" min="0" max="59" value={r.s}
-                onChange={(e) => update(i, { s: e.target.value }, "time")}
-                placeholder="0" className={inputCls} />
-              <span className="text-[10px] text-muted-foreground font-medium">s</span>
+            <label className={`${labelCls} text-left`}>Tid</label>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="min-w-0">
+                <input
+                  type="number" inputMode="numeric" min="0" value={r.h}
+                  onChange={(e) => update(i, { h: e.target.value }, "time")}
+                  placeholder="0" className={inputCls} />
+                <span className={unitCls}>tim</span>
+              </div>
+              <div className="min-w-0">
+                <input
+                  type="number" inputMode="numeric" min="0" max="59" value={r.m}
+                  onChange={(e) => update(i, { m: e.target.value }, "time")}
+                  placeholder="0" className={inputCls} />
+                <span className={unitCls}>min</span>
+              </div>
+              <div className="min-w-0">
+                <input
+                  type="number" inputMode="numeric" min="0" max="59" value={r.s}
+                  onChange={(e) => update(i, { s: e.target.value }, "time")}
+                  placeholder="0" className={inputCls} />
+                <span className={unitCls}>sek</span>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Tempo</label>
+          <div className={`grid gap-2 ${hideDistance ? "grid-cols-2" : "grid-cols-3"}`}>
+            <div className="min-w-0">
+              <label className={labelCls}>Tempo</label>
               <input
                 type="text" inputMode="numeric" pattern="[0-9:]*" value={r.tempo}
                 onChange={(e) => update(i, { tempo: e.target.value }, "tempo")}
@@ -203,23 +215,25 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
                   update(i, { tempo: formatTempo(v) }, "tempo");
                 }}
                 placeholder="5:30" className={inputCls} />
-              <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">min/km</span>
+              <span className={unitCls}>{paceUnit}</span>
             </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Distans</label>
-              <input
-                type="number" inputMode="decimal" value={r.distance}
-                onChange={(e) => update(i, { distance: e.target.value }, "distance")}
-                placeholder="1.0" className={inputCls} />
-              <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">km</span>
-            </div>
-            <div>
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Puls</label>
+            {!hideDistance && (
+              <div className="min-w-0">
+                <label className={labelCls}>Distans</label>
+                <input
+                  type="number" inputMode="decimal" value={r.distance}
+                  onChange={(e) => update(i, { distance: e.target.value }, "distance")}
+                  placeholder={distUnit === "m" ? "400" : "1.0"} className={inputCls} />
+                <span className={unitCls}>{distUnit}</span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <label className={labelCls}>Puls</label>
               <input
                 type="number" inputMode="numeric" value={r.pulse}
                 onChange={(e) => update(i, { pulse: e.target.value })}
                 placeholder="155" className={inputCls} />
-              <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">bpm</span>
+              <span className={unitCls}>bpm</span>
             </div>
           </div>
         </div>
@@ -227,6 +241,7 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
     </div>
   );
 }
+
 
 export function summarizeIntervalRows(rows: IntervalRow[]): {
   totalTimeMin: number;
