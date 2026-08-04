@@ -15,6 +15,7 @@ import {
   Send,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
