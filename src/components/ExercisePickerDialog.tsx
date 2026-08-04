@@ -82,23 +82,29 @@ const ExercisePickerDialog = ({
       supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
         if (data) setCustomExercises(data);
       });
-      // Focus search after animation
-      setTimeout(() => inputRef.current?.focus(), 150);
+      // No auto-focus: keyboard should not open automatically
     }
   }, [open, initialMuscleGroup]);
 
-  // Handle keyboard on mobile — keep content visible
+  // Handle keyboard on mobile — keep the sheet above the keyboard
   useEffect(() => {
     if (!open) return;
     const handleResize = () => {
-      if (contentRef.current) {
-        const vh = window.visualViewport?.height || window.innerHeight;
-        contentRef.current.style.maxHeight = `${vh - 24}px`;
-      }
+      if (!contentRef.current) return;
+      const vv = window.visualViewport;
+      const vh = vv?.height || window.innerHeight;
+      const offset = vv ? vv.offsetTop : 0;
+      contentRef.current.style.height = `${vh}px`;
+      contentRef.current.style.maxHeight = `${vh}px`;
+      contentRef.current.style.transform = `translateY(${offset}px)`;
     };
     handleResize();
     window.visualViewport?.addEventListener("resize", handleResize);
-    return () => window.visualViewport?.removeEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
+    };
   }, [open]);
 
   if (!open) return null;
