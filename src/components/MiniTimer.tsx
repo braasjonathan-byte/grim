@@ -186,6 +186,8 @@ const MiniTimer = () => {
     const apply = () => {
       const total = Math.max(1, mins * 60 + secs);
       setCountdownDefault(total);
+      // Håll vilotimern (efter set) i synk med timerns nedräkningstid
+      localStorage.setItem("grim_set_rest_timer_seconds", String(total));
       if (mode === "countdown" && !running) setSeconds(total);
       setSettingsOpen(false);
     };
