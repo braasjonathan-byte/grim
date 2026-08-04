@@ -1,3 +1,4 @@
+import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,14 +44,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [barcodeOpen, setBarcodeOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [restaurantOpen, setRestaurantOpen] = useState(false);
-  const [isHonorary, setIsHonorary] = useState(false);
+  const { isHonorary } = useAccessLevel();
 
-  useEffect(() => {
-    if (!open) return;
-    supabase.from("profiles").select("is_honorary").eq("user_id", userId).maybeSingle().then(({ data }) => {
-      setIsHonorary(!!data?.is_honorary);
-    });
-  }, [open, userId]);
 
   // search
   useEffect(() => {

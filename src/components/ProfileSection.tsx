@@ -1,3 +1,4 @@
+import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { User, Camera, Loader2, Instagram, Music, Crown, Shield, Ruler, Trash2, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -61,8 +62,8 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [spotifyName, setSpotifyName] = useState("");
   const [spotifyThumb, setSpotifyThumb] = useState<string | null>(null);
   const [fetchingSpotify, setFetchingSpotify] = useState(false);
-  const [isHonorary, setIsHonorary] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isHonorary, isAdmin } = useAccessLevel();
+
   const [loaded, setLoaded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const dirty = useRef(false);
@@ -70,14 +71,11 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const [{ data }, { data: roleData }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, is_honorary, weight_kg")
-          .eq("user_id", userId)
-          .single(),
-        supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin").maybeSingle(),
-      ]);
+      const { data } = await supabase
+        .from("profiles")
+        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, weight_kg")
+        .eq("user_id", userId)
+        .single();
 
       if (data) {
         setAge(data.age?.toString() || "");
@@ -89,13 +87,12 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         setSnapchat((data as any).snapchat || "");
         setSpotifyUrl((data as any).spotify_anthem_url || "");
         setSpotifyName((data as any).spotify_anthem_name || "");
-        setIsHonorary(data.is_honorary ?? false);
       }
-      setIsAdmin(!!roleData);
       setLoaded(true);
     };
     fetchProfile();
   }, [userId]);
+
 
   // Auto-save profile with debounce
   const doSave = useCallback(async () => {

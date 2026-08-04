@@ -1,3 +1,4 @@
+import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin } from "lucide-react";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
@@ -38,24 +39,11 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
   const [gpsVoiceMin, setGpsVoiceMinState] = useState<number>(() => getGpsVoiceIntervalMin());
   const [gpsVoiceKm, setGpsVoiceKmState] = useState<number>(() => getGpsVoiceIntervalKm());
 
-  // Fallback: verify honorary status directly against the profile so premium
-  // themes unlock even if the prop hasn't propagated yet (e.g. status granted
-  // while the app was open, or a slow/failed access-status load).
-  const [honoraryFromDb, setHonoraryFromDb] = useState(false);
-  useEffect(() => {
-    if (!userId || isHonorary) return;
-    let cancelled = false;
-    supabase
-      .from("profiles")
-      .select("is_honorary")
-      .eq("user_id", userId)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        if (!cancelled) setHonoraryFromDb(Boolean(data?.is_honorary));
-      });
-    return () => { cancelled = true; };
-  }, [userId, isHonorary]);
-  const honorary = isHonorary || honoraryFromDb;
+  // Behörighet läses alltid från den centrala källan (user_roles + is_honorary).
+  // Admin/Skapare räknas alltid som hedersmedlem.
+  const access = useAccessLevel();
+  const honorary = isHonorary || access.isHonorary;
+
 
 
 

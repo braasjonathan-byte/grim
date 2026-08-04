@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link, Copy, Check, QrCode, X, Share2 } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import { QRCodeSVG } from "qrcode.react";
+import { useAccessLevel } from "@/hooks/useAccessLevel";
 
 interface ReferralLinkProps {
   userId: string;
@@ -11,24 +12,24 @@ interface ReferralLinkProps {
 const ReferralLink = ({ userId }: ReferralLinkProps) => {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [isHonorary, setIsHonorary] = useState(false);
+  const { isHonorary } = useAccessLevel();
   const [nickname, setNickname] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     supabase
       .from("profiles")
-      .select("referral_code, is_honorary, nickname")
+      .select("referral_code, nickname")
       .eq("user_id", userId)
       .single()
       .then(({ data }) => {
         if (data) {
           setReferralCode((data as any).referral_code);
-          setIsHonorary((data as any).is_honorary);
           setNickname((data as any).nickname ?? null);
         }
       });
   }, [userId]);
+
 
   if (!referralCode) return null;
 
