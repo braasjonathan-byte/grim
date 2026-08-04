@@ -253,6 +253,66 @@ const MiniTimer = () => {
     willChange: "transform",
   } as React.CSSProperties;
 
+  // --- Draggable bubble (snaps to left/right edge) ---
+  const BUBBLE_SIZE = 44;
+  const BUBBLE_KEY = "grim_mini_timer_bubble_pos";
+  const [bubblePos, setBubblePos] = useState<{ side: "left" | "right"; top: number } | null>(() => {
+    try {
+      const raw = localStorage.getItem(BUBBLE_KEY);
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      if ((p.side === "left" || p.side === "right") && typeof p.top === "number") return p;
+    } catch { /* ignore */ }
+    return null;
+  });
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef<{ moved: boolean; offsetX: number; offsetY: number } | null>(null);
+  const [dragXY, setDragXY] = useState<{ x: number; y: number } | null>(null);
+
+  const clampTop = (y: number) =>
+    Math.max(8, Math.min(window.innerHeight - BUBBLE_SIZE - 8, y));
+
+  const onBubblePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragRef.current = { moved: false, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+    setDragXY({ x: rect.left, y: rect.top });
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const onBubblePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const x = e.clientX - d.offsetX;
+    const y = e.clientY - d.offsetY;
+    if (!d.moved) {
+      d.moved = true;
+      setDragging(true);
+    }
+    setDragXY({ x, y });
+  };
+
+  const onBubblePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    if (!d) return;
+    if (!d.moved) {
+      setDragging(false);
+      setDragXY(null);
+      setExpanded(true);
+      return;
+    }
+    const x = e.clientX - d.offsetX;
+    const y = clampTop(e.clientY - d.offsetY);
+    const side: "left" | "right" = x + BUBBLE_SIZE / 2 < window.innerWidth / 2 ? "left" : "right";
+    const next = { side, top: y };
+    setBubblePos(next);
+    try { localStorage.setItem(BUBBLE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    setDragging(false);
+    setDragXY(null);
+  };
+
+
   if (fullscreen) {
     const R = 120;
     const C = 2 * Math.PI * R;
@@ -326,18 +386,29 @@ const MiniTimer = () => {
     );
   }
 
-  // Collapsed & idle: tiny floating round button
+  // Collapsed & idle: tiny floating round button (draggable along the screen edges)
   if (!expanded && isIdle) {
+    const containerStyle: React.CSSProperties = dragXY
+      ? { top: dragXY.y, left: dragXY.x }
+      : bubblePos
+      ? { top: bubblePos.top, [bubblePos.side]: 16 }
+      : { right: 16, ...dockStyle };
     return (
-      <div className="fixed right-4 z-50 pointer-events-none" style={dockStyle}>
+      <div className="fixed z-50 pointer-events-none" style={containerStyle}>
         <button
-          onClick={() => setExpanded(true)}
-          aria-label="Öppna stoppur"
-          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-soft text-primary transition-transform active:scale-95 animate-fade-in"
+          onPointerDown={onBubblePointerDown}
+          onPointerMove={onBubblePointerMove}
+          onPointerUp={onBubblePointerUp}
+          onPointerCancel={onBubblePointerUp}
+          aria-label="Öppna stoppur (dra för att flytta)"
+          className={`pointer-events-auto touch-none flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-soft text-primary animate-fade-in ${
+            dragging ? "scale-110 cursor-grabbing" : "transition-transform active:scale-95 cursor-grab"
+          }`}
         >
           <TimerReset className="h-5 w-5" />
         </button>
       </div>
+
     );
   }
 
