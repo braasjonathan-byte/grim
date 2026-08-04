@@ -75,7 +75,7 @@ const buildOverpassQuery = (
       `way["highway"~"^(path|footway|track|pedestrian|cycleway|steps|bridleway|residential|living_street|unclassified|service|tertiary)$"]["access"!~"^(private|no)$"]${around};`,
     );
   }
-  return `[out:json][timeout:25];(${parts.join("")});out geom;`;
+  return `[out:json][timeout:20];(${parts.join("")});out geom;`;
 };
 
 const isPaved = (tags: Record<string, string>) => {
@@ -97,28 +97,80 @@ interface Edge {
   wayId: number;
 }
 
+// Kör alla Overpass-speglar parallellt och använd det första svaret som lyckas.
 const fetchOverpass = async (query: string) => {
-  let lastErr = "";
-  for (const url of OVERPASS_ENDPOINTS) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "GrimApp/1.0 (route loop generator; contact: support@grim.lovable.app)",
-        },
-        body: `data=${encodeURIComponent(query)}`,
-      });
-      if (!res.ok) {
-        lastErr = `${res.status}: ${await res.text()}`;
-        continue;
-      }
-      return await res.json();
-    } catch (e) {
-      lastErr = String(e);
-    }
+  const attempts = OVERPASS_ENDPOINTS.map(async (url) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "GrimApp/1.0 (route loop generator; contact: support@grim.lovable.app)",
+      },
+      body: `data=${encodeURIComponent(query)}`,
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) throw new Error(`${url} ${res.status}`);
+    return await res.json();
+  });
+  try {
+    return await Promise.any(attempts);
+  } catch (e) {
+    throw new Error(`Overpass misslyckades – ${String((e as AggregateError)?.errors?.map(String).join(" | ") ?? e)}`);
   }
-  throw new Error(`Overpass misslyckades – ${lastErr}`);
+};
+
+// Kort minnescache per instans så att upprepade sökningar på samma plats går direkt.
+const graphCache = new Map<string, { at: number; data: any }>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+const cachedOverpass = async (key: string, query: string) => {
+  const hit = graphCache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
+  const data = await fetchOverpass(query);
+  graphCache.set(key, { at: Date.now(), data });
+  if (graphCache.size > 20) graphCache.delete(graphCache.keys().next().value as string);
+  return data;
+};
+
+/** Höjdprofil via Google Elevation API (genom Lovable-gatewayen). */
+const fetchElevation = async (points: LatLng[]): Promise<{ gain: number; loss: number } | null> => {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
+  if (!LOVABLE_API_KEY || !GOOGLE_MAPS_API_KEY || points.length < 2) return null;
+  const maxPts = 25;
+  const step = Math.max(1, Math.ceil(points.length / maxPts));
+  const sampled = points.filter((_, i) => i % step === 0);
+  const path = sampled.map((p) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`).join("|");
+  try {
+    const res = await fetch(
+      `https://connector-gateway.lovable.dev/google_maps/maps/api/elevation/json?path=${encodeURIComponent(path)}&samples=64`,
+      {
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "X-Connection-Api-Key": GOOGLE_MAPS_API_KEY,
+        },
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+    if (!res.ok) {
+      console.error("elevation failed", res.status, await res.text());
+      return null;
+    }
+    const json = await res.json();
+    const results: any[] = json?.results ?? [];
+    if (results.length < 2) return null;
+    let gain = 0;
+    let loss = 0;
+    for (let i = 1; i < results.length; i++) {
+      const d = Number(results[i].elevation) - Number(results[i - 1].elevation);
+      if (d > 0.7) gain += d;
+      else if (d < -0.7) loss += -d;
+    }
+    return { gain: Math.round(gain), loss: Math.round(loss) };
+  } catch (e) {
+    console.error("elevation error", e);
+    return null;
+  }
 };
 
 Deno.serve(async (req) => {
@@ -130,7 +182,7 @@ Deno.serve(async (req) => {
     const lng = Number(body.lng);
     const distanceKm = Number(body.distanceKm);
     const activity = String(body.activity ?? "running");
-    const asphaltOnly = Boolean(body.asphaltOnly) && activity === "cycling";
+    const asphaltOnly = Boolean(body.asphaltOnly);
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
       return new Response(JSON.stringify({ error: "Ogiltig position" }), {
@@ -146,10 +198,11 @@ Deno.serve(async (req) => {
     }
 
     const targetM = distanceKm * 1000;
-    const radiusM = Math.min(Math.max(targetM * 0.35, 1200), 25000);
+    const radiusM = Math.min(Math.max(targetM * 0.3, 1000), 12000);
 
     const t0 = Date.now();
-    const data = await fetchOverpass(buildOverpassQuery(lat, lng, radiusM, activity, asphaltOnly));
+    const cacheKey = `${lat.toFixed(3)}|${lng.toFixed(3)}|${activity}|${asphaltOnly}|${Math.round(radiusM / 500)}`;
+    const data = await cachedOverpass(cacheKey, buildOverpassQuery(lat, lng, radiusM, activity, asphaltOnly));
     const elements: any[] = data?.elements ?? [];
     console.log("overpass ms", Date.now() - t0, "elements", elements.length);
 
@@ -318,7 +371,7 @@ Deno.serve(async (req) => {
     }
 
     const candidates: Candidate[] = [];
-    const directions = [0, 60, 120, 180, 240, 300];
+    const directions = [0, 72, 144, 216, 288];
     const minTargetM = targetM * 0.8;
     const maxTargetM = targetM * 1.2;
 
@@ -330,7 +383,7 @@ Deno.serve(async (req) => {
       const visitedNodes = new Set<number>([startNode]);
       let traveled = 0;
       let guard = 0;
-      while (traveled < targetM * fraction && guard++ < 600) {
+      while (traveled < targetM * fraction && guard++ < 400) {
         const options = (graph.get(node) ?? []).filter((e) => !visitedNodes.has(e.to));
         if (options.length === 0) break;
         const cur = coords.get(node)!;
@@ -361,7 +414,7 @@ Deno.serve(async (req) => {
 
     for (const dir of directions) {
       let fraction = 0.5;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 2; attempt++) {
         const c = buildCandidate(dir, fraction);
         if (!c) break;
         candidates.push(c);
@@ -411,6 +464,13 @@ Deno.serve(async (req) => {
       });
       if (routes.length >= 4) break;
     }
+
+    // Höjdprofil för alla förslag parallellt
+    const elevations = await Promise.all(routes.map((r) => fetchElevation(r.points)));
+    routes.forEach((r, i) => {
+      r.elevationGainM = elevations[i]?.gain ?? null;
+      r.elevationLossM = elevations[i]?.loss ?? null;
+    });
 
     return new Response(
       JSON.stringify({
