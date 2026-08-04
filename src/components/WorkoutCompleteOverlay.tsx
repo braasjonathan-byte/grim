@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ConfettiBurst from "@/components/ConfettiBurst";
-import { formatVolumeKg, formatDurationMin, type WorkoutSummary } from "@/lib/workoutSummary";
+import { formatVolumeKg, formatDurationMin, formatCardioDistance, formatCardioPace, type WorkoutSummary } from "@/lib/workoutSummary";
 import { hapticLight } from "@/lib/haptics";
 import { buildSurpriseReward, type SurpriseReward } from "@/lib/surpriseRewards";
 
@@ -50,12 +50,39 @@ const WorkoutCompleteOverlay = ({ open, title, summary, userId, onClose }: Worko
 
   if (!open) return null;
 
-  const stats = [
-    { label: "Set", value: String(summary?.sets ?? 0) },
-    { label: "Övningar", value: String(summary?.exercises.length ?? 0) },
-    { label: "Volym", value: summary?.volumeKg ? formatVolumeKg(summary.volumeKg) : "–" },
-    { label: "Tid", value: summary?.durationMin ? formatDurationMin(summary.durationMin) : "–" },
-  ];
+  const cardio = summary?.cardio ?? null;
+  const hasStrength = (summary?.sets ?? 0) > 0 || (summary?.volumeKg ?? 0) > 0;
+  const timeStat = { label: "Tid", value: summary?.durationMin ? formatDurationMin(summary.durationMin) : "–" };
+
+  let stats: Array<{ label: string; value: string }>;
+  if (cardio && !hasStrength) {
+    // Rent konditionspass
+    const pace = formatCardioPace(cardio.minutes, cardio.distanceKm, cardio.primaryName);
+    stats = [
+      { label: "Distans", value: formatCardioDistance(cardio.distanceKm, cardio.primaryName) },
+      { label: pace.label, value: pace.value },
+      timeStat,
+      { label: "Snittpuls", value: cardio.pulse ? `${cardio.pulse} bpm` : "–" },
+    ];
+  } else if (cardio && hasStrength) {
+    // Blandat pass – set/övningar för styrkan, distans/tempo för konditionen
+    const pace = formatCardioPace(cardio.minutes, cardio.distanceKm, cardio.primaryName);
+    stats = [
+      { label: "Set", value: String(summary?.sets ?? 0) },
+      { label: "Övningar", value: String(summary?.exercises.length ?? 0) },
+      { label: "Volym", value: summary?.volumeKg ? formatVolumeKg(summary.volumeKg) : "–" },
+      { label: "Distans", value: formatCardioDistance(cardio.distanceKm, cardio.primaryName) },
+      { label: pace.label, value: pace.value },
+      timeStat,
+    ];
+  } else {
+    stats = [
+      { label: "Set", value: String(summary?.sets ?? 0) },
+      { label: "Övningar", value: String(summary?.exercises.length ?? 0) },
+      { label: "Volym", value: summary?.volumeKg ? formatVolumeKg(summary.volumeKg) : "–" },
+      timeStat,
+    ];
+  }
   const prs = summary?.prExercises ?? [];
 
   return (
