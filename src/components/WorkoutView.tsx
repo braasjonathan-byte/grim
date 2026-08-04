@@ -2140,11 +2140,11 @@ const estimateCalories = (
   return Math.round(Math.min(totalKcal, 3000));
 };
 
-  const filteredExercises = allExercises.filter((e) => {
-    const matchesSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
-    const matchesMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
-    return matchesSearch && matchesMuscle;
-  });
+  const filteredExercises = fuzzyFilterSort(
+    allExercises.filter((e) => !selectedMuscle || e.muscleGroup === selectedMuscle),
+    exerciseSearch,
+    (e) => [e.name, e.muscleGroup, e.category]
+  );
 
   // Helper: count unchecked sets for a workout
   const countUncheckedSets = (week: number, day: string): number => {
