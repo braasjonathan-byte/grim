@@ -678,9 +678,8 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
     const names = Array.from(new Set(konditionExercises.map(e => e.name))).sort((a, b) => a.localeCompare(b, "sv"));
-    return q ? names.filter(n => n.toLowerCase().includes(q)) : names;
+    return fuzzyFilterSort(names, query, (n) => [n]);
   }, [query, konditionExercises]);
 
   const closePicker = () => { setPickerOpen(false); setQuery(""); };
