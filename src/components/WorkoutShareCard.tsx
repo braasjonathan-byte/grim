@@ -242,6 +242,7 @@ const WorkoutShareCard = ({
         metaLine,
         nickname,
         sportLabel,
+        sportKey,
         stats,
         exercises: svgExercises,
         isRunning,
@@ -250,7 +251,7 @@ const WorkoutShareCard = ({
         userPhotoBase64: userPhoto || undefined,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sessionName, metaLine, nickname, sportLabel, stats, JSON.stringify(svgExercises), isRunning, logoBase64, variant, userPhoto]
+    [sessionName, metaLine, nickname, sportLabel, sportKey, stats, JSON.stringify(svgExercises), isRunning, logoBase64, variant, userPhoto]
   );
 
   const generateImage = async (): Promise<Blob | null> => {
@@ -262,6 +263,7 @@ const WorkoutShareCard = ({
         metaLine,
         nickname,
         sportLabel,
+        sportKey,
         stats,
         exercises: svgExercises,
         isRunning,
