@@ -4832,7 +4832,7 @@ const estimateCalories = (
 
         {/* Day tabs */}
         {isMobile && dayGroupsInWeek.length > 1 && (
-          <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
+          <div className="grid grid-cols-7 gap-1 pb-1">
             {dayGroupsInWeek.map((dg, idx) => {
               const dgDone = dg.plans.every(p => completions[`0-${p.day}`]?.done);
               const dgSkipped = dg.plans.every(p => completions[`0-${p.day}`]?.skipped);
@@ -6576,10 +6576,10 @@ const estimateCalories = (
                   return (
                     <div
                       key={dayName}
-                      className="flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
+                      className="w-full min-w-0 flex flex-col items-center gap-1 px-0.5 py-1.5 rounded-full bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
                       title="Innan träningsplanen startade"
                     >
-                      <span className="text-xs font-medium">{dayName}</span>
+                      <span className="text-[11px] font-medium leading-none">{dayName}</span>
                       <span className="h-1.5 w-1.5" />
                     </div>
                   );
@@ -6588,14 +6588,14 @@ const estimateCalories = (
                   <button
                     key={dayName}
                     onClick={() => { setEmptyDayName(""); setEmptyDayChoice({ week: currentWeek, day: dayName }); }}
-                    className={`flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full transition-all ${
+                    className={`w-full min-w-0 flex flex-col items-center gap-1 px-0.5 py-1.5 rounded-full transition-all ${
                       isToday
                         ? "bg-warning/10 text-warning/80 ring-2 ring-warning/50 hover:bg-warning/20"
                         : "bg-secondary/40 text-muted-foreground/70 hover:bg-secondary hover:text-foreground"
                     }`}
                     title="Vilodag — tryck för att lägga till pass"
                   >
-                    <span className="text-xs font-medium">{dayName}</span>
+                    <span className="text-[11px] font-medium leading-none">{dayName}</span>
                     {isToday ? (
                       <span className="h-1.5 w-1.5 rounded-full bg-warning" />
                     ) : (
@@ -6615,7 +6615,7 @@ const estimateCalories = (
                 <button
                   key={k}
                   onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
-                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`w-full min-w-0 flex flex-col items-center gap-1 px-0.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isToday ? "ring-2 ring-warning/60" : ""
                   } ${
                     isActive
@@ -6634,7 +6634,7 @@ const estimateCalories = (
                   }`}
                   title={done ? "Genomfört" : skipped ? "Överhoppat" : isToday ? "Idag" : "Kommande pass"}
                 >
-                  <span>{getBaseDay(plan.day)}</span>
+                  <span className="text-[11px] leading-none">{getBaseDay(plan.day)}</span>
                   {done ? (
                     <Check className={`h-2.5 w-2.5 ${isActive ? "text-success-foreground" : "text-success"}`} strokeWidth={4} />
                   ) : skipped ? (
