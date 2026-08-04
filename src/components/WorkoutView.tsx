@@ -7018,8 +7018,9 @@ const estimateCalories = (
                                       <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-end">
                                         <span className="w-7" />
                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
-                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
-                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans</span>
+                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo ({modeLabel(getCardioModes(line)[0])})</span>
+                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Route className="w-3 h-3 text-primary" />Distans ({getCardioDistUnit(line) ?? "km"})</span>
+
                                       </div>
                                       {Array.from({ length: activeCount }, (_, ii) => {
                                         const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
