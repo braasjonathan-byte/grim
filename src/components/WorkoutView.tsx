@@ -5,7 +5,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { showUndoToast } from "@/lib/undoToast";
 import { supabase } from "@/integrations/supabase/client";
-import { queueOfflineUpsert } from "@/hooks/useOfflineSync";
+import { queueOfflineUpsert, dequeueOfflineUpsert } from "@/hooks/useOfflineSync";
+import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff } from "lucide-react";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
@@ -1937,6 +1938,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         };
       }
       setCompletions(map);
+      // Seed the data-loss guard with what the backend actually holds
+      seedCheckmarkCounts(userId, compData as any);
       const commentMap: Record<string, string> = {};
       for (const c of compData) {
         commentMap[`${c.week}-${c.day}`] = c.user_comment || "";
@@ -2578,6 +2581,37 @@ const estimateCalories = (
         logged_weights: payload.logged_weights,
       };
 
+    // Safety net: never let a write silently remove more than one checkmark
+    // compared to what we know is already stored in the backend.
+    const nextCount = countCheckmarks(payload.logged_weights, !!payload.done);
+    const destructive = detectDestructiveWrite(getKnownCheckmarkCount(userId, week, day), nextCount);
+    if (destructive) {
+      const { data: serverRow } = await supabase
+        .from("workout_completions")
+        .select("done, logged_weights")
+        .eq("user_id", userId)
+        .eq("week", week)
+        .eq("day", day)
+        .maybeSingle();
+      const serverCount = serverRow
+        ? countCheckmarks((serverRow as any).logged_weights, !!(serverRow as any).done)
+        : 0;
+      if (nextCount < serverCount - 1) {
+        logDestructiveWrite("safeUpsertCompletion", userId, week, day, { previousCount: serverCount, nextCount }, true);
+        // Restore the authoritative backend state into the UI instead of saving.
+        if (serverRow) {
+          setCompletions((prev: Record<string, any>) => ({
+            ...prev,
+            [entryKey]: { ...prev[entryKey], ...(serverRow as any), week, day },
+          }));
+        }
+        rememberCheckmarkCount(userId, week, day, serverCount);
+        toast.error("Sparningen stoppades – den skulle ha raderat loggad träningsdata. Data laddades om.");
+        return;
+      }
+      logDestructiveWrite("safeUpsertCompletion", userId, week, day, { previousCount: serverCount, nextCount }, false);
+    }
+
     // Queue to localStorage first so data survives if the page is killed before network completes
     queueOfflineUpsert("workout_completions", upsertData as any, "user_id,week,day");
 
@@ -2586,23 +2620,10 @@ const estimateCalories = (
       { onConflict: "user_id,week,day" }
     );
 
-    // If network save succeeded, remove from offline queue (it will be a duplicate but harmless)
+    // If network save succeeded, remove the queued fallback so it can never be replayed later
     if (!error) {
-      // Clear the queued item since it saved successfully
-      try {
-        const raw = localStorage.getItem("grim_offline_queue");
-        if (raw) {
-          const queue = JSON.parse(raw) as any[];
-          // Remove matching items (same table + user + week + day)
-          const filtered = queue.filter((item: any) =>
-            !(item.table === "workout_completions" &&
-              item.data.user_id === userId &&
-              item.data.week === week &&
-              item.data.day === day)
-          );
-          localStorage.setItem("grim_offline_queue", JSON.stringify(filtered));
-        }
-      } catch { /* ignore */ }
+      rememberCheckmarkCount(userId, week, day, nextCount);
+      dequeueOfflineUpsert("workout_completions", { user_id: userId, week, day });
     }
 
     // Notify friends when a workout is marked done (server dedups per user+week+day)
