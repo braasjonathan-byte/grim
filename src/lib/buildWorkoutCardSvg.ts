@@ -183,7 +183,7 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
 
   /* ── Header row: logo + wordmark + meta ── */
   els.push(
-    `<image href="${input.logoBase64}" x="${P}" y="${P}" width="104" height="104" clip-path="url(#logoClip)" preserveAspectRatio="xMidYMid slice"/>`
+    `<image href="${input.logoBase64}" x="${P}" y="${P}" width="104" height="104" clip-path="url(#${ID.logo})" preserveAspectRatio="xMidYMid slice"/>`
   );
   els.push(
     `<text x="${P + 128}" y="${P + 46}" fill="${t.text}" font-size="40" font-family="${MARKER}">Grim</text>`
