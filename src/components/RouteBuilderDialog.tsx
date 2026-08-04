@@ -191,10 +191,12 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
           {Math.round(route.elevationLossM)} m
         </span>
       )}
-      <span className="text-muted-foreground">
-        {Math.round((route.pavedRatio ?? 0) * 100)} % belagd
-        {route.surfaces?.length ? ` · ${route.surfaces.map((s) => SURFACE_LABELS[s] ?? s).join(", ")}` : ""}
-      </span>
+      {route.pavedRatio != null && (
+        <span className="text-muted-foreground">
+          {Math.round(route.pavedRatio * 100)} % belagd
+          {route.surfaces?.length ? ` · ${route.surfaces.map((s) => SURFACE_LABELS[s] ?? s).join(", ")}` : ""}
+        </span>
+      )}
     </div>
   );
 

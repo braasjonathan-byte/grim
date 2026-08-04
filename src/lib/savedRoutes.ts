@@ -5,7 +5,7 @@ export type RoutePoint = [number, number];
 export interface RouteData {
   distanceKm: number;
   points: RoutePoint[];
-  pavedRatio: number;
+  pavedRatio: number | null;
   surfaces: string[];
   elevationGainM?: number | null;
   elevationLossM?: number | null;
