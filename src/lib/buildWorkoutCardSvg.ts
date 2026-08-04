@@ -242,13 +242,12 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
       els.push(
         `<rect x="${cx}" y="${cy}" width="${rowW}" height="${ch}" rx="34" fill="${t.panel}" fill-opacity="${t.panelOpacity}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
       );
-      els.push(`<rect x="${cx + 34}" y="${cy + 40}" width="56" height="6" rx="3" fill="${t.accent}"/>`);
       const valFs = Math.min(84, Math.max(46, Math.floor((rowW - 80) / Math.max(3, s.value.length) * 1.7)));
       els.push(
-        `<text x="${cx + 34}" y="${cy + ch - 74}" fill="${t.text}" font-size="${valFs}" font-family="${SANS}" font-weight="700" letter-spacing="-1">${esc(ellipsize(s.value, valFs, rowW - 68, 0.58))}</text>`
+        `<text x="${cx + 40}" y="${cy + ch - 78}" fill="${t.text}" font-size="${valFs}" font-family="${SANS}" font-weight="700" letter-spacing="-1">${esc(ellipsize(s.value, valFs, rowW - 80, 0.58))}</text>`
       );
       els.push(
-        `<text x="${cx + 34}" y="${cy + ch - 34}" fill="${t.muted}" font-size="24" font-family="${SANS}" font-weight="600" letter-spacing="3">${esc(s.label.toUpperCase())}</text>`
+        `<text x="${cx + 40}" y="${cy + ch - 38}" fill="${t.muted}" font-size="24" font-family="${SANS}" font-weight="600" letter-spacing="3">${esc(s.label.toUpperCase())}</text>`
       );
     });
     y += rows * ch + (rows - 1) * gap + 34;
@@ -258,46 +257,54 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const footerY = H - P - 40;
   const panelBottom = footerY - 56;
   const panelH = panelBottom - y;
-  const visible = input.exercises.slice(0, Math.max(0, Math.floor((panelH - 150) / 92)));
+  const ip = 44;
+  const headH = 96;
+  const minRow = 92;
+  const maxRow = 138;
+  const avail = panelH - headH - ip;
+  const maxRows = Math.max(0, Math.floor(avail / minRow));
+  const visible = input.exercises.slice(0, maxRows);
   const hidden = input.exercises.length - visible.length;
+  // Spread rows evenly so the panel never looks half empty
+  const rowH = visible.length > 0
+    ? Math.min(maxRow, Math.max(minRow, avail / (visible.length + (hidden > 0 ? 1 : 0))))
+    : minRow;
 
   if (panelH > 200) {
     els.push(
       `<rect x="${P}" y="${y}" width="${CW}" height="${panelH}" rx="40" fill="${t.panel}" fill-opacity="${t.panelOpacity}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
     );
-    const ip = 44;
     let ty = y + ip + 34;
     els.push(
       `<text x="${P + ip}" y="${ty}" fill="${t.muted}" font-size="24" font-family="${SANS}" font-weight="700" letter-spacing="4">${input.isRunning ? "PASSET" : "ÖVNINGAR"}</text>`
     );
-    ty += 52;
+    ty += 62;
 
     visible.forEach((ex, idx) => {
+      els.push(`<circle cx="${P + ip + 7}" cy="${ty - 11}" r="7" fill="${t.accent}"/>`);
       els.push(
-        `<circle cx="${P + ip + 7}" cy="${ty - 10}" r="7" fill="${t.accent}"/>`
-      );
-      els.push(
-        `<text x="${P + ip + 32}" y="${ty}" fill="${t.text}" font-size="34" font-family="${SANS}" font-weight="600">${esc(ellipsize(ex.name, 34, CW - 2 * ip - 40, 0.55))}</text>`
+        `<text x="${P + ip + 34}" y="${ty}" fill="${t.text}" font-size="34" font-family="${SANS}" font-weight="600">${esc(ellipsize(ex.name, 34, CW - 2 * ip - 44, 0.55))}</text>`
       );
       if (ex.detail) {
         els.push(
-          `<text x="${P + ip + 32}" y="${ty + 38}" fill="${t.subtext}" font-size="26" font-family="${SANS}" font-weight="500">${esc(ellipsize(ex.detail, 26, CW - 2 * ip - 40, 0.55))}</text>`
+          `<text x="${P + ip + 34}" y="${ty + 38}" fill="${t.subtext}" font-size="26" font-family="${SANS}" font-weight="500">${esc(ellipsize(ex.detail, 26, CW - 2 * ip - 44, 0.55))}</text>`
         );
       }
-      ty += 92;
       if (idx < visible.length - 1) {
         els.push(
-          `<line x1="${P + ip}" y1="${ty - 56}" x2="${P + CW - ip}" y2="${ty - 56}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
+          `<line x1="${P + ip}" y1="${ty + rowH - 44}" x2="${P + CW - ip}" y2="${ty + rowH - 44}" stroke="${t.border}" stroke-opacity="${t.borderOpacity}" stroke-width="2"/>`
         );
       }
+      ty += rowH;
     });
 
     if (hidden > 0) {
       els.push(
-        `<text x="${P + ip + 32}" y="${Math.min(ty + 10, y + panelH - 34)}" fill="${t.muted}" font-size="26" font-family="${SANS}" font-weight="600">+ ${hidden} till</text>`
+        `<text x="${P + ip + 34}" y="${Math.min(ty + 6, y + panelH - 40)}" fill="${t.muted}" font-size="26" font-family="${SANS}" font-weight="600">+ ${hidden} till</text>`
       );
     }
   }
+
 
   /* ── Footer ── */
   els.push(
