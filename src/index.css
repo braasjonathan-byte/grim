@@ -290,7 +290,7 @@
   z-index: 10000 !important;
 }
 
-/* GPS live position pulse marker (MapLibre custom marker) */
+/* GPS live position pulse marker (Google Maps custom overlay) */
 .grim-gps-pulse {
   width: 18px;
   height: 18px;
