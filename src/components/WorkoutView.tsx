@@ -4832,7 +4832,7 @@ const estimateCalories = (
 
         {/* Day tabs */}
         {isMobile && dayGroupsInWeek.length > 1 && (
-          <div className="grid grid-cols-7 gap-1 pb-1">
+          <div className="flex flex-wrap gap-1 pb-1">
             {dayGroupsInWeek.map((dg, idx) => {
               const dgDone = dg.plans.every(p => completions[`0-${p.day}`]?.done);
               const dgSkipped = dg.plans.every(p => completions[`0-${p.day}`]?.skipped);
@@ -6563,7 +6563,7 @@ const estimateCalories = (
         return (
         <div className="flex flex-col gap-2">
           {/* Day tabs — letter + status indicator (today / done / upcoming) */}
-          <div className="flex gap-1 overflow-x-auto scrollbar-none pb-1">
+          <div className="grid grid-cols-7 gap-1 pb-1">
             {DAYS.map((dayName) => {
               const planIdx = mobileDayTabs.findIndex((p) => sameWorkoutDay(p.day, dayName));
               const isRest = planIdx === -1;
