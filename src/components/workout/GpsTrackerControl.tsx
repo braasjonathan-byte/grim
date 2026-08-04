@@ -34,9 +34,8 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
   useEffect(() => { setHeatmap(loadRouteHistory()); }, []);
 
   // Lås bakgrunden när helskärmsvyn är öppen så man inte råkar trycka/scrolla bakom
-  const [fsOpen, setFsOpen] = useState(false);
   useEffect(() => {
-    if (!fsOpen) return;
+    if (!fullscreen) return;
     const { overflow, touchAction } = document.body.style;
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "none";
@@ -44,7 +43,7 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
       document.body.style.overflow = overflow;
       document.body.style.touchAction = touchAction;
     };
-  }, [fsOpen]);
+  }, [fullscreen]);
 
 
   const stopPrimeWatch = () => {
