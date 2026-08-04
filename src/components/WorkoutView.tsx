@@ -2272,10 +2272,25 @@ const estimateCalories = (
     }
   };
 
-  const toggleDone = async (week: number, day: string) => {
+  const toggleDone = async (week: number, day: string, skipNamePrompt = false) => {
     const key = `${week}-${day}`;
     const current = completions[key];
     const newDone = !current?.done;
+
+    if (newDone && !skipNamePrompt) {
+      // Missing/placeholder session name → ask for a name first (before all other dialogs)
+      const dayPlans = plans.filter((p) => p.week === week && p.day === day);
+      const target = dayPlans.find((p) => planHasAnyExercise(p));
+      if (target) {
+        const nameLower = (target.session_name || "").trim().toLowerCase();
+        if (!nameLower || /^(vila|vilodag|återhämtning)$/.test(nameLower)) {
+          const suggestion = suggestSessionName(target.details || "");
+          setNamePromptDialog({ week, day, planId: target.id, suggestion });
+          setNamePromptInput(suggestion);
+          return;
+        }
+      }
+    }
 
     // If marking as done, check for unchecked sets first and show dialog
     if (newDone) {
@@ -2288,6 +2303,7 @@ const estimateCalories = (
 
     await performToggleDone(week, day);
   };
+
 
   const performToggleDone = async (week: number, day: string) => {
     const key = `${week}-${day}`;
