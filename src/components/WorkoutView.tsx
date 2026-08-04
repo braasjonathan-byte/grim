@@ -9253,7 +9253,11 @@ const estimateCalories = (
                           count={parseInt(condIntervalsInput) || 0}
                           rows={condIntervalRows}
                           onChange={setCondIntervalRows}
+                          paceUnit={modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}
+                          distUnit={getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}
+                          hideDistance={getCardioDistUnit(conditioningDialog.exerciseName) === null}
                         />
+
                       ) : (
                         <>
                       <div>
