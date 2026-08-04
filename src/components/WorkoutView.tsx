@@ -985,7 +985,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
         if (bikeMode === "kmh") {
-          data.tempo = String(Math.round((60 * dVal / tVal) * 10) / 10);
+          data.tempo = (60 * distToKm(dVal) / tVal).toFixed(1);
+
         } else {
           const dUnits = distToTempoUnits(dVal);
           const tm = tVal / dUnits;
