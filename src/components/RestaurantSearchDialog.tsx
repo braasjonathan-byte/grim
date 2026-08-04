@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, Utensils, Plus } from "lucide-react";
@@ -46,10 +46,18 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
   const [selected, setSelected] = useState<OFFItem | null>(null);
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
+  // Always read the latest field values — never a value captured in an older render.
+  const brandRef = useRef("");
+  const itemRef = useRef("");
+  const reqRef = useRef(0);
+
+  useEffect(() => { brandRef.current = brand; }, [brand]);
+  useEffect(() => { itemRef.current = item; }, [item]);
 
   useEffect(() => {
-    if (!open) { setBrand(""); setItem(""); setResults([]); setSelected(null); }
+    if (!open) { setBrand(""); setItem(""); setResults([]); setSelected(null); setLoading(false); }
   }, [open]);
+
 
   // Simple typo-tolerant Levenshtein for fuzzy ranking
   function lev(a: string, b: string): number {
@@ -87,10 +95,11 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
     return Math.min(best, full);
   }
 
-  async function search(brandQ: string, itemQ?: string) {
-    const b = brandQ.trim();
-    const it = (itemQ || "").trim();
+  async function search(brandQ?: string, itemQ?: string) {
+    const b = (brandQ ?? brandRef.current).trim();
+    const it = (itemQ ?? itemRef.current).trim();
     if (!b && !it) return;
+    const reqId = ++reqRef.current;
     setLoading(true);
     setSelected(null);
     try {
@@ -171,9 +180,12 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
           .map((x: any) => x.p);
       }
 
-      setResults(items);
+      if (reqId === reqRef.current) setResults(items);
+    } catch {
+      // Nätverksfel ska inte lämna knappen i "Söker…"-läge
+      if (reqId === reqRef.current) setResults([]);
     } finally {
-      setLoading(false);
+      if (reqId === reqRef.current) setLoading(false);
     }
   }
 
@@ -219,7 +231,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
                   placeholder="Sök maträtt (t.ex. Big Mac)"
                   className="pl-9 rounded-none"
                   autoFocus
-                  onKeyDown={(e) => e.key === "Enter" && search(brand, item)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
                 />
               </div>
               <Input
@@ -227,10 +239,19 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
                 onChange={(e) => setBrand(e.target.value)}
                 placeholder="Restaurang (valfritt)"
                 className="rounded-none"
-                onKeyDown={(e) => e.key === "Enter" && search(brand, item)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
               />
-              <button onClick={() => search(brand, item)} className="w-full py-2 bg-primary text-primary-foreground text-sm font-bold">
-                Sök
+              <button
+                type="button"
+                disabled={loading}
+                // pointerdown + preventDefault: på mobil skulle annars första tryckningen
+                // bara stänga tangentbordet (blur → layoutskifte) och klicket tappas bort.
+                onPointerDown={(e) => { e.preventDefault(); search(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); search(); } }}
+                className="w-full py-2 bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Söker…" : "Sök"}
               </button>
             </div>
 
@@ -239,7 +260,12 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Populära</p>
                 <div className="flex flex-wrap gap-1.5">
                   {POPULAR.map((b) => (
-                    <button key={b} onClick={() => { setBrand(b); search(b, item); }} className="px-2 py-1 border border-input text-xs">
+                    <button
+                      key={b}
+                      type="button"
+                      onPointerDown={(e) => { e.preventDefault(); setBrand(b); search(b); }}
+                      className="px-2 py-1 border border-input text-xs"
+                    >
                       {b}
                     </button>
                   ))}
@@ -249,7 +275,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
 
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && results.length === 0 && (brand || item) && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar. Pröva ett annat sökord.</p>}
+              {!loading && results.length === 0 && reqRef.current > 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar. Pröva ett annat sökord.</p>}
               <ul className="divide-y divide-border">
                 {results.map((r) => (
                   <li key={r.code}>
