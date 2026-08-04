@@ -272,7 +272,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
 
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && results.length === 0 && (brand || item) && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar. Pröva ett annat sökord.</p>}
+              {!loading && results.length === 0 && reqRef.current > 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar. Pröva ett annat sökord.</p>}
               <ul className="divide-y divide-border">
                 {results.map((r) => (
                   <li key={r.code}>
