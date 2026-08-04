@@ -181,6 +181,9 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
       }
 
       if (reqId === reqRef.current) setResults(items);
+    } catch {
+      // Nätverksfel ska inte lämna knappen i "Söker…"-läge
+      if (reqId === reqRef.current) setResults([]);
     } finally {
       if (reqId === reqRef.current) setLoading(false);
     }
