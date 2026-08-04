@@ -386,18 +386,29 @@ const MiniTimer = () => {
     );
   }
 
-  // Collapsed & idle: tiny floating round button
+  // Collapsed & idle: tiny floating round button (draggable along the screen edges)
   if (!expanded && isIdle) {
+    const containerStyle: React.CSSProperties = dragXY
+      ? { top: dragXY.y, left: dragXY.x }
+      : bubblePos
+      ? { top: bubblePos.top, [bubblePos.side]: 16 }
+      : { right: 16, ...dockStyle };
     return (
-      <div className="fixed right-4 z-50 pointer-events-none" style={dockStyle}>
+      <div className="fixed z-50 pointer-events-none" style={containerStyle}>
         <button
-          onClick={() => setExpanded(true)}
-          aria-label="Öppna stoppur"
-          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-soft text-primary transition-transform active:scale-95 animate-fade-in"
+          onPointerDown={onBubblePointerDown}
+          onPointerMove={onBubblePointerMove}
+          onPointerUp={onBubblePointerUp}
+          onPointerCancel={onBubblePointerUp}
+          aria-label="Öppna stoppur (dra för att flytta)"
+          className={`pointer-events-auto touch-none flex h-11 w-11 items-center justify-center rounded-full bg-card shadow-soft text-primary animate-fade-in ${
+            dragging ? "scale-110 cursor-grabbing" : "transition-transform active:scale-95 cursor-grab"
+          }`}
         >
           <TimerReset className="h-5 w-5" />
         </button>
       </div>
+
     );
   }
 
