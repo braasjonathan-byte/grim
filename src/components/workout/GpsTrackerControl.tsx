@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useId } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
 import { toPng } from "html-to-image";
@@ -31,6 +32,18 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
   const summaryCardRef = useRef<HTMLDivElement | null>(null);
   const [heatmap, setHeatmap] = useState<[number, number][][]>([]);
   useEffect(() => { setHeatmap(loadRouteHistory()); }, []);
+
+  // Lås bakgrunden när helskärmsvyn är öppen så man inte råkar trycka/scrolla bakom
+  useEffect(() => {
+    if (!fullscreen) return;
+    const { overflow, touchAction } = document.body.style;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = overflow;
+      document.body.style.touchAction = touchAction;
+    };
+  }, [fullscreen]);
 
 
   const stopPrimeWatch = () => {
@@ -346,8 +359,16 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
           </button>
         </div>
       )}
-      {fullscreen && (isOwner || primed) && (
-        <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
+      {createPortal(
+        fullscreen && (isOwner || primed) ? (
+        <div
+          className="fixed inset-0 z-[9999] bg-background flex flex-col overscroll-contain"
+          style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+        >
           {/* Map area – tar ~60% av höjden */}
           <div className="relative basis-[60%] grow-0 shrink-0 min-h-0">
             {fullscreenRoute.length > 0 ? (
@@ -501,6 +522,8 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
             )}
           </div>
         </div>
+        ) : null,
+        document.body,
       )}
 
     </div>
