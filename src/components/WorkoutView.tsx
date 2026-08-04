@@ -1277,6 +1277,35 @@ const getSessionColor = (session: string) => {
   return "text-secondary-foreground";
 };
 
+/** True när passet innehåller minst en riktig övning (bortsett från vila/utmaningar). */
+const planHasAnyExercise = (plan: { details?: string | null }) =>
+  (plan.details || "")
+    .split(/[;\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .some((l) => !l.startsWith("⚔️") && !/^(vila|vilodag)/i.test(l));
+
+/** Föreslår ett passnamn utifrån övningarna i dagens pass. */
+const suggestSessionName = (details: string): string => {
+  const names = (details || "")
+    .split(/[;\n]/)
+    .map((s) => s.trim())
+    .filter((l) => l && !l.startsWith("⚔️") && !/^(vila|vilodag)/i.test(l))
+    .map((l) => l.split(/\s+[—–]\s+|\s+\d/)[0].trim())
+    .filter(Boolean);
+  if (names.length === 0) return "Pass";
+  const uniq = Array.from(new Set(names));
+  if (uniq.length === 1) return uniq[0];
+  if (uniq.length === 2) return `${uniq[0]} & ${uniq[1]}`;
+  const joined = uniq.join(" ").toLowerCase();
+  const cardio = /löpning|cykl|simning|rodd|promenad|crosstrainer|airbike|hopprep|stair|skid/.test(joined);
+  const strength = /press|böj|squat|mark|curl|rodd\s|drag|lyft|dips|chins/.test(joined);
+  if (cardio && !strength) return "Konditionspass";
+  if (strength && !cardio) return "Styrkepass";
+  return `${uniq[0]} + ${uniq.length - 1} till`;
+};
+
+
 
 // Format a day key for display - if it looks like an ISO date, format it nicely
 const formatDayDisplay = (day: string) => {
@@ -1627,6 +1656,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     day: string;
     uncheckedCount: number;
   } | null>(null);
+
+  // Ask for a session name when completing an unnamed workout (shown before all other dialogs)
+  const [namePromptDialog, setNamePromptDialog] = useState<{
+    week: number;
+    day: string;
+    planId: string;
+    suggestion: string;
+  } | null>(null);
+  const [namePromptInput, setNamePromptInput] = useState("");
+
+
 
   // Ask the user after marking a workout done whether to share to friends feed.
   const [sharePromptDialog, setSharePromptDialog] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
@@ -2243,10 +2283,25 @@ const estimateCalories = (
     }
   };
 
-  const toggleDone = async (week: number, day: string) => {
+  const toggleDone = async (week: number, day: string, skipNamePrompt = false) => {
     const key = `${week}-${day}`;
     const current = completions[key];
     const newDone = !current?.done;
+
+    if (newDone && !skipNamePrompt) {
+      // Missing/placeholder session name → ask for a name first (before all other dialogs)
+      const dayPlans = plans.filter((p) => p.week === week && p.day === day);
+      const target = dayPlans.find((p) => planHasAnyExercise(p));
+      if (target) {
+        const nameLower = (target.session_name || "").trim().toLowerCase();
+        if (!nameLower || /^(vila|vilodag|återhämtning)$/.test(nameLower)) {
+          const suggestion = suggestSessionName(target.details || "");
+          setNamePromptDialog({ week, day, planId: target.id, suggestion });
+          setNamePromptInput(suggestion);
+          return;
+        }
+      }
+    }
 
     // If marking as done, check for unchecked sets first and show dialog
     if (newDone) {
@@ -2259,6 +2314,7 @@ const estimateCalories = (
 
     await performToggleDone(week, day);
   };
+
 
   const performToggleDone = async (week: number, day: string) => {
     const key = `${week}-${day}`;
@@ -6244,7 +6300,47 @@ const estimateCalories = (
           setSharePromptDialog(null);
         }}
       />
+      {namePromptDialog && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setNamePromptDialog(null)} />
+          <div className="relative bg-card rounded-2xl shadow-lg p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+            <div>
+              <h3 className="font-bold text-base">Vad heter passet?</h3>
+              <p className="text-sm text-muted-foreground mt-1">Passet saknar namn – här är ett förslag som du kan ändra.</p>
+            </div>
+            <input
+              autoFocus
+              value={namePromptInput}
+              onChange={(e) => setNamePromptInput(e.target.value)}
+              placeholder={namePromptDialog.suggestion}
+              className="w-full bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setNamePromptDialog(null)}
+                className="flex-1 py-2.5 bg-secondary text-secondary-foreground text-sm font-semibold rounded-xl hover:opacity-80 transition-opacity"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  const d = namePromptDialog;
+                  const name = (namePromptInput.trim() || d.suggestion).trim();
+                  setNamePromptDialog(null);
+                  await supabase.from("workout_plans").update({ session_name: name }).eq("id", d.planId);
+                  setPlans((prev) => prev.map((p) => (p.id === d.planId ? { ...p, session_name: name } : p)));
+                  await toggleDone(d.week, d.day, true);
+                }}
+                className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl"
+              >
+                Spara & klarmarkera
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {uncheckedSetsDialog && (
+
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
           <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
@@ -6580,9 +6676,14 @@ const estimateCalories = (
           const isDone = completion?.done || false;
           const isSkipped = completion?.skipped || false;
           const expanded = true;
-          const Icon = getSessionIcon(plan.session_name);
-          const colorClass = getSessionColor(plan.session_name);
-          const isRest = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
+          const planHasExercises = planHasAnyExercise(plan);
+          const restName = plan.session_name.toLowerCase().includes("vila") || plan.session_name.toLowerCase().includes("återhämtning");
+          const isRest = restName && !planHasExercises;
+          const baseIcon = getSessionIcon(plan.session_name);
+          const Icon = !isRest && baseIcon === Moon && planHasExercises ? Dumbbell : baseIcon;
+          const baseColor = getSessionColor(plan.session_name);
+          const colorClass = !isRest && baseColor === "text-muted-foreground" ? "text-primary" : baseColor;
+
           const cardTodayNames = ["Sön", "Mån", "Tis", "Ons", "Tors", "Fre", "Lör"];
           const isCardToday = sameWorkoutDay(plan.day, cardTodayNames[new Date().getDay()]) && plan.week === activePlanWeek;
 
@@ -10145,7 +10246,47 @@ const estimateCalories = (
         </div>
       </div>
     )}
+    {namePromptDialog && (
+      <div className="fixed inset-0 z-[90] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setNamePromptDialog(null)} />
+        <div className="relative bg-card rounded-2xl shadow-lg p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <div>
+            <h3 className="font-bold text-base">Vad heter passet?</h3>
+            <p className="text-sm text-muted-foreground mt-1">Passet saknar namn – här är ett förslag som du kan ändra.</p>
+          </div>
+          <input
+            autoFocus
+            value={namePromptInput}
+            onChange={(e) => setNamePromptInput(e.target.value)}
+            placeholder={namePromptDialog.suggestion}
+            className="w-full bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => setNamePromptDialog(null)}
+              className="flex-1 py-2.5 bg-secondary text-secondary-foreground text-sm font-semibold rounded-xl hover:opacity-80 transition-opacity"
+            >
+              Avbryt
+            </button>
+            <button
+              onClick={async () => {
+                const d = namePromptDialog;
+                const name = (namePromptInput.trim() || d.suggestion).trim();
+                setNamePromptDialog(null);
+                await supabase.from("workout_plans").update({ session_name: name }).eq("id", d.planId);
+                setPlans((prev) => prev.map((p) => (p.id === d.planId ? { ...p, session_name: name } : p)));
+                await toggleDone(d.week, d.day, true);
+              }}
+              className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl"
+            >
+              Spara & klarmarkera
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {uncheckedSetsDialog && (
+
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
         <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
         <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
