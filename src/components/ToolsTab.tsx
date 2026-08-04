@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw, Trash2, Route as RouteIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { updateApp } from "@/lib/appUpdate";
 import { APP_VERSION } from "@/lib/version";
@@ -22,6 +22,7 @@ const ProfileTab = lazy(() => import("@/components/ProfileTab"));
 const AdminUserList = lazy(() => import("@/components/AdminUserList"));
 const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
 const AdminCompletionsList = lazy(() => import("@/components/AdminCompletionsList"));
+const RouteBuilderDialog = lazy(() => import("@/components/RouteBuilderDialog"));
 
 const ReadyWorkoutManager = lazy(() => import("@/components/ReadyWorkoutManager"));
 const TriathlonView = lazy(() => import("@/components/TriathlonView"));
@@ -65,6 +66,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [confirmDelete2, setConfirmDelete2] = useState(false);
   const navigate = useNavigate();
   const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
+  const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const autoScrollRef = useRef<number | null>(null);
@@ -150,7 +152,26 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
     )},
+    { key: "route-builder", label: "Skapa runda", render: () => (
+      <button
+        type="button"
+        onClick={() => setRouteBuilderOpen(true)}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <RouteIcon className="h-4 w-4" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-foreground">Skapa runda</span>
+            <span className="block truncate text-xs text-muted-foreground">Slingförslag på riktiga vägar och stigar</span>
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </button>
+    )},
     
+
     { key: "suggestions", label: "Förslag", adminOnly: true, render: () => <SuggestionBox userId={userId} isAdmin={isAdmin} /> },
     { key: "help", label: "Hjälp", render: () => <HelpSection /> },
   ];
@@ -333,6 +354,12 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       </div>
 
       <ProfileCompletenessBanner userId={userId} />
+
+      {routeBuilderOpen && (
+        <Suspense fallback={null}>
+          <RouteBuilderDialog open={routeBuilderOpen} onOpenChange={setRouteBuilderOpen} />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         <ReferralLink userId={userId} />
