@@ -140,6 +140,7 @@ export default {
   			'fade-in': 'fade-in 0.3s ease-out'
   		},
   		boxShadow: {
+  			DEFAULT: 'var(--shadow)',
   			'2xs': 'var(--shadow-2xs)',
   			xs: 'var(--shadow-xs)',
   			sm: 'var(--shadow-sm)',
