@@ -1070,7 +1070,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
               <button
                 key={m}
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setBikeMode(m); setTempo(""); setAutoField(null); }}
+                onClick={(e) => { e.stopPropagation(); setBikeMode(m); }}
                 className={`px-3 py-1.5 text-[10px] font-semibold rounded-full transition-all ${bikeMode === m ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`}
               >{label}</button>
             );
