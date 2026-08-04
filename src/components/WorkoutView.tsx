@@ -1519,6 +1519,30 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [condTimeSeconds, setCondTimeSeconds] = useState("");
   const [condDistanceInput, setCondDistanceInput] = useState("");
   const [condAutoField, setCondAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
+  // Vald tempoenhet för konditionsdialogen (delas med redigeringskortet via localStorage)
+  const [condMode, setCondMode] = useState<CardioMode>("minkm");
+  const condDistUnit = getCardioDistUnit(conditioningDialog?.exerciseName || "") ?? "km";
+  const condDistToKm = (v: string) => {
+    const n = parseFloat((v || "").replace(",", "."));
+    if (!isFinite(n) || n <= 0) return 0;
+    return condDistUnit === "m" ? n / 1000 : n;
+  };
+  const condKmToDist = (km: number) => {
+    const v = condDistUnit === "m" ? km * 1000 : km;
+    return String(Math.round(v * 100) / 100);
+  };
+  const changeCondMode = (m: CardioMode) => {
+    if (m === condMode) return;
+    const converted = convertTempoValue(condMode, m, condTempoInput);
+    setCondMode(m);
+    if (conditioningDialog) storeCardioMode(conditioningDialog.exerciseName, m);
+    const distKm = condDistToKm(condDistanceInput);
+    if (condTimeTotalMin > 0 && distKm > 0) {
+      setCondTempoInput(computeTempoValue(m, condTimeTotalMin, distKm));
+    } else {
+      setCondTempoInput(converted);
+    }
+  };
 
   // Compute total minutes from H:M:S
   const condTimeTotalMin = (() => {
