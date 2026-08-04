@@ -878,20 +878,18 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
 
-  // Distance unit per tempo mode: min/100m → 0.1 km per "unit", min/500m → 0.5, others → 1
-  const kmPerTempoUnit = bikeMode === "min100m" ? 0.1 : bikeMode === "min500m" ? 0.5 : (isSwim ? 0.1 : 1);
-  const distToTempoUnits = (d: number): number => {
-    // Distance entered in km for most sports, in meters for swim
-    const dKm = isSwim ? d / 1000 : d;
-    return dKm / kmPerTempoUnit;
-  };
-  const tempoUnitsToDist = (u: number): number => {
-    const dKm = u * kmPerTempoUnit;
-    return isSwim ? dKm * 1000 : dKm;
-  };
+  // Distance unit per tempo mode: min/100m → 0.1 km per "unit", min/500m → 0.5, others → 1 km
+  const kmPerTempoUnit = bikeMode === "min100m" ? 0.1 : bikeMode === "min500m" ? 0.5 : 1;
+  // Distansfältet anges i meter för simning, annars i km
+  const distIsMeters = distUnit === "m";
+  const distToKm = (d: number): number => (distIsMeters ? d / 1000 : d);
+  const kmToDist = (km: number): number => (distIsMeters ? km * 1000 : km);
+  const distToTempoUnits = (d: number): number => distToKm(d) / kmPerTempoUnit;
+  const tempoUnitsToDist = (u: number): number => kmToDist(u * kmPerTempoUnit);
 
-  // Watt / spm: no direct relation between tempo and time/distance — skip auto-calc on tempo.
-  const tempoIsLinked = bikeMode !== "watt" && bikeMode !== "spm";
+  // Watt / spm / kcal / nivå: ingen relation till tid & distans — endast manuell inmatning.
+  const tempoIsLinked = isLinkedMode(bikeMode);
+
 
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
     if (!tempoIsLinked) return;
