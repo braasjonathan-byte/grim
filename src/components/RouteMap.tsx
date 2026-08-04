@@ -60,7 +60,12 @@ const loadGoogleMaps = (): Promise<void> => {
   return mapsPromise;
 };
 
-const DARK_STYLE: google.maps.MapTypeStyle[] = [
+/** Lazy accessor for the Google Maps namespace (script is loaded on demand). */
+const gm: any = new Proxy({}, {
+  get: (_t, prop) => (window as any).google?.maps?.[prop as string],
+});
+
+const DARK_STYLE: any[] = [
   { elementType: "geometry", stylers: [{ color: "#212121" }] },
   { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
@@ -74,7 +79,7 @@ const DARK_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
 ];
 
-const LIGHT_STYLE: google.maps.MapTypeStyle[] = [
+const LIGHT_STYLE: any[] = [
   { featureType: "poi", stylers: [{ visibility: "off" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
 ];
@@ -102,11 +107,11 @@ const distanceM = (a: Point, b: Point) => {
 };
 
 /** DOM overlay for the pulsing live-position dot (keeps the existing CSS animation). */
-const createPulseOverlay = (map: google.maps.Map, position: google.maps.LatLngLiteral, color: string) => {
-  class PulseOverlay extends google.maps.OverlayView {
+const createPulseOverlay = (map: any, position: any, color: string) => {
+  class PulseOverlay extends (gm.OverlayView as { new (): any }) {
     private el: HTMLDivElement | null = null;
-    private pos: google.maps.LatLngLiteral;
-    constructor(p: google.maps.LatLngLiteral) {
+    private pos: any;
+    constructor(p: any) {
       super();
       this.pos = p;
     }
@@ -120,7 +125,7 @@ const createPulseOverlay = (map: google.maps.Map, position: google.maps.LatLngLi
     }
     draw() {
       if (!this.el) return;
-      const p = this.getProjection()?.fromLatLngToDivPixel(new google.maps.LatLng(this.pos));
+      const p = this.getProjection()?.fromLatLngToDivPixel(new gm.LatLng(this.pos));
       if (!p) return;
       this.el.style.left = `${p.x - 9}px`;
       this.el.style.top = `${p.y - 9}px`;
@@ -129,7 +134,7 @@ const createPulseOverlay = (map: google.maps.Map, position: google.maps.LatLngLi
       this.el?.remove();
       this.el = null;
     }
-    setPosition(p: google.maps.LatLngLiteral) {
+    setPosition(p: any) {
       this.pos = p;
       this.draw();
     }
@@ -139,8 +144,8 @@ const createPulseOverlay = (map: google.maps.Map, position: google.maps.LatLngLi
   }
   const overlay = new PulseOverlay(position);
   overlay.setMap(map);
-  return overlay as google.maps.OverlayView & {
-    setPosition: (p: google.maps.LatLngLiteral) => void;
+  return overlay as any & {
+    setPosition: (p: any) => void;
     setColor: (c: string) => void;
   };
 };
@@ -155,12 +160,12 @@ const RouteMap = ({
   heatmap,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const routeLineRef = useRef<google.maps.Polyline | null>(null);
-  const haloLineRef = useRef<google.maps.Polyline | null>(null);
-  const heatLinesRef = useRef<google.maps.Polyline[]>([]);
-  const startMarkerRef = useRef<google.maps.Marker | null>(null);
-  const endMarkerRef = useRef<google.maps.Marker | null>(null);
+  const mapRef = useRef<any | null>(null);
+  const routeLineRef = useRef<any | null>(null);
+  const haloLineRef = useRef<any | null>(null);
+  const heatLinesRef = useRef<any[]>([]);
+  const startMarkerRef = useRef<any | null>(null);
+  const endMarkerRef = useRef<any | null>(null);
   const pulseRef = useRef<ReturnType<typeof createPulseOverlay> | null>(null);
   const fittedOnceRef = useRef(false);
 
@@ -185,7 +190,7 @@ const RouteMap = ({
         const center = route.length
           ? { lat: route[0][0], lng: route[0][1] }
           : { lat: 59.3293, lng: 18.0686 };
-        const map = new google.maps.Map(containerRef.current, {
+        const map = new gm.Map(containerRef.current, {
           center,
           zoom: 14,
           disableDefaultUI: true,
@@ -240,7 +245,7 @@ const RouteMap = ({
         .filter((r) => r.length > 1)
         .map(
           (r) =>
-            new google.maps.Polyline({
+            new gm.Polyline({
               map,
               path: r.map((p) => ({ lat: p[0], lng: p[1] })),
               strokeColor: primary,
@@ -254,7 +259,7 @@ const RouteMap = ({
 
     // Main route + halo
     if (!haloLineRef.current) {
-      haloLineRef.current = new google.maps.Polyline({
+      haloLineRef.current = new gm.Polyline({
         map,
         path,
         strokeColor: dark ? "#000000" : "#ffffff",
@@ -263,7 +268,7 @@ const RouteMap = ({
         clickable: false,
         zIndex: 2,
       });
-      routeLineRef.current = new google.maps.Polyline({
+      routeLineRef.current = new gm.Polyline({
         map,
         path,
         strokeColor: primary,
@@ -281,8 +286,8 @@ const RouteMap = ({
 
     // Start marker
     if (path.length > 0) {
-      const icon: google.maps.Symbol = {
-        path: google.maps.SymbolPath.CIRCLE,
+      const icon: any = {
+        path: gm.SymbolPath.CIRCLE,
         scale: 7,
         fillColor: "#16a34a",
         fillOpacity: 1,
@@ -290,7 +295,7 @@ const RouteMap = ({
         strokeWeight: 2,
       };
       if (!startMarkerRef.current) {
-        startMarkerRef.current = new google.maps.Marker({ map, position: path[0], icon, zIndex: 4 });
+        startMarkerRef.current = new gm.Marker({ map, position: path[0], icon, zIndex: 4 });
       } else {
         startMarkerRef.current.setPosition(path[0]);
       }
@@ -298,8 +303,8 @@ const RouteMap = ({
 
     // End marker — playback only
     if (!live && path.length > 1) {
-      const icon: google.maps.Symbol = {
-        path: google.maps.SymbolPath.CIRCLE,
+      const icon: any = {
+        path: gm.SymbolPath.CIRCLE,
         scale: 7,
         fillColor: "#dc2626",
         fillOpacity: 1,
@@ -308,7 +313,7 @@ const RouteMap = ({
       };
       const end = path[path.length - 1];
       if (!endMarkerRef.current) {
-        endMarkerRef.current = new google.maps.Marker({ map, position: end, icon, zIndex: 4 });
+        endMarkerRef.current = new gm.Marker({ map, position: end, icon, zIndex: 4 });
       } else {
         endMarkerRef.current.setPosition(end);
       }
@@ -334,7 +339,7 @@ const RouteMap = ({
         map.panTo(path[path.length - 1]);
         if ((map.getZoom() ?? 0) < 15) map.setZoom(15);
       } else if (!fittedOnceRef.current) {
-        const bounds = new google.maps.LatLngBounds();
+        const bounds = new gm.LatLngBounds();
         path.forEach((p) => bounds.extend(p));
         map.fitBounds(bounds, 30);
         fittedOnceRef.current = true;
