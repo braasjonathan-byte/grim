@@ -247,13 +247,15 @@ export function summarizeCompletion(
     }
   }
 
+  const cardio = collectCardio(lw);
+
   return {
     sets,
     volumeKg: Math.round(volumeKg),
     exercises: [...exercises],
     prExercises: [...prExercises],
-    durationMin: computeDuration(lw, endAt),
-
+    durationMin: computeDuration(lw, cardio?.minutes ?? 0, endAt),
+    cardio,
   };
 }
 
