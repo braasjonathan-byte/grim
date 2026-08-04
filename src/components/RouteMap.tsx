@@ -562,7 +562,7 @@ const RouteMap = ({
   return (
     <div
       className={`w-full rounded-md overflow-hidden border border-border ${className}`}
-      style={{ height, position: "relative", zIndex: 0, isolation: "isolate" }}
+      style={{ height: height === 0 ? "100%" : height, position: "relative", zIndex: 0, isolation: "isolate" }}
     >
       {mapInner}
     </div>
