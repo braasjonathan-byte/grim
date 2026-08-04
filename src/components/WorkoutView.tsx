@@ -2248,7 +2248,53 @@ const estimateCalories = (
     return unchecked;
   };
 
+  /**
+   * Returns a logged_weights object where every strength set of the day is
+   * marked as done (__sets__) and has set data (__setdata__), merged on top of
+   * `base`. Never removes existing marks — only adds.
+   */
+  const buildAllSetsWeights = (week: number, day: string, base: Record<string, any>) => {
+    const acc: Record<string, any> = { ...base };
+    const dayPlans = plans.filter((p) => p.week === week && p.day === day);
+    for (const plan of dayPlans) {
+      if (!plan.details) continue;
+      const parts = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        if (part.startsWith("⚔️")) continue;
+        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
+        if (isCondExercise) continue;
+        if (/^(vila|vilodag)/i.test(part)) continue;
+        const { clean: cleanPart } = extractRpe(part);
+        const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
+        const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
+        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
+        const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, "").trim() : null;
+        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, "") : exerciseName || cleanPart;
+        if (!pName) continue;
+        const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
+        acc[`__sets__${pName}`] = "1".repeat(sc);
+        const setDataKey = `__setdata__${pName}`;
+        // Reuse planned kg/reps when the user has not logged their own.
+        const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
+        const defReps = partStructMatch ? partStructMatch[3] : circuitSecMatch ? circuitSecMatch[1] : "10";
+        const defKg = partStructMatch && partStructMatch[5] ? partStructMatch[5] : "";
+        let existingData: any[] = [];
+        try {
+          const raw = acc[setDataKey];
+          if (raw) existingData = JSON.parse(raw as string) || [];
+        } catch {}
+        const initData = Array.from({ length: sc }, (_, i) => ({
+          kg: existingData[i]?.kg ?? defKg,
+          reps: existingData[i]?.reps ?? defReps,
+        }));
+        acc[setDataKey] = JSON.stringify(initData);
+      }
+    }
+    return acc;
+  };
+
   // Auto-check all sets for a given week/day (used when marking workout as done)
+
   const autoCheckAllSets = async (week: number, day: string) => {
     const dayPlans = plans.filter(p => p.week === week && p.day === day);
     for (const plan of dayPlans) {
@@ -2338,6 +2384,27 @@ const estimateCalories = (
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
 
+      // Read the freshest logged data from state (an auto-check of all sets may
+      // have written __sets__/__setdata__ just before this call), then make sure
+      // every strength set of the day is marked done. This only ADDS marks, so
+      // the data-loss guard is never triggered.
+      let latestWeights: Record<string, any> = await new Promise((resolve) => {
+        setCompletions((prev: Record<string, any>) => {
+          resolve(((prev[key]?.logged_weights || {}) as Record<string, any>));
+          return prev;
+        });
+      });
+      const filledWeights = buildAllSetsWeights(week, day, latestWeights);
+      if (JSON.stringify(filledWeights) !== JSON.stringify(latestWeights)) {
+        latestWeights = filledWeights;
+        setCompletions((prev: Record<string, any>) => ({
+          ...prev,
+          [key]: { ...prev[key], week, day, logged_weights: filledWeights },
+        }));
+        await safeUpsertCompletion(week, day, { logged_weights: filledWeights });
+      }
+
+
       // Auto-mark all conditioning lines in this day as completed as well
       try {
         const dayPlans = plans.filter((p) => p.week === week && p.day === day);
@@ -2363,6 +2430,7 @@ const estimateCalories = (
           await updateCompletionWeights(week, day, (existing) => {
             const next = { ...existing };
             for (const n of condNames) next[`__cond_done__${n}`] = "1";
+            latestWeights = next;
             return next;
           });
         }
@@ -2370,13 +2438,13 @@ const estimateCalories = (
 
       // Short "Bra jobbat!" celebration with a summary of the session
       try {
-        const lw = (completions[key] as any)?.logged_weights;
         setCompleteCelebration({
           title: plan?.session_name?.trim() || "",
-          summary: summarizeCompletion(lw, prIndex, new Date()),
+          summary: summarizeCompletion(latestWeights, prIndex, new Date()),
 
         });
       } catch {}
+
 
       // Prepare the share dialog; it opens once the celebration is dismissed.
       setPendingShare({ week, day, caption: null, loading: true });
@@ -6391,39 +6459,11 @@ const estimateCalories = (
                 onClick={async () => {
                   const { week, day } = uncheckedSetsDialog;
                   setUncheckedSetsDialog(null);
-                  const dayPlans = plans.filter(p => p.week === week && p.day === day);
                   const k = `${week}-${day}`;
                   const accumulated: Record<string, any> = await new Promise((resolve) => {
                     setCompletions((prev) => {
                       const prevComp = prev[k] || ({} as any);
-                      const acc: Record<string, any> = { ...((prevComp.logged_weights || {}) as Record<string, any>) };
-                      for (const plan of dayPlans) {
-                        if (!plan.details) continue;
-                        const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-                        for (const part of parts) {
-                          if (part.startsWith("⚔️")) continue;
-                          const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
-                          if (isCondExercise) continue;
-                          if (/^(vila|vilodag)/i.test(part)) continue;
-                          const { clean: cleanPart } = extractRpe(part);
-                          const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
-                          const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-                          const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
-                          const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
-                          const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, '') : exerciseName || cleanPart;
-                          const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
-                          const allChecked = "1".repeat(sc);
-                          acc[`__sets__${pName}`] = allChecked;
-                          const setDataKey = `__setdata__${pName}`;
-                          if (!acc[setDataKey]) {
-                            const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
-                            const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
-                            const defKg = partStructMatch && partStructMatch[5] ? partStructMatch[5] : "";
-                            const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
-                            acc[setDataKey] = JSON.stringify(initData);
-                          }
-                        }
-                      }
+                      const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>);
                       resolve(acc);
                       return {
                         ...prev,
@@ -10337,41 +10377,13 @@ const estimateCalories = (
               onClick={async () => {
                 const { week, day } = uncheckedSetsDialog;
                 setUncheckedSetsDialog(null);
-                const dayPlans = plans.filter(p => p.week === week && p.day === day);
                 const k = `${week}-${day}`;
 
                 // Build accumulated logged_weights using fresh state via functional setState
                 const accumulated: Record<string, any> = await new Promise((resolve) => {
                   setCompletions((prev) => {
                     const prevComp = prev[k] || ({} as any);
-                    const acc: Record<string, any> = { ...((prevComp.logged_weights || {}) as Record<string, any>) };
-                    for (const plan of dayPlans) {
-                      if (!plan.details) continue;
-                      const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-                      for (const part of parts) {
-                        if (part.startsWith("⚔️")) continue;
-                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
-                        if (isCondExercise) continue;
-                        if (/^(vila|vilodag)/i.test(part)) continue;
-                        const { clean: cleanPart } = extractRpe(part);
-                        const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
-                        const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-                        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
-                        const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
-                        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, '') : exerciseName || cleanPart;
-                        const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
-                        const allChecked = "1".repeat(sc);
-                        acc[`__sets__${pName}`] = allChecked;
-                        const setDataKey = `__setdata__${pName}`;
-                        if (!acc[setDataKey]) {
-                          const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
-                          const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
-                          const defKg = partStructMatch && partStructMatch[5] ? partStructMatch[5] : "";
-                          const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
-                          acc[setDataKey] = JSON.stringify(initData);
-                        }
-                      }
-                    }
+                    const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>);
                     resolve(acc);
                     // Optimistically update state immediately so checkboxes re-render as checked
                     return {
@@ -10380,6 +10392,7 @@ const estimateCalories = (
                     };
                   });
                 });
+
 
                 await safeUpsertCompletion(week, day, { logged_weights: accumulated });
                 await performToggleDone(week, day);
