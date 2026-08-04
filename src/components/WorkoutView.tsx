@@ -10377,41 +10377,13 @@ const estimateCalories = (
               onClick={async () => {
                 const { week, day } = uncheckedSetsDialog;
                 setUncheckedSetsDialog(null);
-                const dayPlans = plans.filter(p => p.week === week && p.day === day);
                 const k = `${week}-${day}`;
 
                 // Build accumulated logged_weights using fresh state via functional setState
                 const accumulated: Record<string, any> = await new Promise((resolve) => {
                   setCompletions((prev) => {
                     const prevComp = prev[k] || ({} as any);
-                    const acc: Record<string, any> = { ...((prevComp.logged_weights || {}) as Record<string, any>) };
-                    for (const plan of dayPlans) {
-                      if (!plan.details) continue;
-                      const parts = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-                      for (const part of parts) {
-                        if (part.startsWith("⚔️")) continue;
-                        const isCondExercise = /\d+\s*min|\d+\s*km|\/km|löpning|roddmaskin|cykel|cykling|simning|jogg|promenad|(?<![-\w])gång(?![-\w])|intervallträning|stair\s*machine|trappmaskin/i.test(part);
-                        if (isCondExercise) continue;
-                        if (/^(vila|vilodag)/i.test(part)) continue;
-                        const { clean: cleanPart } = extractRpe(part);
-                        const partStructMatch = cleanPart.match(/^(.+?)(?:\s+|[—–]\s+)(\d+)\s*[×x]\s*(\d+)(s)?(?:\s*@\s*(\d+(?:[.,]\d+)?)\s*kg)?$/i);
-                        const fallbackSetsMatch = !partStructMatch ? cleanPart.match(/(\d+)\s*[×x]\s*\S+/) : null;
-                        const nameMatch = part.match(/^([A-Za-zÀ-ÖØ-öø-ÿ\s/\-]+?)(?:\s*[—–]?\s+\d)/);
-                        const exerciseName = nameMatch ? nameMatch[1].trim().replace(/\s*[—–]\s*$/, '').trim() : null;
-                        const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, '') : exerciseName || cleanPart;
-                        const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
-                        const allChecked = "1".repeat(sc);
-                        acc[`__sets__${pName}`] = allChecked;
-                        const setDataKey = `__setdata__${pName}`;
-                        if (!acc[setDataKey]) {
-                          const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
-                          const defReps = partStructMatch ? partStructMatch[3] : (circuitSecMatch ? circuitSecMatch[1] : "10");
-                          const defKg = partStructMatch && partStructMatch[5] ? partStructMatch[5] : "";
-                          const initData = Array.from({ length: sc }, () => ({ kg: defKg, reps: defReps }));
-                          acc[setDataKey] = JSON.stringify(initData);
-                        }
-                      }
-                    }
+                    const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>);
                     resolve(acc);
                     // Optimistically update state immediately so checkboxes re-render as checked
                     return {
@@ -10420,6 +10392,7 @@ const estimateCalories = (
                     };
                   });
                 });
+
 
                 await safeUpsertCompletion(week, day, { logged_weights: accumulated });
                 await performToggleDone(week, day);
