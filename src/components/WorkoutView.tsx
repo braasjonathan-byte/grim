@@ -1082,7 +1082,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowIntervalRunner(true); }}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition"
+          className="w-full h-11 flex items-center justify-center gap-2 px-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-soft hover:bg-primary/90 transition-colors"
         >
           <Play className="w-4 h-4" /> Starta intervallpass
         </button>
