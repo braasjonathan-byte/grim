@@ -5586,28 +5586,26 @@ const estimateCalories = (
 
                         ) : (
                           <>
-                        <div className="mb-4">
+                        <div>
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
-                          <div className="flex items-center gap-1.5">
-                            <div className="flex-1 relative">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">tim</span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="min-w-0">
+                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className={condInputCls} />
+                              <span className={condUnitCls}>tim</span>
                             </div>
-                            <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                            <div className="flex-1 relative">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">min</span>
+                            <div className="min-w-0">
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className={condInputCls} />
+                              <span className={condUnitCls}>min</span>
                             </div>
-                            <span className="text-muted-foreground font-bold text-sm pb-1">:</span>
-                            <div className="flex-1 relative">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground font-medium">sek</span>
+                            <div className="min-w-0">
+                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className={condInputCls} />
+                              <span className={condUnitCls}>sek</span>
                             </div>
                           </div>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Tempo</label>
+                          <div className="min-w-0">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Tempo</label>
                             <input
                           type="text"
                           value={condTempoInput}
@@ -5616,12 +5614,12 @@ const estimateCalories = (
                             setCondTempoInput(v);
                             autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo");
                           }}
-                          placeholder="5:30"
-                          className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                            <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">min/km</span>
+                          placeholder={modePlaceholder(getCardioModes(conditioningDialog.exerciseName)[0]).replace("t.ex. ", "")}
+                          className={condInputCls} />
+                            <span className={condUnitCls}>{modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}</span>
                           </div>
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-0.5">
+                          <div className="min-w-0">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center justify-center gap-0.5">
                               <Route className="w-3 h-3" /> Distans
                             </label>
                             <input
@@ -5633,36 +5631,37 @@ const estimateCalories = (
                             setCondDistanceInput(v);
                             autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance");
                           }}
-                          placeholder="5"
-                          className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                            <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">km</span>
+                          placeholder={getCardioDistUnit(conditioningDialog.exerciseName) === "m" ? "400" : "5"}
+                          className={condInputCls} />
+                            <span className={condUnitCls}>{getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}</span>
                           </div>
-                          <div>
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block text-center">Puls</label>
+                          <div className="min-w-0">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Puls</label>
                             <input
                           type="number"
                           inputMode="numeric"
                           value={condPulseInput}
                           onChange={(e) => setCondPulseInput(e.target.value)}
                           placeholder="155"
-                          className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                            <span className="text-[9px] text-muted-foreground mt-0.5 block text-center">bpm</span>
+                          className={condInputCls} />
+                            <span className={condUnitCls}>bpm</span>
                           </div>
                         </div>
                           </>
                         )}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 pt-1">
                           <button
                         onClick={addConditioningExercise}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-warning text-warning-foreground rounded-md text-xs font-semibold">
-                            <Plus className="w-3.5 h-3.5" /> Lägg till
+                        className="flex-1 h-11 flex items-center justify-center gap-1.5 bg-warning text-warning-foreground rounded-xl text-sm font-semibold shadow-soft hover:bg-warning/90 transition-colors">
+                            <Plus className="w-4 h-4" /> Lägg till
                           </button>
                           <button
                         onClick={() => {setConditioningDialog(null);setCondTempoInput("");resetCondTime();setCondDistanceInput("");setCondAutoField(null);setCondIntervalsInput("");setCondRestInput("");setCondPulseInput("");setCondSpmInput("");setCondIntervalRows([]);}}
-                        className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                        className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-xl transition-colors">
                             Avbryt
                           </button>
                         </div>
+
                       </div>
                   }
 
