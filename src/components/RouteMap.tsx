@@ -271,16 +271,21 @@ const RouteMap = ({
   defaultOpen = false,
   live = false,
   heatmap,
+  traveledCount = 0,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any | null>(null);
   const routeLineRef = useRef<any | null>(null);
+  const doneLineRef = useRef<any | null>(null);
   const haloLineRef = useRef<any | null>(null);
   const heatLinesRef = useRef<any[]>([]);
   const startMarkerRef = useRef<any | null>(null);
   const endMarkerRef = useRef<any | null>(null);
   const pulseRef = useRef<ReturnType<typeof createPulseOverlay> | null>(null);
   const fittedOnceRef = useRef(false);
+  const followPausedRef = useRef(false);
+  const followTimerRef = useRef<number | null>(null);
+
 
   const [open, setOpen] = useState(collapsible ? defaultOpen : true);
   const [mapReady, setMapReady] = useState(false);
