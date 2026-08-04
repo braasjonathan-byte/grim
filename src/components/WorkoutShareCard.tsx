@@ -9,6 +9,7 @@ import {
   type SvgStats,
   type SvgExercise,
   type ShareCardVariant,
+  type SportKey,
 } from "@/lib/buildWorkoutCardSvg";
 import { pickImage } from "@/lib/pickImage";
 import WorkoutPostThread from "./WorkoutPostThread";
@@ -33,17 +34,18 @@ interface WorkoutShareCardProps {
 }
 
 /** Sport identity: short label per workout type, consistent with app terminology. */
-const SPORT_RULES: { re: RegExp; label: string }[] = [
-  { re: /(löpning|jogg|långpass|tröskel|intervall\s*löp|terräng)/i, label: "Löpning" },
-  { re: /(cykel|cykling|spinning)/i, label: "Cykling" },
-  { re: /(sim|simning|crawl)/i, label: "Simning" },
-  { re: /(rodd|roddmaskin)/i, label: "Rodd" },
-  { re: /(skidor|skidåkning|längdskidor)/i, label: "Skidor" },
-  { re: /(gång|promenad|vandring)/i, label: "Gång" },
-  { re: /(triathlon|duathlon)/i, label: "Triathlon" },
-  { re: /(yoga|mobilitet|rörlighet|stretch)/i, label: "Rörlighet" },
-  { re: /(hiit|cirkel|crossfit|kondition)/i, label: "Kondition" },
+const SPORT_RULES: { re: RegExp; label: string; key: SportKey }[] = [
+  { re: /(löpning|jogg|långpass|tröskel|intervall\s*löp|terräng)/i, label: "Löpning", key: "run" },
+  { re: /(cykel|cykling|spinning)/i, label: "Cykling", key: "bike" },
+  { re: /(sim|simning|crawl)/i, label: "Simning", key: "swim" },
+  { re: /(rodd|roddmaskin)/i, label: "Rodd", key: "row" },
+  { re: /(skidor|skidåkning|längdskidor)/i, label: "Skidor", key: "ski" },
+  { re: /(gång|promenad|vandring)/i, label: "Gång", key: "walk" },
+  { re: /(triathlon|duathlon)/i, label: "Triathlon", key: "triathlon" },
+  { re: /(yoga|mobilitet|rörlighet|stretch)/i, label: "Rörlighet", key: "mobility" },
+  { re: /(hiit|cirkel|crossfit|kondition)/i, label: "Kondition", key: "cardio" },
 ];
+
 
 const CARDIO_LABELS = new Set([
   "Löpning",
@@ -90,10 +92,12 @@ const WorkoutShareCard = ({
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const sportLabel = useMemo(() => {
+  const sport = useMemo(() => {
     const hit = SPORT_RULES.find((r) => r.re.test(sessionName) || r.re.test(details));
-    return hit ? hit.label : "Styrka";
+    return hit ?? { label: "Styrka", key: "strength" as SportKey };
   }, [sessionName, details]);
+  const sportLabel = sport.label;
+  const sportKey = sport.key;
 
   const isRunning = CARDIO_LABELS.has(sportLabel);
 
@@ -238,6 +242,7 @@ const WorkoutShareCard = ({
         metaLine,
         nickname,
         sportLabel,
+        sportKey,
         stats,
         exercises: svgExercises,
         isRunning,
@@ -246,7 +251,7 @@ const WorkoutShareCard = ({
         userPhotoBase64: userPhoto || undefined,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sessionName, metaLine, nickname, sportLabel, stats, JSON.stringify(svgExercises), isRunning, logoBase64, variant, userPhoto]
+    [sessionName, metaLine, nickname, sportLabel, sportKey, stats, JSON.stringify(svgExercises), isRunning, logoBase64, variant, userPhoto]
   );
 
   const generateImage = async (): Promise<Blob | null> => {
@@ -258,6 +263,7 @@ const WorkoutShareCard = ({
         metaLine,
         nickname,
         sportLabel,
+        sportKey,
         stats,
         exercises: svgExercises,
         isRunning,

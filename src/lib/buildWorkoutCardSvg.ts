@@ -31,6 +31,8 @@ export interface SvgCardInput {
   nickname: string;
   /** Short sport/type label, e.g. "LÖPNING" or "STYRKA" */
   sportLabel: string;
+  /** Key into SPORT_VISUALS for icon + accent colour */
+  sportKey?: SportKey;
   stats: SvgStats[];
   exercises: SvgExercise[];
   isRunning: boolean;
@@ -40,6 +42,44 @@ export interface SvgCardInput {
   userPhotoBase64?: string;
 }
 
+/* ── sport identity (icon + accent), mirrors the app's lucide icons ── */
+
+export type SportKey =
+  | "run"
+  | "bike"
+  | "swim"
+  | "row"
+  | "ski"
+  | "walk"
+  | "triathlon"
+  | "mobility"
+  | "cardio"
+  | "strength";
+
+/** 24×24 stroke paths (lucide geometry) drawn with stroke-width 2. */
+export const SPORT_VISUALS: Record<SportKey, { accent: string; path: string }> = {
+  // Footprints
+  run: { accent: "#2563eb", path: "M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z M16 17h4 M4 13h4" },
+  // Bike
+  bike: { accent: "#0ea5e9", path: "M18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z M12 17.5V14l-3-3 4-3 2 3h2" },
+  // Waves
+  swim: { accent: "#06b6d4", path: "M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1 .6-.5 1.2-1 2.5-1 1.3 0 1.9.5 2.5 1 M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1 .6-.5 1.2-1 2.5-1 1.3 0 1.9.5 2.5 1 M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1 .6-.5 1.2-1 2.5-1 1.3 0 1.9.5 2.5 1" },
+  // Sailboat-ish rowing
+  row: { accent: "#14b8a6", path: "M4 20h16 M6 16 3 9h18l-3 7 M12 9V3 M8 9c0-2 1.8-4 4-4s4 2 4 4" },
+  // Snowflake
+  ski: { accent: "#6366f1", path: "M12 2v20 M4.9 6.5l14.2 11 M19.1 6.5l-14.2 11 M9 4l3 2 3-2 M9 20l3-2 3 2" },
+  // Walk / footsteps
+  walk: { accent: "#0d9488", path: "M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z M9 20l3-6 M14 22l-2-5-3-3 1-5 3 2 2 3 3 1 M6 12l1-3" },
+  // Zap
+  triathlon: { accent: "#7c3aed", path: "M13 2 4 14h7l-1 8 9-12h-7l1-8Z" },
+  // Heart-ish / mobility
+  mobility: { accent: "#a855f7", path: "M12 5c1.5-1.8 3.4-2.5 5-2.5A4.7 4.7 0 0 1 21.5 8c0 4.5-6 8.5-9.5 11.5C8.5 16.5 2.5 12.5 2.5 8A4.7 4.7 0 0 1 7 2.5c1.6 0 3.5.7 5 2.5Z" },
+  // Activity pulse
+  cardio: { accent: "#ef4444", path: "M22 12h-4l-3 9L9 3l-3 9H2" },
+  // Dumbbell
+  strength: { accent: "#2563eb", path: "M14.4 14.4 9.6 9.6 M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767 1.768a2 2 0 1 1-2.829-2.829l6.364-6.364a2 2 0 1 1 2.829 2.829l1.767-1.768a2 2 0 1 1 2.829 2.829z M2.5 21.5l1.4-1.4 M21.5 2.5l-1.4 1.4 M5.343 2.515a2 2 0 1 1 2.829 2.828l1.767-1.768a2 2 0 1 1 2.829 2.829L6.404 12.768a2 2 0 1 1-2.829-2.829l-1.767 1.768a2 2 0 1 1-2.829-2.829z" },
+};
+
 /* ── canvas constants ─────────────────────────────── */
 
 export const CARD_W = 1080;
@@ -48,6 +88,7 @@ export const CARD_H = 1920;
 const MARKER = `'Permanent Marker', cursive`;
 const SANS = `'Space Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif`;
 const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@400;500;600;700&display=swap');`;
+
 
 /* ── themes ───────────────────────────────────────── */
 
@@ -148,7 +189,13 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
   const H = CARD_H;
   const P = 84;
   const CW = W - 2 * P;
-  const t = SHARE_CARD_THEMES[input.variant] ?? SHARE_CARD_THEMES.light;
+  const baseTheme = SHARE_CARD_THEMES[input.variant] ?? SHARE_CARD_THEMES.light;
+  const sportVisual = input.sportKey ? SPORT_VISUALS[input.sportKey] : undefined;
+  // Sport accent tints light/dark cards; the primary card keeps its white accent
+  const t: SvgCardTheme =
+    sportVisual && input.variant !== "primary"
+      ? { ...baseTheme, accent: sportVisual.accent }
+      : baseTheme;
 
   // Unique suffix so multiple cards on the same page never share gradient IDs
   const uid = `c${Math.random().toString(36).slice(2, 8)}`;
@@ -197,16 +244,33 @@ export function buildWorkoutCardSvg(input: SvgCardInput): string {
 
   let y = P + 190;
 
-  /* ── Sport chip ── */
+  /* ── Sport chip (icon + label) ── */
   const chipLabel = input.sportLabel.toUpperCase();
   const chipFs = 26;
-  const chipW = Math.max(150, textWidth(chipLabel, chipFs, 0.68) + 64);
+  const iconSize = 30;
+  const hasIcon = !!sportVisual;
+  const chipPadL = hasIcon ? 30 : 32;
+  const labelW = textWidth(chipLabel, chipFs, 0.68);
+  const chipW = Math.max(150, chipPadL + (hasIcon ? iconSize + 16 : 0) + labelW + 32);
   els.push(
     `<rect x="${P}" y="${y}" width="${chipW}" height="58" rx="29" fill="${t.accent}"/>`
   );
+  if (sportVisual) {
+    const s = iconSize / 24;
+    els.push(
+      `<g transform="translate(${P + chipPadL} ${y + (58 - iconSize) / 2}) scale(${s})" fill="none" stroke="${t.onAccent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${sportVisual.path}"/></g>`
+    );
+  }
   els.push(
-    `<text x="${P + chipW / 2}" y="${y + 29}" fill="${t.onAccent}" font-size="${chipFs}" font-family="${SANS}" font-weight="700" letter-spacing="3" text-anchor="middle" dy="0.35em">${esc(chipLabel)}</text>`
+    `<text x="${P + chipPadL + (hasIcon ? iconSize + 16 : 0)}" y="${y + 29}" fill="${t.onAccent}" font-size="${chipFs}" font-family="${SANS}" font-weight="700" letter-spacing="3" dy="0.35em">${esc(chipLabel)}</text>`
   );
+  // Oversized, very faint sport glyph as a background watermark
+  if (sportVisual) {
+    const wm = 520;
+    els.push(
+      `<g transform="translate(${W - wm - 20} ${y - 90}) scale(${wm / 24})" fill="none" stroke="${t.accent}" stroke-opacity="0.10" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="${sportVisual.path}"/></g>`
+    );
+  }
   y += 58 + 40;
 
   /* ── Session title (marker font, branding/heading only) ── */
