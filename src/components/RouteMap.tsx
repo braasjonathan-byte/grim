@@ -320,7 +320,18 @@ const RouteMap = ({
           styles: dark ? DARK_STYLE : LIGHT_STYLE,
         });
         mapRef.current = map;
+        // Användaren får panorera fritt – auto-centrering pausas i 5 s efter senaste interaktion.
+        const pauseFollow = () => {
+          followPausedRef.current = true;
+          if (followTimerRef.current) window.clearTimeout(followTimerRef.current);
+          followTimerRef.current = window.setTimeout(() => {
+            followPausedRef.current = false;
+          }, 5000);
+        };
+        map.addListener("dragstart", pauseFollow);
+        map.addListener("dragend", pauseFollow);
         setMapReady(true);
+
       })
       .catch((e) => {
         if (cancelled) return;
