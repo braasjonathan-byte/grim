@@ -46,7 +46,7 @@ import AutoSaveInput from "@/components/AutoSaveInput";
 import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import IntervalRowsEditor, { IntervalRow, emptyIntervalRow, summarizeIntervalRows } from "@/components/IntervalRowsEditor";
-import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, formatPaceDisplay } from "@/lib/cardioUnits";
+import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay } from "@/lib/cardioUnits";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
@@ -798,8 +798,9 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
-const condInputCls = "w-full min-w-0 bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
+const condInputCls = "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
 const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
+
 
 const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
   name: string; lineIndex: number; planId: string;
@@ -877,20 +878,18 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     return `${mn}:${sc.toString().padStart(2, "0")}`;
   };
 
-  // Distance unit per tempo mode: min/100m → 0.1 km per "unit", min/500m → 0.5, others → 1
-  const kmPerTempoUnit = bikeMode === "min100m" ? 0.1 : bikeMode === "min500m" ? 0.5 : (isSwim ? 0.1 : 1);
-  const distToTempoUnits = (d: number): number => {
-    // Distance entered in km for most sports, in meters for swim
-    const dKm = isSwim ? d / 1000 : d;
-    return dKm / kmPerTempoUnit;
-  };
-  const tempoUnitsToDist = (u: number): number => {
-    const dKm = u * kmPerTempoUnit;
-    return isSwim ? dKm * 1000 : dKm;
-  };
+  // Distance unit per tempo mode: min/100m → 0.1 km per "unit", min/500m → 0.5, others → 1 km
+  const kmPerTempoUnit = bikeMode === "min100m" ? 0.1 : bikeMode === "min500m" ? 0.5 : 1;
+  // Distansfältet anges i meter för simning, annars i km
+  const distIsMeters = distUnit === "m";
+  const distToKm = (d: number): number => (distIsMeters ? d / 1000 : d);
+  const kmToDist = (km: number): number => (distIsMeters ? km * 1000 : km);
+  const distToTempoUnits = (d: number): number => distToKm(d) / kmPerTempoUnit;
+  const tempoUnitsToDist = (u: number): number => kmToDist(u * kmPerTempoUnit);
 
-  // Watt / spm: no direct relation between tempo and time/distance — skip auto-calc on tempo.
-  const tempoIsLinked = bikeMode !== "watt" && bikeMode !== "spm";
+  // Watt / spm / kcal / nivå: ingen relation till tid & distans — endast manuell inmatning.
+  const tempoIsLinked = isLinkedMode(bikeMode);
+
 
   const liveAutoCalc = (totalMin: number, tempoVal: string, distVal: string, changed: "time" | "tempo" | "distance") => {
     if (!tempoIsLinked) return;
@@ -911,14 +910,15 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
     const calc = (field: "time" | "tempo" | "distance") => {
       const dUnits = distToTempoUnits(d);
+      const dKm = distToKm(d);
       if (isKmh) {
-        // km/h: speed = 60 * dist_km / time_min
+        // km/h: hastighet = distans (km) / tid (timmar)
         if (field === "distance" && t > 0 && p && p > 0) {
-          setDistance(String(Math.round((p * t / 60) * 100) / 100));
-        } else if (field === "tempo" && t > 0 && d > 0) {
-          setTempo(String(Math.round((60 * d / t) * 10) / 10));
-        } else if (field === "time" && d > 0 && p && p > 0) {
-          const tot = 60 * d / p;
+          setDistance(String(Math.round(kmToDist(p * t / 60) * 100) / 100));
+        } else if (field === "tempo" && t > 0 && dKm > 0) {
+          setTempo((60 * dKm / t).toFixed(1));
+        } else if (field === "time" && dKm > 0 && p && p > 0) {
+          const tot = 60 * dKm / p;
           const hh = Math.floor(tot / 60);
           const rem = tot - hh * 60;
           const mm = Math.floor(rem);
@@ -929,6 +929,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         }
         return;
       }
+
       if (field === "distance" && t > 0 && p && p > 0) {
         const units = t / p;
         setDistance(String(Math.round(tempoUnitsToDist(units) * 100) / 100));
@@ -952,6 +953,23 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     }
   };
 
+  // Räkna om tempofältet till rätt format/värde när enheten byts.
+  const prevModeRef = useRef(bikeMode);
+  useEffect(() => {
+    if (prevModeRef.current === bikeMode) return;
+    prevModeRef.current = bikeMode;
+    if (!isLinkedMode(bikeMode)) { setTempo(""); setAutoField(null); return; }
+    const t = getTotalMin();
+    const d = parseFloat(distance.replace(",", "."));
+    if (!(t > 0) || !(d > 0)) { setTempo(""); setAutoField(null); return; }
+    const dKm = distToKm(d);
+    if (bikeMode === "kmh") setTempo((60 * dKm / t).toFixed(1));
+    else setTempo(fmtTempo(t / distToTempoUnits(d)));
+    setAutoField("tempo");
+  }, [bikeMode]);
+
+
+
   const handleSave = async () => {
     const t = getTotalMin();
     const timeStr = t > 0 ? String(Math.round(t * 100) / 100) : "";
@@ -967,7 +985,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
         if (bikeMode === "kmh") {
-          data.tempo = String(Math.round((60 * dVal / tVal) * 10) / 10);
+          data.tempo = (60 * distToKm(dVal) / tVal).toFixed(1);
+
         } else {
           const dUnits = distToTempoUnits(dVal);
           const tm = tVal / dUnits;
@@ -1051,7 +1070,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
               <button
                 key={m}
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setBikeMode(m); setTempo(""); setAutoField(null); }}
+                onClick={(e) => { e.stopPropagation(); setBikeMode(m); }}
                 className={`px-3 py-1.5 text-[10px] font-semibold rounded-full transition-all ${bikeMode === m ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`}
               >{label}</button>
             );
