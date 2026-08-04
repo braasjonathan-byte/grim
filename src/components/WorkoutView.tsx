@@ -3963,7 +3963,18 @@ const estimateCalories = (
     // Check if exercise is conditioning type
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
+      // Intervallpass behöver konfigureras innan de läggs till
+      if (!exerciseName.toLowerCase().includes("intervall")) {
+        const targetPlanForCond = plans.find((p) => p.id === planId);
+        if (targetPlanForCond) {
+          setShowExercisePicker(null);
+          setIsWarmupMode(false);
+          void addExerciseToPlan(targetPlanForCond, exerciseName);
+        }
+        return;
+      }
       setConditioningDialog({ planId, exerciseName });
+
       setCondMode(getStoredCardioMode(exerciseName));
       if (isStairMachine(exerciseName)) {
         setCondTempoInput("");
