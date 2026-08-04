@@ -46,7 +46,7 @@ import AutoSaveInput from "@/components/AutoSaveInput";
 import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import IntervalRowsEditor, { IntervalRow, emptyIntervalRow, summarizeIntervalRows } from "@/components/IntervalRowsEditor";
-import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, getStoredCardioMode, storeCardioMode, convertTempoValue, computeTempoValue, computeDistanceKm, computeTimeMin, kmPerTempoUnit } from "@/lib/cardioUnits";
+import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, getStoredCardioMode, storeCardioMode, convertTempoValue, computeTempoValue, computeDistanceKm, computeTimeMin, kmPerTempoUnit, parseTempoInput } from "@/lib/cardioUnits";
 import CardioLogFields from "@/components/CardioLogFields";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
