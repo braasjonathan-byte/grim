@@ -13,7 +13,7 @@ import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 const RouteBuilderDialog = lazy(() => import("@/components/RouteBuilderDialog"));
 
 // Inline conditioning editing card (green, open by default)
-export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean }) => {
+export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean; onCancel?: () => void }) => {
   const gps = useGpsTracker();
   const hr = useHeartRate();
   const myId = useId();
@@ -121,6 +121,9 @@ export const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: 
     setPrimeError(null);
     goodFixSamples.current = 0;
     setFullscreen(false);
+    // Meddela föräldern så att vyn kan fällas ihop igen (annars ligger den
+    // expanderade GPS-panelen kvar och kastar om knapparna i passkortet).
+    onCancel?.();
   };
 
   useEffect(() => {

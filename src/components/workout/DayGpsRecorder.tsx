@@ -59,6 +59,7 @@ export const DayGpsRecorder = ({ konditionExercises, onSave }: {
         </div>
         <GpsTrackerControl
           autoStart
+          onCancel={() => setSelectedName(null)}
           onStop={async (km, sec, route) => {
             const name = selectedName;
             setSelectedName(null);
