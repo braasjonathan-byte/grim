@@ -1,3 +1,4 @@
+import { lazyRetry } from "@/lib/lazyRetry";
 import { lazy, Suspense } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,11 +9,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SaveIndicatorProvider } from "@/components/SaveIndicator";
 import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
 
-const Index = lazy(() => import("./pages/Index"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const Install = lazy(() => import("./pages/Install"));
-const Privacy = lazy(() => import("./pages/Privacy"));
-const DeleteAccount = lazy(() => import("./pages/DeleteAccount"));
+const Index = lazyRetry(() => import("./pages/Index"));
+const NotFound = lazyRetry(() => import("./pages/NotFound"));
+const Install = lazyRetry(() => import("./pages/Install"));
+const Privacy = lazyRetry(() => import("./pages/Privacy"));
+const DeleteAccount = lazyRetry(() => import("./pages/DeleteAccount"));
 
 const queryClient = new QueryClient();
 

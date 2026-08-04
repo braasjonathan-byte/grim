@@ -1,3 +1,4 @@
+import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useRef, useId, lazy, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
@@ -10,7 +11,7 @@ import { openAppSettings } from "@/lib/openSettings";
 import RouteMap from "@/components/RouteMap";
 import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 
-const RouteBuilderDialog = lazy(() => import("@/components/RouteBuilderDialog"));
+const RouteBuilderDialog = lazyRetry(() => import("@/components/RouteBuilderDialog"));
 
 // Inline conditioning editing card (green, open by default)
 export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean; onCancel?: () => void }) => {

@@ -1,3 +1,4 @@
+import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw, Trash2, Route as RouteIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -17,27 +18,27 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
-const SupporterButton = lazy(() => import("@/components/SupporterButton"));
-const ProfileTab = lazy(() => import("@/components/ProfileTab"));
-const AdminUserList = lazy(() => import("@/components/AdminUserList"));
-const ExerciseGifManager = lazy(() => import("@/components/ExerciseGifManager"));
-const AdminCompletionsList = lazy(() => import("@/components/AdminCompletionsList"));
-const RouteBuilderDialog = lazy(() => import("@/components/RouteBuilderDialog"));
+const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
+const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
+const AdminUserList = lazyRetry(() => import("@/components/AdminUserList"));
+const ExerciseGifManager = lazyRetry(() => import("@/components/ExerciseGifManager"));
+const AdminCompletionsList = lazyRetry(() => import("@/components/AdminCompletionsList"));
+const RouteBuilderDialog = lazyRetry(() => import("@/components/RouteBuilderDialog"));
 
-const ReadyWorkoutManager = lazy(() => import("@/components/ReadyWorkoutManager"));
-const TriathlonView = lazy(() => import("@/components/TriathlonView"));
-const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
-const NotificationSettings = lazy(() => import("@/components/NotificationSettings"));
-const ReferralLink = lazy(() => import("@/components/ReferralLink"));
-const EventCountdown = lazy(() => import("@/components/EventCountdown"));
-const WorkoutTimer = lazy(() => import("@/components/WorkoutTimer"));
-const RestTimerSettings = lazy(() => import("@/components/RestTimerSettings"));
-const OneRMCalculator = lazy(() => import("@/components/OneRMCalculator"));
-const PulseZoneCalculator = lazy(() => import("@/components/PulseZoneCalculator"));
-const CalorieCalculator = lazy(() => import("@/components/CalorieCalculator"));
-const SuggestionBox = lazy(() => import("@/components/SuggestionBox"));
-const HelpSection = lazy(() => import("@/components/HelpSection"));
-const DisclaimerSection = lazy(() => import("@/components/DisclaimerSection"));
+const ReadyWorkoutManager = lazyRetry(() => import("@/components/ReadyWorkoutManager"));
+const TriathlonView = lazyRetry(() => import("@/components/TriathlonView"));
+const SettingsPanel = lazyRetry(() => import("@/components/SettingsPanel"));
+const NotificationSettings = lazyRetry(() => import("@/components/NotificationSettings"));
+const ReferralLink = lazyRetry(() => import("@/components/ReferralLink"));
+const EventCountdown = lazyRetry(() => import("@/components/EventCountdown"));
+const WorkoutTimer = lazyRetry(() => import("@/components/WorkoutTimer"));
+const RestTimerSettings = lazyRetry(() => import("@/components/RestTimerSettings"));
+const OneRMCalculator = lazyRetry(() => import("@/components/OneRMCalculator"));
+const PulseZoneCalculator = lazyRetry(() => import("@/components/PulseZoneCalculator"));
+const CalorieCalculator = lazyRetry(() => import("@/components/CalorieCalculator"));
+const SuggestionBox = lazyRetry(() => import("@/components/SuggestionBox"));
+const HelpSection = lazyRetry(() => import("@/components/HelpSection"));
+const DisclaimerSection = lazyRetry(() => import("@/components/DisclaimerSection"));
 
 interface ToolsTabProps {
   userId: string;
