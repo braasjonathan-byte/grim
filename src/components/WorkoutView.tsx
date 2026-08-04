@@ -406,7 +406,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
               setPrimed(true);
               setFullscreen(true);
             }}
-            className="w-full h-11 flex items-center justify-center gap-1.5 px-4 bg-primary text-primary-foreground text-sm font-semibold rounded-xl shadow-soft active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full h-11 flex items-center justify-center gap-1.5 px-4 bg-primary text-primary-foreground text-sm font-semibold rounded-full shadow-soft active:scale-[0.98] transition-all disabled:opacity-50"
             title={otherActive ? "En GPS-inspelning pågår redan på en annan övning" : undefined}
           >
             <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
@@ -799,7 +799,7 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
-const condInputCls = "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
+const condInputCls = "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center font-bold tabular-nums placeholder:text-muted-foreground/60 placeholder:font-normal placeholder:italic";
 const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
 
 
@@ -1008,7 +1008,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const displayTempo = savedData?.tempo || initTempo;
     const displayPulse = savedData?.pulse || initPulse;
     return (
-      <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 space-y-1">
+      <div className="bg-primary/10 border border-primary/20 rounded-2xl shadow-soft p-3 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {onToggleCompleted && (
@@ -1041,7 +1041,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
   }
 
   return (
-    <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 space-y-2">
+    <div className="bg-primary/10 border border-primary/20 rounded-2xl shadow-soft p-3.5 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {onToggleCompleted && (
@@ -1185,8 +1185,8 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         </div>
       </div>
       <div className="flex gap-2 pt-1">
-        <button onClick={handleSave} className="flex-1 h-11 bg-primary text-primary-foreground rounded-xl text-sm font-semibold shadow-soft hover:bg-primary/90 transition-colors">Spara</button>
-        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-xl transition-colors">Avbryt</button>}
+        <button onClick={handleSave} className="flex-1 h-11 bg-primary text-primary-foreground rounded-full text-sm font-semibold shadow-soft hover:bg-primary/90 active:scale-[0.98] transition-all">Spara</button>
+        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-full transition-colors">Avbryt</button>}
       </div>
 
     </div>
@@ -3963,7 +3963,18 @@ const estimateCalories = (
     // Check if exercise is conditioning type
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
+      // Intervallpass behöver konfigureras innan de läggs till
+      if (!exerciseName.toLowerCase().includes("intervall")) {
+        const targetPlanForCond = plans.find((p) => p.id === planId);
+        if (targetPlanForCond) {
+          setShowExercisePicker(null);
+          setIsWarmupMode(false);
+          void addExerciseToPlan(targetPlanForCond, exerciseName);
+        }
+        return;
+      }
       setConditioningDialog({ planId, exerciseName });
+
       setCondMode(getStoredCardioMode(exerciseName));
       if (isStairMachine(exerciseName)) {
         setCondTempoInput("");
