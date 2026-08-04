@@ -370,7 +370,10 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    let lastRun = 0;
     const syncSubscription = async () => {
+      if (Date.now() - lastRun < 30_000) return;
+      lastRun = Date.now();
       try {
         const { data, error } = await supabase.functions.invoke("check-subscription");
         if (error || cancelled) return;
