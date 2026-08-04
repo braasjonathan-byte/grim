@@ -7015,7 +7015,7 @@ const estimateCalories = (
                                         </div>
                                       </div>
                                       {/* Per-interval header */}
-                                      <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                                      <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-end">
                                         <span className="w-7" />
                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
                                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
@@ -7041,7 +7041,7 @@ const estimateCalories = (
                                         const isDoneI = setsStr[ii] === "1";
 
                                         return (
-                                          <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                          <div key={ii} className={`grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center rounded-lg px-1 py-1 ${ii % 2 === 0 ? "bg-muted/30" : "bg-transparent"}`}>
                                             <button
                                               onClick={async (e) => {
                                                 e.stopPropagation();
@@ -7133,7 +7133,7 @@ const estimateCalories = (
                                         }
                                         if (totalDist > 0) {
                                           return (
-                                            <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center pt-1 border-t border-warning/20 mt-1">
+                                            <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center pt-1 border-t border-warning/20 mt-1">
                                               <span className="w-7" />
                                               <span />
                                               <span className="text-[10px] text-muted-foreground uppercase tracking-wider text-center font-semibold">Totalt</span>
@@ -8058,7 +8058,7 @@ const estimateCalories = (
                               {intervalCount > 0 ? (
                                 <div className="space-y-2">
                                   {/* Per-interval header */}
-                                  <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                                  <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-end">
                                     <span className="w-7" />
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
@@ -8093,7 +8093,7 @@ const estimateCalories = (
                                     }
                                     if (row.dist && !rowDist) rowDist = row.dist;
                                     return (
-                                      <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                      <div key={ii} className={`grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center rounded-lg px-1 py-1 ${ii % 2 === 0 ? "bg-muted/30" : "bg-transparent"}`}>
                                         {(() => {
                                           const intervalSetsKey = `__sets__interval_${condName || part}`;
                                           const setsStr = ((completions[key]?.logged_weights as Record<string, any>)?.[intervalSetsKey] as string) || "";
@@ -8571,7 +8571,7 @@ const estimateCalories = (
                                 </button>
                               </div>
                               {/* Per-interval header */}
-                              <div className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-end">
+                              <div className="grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-end">
                                 <span className="w-7" />
                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-0.5"><Timer className="w-3 h-3 text-primary" />Tid</span>
                                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Tempo</span>
@@ -8595,7 +8595,7 @@ const estimateCalories = (
                                 const isDoneI = setsStr[ii] === "1";
 
                                 return (
-                                  <div key={ii} className="grid grid-cols-[28px_1fr_1fr_1fr] gap-1.5 items-center">
+                                  <div key={ii} className={`grid grid-cols-[28px_minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] gap-1.5 items-center rounded-lg px-1 py-1 ${ii % 2 === 0 ? "bg-muted/30" : "bg-transparent"}`}>
                                     <button
                                       onClick={async (e) => {
                                         e.stopPropagation();
