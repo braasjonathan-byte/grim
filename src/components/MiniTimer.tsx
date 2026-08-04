@@ -139,10 +139,11 @@ const MiniTimer = () => {
   useEffect(() => {
     const startRestTimer = (event: Event) => {
       const detail = (event as CustomEvent<{ seconds?: number; label?: string }>).detail;
-      const configuredSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || "90";
+      const configuredSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || localStorage.getItem(COUNTDOWN_KEY) || "90";
       const startSeconds = Math.max(1, Math.round(Number(detail?.seconds ?? configuredSeconds) || 0));
       if (!startSeconds) return;
       setMode("countdown");
+      setCountdownDefault(startSeconds);
       setLabel(detail?.label || "Vila");
       setSeconds(startSeconds);
       setRunning(true);
@@ -186,6 +187,8 @@ const MiniTimer = () => {
     const apply = () => {
       const total = Math.max(1, mins * 60 + secs);
       setCountdownDefault(total);
+      // Håll vilotimern (efter set) i synk med timerns nedräkningstid
+      localStorage.setItem("grim_set_rest_timer_seconds", String(total));
       if (mode === "countdown" && !running) setSeconds(total);
       setSettingsOpen(false);
     };
