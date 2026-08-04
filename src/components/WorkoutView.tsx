@@ -6300,7 +6300,47 @@ const estimateCalories = (
           setSharePromptDialog(null);
         }}
       />
+      {namePromptDialog && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setNamePromptDialog(null)} />
+          <div className="relative bg-card rounded-2xl shadow-lg p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+            <div>
+              <h3 className="font-bold text-base">Vad heter passet?</h3>
+              <p className="text-sm text-muted-foreground mt-1">Passet saknar namn – här är ett förslag som du kan ändra.</p>
+            </div>
+            <input
+              autoFocus
+              value={namePromptInput}
+              onChange={(e) => setNamePromptInput(e.target.value)}
+              placeholder={namePromptDialog.suggestion}
+              className="w-full bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setNamePromptDialog(null)}
+                className="flex-1 py-2.5 bg-secondary text-secondary-foreground text-sm font-semibold rounded-xl hover:opacity-80 transition-opacity"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  const d = namePromptDialog;
+                  const name = (namePromptInput.trim() || d.suggestion).trim();
+                  setNamePromptDialog(null);
+                  await supabase.from("workout_plans").update({ session_name: name }).eq("id", d.planId);
+                  setPlans((prev) => prev.map((p) => (p.id === d.planId ? { ...p, session_name: name } : p)));
+                  await toggleDone(d.week, d.day, true);
+                }}
+                className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl"
+              >
+                Spara & klarmarkera
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {uncheckedSetsDialog && (
+
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setUncheckedSetsDialog(null)} />
           <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
