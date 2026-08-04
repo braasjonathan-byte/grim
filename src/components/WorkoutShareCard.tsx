@@ -33,17 +33,18 @@ interface WorkoutShareCardProps {
 }
 
 /** Sport identity: short label per workout type, consistent with app terminology. */
-const SPORT_RULES: { re: RegExp; label: string }[] = [
-  { re: /(löpning|jogg|långpass|tröskel|intervall\s*löp|terräng)/i, label: "Löpning" },
-  { re: /(cykel|cykling|spinning)/i, label: "Cykling" },
-  { re: /(sim|simning|crawl)/i, label: "Simning" },
-  { re: /(rodd|roddmaskin)/i, label: "Rodd" },
-  { re: /(skidor|skidåkning|längdskidor)/i, label: "Skidor" },
-  { re: /(gång|promenad|vandring)/i, label: "Gång" },
-  { re: /(triathlon|duathlon)/i, label: "Triathlon" },
-  { re: /(yoga|mobilitet|rörlighet|stretch)/i, label: "Rörlighet" },
-  { re: /(hiit|cirkel|crossfit|kondition)/i, label: "Kondition" },
+const SPORT_RULES: { re: RegExp; label: string; key: SportKey }[] = [
+  { re: /(löpning|jogg|långpass|tröskel|intervall\s*löp|terräng)/i, label: "Löpning", key: "run" },
+  { re: /(cykel|cykling|spinning)/i, label: "Cykling", key: "bike" },
+  { re: /(sim|simning|crawl)/i, label: "Simning", key: "swim" },
+  { re: /(rodd|roddmaskin)/i, label: "Rodd", key: "row" },
+  { re: /(skidor|skidåkning|längdskidor)/i, label: "Skidor", key: "ski" },
+  { re: /(gång|promenad|vandring)/i, label: "Gång", key: "walk" },
+  { re: /(triathlon|duathlon)/i, label: "Triathlon", key: "triathlon" },
+  { re: /(yoga|mobilitet|rörlighet|stretch)/i, label: "Rörlighet", key: "mobility" },
+  { re: /(hiit|cirkel|crossfit|kondition)/i, label: "Kondition", key: "cardio" },
 ];
+
 
 const CARDIO_LABELS = new Set([
   "Löpning",
