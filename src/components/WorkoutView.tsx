@@ -1521,7 +1521,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [condAutoField, setCondAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
   // Vald tempoenhet för konditionsdialogen (delas med redigeringskortet via localStorage)
   const [condMode, setCondMode] = useState<CardioMode>("minkm");
-  const condDistUnit = getCardioDistUnit(conditioningDialog?.exerciseName || "") ?? "km";
+  // Namn på övningen som redigeras (redigeringskortet nedanför passet)
+  const [condEditName, setCondEditName] = useState("");
+  const condActiveName = conditioningDialog?.exerciseName || condEditName;
+  const condDistUnit = getCardioDistUnit(condActiveName) ?? "km";
   const condDistToKm = (v: string) => {
     const n = parseFloat((v || "").replace(",", "."));
     if (!isFinite(n) || n <= 0) return 0;
@@ -1535,7 +1538,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (m === condMode) return;
     const converted = convertTempoValue(condMode, m, condTempoInput);
     setCondMode(m);
-    if (conditioningDialog) storeCardioMode(conditioningDialog.exerciseName, m);
+    if (condActiveName) storeCardioMode(condActiveName, m);
     const distKm = condDistToKm(condDistanceInput);
     if (condTimeTotalMin > 0 && distKm > 0) {
       setCondTempoInput(computeTempoValue(m, condTimeTotalMin, distKm));
@@ -4164,6 +4167,8 @@ const estimateCalories = (
     setCondSpmInput(spmM ? spmM[1] : "");
     setCondIntervalsInput("");
     setCondRestInput("");
+    setCondEditName(name);
+    setCondMode(getStoredCardioMode(name));
     setEditingCondLine({ planId, lineIndex, name });
   };
 
@@ -4197,6 +4202,7 @@ const estimateCalories = (
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
     setEditingCondLine(null);
+    setCondEditName("");
     resetCondTime();
     setCondTempoInput("");
     setCondDistanceInput("");
@@ -7511,41 +7517,27 @@ const estimateCalories = (
                                       </div>
                                     </>
                                   ) : (
-                                    <>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-                            <div className="flex items-center gap-1">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
-                            </div>
-                                    </div>
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                                      <input type="text" inputMode="numeric" pattern="[0-9:]*" value={condTempoInput} onChange={(e) => setCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                                      <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => setCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                    </div>
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                                      <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                    </div>
-                                  </div>
-                                    </>
+                                    <CardioLogFields
+                                      exerciseName={editingCondLine.name}
+                                      mode={condMode}
+                                      onModeChange={changeCondMode}
+                                      hours={condTimeHours}
+                                      minutes={condTimeMinutes}
+                                      seconds={condTimeSeconds}
+                                      onTimeChange={(part, v) => handleCondTimeChange(part, v, false)}
+                                      tempo={condTempoInput}
+                                      onTempoChange={(v) => { setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }}
+                                      distance={condDistanceInput}
+                                      onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
+                                      pulse={condPulseInput}
+                                      onPulseChange={setCondPulseInput}
+                                    />
                                   )}
                                   <div className="flex gap-2">
                                     <button onClick={saveEditedCondLine} className="flex-1 py-2 bg-success text-success-foreground rounded-md text-xs font-semibold">
                                       Spara
                                     </button>
-                                      <button onClick={() => { setEditingCondLine(null); resetCondTime(); setCondTempoInput(""); setCondDistanceInput(""); setCondAutoField(null); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                      <button onClick={() => { setEditingCondLine(null); setCondEditName(""); resetCondTime(); setCondTempoInput(""); setCondDistanceInput(""); setCondAutoField(null); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                                       Avbryt
                                     </button>
                                   </div>
