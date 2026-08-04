@@ -953,6 +953,23 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     }
   };
 
+  // Räkna om tempofältet till rätt format/värde när enheten byts.
+  const prevModeRef = useRef(bikeMode);
+  useEffect(() => {
+    if (prevModeRef.current === bikeMode) return;
+    prevModeRef.current = bikeMode;
+    if (!isLinkedMode(bikeMode)) { setTempo(""); setAutoField(null); return; }
+    const t = getTotalMin();
+    const d = parseFloat(distance.replace(",", "."));
+    if (!(t > 0) || !(d > 0)) { setTempo(""); setAutoField(null); return; }
+    const dKm = distToKm(d);
+    if (bikeMode === "kmh") setTempo((60 * dKm / t).toFixed(1));
+    else setTempo(fmtTempo(t / distToTempoUnits(d)));
+    setAutoField("tempo");
+  }, [bikeMode]);
+
+
+
   const handleSave = async () => {
     const t = getTotalMin();
     const timeStr = t > 0 ? String(Math.round(t * 100) / 100) : "";
