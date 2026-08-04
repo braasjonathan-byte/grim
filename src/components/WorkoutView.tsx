@@ -3803,23 +3803,29 @@ const estimateCalories = (
 
   const autoCalcCond = (totalMinutes: number, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
     const t = totalMinutes;
-    const p = parseCondTempo(tempo);
-    const d = parseFloat(dist.replace(",", "."));
+    const linked = isLinkedMode(condMode);
+    const p = linked ? parseTempoInput(condMode, tempo) : null;
+    const dKm = condDistToKm(dist);
     const filled = {
       time: t > 0,
       tempo: tempo.trim().length > 0 && p !== null && p > 0,
-      distance: dist.trim().length > 0 && !isNaN(d) && d > 0,
+      distance: dKm > 0,
     };
 
     const calculateField = (field: "time" | "tempo" | "distance") => {
-      if (field === "distance" && t > 0 && p && p > 0) {
-        setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
-      } else if (field === "tempo" && t > 0 && d > 0) {
-        setCondTempoInput(formatCondTempo(t / d));
-      } else if (field === "time" && d > 0 && p && p > 0) {
-        setCondTimeFromMinutes(p * d);
+      if (!linked) return;
+      if (field === "distance") {
+        const km = computeDistanceKm(condMode, t, tempo);
+        if (km && km > 0) setCondDistanceInput(condKmToDist(km));
+      } else if (field === "tempo") {
+        const v = computeTempoValue(condMode, t, dKm);
+        if (v) setCondTempoInput(v);
+      } else if (field === "time") {
+        const min = computeTimeMin(condMode, tempo, dKm);
+        if (min && min > 0) setCondTimeFromMinutes(min);
       }
     };
+
 
     const filledCount = Object.values(filled).filter(Boolean).length;
     if (!filled[changed]) {
