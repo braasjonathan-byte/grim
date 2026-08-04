@@ -1,4 +1,24 @@
 import { isPrWeight, type PrIndex } from "@/lib/prBadges";
+import {
+  getCardioDistUnit,
+  getStoredCardioMode,
+  computeTempoValue,
+  modeDisplaySuffix,
+  type CardioMode,
+} from "@/lib/cardioUnits";
+
+export interface CardioSummary {
+  /** Total distance in km across all logged cardio exercises */
+  distanceKm: number;
+  /** Total logged cardio minutes */
+  minutes: number;
+  /** Weighted average pulse (bpm), or null when nothing logged */
+  pulse: number | null;
+  /** Name of the cardio exercise with the most time (drives unit choice) */
+  primaryName: string;
+  /** Number of distinct cardio exercises logged */
+  count: number;
+}
 
 export interface WorkoutSummary {
   sets: number;
@@ -7,27 +27,116 @@ export interface WorkoutSummary {
   prExercises: string[];
   /** Session length in minutes, or null when it can't be determined */
   durationMin: number | null;
+  /** Aggregated cardio metrics, or null when no cardio was logged */
+  cardio: CardioSummary | null;
 }
 
 const cleanName = (n: string) => n.replace(/( —)+$/, "").trim();
 
-/** Minutes spent on cardio exercises that were marked as done. */
-function cardioMinutes(lw: Record<string, unknown>): number {
-  let total = 0;
+const toNum = (v: unknown): number => {
+  if (typeof v === "number") return isFinite(v) ? v : 0;
+  if (typeof v === "string") {
+    const n = parseFloat(v.replace(",", "."));
+    return isFinite(n) ? n : 0;
+  }
+  return 0;
+};
+
+const parsePayload = (value: unknown): Record<string, unknown> | null => {
+  if (typeof value === "string") {
+    try {
+      const p = JSON.parse(value);
+      return p && typeof p === "object" && !Array.isArray(p) ? (p as Record<string, unknown>) : null;
+    } catch { return null; }
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  return null;
+};
+
+/** min/km from a tempo string like "5:30" or "5,30" */
+const paceMinPerKm = (tempo: unknown): number => {
+  const raw = String(tempo ?? "").trim().replace(",", ":").replace(".", ":");
+  const pair = raw.match(/^(\d+):(\d{1,2})/);
+  if (pair) return parseInt(pair[1], 10) + parseInt(pair[2].padEnd(2, "0"), 10) / 60;
+  const single = raw.match(/^(\d+)$/);
+  return single ? parseInt(single[1], 10) : 0;
+};
+
+const entryDistanceKm = (data: Record<string, unknown>): number => {
+  const intervals = Array.isArray(data.intervals) ? data.intervals : [];
+  if (intervals.length) {
+    let sum = 0;
+    for (const raw of intervals) {
+      const iv = parsePayload(raw) || {};
+      const d = toNum(iv.dist ?? iv.distance);
+      if (d > 0) { sum += d; continue; }
+      const mins = toNum(iv.time);
+      const pace = paceMinPerKm(iv.tempo);
+      if (mins > 0 && pace > 0) sum += mins / pace;
+    }
+    if (sum > 0) return sum;
+  }
+  const direct = toNum(data.dist ?? data.distance);
+  if (direct > 0) return direct;
+  const mins = toNum(data.time);
+  const pace = paceMinPerKm(data.tempo);
+  return mins > 0 && pace > 0 ? mins / pace : 0;
+};
+
+const entryMinutes = (data: Record<string, unknown>): number => {
+  const direct = toNum(data.time);
+  if (direct > 0) return direct;
+  const intervals = Array.isArray(data.intervals) ? data.intervals : [];
+  return intervals.reduce((s, raw) => s + toNum((parsePayload(raw) || {}).time), 0);
+};
+
+/** Aggregates every logged cardio exercise in the session. */
+function collectCardio(lw: Record<string, unknown>): CardioSummary | null {
+  let minutes = 0;
+  let distanceKm = 0;
+  let pulseWeighted = 0;
+  let pulseWeight = 0;
+  let bestMinutes = -1;
+  let primaryName = "";
+  const seen = new Set<string>();
+  let count = 0;
+
   for (const [key, value] of Object.entries(lw)) {
     if (!key.startsWith("__cond__") || key.startsWith("__cond_done__")) continue;
-    const name = key.substring("__cond__".length);
-    if (lw[`__cond_done__${name}`] !== "1") continue;
-    let obj: { time?: string | number } | null = null;
-    if (typeof value === "string") {
-      try { obj = JSON.parse(value); } catch { obj = null; }
-    } else if (value && typeof value === "object") {
-      obj = value as { time?: string | number };
+    const name = cleanName(key.substring("__cond__".length));
+    const doneFlag = lw[`__cond_done__${key.substring("__cond__".length)}`];
+    if (doneFlag !== undefined && doneFlag !== "1") continue;
+    const data = parsePayload(value);
+    if (!data) continue;
+
+    const sig = JSON.stringify([data.time ?? "", data.dist ?? data.distance ?? "", data.tempo ?? "", data.intervals ?? null]);
+    if (seen.has(sig)) continue;
+    seen.add(sig);
+
+    const mins = entryMinutes(data);
+    const km = entryDistanceKm(data);
+    if (mins <= 0 && km <= 0) continue;
+    count += 1;
+    minutes += mins;
+    distanceKm += km;
+
+    const pulse = toNum(data.pulse);
+    if (pulse > 0) {
+      const w = mins > 0 ? mins : 1;
+      pulseWeighted += pulse * w;
+      pulseWeight += w;
     }
-    const min = Number(obj?.time);
-    if (isFinite(min) && min > 0) total += min;
+    if (mins > bestMinutes) { bestMinutes = mins; primaryName = name; }
   }
-  return total;
+
+  if (count === 0) return null;
+  return {
+    distanceKm,
+    minutes,
+    pulse: pulseWeight > 0 ? Math.round(pulseWeighted / pulseWeight) : null,
+    primaryName,
+    count,
+  };
 }
 
 /**
@@ -36,7 +145,7 @@ function cardioMinutes(lw: Record<string, unknown>): number {
  * Cardio: the sum of logged cardio minutes.
  * Both: the longer of the two, so overlapping time isn't counted twice.
  */
-function computeDuration(lw: Record<string, unknown>, endAt?: Date | number | string | null): number | null {
+function computeDuration(lw: Record<string, unknown>, cardioMin: number, endAt?: Date | number | string | null): number | null {
   const startRaw = lw["__first_set_at__"];
   let strengthMin = 0;
   if (typeof startRaw === "string") {
@@ -46,10 +155,29 @@ function computeDuration(lw: Record<string, unknown>, endAt?: Date | number | st
       strengthMin = Math.round((end - start) / 60000);
     }
   }
-  const cardioMin = Math.round(cardioMinutes(lw));
-  const total = Math.max(strengthMin, cardioMin);
+  const total = Math.max(strengthMin, Math.round(cardioMin));
   return total > 0 ? total : null;
 }
+
+/** Formats total distance for display, in the unit that suits the sport. */
+export function formatCardioDistance(km: number, sportName: string): string {
+  if (!(km > 0)) return "–";
+  const unit = getCardioDistUnit(sportName);
+  if (unit === "m") return `${Math.round(km * 1000)} m`;
+  if (km >= 10) return `${km.toFixed(1).replace(".", ",")} km`;
+  return `${km.toFixed(2).replace(".", ",")} km`;
+}
+
+/** Weighted average pace/speed across the session, in the sport's unit. */
+export function formatCardioPace(minutes: number, km: number, sportName: string): { value: string; label: string } {
+  const mode: CardioMode = getStoredCardioMode(sportName);
+  const label = mode === "kmh" ? "Snittfart" : "Snittempo";
+  if (!(minutes > 0) || !(km > 0)) return { value: "–", label };
+  const value = computeTempoValue(mode, minutes, km);
+  if (!value) return { value: "–", label };
+  return { value: `${value}${modeDisplaySuffix(mode)}`, label };
+}
+
 
 export function formatDurationMin(min: number): string {
   if (min < 60) return `${min} min`;
