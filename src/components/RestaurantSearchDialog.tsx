@@ -180,9 +180,9 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
           .map((x: any) => x.p);
       }
 
-      setResults(items);
+      if (reqId === reqRef.current) setResults(items);
     } finally {
-      setLoading(false);
+      if (reqId === reqRef.current) setLoading(false);
     }
   }
 
