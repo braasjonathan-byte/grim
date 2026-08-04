@@ -13,7 +13,10 @@ interface Props {
   live?: boolean;
   /** Optional historic routes drawn as a faint heatmap-style overlay underneath the main line. */
   heatmap?: Point[][];
+  /** Antal punkter i början av rutten som redan avverkats – ritas grå. */
+  traveledCount?: number;
 }
+
 
 const useIsDark = () => {
   const [dark, setDark] = useState<boolean>(() =>
