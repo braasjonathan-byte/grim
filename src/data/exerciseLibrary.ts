@@ -1,3 +1,5 @@
+import { fuzzyFilterSort } from "@/lib/fuzzySearch";
+
 export interface ExerciseInfo {
   name: string;
   category: "styrka" | "kondition" | "rörlighet" | "core";
