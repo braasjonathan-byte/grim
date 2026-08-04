@@ -475,8 +475,9 @@ const RouteMap = ({
     }
 
     // Live pulsing dot
-    if (live && path.length > 0) {
-      const cur = path[path.length - 1];
+    const livePoint = livePosition ? { lat: livePosition[0], lng: livePosition[1] } : null;
+    if (live && (livePoint || path.length > 0)) {
+      const cur = livePoint ?? path[path.length - 1];
       if (!pulseRef.current) {
         pulseRef.current = createPulseOverlay(map, cur, primary);
       } else {
@@ -486,21 +487,22 @@ const RouteMap = ({
     }
 
     // Camera
-    if (path.length === 1) {
+    if (path.length === 1 && !livePoint) {
       map.setCenter(path[0]);
       map.setZoom(16);
-    } else if (path.length > 1) {
-      if (live) {
-        map.panTo(path[path.length - 1]);
+    } else if (live && (livePoint || path.length > 1)) {
+      if (!followPausedRef.current) {
+        map.panTo(livePoint ?? path[path.length - 1]);
         if ((map.getZoom() ?? 0) < 15) map.setZoom(15);
-      } else if (!fittedOnceRef.current) {
-        const bounds = new gm.LatLngBounds();
-        path.forEach((p) => bounds.extend(p));
-        map.fitBounds(bounds, 30);
-        fittedOnceRef.current = true;
       }
+    } else if (path.length > 1 && !fittedOnceRef.current) {
+      const bounds = new gm.LatLngBounds();
+      path.forEach((p) => bounds.extend(p));
+      map.fitBounds(bounds, 30);
+      fittedOnceRef.current = true;
     }
-  }, [mapReady, route, heatmap, live, primary, dark]);
+  }, [mapReady, route, heatmap, live, primary, dark, traveledCount, livePosition]);
+
 
   // Return-to-start data
   const returnInfo = useMemo(() => {
