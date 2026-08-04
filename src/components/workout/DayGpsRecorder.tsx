@@ -23,6 +23,23 @@ export const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
   const closePicker = () => { setPickerOpen(false); setQuery(""); };
 
+  // Håll dialogen ovanför tangentbordet (visualViewport)
+  const [vv, setVv] = useState<{ h: number; top: number }>({ h: 0, top: 0 });
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const update = () => {
+      const v = window.visualViewport;
+      setVv({ h: v?.height || window.innerHeight, top: v?.offsetTop || 0 });
+    };
+    update();
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
+    };
+  }, [pickerOpen]);
+
   const pick = (name: string) => {
     closePicker();
     setSelectedName(name);
