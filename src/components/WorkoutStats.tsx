@@ -537,9 +537,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     if (summaryPeriod === "week") {
       return completions.filter((c) => {
         const d = getCompletionStatsDate(c, planStartDate);
+        if (!d) return false;
         return d >= currentMonday && d < endOfWeek;
       });
     }
+
 
     const startOfMonth = getStartOfMonth(now);
     const startOfYear = getStartOfYear(now);
