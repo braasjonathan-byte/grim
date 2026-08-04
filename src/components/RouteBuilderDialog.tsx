@@ -202,12 +202,25 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
 
   return (
     <>
-      <Dialog open={open && !navRoute} onOpenChange={onOpenChange}>
-        <DialogContent className="z-[10050] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
-          <DialogHeader>
+      <Dialog open={open && !navRoute}>
+        <DialogContent
+          className="z-[10050] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl"
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="flex flex-row items-center justify-between gap-2">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <RouteIcon className="h-4 w-4 text-primary" /> Rundor
             </DialogTitle>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Stäng"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1">
