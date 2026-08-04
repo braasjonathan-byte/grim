@@ -799,7 +799,7 @@ const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
-const condInputCls = "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
+const condInputCls = "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center font-bold tabular-nums placeholder:text-muted-foreground/60 placeholder:font-normal placeholder:italic";
 const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
 
 
