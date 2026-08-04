@@ -3905,6 +3905,7 @@ const estimateCalories = (
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
       setConditioningDialog({ planId, exerciseName });
+      setCondMode(getStoredCardioMode(exerciseName));
       if (isStairMachine(exerciseName)) {
         setCondTempoInput("");
         setCondSpmInput("");
@@ -5726,6 +5727,7 @@ const estimateCalories = (
                             onClick={(e) => {
                               e.stopPropagation();
                               setConditioningDialog({ planId: plan.id, exerciseName: "Intervallträning" });
+                              setCondMode(getStoredCardioMode("Intervallträning"));
                               const lastCondTempo = findLastCondTempo("Intervallträning");
                               setCondTempoInput(lastCondTempo || "");
                               resetCondTime();
@@ -9361,6 +9363,7 @@ const estimateCalories = (
                           onClick={(e) => {
                             e.stopPropagation();
                             setConditioningDialog({ planId: plan.id, exerciseName: "Intervallträning" });
+                              setCondMode(getStoredCardioMode("Intervallträning"));
                             const lastCondTempo = findLastCondTempo("Intervallträning");
                             setCondTempoInput(lastCondTempo || "");
                             resetCondTime();
