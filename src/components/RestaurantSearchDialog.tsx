@@ -95,10 +95,11 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
     return Math.min(best, full);
   }
 
-  async function search(brandQ: string, itemQ?: string) {
-    const b = brandQ.trim();
-    const it = (itemQ || "").trim();
+  async function search(brandQ?: string, itemQ?: string) {
+    const b = (brandQ ?? brandRef.current).trim();
+    const it = (itemQ ?? itemRef.current).trim();
     if (!b && !it) return;
+    const reqId = ++reqRef.current;
     setLoading(true);
     setSelected(null);
     try {
