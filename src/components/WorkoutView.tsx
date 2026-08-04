@@ -1008,7 +1008,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const displayTempo = savedData?.tempo || initTempo;
     const displayPulse = savedData?.pulse || initPulse;
     return (
-      <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 space-y-1">
+      <div className="bg-primary/10 border border-primary/20 rounded-2xl shadow-soft p-3 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {onToggleCompleted && (
