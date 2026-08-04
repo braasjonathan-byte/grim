@@ -311,7 +311,6 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
                         className="w-full rounded-xl font-bold"
                         onClick={() => {
                           setNavRoute({ route: active, activity, name: savingName });
-                          onOpenChange(false);
                         }}
                       >
                         <Navigation className="mr-2 h-4 w-4" /> Starta runda
