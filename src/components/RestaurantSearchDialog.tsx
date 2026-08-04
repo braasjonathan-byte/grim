@@ -46,10 +46,18 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
   const [selected, setSelected] = useState<OFFItem | null>(null);
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
+  // Always read the latest field values — never a value captured in an older render.
+  const brandRef = useRef("");
+  const itemRef = useRef("");
+  const reqRef = useRef(0);
+
+  useEffect(() => { brandRef.current = brand; }, [brand]);
+  useEffect(() => { itemRef.current = item; }, [item]);
 
   useEffect(() => {
-    if (!open) { setBrand(""); setItem(""); setResults([]); setSelected(null); }
+    if (!open) { setBrand(""); setItem(""); setResults([]); setSelected(null); setLoading(false); }
   }, [open]);
+
 
   // Simple typo-tolerant Levenshtein for fuzzy ranking
   function lev(a: string, b: string): number {
