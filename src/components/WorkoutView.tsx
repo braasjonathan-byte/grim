@@ -327,7 +327,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   const triggerSetRestTimer = useCallback((wasChecked: boolean) => {
     const setRestTimerEnabled = localStorage.getItem("grim_set_rest_timer_enabled") === "true";
-    const setRestTimerSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || "90";
+    const setRestTimerSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || localStorage.getItem("grim_mini_timer_countdown_seconds") || "90";
     if (!wasChecked || !setRestTimerEnabled) return;
     const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
     if (!seconds) return;
