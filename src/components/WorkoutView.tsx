@@ -2385,13 +2385,25 @@ const estimateCalories = (
       const plan = plans.find((p) => p.week === week && p.day === day);
 
       // Read the freshest logged data from state (an auto-check of all sets may
-      // have written __sets__/__setdata__ just before this call).
+      // have written __sets__/__setdata__ just before this call), then make sure
+      // every strength set of the day is marked done. This only ADDS marks, so
+      // the data-loss guard is never triggered.
       let latestWeights: Record<string, any> = await new Promise((resolve) => {
         setCompletions((prev: Record<string, any>) => {
           resolve(((prev[key]?.logged_weights || {}) as Record<string, any>));
           return prev;
         });
       });
+      const filledWeights = buildAllSetsWeights(week, day, latestWeights);
+      if (JSON.stringify(filledWeights) !== JSON.stringify(latestWeights)) {
+        latestWeights = filledWeights;
+        setCompletions((prev: Record<string, any>) => ({
+          ...prev,
+          [key]: { ...prev[key], week, day, logged_weights: filledWeights },
+        }));
+        await safeUpsertCompletion(week, day, { logged_weights: filledWeights });
+      }
+
 
       // Auto-mark all conditioning lines in this day as completed as well
       try {
