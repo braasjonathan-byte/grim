@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
+import {
+  type CardioMode, getCardioModes, modeLabel, modeFieldLabel, modePlaceholder,
+  modeDisplaySuffix, isLinkedMode, isPaceMode, formatPaceDisplay,
+  getStoredCardioMode, storeCardioMode, convertTempoValue,
+  computeTempoValue, computeDistanceKm, computeTimeMin,
+} from "@/lib/cardioUnits";
 
 
 
@@ -110,6 +116,8 @@ const WorkoutLogDialog = ({
   const [duration, setDuration] = useState("");
 
   const [pulse, setPulse] = useState(existingLog?.logged_pulse?.toString() || "");
+  const availableModes = getCardioModes(sessionName);
+  const [mode, setMode] = useState<CardioMode>(() => getStoredCardioMode(sessionName));
   const [saving, setSaving] = useState(false);
 
   // Auto-calc distance for each interval row when tempo or time changes
@@ -143,28 +151,42 @@ const WorkoutLogDialog = ({
     );
   };
 
-  // Auto-calc for non-interval mode
+  // Auto-calc for non-interval mode (enhetsmedvetet)
   const autoCalcSimple = (newTime: string, newTempo: string, newDist: string, changed: "time" | "tempo" | "distance") => {
     const t = parseFloat(newTime.replace(",", "."));
-    const p = tempoToMinPerKm(newTempo);
     const d = parseFloat(newDist.replace(",", "."));
+    if (!isLinkedMode(mode)) return;
 
-    if (changed === "time" && t > 0 && p && p > 0) {
-      setDistance(calcDistance(t, p));
-    } else if (changed === "time" && t > 0 && d > 0) {
-      setTempo(formatTempo(t / d));
-    } else if (changed === "tempo" && p && p > 0) {
+    if (changed === "time" && t > 0) {
+      const km = computeDistanceKm(mode, t, newTempo);
+      if (km) { setDistance(String(Math.round(km * 100) / 100)); return; }
+      if (d > 0) setTempo(computeTempoValue(mode, t, d));
+    } else if (changed === "tempo") {
       let time = t;
       if (!(time > 0)) {
         const runMin = parseRunningMinutes(details);
         if (runMin) { time = runMin; setDuration(String(runMin)); }
       }
-      if (time > 0) setDistance(calcDistance(time, p));
-    } else if (changed === "distance" && d > 0 && t > 0) {
-      setTempo(formatTempo(t / d));
-    } else if (changed === "distance" && d > 0 && p && p > 0) {
-      setDuration(String(Math.round(p * d * 10) / 10));
+      const km = time > 0 ? computeDistanceKm(mode, time, newTempo) : null;
+      if (km) setDistance(String(Math.round(km * 100) / 100));
+    } else if (changed === "distance" && d > 0) {
+      if (t > 0) {
+        setTempo(computeTempoValue(mode, t, d));
+      } else {
+        const min = computeTimeMin(mode, newTempo, d);
+        if (min) setDuration(String(Math.round(min * 10) / 10));
+      }
     }
+  };
+
+  const changeMode = (m: CardioMode) => {
+    if (m === mode) return;
+    const t = parseFloat(duration.replace(",", "."));
+    const d = parseFloat(distance.replace(",", "."));
+    const converted = t > 0 && d > 0 ? computeTempoValue(m, t, d) : convertTempoValue(mode, m, tempo);
+    setMode(m);
+    storeCardioMode(sessionName, m);
+    setTempo(converted);
   };
 
   // Pre-fill distance on mount for non-interval
@@ -195,7 +217,7 @@ const WorkoutLogDialog = ({
   const handleSave = async () => {
     setSaving(true);
 
-    const saveTempo = isInterval ? avgTempo : tempo.trim();
+    const saveTempo = isInterval ? avgTempo : (isPaceMode(mode) ? formatPaceDisplay(tempo.trim(), mode) : tempo.trim());
     const saveDist = isInterval ? totalDistance : parseFloat(distance) || null;
 
     // First read existing record to preserve logged_weights
@@ -315,6 +337,20 @@ const WorkoutLogDialog = ({
         ) : (
           /* Non-interval mode */
           <div className="space-y-3">
+            {availableModes.length > 1 && (
+              <div className="flex gap-1.5 flex-wrap">
+                {availableModes.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => changeMode(m)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors ${m === mode ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                  >
+                    {modeLabel(m)}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground flex items-center gap-1">
@@ -335,7 +371,7 @@ const WorkoutLogDialog = ({
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Timer className="w-3 h-3" /> Tempo
+                  <Timer className="w-3 h-3" /> {modeFieldLabel(mode, sessionName)}
                 </label>
                 <input
                   type="text"
@@ -344,7 +380,7 @@ const WorkoutLogDialog = ({
                     setTempo(e.target.value);
                     autoCalcSimple(duration, e.target.value, distance, "tempo");
                   }}
-                  placeholder="5:30"
+                  placeholder={modePlaceholder(mode)}
                   className={inputClass}
                 />
               </div>

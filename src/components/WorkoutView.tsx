@@ -46,7 +46,8 @@ import AutoSaveInput from "@/components/AutoSaveInput";
 import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import IntervalRowsEditor, { IntervalRow, emptyIntervalRow, summarizeIntervalRows } from "@/components/IntervalRowsEditor";
-import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay } from "@/lib/cardioUnits";
+import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, getStoredCardioMode, storeCardioMode, convertTempoValue, computeTempoValue, computeDistanceKm, computeTimeMin, kmPerTempoUnit, parseTempoInput } from "@/lib/cardioUnits";
+import CardioLogFields from "@/components/CardioLogFields";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
 import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
@@ -1518,6 +1519,33 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [condTimeSeconds, setCondTimeSeconds] = useState("");
   const [condDistanceInput, setCondDistanceInput] = useState("");
   const [condAutoField, setCondAutoField] = useState<"time" | "tempo" | "distance" | null>(null);
+  // Vald tempoenhet för konditionsdialogen (delas med redigeringskortet via localStorage)
+  const [condMode, setCondMode] = useState<CardioMode>("minkm");
+  // Namn på övningen som redigeras (redigeringskortet nedanför passet)
+  const [condEditName, setCondEditName] = useState("");
+  const condActiveName = conditioningDialog?.exerciseName || condEditName;
+  const condDistUnit = getCardioDistUnit(condActiveName) ?? "km";
+  const condDistToKm = (v: string) => {
+    const n = parseFloat((v || "").replace(",", "."));
+    if (!isFinite(n) || n <= 0) return 0;
+    return condDistUnit === "m" ? n / 1000 : n;
+  };
+  const condKmToDist = (km: number) => {
+    const v = condDistUnit === "m" ? km * 1000 : km;
+    return String(Math.round(v * 100) / 100);
+  };
+  const changeCondMode = (m: CardioMode) => {
+    if (m === condMode) return;
+    const converted = convertTempoValue(condMode, m, condTempoInput);
+    setCondMode(m);
+    if (condActiveName) storeCardioMode(condActiveName, m);
+    const distKm = condDistToKm(condDistanceInput);
+    if (condTimeTotalMin > 0 && distKm > 0) {
+      setCondTempoInput(computeTempoValue(m, condTimeTotalMin, distKm));
+    } else {
+      setCondTempoInput(converted);
+    }
+  };
 
   // Compute total minutes from H:M:S
   const condTimeTotalMin = (() => {
@@ -3778,23 +3806,29 @@ const estimateCalories = (
 
   const autoCalcCond = (totalMinutes: number, tempo: string, dist: string, changed: "time" | "tempo" | "distance") => {
     const t = totalMinutes;
-    const p = parseCondTempo(tempo);
-    const d = parseFloat(dist.replace(",", "."));
+    const linked = isLinkedMode(condMode);
+    const p = linked ? parseTempoInput(condMode, tempo) : null;
+    const dKm = condDistToKm(dist);
     const filled = {
       time: t > 0,
       tempo: tempo.trim().length > 0 && p !== null && p > 0,
-      distance: dist.trim().length > 0 && !isNaN(d) && d > 0,
+      distance: dKm > 0,
     };
 
     const calculateField = (field: "time" | "tempo" | "distance") => {
-      if (field === "distance" && t > 0 && p && p > 0) {
-        setCondDistanceInput(String(Math.round((t / p) * 100) / 100));
-      } else if (field === "tempo" && t > 0 && d > 0) {
-        setCondTempoInput(formatCondTempo(t / d));
-      } else if (field === "time" && d > 0 && p && p > 0) {
-        setCondTimeFromMinutes(p * d);
+      if (!linked) return;
+      if (field === "distance") {
+        const km = computeDistanceKm(condMode, t, tempo);
+        if (km && km > 0) setCondDistanceInput(condKmToDist(km));
+      } else if (field === "tempo") {
+        const v = computeTempoValue(condMode, t, dKm);
+        if (v) setCondTempoInput(v);
+      } else if (field === "time") {
+        const min = computeTimeMin(condMode, tempo, dKm);
+        if (min && min > 0) setCondTimeFromMinutes(min);
       }
     };
+
 
     const filledCount = Object.values(filled).filter(Boolean).length;
     if (!filled[changed]) {
@@ -3874,6 +3908,7 @@ const estimateCalories = (
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
       setConditioningDialog({ planId, exerciseName });
+      setCondMode(getStoredCardioMode(exerciseName));
       if (isStairMachine(exerciseName)) {
         setCondTempoInput("");
         setCondSpmInput("");
@@ -4014,8 +4049,8 @@ const estimateCalories = (
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
     } else {
-      if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
-      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+      if (condTempoInput.trim()) infoParts.push(`${formatPaceDisplay(condTempoInput.trim(), condMode)}${modeDisplaySuffix(condMode)}`);
+      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} ${condDistUnit}`);
     }
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
 
@@ -4132,6 +4167,8 @@ const estimateCalories = (
     setCondSpmInput(spmM ? spmM[1] : "");
     setCondIntervalsInput("");
     setCondRestInput("");
+    setCondEditName(name);
+    setCondMode(getStoredCardioMode(name));
     setEditingCondLine({ planId, lineIndex, name });
   };
 
@@ -4152,8 +4189,8 @@ const estimateCalories = (
       const spm = parseFloat(condSpmInput.replace(",", "."));
       if (time > 0 && spm > 0) infoParts.push(`${Math.round(time * spm)} steg`);
     } else {
-      if (condTempoInput.trim()) infoParts.push(`${condTempoInput.trim()}/km`);
-      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} km`);
+      if (condTempoInput.trim()) infoParts.push(`${formatPaceDisplay(condTempoInput.trim(), condMode)}${modeDisplaySuffix(condMode)}`);
+      if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} ${condDistUnit}`);
     }
     if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
     const entry = infoParts.length > 0 ? `${editingCondLine.name} — ${infoParts.join(", ")}` : editingCondLine.name;
@@ -4165,6 +4202,7 @@ const estimateCalories = (
     setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
     triggerSave();
     setEditingCondLine(null);
+    setCondEditName("");
     resetCondTime();
     setCondTempoInput("");
     setCondDistanceInput("");
@@ -5533,7 +5571,7 @@ const estimateCalories = (
                         )}
                         {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{formatPaceDisplay(condTempoInput, getCardioModes(conditioningDialog.exerciseName)[0])}{modeDisplaySuffix(getCardioModes(conditioningDialog.exerciseName)[0])}</span>
+                            <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{formatPaceDisplay(condTempoInput, condMode)}{modeDisplaySuffix(condMode)}</span>
                           </p>
                         )}
 
@@ -5598,76 +5636,29 @@ const estimateCalories = (
                             count={parseInt(condIntervalsInput) || 0}
                             rows={condIntervalRows}
                             onChange={setCondIntervalRows}
-                            paceUnit={modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}
+                            paceUnit={modeLabel(condMode)}
                             distUnit={getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}
                             hideDistance={getCardioDistUnit(conditioningDialog.exerciseName) === null}
                           />
 
                         ) : (
-                          <>
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="min-w-0">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className={condInputCls} />
-                              <span className={condUnitCls}>tim</span>
-                            </div>
-                            <div className="min-w-0">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className={condInputCls} />
-                              <span className={condUnitCls}>min</span>
-                            </div>
-                            <div className="min-w-0">
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className={condInputCls} />
-                              <span className={condUnitCls}>sek</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="min-w-0">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Tempo</label>
-                            <input
-                          type="text"
-                          value={condTempoInput}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setCondTempoInput(v);
-                            autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo");
-                          }}
-                          placeholder={modePlaceholder(getCardioModes(conditioningDialog.exerciseName)[0]).replace("t.ex. ", "")}
-                          className={condInputCls} />
-                            <span className={condUnitCls}>{modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center justify-center gap-0.5">
-                              <Route className="w-3 h-3" /> Distans
-                            </label>
-                            <input
-                          type="number"
-                          inputMode="decimal"
-                          value={condDistanceInput}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setCondDistanceInput(v);
-                            autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance");
-                          }}
-                          placeholder={getCardioDistUnit(conditioningDialog.exerciseName) === "m" ? "400" : "5"}
-                          className={condInputCls} />
-                            <span className={condUnitCls}>{getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}</span>
-                          </div>
-                          <div className="min-w-0">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Puls</label>
-                            <input
-                          type="number"
-                          inputMode="numeric"
-                          value={condPulseInput}
-                          onChange={(e) => setCondPulseInput(e.target.value)}
-                          placeholder="155"
-                          className={condInputCls} />
-                            <span className={condUnitCls}>bpm</span>
-                          </div>
-                        </div>
-                          </>
+                          <CardioLogFields
+                            exerciseName={conditioningDialog.exerciseName}
+                            mode={condMode}
+                            onModeChange={changeCondMode}
+                            hours={condTimeHours}
+                            minutes={condTimeMinutes}
+                            seconds={condTimeSeconds}
+                            onTimeChange={(part, v) => handleCondTimeChange(part, v)}
+                            tempo={condTempoInput}
+                            onTempoChange={(v) => { setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }}
+                            distance={condDistanceInput}
+                            onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
+                            pulse={condPulseInput}
+                            onPulseChange={setCondPulseInput}
+                          />
                         )}
+
                         <div className="flex gap-2 pt-1">
                           <button
                         onClick={addConditioningExercise}
@@ -5695,6 +5686,7 @@ const estimateCalories = (
                             onClick={(e) => {
                               e.stopPropagation();
                               setConditioningDialog({ planId: plan.id, exerciseName: "Intervallträning" });
+                              setCondMode(getStoredCardioMode("Intervallträning"));
                               const lastCondTempo = findLastCondTempo("Intervallträning");
                               setCondTempoInput(lastCondTempo || "");
                               resetCondTime();
@@ -7525,41 +7517,27 @@ const estimateCalories = (
                                       </div>
                                     </>
                                   ) : (
-                                    <>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-                            <div className="flex items-center gap-1">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">h</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">m</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                              <span className="text-[10px] text-muted-foreground font-medium">s</span>
-                            </div>
-                                    </div>
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                                      <input type="text" inputMode="numeric" pattern="[0-9:]*" value={condTempoInput} onChange={(e) => setCondTempoInput(e.target.value)} placeholder="t.ex. 5:30" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                                      <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => setCondDistanceInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                    </div>
-                                    <div>
-                                      <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                                      <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                                    </div>
-                                  </div>
-                                    </>
+                                    <CardioLogFields
+                                      exerciseName={editingCondLine.name}
+                                      mode={condMode}
+                                      onModeChange={changeCondMode}
+                                      hours={condTimeHours}
+                                      minutes={condTimeMinutes}
+                                      seconds={condTimeSeconds}
+                                      onTimeChange={(part, v) => handleCondTimeChange(part, v, false)}
+                                      tempo={condTempoInput}
+                                      onTempoChange={(v) => { setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }}
+                                      distance={condDistanceInput}
+                                      onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
+                                      pulse={condPulseInput}
+                                      onPulseChange={setCondPulseInput}
+                                    />
                                   )}
                                   <div className="flex gap-2">
                                     <button onClick={saveEditedCondLine} className="flex-1 py-2 bg-success text-success-foreground rounded-md text-xs font-semibold">
                                       Spara
                                     </button>
-                                      <button onClick={() => { setEditingCondLine(null); resetCondTime(); setCondTempoInput(""); setCondDistanceInput(""); setCondAutoField(null); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
+                                      <button onClick={() => { setEditingCondLine(null); setCondEditName(""); resetCondTime(); setCondTempoInput(""); setCondDistanceInput(""); setCondAutoField(null); setCondPulseInput(""); setCondSpmInput(""); }} className="px-3 py-2 text-muted-foreground hover:text-foreground text-xs bg-secondary rounded-md">
                                       Avbryt
                                     </button>
                                   </div>
@@ -9214,7 +9192,7 @@ const estimateCalories = (
                       </h4>
                       {condTempoInput && !isStairMachine(conditioningDialog.exerciseName) && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{condTempoInput}/km</span>
+                          <Timer className="w-3 h-3" /> Senast tempo: <span className="font-mono font-semibold text-foreground">{formatPaceDisplay(condTempoInput, condMode)}{modeDisplaySuffix(condMode)}</span>
                         </p>
                       )}
                       {conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (
@@ -9271,39 +9249,29 @@ const estimateCalories = (
                           count={parseInt(condIntervalsInput) || 0}
                           rows={condIntervalRows}
                           onChange={setCondIntervalRows}
-                          paceUnit={modeLabel(getCardioModes(conditioningDialog.exerciseName)[0])}
+                          paceUnit={modeLabel(condMode)}
                           distUnit={getCardioDistUnit(conditioningDialog.exerciseName) ?? "km"}
                           hideDistance={getCardioDistUnit(conditioningDialog.exerciseName) === null}
                         />
 
                       ) : (
                         <>
-                      <div>
-                        <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
-                        <div className="flex items-center gap-1">
-                          <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                          <span className="text-[10px] text-muted-foreground font-medium">h</span>
-                          <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                          <span className="text-[10px] text-muted-foreground font-medium">m</span>
-                          <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                          <span className="text-[10px] text-muted-foreground font-medium">s</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo</label>
-                          <input type="text" inputMode="numeric" pattern="[0-9:]*" value={condTempoInput} onChange={(e) => { const v = e.target.value; setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }} placeholder="5:30" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans</label>
-                          <input type="number" inputMode="decimal" value={condDistanceInput} onChange={(e) => { const v = e.target.value; setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }} placeholder="km" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                        </div>
-                        <div>
-                          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Puls</label>
-                          <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="bpm" className="w-full bg-background text-foreground text-sm px-2 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
-                        </div>
-                      </div>
-                        </>
+                      <CardioLogFields
+                        exerciseName={conditioningDialog.exerciseName}
+                        mode={condMode}
+                        onModeChange={changeCondMode}
+                        hours={condTimeHours}
+                        minutes={condTimeMinutes}
+                        seconds={condTimeSeconds}
+                        onTimeChange={(part, v) => handleCondTimeChange(part, v)}
+                        tempo={condTempoInput}
+                        onTempoChange={(v) => { setCondTempoInput(v); autoCalcCond(condTimeTotalMin, v, condDistanceInput, "tempo"); }}
+                        distance={condDistanceInput}
+                        onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
+                        pulse={condPulseInput}
+                        onPulseChange={setCondPulseInput}
+                      />
+                      </>
                       )}
                       <div className="flex gap-2">
                         <button onClick={addConditioningExercise} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground rounded-md text-xs font-semibold">
@@ -9330,6 +9298,7 @@ const estimateCalories = (
                           onClick={(e) => {
                             e.stopPropagation();
                             setConditioningDialog({ planId: plan.id, exerciseName: "Intervallträning" });
+                              setCondMode(getStoredCardioMode("Intervallträning"));
                             const lastCondTempo = findLastCondTempo("Intervallträning");
                             setCondTempoInput(lastCondTempo || "");
                             resetCondTime();
