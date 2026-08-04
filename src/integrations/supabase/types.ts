@@ -1225,6 +1225,51 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_routes: {
+        Row: {
+          activity: string
+          created_at: string
+          distance_km: number
+          elevation_gain_m: number | null
+          elevation_loss_m: number | null
+          id: string
+          name: string
+          paved_ratio: number | null
+          points: Json
+          surfaces: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity?: string
+          created_at?: string
+          distance_km: number
+          elevation_gain_m?: number | null
+          elevation_loss_m?: number | null
+          id?: string
+          name: string
+          paved_ratio?: number | null
+          points: Json
+          surfaces?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity?: string
+          created_at?: string
+          distance_km?: number
+          elevation_gain_m?: number | null
+          elevation_loss_m?: number | null
+          id?: string
+          name?: string
+          paved_ratio?: number | null
+          points?: Json
+          surfaces?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_workouts: {
         Row: {
           created_at: string
