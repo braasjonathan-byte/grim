@@ -910,14 +910,15 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
     const missing = (["time", "tempo", "distance"] as const).find(f => !filled[f]);
     const calc = (field: "time" | "tempo" | "distance") => {
       const dUnits = distToTempoUnits(d);
+      const dKm = distToKm(d);
       if (isKmh) {
-        // km/h: speed = 60 * dist_km / time_min
+        // km/h: hastighet = distans (km) / tid (timmar)
         if (field === "distance" && t > 0 && p && p > 0) {
-          setDistance(String(Math.round((p * t / 60) * 100) / 100));
-        } else if (field === "tempo" && t > 0 && d > 0) {
-          setTempo(String(Math.round((60 * d / t) * 10) / 10));
-        } else if (field === "time" && d > 0 && p && p > 0) {
-          const tot = 60 * d / p;
+          setDistance(String(Math.round(kmToDist(p * t / 60) * 100) / 100));
+        } else if (field === "tempo" && t > 0 && dKm > 0) {
+          setTempo((60 * dKm / t).toFixed(1));
+        } else if (field === "time" && dKm > 0 && p && p > 0) {
+          const tot = 60 * dKm / p;
           const hh = Math.floor(tot / 60);
           const rem = tot - hh * 60;
           const mm = Math.floor(rem);
@@ -928,6 +929,7 @@ const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondD
         }
         return;
       }
+
       if (field === "distance" && t > 0 && p && p > 0) {
         const units = t / p;
         setDistance(String(Math.round(tempoUnitsToDist(units) * 100) / 100));
