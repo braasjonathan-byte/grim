@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import maplibregl, { Map as MLMap, Marker } from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { ChevronDown, ChevronUp, Map as MapIcon, Navigation } from "lucide-react";
 
 type Point = [number, number]; // [lat, lng]
@@ -17,9 +15,6 @@ interface Props {
   heatmap?: Point[][];
 }
 
-const CARTO_LIGHT = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-const CARTO_DARK = "https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png";
-
 const useIsDark = () => {
   const [dark, setDark] = useState<boolean>(() =>
     typeof document !== "undefined" && document.documentElement.classList.contains("dark"),
@@ -35,19 +30,54 @@ const useIsDark = () => {
   return dark;
 };
 
-const buildStyle = (dark: boolean): maplibregl.StyleSpecification => {
-  const tmpl = dark ? CARTO_DARK : CARTO_LIGHT;
-  const tiles = ["a", "b", "c", "d"].map((s) =>
-    tmpl.replace("{s}", s).replace("{r}", window.devicePixelRatio >= 2 ? "@2x" : ""),
-  );
-  return {
-    version: 8,
-    sources: {
-      base: { type: "raster", tiles, tileSize: 256, attribution: "© OpenStreetMap © CARTO" },
-    },
-    layers: [{ id: "base", type: "raster", source: "base" }],
-  };
+/* ---------- Google Maps JS API loader (singleton) ---------- */
+let mapsPromise: Promise<void> | null = null;
+
+const loadGoogleMaps = (): Promise<void> => {
+  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  if ((window as any).google?.maps?.Map) return Promise.resolve();
+  if (mapsPromise) return mapsPromise;
+
+  const key = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
+  const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined;
+  if (!key) return Promise.reject(new Error("Google Maps browser key saknas"));
+
+  mapsPromise = new Promise<void>((resolve, reject) => {
+    const cbName = "__grimInitGoogleMaps";
+    (window as any)[cbName] = () => resolve();
+    const s = document.createElement("script");
+    s.src =
+      `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}` +
+      `&loading=async&callback=${cbName}` +
+      (channel ? `&channel=${encodeURIComponent(channel)}` : "");
+    s.async = true;
+    s.onerror = () => {
+      mapsPromise = null;
+      reject(new Error("Kunde inte ladda Google Maps"));
+    };
+    document.head.appendChild(s);
+  });
+  return mapsPromise;
 };
+
+const DARK_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#212121" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#757575" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2c2c2c" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3c3c3c" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
+];
+
+const LIGHT_STYLE: google.maps.MapTypeStyle[] = [
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+];
 
 const bearing = (a: Point, b: Point) => {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -71,6 +101,50 @@ const distanceM = (a: Point, b: Point) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
+/** DOM overlay for the pulsing live-position dot (keeps the existing CSS animation). */
+const createPulseOverlay = (map: google.maps.Map, position: google.maps.LatLngLiteral, color: string) => {
+  class PulseOverlay extends google.maps.OverlayView {
+    private el: HTMLDivElement | null = null;
+    private pos: google.maps.LatLngLiteral;
+    constructor(p: google.maps.LatLngLiteral) {
+      super();
+      this.pos = p;
+    }
+    onAdd() {
+      const el = document.createElement("div");
+      el.className = "grim-gps-pulse";
+      el.style.position = "absolute";
+      el.style.setProperty("--pulse-color", color);
+      this.el = el;
+      this.getPanes()?.overlayMouseTarget.appendChild(el);
+    }
+    draw() {
+      if (!this.el) return;
+      const p = this.getProjection()?.fromLatLngToDivPixel(new google.maps.LatLng(this.pos));
+      if (!p) return;
+      this.el.style.left = `${p.x - 9}px`;
+      this.el.style.top = `${p.y - 9}px`;
+    }
+    onRemove() {
+      this.el?.remove();
+      this.el = null;
+    }
+    setPosition(p: google.maps.LatLngLiteral) {
+      this.pos = p;
+      this.draw();
+    }
+    setColor(c: string) {
+      this.el?.style.setProperty("--pulse-color", c);
+    }
+  }
+  const overlay = new PulseOverlay(position);
+  overlay.setMap(map);
+  return overlay as google.maps.OverlayView & {
+    setPosition: (p: google.maps.LatLngLiteral) => void;
+    setColor: (c: string) => void;
+  };
+};
+
 const RouteMap = ({
   route,
   height = 200,
@@ -81,12 +155,19 @@ const RouteMap = ({
   heatmap,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<MLMap | null>(null);
-  const userMarkerRef = useRef<Marker | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const routeLineRef = useRef<google.maps.Polyline | null>(null);
+  const haloLineRef = useRef<google.maps.Polyline | null>(null);
+  const heatLinesRef = useRef<google.maps.Polyline[]>([]);
+  const startMarkerRef = useRef<google.maps.Marker | null>(null);
+  const endMarkerRef = useRef<google.maps.Marker | null>(null);
+  const pulseRef = useRef<ReturnType<typeof createPulseOverlay> | null>(null);
+  const fittedOnceRef = useRef(false);
+
   const [open, setOpen] = useState(collapsible ? defaultOpen : true);
   const [mapReady, setMapReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const dark = useIsDark();
-  const fittedOnceRef = useRef(false);
 
   const primary = useMemo(() => {
     if (typeof document === "undefined") return "#2563eb";
@@ -97,194 +178,169 @@ const RouteMap = ({
   // Init map once
   useEffect(() => {
     if (!open || !containerRef.current || mapRef.current) return;
-    const center: [number, number] = route.length
-      ? [route[0][1], route[0][0]]
-      : [18.0686, 59.3293];
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: buildStyle(dark),
-      center,
-      zoom: 14,
-      attributionControl: false,
-      pitchWithRotate: false,
-      dragRotate: false,
-    });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), "top-right");
-    map.on("load", () => setMapReady(true));
-    mapRef.current = map;
+    let cancelled = false;
+    loadGoogleMaps()
+      .then(() => {
+        if (cancelled || !containerRef.current || mapRef.current) return;
+        const center = route.length
+          ? { lat: route[0][0], lng: route[0][1] }
+          : { lat: 59.3293, lng: 18.0686 };
+        const map = new google.maps.Map(containerRef.current, {
+          center,
+          zoom: 14,
+          disableDefaultUI: true,
+          zoomControl: true,
+          gestureHandling: "greedy",
+          clickableIcons: false,
+          styles: dark ? DARK_STYLE : LIGHT_STYLE,
+        });
+        mapRef.current = map;
+        setMapReady(true);
+      })
+      .catch((e) => !cancelled && setLoadError(e?.message ?? "Kartan kunde inte laddas"));
+
     return () => {
-      map.remove();
+      cancelled = true;
+      routeLineRef.current?.setMap(null);
+      haloLineRef.current?.setMap(null);
+      heatLinesRef.current.forEach((l) => l.setMap(null));
+      heatLinesRef.current = [];
+      startMarkerRef.current?.setMap(null);
+      endMarkerRef.current?.setMap(null);
+      pulseRef.current?.setMap(null);
+      routeLineRef.current = null;
+      haloLineRef.current = null;
+      startMarkerRef.current = null;
+      endMarkerRef.current = null;
+      pulseRef.current = null;
       mapRef.current = null;
-      userMarkerRef.current = null;
       setMapReady(false);
       fittedOnceRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // React to theme changes (rebuild basemap)
+  // Theme changes
   useEffect(() => {
     if (!mapRef.current || !mapReady) return;
-    mapRef.current.setStyle(buildStyle(dark));
-    mapRef.current.once("styledata", () => {
-      // re-add overlays after style swap
-      applyOverlays();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dark]);
+    mapRef.current.setOptions({ styles: dark ? DARK_STYLE : LIGHT_STYLE });
+  }, [dark, mapReady]);
 
-  const applyOverlays = () => {
+  // Overlays
+  useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !mapReady) return;
 
-    // Heatmap (historic) overlay
+    const path = route.map((p) => ({ lat: p[0], lng: p[1] }));
+
+    // Heatmap (historic routes)
     if (heatmap && heatmap.length) {
-      const fc = {
-        type: "FeatureCollection",
-        features: heatmap
-          .filter((r) => r.length > 1)
-          .map((r) => ({
-            type: "Feature",
-            geometry: { type: "LineString", coordinates: r.map((p) => [p[1], p[0]]) },
-            properties: {},
-          })),
-      } as any;
-      if (!map.getSource("heat")) {
-        map.addSource("heat", { type: "geojson", data: fc });
-        map.addLayer({
-          id: "heat-line",
-          type: "line",
-          source: "heat",
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: { "line-color": primary, "line-width": 3, "line-opacity": 0.18, "line-blur": 2 },
-        });
-      } else {
-        (map.getSource("heat") as maplibregl.GeoJSONSource).setData(fc);
-      }
+      heatLinesRef.current.forEach((l) => l.setMap(null));
+      heatLinesRef.current = heatmap
+        .filter((r) => r.length > 1)
+        .map(
+          (r) =>
+            new google.maps.Polyline({
+              map,
+              path: r.map((p) => ({ lat: p[0], lng: p[1] })),
+              strokeColor: primary,
+              strokeOpacity: 0.18,
+              strokeWeight: 3,
+              clickable: false,
+              zIndex: 1,
+            }),
+        );
     }
 
-    // Main route
-    const coords = route.map((p) => [p[1], p[0]]);
-    const routeFc = {
-      type: "Feature",
-      geometry: { type: "LineString", coordinates: coords },
-      properties: {},
-    } as any;
-    if (!map.getSource("route")) {
-      map.addSource("route", { type: "geojson", data: routeFc });
-      map.addLayer({
-        id: "route-halo",
-        type: "line",
-        source: "route",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": dark ? "#000" : "#fff", "line-width": 8, "line-opacity": 0.7 },
+    // Main route + halo
+    if (!haloLineRef.current) {
+      haloLineRef.current = new google.maps.Polyline({
+        map,
+        path,
+        strokeColor: dark ? "#000000" : "#ffffff",
+        strokeOpacity: 0.7,
+        strokeWeight: 8,
+        clickable: false,
+        zIndex: 2,
       });
-      map.addLayer({
-        id: "route-line",
-        type: "line",
-        source: "route",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": primary, "line-width": 5 },
+      routeLineRef.current = new google.maps.Polyline({
+        map,
+        path,
+        strokeColor: primary,
+        strokeOpacity: 1,
+        strokeWeight: 5,
+        clickable: false,
+        zIndex: 3,
       });
     } else {
-      (map.getSource("route") as maplibregl.GeoJSONSource).setData(routeFc);
-      map.setPaintProperty("route-line", "line-color", primary);
-      map.setPaintProperty("route-halo", "line-color", dark ? "#000" : "#fff");
+      haloLineRef.current.setPath(path);
+      haloLineRef.current.setOptions({ strokeColor: dark ? "#000000" : "#ffffff" });
+      routeLineRef.current?.setPath(path);
+      routeLineRef.current?.setOptions({ strokeColor: primary });
     }
 
     // Start marker
-    if (route.length > 0) {
-      const start = route[0];
-      const startId = "route-start";
-      const startFc = {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [start[1], start[0]] },
-        properties: {},
-      } as any;
-      if (!map.getSource(startId)) {
-        map.addSource(startId, { type: "geojson", data: startFc });
-        map.addLayer({
-          id: startId,
-          type: "circle",
-          source: startId,
-          paint: {
-            "circle-radius": 7,
-            "circle-color": "#16a34a",
-            "circle-stroke-color": "#fff",
-            "circle-stroke-width": 2,
-          },
-        });
+    if (path.length > 0) {
+      const icon: google.maps.Symbol = {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: "#16a34a",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 2,
+      };
+      if (!startMarkerRef.current) {
+        startMarkerRef.current = new google.maps.Marker({ map, position: path[0], icon, zIndex: 4 });
       } else {
-        (map.getSource(startId) as maplibregl.GeoJSONSource).setData(startFc);
+        startMarkerRef.current.setPosition(path[0]);
       }
     }
 
-    // End marker — only in playback mode (not live)
-    if (!live && route.length > 1) {
-      const end = route[route.length - 1];
-      const endId = "route-end";
-      const endFc = {
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [end[1], end[0]] },
-        properties: {},
-      } as any;
-      if (!map.getSource(endId)) {
-        map.addSource(endId, { type: "geojson", data: endFc });
-        map.addLayer({
-          id: endId,
-          type: "circle",
-          source: endId,
-          paint: {
-            "circle-radius": 7,
-            "circle-color": "#dc2626",
-            "circle-stroke-color": "#fff",
-            "circle-stroke-width": 2,
-          },
-        });
+    // End marker — playback only
+    if (!live && path.length > 1) {
+      const icon: google.maps.Symbol = {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: "#dc2626",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 2,
+      };
+      const end = path[path.length - 1];
+      if (!endMarkerRef.current) {
+        endMarkerRef.current = new google.maps.Marker({ map, position: end, icon, zIndex: 4 });
       } else {
-        (map.getSource(endId) as maplibregl.GeoJSONSource).setData(endFc);
+        endMarkerRef.current.setPosition(end);
       }
     }
 
-    // Live current-position pulsing dot
-    if (live && route.length > 0) {
-      const cur = route[route.length - 1];
-      if (!userMarkerRef.current) {
-        const el = document.createElement("div");
-        el.className = "grim-gps-pulse";
-        el.style.setProperty("--pulse-color", primary);
-        userMarkerRef.current = new maplibregl.Marker({ element: el, anchor: "center" })
-          .setLngLat([cur[1], cur[0]])
-          .addTo(map);
+    // Live pulsing dot
+    if (live && path.length > 0) {
+      const cur = path[path.length - 1];
+      if (!pulseRef.current) {
+        pulseRef.current = createPulseOverlay(map, cur, primary);
       } else {
-        userMarkerRef.current.setLngLat([cur[1], cur[0]]);
-        (userMarkerRef.current.getElement() as HTMLDivElement).style.setProperty("--pulse-color", primary);
+        pulseRef.current.setPosition(cur);
+        pulseRef.current.setColor(primary);
       }
     }
 
-    // Camera handling
-    if (route.length === 1) {
-      map.jumpTo({ center: [route[0][1], route[0][0]], zoom: 16 });
-    } else if (route.length > 1) {
+    // Camera
+    if (path.length === 1) {
+      map.setCenter(path[0]);
+      map.setZoom(16);
+    } else if (path.length > 1) {
       if (live) {
-        const last = route[route.length - 1];
-        map.easeTo({ center: [last[1], last[0]], duration: 600, zoom: Math.max(map.getZoom(), 15) });
+        map.panTo(path[path.length - 1]);
+        if ((map.getZoom() ?? 0) < 15) map.setZoom(15);
       } else if (!fittedOnceRef.current) {
-        const bounds = coords.reduce(
-          (b, c) => b.extend(c as [number, number]),
-          new maplibregl.LngLatBounds(coords[0] as [number, number], coords[0] as [number, number]),
-        );
-        map.fitBounds(bounds, { padding: 30, duration: 0 });
+        const bounds = new google.maps.LatLngBounds();
+        path.forEach((p) => bounds.extend(p));
+        map.fitBounds(bounds, 30);
         fittedOnceRef.current = true;
       }
     }
-  };
-
-  useEffect(() => {
-    if (!mapReady) return;
-    applyOverlays();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, route, heatmap, live, primary]);
+  }, [mapReady, route, heatmap, live, primary, dark]);
 
   // Return-to-start data
   const returnInfo = useMemo(() => {
@@ -301,6 +357,11 @@ const RouteMap = ({
   const mapInner = (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
+      {loadError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/40 text-[11px] font-semibold text-muted-foreground px-3 text-center">
+          {loadError}
+        </div>
+      )}
       {returnInfo && (
         <div className="absolute top-2 left-2 z-10 flex items-center gap-2 bg-background/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-sm">
           <Navigation
