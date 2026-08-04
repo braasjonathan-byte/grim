@@ -8,8 +8,10 @@ const corsHeaders = {
 };
 
 const OVERPASS_ENDPOINTS = [
-  "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.osm.jp/api/interpreter",
 ];
 
 type LatLng = [number, number];
@@ -75,7 +77,7 @@ const buildOverpassQuery = (
       `way["highway"~"^(path|footway|track|pedestrian|cycleway|steps|bridleway|residential|living_street|unclassified|service|tertiary)$"]["access"!~"^(private|no)$"]${around};`,
     );
   }
-  return `[out:json][timeout:20];(${parts.join("")});out geom;`;
+  return `[out:json][timeout:14];(${parts.join("")});out geom qt;`;
 };
 
 const isPaved = (tags: Record<string, string>) => {
@@ -98,7 +100,7 @@ interface Edge {
 }
 
 // Kör alla Overpass-speglar parallellt och använd det första svaret som lyckas.
-const fetchOverpass = async (query: string) => {
+const raceOverpass = async (query: string, timeoutMs: number) => {
   const attempts = OVERPASS_ENDPOINTS.map(async (url) => {
     const res = await fetch(url, {
       method: "POST",
@@ -107,15 +109,28 @@ const fetchOverpass = async (query: string) => {
         "User-Agent": "GrimApp/1.0 (route loop generator; contact: support@grim.lovable.app)",
       },
       body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) throw new Error(`${url} ${res.status}`);
-    return await res.json();
+    const json = await res.json();
+    if (!json?.elements?.length) throw new Error(`${url} tomt svar`);
+    return json;
   });
+  return await Promise.any(attempts);
+};
+
+const fetchOverpass = async (query: string) => {
   try {
-    return await Promise.any(attempts);
+    return await raceOverpass(query, 12000);
   } catch (e) {
-    throw new Error(`Overpass misslyckades – ${String((e as AggregateError)?.errors?.map(String).join(" | ") ?? e)}`);
+    console.warn("overpass första försöket misslyckades, försöker igen", String(e));
+    try {
+      return await raceOverpass(query, 9000);
+    } catch (e2) {
+      throw new Error(
+        `Overpass misslyckades – ${String((e2 as AggregateError)?.errors?.map(String).join(" | ") ?? e2)}`,
+      );
+    }
   }
 };
 
@@ -198,11 +213,23 @@ Deno.serve(async (req) => {
     }
 
     const targetM = distanceKm * 1000;
-    const radiusM = Math.min(Math.max(targetM * 0.3, 1000), 12000);
+    const radiusM = Math.min(Math.max(targetM * 0.3, 900), 8000);
 
     const t0 = Date.now();
     const cacheKey = `${lat.toFixed(3)}|${lng.toFixed(3)}|${activity}|${asphaltOnly}|${Math.round(radiusM / 500)}`;
-    const data = await cachedOverpass(cacheKey, buildOverpassQuery(lat, lng, radiusM, activity, asphaltOnly));
+    let data: any;
+    try {
+      data = await cachedOverpass(cacheKey, buildOverpassQuery(lat, lng, radiusM, activity, asphaltOnly));
+    } catch (e) {
+      console.error("overpass error", e);
+      return new Response(
+        JSON.stringify({
+          routes: [],
+          message: "Kartdatatjänsten svarar långsamt just nu. Försök igen om en liten stund.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const elements: any[] = data?.elements ?? [];
     console.log("overpass ms", Date.now() - t0, "elements", elements.length);
 
