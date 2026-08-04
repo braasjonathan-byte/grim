@@ -1,3 +1,4 @@
+import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
