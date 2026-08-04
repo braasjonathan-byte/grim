@@ -2338,6 +2338,15 @@ const estimateCalories = (
     if (newDone) {
       const plan = plans.find((p) => p.week === week && p.day === day);
 
+      // Read the freshest logged data from state (an auto-check of all sets may
+      // have written __sets__/__setdata__ just before this call).
+      let latestWeights: Record<string, any> = await new Promise((resolve) => {
+        setCompletions((prev: Record<string, any>) => {
+          resolve(((prev[key]?.logged_weights || {}) as Record<string, any>));
+          return prev;
+        });
+      });
+
       // Auto-mark all conditioning lines in this day as completed as well
       try {
         const dayPlans = plans.filter((p) => p.week === week && p.day === day);
@@ -2363,6 +2372,7 @@ const estimateCalories = (
           await updateCompletionWeights(week, day, (existing) => {
             const next = { ...existing };
             for (const n of condNames) next[`__cond_done__${n}`] = "1";
+            latestWeights = next;
             return next;
           });
         }
@@ -2370,13 +2380,13 @@ const estimateCalories = (
 
       // Short "Bra jobbat!" celebration with a summary of the session
       try {
-        const lw = (completions[key] as any)?.logged_weights;
         setCompleteCelebration({
           title: plan?.session_name?.trim() || "",
-          summary: summarizeCompletion(lw, prIndex, new Date()),
+          summary: summarizeCompletion(latestWeights, prIndex, new Date()),
 
         });
       } catch {}
+
 
       // Prepare the share dialog; it opens once the celebration is dismissed.
       setPendingShare({ week, day, caption: null, loading: true });
