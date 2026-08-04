@@ -179,7 +179,22 @@ const RouteNavigation = ({
   const speedUnit = paceMode ? "min/km" : "km/h";
 
   const Icon = maneuverIcon(current?.maneuver ?? null);
-  const mapRoute = position ? [...polyline] : polyline;
+
+  // Hur långt längs rundan man kommit – används för att gråmarkera avverkad sträcka.
+  const [traveledCount, setTraveledCount] = useState(0);
+  useEffect(() => {
+    if (!position || polyline.length < 2) return;
+    let best = 0;
+    let bestD = Infinity;
+    for (let i = 0; i < polyline.length; i++) {
+      const d = distanceM(position, polyline[i]);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    if (bestD < 60) setTraveledCount((c) => Math.max(c, best + 1));
+  }, [position, polyline]);
 
   return createPortal(
     <div className="fixed inset-0 z-[10100] flex flex-col bg-background" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
@@ -226,7 +241,35 @@ const RouteNavigation = ({
 
       {/* Karta */}
       <div className="relative min-h-0 flex-1">
-        <RouteMap route={mapRoute} height={0} className="absolute inset-0 h-full" live={!!position} />
+        <RouteMap
+          route={polyline}
+          height={0}
+          className="absolute inset-0 h-full rounded-none border-0"
+          live
+          livePosition={position}
+          traveledCount={traveledCount}
+        />
+        {listOpen && steps && (
+          <div className="absolute inset-x-0 bottom-0 z-10 max-h-[55%] overflow-y-auto border-t border-border bg-card/95 backdrop-blur px-3 py-2">
+            <ol className="space-y-1">
+              {steps.map((s, i) => {
+                const SIcon = maneuverIcon(s.maneuver);
+                return (
+                  <li
+                    key={i}
+                    className={`flex items-start gap-2 rounded-xl px-3 py-2 text-xs ${
+                      i === stepIndex ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <SIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1">{s.instruction}</span>
+                    <span className="tabular-nums">{fmtDist(s.distanceM)}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
       </div>
 
       {/* Botten */}
@@ -258,25 +301,6 @@ const RouteNavigation = ({
           </div>
         </div>
 
-        {listOpen && steps && (
-          <ol className="mt-3 max-h-56 space-y-1 overflow-y-auto">
-            {steps.map((s, i) => {
-              const SIcon = maneuverIcon(s.maneuver);
-              return (
-                <li
-                  key={i}
-                  className={`flex items-start gap-2 rounded-xl px-3 py-2 text-xs ${
-                    i === stepIndex ? "bg-primary/10 font-semibold text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  <SIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span className="flex-1">{s.instruction}</span>
-                  <span className="tabular-nums">{fmtDist(s.distanceM)}</span>
-                </li>
-              );
-            })}
-          </ol>
-        )}
       </div>
     </div>,
     document.body,
