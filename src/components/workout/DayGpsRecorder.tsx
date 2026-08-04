@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { MapPin, X } from "lucide-react";
 import { sv } from "date-fns/locale";
@@ -22,6 +22,23 @@ export const DayGpsRecorder = ({ konditionExercises, onSave }: {
   }, [query, konditionExercises]);
 
   const closePicker = () => { setPickerOpen(false); setQuery(""); };
+
+  // Håll dialogen ovanför tangentbordet (visualViewport)
+  const [vv, setVv] = useState<{ h: number; top: number }>({ h: 0, top: 0 });
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const update = () => {
+      const v = window.visualViewport;
+      setVv({ h: v?.height || window.innerHeight, top: v?.offsetTop || 0 });
+    };
+    update();
+    window.visualViewport?.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("scroll", update);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("scroll", update);
+    };
+  }, [pickerOpen]);
 
   const pick = (name: string) => {
     closePicker();
@@ -80,11 +97,13 @@ export const DayGpsRecorder = ({ konditionExercises, onSave }: {
 
       {pickerOpen && createPortal(
         <div
-          className="fixed inset-0 z-[10000] bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+          className="fixed left-0 right-0 z-[10000] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+          style={{ top: vv.top, height: vv.h || undefined }}
           onClick={closePicker}
         >
           <div
-            className="w-full max-w-md bg-background border border-border rounded-md p-4 space-y-3"
+            className="w-full max-w-md bg-background border border-border rounded-md p-4 space-y-3 overflow-hidden flex flex-col"
+            style={{ maxHeight: vv.h ? vv.h - 32 : undefined }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -104,9 +123,9 @@ export const DayGpsRecorder = ({ konditionExercises, onSave }: {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Sök övning…"
               className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors"
-              autoFocus
             />
-            <div className="max-h-72 overflow-y-auto space-y-1">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
+
               {filtered.map(name => (
                 <button
                   key={name}
