@@ -405,7 +405,7 @@ const GpsTrackerControl = ({ onStop, autoStart = false }: { onStop: (km: number,
               setPrimed(true);
               setFullscreen(true);
             }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all disabled:opacity-50"
+            className="w-full h-11 flex items-center justify-center gap-1.5 px-4 bg-primary text-primary-foreground text-sm font-semibold rounded-xl shadow-soft active:scale-[0.98] transition-all disabled:opacity-50"
             title={otherActive ? "En GPS-inspelning pågår redan på en annan övning" : undefined}
           >
             <MapPin className="w-3.5 h-3.5" /> Starta GPS-inspelning
