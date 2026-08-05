@@ -358,6 +358,8 @@ const RouteMap = ({
       haloLineRef.current?.setMap(null);
       heatLinesRef.current.forEach((l) => l.setMap(null));
       heatLinesRef.current = [];
+      altLinesRef.current.forEach((l) => l.setMap(null));
+      altLinesRef.current = [];
       startMarkerRef.current?.setMap(null);
       endMarkerRef.current?.setMap(null);
       pulseRef.current?.setMap(null);
@@ -529,7 +531,7 @@ const RouteMap = ({
       map.fitBounds(bounds, 30);
       fittedOnceRef.current = true;
     }
-  }, [mapReady, route, heatmap, live, primary, dark, traveledCount, livePosition]);
+  }, [mapReady, route, heatmap, alternatives, live, primary, dark, traveledCount, livePosition]);
 
 
   // Return-to-start data
