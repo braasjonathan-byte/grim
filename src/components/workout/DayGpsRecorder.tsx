@@ -96,7 +96,9 @@ export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey }: {
           ) : (
             <GpsTrackerControl
               autoStart
+              storageKey={sessionKey}
               onCancel={() => setSelectedName(null)}
+
               onStop={async (km, sec, route) => {
                 const name = selectedName;
                 setSelectedName(null);
