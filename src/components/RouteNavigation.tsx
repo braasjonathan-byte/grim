@@ -318,9 +318,9 @@ const RouteNavigation = ({
             </div>
             <div className="h-8 w-px bg-border" />
             <div>
-            <p className="text-lg font-black tabular-nums text-foreground">{fmtDist(remainingM)}</p>
+            <p className="text-lg font-black tabular-nums text-foreground">{fmtDist(movedM)}</p>
             <p className="text-[11px] text-muted-foreground">
-              {name ? `${name} · ` : ""}kvar av rundan
+              {name ? `${name} · ` : ""}rört dig · {fmtDist(remainingM)} kvar
               {route.elevationGainM != null ? ` · ↑ ${Math.round(route.elevationGainM)} m` : ""}
             </p>
             </div>
@@ -342,16 +342,19 @@ const RouteNavigation = ({
       {confirmExit && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 px-6 backdrop-blur-sm">
           <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-4 text-center shadow-soft">
-            <p className="text-sm font-bold text-foreground">Avsluta navigeringen?</p>
-            <p className="mt-1 text-xs text-muted-foreground">Kartan och vägbeskrivningen stängs.</p>
+            <p className="text-sm font-bold text-foreground">Avsluta rundan?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Navigeringen avslutas och {fmtDist(movedM)} registreras som din sträcka.
+            </p>
             <div className="mt-4 flex gap-2">
               <Button variant="secondary" className="flex-1 rounded-full" onClick={() => setConfirmExit(false)}>
-                Fortsätt
+                Fortsätt rundan
               </Button>
-              <Button variant="destructive" className="flex-1 rounded-full" onClick={onClose}>
+              <Button variant="destructive" className="flex-1 rounded-full" onClick={finish}>
                 Avsluta
               </Button>
             </div>
+
           </div>
         </div>
       )}
