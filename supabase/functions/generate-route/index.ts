@@ -171,6 +171,10 @@ Deno.serve(async (req) => {
     const distanceKm = Number(body.distanceKm);
     const activity = String(body.activity ?? "running");
     const asphaltOnly = Boolean(body.asphaltOnly);
+    const destLat = Number(body.destLat);
+    const destLng = Number(body.destLng);
+    const hasDestination =
+      Number.isFinite(destLat) && Number.isFinite(destLng) && Math.abs(destLat) <= 90 && Math.abs(destLng) <= 180;
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
       return new Response(JSON.stringify({ error: "Ogiltig position" }), {
@@ -178,6 +182,39 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const t0 = Date.now();
+    const start: LatLng = [lat, lng];
+
+    // ---- Punkt-till-punkt-rutt mot vald destination ----
+    if (hasDestination) {
+      const r = await computeRoute(start, [destLat, destLng], [], activity, asphaltOnly);
+      if (!r) {
+        return new Response(
+          JSON.stringify({ routes: [], message: "Kunde inte hitta en väg till destinationen för den här aktiviteten." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const elev = await fetchElevation(r.points).catch(() => null);
+      console.log("destination route", r.distanceKm.toFixed(2), "km,", Date.now() - t0, "ms");
+      return new Response(
+        JSON.stringify({
+          routes: [
+            {
+              distanceKm: Math.round(r.distanceKm * 100) / 100,
+              points: r.points,
+              pavedRatio: null,
+              surfaces: [],
+              elevationGainM: elev?.gain ?? null,
+              elevationLossM: elev?.loss ?? null,
+            },
+          ],
+          mode: "destination",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!Number.isFinite(distanceKm) || distanceKm < 0.5 || distanceKm > 200) {
       return new Response(JSON.stringify({ error: "Distansen måste vara 0,5–200 km" }), {
         status: 400,
@@ -185,18 +222,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const t0 = Date.now();
-    const start: LatLng = [lat, lng];
     const targetKm = distanceKm;
 
-    // Sex riktningar per slinga → jämnare, mer "rund" bana med bättre flyt.
+    // Sex slumpade riktningar → större chans att hitta ett vägnät med bra flyt.
     const baseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.78;
-    const dirs = [0, 1, 2, 3].map((i) => (Math.random() * 40 + i * 90) % 360);
+    const dirs = [0, 1, 2, 3, 4, 5].map((i) => (Math.random() * 30 + i * 60) % 360);
 
+    // Åtta waypoints ger Google tillräcklig vägledning för en rundare bana.
     const buildWaypoints = (dir: number, radiusM: number): LatLng[] =>
-      [0, 60, 120, 180, 240, 300].map((d, i) =>
-        offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.9)),
+      [0, 45, 90, 135, 180, 225, 270, 315].map((d, i) =>
+        offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.92)),
       );
+
+
 
     /** Andel av rutten som körs fram och tillbaka på samma sträcka (0 = perfekt flyt). */
     const overlapRatio = (points: LatLng[]): number => {
