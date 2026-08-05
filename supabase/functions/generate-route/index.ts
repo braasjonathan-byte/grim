@@ -241,10 +241,17 @@ Deno.serve(async (req) => {
     };
 
     // Åtta waypoints ger Google tillräcklig vägledning för en rundare bana.
-    const buildWaypoints = (dir: number, radiusM: number): LatLng[] =>
-      [0, 45, 90, 135, 180, 225, 270, 315].map((d, i) =>
-        offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.92)),
-      );
+    // zig = blomformad bana (in och ut mot centrum) → längre runda på samma radie,
+    // används när större radie bara ger vattenpassager (kustnära lägen).
+    const buildWaypoints = (dir: number, radiusM: number, zig = false): LatLng[] =>
+      zig
+        ? [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((d, i) =>
+            offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.45)),
+          )
+        : [0, 45, 90, 135, 180, 225, 270, 315].map((d, i) =>
+            offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.92)),
+          );
+
 
     /**
      * Andel av rutten som körs fram och tillbaka på samma sträcka (0 = perfekt flyt).
