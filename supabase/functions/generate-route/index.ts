@@ -404,9 +404,18 @@ Deno.serve(async (req) => {
             // korta spetsar separat så de inte kan döljas av totalruttens längd.
             if (j > i && routeGap <= NEEDLE_MAX_GAP) {
               const apexIdx = Math.min(n - 1, i + Math.floor((j - i) / 2));
-              const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
-              if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
-                needleSpikes.push(candidate);
+              const beforeApex = Math.max(0, apexIdx - 2);
+              const afterApex = Math.min(n - 1, apexIdx + 2);
+              let apexTurn = Math.abs(
+                bearingOf(sampled[beforeApex], sampled[apexIdx]) -
+                  bearingOf(sampled[apexIdx], sampled[afterApex]),
+              ) % 360;
+              if (apexTurn > 180) apexTurn = 360 - apexTurn;
+              if (apexTurn > 150) {
+                const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
+                if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
+                  needleSpikes.push(candidate);
+                }
               }
             }
             break;
