@@ -772,13 +772,22 @@ Deno.serve(async (req) => {
       const osrmBaseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.9;
       const initialDir = Math.random() * 360;
       try {
-        for (let osrmAttempt = 0; osrmAttempt < 3 && Date.now() < osrmDeadline - 500; osrmAttempt++) {
-          const radiusFactor = [1, 0.75, 0.55][osrmAttempt];
-          const osrmWaypoints = buildWaypoints(
-            initialDir + osrmAttempt * 47,
-            osrmBaseRadius * radiusFactor,
-            false,
-            Math.max(8, baseWaypointCount),
+        for (let osrmAttempt = 0; osrmAttempt < 4 && Date.now() < osrmDeadline - 500; osrmAttempt++) {
+          const radiusFactor = osrmAttempt < 2 ? 1 : 0.72;
+          const direction = initialDir + osrmAttempt * 90;
+          const attemptRadius = osrmBaseRadius * radiusFactor;
+          // Tangentcirkel: start ligger på cirkelns kant och resten av formen på
+          // en sida. Till skillnad från en startcentrerad cirkel kan den därför
+          // roteras helt in över land vid kust och skärgård.
+          const osrmCentre = offset(start, direction, attemptRadius);
+          const waypointCount = Math.max(8, baseWaypointCount);
+          const startBearing = (direction + 180) % 360;
+          const osrmWaypoints = Array.from({ length: waypointCount - 1 }, (_, index) =>
+            offset(
+              osrmCentre,
+              startBearing + ((index + 1) * 360) / waypointCount,
+              attemptRadius * (index % 2 === 0 ? 1 : 0.94),
+            )
           );
           const coordinates = [start, ...osrmWaypoints]
             .map(([pointLat, pointLng]) => `${pointLng.toFixed(6)},${pointLat.toFixed(6)}`)
@@ -807,7 +816,7 @@ Deno.serve(async (req) => {
           };
           if (osrmRoute.points.length >= 4) osrmCandidates.push(osrmRoute);
           console.log(
-            `OSRM försök ${osrmAttempt + 1}: radie ${Math.round(osrmBaseRadius * radiusFactor)} m → ` +
+            `OSRM försök ${osrmAttempt + 1}: tangentcirkel ${Math.round(direction % 360)}°, radie ${Math.round(attemptRadius)} m → ` +
               `${osrmRoute.distanceKm.toFixed(2)} km (${qualityLevel(osrmRoute)})`,
           );
           if (qualityLevel(osrmRoute) !== "none") break;
