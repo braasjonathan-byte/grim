@@ -317,26 +317,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [copyToDateConflict, setCopyToDateConflict] = useState<"ask" | "replace" | "add" | null>(null);
   const [copyToDateSaving, setCopyToDateSaving] = useState(false);
 
-  // Single source of truth for "the user currently has an open card/dialog".
-  // Background refetches must never move the active day/week or collapse the
-  // expanded day while any of these are open, since several editors render
-  // inline inside the expanded day card and would be unmounted.
-  const hasOpenModalUi = !!(
-    showExercisePicker
-    || weightDialog
-    || conditioningDialog
-    || editingExercise
-    || editingCondLine
-    || deleteExerciseConfirm
-    || replaceExerciseTarget
-    || renameDialog
-    || changeDayDialog
-    || chatShareTarget
-    || copyToDateSource
-    || editingUppläggPlanId
-  );
-
-
   // Add week by copying dialog
   const [showAddWeekDialog, setShowAddWeekDialog] = useState(false);
   const [addWeekSourceWeek, setAddWeekSourceWeek] = useState<number | null>(null);
@@ -412,6 +392,70 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [profileAge, setProfileAge] = useState<number | null>(null);
   const [showWeightPrompt, setShowWeightPrompt] = useState(false);
   const [weightPromptValue, setWeightPromptValue] = useState("");
+
+  // Single source of truth for open, user-owned UI. Background refreshes may
+  // update data behind these surfaces, but must not navigate, collapse or
+  // remove the plan row that owns an open editor/dialog.
+  const hasOpenModalUi = !!(
+    inlineIntervalRunner
+    || showAddSingle
+    || showCopyPicker
+    || addExtraDay
+    || showExtraCopyPicker
+    || showExercisePicker
+    || showAddCustomExercise
+    || weightDialog
+    || conditioningDialog
+    || editingExercise
+    || editingCondLine
+    || deleteExerciseConfirm
+    || replaceExerciseTarget
+    || replacementTarget
+    || runLogTarget
+    || exerciseInfoState
+    || propagateDialog
+    || replacePropagateDialog
+    || uncheckedSetsDialog
+    || namePromptDialog
+    || sharePromptDialog
+    || completeCelebration
+    || shareTarget
+    || renameDialog
+    || changeDayDialog
+    || chatShareTarget
+    || copyToDateSource
+    || editingUppläggPlanId
+    || showAddWeekDialog
+    || circuitTimer
+    || importWorkoutTarget
+    || emptyDayChoice
+    || pendingImport
+    || saveWorkoutSource
+    || openExerciseMenuId
+    || showWeightPrompt
+  );
+  const openUiRef = useRef(hasOpenModalUi);
+  const protectedPlanIdsRef = useRef<Set<string>>(new Set());
+  openUiRef.current = hasOpenModalUi;
+  protectedPlanIdsRef.current = new Set([
+    showExercisePicker,
+    weightDialog?.planId,
+    conditioningDialog?.planId,
+    editingExercise?.planId,
+    editingCondLine?.planId,
+    deleteExerciseConfirm?.planId,
+    replaceExerciseTarget?.planId,
+    replacementTarget?.planId,
+    propagateDialog?.plan.id,
+    replacePropagateDialog?.sourcePlanId,
+    namePromptDialog?.planId,
+    renameDialog?.planId,
+    changeDayDialog?.planId,
+    chatShareTarget?.id,
+    copyToDateSource?.id,
+    editingUppläggPlanId,
+    importWorkoutTarget?.planId,
+  ].filter((id): id is string => !!id && id !== "__new__"));
 
   // Users allowed to edit exercise descriptions (admin or specific users)
   const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
@@ -523,6 +567,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             && nextKeys.every((key) => Object.is(current[key], nextPlan[key]));
           return unchanged ? current : nextPlan;
         });
+        // A refresh may briefly omit a row while a write/realtime recount is in
+        // flight. Keep any row that owns open UI mounted until the user closes
+        // that UI; a later refresh can then remove it authoritatively.
+        const returnedIds = new Set(reconciled.map((plan) => plan.id));
+        for (const plan of previous) {
+          if (protectedPlanIdsRef.current.has(plan.id) && !returnedIds.has(plan.id)) {
+            reconciled.push(plan);
+          }
+        }
         return reconciled.length === previous.length
           && reconciled.every((plan, index) => plan === previous[index])
           ? previous
@@ -589,11 +642,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         setInitialWeekSet(true);
       }
 
-      if (planData.length === 0) {
-        setMode(prev => (prev === "loading" || prev === "choose") ? "choose" : prev);
-      } else {
-        const allSingle = planData.every((p) => p.week === 0);
-        setMode(allSingle ? "single" : "plan");
+      // View-mode changes replace the whole workout subtree. Never perform one
+      // as a side effect of a background response while the user has open UI.
+      if (!openUiRef.current) {
+        if (planData.length === 0) {
+          setMode(prev => (prev === "loading" || prev === "choose") ? "choose" : prev);
+        } else {
+          const allSingle = planData.every((p) => p.week === 0);
+          setMode(allSingle ? "single" : "plan");
+        }
       }
     }
     // If planData is null (query failed / auth not ready), stay in "loading" and retry
