@@ -18,6 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
 import { Button } from "@/components/ui/button";
 import type { RouteData, RoutePoint } from "@/lib/savedRoutes";
+import { appendRouteToHistory } from "@/lib/routeHistory";
+
 
 interface Step {
   instruction: string;
