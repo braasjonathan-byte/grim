@@ -590,6 +590,8 @@ Deno.serve(async (req) => {
     return json({
       provider,
       route,
+      alternatives,
+
       withinTolerance: deviation <= 0.1,
       message:
         deviation > 0.1
