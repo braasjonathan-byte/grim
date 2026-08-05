@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
-import RouteNavigation from "@/components/RouteNavigation";
+import { startRouteNavigation } from "@/lib/routeNavigationBus";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -127,7 +127,18 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
   const [friends, setFriends] = useState<{ user_id: string; nickname: string }[]>([]);
   const [sharing, setSharing] = useState(false);
 
-  const [navRoute, setNavRoute] = useState<{ route: RouteData; activity: string; name?: string } | null>(null);
+  const startNav = (req: { route: RouteData; activity: string; name?: string }) => {
+    startRouteNavigation({
+      ...req,
+      onClose: (result) => {
+        if (result && result.distanceKm > 0.01) {
+          toast.success(`Runda avslutad – ${result.distanceKm.toFixed(2)} km registrerade`);
+        }
+        onOpenChange(false);
+      },
+    });
+    onOpenChange(false);
+  };
 
   useEffect(() => {
     try {
@@ -321,7 +332,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
 
   return (
     <>
-      <Dialog open={open && !navRoute}>
+      <Dialog open={open}>
         <DialogContent
           className="z-[10050] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl"
           onEscapeKeyDown={(e) => e.preventDefault()}
@@ -501,7 +512,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
                       <Button
                         className="w-full rounded-xl font-bold"
                         onClick={() => {
-                          setNavRoute({ route: active, activity, name: savingName });
+                          startNav({ route: active, activity, name: savingName });
                         }}
                       >
                         <Navigation className="mr-2 h-4 w-4" /> Starta runda
@@ -567,7 +578,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
                   <RouteMap route={r.points} height={160} />
                   <RouteStats route={r} />
                   <div className="grid grid-cols-2 gap-2">
-                    <Button size="sm" className="rounded-xl font-bold" onClick={() => setNavRoute({ route: r, activity: r.activity, name: r.name })}>
+                    <Button size="sm" className="rounded-xl font-bold" onClick={() => startNav({ route: r, activity: r.activity, name: r.name })}>
                       <Navigation className="mr-1.5 h-4 w-4" /> Starta
                     </Button>
                     <Button size="sm" variant="outline" className="rounded-xl" onClick={() => openShare(r.name, r.activity, r)}>
@@ -616,20 +627,6 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
         </DialogContent>
       </Dialog>
 
-      {navRoute && (
-        <RouteNavigation
-          route={navRoute.route}
-          activity={navRoute.activity}
-          name={navRoute.name}
-          onClose={(result) => {
-            if (result && result.distanceKm > 0.01) {
-              toast.success(`Runda avslutad – ${result.distanceKm.toFixed(2)} km registrerade`);
-            }
-            setNavRoute(null);
-            onOpenChange(false);
-          }}
-        />
-      )}
     </>
   );
 };
