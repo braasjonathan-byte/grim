@@ -382,16 +382,29 @@ Deno.serve(async (req) => {
       // rondeller eller parallellgator, inte en verklig återvändsgränd.
       let flagged = 0;
       let run = 0;
+      const spikes: Spike[] = [];
       for (let i = 0; i <= n; i++) {
         if (i < n && flags[i]) {
           run++;
         } else {
-          if (run >= MIN_RUN) flagged += run;
+          if (run >= MIN_RUN) {
+            flagged += run;
+            const from = i - run;
+            const mid = Math.min(n - 1, from + Math.floor(run / 2));
+            spikes.push({ apex: sampled[mid], lengthM: (run * STEP) / 2 });
+          }
           run = 0;
         }
       }
-      return flagged / n;
+      return { ratio: flagged / n, spikes };
     };
+
+    const outAndBackRatio = (points: LatLng[]): number => analyseOutAndBack(points).ratio;
+
+    /** Längsta enskilda nål-spetsen i meter (enkel riktning). */
+    const longestSpikeM = (points: LatLng[]): number =>
+      analyseOutAndBack(points).spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
+
 
 
     /** Antal skarpa vändningar (>150°) – typiskt återvändsgränder. */
