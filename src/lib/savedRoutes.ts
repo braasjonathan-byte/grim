@@ -9,6 +9,10 @@ export interface RouteData {
   surfaces: string[];
   elevationGainM?: number | null;
   elevationLossM?: number | null;
+  /** Höjd (m ö.h.) per punkt – finns bara på nygenererade rutter. */
+  elevations?: number[] | null;
+  /** Uppskattad tid i minuter från ruttleverantören. */
+  durationMin?: number | null;
 }
 
 export interface SavedRoute extends RouteData {
