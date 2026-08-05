@@ -1,6 +1,8 @@
-// Genererar rundslingor (loopar) via Google Routes API.
-// Input: { lat, lng, distanceKm, activity: "cycling" | "running" | "walking" | "hiking", asphaltOnly?: boolean }
+// Genererar rundslingor (loopar) eller punkt-till-punkt-rutter via Google Routes API.
+// Input loop: { lat, lng, distanceKm, activity: "cycling" | "running" | "walking" | "hiking", asphaltOnly?: boolean }
+// Input destination: { lat, lng, destLat, destLng, activity, asphaltOnly? }
 // Output: { routes: [{ distanceKm, points, pavedRatio, surfaces, elevationGainM, elevationLossM }] }
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
