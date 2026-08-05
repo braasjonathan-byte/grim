@@ -3306,11 +3306,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const currentIsoWeek = today.isoWeek;
     const todayPlan = singlePlans.find((p) => p.day.startsWith(today.dateKey));
     const todayWeek = todayPlan ? getIsoWeekFromKey(todayPlan.day) : currentIsoWeek;
-    const effectiveWeek = singleWeeks.includes(todayWeek) ? todayWeek :
-      (singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek :
-      (singleWeeks.includes(currentIsoWeek) ? currentIsoWeek : currentIsoWeek));
+    // Freeze the rendered week while an editor/dialog is open. A background
+    // refresh may add or reorder single workouts, but must not swap out the
+    // plan subtree that owns the user's unsaved form state.
+    const effectiveWeek = hasOpenModalUi && singleWeeks.includes(singleCurrentWeek)
+      ? singleCurrentWeek
+      : singleWeeks.includes(todayWeek) ? todayWeek
+      : singleWeeks.includes(singleCurrentWeek) ? singleCurrentWeek
+      : currentIsoWeek;
 
-    if (!autoSelectedSingleTodayRef.current && singleCurrentWeek !== effectiveWeek) {
+    if (!hasOpenModalUi && !autoSelectedSingleTodayRef.current && singleCurrentWeek !== effectiveWeek) {
       autoSelectedSingleTodayRef.current = true;
       setSingleCurrentWeek(effectiveWeek);
     }
@@ -3339,7 +3344,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       (dg.dayName === today.dayName && effectiveWeek === currentIsoWeek)
     );
 
-    if (todayGroupIndex >= 0 && singleActiveDayIdx !== todayGroupIndex) {
+    if (!hasOpenModalUi && todayGroupIndex >= 0 && singleActiveDayIdx !== todayGroupIndex) {
       setSingleActiveDayIdx(todayGroupIndex);
     }
 
