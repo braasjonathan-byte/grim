@@ -1,6 +1,8 @@
-// Genererar rundslingor (loopar) via Google Routes API.
-// Input: { lat, lng, distanceKm, activity: "cycling" | "running" | "walking" | "hiking", asphaltOnly?: boolean }
+// Genererar rundslingor (loopar) eller punkt-till-punkt-rutter via Google Routes API.
+// Input loop: { lat, lng, distanceKm, activity: "cycling" | "running" | "walking" | "hiking", asphaltOnly?: boolean }
+// Input destination: { lat, lng, destLat, destLng, activity, asphaltOnly? }
 // Output: { routes: [{ distanceKm, points, pavedRatio, surfaces, elevationGainM, elevationLossM }] }
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,30 +74,31 @@ const decodePolyline = (encoded: string): LatLng[] => {
   return points;
 };
 
-const travelModeFor = (activity: string, asphaltOnly: boolean) =>
-  activity === "cycling" ? "BICYCLE" : asphaltOnly ? "WALK" : "WALK";
+const travelModeFor = (activity: string) => (activity === "cycling" ? "BICYCLE" : "WALK");
 
 interface RouteResult {
   distanceKm: number;
   points: LatLng[];
 }
 
-/** Ber Google om en rundslinga genom ett antal waypoints. */
-const computeLoop = async (
+/** Anropar Google Routes API för en rutt (loop om destination === start). */
+const computeRoute = async (
   start: LatLng,
+  destination: LatLng,
   waypoints: LatLng[],
   activity: string,
-  asphaltOnly: boolean,
+  _asphaltOnly: boolean,
 ): Promise<RouteResult | null> => {
-  const body = {
+  const body: Record<string, unknown> = {
     origin: { location: { latLng: { latitude: start[0], longitude: start[1] } } },
-    destination: { location: { latLng: { latitude: start[0], longitude: start[1] } } },
+    destination: { location: { latLng: { latitude: destination[0], longitude: destination[1] } } },
     intermediates: waypoints.map((w) => ({ location: { latLng: { latitude: w[0], longitude: w[1] } } })),
-    travelMode: travelModeFor(activity, asphaltOnly),
+    travelMode: travelModeFor(activity),
     polylineQuality: "HIGH_QUALITY",
     languageCode: "sv-SE",
     units: "METRIC",
   };
+  // Routes API stödjer inga avoid-modifiers för WALK/BICYCLE – lämnas därför tomt.
   const res = await fetch(`${GATEWAY}/routes/directions/v2:computeRoutes`, {
     method: "POST",
     headers: gatewayHeaders({ "X-Goog-FieldMask": "routes.distanceMeters,routes.polyline.encodedPolyline" }),
@@ -114,6 +117,14 @@ const computeLoop = async (
   if (points.length < 4) return null;
   return { distanceKm: Number(route.distanceMeters ?? 0) / 1000, points };
 };
+
+const computeLoop = (
+  start: LatLng,
+  waypoints: LatLng[],
+  activity: string,
+  asphaltOnly: boolean,
+): Promise<RouteResult | null> => computeRoute(start, start, waypoints, activity, asphaltOnly);
+
 
 /** Höjdprofil via Google Elevation API. */
 const fetchElevation = async (points: LatLng[]): Promise<{ gain: number; loss: number } | null> => {
@@ -160,6 +171,10 @@ Deno.serve(async (req) => {
     const distanceKm = Number(body.distanceKm);
     const activity = String(body.activity ?? "running");
     const asphaltOnly = Boolean(body.asphaltOnly);
+    const destLat = Number(body.destLat);
+    const destLng = Number(body.destLng);
+    const hasDestination =
+      Number.isFinite(destLat) && Number.isFinite(destLng) && Math.abs(destLat) <= 90 && Math.abs(destLng) <= 180;
 
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
       return new Response(JSON.stringify({ error: "Ogiltig position" }), {
@@ -167,6 +182,39 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const t0 = Date.now();
+    const start: LatLng = [lat, lng];
+
+    // ---- Punkt-till-punkt-rutt mot vald destination ----
+    if (hasDestination) {
+      const r = await computeRoute(start, [destLat, destLng], [], activity, asphaltOnly);
+      if (!r) {
+        return new Response(
+          JSON.stringify({ routes: [], message: "Kunde inte hitta en väg till destinationen för den här aktiviteten." }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      const elev = await fetchElevation(r.points).catch(() => null);
+      console.log("destination route", r.distanceKm.toFixed(2), "km,", Date.now() - t0, "ms");
+      return new Response(
+        JSON.stringify({
+          routes: [
+            {
+              distanceKm: Math.round(r.distanceKm * 100) / 100,
+              points: r.points,
+              pavedRatio: null,
+              surfaces: [],
+              elevationGainM: elev?.gain ?? null,
+              elevationLossM: elev?.loss ?? null,
+            },
+          ],
+          mode: "destination",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     if (!Number.isFinite(distanceKm) || distanceKm < 0.5 || distanceKm > 200) {
       return new Response(JSON.stringify({ error: "Distansen måste vara 0,5–200 km" }), {
         status: 400,
@@ -174,34 +222,44 @@ Deno.serve(async (req) => {
       });
     }
 
-    const t0 = Date.now();
-    const start: LatLng = [lat, lng];
     const targetKm = distanceKm;
 
-    // Sex riktningar per slinga → jämnare, mer "rund" bana med bättre flyt.
+    // Sex slumpade riktningar → större chans att hitta ett vägnät med bra flyt.
     const baseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.78;
-    const dirs = [0, 1, 2, 3].map((i) => (Math.random() * 40 + i * 90) % 360);
+    const dirs = [0, 1, 2, 3, 4, 5].map((i) => (Math.random() * 30 + i * 60) % 360);
 
+    // Åtta waypoints ger Google tillräcklig vägledning för en rundare bana.
     const buildWaypoints = (dir: number, radiusM: number): LatLng[] =>
-      [0, 60, 120, 180, 240, 300].map((d, i) =>
-        offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.9)),
+      [0, 45, 90, 135, 180, 225, 270, 315].map((d, i) =>
+        offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.92)),
       );
 
-    /** Andel av rutten som körs fram och tillbaka på samma sträcka (0 = perfekt flyt). */
+
+
+    /**
+     * Andel av rutten som körs fram och tillbaka på samma sträcka (0 = perfekt flyt).
+     * Endast unika cellbesök räknas – på så vis straffas verkliga återbesök,
+     * inte tät punktupplösning inom samma cell.
+     */
     const overlapRatio = (points: LatLng[]): number => {
       const cell = 40; // meter
-      const seen = new Map<string, number>();
+      const seen = new Set<string>();
+      let visits = 0;
       let repeats = 0;
+      let lastKey = "";
       for (const p of points) {
         const key = `${Math.round((p[0] * 111320) / cell)}:${Math.round(
           (p[1] * 111320 * Math.cos((p[0] * Math.PI) / 180)) / cell,
         )}`;
-        const n = (seen.get(key) ?? 0) + 1;
-        seen.set(key, n);
-        if (n > 1) repeats++;
+        if (key === lastKey) continue;
+        lastKey = key;
+        visits++;
+        if (seen.has(key)) repeats++;
+        else seen.add(key);
       }
-      return repeats / Math.max(points.length, 1);
+      return repeats / Math.max(visits, 1);
     };
+
 
     /** Antal skarpa vändningar (>150°) – typiskt återvändsgränder. */
     const uTurns = (points: LatLng[]): number => {
@@ -227,17 +285,42 @@ Deno.serve(async (req) => {
       overlapRatio(r.points) * 2.5 +
       Math.min(uTurns(r.points), 10) * 0.05;
 
+    /**
+     * Konvergerar radien mot måldistansen. Håller reda på den minsta radie som
+     * gav för lång rutt och den största som gav för kort rutt – när båda finns
+     * används binärsökning (snabb konvergens), annars en dämpad ratio-skalning.
+     */
     const attempt = async (dir: number): Promise<RouteResult | null> => {
       let radius = baseRadius;
       let best: RouteResult | null = null;
-      for (let i = 0; i < 3; i++) {
+      let lowRadius: number | null = null; // ger för kort rutt
+      let highRadius: number | null = null; // ger för lång rutt
+
+      for (let i = 0; i < 6; i++) {
         const r = await computeLoop(start, buildWaypoints(dir, radius), activity, asphaltOnly);
         if (!r) return best;
+        const ov = overlapRatio(r.points);
+        console.log(
+          `dir ${Math.round(dir)}° försök ${i + 1}: radie ${Math.round(radius)} m → ${r.distanceKm.toFixed(2)} km ` +
+            `(mål ${targetKm} km, avvikelse ${(((r.distanceKm - targetKm) / targetKm) * 100).toFixed(1)} %, overlap ${(ov * 100).toFixed(0)} %)`,
+        );
         if (!best || score(r) < score(best)) best = r;
-        const ratio = targetKm / Math.max(r.distanceKm, 0.1);
-        const good = ratio > 0.85 && ratio < 1.15 && overlapRatio(r.points) < 0.15;
-        if (good) break;
-        radius = Math.max(150, Math.min(radius * (ratio > 0.85 && ratio < 1.15 ? 1.05 : ratio), 40000));
+
+        const rel = (r.distanceKm - targetKm) / targetKm;
+        if (Math.abs(rel) < 0.07 && ov < 0.15) break;
+
+        if (rel < 0) lowRadius = Math.max(lowRadius ?? 0, radius);
+        else highRadius = highRadius == null ? radius : Math.min(highRadius, radius);
+
+        let next: number;
+        if (lowRadius != null && highRadius != null && highRadius > lowRadius) {
+          next = (lowRadius + highRadius) / 2;
+        } else {
+          // Dämpad skalning: undviker att skjuta förbi målet i glesa vägnät.
+          const ratio = targetKm / Math.max(r.distanceKm, 0.1);
+          next = radius * Math.max(0.4, Math.min(2.5, 1 + (ratio - 1) * 0.85));
+        }
+        radius = Math.max(120, Math.min(next, 60000));
       }
       return best;
     };
@@ -247,11 +330,11 @@ Deno.serve(async (req) => {
 
     const found = settled
       .filter((r): r is RouteResult => !!r)
-      // Släng uppenbara ut-och-tillbaka-rutter om vi har bättre alternativ
       .sort((a, b) => score(a) - score(b));
 
-    const clean = found.filter((r) => overlapRatio(r.points) < 0.4);
-    const pool = clean.length > 0 ? clean : found;
+    // Endast rutter inom ±20 % av målet och med lågt fram-och-tillbaka-flöde.
+    const accurate = found.filter((r) => Math.abs(r.distanceKm - targetKm) / targetKm <= 0.2);
+    const pool = accurate.filter((r) => overlapRatio(r.points) < 0.25);
 
     // Ta bort dubbletter (liknande mittpunkt)
     const unique: RouteResult[] = [];
@@ -262,13 +345,22 @@ Deno.serve(async (req) => {
       if (unique.length >= 4) break;
     }
 
-
     if (unique.length === 0) {
+      const closest = found[0];
+      console.log(
+        "inga träffsäkra rundor. bästa:",
+        closest ? `${closest.distanceKm.toFixed(2)} km (mål ${targetKm})` : "ingen",
+      );
       return new Response(
-        JSON.stringify({ routes: [], message: "Hittade inga rundor här just nu. Prova en annan distans." }),
+        JSON.stringify({
+          routes: [],
+          message: `Kunde inte hitta en runda nära ${targetKm} km i det här området – prova en annan distans.`,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+
 
     const elevations = await Promise.all(unique.map((r) => fetchElevation(r.points).catch(() => null)));
 

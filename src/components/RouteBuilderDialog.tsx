@@ -66,6 +66,8 @@ const SURFACE_LABELS: Record<string, string> = {
 // återställer användarens val. Endast användarens egna handlingar ändrar dem.
 const FORM_KEY = "grim.routeBuilder.form";
 
+type Destination = { lat: number; lng: number; name: string };
+
 type PersistedForm = {
   tab: "new" | "saved";
   activity: Activity;
@@ -74,6 +76,8 @@ type PersistedForm = {
   routes: RouteData[] | null;
   selected: number;
   savingName: string;
+  destQuery: string;
+  destination: Destination | null;
 };
 
 const DEFAULT_FORM: PersistedForm = {
@@ -84,6 +88,8 @@ const DEFAULT_FORM: PersistedForm = {
   routes: null,
   selected: 0,
   savingName: "",
+  destQuery: "",
+  destination: null,
 };
 
 const readForm = (): PersistedForm => {
@@ -106,6 +112,11 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
   const [routes, setRoutes] = useState<RouteData[] | null>(initial.routes);
   const [selected, setSelected] = useState(initial.selected);
 
+  const [destQuery, setDestQuery] = useState(initial.destQuery);
+  const [destination, setDestination] = useState<Destination | null>(initial.destination);
+  const [suggestions, setSuggestions] = useState<{ placeId: string; text: string; secondary: string }[]>([]);
+  const [destLoading, setDestLoading] = useState(false);
+
   const [userId, setUserId] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedRoute[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
@@ -122,12 +133,63 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
     try {
       sessionStorage.setItem(
         FORM_KEY,
-        JSON.stringify({ tab, activity, asphaltOnly, distanceKm, routes, selected, savingName } satisfies PersistedForm),
+        JSON.stringify({
+          tab,
+          activity,
+          asphaltOnly,
+          distanceKm,
+          routes,
+          selected,
+          savingName,
+          destQuery,
+          destination,
+        } satisfies PersistedForm),
       );
     } catch {
       /* ignore */
     }
-  }, [tab, activity, asphaltOnly, distanceKm, routes, selected, savingName]);
+  }, [tab, activity, asphaltOnly, distanceKm, routes, selected, savingName, destQuery, destination]);
+
+  // Platsförslag medan användaren skriver (debounce 300 ms).
+  useEffect(() => {
+    const q = destQuery.trim();
+    if (destination && q === destination.name) return;
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    const id = window.setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("place-search", { body: { query: q } });
+        if (!cancelled) setSuggestions(data?.suggestions ?? []);
+      } catch {
+        if (!cancelled) setSuggestions([]);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [destQuery, destination]);
+
+  const pickSuggestion = async (s: { placeId: string; text: string; secondary: string }) => {
+    setDestLoading(true);
+    setSuggestions([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("place-search", { body: { placeId: s.placeId } });
+      if (error || !data?.lat) throw error ?? new Error("Kunde inte hämta platsen");
+      const name = s.text || data.name || "Destination";
+      setDestination({ lat: data.lat, lng: data.lng, name });
+      setDestQuery(name);
+    } catch {
+      toast.error("Kunde inte hämta platsen");
+    } finally {
+      setDestLoading(false);
+    }
+  };
+
+
 
 
   useEffect(() => {
@@ -152,6 +214,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
   const generate = async () => {
     setLoading(true);
     setRoutes(null);
+    const useDestination = !!destination && destQuery.trim().length > 0;
     try {
       const pos = await getPositionRobust();
       const { data, error } = await supabase.functions.invoke("generate-route", {
@@ -161,6 +224,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
           distanceKm,
           activity,
           asphaltOnly,
+          ...(useDestination ? { destLat: destination!.lat, destLng: destination!.lng } : {}),
         },
       });
       if (error) throw error;
@@ -172,7 +236,13 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
       }
       setRoutes(result);
       setSelected(0);
-      setSavingName(`${ACTIVITIES.find((a) => a.key === activity)?.label ?? "Runda"} ${result[0].distanceKm.toFixed(1)} km`);
+      const label = ACTIVITIES.find((a) => a.key === activity)?.label ?? "Runda";
+      setSavingName(
+        useDestination
+          ? `${label} till ${destination!.name} · ${result[0].distanceKm.toFixed(1)} km`
+          : `${label} ${result[0].distanceKm.toFixed(1)} km`,
+      );
+
     } catch (e: any) {
       const msg =
         e?.code === 1
@@ -318,34 +388,93 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
                 <Switch checked={asphaltOnly} onCheckedChange={setAsphaltOnly} />
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-muted-foreground">Längd på banan</Label>
-                  <span className="text-sm font-bold tabular-nums text-foreground">{distanceKm} km</span>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground">Destination (valfritt)</Label>
+                <div className="relative">
+                  <Input
+                    value={destQuery}
+                    onChange={(e) => {
+                      setDestQuery(e.target.value);
+                      setDestination(null);
+                    }}
+                    placeholder="Adress, plats eller ort"
+                    className="h-10 rounded-xl pr-9 text-sm"
+                  />
+                  {(destLoading || destination) && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {destLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDestination(null);
+                            setDestQuery("");
+                          }}
+                          aria-label="Rensa destination"
+                        >
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      )}
+                    </span>
+                  )}
+                  {suggestions.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-border/60 bg-popover shadow-soft">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s.placeId}
+                          type="button"
+                          onClick={() => pickSuggestion(s)}
+                          className="flex w-full items-start gap-2 px-3 py-2 text-left text-xs hover:bg-muted"
+                        >
+                          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold text-foreground">{s.text}</span>
+                            {s.secondary && <span className="block truncate text-muted-foreground">{s.secondary}</span>}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <Slider
-                  value={[distanceKm]}
-                  min={1}
-                  max={activity === "cycling" ? 100 : 30}
-                  step={1}
-                  onValueChange={(v) => setDistanceKm(v[0])}
-                />
                 <p className="text-[11px] text-muted-foreground">
-                  Förslagen hamnar inom ±20 % ({(distanceKm * 0.8).toFixed(1)}–{(distanceKm * 1.2).toFixed(1)} km).
+                  {destination
+                    ? `Rutt från din position till ${destination.name}.`
+                    : "Lämna tomt för en rundslinga tillbaka till start."}
                 </p>
               </div>
+
+              {!destination && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-muted-foreground">Längd på banan</Label>
+                    <span className="text-sm font-bold tabular-nums text-foreground">{distanceKm} km</span>
+                  </div>
+                  <Slider
+                    value={[distanceKm]}
+                    min={1}
+                    max={activity === "cycling" ? 100 : 50}
+                    step={1}
+                    onValueChange={(v) => setDistanceKm(v[0])}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Förslagen hamnar inom ±20 % ({(distanceKm * 0.8).toFixed(1)}–{(distanceKm * 1.2).toFixed(1)} km).
+                  </p>
+                </div>
+              )}
 
               <Button onClick={generate} disabled={loading} className="w-full rounded-xl font-bold">
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Söker rundor…
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {destination ? "Söker rutt…" : "Söker rundor…"}
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" /> Föreslå rundor
+                    <Sparkles className="mr-2 h-4 w-4" /> {destination ? "Skapa rutt" : "Föreslå rundor"}
                   </>
                 )}
               </Button>
+
 
               {routes && routes.length > 0 && (
                 <div className="space-y-3">
