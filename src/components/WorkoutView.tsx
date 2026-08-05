@@ -77,7 +77,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const isMobile = useIsMobile();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
-  const swipeKey = useRef(0);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
@@ -149,6 +148,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Inline editing of existing exercise
   const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;originalName: string;sets: string;reps: string;weight: string;} | null>(null);
+  const [editingCondLine, setEditingCondLine] = useState<{ planId: string; lineIndex: number; name: string } | null>(null);
 
   // Conditioning exercise dialog
   const [conditioningDialog, setConditioningDialog] = useState<{planId: string;exerciseName: string;} | null>(null);
@@ -454,16 +454,60 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     });
   }, [userId]);
 
+  const refreshSocialInteractions = useCallback(async () => {
+    const [{ data: friendCommentsData }, { data: likesData }, social] = await Promise.all([
+      supabase.from("workout_comments").select("*").eq("target_user_id", userId).order("created_at", { ascending: true }),
+      supabase.from("workout_likes").select("*").eq("target_user_id", userId),
+      fetchSocialWorkoutInteractions(userId),
+    ]);
+
+    const mergedLikes = mergeWorkoutLikes((likesData || []) as any, social.likes);
+    const mergedComments = mergeWorkoutComments((friendCommentsData || []) as any, social.comments);
+    setWorkoutLikes(mergedLikes as any);
+    setFriendComments(mergedComments as any);
+
+    const allAuthorIds = new Set<string>();
+    mergedComments.forEach((comment: any) => allAuthorIds.add(comment.author_id));
+    mergedLikes.forEach((like: any) => allAuthorIds.add(like.user_id));
+    if (allAuthorIds.size === 0) return;
+
+    const { data: authorProfiles } = await supabase
+      .from("profiles")
+      .select("user_id, nickname")
+      .in("user_id", [...allAuthorIds]);
+    if (authorProfiles) {
+      const map: Record<string, string> = {};
+      for (const profile of authorProfiles) map[profile.user_id] = profile.nickname;
+      setCommentNicknames(map);
+    }
+  }, [userId]);
+
   const fetchData = useCallback(async () => {
-    const [{ data: planData }, { data: compData }, { data: friendCommentsData }, { data: likesData }] = await Promise.all([
-    supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
-    supabase.from("workout_completions").select("*").eq("user_id", userId),
-    supabase.from("workout_comments").select("*").eq("target_user_id", userId).order("created_at", { ascending: true }),
-    supabase.from("workout_likes").select("*").eq("target_user_id", userId)]
-    );
+    const [{ data: planData }, { data: compData }] = await Promise.all([
+      supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
+      supabase.from("workout_completions").select("*").eq("user_id", userId),
+    ]);
 
     if (planData) {
-      setPlans(planData);
+      // Keep existing object identities for unchanged plans. Besides reducing large
+      // recount renders, this prevents open editors/dialogs inside a plan card from
+      // being torn down merely because a background refetch returned fresh objects.
+      setPlans((previous) => {
+        const previousById = new Map(previous.map((plan) => [plan.id, plan]));
+        const reconciled = planData.map((nextPlan) => {
+          const current = previousById.get(nextPlan.id);
+          if (!current) return nextPlan;
+          const currentKeys = Object.keys(current) as (keyof PlanDay)[];
+          const nextKeys = Object.keys(nextPlan) as (keyof PlanDay)[];
+          const unchanged = currentKeys.length === nextKeys.length
+            && nextKeys.every((key) => Object.is(current[key], nextPlan[key]));
+          return unchanged ? current : nextPlan;
+        });
+        return reconciled.length === previous.length
+          && reconciled.every((plan, index) => plan === previous[index])
+          ? previous
+          : reconciled;
+      });
       const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
 
@@ -546,7 +590,26 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           logged_weights: c.logged_weights as Record<string, number> | null
         };
       }
-      setCompletions(map);
+      setCompletions((previous) => {
+        const next: Record<string, Completion> = {};
+        for (const [key, completion] of Object.entries(map)) {
+          const current = previous[key];
+          if (!current) {
+            next[key] = completion;
+            continue;
+          }
+          const currentKeys = Object.keys(current) as (keyof Completion)[];
+          const completionKeys = Object.keys(completion) as (keyof Completion)[];
+          const unchanged = currentKeys.length === completionKeys.length
+            && completionKeys.every((field) => Object.is(current[field], completion[field]));
+          next[key] = unchanged ? current : completion;
+        }
+        const nextKeys = Object.keys(next);
+        return nextKeys.length === Object.keys(previous).length
+          && nextKeys.every((key) => next[key] === previous[key])
+          ? previous
+          : next;
+      });
       // Seed the data-loss guard with what the backend actually holds
       seedCheckmarkCounts(userId, compData as any);
       const commentMap: Record<string, string> = {};
@@ -556,32 +619,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setComments((prev) => ({ ...commentMap, ...prev }));
     }
 
-    // Merge in social-post interactions so historical comments/likes from the feed appear here
-    const { comments: socialComments, likes: socialLikes } = await fetchSocialWorkoutInteractions(userId);
-    const mergedLikes = mergeWorkoutLikes((likesData || []) as any, socialLikes);
-    const mergedComments = mergeWorkoutComments((friendCommentsData || []) as any, socialComments);
-
-    setWorkoutLikes(mergedLikes as any);
-
-    // Collect all author IDs from comments and likes
-    const allAuthorIds = new Set<string>();
-    mergedComments.forEach((c: any) => allAuthorIds.add(c.author_id));
-    mergedLikes.forEach((l: any) => allAuthorIds.add(l.user_id));
-
-    setFriendComments(mergedComments as any);
-
-    if (allAuthorIds.size > 0) {
-      const { data: authorProfiles } = await supabase
-        .from("profiles")
-        .select("user_id, nickname")
-        .in("user_id", [...allAuthorIds]);
-      if (authorProfiles) {
-        const map: Record<string, string> = {};
-        for (const p of authorProfiles) map[p.user_id] = p.nickname;
-        setCommentNicknames(map);
-      }
-    }
-  }, [userId, initialWeekSet, planStartDate, profileLoaded]);
+    await refreshSocialInteractions();
+  }, [userId, initialWeekSet, planStartDate, profileLoaded, refreshSocialInteractions]);
 
   useEffect(() => {
     fetchData();
@@ -595,15 +634,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   useEffect(() => {
     const channel = supabase
       .channel(`workout-social-sync-${userId}-${Math.random().toString(36).slice(2, 8)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "workout_comments", filter: `target_user_id=eq.${userId}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "workout_likes", filter: `target_user_id=eq.${userId}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_comments", filter: `target_user_id=eq.${userId}` }, () => refreshSocialInteractions())
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_likes", filter: `target_user_id=eq.${userId}` }, () => refreshSocialInteractions())
       .subscribe();
-    const off = onPostInteraction(() => fetchData());
+    const off = onPostInteraction(() => refreshSocialInteractions());
     return () => {
       supabase.removeChannel(channel);
       off();
     };
-  }, [fetchData, userId]);
+  }, [refreshSocialInteractions, userId]);
 
   // Backfill disabled: automatic plan mutations caused data corruption for users.
   // Tröskellöpning details should be set at plan creation time, not retroactively.
@@ -663,13 +702,25 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
 
     setActiveDayIndex(index);
-    setExpandedDay(null);
-  }, [currentWeek, plans, planStartDate]);
+    // A background refetch must never collapse the day that owns an active
+    // registration card. Only explicit day/week navigation may replace it.
+    const hasOpenExerciseUi = !!(
+      showExercisePicker
+      || weightDialog
+      || conditioningDialog
+      || editingExercise
+      || editingCondLine
+      || deleteExerciseConfirm
+      || replaceExerciseTarget
+    );
+    if (!hasOpenExerciseUi) setExpandedDay(null);
+  }, [currentWeek, plans, planStartDate, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine, deleteExerciseConfirm, replaceExerciseTarget]);
 
 
   // Auto-expand if the currently shown day has only one session
   useEffect(() => {
     if (!isMobile) return;
+    if (showExercisePicker || weightDialog || conditioningDialog || editingExercise || editingCondLine) return;
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
       .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
@@ -679,7 +730,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (sameDayPlans.length === 1) {
       setExpandedDay(`${activePlan.week}-${activePlan.day}`);
     }
-  }, [activeDayIndex, currentWeek, plans, isMobile]);
+  }, [activeDayIndex, currentWeek, plans, isMobile, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine]);
 
   const allExercises = useMemo(() => {
     const customMap = new Map(customExercises.map(e => [e.name.toLowerCase(), e]));
@@ -2746,9 +2797,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setCondMode(getStoredCardioMode(name));
     setEditingCondLine({ planId, lineIndex, name });
   };
-
-  // State for editing a conditioning line
-  const [editingCondLine, setEditingCondLine] = useState<{ planId: string; lineIndex: number; name: string } | null>(null);
 
   // Save edited conditioning line
   const saveEditedCondLine = async () => {
@@ -5096,7 +5144,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               return (
                 <button
                   key={k}
-                  onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
+                  onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); setActiveDayIndex(planIdx); setExpandedDay(null); }}
                   className={`w-full min-w-0 flex flex-col items-center gap-1 px-0.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isToday ? "ring-2 ring-warning/60" : ""
                   } ${
@@ -5135,7 +5183,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         );
       })()}
       <div
-        key={isMobile && weekDays.length > 1 ? `swipe-${swipeKey.current}` : undefined}
         className={`${isMobile && weekDays.length > 1 ? (swipeDirection === "left" ? "swipe-left" : swipeDirection === "right" ? "swipe-right" : "") : ""} grid grid-cols-1 gap-2`}
         onTouchStart={(e) => {
           if (!isMobile || weekDays.length <= 1) return;
@@ -5151,12 +5198,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
             if (dx < 0 && activeDayIndex < mobileDayTabs.length - 1) {
               setSwipeDirection("left");
-              swipeKey.current++;
               setActiveDayIndex(activeDayIndex + 1);
               setExpandedDay(null);
             } else if (dx > 0 && activeDayIndex > 0) {
               setSwipeDirection("right");
-              swipeKey.current++;
               setActiveDayIndex(activeDayIndex - 1);
               setExpandedDay(null);
             }

@@ -171,9 +171,6 @@ const Index = () => {
 
   // Wrap setTab to push browser history for Android back button support
   const setTab = useCallback((newTab: Tab) => {
-    if (newTab === "workout") {
-      setWorkoutRefreshKey((key) => key + 1);
-    }
     hapticLight();
     setTabState(newTab);
     localStorage.setItem("grim_active_tab", newTab);
@@ -226,7 +223,6 @@ const Index = () => {
   const [nickname, setNickname] = useState("");
   const userRef = useRef<User | null>(null);
   const loadUserDataSeqRef = useRef(0);
-  const [workoutRefreshKey, setWorkoutRefreshKey] = useState(0);
   const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
   const [notification, setNotification] = useState<FriendActivity | null>(null);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -956,7 +952,7 @@ const Index = () => {
           {tab === "home" && <HomeView userId={user.id} onNavigate={(t) => setTab(t as Tab)} />}
           {tab === "workout" && <>
             <OnboardingTutorial />
-            <WorkoutView key={adminViewUserId || workoutRefreshKey} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
+            <WorkoutView key={adminViewUserId || user.id} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
           </>}
           {tab === "social" &&
             <SocialView
@@ -1030,7 +1026,7 @@ const Index = () => {
       {/* AI Chat Button - temporarily disabled */}
       {/* <AIChatButton
                   userId={user.id}
-                  onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
+                  onActionsExecuted={() => undefined} /> */}
 
 
       {/* Mini Timer above footer */}
