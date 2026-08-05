@@ -317,6 +317,26 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [copyToDateConflict, setCopyToDateConflict] = useState<"ask" | "replace" | "add" | null>(null);
   const [copyToDateSaving, setCopyToDateSaving] = useState(false);
 
+  // Single source of truth for "the user currently has an open card/dialog".
+  // Background refetches must never move the active day/week or collapse the
+  // expanded day while any of these are open, since several editors render
+  // inline inside the expanded day card and would be unmounted.
+  const hasOpenModalUi = !!(
+    showExercisePicker
+    || weightDialog
+    || conditioningDialog
+    || editingExercise
+    || editingCondLine
+    || deleteExerciseConfirm
+    || replaceExerciseTarget
+    || renameDialog
+    || changeDayDialog
+    || chatShareTarget
+    || copyToDateSource
+    || editingUppläggPlanId
+  );
+
+
   // Add week by copying dialog
   const [showAddWeekDialog, setShowAddWeekDialog] = useState(false);
   const [addWeekSourceWeek, setAddWeekSourceWeek] = useState<number | null>(null);
@@ -670,10 +690,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       skipDayResetRef.current = false;
       return;
     }
+    // Never re-target the active day while the user has a card/dialog open —
+    // a background refetch would otherwise unmount the open editor.
+    if (hasOpenModalUi) return;
     const weekChanged = prevWeekRef.current !== currentWeek;
     const isInitialPick = !didInitialDayPickRef.current && plans.length > 0;
     const shouldRetryInitialDateAlignment = pendingInitialDateRealignRef.current && !!planStartDate;
     if (!weekChanged && !isInitialPick && !shouldRetryInitialDateAlignment) return;
+
 
     prevWeekRef.current = currentWeek;
 
@@ -702,25 +726,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
 
     setActiveDayIndex(index);
-    // A background refetch must never collapse the day that owns an active
-    // registration card. Only explicit day/week navigation may replace it.
-    const hasOpenExerciseUi = !!(
-      showExercisePicker
-      || weightDialog
-      || conditioningDialog
-      || editingExercise
-      || editingCondLine
-      || deleteExerciseConfirm
-      || replaceExerciseTarget
-    );
-    if (!hasOpenExerciseUi) setExpandedDay(null);
-  }, [currentWeek, plans, planStartDate, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine, deleteExerciseConfirm, replaceExerciseTarget]);
+    setExpandedDay(null);
+  }, [currentWeek, plans, planStartDate, hasOpenModalUi]);
+
 
 
   // Auto-expand if the currently shown day has only one session
   useEffect(() => {
     if (!isMobile) return;
-    if (showExercisePicker || weightDialog || conditioningDialog || editingExercise || editingCondLine) return;
+    if (hasOpenModalUi) return;
+
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
       .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
@@ -730,7 +745,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (sameDayPlans.length === 1) {
       setExpandedDay(`${activePlan.week}-${activePlan.day}`);
     }
-  }, [activeDayIndex, currentWeek, plans, isMobile, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine]);
+  }, [activeDayIndex, currentWeek, plans, isMobile, hasOpenModalUi]);
 
   const allExercises = useMemo(() => {
     const customMap = new Map(customExercises.map(e => [e.name.toLowerCase(), e]));
