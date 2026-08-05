@@ -625,14 +625,14 @@ Deno.serve(async (req) => {
 
 
     /**
-     * Kör alla riktningar, men högst två samtidigt. Det behåller envisheten och
+     * Kör alla riktningar, men högst fyra samtidigt. Det behåller envisheten och
      * anropsbudgeten utan att slå i edge-funktionens CPU-/minnesgräns.
      */
     const runPass = async (dirsToTry: number[]): Promise<{ dir: number; route: RouteResult }[]> => {
       const found: { dir: number; route: RouteResult }[] = [];
-      for (let offset = 0; offset < dirsToTry.length; offset += 2) {
+      for (let offset = 0; offset < dirsToTry.length; offset += 4) {
         const settled = await Promise.all(
-          dirsToTry.slice(offset, offset + 2).map(async (d) => {
+          dirsToTry.slice(offset, offset + 4).map(async (d) => {
           const route = await attempt(d).catch((e) => {
             console.log(`dir ${Math.round(d)}° kraschade:`, String(e));
             return null;
