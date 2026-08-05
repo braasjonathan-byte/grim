@@ -407,6 +407,25 @@ const RouteMap = ({
         );
     }
 
+    // Alternativa vägval – tydligt avvikande färg (bärnsten) så kortaste rutten sticker ut.
+    altLinesRef.current.forEach((l) => l.setMap(null));
+    altLinesRef.current = (alternatives ?? [])
+      .filter((r) => r.length > 1)
+      .map(
+        (r) =>
+          new gm.Polyline({
+            map,
+            path: r.map((p) => ({ lat: p[0], lng: p[1] })),
+            strokeColor: "#f59e0b",
+            strokeOpacity: 0.9,
+            strokeWeight: 4,
+            clickable: false,
+            zIndex: 2,
+          }),
+      );
+
+
+
     // Main route + halo. Avverkad del ritas grå, återstående i temats färg.
     const cut = Math.max(0, Math.min(traveledCount, path.length));
     const donePath = cut > 1 ? path.slice(0, cut) : [];
