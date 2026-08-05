@@ -728,23 +728,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setActiveDayIndex(index);
     // A background refetch must never collapse the day that owns an active
     // registration card. Only explicit day/week navigation may replace it.
-    const hasOpenExerciseUi = !!(
-      showExercisePicker
-      || weightDialog
-      || conditioningDialog
-      || editingExercise
-      || editingCondLine
-      || deleteExerciseConfirm
-      || replaceExerciseTarget
-    );
-    if (!hasOpenExerciseUi) setExpandedDay(null);
-  }, [currentWeek, plans, planStartDate, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine, deleteExerciseConfirm, replaceExerciseTarget]);
+    setActiveDayIndex(index);
+    setExpandedDay(null);
+  }, [currentWeek, plans, planStartDate, hasOpenModalUi]);
 
 
   // Auto-expand if the currently shown day has only one session
   useEffect(() => {
     if (!isMobile) return;
-    if (showExercisePicker || weightDialog || conditioningDialog || editingExercise || editingCondLine) return;
+    if (hasOpenModalUi) return;
+
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
       .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
