@@ -415,35 +415,45 @@ const RouteMap = ({
         );
     }
 
-    // Alternativa vägval – tydligt avvikande färg (bärnsten) så kortaste rutten sticker ut.
+    // Alternativa vägval – rita ENDAST de delar som avviker från huvudrutten,
+    // i bärnsten och ovanpå, så kortaste vägen (temats färg) alltid syns tydligt.
     altLinesRef.current.forEach((l) => l.setMap(null));
-    altLinesRef.current = (alternatives ?? [])
-      .filter((r) => r.length > 1)
-      .map(
-        (r) =>
-          new gm.Polyline({
-            map,
-            path: r.map((p) => ({ lat: p[0], lng: p[1] })),
-            strokeColor: "#f59e0b",
-            strokeOpacity: 0,
-            strokeWeight: 5,
-            clickable: false,
-            zIndex: 5,
-            icons: [
-              {
-                icon: {
-                  path: "M 0,-1 0,1",
-                  strokeColor: "#f59e0b",
-                  strokeOpacity: 1,
-                  strokeWeight: 5,
-                  scale: 1,
-                },
-                offset: "0",
-                repeat: "14px",
-              },
-            ],
-          }),
-      );
+    const cellKey = (lat: number, lng: number) => `${Math.round(lat / 0.0004)}:${Math.round(lng / 0.0004)}`;
+    const primaryCells = new Set<string>();
+    for (const p of route ?? []) {
+      const [la, ln] = p;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          primaryCells.add(cellKey(la + dy * 0.0004, ln + dx * 0.0004));
+        }
+      }
+    }
+    const divergent: Point[][] = [];
+    for (const alt of alternatives ?? []) {
+      let seg: Point[] = [];
+      for (const p of alt) {
+        if (primaryCells.has(cellKey(p[0], p[1]))) {
+          if (seg.length > 1) divergent.push(seg);
+          seg = [];
+        } else {
+          seg.push(p);
+        }
+      }
+      if (seg.length > 1) divergent.push(seg);
+    }
+    altLinesRef.current = divergent.map(
+      (r) =>
+        new gm.Polyline({
+          map,
+          path: r.map((p) => ({ lat: p[0], lng: p[1] })),
+          strokeColor: "#f59e0b",
+          strokeOpacity: 1,
+          strokeWeight: 5,
+          clickable: false,
+          zIndex: 6,
+        }),
+    );
+
 
 
 
