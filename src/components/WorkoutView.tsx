@@ -5118,9 +5118,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
-        <div className="w-full bg-secondary rounded-full h-1.5 overflow-hidden">
-          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-        </div>
         <p className="text-[10px] text-muted-foreground text-center">{progress}% avklarat · Vecka {currentWeek} av {weeks.length}</p>
       </div>
 
