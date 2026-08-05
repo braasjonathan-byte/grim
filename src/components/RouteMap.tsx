@@ -13,10 +13,13 @@ interface Props {
   live?: boolean;
   /** Optional historic routes drawn as a faint heatmap-style overlay underneath the main line. */
   heatmap?: Point[][];
+  /** Alternativa vägval (punkt-till-punkt) – ritas i avvikande färg under huvudrutten. */
+  alternatives?: Point[][];
   /** Antal punkter i början av rutten som redan avverkats – ritas grå. */
   traveledCount?: number;
   /** Aktuell GPS-position (för navigering där route är den planerade rundan). */
   livePosition?: Point | null;
+
 }
 
 
