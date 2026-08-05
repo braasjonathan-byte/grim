@@ -8,13 +8,25 @@ import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 
 // Day-level GPS recorder: first lets user pick which kondition exercise to record,
 // then starts GPS tracking. On stop, saves directly to the chosen exercise.
-export const DayGpsRecorder = ({ konditionExercises, onSave }: {
+export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey }: {
   konditionExercises: { name: string }[];
   onSave: (name: string, km: number, sec: number, route: [number, number][]) => Promise<void> | void;
+  /** Stabil nyckel (t.ex. plan-id) så att vyn överlever att kortet remountas vid datauppdatering. */
+  storageKey?: string;
 }) => {
-  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const sessionKey = `grim.gps.day.${storageKey ?? "default"}`;
+  const [selectedName, setSelectedName] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(sessionKey) || null; } catch { return null; }
+  });
+  useEffect(() => {
+    try {
+      if (selectedName) sessionStorage.setItem(sessionKey, selectedName);
+      else sessionStorage.removeItem(sessionKey);
+    } catch { /* ignore */ }
+  }, [selectedName, sessionKey]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
+
 
   const filtered = useMemo(() => {
     const names = Array.from(new Set(konditionExercises.map(e => e.name))).sort((a, b) => a.localeCompare(b, "sv"));
@@ -84,7 +96,9 @@ export const DayGpsRecorder = ({ konditionExercises, onSave }: {
           ) : (
             <GpsTrackerControl
               autoStart
+              storageKey={sessionKey}
               onCancel={() => setSelectedName(null)}
+
               onStop={async (km, sec, route) => {
                 const name = selectedName;
                 setSelectedName(null);

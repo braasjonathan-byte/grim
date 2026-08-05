@@ -14,7 +14,7 @@ import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 const RouteBuilderDialog = lazyRetry(() => import("@/components/RouteBuilderDialog"));
 
 // Inline conditioning editing card (green, open by default)
-export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean; onCancel?: () => void }) => {
+export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storageKey }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean; onCancel?: () => void; storageKey?: string }) => {
   const gps = useGpsTracker();
   const hr = useHeartRate();
   const myId = useId();
@@ -22,15 +22,31 @@ export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel }: { onS
   const otherActive = gps.isTracking && !isOwner;
   const didAutoStart = useRef(false);
   const [summary, setSummary] = useState<{ km: number; sec: number; route: [number, number][]; splits?: number[] } | null>(null);
-  const [fullscreen, setFullscreen] = useState(false);
+  // Vyläget sparas i sessionStorage så att helskärmen inte försvinner om
+  // passkortet remountas (t.ex. vid en datauppdatering i bakgrunden).
+  const viewKey = `${storageKey ?? "grim.gps"}.view`;
+  const savedView = (() => {
+    try { return JSON.parse(sessionStorage.getItem(viewKey) || "null") as { fullscreen?: boolean; primed?: boolean; routeBuilderOpen?: boolean } | null; } catch { return null; }
+  })();
+  const [fullscreen, setFullscreen] = useState(!!savedView?.fullscreen);
   // "Primed" = användaren har öppnat GPS-vyn men inte tryckt Starta än.
   // Vi söker GPS-signal i bakgrunden men startar inte tid/distans-räknaren.
-  const [primed, setPrimed] = useState(false);
+  const [primed, setPrimed] = useState(!!savedView?.primed);
   const [fixAccuracy, setFixAccuracy] = useState<number | null>(null);
   const [primePoint, setPrimePoint] = useState<[number, number] | null>(null);
   const [primeError, setPrimeError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
-  const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
+  const [routeBuilderOpen, setRouteBuilderOpen] = useState(!!savedView?.routeBuilderOpen);
+  useEffect(() => {
+    try {
+      if (fullscreen || primed || routeBuilderOpen) {
+        sessionStorage.setItem(viewKey, JSON.stringify({ fullscreen, primed, routeBuilderOpen }));
+      } else {
+        sessionStorage.removeItem(viewKey);
+      }
+    } catch { /* ignore */ }
+  }, [fullscreen, primed, routeBuilderOpen, viewKey]);
+
   const fixWatchId = useRef<number | null>(null);
   const goodFixSamples = useRef(0);
   const summaryCardRef = useRef<HTMLDivElement | null>(null);
@@ -121,7 +137,9 @@ export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel }: { onS
     setPrimePoint(null);
     setPrimeError(null);
     goodFixSamples.current = 0;
+    setRouteBuilderOpen(false);
     setFullscreen(false);
+
     // Meddela föräldern så att vyn kan fällas ihop igen (annars ligger den
     // expanderade GPS-panelen kvar och kastar om knapparna i passkortet).
     onCancel?.();
