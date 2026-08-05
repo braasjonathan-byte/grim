@@ -77,7 +77,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const isMobile = useIsMobile();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
-  const swipeKey = useRef(0);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const [plans, setPlans] = useState<PlanDay[]>([]);
@@ -5125,7 +5124,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               return (
                 <button
                   key={k}
-                  onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); swipeKey.current++; setActiveDayIndex(planIdx); setExpandedDay(null); }}
+                  onClick={() => { setSwipeDirection(planIdx > activeDayIndex ? "left" : "right"); setActiveDayIndex(planIdx); setExpandedDay(null); }}
                   className={`w-full min-w-0 flex flex-col items-center gap-1 px-0.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isToday ? "ring-2 ring-warning/60" : ""
                   } ${
@@ -5179,12 +5178,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
             if (dx < 0 && activeDayIndex < mobileDayTabs.length - 1) {
               setSwipeDirection("left");
-              swipeKey.current++;
               setActiveDayIndex(activeDayIndex + 1);
               setExpandedDay(null);
             } else if (dx > 0 && activeDayIndex > 0) {
               setSwipeDirection("right");
-              swipeKey.current++;
               setActiveDayIndex(activeDayIndex - 1);
               setExpandedDay(null);
             }

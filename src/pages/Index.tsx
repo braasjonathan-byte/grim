@@ -1026,7 +1026,7 @@ const Index = () => {
       {/* AI Chat Button - temporarily disabled */}
       {/* <AIChatButton
                   userId={user.id}
-                  onActionsExecuted={() => setWorkoutRefreshKey((k) => k + 1)} /> */}
+                  onActionsExecuted={() => undefined} /> */}
 
 
       {/* Mini Timer above footer */}
