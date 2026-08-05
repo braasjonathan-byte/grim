@@ -859,7 +859,7 @@ Deno.serve(async (req) => {
       const mid = r.points[Math.floor(r.points.length / 2)];
       const dup = unique.some((u) => haversine(u.points[Math.floor(u.points.length / 2)], mid) < 300);
       if (!dup) unique.push(r);
-      if (unique.length >= 4) break;
+      if (unique.length >= 1) break;
     }
 
     if (unique.length === 0) {
