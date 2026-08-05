@@ -453,13 +453,39 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     });
   }, [userId]);
 
+  const refreshSocialInteractions = useCallback(async () => {
+    const [{ data: friendCommentsData }, { data: likesData }, social] = await Promise.all([
+      supabase.from("workout_comments").select("*").eq("target_user_id", userId).order("created_at", { ascending: true }),
+      supabase.from("workout_likes").select("*").eq("target_user_id", userId),
+      fetchSocialWorkoutInteractions(userId),
+    ]);
+
+    const mergedLikes = mergeWorkoutLikes((likesData || []) as any, social.likes);
+    const mergedComments = mergeWorkoutComments((friendCommentsData || []) as any, social.comments);
+    setWorkoutLikes(mergedLikes as any);
+    setFriendComments(mergedComments as any);
+
+    const allAuthorIds = new Set<string>();
+    mergedComments.forEach((comment: any) => allAuthorIds.add(comment.author_id));
+    mergedLikes.forEach((like: any) => allAuthorIds.add(like.user_id));
+    if (allAuthorIds.size === 0) return;
+
+    const { data: authorProfiles } = await supabase
+      .from("profiles")
+      .select("user_id, nickname")
+      .in("user_id", [...allAuthorIds]);
+    if (authorProfiles) {
+      const map: Record<string, string> = {};
+      for (const profile of authorProfiles) map[profile.user_id] = profile.nickname;
+      setCommentNicknames(map);
+    }
+  }, [userId]);
+
   const fetchData = useCallback(async () => {
-    const [{ data: planData }, { data: compData }, { data: friendCommentsData }, { data: likesData }] = await Promise.all([
-    supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
-    supabase.from("workout_completions").select("*").eq("user_id", userId),
-    supabase.from("workout_comments").select("*").eq("target_user_id", userId).order("created_at", { ascending: true }),
-    supabase.from("workout_likes").select("*").eq("target_user_id", userId)]
-    );
+    const [{ data: planData }, { data: compData }] = await Promise.all([
+      supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
+      supabase.from("workout_completions").select("*").eq("user_id", userId),
+    ]);
 
     if (planData) {
       // Keep existing object identities for unchanged plans. Besides reducing large
@@ -467,7 +493,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       // being torn down merely because a background refetch returned fresh objects.
       setPlans((previous) => {
         const previousById = new Map(previous.map((plan) => [plan.id, plan]));
-        return planData.map((nextPlan) => {
+        const reconciled = planData.map((nextPlan) => {
           const current = previousById.get(nextPlan.id);
           if (!current) return nextPlan;
           const currentKeys = Object.keys(current) as (keyof PlanDay)[];
@@ -476,6 +502,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             && nextKeys.every((key) => Object.is(current[key], nextPlan[key]));
           return unchanged ? current : nextPlan;
         });
+        return reconciled.length === previous.length
+          && reconciled.every((plan, index) => plan === previous[index])
+          ? previous
+          : reconciled;
       });
       const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
@@ -573,7 +603,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             && completionKeys.every((field) => Object.is(current[field], completion[field]));
           next[key] = unchanged ? current : completion;
         }
-        return next;
+        const nextKeys = Object.keys(next);
+        return nextKeys.length === Object.keys(previous).length
+          && nextKeys.every((key) => next[key] === previous[key])
+          ? previous
+          : next;
       });
       // Seed the data-loss guard with what the backend actually holds
       seedCheckmarkCounts(userId, compData as any);
@@ -584,32 +618,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setComments((prev) => ({ ...commentMap, ...prev }));
     }
 
-    // Merge in social-post interactions so historical comments/likes from the feed appear here
-    const { comments: socialComments, likes: socialLikes } = await fetchSocialWorkoutInteractions(userId);
-    const mergedLikes = mergeWorkoutLikes((likesData || []) as any, socialLikes);
-    const mergedComments = mergeWorkoutComments((friendCommentsData || []) as any, socialComments);
-
-    setWorkoutLikes(mergedLikes as any);
-
-    // Collect all author IDs from comments and likes
-    const allAuthorIds = new Set<string>();
-    mergedComments.forEach((c: any) => allAuthorIds.add(c.author_id));
-    mergedLikes.forEach((l: any) => allAuthorIds.add(l.user_id));
-
-    setFriendComments(mergedComments as any);
-
-    if (allAuthorIds.size > 0) {
-      const { data: authorProfiles } = await supabase
-        .from("profiles")
-        .select("user_id, nickname")
-        .in("user_id", [...allAuthorIds]);
-      if (authorProfiles) {
-        const map: Record<string, string> = {};
-        for (const p of authorProfiles) map[p.user_id] = p.nickname;
-        setCommentNicknames(map);
-      }
-    }
-  }, [userId, initialWeekSet, planStartDate, profileLoaded]);
+    await refreshSocialInteractions();
+  }, [userId, initialWeekSet, planStartDate, profileLoaded, refreshSocialInteractions]);
 
   useEffect(() => {
     fetchData();
@@ -623,15 +633,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   useEffect(() => {
     const channel = supabase
       .channel(`workout-social-sync-${userId}-${Math.random().toString(36).slice(2, 8)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "workout_comments", filter: `target_user_id=eq.${userId}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "workout_likes", filter: `target_user_id=eq.${userId}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_comments", filter: `target_user_id=eq.${userId}` }, () => refreshSocialInteractions())
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_likes", filter: `target_user_id=eq.${userId}` }, () => refreshSocialInteractions())
       .subscribe();
-    const off = onPostInteraction(() => fetchData());
+    const off = onPostInteraction(() => refreshSocialInteractions());
     return () => {
       supabase.removeChannel(channel);
       off();
     };
-  }, [fetchData, userId]);
+  }, [refreshSocialInteractions, userId]);
 
   // Backfill disabled: automatic plan mutations caused data corruption for users.
   // Tröskellöpning details should be set at plan creation time, not retroactively.
