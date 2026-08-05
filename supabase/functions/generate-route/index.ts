@@ -570,15 +570,17 @@ Deno.serve(async (req) => {
 
         // Distansen sitter men rutten har en nål-spets → sätt ut extra waypoints
         // kring spetsen istället för att ändra radie/bäring.
-        if (!spikeFree && Math.abs(rel) < 0.15 && repairRounds < 3) {
+        if (!spikeFree && Math.abs(rel) < 0.2 && repairRounds < 3) {
           repairRounds++;
-          repairs = [...repairs, ...spikes.sort((a, b) => b.lengthM - a.lengthM).slice(0, 2).map((s) => s.apex)];
-          waypointCount = Math.min(waypointCount + 2, 16);
+          const worst = spikes.sort((a, b) => b.lengthM - a.lengthM)[0];
+          if (worst) repairs = [...repairs, worst.apex].slice(-3);
+          waypointCount = Math.min(waypointCount + 2, 14);
           console.log(
             `dir ${Math.round(dir)}°: spets hittad (${Math.round(longest)} m) – lägger till waypoints runt den (runda ${repairRounds}, ${waypointCount} wp)`,
           );
           continue;
         }
+
 
         if (rel < 0) lowRadius = Math.max(lowRadius ?? 0, radius);
         else highRadius = highRadius == null ? radius : Math.min(highRadius, radius);
