@@ -463,7 +463,21 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     );
 
     if (planData) {
-      setPlans(planData);
+      // Keep existing object identities for unchanged plans. Besides reducing large
+      // recount renders, this prevents open editors/dialogs inside a plan card from
+      // being torn down merely because a background refetch returned fresh objects.
+      setPlans((previous) => {
+        const previousById = new Map(previous.map((plan) => [plan.id, plan]));
+        return planData.map((nextPlan) => {
+          const current = previousById.get(nextPlan.id);
+          if (!current) return nextPlan;
+          const currentKeys = Object.keys(current) as (keyof PlanDay)[];
+          const nextKeys = Object.keys(nextPlan) as (keyof PlanDay)[];
+          const unchanged = currentKeys.length === nextKeys.length
+            && nextKeys.every((key) => Object.is(current[key], nextPlan[key]));
+          return unchanged ? current : nextPlan;
+        });
+      });
       const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
 
@@ -546,7 +560,22 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           logged_weights: c.logged_weights as Record<string, number> | null
         };
       }
-      setCompletions(map);
+      setCompletions((previous) => {
+        const next: Record<string, Completion> = {};
+        for (const [key, completion] of Object.entries(map)) {
+          const current = previous[key];
+          if (!current) {
+            next[key] = completion;
+            continue;
+          }
+          const currentKeys = Object.keys(current) as (keyof Completion)[];
+          const completionKeys = Object.keys(completion) as (keyof Completion)[];
+          const unchanged = currentKeys.length === completionKeys.length
+            && completionKeys.every((field) => Object.is(current[field], completion[field]));
+          next[key] = unchanged ? current : completion;
+        }
+        return next;
+      });
       // Seed the data-loss guard with what the backend actually holds
       seedCheckmarkCounts(userId, compData as any);
       const commentMap: Record<string, string> = {};
@@ -5135,7 +5164,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         );
       })()}
       <div
-        key={isMobile && weekDays.length > 1 ? `swipe-${swipeKey.current}` : undefined}
         className={`${isMobile && weekDays.length > 1 ? (swipeDirection === "left" ? "swipe-left" : swipeDirection === "right" ? "swipe-right" : "") : ""} grid grid-cols-1 gap-2`}
         onTouchStart={(e) => {
           if (!isMobile || weekDays.length <= 1) return;
