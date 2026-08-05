@@ -591,7 +591,8 @@ Deno.serve(async (req) => {
     const isClean = (r: RouteResult) =>
       Math.abs(r.distanceKm - targetKm) / targetKm <= 0.2 &&
       overlapRatio(r.points) < 0.25 &&
-      outAndBackRatio(r.points) < OUT_AND_BACK_MAX;
+      outAndBackRatio(r.points) < OUT_AND_BACK_MAX &&
+      longestSpikeM(r.points) <= SPIKE_MAX_M;
 
     const allResults: { dir: number; route: RouteResult }[] = [];
     const badDirs: number[] = [];
@@ -607,17 +608,19 @@ Deno.serve(async (req) => {
       allResults.push(...pass);
     }
 
-    // Lager 3: inga rutter klarade kvalitetströskeln → nya bäringar, undvik de dåliga.
-    if (!allResults.some((r) => isClean(r.route))) {
+    // Lager 3–4: envishet före felmeddelande – nya bäringar tills en ren runda hittas.
+    for (const layer of [8, 8]) {
+      if (allResults.some((r) => isClean(r.route))) break;
       badDirs.push(...allResults.map((r) => r.dir));
       console.log(
-        "inga rena rundor efter första lagret – kör om med nya bäringar (undviker",
+        `inga rena rundor ännu – kör om med ${layer} nya bäringar (undviker`,
         badDirs.map((d) => Math.round(d)).join(", "),
         "°)",
       );
-      pass = await runPass(randomDirs(6, badDirs));
+      pass = await runPass(randomDirs(layer, badDirs));
       allResults.push(...pass);
     }
+
 
     console.log("routes ms", Date.now() - t0);
 
