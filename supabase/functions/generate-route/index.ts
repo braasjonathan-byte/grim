@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
     };
 
     // Tröskel för hur mycket ut-och-tillbaka som accepteras alls.
-    const OUT_AND_BACK_MAX = 0.12;
+    const OUT_AND_BACK_MAX = 0.3;
 
     /** Lägre = bättre. Ut-och-tillbaka straffas mycket hårdare än allmän overlap. */
     const score = (r: RouteResult): number =>
