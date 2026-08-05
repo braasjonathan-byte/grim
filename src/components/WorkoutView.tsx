@@ -726,11 +726,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
 
     setActiveDayIndex(index);
-    // A background refetch must never collapse the day that owns an active
-    // registration card. Only explicit day/week navigation may replace it.
-    setActiveDayIndex(index);
     setExpandedDay(null);
   }, [currentWeek, plans, planStartDate, hasOpenModalUi]);
+
 
 
   // Auto-expand if the currently shown day has only one session
