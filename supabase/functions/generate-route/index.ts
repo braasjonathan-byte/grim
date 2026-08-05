@@ -236,21 +236,30 @@ Deno.serve(async (req) => {
 
 
 
-    /** Andel av rutten som körs fram och tillbaka på samma sträcka (0 = perfekt flyt). */
+    /**
+     * Andel av rutten som körs fram och tillbaka på samma sträcka (0 = perfekt flyt).
+     * Endast unika cellbesök räknas – på så vis straffas verkliga återbesök,
+     * inte tät punktupplösning inom samma cell.
+     */
     const overlapRatio = (points: LatLng[]): number => {
       const cell = 40; // meter
-      const seen = new Map<string, number>();
+      const seen = new Set<string>();
+      let visits = 0;
       let repeats = 0;
+      let lastKey = "";
       for (const p of points) {
         const key = `${Math.round((p[0] * 111320) / cell)}:${Math.round(
           (p[1] * 111320 * Math.cos((p[0] * Math.PI) / 180)) / cell,
         )}`;
-        const n = (seen.get(key) ?? 0) + 1;
-        seen.set(key, n);
-        if (n > 1) repeats++;
+        if (key === lastKey) continue;
+        lastKey = key;
+        visits++;
+        if (seen.has(key)) repeats++;
+        else seen.add(key);
       }
-      return repeats / Math.max(points.length, 1);
+      return repeats / Math.max(visits, 1);
     };
+
 
     /** Antal skarpa vändningar (>150°) – typiskt återvändsgränder. */
     const uTurns = (points: LatLng[]): number => {
