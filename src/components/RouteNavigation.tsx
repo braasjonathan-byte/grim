@@ -56,11 +56,13 @@ const RouteNavigation = ({
   route,
   activity,
   name,
+  alternatives,
   onClose,
 }: {
   route: RouteData;
   activity: string;
   name?: string;
+  alternatives?: RoutePoint[][];
   onClose: (result?: { distanceKm: number; points: RoutePoint[] }) => void;
 }) => {
   const [steps, setSteps] = useState<Step[] | null>(null);

@@ -299,7 +299,12 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
     if (open) refreshSaved();
   }, [open, refreshSaved]);
 
-  const startNav = (req: { route: RouteData; activity: string; name?: string }) => {
+  const startNav = (req: {
+    route: RouteData;
+    activity: string;
+    name?: string;
+    alternatives?: [number, number][][];
+  }) => {
     startRouteNavigation({
       ...req,
       onClose: (result) => {
