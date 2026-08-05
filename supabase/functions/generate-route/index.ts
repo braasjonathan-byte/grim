@@ -487,11 +487,13 @@ Deno.serve(async (req) => {
 
     // Clean-nivån är förstahandsvalet. Acceptable används först efter att alla
     // Google-lager har körts och ingen clean-rutt hittats.
-    const OUT_AND_BACK_MAX = 0.16;
+    // Prioritering: hellre en runda som avviker en del från måldistansen än en
+    // runda med avstickare där man tvingas ta samma väg tillbaka.
+    const OUT_AND_BACK_MAX = 0.10;
     // En enda tydlig nål-spets räcker för att underkänna en rutt, oavsett andel.
-    const SPIKE_MAX_M = 380;
-    const ACCEPTABLE_OUT_AND_BACK_MAX = 0.22;
-    const ACCEPTABLE_SPIKE_MAX_M = 500;
+    const SPIKE_MAX_M = 180;
+    const ACCEPTABLE_OUT_AND_BACK_MAX = 0.14;
+    const ACCEPTABLE_SPIKE_MAX_M = 240;
 
     type QualityLevel = "clean" | "acceptable" | "none";
 
@@ -501,14 +503,14 @@ Deno.serve(async (req) => {
       const outAndBack = outAndBackRatio(r.points);
       const spike = longestSpikeM(r.points);
       if (
-        deviation <= 0.25 &&
-        overlap < 0.25 &&
+        deviation <= 0.40 &&
+        overlap < 0.22 &&
         outAndBack < OUT_AND_BACK_MAX &&
         spike <= SPIKE_MAX_M
       ) return "clean";
       if (
-        deviation <= 0.30 &&
-        overlap < 0.35 &&
+        deviation <= 0.55 &&
+        overlap < 0.32 &&
         outAndBack < ACCEPTABLE_OUT_AND_BACK_MAX &&
         spike <= ACCEPTABLE_SPIKE_MAX_M
       ) return "acceptable";
@@ -522,17 +524,20 @@ Deno.serve(async (req) => {
       if (hit !== undefined) return hit;
       const { ratio, spikes } = analyseOutAndBack(r.points);
       const longest = spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
-      const qualityPenalty = qualityLevel(r) === "clean" ? 0 : qualityLevel(r) === "acceptable" ? 5 : 20;
+      const qualityPenalty = qualityLevel(r) === "clean" ? 0 : qualityLevel(r) === "acceptable" ? 8 : 40;
       const val =
         qualityPenalty +
-        Math.abs(r.distanceKm - targetKm) / targetKm +
-        overlapRatio(r.points) * 2.5 +
-        ratio * 12 +
-        Math.min(longest / SPIKE_MAX_M, 8) * 1.5 +
-        Math.min(uTurns(r.points), 10) * 0.05;
+        // Distansavvikelse väger lätt – flyt går före exakt längd.
+        (Math.abs(r.distanceKm - targetKm) / targetKm) * 0.6 +
+        overlapRatio(r.points) * 4 +
+        ratio * 25 +
+        Math.min(longest / SPIKE_MAX_M, 8) * 4 +
+        spikes.length * 1.5 +
+        Math.min(uTurns(r.points), 10) * 0.1;
       scoreCache.set(r.points, val);
       return val;
     };
+
 
 
 
