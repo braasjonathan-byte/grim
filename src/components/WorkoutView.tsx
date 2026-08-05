@@ -306,6 +306,27 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [renameInput, setRenameInput] = useState("");
   const [settingCurrentDay, setSettingCurrentDay] = useState(false);
 
+  // Single source of truth for "the user currently has an open card/dialog".
+  // Background refetches must never move the active day/week or collapse the
+  // expanded day while any of these are open, since several editors render
+  // inline inside the expanded day card and would be unmounted.
+  const hasOpenModalUi = !!(
+    showExercisePicker
+    || weightDialog
+    || conditioningDialog
+    || editingExercise
+    || editingCondLine
+    || deleteExerciseConfirm
+    || replaceExerciseTarget
+    || renameDialog
+    || changeDayDialog
+    || chatShareTarget
+    || editingUppläggPlanId
+  );
+  const hasOpenModalUiRef = useRef(hasOpenModalUi);
+  useEffect(() => { hasOpenModalUiRef.current = hasOpenModalUi; }, [hasOpenModalUi]);
+
+
   // Share to chat
   const [chatShareTarget, setChatShareTarget] = useState<PlanDay | null>(null);
   const [chatFriends, setChatFriends] = useState<{user_id: string; nickname: string}[]>([]);
