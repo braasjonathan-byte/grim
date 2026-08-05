@@ -643,10 +643,13 @@ Deno.serve(async (req) => {
       console.log(
         "inga träffsäkra rundor. bästa:",
         closest
-          ? `${closest.distanceKm.toFixed(2)} km (mål ${targetKm}), overlap ${(overlapRatio(closest.points) * 100).toFixed(0)} %, ut-och-tillbaka ${(outAndBackRatio(closest.points) * 100).toFixed(0)} %`
+          ? `${closest.distanceKm.toFixed(2)} km (mål ${targetKm}), overlap ${(overlapRatio(closest.points) * 100).toFixed(0)} %, ut-och-tillbaka ${(outAndBackRatio(closest.points) * 100).toFixed(0)} %, längsta spets ${Math.round(longestSpikeM(closest.points))} m`
           : "ingen",
       );
-      const hadDeadEnds = closest ? outAndBackRatio(closest.points) >= OUT_AND_BACK_MAX : false;
+      const hadDeadEnds = closest
+        ? outAndBackRatio(closest.points) >= OUT_AND_BACK_MAX || longestSpikeM(closest.points) > SPIKE_MAX_M
+        : false;
+
       return new Response(
         JSON.stringify({
           routes: [],
