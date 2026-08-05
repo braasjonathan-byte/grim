@@ -401,7 +401,7 @@ Deno.serve(async (req) => {
       let highRadius: number | null = null; // ger för lång rutt
       let failures = 0;
 
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 8; i++) {
         let r: RouteResult | null = null;
         try {
           r = await computeLoop(start, buildWaypoints(dir, radius), activity, asphaltOnly);
@@ -425,6 +425,18 @@ Deno.serve(async (req) => {
             `(mål ${targetKm} km, avvikelse ${(((r.distanceKm - targetKm) / targetKm) * 100).toFixed(1)} %, ` +
             `overlap ${(ov * 100).toFixed(0)} %, ut-och-tillbaka ${(ob * 100).toFixed(0)} %)`,
         );
+
+        // Orimligt lång rutt = waypoint hamnade i vatten och Google rutade runt
+        // hela viken/över bron. Använd den varken som förslag eller som bracket –
+        // krymp radien försiktigt istället för att binärsöka mot ett skenvärde.
+        if (r.distanceKm > targetKm * 2.2) {
+          console.log(
+            `dir ${Math.round(dir)}° radie ${Math.round(radius)} m: orimlig rutt (${r.distanceKm.toFixed(0)} km) – troligen vattenpassage, krymper radien`,
+          );
+          radius = Math.max(120, lowRadius != null ? (radius + lowRadius) / 2 : radius * 0.85);
+          continue;
+        }
+
         if (!best || score(r) < score(best)) best = r;
 
         const rel = (r.distanceKm - targetKm) / targetKm;
@@ -432,6 +444,7 @@ Deno.serve(async (req) => {
 
         if (rel < 0) lowRadius = Math.max(lowRadius ?? 0, radius);
         else highRadius = highRadius == null ? radius : Math.min(highRadius, radius);
+
 
         let next: number;
         if (lowRadius != null && highRadius != null && highRadius > lowRadius) {
