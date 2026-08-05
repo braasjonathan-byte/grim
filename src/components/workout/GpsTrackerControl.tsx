@@ -137,7 +137,9 @@ export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storage
     setPrimePoint(null);
     setPrimeError(null);
     goodFixSamples.current = 0;
+    setRouteBuilderOpen(false);
     setFullscreen(false);
+
     // Meddela föräldern så att vyn kan fällas ihop igen (annars ligger den
     // expanderade GPS-panelen kvar och kastar om knapparna i passkortet).
     onCancel?.();
