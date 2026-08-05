@@ -690,10 +690,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       skipDayResetRef.current = false;
       return;
     }
+    // Never re-target the active day while the user has a card/dialog open —
+    // a background refetch would otherwise unmount the open editor.
+    if (hasOpenModalUi) return;
     const weekChanged = prevWeekRef.current !== currentWeek;
     const isInitialPick = !didInitialDayPickRef.current && plans.length > 0;
     const shouldRetryInitialDateAlignment = pendingInitialDateRealignRef.current && !!planStartDate;
     if (!weekChanged && !isInitialPick && !shouldRetryInitialDateAlignment) return;
+
 
     prevWeekRef.current = currentWeek;
 
