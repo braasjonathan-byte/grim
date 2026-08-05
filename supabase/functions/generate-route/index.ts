@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
         }
       }
       const n = sampled.length;
-      if (n < 8) return 0;
+      if (n < 8) return { ratio: 0, spikes: [] };
 
       const heading: number[] = sampled.map((_, i) =>
         bearingOf(sampled[Math.max(0, i - 1)], sampled[Math.min(n - 1, i + 1)]),
