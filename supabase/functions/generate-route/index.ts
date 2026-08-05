@@ -763,46 +763,73 @@ Deno.serve(async (req) => {
      */
     if (pool.length === 0) {
       const profile = activity === "cycling" ? "cycling" : "foot";
-      const osrmWaypoints = buildWaypoints(Math.random() * 360, baseRadius, false, Math.max(8, baseWaypointCount));
-      const coordinates = [start, ...osrmWaypoints]
-        .map(([pointLat, pointLng]) => `${pointLng.toFixed(6)},${pointLat.toFixed(6)}`)
-        .join(";");
-      const osrmUrl =
-        `https://router.project-osrm.org/trip/v1/${profile}/${coordinates}` +
-        "?roundtrip=true&source=first&geometries=polyline&overview=full&steps=false";
       console.log(`OSRM fallback används (profil ${profile}) efter att Google saknade användbar rutt`);
+      const osrmDeadline = Date.now() + 8000;
+      const osrmCandidates: RouteResult[] = [];
+      // Trip behöver något större geometri än Google för att närma sig målet.
+      // Vid kust/glesbygd roteras formen och radien krymps gradvis så att
+      // waypoints som hamnade i vatten inte förstör hela säkerhetsnätet.
+      const osrmBaseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.9;
+      const initialDir = Math.random() * 360;
       try {
-        const osrmResponse = await fetch(osrmUrl, {
-          headers: { "User-Agent": "GrimRouteBuilder/1.0" },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (!osrmResponse.ok) {
-          console.error("OSRM fallback misslyckades", osrmResponse.status, (await osrmResponse.text()).slice(0, 400));
-        } else {
+        for (let osrmAttempt = 0; osrmAttempt < 3 && Date.now() < osrmDeadline - 500; osrmAttempt++) {
+          const radiusFactor = [1, 0.75, 0.55][osrmAttempt];
+          const osrmWaypoints = buildWaypoints(
+            initialDir + osrmAttempt * 47,
+            osrmBaseRadius * radiusFactor,
+            false,
+            Math.max(8, baseWaypointCount),
+          );
+          const coordinates = [start, ...osrmWaypoints]
+            .map(([pointLat, pointLng]) => `${pointLng.toFixed(6)},${pointLat.toFixed(6)}`)
+            .join(";");
+          const osrmUrl =
+            `https://router.project-osrm.org/trip/v1/${profile}/${coordinates}` +
+            "?roundtrip=true&source=first&geometries=polyline&overview=full&steps=false";
+          const remainingMs = Math.max(500, osrmDeadline - Date.now());
+          const osrmResponse = await fetch(osrmUrl, {
+            headers: { "User-Agent": "GrimRouteBuilder/1.0" },
+            signal: AbortSignal.timeout(remainingMs),
+          });
+          if (!osrmResponse.ok) {
+            console.error("OSRM fallback misslyckades", osrmResponse.status, (await osrmResponse.text()).slice(0, 400));
+            continue;
+          }
           const osrmJson = await osrmResponse.json();
           const trip = osrmJson?.trips?.[0];
-          if (trip?.geometry && Number(trip.distance) > 0) {
-            const osrmRoute: RouteResult = {
-              distanceKm: Number(trip.distance) / 1000,
-              points: decodePolyline(String(trip.geometry)),
-            };
-            // OSRM får samma rimlighetskontroll som acceptable. En trasig eller
-            // extremt avvikande fallback ska inte döljas som ett lyckat resultat.
-            if (osrmRoute.points.length >= 4 && qualityLevel(osrmRoute) !== "none") {
-              selectedQuality = qualityLevel(osrmRoute);
-              selectedSource = "osrm";
-              pool = [osrmRoute];
-              console.log(`OSRM levererade ${osrmRoute.distanceKm.toFixed(2)} km (${selectedQuality})`);
-            } else {
-              console.log(
-                `OSRM-rutten underkändes: ${osrmRoute.distanceKm.toFixed(2)} km, ` +
-                  `overlap ${(overlapRatio(osrmRoute.points) * 100).toFixed(0)} %, ` +
-                  `ut-och-tillbaka ${(outAndBackRatio(osrmRoute.points) * 100).toFixed(0)} %, ` +
-                  `längsta spets ${Math.round(longestSpikeM(osrmRoute.points))} m`,
-              );
-            }
-          } else {
+          if (!trip?.geometry || Number(trip.distance) <= 0) {
             console.error("OSRM fallback saknade en giltig trip", String(osrmJson?.code ?? "okänd kod"));
+            continue;
+          }
+          const osrmRoute: RouteResult = {
+            distanceKm: Number(trip.distance) / 1000,
+            points: decodePolyline(String(trip.geometry)),
+          };
+          if (osrmRoute.points.length >= 4) osrmCandidates.push(osrmRoute);
+          console.log(
+            `OSRM försök ${osrmAttempt + 1}: radie ${Math.round(osrmBaseRadius * radiusFactor)} m → ` +
+              `${osrmRoute.distanceKm.toFixed(2)} km (${qualityLevel(osrmRoute)})`,
+          );
+          if (qualityLevel(osrmRoute) !== "none") break;
+        }
+
+        const osrmRoute = osrmCandidates.sort((a, b) => score(a) - score(b)).find((r) => qualityLevel(r) !== "none");
+        if (osrmRoute) {
+          selectedQuality = qualityLevel(osrmRoute);
+          selectedSource = "osrm";
+          pool = [osrmRoute];
+          console.log(`OSRM levererade ${osrmRoute.distanceKm.toFixed(2)} km (${selectedQuality})`);
+        } else {
+          const rejected = osrmCandidates.sort((a, b) => score(a) - score(b))[0];
+          if (rejected) {
+            console.log(
+              `OSRM-rutten underkändes: ${rejected.distanceKm.toFixed(2)} km, ` +
+                `overlap ${(overlapRatio(rejected.points) * 100).toFixed(0)} %, ` +
+                `ut-och-tillbaka ${(outAndBackRatio(rejected.points) * 100).toFixed(0)} %, ` +
+                `längsta spets ${Math.round(longestSpikeM(rejected.points))} m`,
+            );
+          } else {
+            console.error("OSRM fallback gav inga avkodningsbara rutter");
           }
         }
       } catch (osrmError) {
