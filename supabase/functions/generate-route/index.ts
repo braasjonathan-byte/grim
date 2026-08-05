@@ -421,7 +421,7 @@ Deno.serve(async (req) => {
               }
               // Närliggande, motriktade stråk + en lokal vändning >150° krävs.
               // Det undviker falska träffar från vanliga parallellgator.
-              if (sharpestTurn > 150) {
+              if (sharpestTurn > 135) {
                 const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
                 if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
                   needleSpikes.push(candidate);
