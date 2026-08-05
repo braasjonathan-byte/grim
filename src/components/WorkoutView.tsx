@@ -701,13 +701,25 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
 
     setActiveDayIndex(index);
-    setExpandedDay(null);
-  }, [currentWeek, plans, planStartDate]);
+    // A background refetch must never collapse the day that owns an active
+    // registration card. Only explicit day/week navigation may replace it.
+    const hasOpenExerciseUi = !!(
+      showExercisePicker
+      || weightDialog
+      || conditioningDialog
+      || editingExercise
+      || editingCondLine
+      || deleteExerciseConfirm
+      || replaceExerciseTarget
+    );
+    if (!hasOpenExerciseUi) setExpandedDay(null);
+  }, [currentWeek, plans, planStartDate, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine, deleteExerciseConfirm, replaceExerciseTarget]);
 
 
   // Auto-expand if the currently shown day has only one session
   useEffect(() => {
     if (!isMobile) return;
+    if (showExercisePicker || weightDialog || conditioningDialog || editingExercise || editingCondLine) return;
     const currentWeekDays = plans
       .filter((p) => p.week === currentWeek)
       .sort((a, b) => getDayIndex(a.day) - getDayIndex(b.day));
@@ -717,7 +729,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (sameDayPlans.length === 1) {
       setExpandedDay(`${activePlan.week}-${activePlan.day}`);
     }
-  }, [activeDayIndex, currentWeek, plans, isMobile]);
+  }, [activeDayIndex, currentWeek, plans, isMobile, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine]);
 
   const allExercises = useMemo(() => {
     const customMap = new Map(customExercises.map(e => [e.name.toLowerCase(), e]));
