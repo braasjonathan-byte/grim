@@ -450,17 +450,22 @@ Deno.serve(async (req) => {
     const SPIKE_MAX_M = 300;
 
     /** Lägre = bättre. Ut-och-tillbaka och nål-spetsar straffas mycket hårt. */
+    const scoreCache = new WeakMap<object, number>();
     const score = (r: RouteResult): number => {
+      const hit = scoreCache.get(r.points);
+      if (hit !== undefined) return hit;
       const { ratio, spikes } = analyseOutAndBack(r.points);
       const longest = spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
-      return (
+      const val =
         Math.abs(r.distanceKm - targetKm) / targetKm +
         overlapRatio(r.points) * 2.5 +
         ratio * 12 +
         Math.min(longest / SPIKE_MAX_M, 8) * 1.5 +
-        Math.min(uTurns(r.points), 10) * 0.05
-      );
+        Math.min(uTurns(r.points), 10) * 0.05;
+      scoreCache.set(r.points, val);
+      return val;
     };
+
 
 
     /**
