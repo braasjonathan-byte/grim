@@ -619,7 +619,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       }
 
       // Auto-navigate to the active (date-based) week on initial load
-      if (wks.length > 0 && !initialWeekSet && profileLoaded) {
+      if (wks.length > 0 && !initialWeekSet && profileLoaded && !openUiRef.current) {
         // Prefer the date-based active week
         const planWeeks = wks.filter(w => w > 0);
         const dateBasedWeek = computeWeekFromStart(planWeeks);
