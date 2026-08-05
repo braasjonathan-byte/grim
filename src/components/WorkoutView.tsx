@@ -148,6 +148,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Inline editing of existing exercise
   const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;originalName: string;sets: string;reps: string;weight: string;} | null>(null);
+  const [editingCondLine, setEditingCondLine] = useState<{ planId: string; lineIndex: number; name: string } | null>(null);
 
   // Conditioning exercise dialog
   const [conditioningDialog, setConditioningDialog] = useState<{planId: string;exerciseName: string;} | null>(null);
@@ -2796,9 +2797,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setCondMode(getStoredCardioMode(name));
     setEditingCondLine({ planId, lineIndex, name });
   };
-
-  // State for editing a conditioning line
-  const [editingCondLine, setEditingCondLine] = useState<{ planId: string; lineIndex: number; name: string } | null>(null);
 
   // Save edited conditioning line
   const saveEditedCondLine = async () => {
