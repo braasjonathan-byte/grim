@@ -74,6 +74,26 @@ const RouteNavigation = ({
   const [voice, setVoice] = useState(true);
   const spokenRef = useRef<number>(-1);
   const watchRef = useRef<number | null>(null);
+  // Faktiskt tillryggalagd sträcka (meter) samt spåret som spelats in.
+  const [movedM, setMovedM] = useState(0);
+  const trackRef = useRef<RoutePoint[]>([]);
+
+  // Blockera oavsiktlig stängning via bakåtknapp/svep – kräver "Avsluta".
+  useEffect(() => {
+    window.history.pushState({ grimNav: true }, "");
+    const onPop = () => {
+      window.history.pushState({ grimNav: true }, "");
+      setConfirmExit(true);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const finish = useCallback(() => {
+    if (trackRef.current.length > 1) appendRouteToHistory(trackRef.current);
+    onClose({ distanceKm: movedM / 1000, points: trackRef.current });
+  }, [movedM, onClose]);
+
 
   const load = useCallback(async () => {
     setLoading(true);
