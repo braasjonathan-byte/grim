@@ -302,7 +302,17 @@ Deno.serve(async (req) => {
      * Returnerar både total andel och varje enskild spets (med apex + längd),
      * så att en kort men tydlig nål-spets kan underkänna en rutt på egen hand.
      */
+    const obCache = new WeakMap<object, { ratio: number; spikes: Spike[] }>();
     const analyseOutAndBack = (points: LatLng[]): { ratio: number; spikes: Spike[] } => {
+      const cached = obCache.get(points);
+      if (cached) return cached;
+      const result = computeOutAndBack(points);
+      obCache.set(points, result);
+      return result;
+    };
+
+    const computeOutAndBack = (points: LatLng[]): { ratio: number; spikes: Spike[] } => {
+
 
       const STEP = 25; // m mellan samplade punkter
       const NEAR = 60; // m maxavstånd för att räknas som "samma sträcka"
