@@ -344,7 +344,7 @@ Deno.serve(async (req) => {
         return res;
       };
 
-      let flagged = 0;
+      const flags: boolean[] = [];
       for (let i = 0; i < n; i++) {
         const p = sampled[i];
         let hit = false;
@@ -353,15 +353,29 @@ Deno.serve(async (req) => {
           if (haversine(p, sampled[j]) > NEAR) continue;
           let diff = Math.abs(heading[i] - heading[j]) % 360;
           if (diff > 180) diff = 360 - diff;
-          if (diff > 150) {
+          if (diff > 160) {
             hit = true;
             break;
           }
         }
-        if (hit) flagged++;
+        flags.push(hit);
+      }
+
+      // Endast sammanhängande sträckor räknas – enstaka träffar är korsningar,
+      // rondeller eller parallellgator, inte en verklig återvändsgränd.
+      let flagged = 0;
+      let run = 0;
+      for (let i = 0; i <= n; i++) {
+        if (i < n && flags[i]) {
+          run++;
+        } else {
+          if (run >= MIN_RUN) flagged += run;
+          run = 0;
+        }
       }
       return flagged / n;
     };
+
 
     /** Antal skarpa vändningar (>150°) – typiskt återvändsgränder. */
     const uTurns = (points: LatLng[]): number => {
