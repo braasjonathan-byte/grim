@@ -426,14 +426,23 @@ Deno.serve(async (req) => {
     };
 
     // Tröskel för hur mycket ut-och-tillbaka som accepteras alls.
-    const OUT_AND_BACK_MAX = 0.3;
+    const OUT_AND_BACK_MAX = 0.12;
+    // En enda tydlig nål-spets räcker för att underkänna en rutt, oavsett andel.
+    const SPIKE_MAX_M = 300;
 
-    /** Lägre = bättre. Ut-och-tillbaka straffas mycket hårdare än allmän overlap. */
-    const score = (r: RouteResult): number =>
-      Math.abs(r.distanceKm - targetKm) / targetKm +
-      overlapRatio(r.points) * 2.5 +
-      outAndBackRatio(r.points) * 12 +
-      Math.min(uTurns(r.points), 10) * 0.05;
+    /** Lägre = bättre. Ut-och-tillbaka och nål-spetsar straffas mycket hårt. */
+    const score = (r: RouteResult): number => {
+      const { ratio, spikes } = analyseOutAndBack(r.points);
+      const longest = spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
+      return (
+        Math.abs(r.distanceKm - targetKm) / targetKm +
+        overlapRatio(r.points) * 2.5 +
+        ratio * 12 +
+        Math.min(longest / SPIKE_MAX_M, 8) * 1.5 +
+        Math.min(uTurns(r.points), 10) * 0.05
+      );
+    };
+
 
     /**
      * Konvergerar radien mot måldistansen. Håller reda på den minsta radie som
