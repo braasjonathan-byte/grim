@@ -14,7 +14,7 @@ import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 const RouteBuilderDialog = lazyRetry(() => import("@/components/RouteBuilderDialog"));
 
 // Inline conditioning editing card (green, open by default)
-export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean; onCancel?: () => void }) => {
+export const GpsTrackerControl = ({ onStop, autoStart = false, onCancel, storageKey }: { onStop: (km: number, sec: number, route: [number, number][]) => void; autoStart?: boolean; onCancel?: () => void; storageKey?: string }) => {
   const gps = useGpsTracker();
   const hr = useHeartRate();
   const myId = useId();
