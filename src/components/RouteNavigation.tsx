@@ -139,8 +139,21 @@ const RouteNavigation = ({
           const dt = (now - lastFixRef.current.t) / 1000;
           if (dt > 0.5) setSpeedMs(distanceM(lastFixRef.current.p, point) / dt);
         }
+        // Ackumulera faktiskt tillryggalagd sträcka (filtrera bort GPS-brus).
+        const acc = typeof p.coords.accuracy === "number" ? p.coords.accuracy : 0;
+        const prev = trackRef.current[trackRef.current.length - 1];
+        if (!prev) {
+          trackRef.current.push(point);
+        } else {
+          const d = distanceM(prev, point);
+          if (d >= Math.max(6, Math.min(acc, 25))) {
+            trackRef.current.push(point);
+            setMovedM((m) => m + d);
+          }
+        }
         lastFixRef.current = { p: point, t: now };
       },
+
       () => {},
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
     );
