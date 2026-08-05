@@ -13,10 +13,13 @@ interface Props {
   live?: boolean;
   /** Optional historic routes drawn as a faint heatmap-style overlay underneath the main line. */
   heatmap?: Point[][];
+  /** Alternativa vägval (punkt-till-punkt) – ritas i avvikande färg under huvudrutten. */
+  alternatives?: Point[][];
   /** Antal punkter i början av rutten som redan avverkats – ritas grå. */
   traveledCount?: number;
   /** Aktuell GPS-position (för navigering där route är den planerade rundan). */
   livePosition?: Point | null;
+
 }
 
 
@@ -273,6 +276,7 @@ const RouteMap = ({
   defaultOpen = false,
   live = false,
   heatmap,
+  alternatives,
   traveledCount = 0,
   livePosition = null,
 }: Props) => {
@@ -282,9 +286,11 @@ const RouteMap = ({
   const doneLineRef = useRef<any | null>(null);
   const haloLineRef = useRef<any | null>(null);
   const heatLinesRef = useRef<any[]>([]);
+  const altLinesRef = useRef<any[]>([]);
   const startMarkerRef = useRef<any | null>(null);
   const endMarkerRef = useRef<any | null>(null);
   const pulseRef = useRef<ReturnType<typeof createPulseOverlay> | null>(null);
+
   const fittedOnceRef = useRef(false);
   const followPausedRef = useRef(false);
   const followTimerRef = useRef<number | null>(null);
@@ -352,6 +358,8 @@ const RouteMap = ({
       haloLineRef.current?.setMap(null);
       heatLinesRef.current.forEach((l) => l.setMap(null));
       heatLinesRef.current = [];
+      altLinesRef.current.forEach((l) => l.setMap(null));
+      altLinesRef.current = [];
       startMarkerRef.current?.setMap(null);
       endMarkerRef.current?.setMap(null);
       pulseRef.current?.setMap(null);
@@ -400,6 +408,25 @@ const RouteMap = ({
             }),
         );
     }
+
+    // Alternativa vägval – tydligt avvikande färg (bärnsten) så kortaste rutten sticker ut.
+    altLinesRef.current.forEach((l) => l.setMap(null));
+    altLinesRef.current = (alternatives ?? [])
+      .filter((r) => r.length > 1)
+      .map(
+        (r) =>
+          new gm.Polyline({
+            map,
+            path: r.map((p) => ({ lat: p[0], lng: p[1] })),
+            strokeColor: "#f59e0b",
+            strokeOpacity: 0.9,
+            strokeWeight: 4,
+            clickable: false,
+            zIndex: 2,
+          }),
+      );
+
+
 
     // Main route + halo. Avverkad del ritas grå, återstående i temats färg.
     const cut = Math.max(0, Math.min(traveledCount, path.length));
@@ -504,7 +531,7 @@ const RouteMap = ({
       map.fitBounds(bounds, 30);
       fittedOnceRef.current = true;
     }
-  }, [mapReady, route, heatmap, live, primary, dark, traveledCount, livePosition]);
+  }, [mapReady, route, heatmap, alternatives, live, primary, dark, traveledCount, livePosition]);
 
 
   // Return-to-start data
