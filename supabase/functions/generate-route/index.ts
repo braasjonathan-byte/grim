@@ -536,9 +536,11 @@ Deno.serve(async (req) => {
       // En sammanhängande halvbåge på insidan av apex tvingar rutten runt
       // återvändsgränden. Välj ordning efter föregående grund-waypoint så bågen
       // inte korsar sig eller tvingar fram ännu en U-sväng.
-      const sideA = offset(apex, (br + 90) % 360, lateral);
+      // Alla tre punkter ligger på insidan av apex. ±90° låg kvar i samma
+      // radialzon och kunde därför fortfarande ledas ut på udden.
+      const sideA = offset(apex, (br + 120) % 360, lateral);
       const inside = offset(apex, (br + 180) % 360, lateral);
-      const sideB = offset(apex, (br + 270) % 360, lateral);
+      const sideB = offset(apex, (br + 240) % 360, lateral);
       const previous = wps[(idx - 1 + wps.length) % wps.length];
       const [a, c] = haversine(previous, sideA) <= haversine(previous, sideB)
         ? [sideA, sideB]
@@ -625,7 +627,14 @@ Deno.serve(async (req) => {
         if (!spikeFree && repairRounds < 3) {
           repairRounds++;
           const worst = [...spikes].sort((a, b) => b.lengthM - a.lengthM)[0];
-          if (worst) repairs = [...repairs, worst.apex].slice(-3);
+          if (worst) {
+            // Reparera den aktuella värsta spetsen. Ersätt en gammal träff i
+            // samma område i stället för att stapla identiska bågar ovanpå varandra.
+            repairs = [
+              ...repairs.filter((apex) => haversine(apex, worst.apex) >= 250),
+              worst.apex,
+            ].slice(-3);
+          }
           const effectiveCount = Math.min(25, waypointCount + repairs.length * 3);
           console.log(
             `dir ${Math.round(dir)}°: spets hittad (${Math.round(longest)} m) – lägger till 3 extra waypoints runt den (reparation ${repairRounds}/3, totalt ${effectiveCount} wp)`,
