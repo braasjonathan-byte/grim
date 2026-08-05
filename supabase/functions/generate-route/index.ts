@@ -423,11 +423,13 @@ Deno.serve(async (req) => {
       let lowRadius: number | null = null; // ger för kort rutt
       let highRadius: number | null = null; // ger för lång rutt
       let failures = 0;
+      let absurd = 0;
+      let zig = false;
 
       for (let i = 0; i < 8; i++) {
         let r: RouteResult | null = null;
         try {
-          r = await computeLoop(start, buildWaypoints(dir, radius), activity, asphaltOnly);
+          r = await computeLoop(start, buildWaypoints(dir, radius, zig), activity, asphaltOnly);
         } catch (err) {
           console.log(`dir ${Math.round(dir)}° radie ${Math.round(radius)} m: nätverksfel`, String(err));
         }
@@ -444,7 +446,7 @@ Deno.serve(async (req) => {
         const ov = overlapRatio(r.points);
         const ob = outAndBackRatio(r.points);
         console.log(
-          `dir ${Math.round(dir)}° försök ${i + 1}: radie ${Math.round(radius)} m → ${r.distanceKm.toFixed(2)} km ` +
+          `dir ${Math.round(dir)}° försök ${i + 1}${zig ? " (zig)" : ""}: radie ${Math.round(radius)} m → ${r.distanceKm.toFixed(2)} km ` +
             `(mål ${targetKm} km, avvikelse ${(((r.distanceKm - targetKm) / targetKm) * 100).toFixed(1)} %, ` +
             `overlap ${(ov * 100).toFixed(0)} %, ut-och-tillbaka ${(ob * 100).toFixed(0)} %)`,
         );
@@ -453,12 +455,21 @@ Deno.serve(async (req) => {
         // hela viken/över bron. Använd den varken som förslag eller som bracket –
         // krymp radien försiktigt istället för att binärsöka mot ett skenvärde.
         if (r.distanceKm > targetKm * 2.2) {
+          absurd++;
           console.log(
-            `dir ${Math.round(dir)}° radie ${Math.round(radius)} m: orimlig rutt (${r.distanceKm.toFixed(0)} km) – troligen vattenpassage, krymper radien`,
+            `dir ${Math.round(dir)}° radie ${Math.round(radius)} m: orimlig rutt (${r.distanceKm.toFixed(0)} km) – troligen vattenpassage`,
           );
-          radius = Math.max(120, lowRadius != null ? (radius + lowRadius) / 2 : radius * 0.85);
+          if (absurd >= 2 && !zig) {
+            // Större radie går bara ut i vattnet – förläng rundan inåt istället.
+            zig = true;
+            radius = Math.max(120, lowRadius ?? radius * 0.6);
+            console.log(`dir ${Math.round(dir)}°: byter till blomformad bana (radie ${Math.round(radius)} m)`);
+          } else {
+            radius = Math.max(120, lowRadius != null ? (radius + lowRadius) / 2 : radius * 0.85);
+          }
           continue;
         }
+
 
         if (!best || score(r) < score(best)) best = r;
 
