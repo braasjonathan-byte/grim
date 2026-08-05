@@ -19,6 +19,7 @@ const RouteNavigationHost = () => {
       route={req.route}
       activity={req.activity}
       name={req.name}
+      alternatives={req.alternatives}
       onClose={(result) => {
         const cb = req.onClose;
         stopRouteNavigation();

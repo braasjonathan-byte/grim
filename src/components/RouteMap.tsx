@@ -425,10 +425,23 @@ const RouteMap = ({
             map,
             path: r.map((p) => ({ lat: p[0], lng: p[1] })),
             strokeColor: "#f59e0b",
-            strokeOpacity: 0.9,
-            strokeWeight: 4,
+            strokeOpacity: 0,
+            strokeWeight: 5,
             clickable: false,
-            zIndex: 2,
+            zIndex: 5,
+            icons: [
+              {
+                icon: {
+                  path: "M 0,-1 0,1",
+                  strokeColor: "#f59e0b",
+                  strokeOpacity: 1,
+                  strokeWeight: 5,
+                  scale: 1,
+                },
+                offset: "0",
+                repeat: "14px",
+              },
+            ],
           }),
       );
 

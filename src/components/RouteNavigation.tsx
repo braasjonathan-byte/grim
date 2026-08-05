@@ -56,11 +56,13 @@ const RouteNavigation = ({
   route,
   activity,
   name,
+  alternatives,
   onClose,
 }: {
   route: RouteData;
   activity: string;
   name?: string;
+  alternatives?: RoutePoint[][];
   onClose: (result?: { distanceKm: number; points: RoutePoint[] }) => void;
 }) => {
   const [steps, setSteps] = useState<Step[] | null>(null);
@@ -284,7 +286,9 @@ const RouteNavigation = ({
           live
           livePosition={position}
           traveledCount={traveledCount}
+          alternatives={alternatives}
         />
+
         {listOpen && steps && (
           <div className="absolute inset-x-0 bottom-0 z-10 max-h-[55%] overflow-y-auto border-t border-border bg-card/95 backdrop-blur px-3 py-2">
             <ol className="space-y-1">
