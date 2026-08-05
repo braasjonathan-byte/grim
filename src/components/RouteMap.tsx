@@ -276,6 +276,7 @@ const RouteMap = ({
   defaultOpen = false,
   live = false,
   heatmap,
+  alternatives,
   traveledCount = 0,
   livePosition = null,
 }: Props) => {
@@ -285,9 +286,11 @@ const RouteMap = ({
   const doneLineRef = useRef<any | null>(null);
   const haloLineRef = useRef<any | null>(null);
   const heatLinesRef = useRef<any[]>([]);
+  const altLinesRef = useRef<any[]>([]);
   const startMarkerRef = useRef<any | null>(null);
   const endMarkerRef = useRef<any | null>(null);
   const pulseRef = useRef<ReturnType<typeof createPulseOverlay> | null>(null);
+
   const fittedOnceRef = useRef(false);
   const followPausedRef = useRef(false);
   const followTimerRef = useRef<number | null>(null);
