@@ -237,6 +237,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
   const [distanceKm, setDistanceKm] = useState(initial.distanceKm);
   const [loading, setLoading] = useState(false);
   const [route, setRoute] = useState<RouteData | null>(initial.route);
+  const [altRoutes, setAltRoutes] = useState<[number, number][][]>([]);
 
   const [startQuery, setStartQuery] = useState(initial.startQuery);
   const [startPlace, setStartPlace] = useState<Place | null>(initial.startPlace);
@@ -325,7 +326,10 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
       return;
     }
     setLoading(true);
-    if (fresh) setRoute(null);
+    if (fresh) {
+      setRoute(null);
+      setAltRoutes([]);
+    }
     try {
       const start = await resolveStart();
       const { data, error } = await supabase.functions.invoke("generate-route", {
@@ -349,6 +353,11 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
 
       const r = payload.route as RouteData;
       setRoute(r);
+      setAltRoutes(
+        routeType === "point"
+          ? ((payload.alternatives ?? []) as RouteData[]).map((a) => a.points as [number, number][])
+          : [],
+      );
       if (payload.message) toast.info(payload.message);
       setSavingName(
         routeType === "point" && destination
@@ -617,7 +626,17 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
 
               {route && (
                 <div className="space-y-3">
-                  <RouteMap route={route.points} height={260} />
+                  <RouteMap route={route.points} height={260} alternatives={altRoutes} />
+                  {altRoutes.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-1 w-5 rounded-full bg-primary" /> Kortaste vägen
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-1 w-5 rounded-full bg-amber-500" /> Alternativ väg
+                      </span>
+                    </div>
+                  )}
                   <RouteStats data={route} act={activity} />
                   {route.elevations && route.elevations.length > 1 && (
                     <ElevationProfile elevations={route.elevations} distanceKm={route.distanceKm} />
