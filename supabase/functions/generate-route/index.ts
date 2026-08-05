@@ -240,17 +240,20 @@ Deno.serve(async (req) => {
       return out;
     };
 
-    // Åtta waypoints ger Google tillräcklig vägledning för en rundare bana.
+    // Fler waypoints = mer kontroll över Google Routes och färre spets-artefakter.
+    // Risken för nål-spetsar ökar med distansen → adaptiv täthet.
+    const baseWaypointCount = targetKm > 30 ? 12 : targetKm > 15 ? 10 : 8;
+
     // zig = blomformad bana (in och ut mot centrum) → längre runda på samma radie,
     // används när större radie bara ger vattenpassager (kustnära lägen).
-    const buildWaypoints = (dir: number, radiusM: number, zig = false): LatLng[] =>
-      zig
-        ? [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((d, i) =>
-            offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.45)),
-          )
-        : [0, 45, 90, 135, 180, 225, 270, 315].map((d, i) =>
-            offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.92)),
-          );
+    const buildWaypoints = (dir: number, radiusM: number, zig = false, count = baseWaypointCount): LatLng[] => {
+      const n = zig ? Math.max(12, count) : count;
+      const step = 360 / n;
+      return Array.from({ length: n }, (_, i) =>
+        offset(start, dir + i * step, radiusM * (zig ? (i % 2 === 0 ? 1 : 0.45) : i % 2 === 0 ? 1 : 0.92)),
+      );
+    };
+
 
 
     /**
