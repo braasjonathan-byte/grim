@@ -621,7 +621,10 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
           route={navRoute.route}
           activity={navRoute.activity}
           name={navRoute.name}
-          onClose={() => {
+          onClose={(result) => {
+            if (result && result.distanceKm > 0.01) {
+              toast.success(`Runda avslutad – ${result.distanceKm.toFixed(2)} km registrerade`);
+            }
             setNavRoute(null);
             onOpenChange(false);
           }}
