@@ -289,8 +289,10 @@ Deno.serve(async (req) => {
      */
     const outAndBackRatio = (points: LatLng[]): number => {
       const STEP = 25; // m mellan samplade punkter
-      const NEAR = 80; // m maxavstånd för att räknas som "samma sträcka"
-      const MIN_GAP = 150; // m minsta avstånd längs rutten mellan de två passagerna
+      const NEAR = 35; // m maxavstånd för att räknas som "samma sträcka"
+      const MIN_GAP = 200; // m minsta avstånd längs rutten mellan de två passagerna
+      const MIN_RUN = 6; // minst 6 samplingar (~150 m) i följd för att räknas
+
 
       // Resampling med jämnt avstånd
       const sampled: LatLng[] = [];
