@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Map as MapIcon, MapPinOff, Navigation, RefreshCw, WifiOff } from "lucide-react";
+import grimMarker from "@/assets/grim-marker.png";
 
 type Point = [number, number]; // [lat, lng]
 
