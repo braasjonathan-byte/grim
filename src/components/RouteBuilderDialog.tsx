@@ -647,7 +647,10 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
                     <ElevationProfile elevations={route.elevations} distanceKm={route.distanceKm} />
                   )}
 
-                  <Button className="w-full rounded-xl font-bold" onClick={() => startNav({ route, activity, name: savingName })}>
+                  <Button
+                    className="w-full rounded-xl font-bold"
+                    onClick={() => startNav({ route, activity, name: savingName, alternatives: altRoutes })}
+                  >
                     <Navigation className="mr-2 h-4 w-4" /> Starta rutt
                   </Button>
 
