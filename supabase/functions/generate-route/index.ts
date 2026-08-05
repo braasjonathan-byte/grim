@@ -276,17 +276,42 @@ Deno.serve(async (req) => {
       overlapRatio(r.points) * 2.5 +
       Math.min(uTurns(r.points), 10) * 0.05;
 
+    /**
+     * Konvergerar radien mot måldistansen. Håller reda på den minsta radie som
+     * gav för lång rutt och den största som gav för kort rutt – när båda finns
+     * används binärsökning (snabb konvergens), annars en dämpad ratio-skalning.
+     */
     const attempt = async (dir: number): Promise<RouteResult | null> => {
       let radius = baseRadius;
       let best: RouteResult | null = null;
-      for (let i = 0; i < 3; i++) {
+      let lowRadius: number | null = null; // ger för kort rutt
+      let highRadius: number | null = null; // ger för lång rutt
+
+      for (let i = 0; i < 6; i++) {
         const r = await computeLoop(start, buildWaypoints(dir, radius), activity, asphaltOnly);
         if (!r) return best;
+        const ov = overlapRatio(r.points);
+        console.log(
+          `dir ${Math.round(dir)}° försök ${i + 1}: radie ${Math.round(radius)} m → ${r.distanceKm.toFixed(2)} km ` +
+            `(mål ${targetKm} km, avvikelse ${(((r.distanceKm - targetKm) / targetKm) * 100).toFixed(1)} %, overlap ${(ov * 100).toFixed(0)} %)`,
+        );
         if (!best || score(r) < score(best)) best = r;
-        const ratio = targetKm / Math.max(r.distanceKm, 0.1);
-        const good = ratio > 0.85 && ratio < 1.15 && overlapRatio(r.points) < 0.15;
-        if (good) break;
-        radius = Math.max(150, Math.min(radius * (ratio > 0.85 && ratio < 1.15 ? 1.05 : ratio), 40000));
+
+        const rel = (r.distanceKm - targetKm) / targetKm;
+        if (Math.abs(rel) < 0.07 && ov < 0.15) break;
+
+        if (rel < 0) lowRadius = Math.max(lowRadius ?? 0, radius);
+        else highRadius = highRadius == null ? radius : Math.min(highRadius, radius);
+
+        let next: number;
+        if (lowRadius != null && highRadius != null && highRadius > lowRadius) {
+          next = (lowRadius + highRadius) / 2;
+        } else {
+          // Dämpad skalning: undviker att skjuta förbi målet i glesa vägnät.
+          const ratio = targetKm / Math.max(r.distanceKm, 0.1);
+          next = radius * Math.max(0.4, Math.min(2.5, 1 + (ratio - 1) * 0.85));
+        }
+        radius = Math.max(120, Math.min(next, 60000));
       }
       return best;
     };
@@ -296,11 +321,11 @@ Deno.serve(async (req) => {
 
     const found = settled
       .filter((r): r is RouteResult => !!r)
-      // Släng uppenbara ut-och-tillbaka-rutter om vi har bättre alternativ
       .sort((a, b) => score(a) - score(b));
 
-    const clean = found.filter((r) => overlapRatio(r.points) < 0.4);
-    const pool = clean.length > 0 ? clean : found;
+    // Endast rutter inom ±20 % av målet och med lågt fram-och-tillbaka-flöde.
+    const accurate = found.filter((r) => Math.abs(r.distanceKm - targetKm) / targetKm <= 0.2);
+    const pool = accurate.filter((r) => overlapRatio(r.points) < 0.25);
 
     // Ta bort dubbletter (liknande mittpunkt)
     const unique: RouteResult[] = [];
@@ -310,6 +335,22 @@ Deno.serve(async (req) => {
       if (!dup) unique.push(r);
       if (unique.length >= 4) break;
     }
+
+    if (unique.length === 0) {
+      const closest = found[0];
+      console.log(
+        "inga träffsäkra rundor. bästa:",
+        closest ? `${closest.distanceKm.toFixed(2)} km (mål ${targetKm})` : "ingen",
+      );
+      return new Response(
+        JSON.stringify({
+          routes: [],
+          message: `Kunde inte hitta en runda nära ${targetKm} km i det här området – prova en annan distans.`,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
 
 
     if (unique.length === 0) {
