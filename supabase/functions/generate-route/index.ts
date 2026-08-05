@@ -330,9 +330,7 @@ Deno.serve(async (req) => {
       const NEAR = 60; // m maxavstånd för att räknas som "samma sträcka"
       const MIN_GAP = 150; // m minsta avstånd längs rutten mellan de två passagerna
       const MIN_RUN = 3; // ~75 m räcker: även en kort, tydlig nål ska hittas
-      const NEEDLE_NEAR = 80; // in- och utgående ben möts inom 80 m
-      const NEEDLE_MIN = 75; // ignorera bara rena korsnings-/GPS-artefakter
-      const NEEDLE_MAX = 2000; // användarens problematiska korta spetsar är <1–2 km
+      const NEEDLE_MAX_GAP = 4000; // tur och retur för en spets på högst 2 km enkel väg
 
 
 
@@ -387,16 +385,28 @@ Deno.serve(async (req) => {
       };
 
       const flags: boolean[] = [];
+      const needleSpikes: Spike[] = [];
       for (let i = 0; i < n; i++) {
         const p = sampled[i];
         let hit = false;
         for (const j of neighbours(p)) {
-          if (Math.abs(along[j] - along[i]) < MIN_GAP) continue;
+          const routeGap = Math.abs(along[j] - along[i]);
+          if (routeGap < MIN_GAP) continue;
           if (haversine(p, sampled[j]) > NEAR) continue;
           let diff = Math.abs(heading[i] - heading[j]) % 360;
           if (diff > 180) diff = 360 - diff;
-          if (diff > 160) {
+          if (diff > 150) {
             hit = true;
+            // Två närliggande passager i motsatt riktning omsluter spetsen.
+            // Mittpunkten längs rutten mellan dem är dess apex. Registrera även
+            // korta spetsar separat så de inte kan döljas av totalruttens längd.
+            if (j > i && routeGap <= NEEDLE_MAX_GAP) {
+              const apexIdx = Math.min(n - 1, i + Math.floor((j - i) / 2));
+              const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
+              if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
+                needleSpikes.push(candidate);
+              }
+            }
             break;
           }
         }
@@ -419,38 +429,6 @@ Deno.serve(async (req) => {
             spikes.push({ apex: sampled[mid], lengthM: (run * STEP) / 2 });
           }
           run = 0;
-        }
-      }
-
-      // Komplettera den andelsbaserade kontrollen med en explicit lokal nål-kontroll.
-      // För varje möjlig vändpunkt söker vi bakåt och framåt efter två punkter som
-      // ligger nära varandra, men där rutten passerar i motsatt riktning. Detta
-      // fångar en ensam 100–2 000 m lång spets även på en 50 km-runda.
-      const needleSpikes: Spike[] = [];
-      for (let apexIdx = 2; apexIdx < n - 2; apexIdx++) {
-        let found: Spike | null = null;
-        for (let before = apexIdx - 1; before >= 0; before--) {
-          const outward = along[apexIdx] - along[before];
-          if (outward > NEEDLE_MAX) break;
-          if (outward < NEEDLE_MIN) continue;
-          for (let after = apexIdx + 1; after < n; after++) {
-            const returning = along[after] - along[apexIdx];
-            if (returning > NEEDLE_MAX) break;
-            if (returning < NEEDLE_MIN || haversine(sampled[before], sampled[after]) > NEEDLE_NEAR) continue;
-            let diff = Math.abs(heading[before] - heading[after]) % 360;
-            if (diff > 180) diff = 360 - diff;
-            if (diff > 150) {
-              found = { apex: sampled[apexIdx], lengthM: Math.min(outward, returning) };
-              break;
-            }
-          }
-          if (found) break;
-        }
-        if (found) {
-          const duplicate = needleSpikes.some((s) => haversine(s.apex, found.apex) < 150);
-          if (!duplicate) needleSpikes.push(found);
-          // Hoppa förbi samma vändområde så att en spets inte räknas flera gånger.
-          apexIdx += Math.max(1, Math.floor(found.lengthM / STEP / 2));
         }
       }
 
