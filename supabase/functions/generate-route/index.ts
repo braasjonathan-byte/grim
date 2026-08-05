@@ -98,7 +98,7 @@ const computeRoute = async (
     languageCode: "sv-SE",
     units: "METRIC",
   };
-  if (activity === "cycling") body.routeModifiers = { avoidHighways: true, avoidTolls: true, avoidFerries: true };
+  // Routes API stödjer inga avoid-modifiers för WALK/BICYCLE – lämnas därför tomt.
   const res = await fetch(`${GATEWAY}/routes/directions/v2:computeRoutes`, {
     method: "POST",
     headers: gatewayHeaders({ "X-Goog-FieldMask": "routes.distanceMeters,routes.polyline.encodedPolyline" }),
