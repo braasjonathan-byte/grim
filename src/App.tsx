@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SaveIndicatorProvider } from "@/components/SaveIndicator";
 import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
+import RouteNavigationHost from "@/components/RouteNavigationHost";
 
 const Index = lazyRetry(() => import("./pages/Index"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
@@ -25,6 +26,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <InAppBrowserDialog />
+          <RouteNavigationHost />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
