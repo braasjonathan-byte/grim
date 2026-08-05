@@ -615,7 +615,7 @@ Deno.serve(async (req) => {
     };
 
     const isClean = (r: RouteResult) =>
-      Math.abs(r.distanceKm - targetKm) / targetKm <= 0.2 &&
+      Math.abs(r.distanceKm - targetKm) / targetKm <= 0.25 &&
       overlapRatio(r.points) < 0.25 &&
       outAndBackRatio(r.points) < OUT_AND_BACK_MAX &&
       longestSpikeM(r.points) <= SPIKE_MAX_M;
