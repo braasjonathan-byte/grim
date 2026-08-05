@@ -652,13 +652,13 @@ Deno.serve(async (req) => {
 
         const rel = (r.distanceKm - targetKm) / targetKm;
         const spikeFree = longest <= SPIKE_MAX_M && ob < OUT_AND_BACK_MAX;
-        if (Math.abs(rel) < 0.07 && ov < 0.15 && spikeFree) break;
+        if (Math.abs(rel) < 0.12 && ov < 0.15 && spikeFree) break;
 
         // Distansen sitter men rutten har en nål-spets → sätt ut extra waypoints
         // kring spetsen istället för att ändra radie/bäring.
         // Reparera först när distansen är i rätt härad. Att lägga lokala bågar
         // på en 500–1100 km vattenomväg slösar annars alla tre reparationsvarv.
-        if (!spikeFree && Math.abs(rel) <= 0.25 && repairRounds < 3) {
+        if (!spikeFree && Math.abs(rel) <= 0.45 && repairRounds < 5) {
           repairRounds++;
           const worst = [...spikes].sort((a, b) => b.lengthM - a.lengthM)[0];
           if (worst) {
