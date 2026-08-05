@@ -244,15 +244,18 @@ Deno.serve(async (req) => {
     // Risken för nål-spetsar ökar med distansen → adaptiv täthet.
     const baseWaypointCount = targetKm > 30 ? 12 : targetKm > 15 ? 10 : 8;
 
-    // zig = blomformad bana (in och ut mot centrum) → längre runda på samma radie,
-    // används när större radie bara ger vattenpassager (kustnära lägen).
+    // zig = svagt blomformad bana (in och ut mot centrum) → längre runda på samma
+    // radie, används när större radie bara ger vattenpassager (kustnära lägen).
+    // Inre faktorn hålls hög (0,7) – djupa "kronblad" skapar just de nål-spetsar
+    // vi vill undvika.
     const buildWaypoints = (dir: number, radiusM: number, zig = false, count = baseWaypointCount): LatLng[] => {
       const n = zig ? Math.max(12, count) : count;
       const step = 360 / n;
       return Array.from({ length: n }, (_, i) =>
-        offset(start, dir + i * step, radiusM * (zig ? (i % 2 === 0 ? 1 : 0.45) : i % 2 === 0 ? 1 : 0.92)),
+        offset(start, dir + i * step, radiusM * (zig ? (i % 2 === 0 ? 1 : 0.7) : i % 2 === 0 ? 1 : 0.92)),
       );
     };
+
 
 
 
