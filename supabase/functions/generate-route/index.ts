@@ -568,7 +568,7 @@ Deno.serve(async (req) => {
         return wps.slice(0, 25); // Routes API-tak för mellanpunkter
       };
 
-      for (let i = 0; i < 16; i++) {
+      for (let i = 0; i < 12; i++) {
         let r: RouteResult | null = null;
         try {
           r = await computeLoop(start, waypointsFor(), activity, asphaltOnly);
@@ -624,7 +624,9 @@ Deno.serve(async (req) => {
 
         // Distansen sitter men rutten har en nål-spets → sätt ut extra waypoints
         // kring spetsen istället för att ändra radie/bäring.
-        if (!spikeFree && repairRounds < 3) {
+        // Reparera först när distansen är i rätt härad. Att lägga lokala bågar
+        // på en 500–1100 km vattenomväg slösar annars alla tre reparationsvarv.
+        if (!spikeFree && Math.abs(rel) <= 0.25 && repairRounds < 3) {
           repairRounds++;
           const worst = [...spikes].sort((a, b) => b.lengthM - a.lengthM)[0];
           if (worst) {
@@ -678,7 +680,7 @@ Deno.serve(async (req) => {
           }),
         );
         found.push(...settled.filter((x): x is { dir: number; route: RouteResult } => !!x));
-        if (found.filter((x) => isClean(x.route)).length >= 2) break;
+        if (found.some((x) => isClean(x.route))) break;
       }
       return found;
     };
@@ -704,7 +706,7 @@ Deno.serve(async (req) => {
     }
 
     // Lager 3–4: envishet före felmeddelande – nya bäringar tills en ren runda hittas.
-    for (const layer of [8, 8]) {
+    for (const layer of [6, 6]) {
       if (allResults.some((r) => isClean(r.route))) break;
       badDirs.push(...allResults.map((r) => r.dir));
       console.log(
