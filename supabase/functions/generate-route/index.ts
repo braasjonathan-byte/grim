@@ -353,13 +353,6 @@ Deno.serve(async (req) => {
 
 
 
-    if (unique.length === 0) {
-      return new Response(
-        JSON.stringify({ routes: [], message: "Hittade inga rundor här just nu. Prova en annan distans." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     const elevations = await Promise.all(unique.map((r) => fetchElevation(r.points).catch(() => null)));
 
     const routes = unique.map((r, i) => ({
