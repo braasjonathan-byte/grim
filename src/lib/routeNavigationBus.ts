@@ -4,6 +4,8 @@ export interface RouteNavRequest {
   route: RouteData;
   activity: string;
   name?: string;
+  /** Alternativa vägval (längre rutter) – ritas i avvikande färg. */
+  alternatives?: RoutePoint[][];
   onClose?: (result?: { distanceKm: number; points: RoutePoint[] }) => void;
 }
 
