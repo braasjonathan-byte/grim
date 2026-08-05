@@ -61,19 +61,55 @@ const SURFACE_LABELS: Record<string, string> = {
   sett: "gatsten",
 };
 
+// Formulär- och resultatstate sparas i sessionStorage så att en remount av
+// föräldern (t.ex. vid GPS-uppdatering eller bakgrunds-refetch) aldrig
+// återställer användarens val. Endast användarens egna handlingar ändrar dem.
+const FORM_KEY = "grim.routeBuilder.form";
+
+type PersistedForm = {
+  tab: "new" | "saved";
+  activity: Activity;
+  asphaltOnly: boolean;
+  distanceKm: number;
+  routes: RouteData[] | null;
+  selected: number;
+  savingName: string;
+};
+
+const DEFAULT_FORM: PersistedForm = {
+  tab: "new",
+  activity: "running",
+  asphaltOnly: false,
+  distanceKm: 5,
+  routes: null,
+  selected: 0,
+  savingName: "",
+};
+
+const readForm = (): PersistedForm => {
+  try {
+    const raw = sessionStorage.getItem(FORM_KEY);
+    if (!raw) return DEFAULT_FORM;
+    return { ...DEFAULT_FORM, ...(JSON.parse(raw) as Partial<PersistedForm>) };
+  } catch {
+    return DEFAULT_FORM;
+  }
+};
+
 const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) => {
-  const [tab, setTab] = useState<"new" | "saved">("new");
-  const [activity, setActivity] = useState<Activity>("running");
-  const [asphaltOnly, setAsphaltOnly] = useState(false);
-  const [distanceKm, setDistanceKm] = useState(5);
+  const initial = useRef<PersistedForm>(readForm()).current;
+  const [tab, setTab] = useState<"new" | "saved">(initial.tab);
+  const [activity, setActivity] = useState<Activity>(initial.activity);
+  const [asphaltOnly, setAsphaltOnly] = useState(initial.asphaltOnly);
+  const [distanceKm, setDistanceKm] = useState(initial.distanceKm);
   const [loading, setLoading] = useState(false);
-  const [routes, setRoutes] = useState<RouteData[] | null>(null);
-  const [selected, setSelected] = useState(0);
+  const [routes, setRoutes] = useState<RouteData[] | null>(initial.routes);
+  const [selected, setSelected] = useState(initial.selected);
 
   const [userId, setUserId] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedRoute[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
-  const [savingName, setSavingName] = useState("");
+  const [savingName, setSavingName] = useState(initial.savingName);
   const [saving, setSaving] = useState(false);
 
   const [shareTarget, setShareTarget] = useState<{ name: string; activity: string; route: RouteData } | null>(null);
@@ -81,6 +117,18 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
   const [sharing, setSharing] = useState(false);
 
   const [navRoute, setNavRoute] = useState<{ route: RouteData; activity: string; name?: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        FORM_KEY,
+        JSON.stringify({ tab, activity, asphaltOnly, distanceKm, routes, selected, savingName } satisfies PersistedForm),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [tab, activity, asphaltOnly, distanceKm, routes, selected, savingName]);
+
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
