@@ -494,7 +494,7 @@ Deno.serve(async (req) => {
      * används binärsökning (snabb konvergens), annars en dämpad ratio-skalning.
      */
     /**
-     * Ersätter waypointen närmast en spets med fyra lokala waypoints,
+     * Ersätter waypointen närmast en spets med tre lokala waypoints,
      * vilket tvingar Google Routes att gå runt det problematiska området
      * istället för att gå in och vända.
      */
@@ -510,15 +510,13 @@ Deno.serve(async (req) => {
       });
       const br = bearingOf(start, apex);
       const lateral = Math.min(Math.max(250, radiusM * 0.18), 750);
-      const base = wps[idx];
-      // Fyra punkter bildar en liten båge runt spetsområdet. Netto tillkommer tre
-      // waypoints per reparationsvarv, inom Google Routes gräns på 25 punkter.
-      const a = offset(base, (br + 55) % 360, lateral);
-      const b = offset(base, (br + 105) % 360, lateral);
-      const c = offset(base, (br + 255) % 360, lateral);
-      const d = offset(base, (br + 305) % 360, lateral);
+      // En sammanhängande halvbåge på insidan av apex tvingar rutten runt
+      // återvändsgränden. Punkterna ligger i färdriktning och korsar inte varandra.
+      const a = offset(apex, (br + 90) % 360, lateral);
+      const b = offset(apex, (br + 180) % 360, lateral);
+      const c = offset(apex, (br + 270) % 360, lateral);
       const out = [...wps];
-      out.splice(idx, 1, a, b, c, d);
+      out.splice(idx, 1, a, b, c);
       return out;
     };
 
@@ -626,18 +624,26 @@ Deno.serve(async (req) => {
     };
 
 
-    /** Kör ett helt lager av riktningar och returnerar det som hittades. */
+    /**
+     * Kör alla riktningar, men högst två samtidigt. Det behåller envisheten och
+     * anropsbudgeten utan att slå i edge-funktionens CPU-/minnesgräns.
+     */
     const runPass = async (dirsToTry: number[]): Promise<{ dir: number; route: RouteResult }[]> => {
-      const settled = await Promise.all(
-        dirsToTry.map(async (d) => {
+      const found: { dir: number; route: RouteResult }[] = [];
+      for (let offset = 0; offset < dirsToTry.length; offset += 2) {
+        const settled = await Promise.all(
+          dirsToTry.slice(offset, offset + 2).map(async (d) => {
           const route = await attempt(d).catch((e) => {
             console.log(`dir ${Math.round(d)}° kraschade:`, String(e));
             return null;
           });
           return route ? { dir: d, route } : null;
-        }),
-      );
-      return settled.filter((x): x is { dir: number; route: RouteResult } => !!x);
+          }),
+        );
+        found.push(...settled.filter((x): x is { dir: number; route: RouteResult } => !!x));
+        if (found.filter((x) => isClean(x.route)).length >= 2) break;
+      }
+      return found;
     };
 
     const isClean = (r: RouteResult) =>
