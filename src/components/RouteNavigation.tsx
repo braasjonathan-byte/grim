@@ -61,7 +61,7 @@ const RouteNavigation = ({
   route: RouteData;
   activity: string;
   name?: string;
-  onClose: () => void;
+  onClose: (result?: { distanceKm: number; points: RoutePoint[] }) => void;
 }) => {
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [polyline, setPolyline] = useState<RoutePoint[]>(route.points);
