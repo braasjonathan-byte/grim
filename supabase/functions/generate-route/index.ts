@@ -331,7 +331,7 @@ Deno.serve(async (req) => {
       const STEP = 25; // m mellan samplade punkter
       const NEAR = 60; // m maxavstånd för att räknas som "samma sträcka"
       const MIN_GAP = 150; // m minsta avstånd längs rutten mellan de två passagerna
-      const MIN_RUN = 3; // ~75 m räcker: även en kort, tydlig nål ska hittas
+      const MIN_RUN = 2; // ~50 m räcker: även mycket korta nålar ska hittas
       const NEEDLE_MAX_GAP = 4000; // tur och retur för en spets på högst 2 km enkel väg
 
 
@@ -421,7 +421,7 @@ Deno.serve(async (req) => {
               }
               // Närliggande, motriktade stråk + en lokal vändning >150° krävs.
               // Det undviker falska träffar från vanliga parallellgator.
-              if (sharpestTurn > 150) {
+              if (sharpestTurn > 135) {
                 const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
                 if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
                   needleSpikes.push(candidate);
@@ -487,11 +487,13 @@ Deno.serve(async (req) => {
 
     // Clean-nivån är förstahandsvalet. Acceptable används först efter att alla
     // Google-lager har körts och ingen clean-rutt hittats.
-    const OUT_AND_BACK_MAX = 0.16;
+    // Prioritering: hellre en runda som avviker en del från måldistansen än en
+    // runda med avstickare där man tvingas ta samma väg tillbaka.
+    const OUT_AND_BACK_MAX = 0.10;
     // En enda tydlig nål-spets räcker för att underkänna en rutt, oavsett andel.
-    const SPIKE_MAX_M = 380;
-    const ACCEPTABLE_OUT_AND_BACK_MAX = 0.22;
-    const ACCEPTABLE_SPIKE_MAX_M = 500;
+    const SPIKE_MAX_M = 180;
+    const ACCEPTABLE_OUT_AND_BACK_MAX = 0.14;
+    const ACCEPTABLE_SPIKE_MAX_M = 240;
 
     type QualityLevel = "clean" | "acceptable" | "none";
 
@@ -501,14 +503,14 @@ Deno.serve(async (req) => {
       const outAndBack = outAndBackRatio(r.points);
       const spike = longestSpikeM(r.points);
       if (
-        deviation <= 0.25 &&
-        overlap < 0.25 &&
+        deviation <= 0.40 &&
+        overlap < 0.22 &&
         outAndBack < OUT_AND_BACK_MAX &&
         spike <= SPIKE_MAX_M
       ) return "clean";
       if (
-        deviation <= 0.30 &&
-        overlap < 0.35 &&
+        deviation <= 0.55 &&
+        overlap < 0.32 &&
         outAndBack < ACCEPTABLE_OUT_AND_BACK_MAX &&
         spike <= ACCEPTABLE_SPIKE_MAX_M
       ) return "acceptable";
@@ -522,17 +524,20 @@ Deno.serve(async (req) => {
       if (hit !== undefined) return hit;
       const { ratio, spikes } = analyseOutAndBack(r.points);
       const longest = spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
-      const qualityPenalty = qualityLevel(r) === "clean" ? 0 : qualityLevel(r) === "acceptable" ? 5 : 20;
+      const qualityPenalty = qualityLevel(r) === "clean" ? 0 : qualityLevel(r) === "acceptable" ? 8 : 40;
       const val =
         qualityPenalty +
-        Math.abs(r.distanceKm - targetKm) / targetKm +
-        overlapRatio(r.points) * 2.5 +
-        ratio * 12 +
-        Math.min(longest / SPIKE_MAX_M, 8) * 1.5 +
-        Math.min(uTurns(r.points), 10) * 0.05;
+        // Distansavvikelse väger lätt – flyt går före exakt längd.
+        (Math.abs(r.distanceKm - targetKm) / targetKm) * 0.6 +
+        overlapRatio(r.points) * 4 +
+        ratio * 25 +
+        Math.min(longest / SPIKE_MAX_M, 8) * 4 +
+        spikes.length * 1.5 +
+        Math.min(uTurns(r.points), 10) * 0.1;
       scoreCache.set(r.points, val);
       return val;
     };
+
 
 
 
@@ -647,13 +652,13 @@ Deno.serve(async (req) => {
 
         const rel = (r.distanceKm - targetKm) / targetKm;
         const spikeFree = longest <= SPIKE_MAX_M && ob < OUT_AND_BACK_MAX;
-        if (Math.abs(rel) < 0.07 && ov < 0.15 && spikeFree) break;
+        if (Math.abs(rel) < 0.12 && ov < 0.15 && spikeFree) break;
 
         // Distansen sitter men rutten har en nål-spets → sätt ut extra waypoints
         // kring spetsen istället för att ändra radie/bäring.
         // Reparera först när distansen är i rätt härad. Att lägga lokala bågar
         // på en 500–1100 km vattenomväg slösar annars alla tre reparationsvarv.
-        if (!spikeFree && Math.abs(rel) <= 0.25 && repairRounds < 3) {
+        if (!spikeFree && Math.abs(rel) <= 0.45 && repairRounds < 5) {
           repairRounds++;
           const worst = [...spikes].sort((a, b) => b.lengthM - a.lengthM)[0];
           if (worst) {
