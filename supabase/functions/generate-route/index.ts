@@ -261,7 +261,16 @@ Deno.serve(async (req) => {
      * Endast unika cellbesök räknas – på så vis straffas verkliga återbesök,
      * inte tät punktupplösning inom samma cell.
      */
+    const ovCache = new WeakMap<object, number>();
     const overlapRatio = (points: LatLng[]): number => {
+      const hit = ovCache.get(points);
+      if (hit !== undefined) return hit;
+      const val = computeOverlapRatio(points);
+      ovCache.set(points, val);
+      return val;
+    };
+    const computeOverlapRatio = (points: LatLng[]): number => {
+
       const cell = 40; // meter
       const seen = new Set<string>();
       let visits = 0;
