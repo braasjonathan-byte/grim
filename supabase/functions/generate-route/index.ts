@@ -331,7 +331,7 @@ Deno.serve(async (req) => {
       const STEP = 25; // m mellan samplade punkter
       const NEAR = 60; // m maxavstånd för att räknas som "samma sträcka"
       const MIN_GAP = 150; // m minsta avstånd längs rutten mellan de två passagerna
-      const MIN_RUN = 3; // ~75 m räcker: även en kort, tydlig nål ska hittas
+      const MIN_RUN = 2; // ~50 m räcker: även mycket korta nålar ska hittas
       const NEEDLE_MAX_GAP = 4000; // tur och retur för en spets på högst 2 km enkel väg
 
 
