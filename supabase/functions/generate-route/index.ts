@@ -74,30 +74,31 @@ const decodePolyline = (encoded: string): LatLng[] => {
   return points;
 };
 
-const travelModeFor = (activity: string, asphaltOnly: boolean) =>
-  activity === "cycling" ? "BICYCLE" : asphaltOnly ? "WALK" : "WALK";
+const travelModeFor = (activity: string) => (activity === "cycling" ? "BICYCLE" : "WALK");
 
 interface RouteResult {
   distanceKm: number;
   points: LatLng[];
 }
 
-/** Ber Google om en rundslinga genom ett antal waypoints. */
-const computeLoop = async (
+/** Anropar Google Routes API för en rutt (loop om destination === start). */
+const computeRoute = async (
   start: LatLng,
+  destination: LatLng,
   waypoints: LatLng[],
   activity: string,
-  asphaltOnly: boolean,
+  _asphaltOnly: boolean,
 ): Promise<RouteResult | null> => {
-  const body = {
+  const body: Record<string, unknown> = {
     origin: { location: { latLng: { latitude: start[0], longitude: start[1] } } },
-    destination: { location: { latLng: { latitude: start[0], longitude: start[1] } } },
+    destination: { location: { latLng: { latitude: destination[0], longitude: destination[1] } } },
     intermediates: waypoints.map((w) => ({ location: { latLng: { latitude: w[0], longitude: w[1] } } })),
-    travelMode: travelModeFor(activity, asphaltOnly),
+    travelMode: travelModeFor(activity),
     polylineQuality: "HIGH_QUALITY",
     languageCode: "sv-SE",
     units: "METRIC",
   };
+  if (activity === "cycling") body.routeModifiers = { avoidHighways: true, avoidTolls: true, avoidFerries: true };
   const res = await fetch(`${GATEWAY}/routes/directions/v2:computeRoutes`, {
     method: "POST",
     headers: gatewayHeaders({ "X-Goog-FieldMask": "routes.distanceMeters,routes.polyline.encodedPolyline" }),
@@ -116,6 +117,14 @@ const computeLoop = async (
   if (points.length < 4) return null;
   return { distanceKm: Number(route.distanceMeters ?? 0) / 1000, points };
 };
+
+const computeLoop = (
+  start: LatLng,
+  waypoints: LatLng[],
+  activity: string,
+  asphaltOnly: boolean,
+): Promise<RouteResult | null> => computeRoute(start, start, waypoints, activity, asphaltOnly);
+
 
 /** Höjdprofil via Google Elevation API. */
 const fetchElevation = async (points: LatLng[]): Promise<{ gain: number; loss: number } | null> => {
