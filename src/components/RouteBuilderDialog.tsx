@@ -214,6 +214,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
   const generate = async () => {
     setLoading(true);
     setRoutes(null);
+    const useDestination = !!destination && destQuery.trim().length > 0;
     try {
       const pos = await getPositionRobust();
       const { data, error } = await supabase.functions.invoke("generate-route", {
@@ -223,6 +224,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
           distanceKm,
           activity,
           asphaltOnly,
+          ...(useDestination ? { destLat: destination!.lat, destLng: destination!.lng } : {}),
         },
       });
       if (error) throw error;
@@ -234,7 +236,13 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
       }
       setRoutes(result);
       setSelected(0);
-      setSavingName(`${ACTIVITIES.find((a) => a.key === activity)?.label ?? "Runda"} ${result[0].distanceKm.toFixed(1)} km`);
+      const label = ACTIVITIES.find((a) => a.key === activity)?.label ?? "Runda";
+      setSavingName(
+        useDestination
+          ? `${label} till ${destination!.name} · ${result[0].distanceKm.toFixed(1)} km`
+          : `${label} ${result[0].distanceKm.toFixed(1)} km`,
+      );
+
     } catch (e: any) {
       const msg =
         e?.code === 1
