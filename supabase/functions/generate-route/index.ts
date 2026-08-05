@@ -553,16 +553,18 @@ Deno.serve(async (req) => {
           console.log(
             `dir ${Math.round(dir)}° radie ${Math.round(radius)} m: orimlig rutt (${r.distanceKm.toFixed(0)} km) – troligen vattenpassage`,
           );
-          if (absurd >= 2 && !zig) {
-            // Större radie går bara ut i vattnet – förläng rundan inåt istället.
+          // Radien når ut i vattnet → lås taket och sök nedåt istället.
+          highRadius = highRadius == null ? radius : Math.min(highRadius, radius);
+          if (absurd >= 3 && !zig) {
             zig = true;
             radius = Math.max(120, lowRadius ?? radius * 0.6);
             console.log(`dir ${Math.round(dir)}°: byter till blomformad bana (radie ${Math.round(radius)} m)`);
           } else {
-            radius = Math.max(120, lowRadius != null ? (radius + lowRadius) / 2 : radius * 0.85);
+            radius = Math.max(120, lowRadius != null ? (radius + lowRadius) / 2 : radius * 0.8);
           }
           continue;
         }
+
 
 
         if (!best || score(r) < score(best)) best = r;
