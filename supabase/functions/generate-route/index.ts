@@ -489,7 +489,7 @@ Deno.serve(async (req) => {
         }
       });
       const br = bearingOf(start, apex);
-      const lateral = Math.max(300, radiusM * 0.4);
+      const lateral = Math.min(Math.max(300, radiusM * 0.25), 900);
       const base = wps[idx];
       const a = offset(base, (br + 90) % 360, lateral);
       const b = offset(base, (br + 270) % 360, lateral);
