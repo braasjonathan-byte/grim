@@ -225,7 +225,9 @@ Deno.serve(async (req) => {
     const targetKm = distanceKm;
 
     // Slumpade riktningar → större chans att hitta ett vägnät med bra flyt.
-    const baseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.78;
+    // Vägrutter blir betydligt längre än geometrins omkrets. En försiktig
+    // startradie håller Malmös kust-waypoints på land; binärsökningen växer vid behov.
+    const baseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.52;
     const randomDirs = (n: number, avoid: number[] = []): number[] => {
       const out: number[] = [];
       const spread = 360 / n;
