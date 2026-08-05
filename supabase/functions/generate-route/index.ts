@@ -403,13 +403,29 @@ Deno.serve(async (req) => {
             // Mittpunkten längs rutten mellan dem är dess apex. Registrera även
             // korta spetsar separat så de inte kan döljas av totalruttens längd.
             if (j > i && routeGap <= NEEDLE_MAX_GAP) {
-              const apexIdx = Math.min(n - 1, i + Math.floor((j - i) / 2));
-              // Den närliggande passagen i motsatt riktning är i sig det säkra
-              // nål-kriteriet. Kräv inte dessutom en exakt U-sväng vid den
-              // samplade mittpunkten: Google rundar ofta av själva apexet.
-              const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
-              if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
-                needleSpikes.push(candidate);
+              // Hitta den verkliga vändpunkten mellan de två motriktade
+              // passagerna. Mittpunkten räcker inte när Google rundar av apex.
+              let apexIdx = i;
+              let sharpestTurn = 0;
+              const turnWindow = 3; // cirka 75 m på vardera sida
+              for (let k = i + turnWindow; k <= j - turnWindow; k++) {
+                let turn = Math.abs(
+                  bearingOf(sampled[k - turnWindow], sampled[k]) -
+                    bearingOf(sampled[k], sampled[k + turnWindow]),
+                ) % 360;
+                if (turn > 180) turn = 360 - turn;
+                if (turn > sharpestTurn) {
+                  sharpestTurn = turn;
+                  apexIdx = k;
+                }
+              }
+              // Närliggande, motriktade stråk + en lokal vändning >150° krävs.
+              // Det undviker falska träffar från vanliga parallellgator.
+              if (sharpestTurn > 150) {
+                const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
+                if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
+                  needleSpikes.push(candidate);
+                }
               }
             }
             break;
@@ -518,12 +534,17 @@ Deno.serve(async (req) => {
       const br = bearingOf(start, apex);
       const lateral = Math.min(Math.max(250, radiusM * 0.18), 750);
       // En sammanhängande halvbåge på insidan av apex tvingar rutten runt
-      // återvändsgränden. Punkterna ligger i färdriktning och korsar inte varandra.
-      const a = offset(apex, (br + 90) % 360, lateral);
-      const b = offset(apex, (br + 180) % 360, lateral);
-      const c = offset(apex, (br + 270) % 360, lateral);
+      // återvändsgränden. Välj ordning efter föregående grund-waypoint så bågen
+      // inte korsar sig eller tvingar fram ännu en U-sväng.
+      const sideA = offset(apex, (br + 90) % 360, lateral);
+      const inside = offset(apex, (br + 180) % 360, lateral);
+      const sideB = offset(apex, (br + 270) % 360, lateral);
+      const previous = wps[(idx - 1 + wps.length) % wps.length];
+      const [a, c] = haversine(previous, sideA) <= haversine(previous, sideB)
+        ? [sideA, sideB]
+        : [sideB, sideA];
       const out = [...wps];
-      out.splice(idx + 1, 0, a, b, c);
+      out.splice(idx, 0, a, inside, c);
       return out;
     };
 
@@ -637,9 +658,9 @@ Deno.serve(async (req) => {
      */
     const runPass = async (dirsToTry: number[]): Promise<{ dir: number; route: RouteResult }[]> => {
       const found: { dir: number; route: RouteResult }[] = [];
-      for (let offset = 0; offset < dirsToTry.length; offset += 4) {
+      for (let offset = 0; offset < dirsToTry.length; offset += 2) {
         const settled = await Promise.all(
-          dirsToTry.slice(offset, offset + 4).map(async (d) => {
+          dirsToTry.slice(offset, offset + 2).map(async (d) => {
           const route = await attempt(d).catch((e) => {
             console.log(`dir ${Math.round(d)}° kraschade:`, String(e));
             return null;
