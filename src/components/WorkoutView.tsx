@@ -3483,7 +3483,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     });
                     return (
                       <DayGpsRecorder
+                        storageKey={String(plan.id)}
                         konditionExercises={konditionExercises}
+
                         onSave={async (name, km, sec, gpsRoute) => {
                           const totMin = sec / 60;
                           const distRounded = Math.round(km * 100) / 100;
