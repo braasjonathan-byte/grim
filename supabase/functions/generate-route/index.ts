@@ -240,17 +240,23 @@ Deno.serve(async (req) => {
       return out;
     };
 
-    // Åtta waypoints ger Google tillräcklig vägledning för en rundare bana.
-    // zig = blomformad bana (in och ut mot centrum) → längre runda på samma radie,
-    // används när större radie bara ger vattenpassager (kustnära lägen).
-    const buildWaypoints = (dir: number, radiusM: number, zig = false): LatLng[] =>
-      zig
-        ? [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((d, i) =>
-            offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.45)),
-          )
-        : [0, 45, 90, 135, 180, 225, 270, 315].map((d, i) =>
-            offset(start, dir + d, radiusM * (i % 2 === 0 ? 1 : 0.92)),
-          );
+    // Fler waypoints = mer kontroll över Google Routes och färre spets-artefakter.
+    // Risken för nål-spetsar ökar med distansen → adaptiv täthet.
+    const baseWaypointCount = targetKm > 30 ? 12 : targetKm > 15 ? 10 : 8;
+
+    // zig = svagt blomformad bana (in och ut mot centrum) → längre runda på samma
+    // radie, används när större radie bara ger vattenpassager (kustnära lägen).
+    // Inre faktorn hålls hög (0,7) – djupa "kronblad" skapar just de nål-spetsar
+    // vi vill undvika.
+    const buildWaypoints = (dir: number, radiusM: number, zig = false, count = baseWaypointCount): LatLng[] => {
+      const n = zig ? Math.max(12, count) : count;
+      const step = 360 / n;
+      return Array.from({ length: n }, (_, i) =>
+        offset(start, dir + i * step, radiusM * (zig ? (i % 2 === 0 ? 1 : 0.7) : i % 2 === 0 ? 1 : 0.92)),
+      );
+    };
+
+
 
 
     /**
@@ -258,7 +264,16 @@ Deno.serve(async (req) => {
      * Endast unika cellbesök räknas – på så vis straffas verkliga återbesök,
      * inte tät punktupplösning inom samma cell.
      */
+    const ovCache = new WeakMap<object, number>();
     const overlapRatio = (points: LatLng[]): number => {
+      const hit = ovCache.get(points);
+      if (hit !== undefined) return hit;
+      const val = computeOverlapRatio(points);
+      ovCache.set(points, val);
+      return val;
+    };
+    const computeOverlapRatio = (points: LatLng[]): number => {
+
       const cell = 40; // meter
       const seen = new Set<string>();
       let visits = 0;
@@ -287,18 +302,35 @@ Deno.serve(async (req) => {
       return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
     };
 
+    interface Spike {
+      apex: LatLng; // yttersta punkten på spetsen
+      lengthM: number; // längd på ut-och-tillbaka-sträckan (enkel riktning)
+    }
+
     /**
      * Riktningsbaserad detektering av "ut på udde/återvändsgränd och tillbaka".
-     * Resamplar rutten var 25:e meter, och letar efter punkter som ligger nära
-     * (<80 m) en annan del av rutten men färdas i nära motsatt riktning (>150°)
-     * – oavsett om det är exakt samma gata eller en parallell cykelbana.
-     * Returnerar andel av rutten (0–1) som är sådan ut-och-tillbaka-sträcka.
+     * Resamplar rutten var 25:e meter och letar efter punkter som ligger nära
+     * en annan del av rutten men färdas i nära motsatt riktning (>160°).
+     * Returnerar både total andel och varje enskild spets (med apex + längd),
+     * så att en kort men tydlig nål-spets kan underkänna en rutt på egen hand.
      */
-    const outAndBackRatio = (points: LatLng[]): number => {
+    const obCache = new WeakMap<object, { ratio: number; spikes: Spike[] }>();
+    const analyseOutAndBack = (points: LatLng[]): { ratio: number; spikes: Spike[] } => {
+      const cached = obCache.get(points);
+      if (cached) return cached;
+      const result = computeOutAndBack(points);
+      obCache.set(points, result);
+      return result;
+    };
+
+    const computeOutAndBack = (points: LatLng[]): { ratio: number; spikes: Spike[] } => {
+
+
       const STEP = 25; // m mellan samplade punkter
-      const NEAR = 35; // m maxavstånd för att räknas som "samma sträcka"
-      const MIN_GAP = 200; // m minsta avstånd längs rutten mellan de två passagerna
-      const MIN_RUN = 6; // minst 6 samplingar (~150 m) i följd för att räknas
+      const NEAR = 60; // m maxavstånd för att räknas som "samma sträcka"
+      const MIN_GAP = 150; // m minsta avstånd längs rutten mellan de två passagerna
+      const MIN_RUN = 4; // minst 4 samplingar (~100 m) i följd för att räknas
+
 
 
       // Resampling med jämnt avstånd
@@ -319,7 +351,7 @@ Deno.serve(async (req) => {
         }
       }
       const n = sampled.length;
-      if (n < 8) return 0;
+      if (n < 8) return { ratio: 0, spikes: [] };
 
       const heading: number[] = sampled.map((_, i) =>
         bearingOf(sampled[Math.max(0, i - 1)], sampled[Math.min(n - 1, i + 1)]),
@@ -372,16 +404,29 @@ Deno.serve(async (req) => {
       // rondeller eller parallellgator, inte en verklig återvändsgränd.
       let flagged = 0;
       let run = 0;
+      const spikes: Spike[] = [];
       for (let i = 0; i <= n; i++) {
         if (i < n && flags[i]) {
           run++;
         } else {
-          if (run >= MIN_RUN) flagged += run;
+          if (run >= MIN_RUN) {
+            flagged += run;
+            const from = i - run;
+            const mid = Math.min(n - 1, from + Math.floor(run / 2));
+            spikes.push({ apex: sampled[mid], lengthM: (run * STEP) / 2 });
+          }
           run = 0;
         }
       }
-      return flagged / n;
+      return { ratio: flagged / n, spikes };
     };
+
+    const outAndBackRatio = (points: LatLng[]): number => analyseOutAndBack(points).ratio;
+
+    /** Längsta enskilda nål-spetsen i meter (enkel riktning). */
+    const longestSpikeM = (points: LatLng[]): number =>
+      analyseOutAndBack(points).spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
+
 
 
     /** Antal skarpa vändningar (>150°) – typiskt återvändsgränder. */
@@ -403,20 +448,59 @@ Deno.serve(async (req) => {
     };
 
     // Tröskel för hur mycket ut-och-tillbaka som accepteras alls.
-    const OUT_AND_BACK_MAX = 0.3;
+    const OUT_AND_BACK_MAX = 0.12;
+    // En enda tydlig nål-spets räcker för att underkänna en rutt, oavsett andel.
+    const SPIKE_MAX_M = 300;
 
-    /** Lägre = bättre. Ut-och-tillbaka straffas mycket hårdare än allmän overlap. */
-    const score = (r: RouteResult): number =>
-      Math.abs(r.distanceKm - targetKm) / targetKm +
-      overlapRatio(r.points) * 2.5 +
-      outAndBackRatio(r.points) * 12 +
-      Math.min(uTurns(r.points), 10) * 0.05;
+    /** Lägre = bättre. Ut-och-tillbaka och nål-spetsar straffas mycket hårt. */
+    const scoreCache = new WeakMap<object, number>();
+    const score = (r: RouteResult): number => {
+      const hit = scoreCache.get(r.points);
+      if (hit !== undefined) return hit;
+      const { ratio, spikes } = analyseOutAndBack(r.points);
+      const longest = spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
+      const val =
+        Math.abs(r.distanceKm - targetKm) / targetKm +
+        overlapRatio(r.points) * 2.5 +
+        ratio * 12 +
+        Math.min(longest / SPIKE_MAX_M, 8) * 1.5 +
+        Math.min(uTurns(r.points), 10) * 0.05;
+      scoreCache.set(r.points, val);
+      return val;
+    };
+
+
 
     /**
      * Konvergerar radien mot måldistansen. Håller reda på den minsta radie som
      * gav för lång rutt och den största som gav för kort rutt – när båda finns
      * används binärsökning (snabb konvergens), annars en dämpad ratio-skalning.
      */
+    /**
+     * Ersätter waypointen närmast en spets med två sidoförskjutna waypoints,
+     * vilket tvingar Google Routes att gå runt det problematiska området
+     * istället för att gå in och vända.
+     */
+    const repairWaypoints = (wps: LatLng[], apex: LatLng, radiusM: number): LatLng[] => {
+      let idx = 0;
+      let bestD = Infinity;
+      wps.forEach((w, i) => {
+        const d = haversine(w, apex);
+        if (d < bestD) {
+          bestD = d;
+          idx = i;
+        }
+      });
+      const br = bearingOf(start, apex);
+      const lateral = Math.min(Math.max(300, radiusM * 0.25), 900);
+      const base = wps[idx];
+      const a = offset(base, (br + 90) % 360, lateral);
+      const b = offset(base, (br + 270) % 360, lateral);
+      const out = [...wps];
+      out.splice(idx, 1, a, b);
+      return out;
+    };
+
     const attempt = async (dir: number): Promise<RouteResult | null> => {
       let radius = baseRadius;
       let best: RouteResult | null = null;
@@ -425,11 +509,20 @@ Deno.serve(async (req) => {
       let failures = 0;
       let absurd = 0;
       let zig = false;
+      let waypointCount = baseWaypointCount;
+      let repairs: LatLng[] = []; // apex-punkter som ska rundas
+      let repairRounds = 0;
 
-      for (let i = 0; i < 8; i++) {
+      const waypointsFor = (): LatLng[] => {
+        let wps = buildWaypoints(dir, radius, zig, waypointCount);
+        for (const apex of repairs) wps = repairWaypoints(wps, apex, radius);
+        return wps.slice(0, 24); // Routes API-tak för mellanpunkter
+      };
+
+      for (let i = 0; i < 12; i++) {
         let r: RouteResult | null = null;
         try {
-          r = await computeLoop(start, buildWaypoints(dir, radius, zig), activity, asphaltOnly);
+          r = await computeLoop(start, waypointsFor(), activity, asphaltOnly);
         } catch (err) {
           console.log(`dir ${Math.round(dir)}° radie ${Math.round(radius)} m: nätverksfel`, String(err));
         }
@@ -438,17 +531,18 @@ Deno.serve(async (req) => {
           console.log(
             `dir ${Math.round(dir)}° radie ${Math.round(radius)} m: ingen rutt (troligen waypoint i vatten) – försök ${failures}`,
           );
-          if (failures >= 3) return best;
-          // Mindre radie ökar chansen att waypoints hamnar på land.
-          radius = Math.max(120, radius * 0.6);
+          if (failures >= 4) return best;
+          if (repairs.length) repairs = repairs.slice(0, -1);
+          else radius = Math.max(120, radius * 0.6);
           continue;
         }
         const ov = overlapRatio(r.points);
-        const ob = outAndBackRatio(r.points);
+        const { ratio: ob, spikes } = analyseOutAndBack(r.points);
+        const longest = spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
         console.log(
-          `dir ${Math.round(dir)}° försök ${i + 1}${zig ? " (zig)" : ""}: radie ${Math.round(radius)} m → ${r.distanceKm.toFixed(2)} km ` +
+          `dir ${Math.round(dir)}° försök ${i + 1}${zig ? " (zig)" : ""}: ${waypointCount} wp${repairs.length ? `+${repairs.length} rep` : ""}, radie ${Math.round(radius)} m → ${r.distanceKm.toFixed(2)} km ` +
             `(mål ${targetKm} km, avvikelse ${(((r.distanceKm - targetKm) / targetKm) * 100).toFixed(1)} %, ` +
-            `overlap ${(ov * 100).toFixed(0)} %, ut-och-tillbaka ${(ob * 100).toFixed(0)} %)`,
+            `overlap ${(ov * 100).toFixed(0)} %, ut-och-tillbaka ${(ob * 100).toFixed(0)} %, längsta spets ${Math.round(longest)} m)`,
         );
 
         // Orimligt lång rutt = waypoint hamnade i vatten och Google rutade runt
@@ -459,22 +553,39 @@ Deno.serve(async (req) => {
           console.log(
             `dir ${Math.round(dir)}° radie ${Math.round(radius)} m: orimlig rutt (${r.distanceKm.toFixed(0)} km) – troligen vattenpassage`,
           );
-          if (absurd >= 2 && !zig) {
-            // Större radie går bara ut i vattnet – förläng rundan inåt istället.
+          // Radien når ut i vattnet → lås taket och sök nedåt istället.
+          highRadius = highRadius == null ? radius : Math.min(highRadius, radius);
+          if (absurd >= 3 && !zig) {
             zig = true;
             radius = Math.max(120, lowRadius ?? radius * 0.6);
             console.log(`dir ${Math.round(dir)}°: byter till blomformad bana (radie ${Math.round(radius)} m)`);
           } else {
-            radius = Math.max(120, lowRadius != null ? (radius + lowRadius) / 2 : radius * 0.85);
+            radius = Math.max(120, lowRadius != null ? (radius + lowRadius) / 2 : radius * 0.8);
           }
           continue;
         }
 
 
+
         if (!best || score(r) < score(best)) best = r;
 
         const rel = (r.distanceKm - targetKm) / targetKm;
-        if (Math.abs(rel) < 0.07 && ov < 0.15 && ob < OUT_AND_BACK_MAX) break;
+        const spikeFree = longest <= SPIKE_MAX_M && ob < OUT_AND_BACK_MAX;
+        if (Math.abs(rel) < 0.07 && ov < 0.15 && spikeFree) break;
+
+        // Distansen sitter men rutten har en nål-spets → sätt ut extra waypoints
+        // kring spetsen istället för att ändra radie/bäring.
+        if (!spikeFree && Math.abs(rel) < 0.2 && repairRounds < 3) {
+          repairRounds++;
+          const worst = spikes.sort((a, b) => b.lengthM - a.lengthM)[0];
+          if (worst) repairs = [...repairs, worst.apex].slice(-3);
+          waypointCount = Math.min(waypointCount + 2, 14);
+          console.log(
+            `dir ${Math.round(dir)}°: spets hittad (${Math.round(longest)} m) – lägger till waypoints runt den (runda ${repairRounds}, ${waypointCount} wp)`,
+          );
+          continue;
+        }
+
 
         if (rel < 0) lowRadius = Math.max(lowRadius ?? 0, radius);
         else highRadius = highRadius == null ? radius : Math.min(highRadius, radius);
@@ -493,6 +604,7 @@ Deno.serve(async (req) => {
       return best;
     };
 
+
     /** Kör ett helt lager av riktningar och returnerar det som hittades. */
     const runPass = async (dirsToTry: number[]): Promise<{ dir: number; route: RouteResult }[]> => {
       const settled = await Promise.all(
@@ -508,9 +620,10 @@ Deno.serve(async (req) => {
     };
 
     const isClean = (r: RouteResult) =>
-      Math.abs(r.distanceKm - targetKm) / targetKm <= 0.2 &&
+      Math.abs(r.distanceKm - targetKm) / targetKm <= 0.25 &&
       overlapRatio(r.points) < 0.25 &&
-      outAndBackRatio(r.points) < OUT_AND_BACK_MAX;
+      outAndBackRatio(r.points) < OUT_AND_BACK_MAX &&
+      longestSpikeM(r.points) <= SPIKE_MAX_M;
 
     const allResults: { dir: number; route: RouteResult }[] = [];
     const badDirs: number[] = [];
@@ -526,17 +639,19 @@ Deno.serve(async (req) => {
       allResults.push(...pass);
     }
 
-    // Lager 3: inga rutter klarade kvalitetströskeln → nya bäringar, undvik de dåliga.
-    if (!allResults.some((r) => isClean(r.route))) {
+    // Lager 3–4: envishet före felmeddelande – nya bäringar tills en ren runda hittas.
+    for (const layer of [8, 8]) {
+      if (allResults.some((r) => isClean(r.route))) break;
       badDirs.push(...allResults.map((r) => r.dir));
       console.log(
-        "inga rena rundor efter första lagret – kör om med nya bäringar (undviker",
+        `inga rena rundor ännu – kör om med ${layer} nya bäringar (undviker`,
         badDirs.map((d) => Math.round(d)).join(", "),
         "°)",
       );
-      pass = await runPass(randomDirs(6, badDirs));
+      pass = await runPass(randomDirs(layer, badDirs));
       allResults.push(...pass);
     }
+
 
     console.log("routes ms", Date.now() - t0);
 
@@ -559,10 +674,13 @@ Deno.serve(async (req) => {
       console.log(
         "inga träffsäkra rundor. bästa:",
         closest
-          ? `${closest.distanceKm.toFixed(2)} km (mål ${targetKm}), overlap ${(overlapRatio(closest.points) * 100).toFixed(0)} %, ut-och-tillbaka ${(outAndBackRatio(closest.points) * 100).toFixed(0)} %`
+          ? `${closest.distanceKm.toFixed(2)} km (mål ${targetKm}), overlap ${(overlapRatio(closest.points) * 100).toFixed(0)} %, ut-och-tillbaka ${(outAndBackRatio(closest.points) * 100).toFixed(0)} %, längsta spets ${Math.round(longestSpikeM(closest.points))} m`
           : "ingen",
       );
-      const hadDeadEnds = closest ? outAndBackRatio(closest.points) >= OUT_AND_BACK_MAX : false;
+      const hadDeadEnds = closest
+        ? outAndBackRatio(closest.points) >= OUT_AND_BACK_MAX || longestSpikeM(closest.points) > SPIKE_MAX_M
+        : false;
+
       return new Response(
         JSON.stringify({
           routes: [],
