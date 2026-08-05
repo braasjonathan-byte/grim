@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
 
     // Fler waypoints = mer kontroll över Google Routes och färre spets-artefakter.
     // Risken för nål-spetsar ökar med distansen → adaptiv täthet.
-    const baseWaypointCount = targetKm > 30 ? 12 : targetKm > 15 ? 10 : 8;
+    const baseWaypointCount = targetKm > 15 ? 10 : 8;
 
     // zig = svagt blomformad bana (in och ut mot centrum) → längre runda på samma
     // radie, används när större radie bara ger vattenpassager (kustnära lägen).
@@ -404,18 +404,12 @@ Deno.serve(async (req) => {
             // korta spetsar separat så de inte kan döljas av totalruttens längd.
             if (j > i && routeGap <= NEEDLE_MAX_GAP) {
               const apexIdx = Math.min(n - 1, i + Math.floor((j - i) / 2));
-              const beforeApex = Math.max(0, apexIdx - 2);
-              const afterApex = Math.min(n - 1, apexIdx + 2);
-              let apexTurn = Math.abs(
-                bearingOf(sampled[beforeApex], sampled[apexIdx]) -
-                  bearingOf(sampled[apexIdx], sampled[afterApex]),
-              ) % 360;
-              if (apexTurn > 180) apexTurn = 360 - apexTurn;
-              if (apexTurn > 150) {
-                const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
-                if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
-                  needleSpikes.push(candidate);
-                }
+              // Den närliggande passagen i motsatt riktning är i sig det säkra
+              // nål-kriteriet. Kräv inte dessutom en exakt U-sväng vid den
+              // samplade mittpunkten: Google rundar ofta av själva apexet.
+              const candidate = { apex: sampled[apexIdx], lengthM: routeGap / 2 };
+              if (!needleSpikes.some((s) => haversine(s.apex, candidate.apex) < 150)) {
+                needleSpikes.push(candidate);
               }
             }
             break;
@@ -505,7 +499,9 @@ Deno.serve(async (req) => {
      * används binärsökning (snabb konvergens), annars en dämpad ratio-skalning.
      */
     /**
-     * Ersätter waypointen närmast en spets med tre lokala waypoints,
+     * Lägger till tre lokala waypoints runt en spets utan att ta bort någon av
+     * grundpunkterna. Därmed behålls rundans form samtidigt som Google tvingas
+     * förbi återvändsgränden i en båge.
      * vilket tvingar Google Routes att gå runt det problematiska området
      * istället för att gå in och vända.
      */
@@ -527,7 +523,7 @@ Deno.serve(async (req) => {
       const b = offset(apex, (br + 180) % 360, lateral);
       const c = offset(apex, (br + 270) % 360, lateral);
       const out = [...wps];
-      out.splice(idx, 1, a, b, c);
+      out.splice(idx + 1, 0, a, b, c);
       return out;
     };
 
@@ -546,7 +542,7 @@ Deno.serve(async (req) => {
       const waypointsFor = (): LatLng[] => {
         let wps = buildWaypoints(dir, radius, zig, waypointCount);
         for (const apex of repairs) wps = repairWaypoints(wps, apex, radius);
-        return wps.slice(0, 24); // Routes API-tak för mellanpunkter
+        return wps.slice(0, 25); // Routes API-tak för mellanpunkter
       };
 
       for (let i = 0; i < 16; i++) {
@@ -609,9 +605,9 @@ Deno.serve(async (req) => {
           repairRounds++;
           const worst = [...spikes].sort((a, b) => b.lengthM - a.lengthM)[0];
           if (worst) repairs = [...repairs, worst.apex].slice(-3);
-          waypointCount = Math.min(waypointCount + 1, 15);
+          const effectiveCount = Math.min(25, waypointCount + repairs.length * 3);
           console.log(
-            `dir ${Math.round(dir)}°: spets hittad (${Math.round(longest)} m) – lägger till waypoints runt den (runda ${repairRounds}, ${waypointCount} wp)`,
+            `dir ${Math.round(dir)}°: spets hittad (${Math.round(longest)} m) – lägger till 3 extra waypoints runt den (reparation ${repairRounds}/3, totalt ${effectiveCount} wp)`,
           );
           continue;
         }
