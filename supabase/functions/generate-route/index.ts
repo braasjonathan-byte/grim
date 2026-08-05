@@ -290,14 +290,20 @@ Deno.serve(async (req) => {
       return (((Math.atan2(y, x) * 180) / Math.PI) + 360) % 360;
     };
 
+    interface Spike {
+      apex: LatLng; // yttersta punkten på spetsen
+      lengthM: number; // längd på ut-och-tillbaka-sträckan (enkel riktning)
+    }
+
     /**
      * Riktningsbaserad detektering av "ut på udde/återvändsgränd och tillbaka".
-     * Resamplar rutten var 25:e meter, och letar efter punkter som ligger nära
-     * (<80 m) en annan del av rutten men färdas i nära motsatt riktning (>150°)
-     * – oavsett om det är exakt samma gata eller en parallell cykelbana.
-     * Returnerar andel av rutten (0–1) som är sådan ut-och-tillbaka-sträcka.
+     * Resamplar rutten var 25:e meter och letar efter punkter som ligger nära
+     * en annan del av rutten men färdas i nära motsatt riktning (>160°).
+     * Returnerar både total andel och varje enskild spets (med apex + längd),
+     * så att en kort men tydlig nål-spets kan underkänna en rutt på egen hand.
      */
-    const outAndBackRatio = (points: LatLng[]): number => {
+    const analyseOutAndBack = (points: LatLng[]): { ratio: number; spikes: Spike[] } => {
+
       const STEP = 25; // m mellan samplade punkter
       const NEAR = 35; // m maxavstånd för att räknas som "samma sträcka"
       const MIN_GAP = 200; // m minsta avstånd längs rutten mellan de två passagerna
