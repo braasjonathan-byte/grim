@@ -489,20 +489,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
 
               {routes && routes.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {routes.map((r, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setSelected(i)}
-                        className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
-                          i === selected ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                        }`}
-                      >
-                        Runda {i + 1} · {r.distanceKm.toFixed(1)} km
-                      </button>
-                    ))}
-                  </div>
+
 
                   {active && (
                     <>
