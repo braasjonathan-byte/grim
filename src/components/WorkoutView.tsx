@@ -745,7 +745,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (sameDayPlans.length === 1) {
       setExpandedDay(`${activePlan.week}-${activePlan.day}`);
     }
-  }, [activeDayIndex, currentWeek, plans, isMobile, showExercisePicker, weightDialog, conditioningDialog, editingExercise, editingCondLine]);
+  }, [activeDayIndex, currentWeek, plans, isMobile, hasOpenModalUi]);
 
   const allExercises = useMemo(() => {
     const customMap = new Map(customExercises.map(e => [e.name.toLowerCase(), e]));
