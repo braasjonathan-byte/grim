@@ -308,6 +308,20 @@
   opacity: 0.5;
   animation: grim-gps-pulse 1.6s ease-out infinite;
 }
+/* Egen position visas som Grim-loggan istället för en prick */
+.grim-gps-pulse--logo {
+  background: transparent;
+  box-shadow: none;
+}
+.grim-gps-pulse__logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+}
 @keyframes grim-gps-pulse {
   0%   { transform: scale(0.6); opacity: 0.6; }
   100% { transform: scale(2.4); opacity: 0; }
