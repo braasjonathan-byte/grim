@@ -66,6 +66,8 @@ const SURFACE_LABELS: Record<string, string> = {
 // återställer användarens val. Endast användarens egna handlingar ändrar dem.
 const FORM_KEY = "grim.routeBuilder.form";
 
+type Destination = { lat: number; lng: number; name: string };
+
 type PersistedForm = {
   tab: "new" | "saved";
   activity: Activity;
@@ -74,6 +76,8 @@ type PersistedForm = {
   routes: RouteData[] | null;
   selected: number;
   savingName: string;
+  destQuery: string;
+  destination: Destination | null;
 };
 
 const DEFAULT_FORM: PersistedForm = {
@@ -84,6 +88,8 @@ const DEFAULT_FORM: PersistedForm = {
   routes: null,
   selected: 0,
   savingName: "",
+  destQuery: "",
+  destination: null,
 };
 
 const readForm = (): PersistedForm => {
@@ -106,6 +112,11 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
   const [routes, setRoutes] = useState<RouteData[] | null>(initial.routes);
   const [selected, setSelected] = useState(initial.selected);
 
+  const [destQuery, setDestQuery] = useState(initial.destQuery);
+  const [destination, setDestination] = useState<Destination | null>(initial.destination);
+  const [suggestions, setSuggestions] = useState<{ placeId: string; text: string; secondary: string }[]>([]);
+  const [destLoading, setDestLoading] = useState(false);
+
   const [userId, setUserId] = useState<string | null>(null);
   const [saved, setSaved] = useState<SavedRoute[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
@@ -122,12 +133,63 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
     try {
       sessionStorage.setItem(
         FORM_KEY,
-        JSON.stringify({ tab, activity, asphaltOnly, distanceKm, routes, selected, savingName } satisfies PersistedForm),
+        JSON.stringify({
+          tab,
+          activity,
+          asphaltOnly,
+          distanceKm,
+          routes,
+          selected,
+          savingName,
+          destQuery,
+          destination,
+        } satisfies PersistedForm),
       );
     } catch {
       /* ignore */
     }
-  }, [tab, activity, asphaltOnly, distanceKm, routes, selected, savingName]);
+  }, [tab, activity, asphaltOnly, distanceKm, routes, selected, savingName, destQuery, destination]);
+
+  // Platsförslag medan användaren skriver (debounce 300 ms).
+  useEffect(() => {
+    const q = destQuery.trim();
+    if (destination && q === destination.name) return;
+    if (q.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    let cancelled = false;
+    const id = window.setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("place-search", { body: { query: q } });
+        if (!cancelled) setSuggestions(data?.suggestions ?? []);
+      } catch {
+        if (!cancelled) setSuggestions([]);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [destQuery, destination]);
+
+  const pickSuggestion = async (s: { placeId: string; text: string; secondary: string }) => {
+    setDestLoading(true);
+    setSuggestions([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("place-search", { body: { placeId: s.placeId } });
+      if (error || !data?.lat) throw error ?? new Error("Kunde inte hämta platsen");
+      const name = s.text || data.name || "Destination";
+      setDestination({ lat: data.lat, lng: data.lng, name });
+      setDestQuery(name);
+    } catch {
+      toast.error("Kunde inte hämta platsen");
+    } finally {
+      setDestLoading(false);
+    }
+  };
+
+
 
 
   useEffect(() => {
