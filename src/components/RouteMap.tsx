@@ -236,9 +236,14 @@ const createPulseOverlay = (map: any, position: any, color: string) => {
     }
     onAdd() {
       const el = document.createElement("div");
-      el.className = "grim-gps-pulse";
+      el.className = "grim-gps-pulse grim-gps-pulse--logo";
       el.style.position = "absolute";
       el.style.setProperty("--pulse-color", color);
+      const img = document.createElement("img");
+      img.src = grimMarker;
+      img.alt = "Din position";
+      img.className = "grim-gps-pulse__logo";
+      el.appendChild(img);
       this.el = el;
       this.getPanes()?.overlayMouseTarget.appendChild(el);
     }
