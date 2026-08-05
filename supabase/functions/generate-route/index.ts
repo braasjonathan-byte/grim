@@ -302,27 +302,50 @@ const orsPointToPoint = async (
   dest: LatLng,
   activity: Activity,
   asphaltOnly: boolean,
-): Promise<RouteResult> => {
-  const data = await orsRequest(
-    ORS_PROFILE[activity],
-    {
-      coordinates: [
-        [start[1], start[0]],
-        [dest[1], dest[0]],
-      ],
-      elevation: true,
-      instructions: false,
-      extra_info: ["surface"],
-      preference: "recommended",
-      units: "m",
-      options: orsOptions(activity, asphaltOnly),
-    },
-    key,
-  );
-  const route = parseOrsFeature(data?.features?.[0]);
-  if (!route) throw new Error("NO_ROUTE");
-  return route;
+): Promise<{ route: RouteResult; alternatives: RouteResult[] }> => {
+  const baseBody = {
+    coordinates: [
+      [start[1], start[0]],
+      [dest[1], dest[0]],
+    ],
+    elevation: true,
+    instructions: false,
+    extra_info: ["surface"],
+    preference: "recommended",
+    units: "m",
+    options: orsOptions(activity, asphaltOnly),
+  };
+
+  let features: any[] = [];
+  try {
+    // Be om alternativa vägval så användaren kan jämföra.
+    const data = await orsRequest(
+      ORS_PROFILE[activity],
+      {
+        ...baseBody,
+        alternative_routes: { target_count: 3, share_factor: 0.6, weight_factor: 1.4 },
+      },
+      key,
+    );
+    features = data?.features ?? [];
+  } catch (e) {
+    console.error("ORS alternatives failed, retrying without", (e as Error).message);
+  }
+
+  if (!features.length) {
+    const data = await orsRequest(ORS_PROFILE[activity], baseBody, key);
+    features = data?.features ?? [];
+  }
+
+  const parsed = features
+    .map((f) => parseOrsFeature(f))
+    .filter((r): r is RouteResult => Boolean(r))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  if (!parsed.length) throw new Error("NO_ROUTE");
+  return { route: parsed[0], alternatives: parsed.slice(1) };
 };
+
 
 // ------------------------------------------------------------- Google Maps
 
