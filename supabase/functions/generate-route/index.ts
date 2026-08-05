@@ -546,13 +546,17 @@ Deno.serve(async (req) => {
     const provider = configured || (ORS_API_KEY ? "ors" : "google");
 
     let route: RouteResult;
+    let alternatives: RouteResult[] = [];
     try {
       if (provider === "ors") {
         if (!ORS_API_KEY) return json({ error: "Ruttjänsten är inte konfigurerad (ORS_API_KEY saknas)" }, 500);
-        route =
-          routeType === "point"
-            ? await orsPointToPoint(ORS_API_KEY, start, dest!, activity, asphaltOnly)
-            : await orsLoop(ORS_API_KEY, start, distanceKm, activity, asphaltOnly, seed);
+        if (routeType === "point") {
+          const res = await orsPointToPoint(ORS_API_KEY, start, dest!, activity, asphaltOnly);
+          route = res.route;
+          alternatives = res.alternatives;
+        } else {
+          route = await orsLoop(ORS_API_KEY, start, distanceKm, activity, asphaltOnly, seed);
+        }
       } else {
         if (!LOVABLE_API_KEY || !GOOGLE_MAPS_API_KEY) {
           return json({ error: "Karttjänsten är inte konfigurerad" }, 500);
@@ -562,6 +566,7 @@ Deno.serve(async (req) => {
             ? await googleRoute(LOVABLE_API_KEY, GOOGLE_MAPS_API_KEY, [start, dest!], activity)
             : await googleLoop(LOVABLE_API_KEY, GOOGLE_MAPS_API_KEY, start, distanceKm, activity, seed);
       }
+
     } catch (e) {
       const msg = (e as Error).message ?? "";
       console.error("route generation failed", msg);
