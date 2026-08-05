@@ -18,6 +18,8 @@ import { supabase } from "@/integrations/supabase/client";
 import RouteMap from "@/components/RouteMap";
 import { Button } from "@/components/ui/button";
 import type { RouteData, RoutePoint } from "@/lib/savedRoutes";
+import { appendRouteToHistory } from "@/lib/routeHistory";
+
 
 interface Step {
   instruction: string;
@@ -59,7 +61,7 @@ const RouteNavigation = ({
   route: RouteData;
   activity: string;
   name?: string;
-  onClose: () => void;
+  onClose: (result?: { distanceKm: number; points: RoutePoint[] }) => void;
 }) => {
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [polyline, setPolyline] = useState<RoutePoint[]>(route.points);
@@ -74,6 +76,26 @@ const RouteNavigation = ({
   const [voice, setVoice] = useState(true);
   const spokenRef = useRef<number>(-1);
   const watchRef = useRef<number | null>(null);
+  // Faktiskt tillryggalagd sträcka (meter) samt spåret som spelats in.
+  const [movedM, setMovedM] = useState(0);
+  const trackRef = useRef<RoutePoint[]>([]);
+
+  // Blockera oavsiktlig stängning via bakåtknapp/svep – kräver "Avsluta".
+  useEffect(() => {
+    window.history.pushState({ grimNav: true }, "");
+    const onPop = () => {
+      window.history.pushState({ grimNav: true }, "");
+      setConfirmExit(true);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const finish = useCallback(() => {
+    if (trackRef.current.length > 1) appendRouteToHistory(trackRef.current);
+    onClose({ distanceKm: movedM / 1000, points: trackRef.current });
+  }, [movedM, onClose]);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -117,8 +139,21 @@ const RouteNavigation = ({
           const dt = (now - lastFixRef.current.t) / 1000;
           if (dt > 0.5) setSpeedMs(distanceM(lastFixRef.current.p, point) / dt);
         }
+        // Ackumulera faktiskt tillryggalagd sträcka (filtrera bort GPS-brus).
+        const acc = typeof p.coords.accuracy === "number" ? p.coords.accuracy : 0;
+        const prev = trackRef.current[trackRef.current.length - 1];
+        if (!prev) {
+          trackRef.current.push(point);
+        } else {
+          const d = distanceM(prev, point);
+          if (d >= Math.max(6, Math.min(acc, 25))) {
+            trackRef.current.push(point);
+            setMovedM((m) => m + d);
+          }
+        }
         lastFixRef.current = { p: point, t: now };
       },
+
       () => {},
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
     );
@@ -283,9 +318,9 @@ const RouteNavigation = ({
             </div>
             <div className="h-8 w-px bg-border" />
             <div>
-            <p className="text-lg font-black tabular-nums text-foreground">{fmtDist(remainingM)}</p>
+            <p className="text-lg font-black tabular-nums text-foreground">{fmtDist(movedM)}</p>
             <p className="text-[11px] text-muted-foreground">
-              {name ? `${name} · ` : ""}kvar av rundan
+              {name ? `${name} · ` : ""}rört dig · {fmtDist(remainingM)} kvar
               {route.elevationGainM != null ? ` · ↑ ${Math.round(route.elevationGainM)} m` : ""}
             </p>
             </div>
@@ -307,16 +342,19 @@ const RouteNavigation = ({
       {confirmExit && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 px-6 backdrop-blur-sm">
           <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-4 text-center shadow-soft">
-            <p className="text-sm font-bold text-foreground">Avsluta navigeringen?</p>
-            <p className="mt-1 text-xs text-muted-foreground">Kartan och vägbeskrivningen stängs.</p>
+            <p className="text-sm font-bold text-foreground">Avsluta rundan?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Navigeringen avslutas och {fmtDist(movedM)} registreras som din sträcka.
+            </p>
             <div className="mt-4 flex gap-2">
               <Button variant="secondary" className="flex-1 rounded-full" onClick={() => setConfirmExit(false)}>
-                Fortsätt
+                Fortsätt rundan
               </Button>
-              <Button variant="destructive" className="flex-1 rounded-full" onClick={onClose}>
+              <Button variant="destructive" className="flex-1 rounded-full" onClick={finish}>
                 Avsluta
               </Button>
             </div>
+
           </div>
         </div>
       )}
