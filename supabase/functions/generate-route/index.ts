@@ -485,10 +485,35 @@ Deno.serve(async (req) => {
       return count;
     };
 
-    // Tröskel för hur mycket ut-och-tillbaka som accepteras alls.
-    const OUT_AND_BACK_MAX = 0.08;
+    // Clean-nivån är förstahandsvalet. Acceptable används först efter att alla
+    // Google-lager har körts och ingen clean-rutt hittats.
+    const OUT_AND_BACK_MAX = 0.16;
     // En enda tydlig nål-spets räcker för att underkänna en rutt, oavsett andel.
-    const SPIKE_MAX_M = 120;
+    const SPIKE_MAX_M = 380;
+    const ACCEPTABLE_OUT_AND_BACK_MAX = 0.22;
+    const ACCEPTABLE_SPIKE_MAX_M = 500;
+
+    type QualityLevel = "clean" | "acceptable" | "none";
+
+    const qualityLevel = (r: RouteResult): QualityLevel => {
+      const deviation = Math.abs(r.distanceKm - targetKm) / targetKm;
+      const overlap = overlapRatio(r.points);
+      const outAndBack = outAndBackRatio(r.points);
+      const spike = longestSpikeM(r.points);
+      if (
+        deviation <= 0.25 &&
+        overlap < 0.25 &&
+        outAndBack < OUT_AND_BACK_MAX &&
+        spike <= SPIKE_MAX_M
+      ) return "clean";
+      if (
+        deviation <= 0.30 &&
+        overlap < 0.35 &&
+        outAndBack < ACCEPTABLE_OUT_AND_BACK_MAX &&
+        spike <= ACCEPTABLE_SPIKE_MAX_M
+      ) return "acceptable";
+      return "none";
+    };
 
     /** Lägre = bättre. Ut-och-tillbaka och nål-spetsar straffas mycket hårt. */
     const scoreCache = new WeakMap<object, number>();
@@ -497,7 +522,9 @@ Deno.serve(async (req) => {
       if (hit !== undefined) return hit;
       const { ratio, spikes } = analyseOutAndBack(r.points);
       const longest = spikes.reduce((m, s) => Math.max(m, s.lengthM), 0);
+      const qualityPenalty = qualityLevel(r) === "clean" ? 0 : qualityLevel(r) === "acceptable" ? 5 : 20;
       const val =
+        qualityPenalty +
         Math.abs(r.distanceKm - targetKm) / targetKm +
         overlapRatio(r.points) * 2.5 +
         ratio * 12 +
@@ -685,11 +712,8 @@ Deno.serve(async (req) => {
       return found;
     };
 
-    const isClean = (r: RouteResult) =>
-      Math.abs(r.distanceKm - targetKm) / targetKm <= 0.25 &&
-      overlapRatio(r.points) < 0.25 &&
-      outAndBackRatio(r.points) < OUT_AND_BACK_MAX &&
-      longestSpikeM(r.points) <= SPIKE_MAX_M;
+    const isClean = (r: RouteResult) => qualityLevel(r) === "clean";
+    const isAcceptable = (r: RouteResult) => qualityLevel(r) === "acceptable";
 
     const allResults: { dir: number; route: RouteResult }[] = [];
     const badDirs: number[] = [];
@@ -723,8 +747,106 @@ Deno.serve(async (req) => {
 
     const found = allResults.map((r) => r.route).sort((a, b) => score(a) - score(b));
 
-    // Endast träffsäkra rutter utan tydliga återvändsgränder. Ingen tyst fallback.
-    const pool = found.filter(isClean);
+    // Graderad fallback: acceptable får aldrig konkurrera ut en clean-rutt.
+    let selectedQuality: QualityLevel = found.some(isClean)
+      ? "clean"
+      : found.some(isAcceptable)
+        ? "acceptable"
+        : "none";
+    let selectedSource: "google" | "osrm" | "none" = selectedQuality === "none" ? "none" : "google";
+    let pool = selectedQuality === "clean" ? found.filter(isClean) : found.filter(isAcceptable);
+
+    /**
+     * Sista säkerhetsnätet: OSRM Trip optimerar ordningen på punkterna till en
+     * verklig rundtur. Google är alltid förstahandskälla och OSRM anropas bara
+     * när samtliga Google-lager saknar både clean och acceptable resultat.
+     */
+    if (pool.length === 0) {
+      const profile = activity === "cycling" ? "cycling" : "foot";
+      console.log(`OSRM fallback används (profil ${profile}) efter att Google saknade användbar rutt`);
+      const osrmDeadline = Date.now() + 8000;
+      const osrmCandidates: RouteResult[] = [];
+      // Trip behöver något större geometri än Google för att närma sig målet.
+      // Vid kust/glesbygd roteras formen och radien krymps gradvis så att
+      // waypoints som hamnade i vatten inte förstör hela säkerhetsnätet.
+      const osrmBaseRadius = (targetKm * 1000) / (2 * Math.PI) * 0.9;
+      const initialDir = Math.random() * 360;
+      try {
+        for (let osrmAttempt = 0; osrmAttempt < 4 && Date.now() < osrmDeadline - 500; osrmAttempt++) {
+          const radiusFactor = osrmAttempt < 2 ? 1 : 0.72;
+          const direction = initialDir + osrmAttempt * 90;
+          const attemptRadius = osrmBaseRadius * radiusFactor;
+          // Tangentcirkel: start ligger på cirkelns kant och resten av formen på
+          // en sida. Till skillnad från en startcentrerad cirkel kan den därför
+          // roteras helt in över land vid kust och skärgård.
+          const osrmCentre = offset(start, direction, attemptRadius);
+          const waypointCount = Math.max(8, baseWaypointCount);
+          const startBearing = (direction + 180) % 360;
+          const osrmWaypoints = Array.from({ length: waypointCount - 1 }, (_, index) =>
+            offset(
+              osrmCentre,
+              startBearing + ((index + 1) * 360) / waypointCount,
+              attemptRadius * (index % 2 === 0 ? 1 : 0.94),
+            )
+          );
+          const coordinates = [start, ...osrmWaypoints]
+            .map(([pointLat, pointLng]) => `${pointLng.toFixed(6)},${pointLat.toFixed(6)}`)
+            .join(";");
+          const osrmUrl =
+            `https://router.project-osrm.org/trip/v1/${profile}/${coordinates}` +
+            "?roundtrip=true&source=first&geometries=polyline&overview=full&steps=false";
+          const remainingMs = Math.max(500, osrmDeadline - Date.now());
+          const osrmResponse = await fetch(osrmUrl, {
+            headers: { "User-Agent": "GrimRouteBuilder/1.0" },
+            signal: AbortSignal.timeout(remainingMs),
+          });
+          if (!osrmResponse.ok) {
+            console.error("OSRM fallback misslyckades", osrmResponse.status, (await osrmResponse.text()).slice(0, 400));
+            continue;
+          }
+          const osrmJson = await osrmResponse.json();
+          const trip = osrmJson?.trips?.[0];
+          if (!trip?.geometry || Number(trip.distance) <= 0) {
+            console.error("OSRM fallback saknade en giltig trip", String(osrmJson?.code ?? "okänd kod"));
+            continue;
+          }
+          const osrmRoute: RouteResult = {
+            distanceKm: Number(trip.distance) / 1000,
+            points: decodePolyline(String(trip.geometry)),
+          };
+          if (osrmRoute.points.length >= 4) osrmCandidates.push(osrmRoute);
+          console.log(
+            `OSRM försök ${osrmAttempt + 1}: tangentcirkel ${Math.round(direction % 360)}°, radie ${Math.round(attemptRadius)} m → ` +
+              `${osrmRoute.distanceKm.toFixed(2)} km (${qualityLevel(osrmRoute)})`,
+          );
+          if (qualityLevel(osrmRoute) !== "none") break;
+        }
+
+        const osrmRoute = osrmCandidates.sort((a, b) => score(a) - score(b)).find((r) => qualityLevel(r) !== "none");
+        if (osrmRoute) {
+          selectedQuality = qualityLevel(osrmRoute);
+          selectedSource = "osrm";
+          pool = [osrmRoute];
+          console.log(`OSRM levererade ${osrmRoute.distanceKm.toFixed(2)} km (${selectedQuality})`);
+        } else {
+          const rejected = osrmCandidates.sort((a, b) => score(a) - score(b))[0];
+          if (rejected) {
+            console.log(
+              `OSRM-rutten underkändes: ${rejected.distanceKm.toFixed(2)} km, ` +
+                `overlap ${(overlapRatio(rejected.points) * 100).toFixed(0)} %, ` +
+                `ut-och-tillbaka ${(outAndBackRatio(rejected.points) * 100).toFixed(0)} %, ` +
+                `längsta spets ${Math.round(longestSpikeM(rejected.points))} m`,
+            );
+          } else {
+            console.error("OSRM fallback gav inga avkodningsbara rutter");
+          }
+        }
+      } catch (osrmError) {
+        console.error("OSRM fallback timeout/nätverksfel", String(osrmError));
+      }
+    }
+
+    console.log("route selection", JSON.stringify({ quality: selectedQuality, source: selectedSource }));
 
     // Ta bort dubbletter (liknande mittpunkt)
     const unique: RouteResult[] = [];
@@ -772,9 +894,9 @@ Deno.serve(async (req) => {
       elevationLossM: elevations[i]?.loss ?? null,
     }));
 
-    console.log("total ms", Date.now() - t0, "routes", routes.length);
+    console.log("total ms", Date.now() - t0, "routes", routes.length, "quality", selectedQuality, "source", selectedSource);
 
-    return new Response(JSON.stringify({ routes, target: distanceKm }), {
+    return new Response(JSON.stringify({ routes, target: distanceKm, quality: selectedQuality, source: selectedSource }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
