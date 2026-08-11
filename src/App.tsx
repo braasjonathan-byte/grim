@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SaveIndicatorProvider } from "@/components/SaveIndicator";
 import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
 import RouteNavigationHost from "@/components/RouteNavigationHost";
+import { startWakeLockManager } from "@/lib/wakeLock";
 
 const Index = lazyRetry(() => import("./pages/Index"));
 const NotFound = lazyRetry(() => import("./pages/NotFound"));
@@ -17,6 +18,8 @@ const Privacy = lazyRetry(() => import("./pages/Privacy"));
 const DeleteAccount = lazyRetry(() => import("./pages/DeleteAccount"));
 
 const queryClient = new QueryClient();
+
+startWakeLockManager();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

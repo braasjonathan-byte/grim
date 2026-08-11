@@ -9,6 +9,8 @@ import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
 import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiometric } from "@/lib/biometric";
 import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
+import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWakeLock } from "@/lib/wakeLock";
+
 
 const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
@@ -48,10 +50,13 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
 
 
-  const [wakeLock, setWakeLock] = useState(() => {
-    return localStorage.getItem("gymberget_wakelock") === "true";
-  });
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const [wakeLock, setWakeLockState] = useState(() => isWakeLockEnabled());
+  useEffect(() => {
+    const unsub = subscribeWakeLock(setWakeLockState);
+    return () => { unsub(); };
+  }, []);
+
+
 
   const [securityOpen, setSecurityOpen] = useState(false);
   const [secQuestions, setSecQuestions] = useState<(number | null)[]>([null, null, null, null]);
@@ -113,36 +118,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
   // Dark/light mode is now handled by the theme system via applyTheme()
 
-  useEffect(() => {
-    const requestWakeLock = async () => {
-      if (wakeLock && "wakeLock" in navigator) {
-        try {
-          wakeLockRef.current = await navigator.wakeLock.request("screen");
-          wakeLockRef.current.addEventListener("release", () => {
-            wakeLockRef.current = null;
-          });
-        } catch {
-          // Wake lock request failed
-        }
-      } else if (!wakeLock && wakeLockRef.current) {
-        await wakeLockRef.current.release();
-        wakeLockRef.current = null;
-      }
-    };
+  // Wake lock hanteras globalt i src/lib/wakeLock.ts (överlever att panelen stängs)
 
-    localStorage.setItem("gymberget_wakelock", wakeLock ? "true" : "false");
-    requestWakeLock();
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible" && wakeLock && !wakeLockRef.current) {
-        requestWakeLock();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [wakeLock]);
 
   useEffect(() => {
     if (!userId) return;
@@ -342,14 +319,14 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
       )}
 
       {/* Wake lock toggle */}
-      {"wakeLock" in navigator && (
+      {isWakeLockSupported() && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-primary" />
             <span className="text-sm">Håll skärmen vaken</span>
           </div>
           <button
-            onClick={() => setWakeLock(!wakeLock)}
+            onClick={() => void setWakeLockEnabled(!wakeLock)}
             className={`relative w-11 h-6 rounded-full transition-colors ${wakeLock ? "bg-primary" : "bg-secondary border border-border"}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${wakeLock ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
