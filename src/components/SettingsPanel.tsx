@@ -51,7 +51,11 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
 
   const [wakeLock, setWakeLockState] = useState(() => isWakeLockEnabled());
-  useEffect(() => subscribeWakeLock(setWakeLockState), []);
+  useEffect(() => {
+    const unsub = subscribeWakeLock(setWakeLockState);
+    return () => { unsub(); };
+  }, []);
+
 
 
   const [securityOpen, setSecurityOpen] = useState(false);
