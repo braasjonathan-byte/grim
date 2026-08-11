@@ -6,6 +6,7 @@
       "name": "vite_react_shadcn_ts",
       "dependencies": {
         "@capacitor-community/bluetooth-le": "^8.2.0",
+        "@capacitor-community/keep-awake": "^8.0.1",
         "@capacitor-community/text-to-speech": "^8.0.2",
         "@capacitor-firebase/app": "^8",
         "@capacitor-firebase/crashlytics": "^8",
@@ -305,6 +306,8 @@
     "@babel/types": ["@babel/types@7.29.0", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A=="],
 
     "@capacitor-community/bluetooth-le": ["@capacitor-community/bluetooth-le@8.2.0", "https://europe-west1-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-community/bluetooth-le/-/bluetooth-le-8.2.0.tgz", { "dependencies": { "@types/web-bluetooth": "^0.0.20" }, "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-wsy2h9sVcXaynyb3Nf9fVZklnQHDtIfT4fc6iL9McZvi19rDJ5aCoEBqa4wch5RywbF3Ic1W/StKuHJuWUumiQ=="],
+
+    "@capacitor-community/keep-awake": ["@capacitor-community/keep-awake@8.0.1", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-community/keep-awake/-/keep-awake-8.0.1.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-wTI5A6FWl5gWoMduzJ5euuJ1P73SO+rea0jV6vNdmz5TLbwIDhufelFe/GowNvU9gog6kDYbFhJ2pOp9ua1f3w=="],
 
     "@capacitor-community/text-to-speech": ["@capacitor-community/text-to-speech@8.0.2", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor-community/text-to-speech/-/text-to-speech-8.0.2.tgz", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-SbpBMzcmzdTiN8jQDme/yUYHEJISZA+IiaRn5zT14k3UKpjaA7eYBnSm9h76rJHRV/y6DVZVhT1J0SaK5JTKtA=="],
 

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.2.0",
+    "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor-firebase/app": "^8",
     "@capacitor-firebase/crashlytics": "^8",
