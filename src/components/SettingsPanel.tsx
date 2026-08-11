@@ -319,14 +319,14 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
       )}
 
       {/* Wake lock toggle */}
-      {"wakeLock" in navigator && (
+      {isWakeLockSupported() && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="w-4 h-4 text-primary" />
             <span className="text-sm">Håll skärmen vaken</span>
           </div>
           <button
-            onClick={() => setWakeLock(!wakeLock)}
+            onClick={() => void setWakeLockEnabled(!wakeLock)}
             className={`relative w-11 h-6 rounded-full transition-colors ${wakeLock ? "bg-primary" : "bg-secondary border border-border"}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${wakeLock ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
