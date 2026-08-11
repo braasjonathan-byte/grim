@@ -112,36 +112,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
   // Dark/light mode is now handled by the theme system via applyTheme()
 
-  useEffect(() => {
-    const requestWakeLock = async () => {
-      if (wakeLock && "wakeLock" in navigator) {
-        try {
-          wakeLockRef.current = await navigator.wakeLock.request("screen");
-          wakeLockRef.current.addEventListener("release", () => {
-            wakeLockRef.current = null;
-          });
-        } catch {
-          // Wake lock request failed
-        }
-      } else if (!wakeLock && wakeLockRef.current) {
-        await wakeLockRef.current.release();
-        wakeLockRef.current = null;
-      }
-    };
+  // Wake lock hanteras globalt i src/lib/wakeLock.ts (överlever att panelen stängs)
 
-    localStorage.setItem("gymberget_wakelock", wakeLock ? "true" : "false");
-    requestWakeLock();
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible" && wakeLock && !wakeLockRef.current) {
-        requestWakeLock();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [wakeLock]);
 
   useEffect(() => {
     if (!userId) return;
