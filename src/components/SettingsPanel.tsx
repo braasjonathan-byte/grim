@@ -48,10 +48,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
 
 
 
-  const [wakeLock, setWakeLock] = useState(() => {
-    return localStorage.getItem("gymberget_wakelock") === "true";
-  });
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const [wakeLock, setWakeLockState] = useState(() => isWakeLockEnabled());
+  useEffect(() => subscribeWakeLock(setWakeLockState), []);
+
 
   const [securityOpen, setSecurityOpen] = useState(false);
   const [secQuestions, setSecQuestions] = useState<(number | null)[]>([null, null, null, null]);
