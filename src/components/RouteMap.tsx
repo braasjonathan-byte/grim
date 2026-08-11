@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Map as MapIcon, MapPinOff, Navigation, RefreshCw, WifiOff } from "lucide-react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import grimMarker from "@/assets/grim-marker.png";
 
 type Point = [number, number]; // [lat, lng]
@@ -14,15 +16,13 @@ interface Props {
   live?: boolean;
   /** Optional historic routes drawn as a faint heatmap-style overlay underneath the main line. */
   heatmap?: Point[][];
-  /** Alternativa vägval (punkt-till-punkt) – ritas i avvikande färg under huvudrutten. */
+  /** Alternativa vägval (punkt-till-punkt) – ritas i avvikande färg ovanpå huvudrutten. */
   alternatives?: Point[][];
   /** Antal punkter i början av rutten som redan avverkats – ritas grå. */
   traveledCount?: number;
   /** Aktuell GPS-position (för navigering där route är den planerade rundan). */
   livePosition?: Point | null;
-
 }
-
 
 const useIsDark = () => {
   const [dark, setDark] = useState<boolean>(() =>
@@ -39,9 +39,6 @@ const useIsDark = () => {
   return dark;
 };
 
-/* ---------- Google Maps JS API loader (singleton) ---------- */
-let mapsPromise: Promise<void> | null = null;
-
 /** Fel som gör att kartan inte kan visas – används för att välja rätt meddelande. */
 export type MapLoadErrorKind = "offline" | "auth" | "network" | "config";
 
@@ -53,97 +50,10 @@ export class MapLoadError extends Error {
   }
 }
 
-const MAPS_LOAD_TIMEOUT_MS = 15000;
-
-const loadGoogleMaps = (): Promise<void> => {
-  if (typeof window === "undefined") return Promise.reject(new MapLoadError("network", "Ingen webbläsarmiljö"));
-  if ((window as any).google?.maps?.Map) return Promise.resolve();
-  if (mapsPromise) return mapsPromise;
-
-  const key = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY as string | undefined;
-  const channel = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_TRACKING_ID as string | undefined;
-  if (!key) return Promise.reject(new MapLoadError("config", "Google Maps-nyckel saknas"));
-  if (typeof navigator !== "undefined" && navigator.onLine === false) {
-    return Promise.reject(new MapLoadError("offline", "Ingen internetanslutning"));
-  }
-
-  mapsPromise = new Promise<void>((resolve, reject) => {
-    const cbName = "__grimInitGoogleMaps";
-    let settled = false;
-    const fail = (err: MapLoadError) => {
-      if (settled) return;
-      settled = true;
-      mapsPromise = null;
-      reject(err);
-    };
-    const done = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-
-    // Google anropar denna globalt vid nyckel-/kvotfel (t.ex. OverQuotaMapError).
-    (window as any).gm_authFailure = () => {
-      fail(new MapLoadError("auth", "Google Maps nekade begäran (nyckel eller kvot)"));
-    };
-    (window as any)[cbName] = () => done();
-
-    const timer = window.setTimeout(
-      () => fail(new MapLoadError("network", "Kartan tog för lång tid att ladda")),
-      MAPS_LOAD_TIMEOUT_MS,
-    );
-    const clear = () => window.clearTimeout(timer);
-    const s = document.createElement("script");
-    s.src =
-      `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}` +
-      `&loading=async&callback=${cbName}` +
-      (channel ? `&channel=${encodeURIComponent(channel)}` : "");
-    s.async = true;
-    s.onerror = () => {
-      clear();
-      s.remove();
-      fail(
-        new MapLoadError(
-          typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "network",
-          "Kunde inte ladda Google Maps",
-        ),
-      );
-    };
-    s.onload = () => {
-      // Skriptet laddades – vänta på callback, men rensa timeouten när den kommit.
-      window.setTimeout(() => clear(), MAPS_LOAD_TIMEOUT_MS);
-    };
-    document.head.appendChild(s);
-  })
-    .then(() => {
-      // låt callback rensa
-    });
-  return mapsPromise;
-};
-
-/** Lazy accessor for the Google Maps namespace (script is loaded on demand). */
-const gm: any = new Proxy({}, {
-  get: (_t, prop) => (window as any).google?.maps?.[prop as string],
-});
-
-const DARK_STYLE: any[] = [
-  { elementType: "geometry", stylers: [{ color: "#212121" }] },
-  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#212121" }] },
-  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#757575" }] },
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#2c2c2c" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3c3c3c" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
-];
-
-const LIGHT_STYLE: any[] = [
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-];
+/* ---------- Kartlager (OpenStreetMap – ingen API-nyckel krävs) ---------- */
+const LIGHT_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 const bearing = (a: Point, b: Point) => {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -167,7 +77,7 @@ const distanceM = (a: Point, b: Point) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
-/** Statisk minikarta av rutten (SVG) – visas när Google Maps inte kan laddas. */
+/** Statisk minikarta av rutten (SVG) – visas när kartan inte kan laddas. */
 const RouteSketch = ({ route }: { route: Point[] }) => {
   if (route.length < 2) return null;
   const lats = route.map((p) => p[0]);
@@ -190,9 +100,9 @@ const RouteSketch = ({ route }: { route: Point[] }) => {
 
 const FALLBACK_TEXT: Record<MapLoadErrorKind, { title: string; body: string }> = {
   offline: { title: "Ingen internetanslutning", body: "Kartan kan inte laddas offline. Din rutt sparas ändå och visas när du är online igen." },
-  auth: { title: "Kartan är inte tillgänglig", body: "Google Maps nekade begäran – kvoten kan vara slut eller nyckeln ogiltig. Försök igen senare." },
-  network: { title: "Kartan kunde inte laddas", body: "Anslutningen till Google Maps misslyckades. Kontrollera nätet och försök igen." },
-  config: { title: "Kartan är inte konfigurerad", body: "Ingen Google Maps-nyckel är kopplad till appen." },
+  auth: { title: "Kartan är inte tillgänglig", body: "Karttjänsten nekade begäran. Försök igen senare." },
+  network: { title: "Kartan kunde inte laddas", body: "Anslutningen till karttjänsten misslyckades. Kontrollera nätet och försök igen." },
+  config: { title: "Kartan är inte konfigurerad", body: "Kartlagret kunde inte initieras." },
 };
 
 const MapFallback = ({
@@ -212,67 +122,34 @@ const MapFallback = ({
       <p className="text-xs font-bold text-foreground">{t.title}</p>
       <p className="text-[11px] leading-snug max-w-[36ch]">{t.body}</p>
       <RouteSketch route={route} />
-      {error.kind !== "config" && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onRetry(); }}
-          className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Försök igen
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onRetry(); }}
+        className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold text-foreground hover:bg-muted"
+      >
+        <RefreshCw className="w-3.5 h-3.5" /> Försök igen
+      </button>
     </div>
   );
 };
 
-/** DOM overlay for the pulsing live-position dot (keeps the existing CSS animation). */
-const createPulseOverlay = (map: any, position: any, color: string) => {
-  class PulseOverlay extends (gm.OverlayView as { new (): any }) {
-    private el: HTMLDivElement | null = null;
-    private pos: any;
-    constructor(p: any) {
-      super();
-      this.pos = p;
-    }
-    onAdd() {
-      const el = document.createElement("div");
-      el.className = "grim-gps-pulse grim-gps-pulse--logo";
-      el.style.position = "absolute";
-      el.style.setProperty("--pulse-color", color);
-      const img = document.createElement("img");
-      img.src = grimMarker;
-      img.alt = "Din position";
-      img.className = "grim-gps-pulse__logo";
-      el.appendChild(img);
-      this.el = el;
-      this.getPanes()?.overlayMouseTarget.appendChild(el);
-    }
-    draw() {
-      if (!this.el) return;
-      const p = this.getProjection()?.fromLatLngToDivPixel(new gm.LatLng(this.pos));
-      if (!p) return;
-      this.el.style.left = `${p.x - 9}px`;
-      this.el.style.top = `${p.y - 9}px`;
-    }
-    onRemove() {
-      this.el?.remove();
-      this.el = null;
-    }
-    setPosition(p: any) {
-      this.pos = p;
-      this.draw();
-    }
-    setColor(c: string) {
-      this.el?.style.setProperty("--pulse-color", c);
-    }
-  }
-  const overlay = new PulseOverlay(position);
-  overlay.setMap(map);
-  return overlay as any & {
-    setPosition: (p: any) => void;
-    setColor: (c: string) => void;
-  };
-};
+const dotIcon = (color: string) =>
+  L.divIcon({
+    className: "grim-route-dot",
+    html: `<span style="display:block;width:14px;height:14px;border-radius:9999px;background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)"></span>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+
+const pulseIcon = (color: string) =>
+  L.divIcon({
+    className: "",
+    html:
+      `<div class="grim-gps-pulse grim-gps-pulse--logo" style="--pulse-color:${color}">` +
+      `<img src="${grimMarker}" alt="Din position" class="grim-gps-pulse__logo" /></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
 
 const RouteMap = ({
   route,
@@ -287,20 +164,20 @@ const RouteMap = ({
   livePosition = null,
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<any | null>(null);
-  const routeLineRef = useRef<any | null>(null);
-  const doneLineRef = useRef<any | null>(null);
-  const haloLineRef = useRef<any | null>(null);
-  const heatLinesRef = useRef<any[]>([]);
-  const altLinesRef = useRef<any[]>([]);
-  const startMarkerRef = useRef<any | null>(null);
-  const endMarkerRef = useRef<any | null>(null);
-  const pulseRef = useRef<ReturnType<typeof createPulseOverlay> | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
+  const routeLineRef = useRef<L.Polyline | null>(null);
+  const doneLineRef = useRef<L.Polyline | null>(null);
+  const haloLineRef = useRef<L.Polyline | null>(null);
+  const heatLinesRef = useRef<L.Polyline[]>([]);
+  const altLinesRef = useRef<L.Polyline[]>([]);
+  const startMarkerRef = useRef<L.Marker | null>(null);
+  const endMarkerRef = useRef<L.Marker | null>(null);
+  const pulseRef = useRef<L.Marker | null>(null);
 
   const fittedOnceRef = useRef(false);
   const followPausedRef = useRef(false);
   const followTimerRef = useRef<number | null>(null);
-
 
   const [open, setOpen] = useState(collapsible ? defaultOpen : true);
   const [mapReady, setMapReady] = useState(false);
@@ -317,65 +194,53 @@ const RouteMap = ({
   // Init map once
   useEffect(() => {
     if (!open || !containerRef.current || mapRef.current) return;
-    let cancelled = false;
     setLoadError(null);
-    loadGoogleMaps()
-      .then(() => {
-        if (cancelled || !containerRef.current || mapRef.current) return;
-        const center = route.length
-          ? { lat: route[0][0], lng: route[0][1] }
-          : { lat: 59.3293, lng: 18.0686 };
-        const map = new gm.Map(containerRef.current, {
-          center,
-          zoom: 14,
-          disableDefaultUI: true,
-          zoomControl: true,
-          gestureHandling: "greedy",
-          clickableIcons: false,
-          styles: dark ? DARK_STYLE : LIGHT_STYLE,
-        });
-        mapRef.current = map;
-        // Användaren får panorera fritt – auto-centrering pausas i 5 s efter senaste interaktion.
-        const pauseFollow = () => {
-          followPausedRef.current = true;
-          if (followTimerRef.current) window.clearTimeout(followTimerRef.current);
-          followTimerRef.current = window.setTimeout(() => {
-            followPausedRef.current = false;
-          }, 5000);
-        };
-        map.addListener("dragstart", pauseFollow);
-        map.addListener("dragend", pauseFollow);
-        setMapReady(true);
-
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setLoadError(
-          e instanceof MapLoadError
-            ? e
-            : new MapLoadError("network", e?.message ?? "Kartan kunde inte laddas"),
-        );
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setLoadError(new MapLoadError("offline", "Ingen internetanslutning"));
+      return;
+    }
+    try {
+      const center: L.LatLngExpression = route.length ? [route[0][0], route[0][1]] : [59.3293, 18.0686];
+      const map = L.map(containerRef.current, {
+        center,
+        zoom: 14,
+        zoomControl: true,
+        attributionControl: true,
+        preferCanvas: true,
       });
+      tileRef.current = L.tileLayer(dark ? DARK_TILES : LIGHT_TILES, {
+        maxZoom: 19,
+        attribution: ATTRIBUTION,
+      }).addTo(map);
+      mapRef.current = map;
+
+      // Användaren får panorera fritt – auto-centrering pausas i 5 s efter senaste interaktion.
+      const pauseFollow = () => {
+        followPausedRef.current = true;
+        if (followTimerRef.current) window.clearTimeout(followTimerRef.current);
+        followTimerRef.current = window.setTimeout(() => {
+          followPausedRef.current = false;
+        }, 5000);
+      };
+      map.on("dragstart", pauseFollow);
+      map.on("dragend", pauseFollow);
+      window.setTimeout(() => map.invalidateSize(), 60);
+      setMapReady(true);
+    } catch (e) {
+      setLoadError(new MapLoadError("network", (e as Error)?.message ?? "Kartan kunde inte laddas"));
+    }
 
     return () => {
-      cancelled = true;
-      routeLineRef.current?.setMap(null);
-      doneLineRef.current?.setMap(null);
-      haloLineRef.current?.setMap(null);
-      heatLinesRef.current.forEach((l) => l.setMap(null));
       heatLinesRef.current = [];
-      altLinesRef.current.forEach((l) => l.setMap(null));
       altLinesRef.current = [];
-      startMarkerRef.current?.setMap(null);
-      endMarkerRef.current?.setMap(null);
-      pulseRef.current?.setMap(null);
       routeLineRef.current = null;
       doneLineRef.current = null;
-
       haloLineRef.current = null;
       startMarkerRef.current = null;
       endMarkerRef.current = null;
       pulseRef.current = null;
+      tileRef.current = null;
+      mapRef.current?.remove();
       mapRef.current = null;
       setMapReady(false);
       fittedOnceRef.current = false;
@@ -385,8 +250,14 @@ const RouteMap = ({
 
   // Theme changes
   useEffect(() => {
-    if (!mapRef.current || !mapReady) return;
-    mapRef.current.setOptions({ styles: dark ? DARK_STYLE : LIGHT_STYLE });
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    tileRef.current?.remove();
+    tileRef.current = L.tileLayer(dark ? DARK_TILES : LIGHT_TILES, {
+      maxZoom: 19,
+      attribution: ATTRIBUTION,
+    }).addTo(map);
+    tileRef.current.bringToBack();
   }, [dark, mapReady]);
 
   // Overlays
@@ -394,30 +265,26 @@ const RouteMap = ({
     const map = mapRef.current;
     if (!map || !mapReady) return;
 
-    const path = route.map((p) => ({ lat: p[0], lng: p[1] }));
+    const path: L.LatLngExpression[] = route.map((p) => [p[0], p[1]]);
 
     // Heatmap (historic routes)
     if (heatmap && heatmap.length) {
-      heatLinesRef.current.forEach((l) => l.setMap(null));
+      heatLinesRef.current.forEach((l) => l.remove());
       heatLinesRef.current = heatmap
         .filter((r) => r.length > 1)
-        .map(
-          (r) =>
-            new gm.Polyline({
-              map,
-              path: r.map((p) => ({ lat: p[0], lng: p[1] })),
-              strokeColor: primary,
-              strokeOpacity: 0.18,
-              strokeWeight: 3,
-              clickable: false,
-              zIndex: 1,
-            }),
+        .map((r) =>
+          L.polyline(r.map((p) => [p[0], p[1]] as L.LatLngExpression), {
+            color: primary,
+            opacity: 0.18,
+            weight: 3,
+            interactive: false,
+          }).addTo(map),
         );
     }
 
     // Alternativa vägval – rita ENDAST de delar som avviker från huvudrutten,
     // i bärnsten och ovanpå, så kortaste vägen (temats färg) alltid syns tydligt.
-    altLinesRef.current.forEach((l) => l.setMap(null));
+    altLinesRef.current.forEach((l) => l.remove());
     const cellKey = (lat: number, lng: number) => `${Math.round(lat / 0.0004)}:${Math.round(lng / 0.0004)}`;
     const primaryCells = new Set<string>();
     for (const p of route ?? []) {
@@ -441,127 +308,91 @@ const RouteMap = ({
       }
       if (seg.length > 1) divergent.push(seg);
     }
-    altLinesRef.current = divergent.map(
-      (r) =>
-        new gm.Polyline({
-          map,
-          path: r.map((p) => ({ lat: p[0], lng: p[1] })),
-          strokeColor: "#f59e0b",
-          strokeOpacity: 1,
-          strokeWeight: 5,
-          clickable: false,
-          zIndex: 6,
-        }),
+    altLinesRef.current = divergent.map((r) =>
+      L.polyline(r.map((p) => [p[0], p[1]] as L.LatLngExpression), {
+        color: "#f59e0b",
+        opacity: 1,
+        weight: 5,
+        interactive: false,
+      }).addTo(map),
     );
-
-
-
 
     // Main route + halo. Avverkad del ritas grå, återstående i temats färg.
     const cut = Math.max(0, Math.min(traveledCount, path.length));
     const donePath = cut > 1 ? path.slice(0, cut) : [];
     const remainingPath = cut > 0 ? path.slice(Math.max(0, cut - 1)) : path;
     if (!haloLineRef.current) {
-      haloLineRef.current = new gm.Polyline({
-        map,
-        path,
-        strokeColor: dark ? "#000000" : "#ffffff",
-        strokeOpacity: 0.7,
-        strokeWeight: 8,
-        clickable: false,
-        zIndex: 2,
-      });
-      doneLineRef.current = new gm.Polyline({
-        map,
-        path: donePath,
-        strokeColor: "#9ca3af",
-        strokeOpacity: 1,
-        strokeWeight: 5,
-        clickable: false,
-        zIndex: 3,
-      });
-      routeLineRef.current = new gm.Polyline({
-        map,
-        path: remainingPath,
-        strokeColor: primary,
-        strokeOpacity: 1,
-        strokeWeight: 5,
-        clickable: false,
-        zIndex: 4,
-      });
+      haloLineRef.current = L.polyline(path, {
+        color: dark ? "#000000" : "#ffffff",
+        opacity: 0.7,
+        weight: 8,
+        interactive: false,
+      }).addTo(map);
+      doneLineRef.current = L.polyline(donePath, {
+        color: "#9ca3af",
+        opacity: 1,
+        weight: 5,
+        interactive: false,
+      }).addTo(map);
+      routeLineRef.current = L.polyline(remainingPath, {
+        color: primary,
+        opacity: 1,
+        weight: 5,
+        interactive: false,
+      }).addTo(map);
     } else {
-      haloLineRef.current.setPath(path);
-      haloLineRef.current.setOptions({ strokeColor: dark ? "#000000" : "#ffffff" });
-      doneLineRef.current?.setPath(donePath);
-      routeLineRef.current?.setPath(remainingPath);
-      routeLineRef.current?.setOptions({ strokeColor: primary });
+      haloLineRef.current.setLatLngs(path);
+      haloLineRef.current.setStyle({ color: dark ? "#000000" : "#ffffff" });
+      doneLineRef.current?.setLatLngs(donePath);
+      routeLineRef.current?.setLatLngs(remainingPath);
+      routeLineRef.current?.setStyle({ color: primary });
     }
-
+    altLinesRef.current.forEach((l) => l.bringToFront());
 
     // Start marker
     if (path.length > 0) {
-      const icon: any = {
-        path: gm.SymbolPath.CIRCLE,
-        scale: 7,
-        fillColor: "#16a34a",
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 2,
-      };
       if (!startMarkerRef.current) {
-        startMarkerRef.current = new gm.Marker({ map, position: path[0], icon, zIndex: 4 });
+        startMarkerRef.current = L.marker(path[0], { icon: dotIcon("#16a34a"), interactive: false }).addTo(map);
       } else {
-        startMarkerRef.current.setPosition(path[0]);
+        startMarkerRef.current.setLatLng(path[0]);
       }
     }
 
     // End marker — playback only
     if (!live && path.length > 1) {
-      const icon: any = {
-        path: gm.SymbolPath.CIRCLE,
-        scale: 7,
-        fillColor: "#dc2626",
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 2,
-      };
       const end = path[path.length - 1];
       if (!endMarkerRef.current) {
-        endMarkerRef.current = new gm.Marker({ map, position: end, icon, zIndex: 4 });
+        endMarkerRef.current = L.marker(end, { icon: dotIcon("#dc2626"), interactive: false }).addTo(map);
       } else {
-        endMarkerRef.current.setPosition(end);
+        endMarkerRef.current.setLatLng(end);
       }
     }
 
     // Live pulsing dot
-    const livePoint = livePosition ? { lat: livePosition[0], lng: livePosition[1] } : null;
+    const livePoint: L.LatLngExpression | null = livePosition ? [livePosition[0], livePosition[1]] : null;
     if (live && (livePoint || path.length > 0)) {
       const cur = livePoint ?? path[path.length - 1];
       if (!pulseRef.current) {
-        pulseRef.current = createPulseOverlay(map, cur, primary);
+        pulseRef.current = L.marker(cur, { icon: pulseIcon(primary), interactive: false, zIndexOffset: 1000 }).addTo(map);
       } else {
-        pulseRef.current.setPosition(cur);
-        pulseRef.current.setColor(primary);
+        pulseRef.current.setLatLng(cur);
+        pulseRef.current.setIcon(pulseIcon(primary));
       }
     }
 
     // Camera
     if (path.length === 1 && !livePoint) {
-      map.setCenter(path[0]);
-      map.setZoom(16);
+      map.setView(path[0], 16);
     } else if (live && (livePoint || path.length > 1)) {
       if (!followPausedRef.current) {
-        map.panTo(livePoint ?? path[path.length - 1]);
-        if ((map.getZoom() ?? 0) < 15) map.setZoom(15);
+        map.panTo(livePoint ?? path[path.length - 1], { animate: true });
+        if (map.getZoom() < 15) map.setZoom(15);
       }
     } else if (path.length > 1 && !fittedOnceRef.current) {
-      const bounds = new gm.LatLngBounds();
-      path.forEach((p) => bounds.extend(p));
-      map.fitBounds(bounds, 30);
+      map.fitBounds(L.latLngBounds(path as L.LatLngTuple[]), { padding: [30, 30] });
       fittedOnceRef.current = true;
     }
   }, [mapReady, route, heatmap, alternatives, live, primary, dark, traveledCount, livePosition]);
-
 
   // Return-to-start data
   const returnInfo = useMemo(() => {
@@ -578,9 +409,9 @@ const RouteMap = ({
   const mapInner = (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
-      {loadError && <MapFallback error={loadError} route={route} onRetry={() => { mapsPromise = null; setRetryKey((k) => k + 1); }} />}
+      {loadError && <MapFallback error={loadError} route={route} onRetry={() => setRetryKey((k) => k + 1)} />}
       {returnInfo && (
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-2 bg-background/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-sm">
+        <div className="absolute top-2 left-2 z-[500] flex items-center gap-2 bg-background/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-sm">
           <Navigation
             className="w-4 h-4 text-primary"
             style={{ transform: `rotate(${returnInfo.bearing}deg)` }}
