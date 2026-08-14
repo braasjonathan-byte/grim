@@ -196,6 +196,73 @@ const RouteMap = ({
     return v ? `hsl(${v})` : "#2563eb";
   }, [dark, mapReady]);
 
+  /* ---------- Heading-up (rotera kartan i färdriktningen) ---------- */
+  const [headingUp, setHeadingUp] = useState(true);
+  const [heading, setHeading] = useState(0);
+  const samplesRef = useRef<number[]>([]);
+  const lastPosRef = useRef<Point | null>(null);
+  const rotationActive = rotateToHeading && headingUp;
+
+  // Rullande cirkulärt medelvärde över de senaste 5 mätningarna – dämpar GPS-brus.
+  const pushHeading = useCallback((deg: number) => {
+    if (!Number.isFinite(deg)) return;
+    const arr = samplesRef.current;
+    arr.push(((deg % 360) + 360) % 360);
+    if (arr.length > 5) arr.shift();
+    let x = 0;
+    let y = 0;
+    for (const d of arr) {
+      const r = (d * Math.PI) / 180;
+      x += Math.cos(r);
+      y += Math.sin(r);
+    }
+    const avg = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+    setHeading((prev) => {
+      // Hoppa inte över 0/360-gränsen – håll kontinuerlig vinkel för mjuk CSS-övergång.
+      let delta = ((avg - (((prev % 360) + 360) % 360) + 540) % 360) - 180;
+      if (Math.abs(delta) < 2) return prev; // ignorera små skakningar
+      return prev + delta;
+    });
+  }, []);
+
+  // Kompass (enhetens orientering) – primär källa när den finns.
+  const compassOkRef = useRef(false);
+  useEffect(() => {
+    if (!rotateToHeading || typeof window === "undefined") return;
+    const onOrient = (e: DeviceOrientationEvent & { webkitCompassHeading?: number }) => {
+      const webkit = typeof e.webkitCompassHeading === "number" ? e.webkitCompassHeading : null;
+      let deg: number | null = webkit;
+      if (deg == null && typeof e.alpha === "number" && (e as DeviceOrientationEvent).absolute !== false) {
+        deg = 360 - e.alpha;
+      }
+      if (deg == null) return;
+      compassOkRef.current = true;
+      pushHeading(deg);
+    };
+    window.addEventListener("deviceorientationabsolute", onOrient as EventListener);
+    window.addEventListener("deviceorientation", onOrient as EventListener);
+    return () => {
+      window.removeEventListener("deviceorientationabsolute", onOrient as EventListener);
+      window.removeEventListener("deviceorientation", onOrient as EventListener);
+    };
+  }, [rotateToHeading, pushHeading]);
+
+  // Fallback: bäring mellan senaste GPS-positionerna.
+  useEffect(() => {
+    if (!rotateToHeading || !livePosition) return;
+    const prev = lastPosRef.current;
+    if (prev) {
+      const d = distanceM(prev, livePosition);
+      if (d >= 8) {
+        if (!compassOkRef.current) pushHeading(bearing(prev, livePosition));
+        lastPosRef.current = livePosition;
+      }
+    } else {
+      lastPosRef.current = livePosition;
+    }
+  }, [livePosition, rotateToHeading, pushHeading]);
+
+
   // Init map once
   useEffect(() => {
     if (!open || !containerRef.current || mapRef.current) return;
