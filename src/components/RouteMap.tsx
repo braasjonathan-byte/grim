@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Map as MapIcon, MapPinOff, Navigation, RefreshCw, WifiOff } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Compass, Map as MapIcon, MapPinOff, Navigation, RefreshCw, WifiOff } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import grimMarker from "@/assets/grim-marker.png";
@@ -22,7 +22,10 @@ interface Props {
   traveledCount?: number;
   /** Aktuell GPS-position (för navigering där route är den planerade rundan). */
   livePosition?: Point | null;
+  /** Aktiv navigering: rotera kartan så färdriktningen pekar uppåt (heading-up). */
+  rotateToHeading?: boolean;
 }
+
 
 const useIsDark = () => {
   const [dark, setDark] = useState<boolean>(() =>
@@ -162,6 +165,8 @@ const RouteMap = ({
   alternatives,
   traveledCount = 0,
   livePosition = null,
+  rotateToHeading = false,
+
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -190,6 +195,73 @@ const RouteMap = ({
     const v = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
     return v ? `hsl(${v})` : "#2563eb";
   }, [dark, mapReady]);
+
+  /* ---------- Heading-up (rotera kartan i färdriktningen) ---------- */
+  const [headingUp, setHeadingUp] = useState(true);
+  const [heading, setHeading] = useState(0);
+  const samplesRef = useRef<number[]>([]);
+  const lastPosRef = useRef<Point | null>(null);
+  const rotationActive = rotateToHeading && headingUp;
+
+  // Rullande cirkulärt medelvärde över de senaste 5 mätningarna – dämpar GPS-brus.
+  const pushHeading = useCallback((deg: number) => {
+    if (!Number.isFinite(deg)) return;
+    const arr = samplesRef.current;
+    arr.push(((deg % 360) + 360) % 360);
+    if (arr.length > 5) arr.shift();
+    let x = 0;
+    let y = 0;
+    for (const d of arr) {
+      const r = (d * Math.PI) / 180;
+      x += Math.cos(r);
+      y += Math.sin(r);
+    }
+    const avg = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+    setHeading((prev) => {
+      // Hoppa inte över 0/360-gränsen – håll kontinuerlig vinkel för mjuk CSS-övergång.
+      let delta = ((avg - (((prev % 360) + 360) % 360) + 540) % 360) - 180;
+      if (Math.abs(delta) < 2) return prev; // ignorera små skakningar
+      return prev + delta;
+    });
+  }, []);
+
+  // Kompass (enhetens orientering) – primär källa när den finns.
+  const compassOkRef = useRef(false);
+  useEffect(() => {
+    if (!rotateToHeading || typeof window === "undefined") return;
+    const onOrient = (e: DeviceOrientationEvent & { webkitCompassHeading?: number }) => {
+      const webkit = typeof e.webkitCompassHeading === "number" ? e.webkitCompassHeading : null;
+      let deg: number | null = webkit;
+      if (deg == null && typeof e.alpha === "number" && (e as DeviceOrientationEvent).absolute !== false) {
+        deg = 360 - e.alpha;
+      }
+      if (deg == null) return;
+      compassOkRef.current = true;
+      pushHeading(deg);
+    };
+    window.addEventListener("deviceorientationabsolute", onOrient as EventListener);
+    window.addEventListener("deviceorientation", onOrient as EventListener);
+    return () => {
+      window.removeEventListener("deviceorientationabsolute", onOrient as EventListener);
+      window.removeEventListener("deviceorientation", onOrient as EventListener);
+    };
+  }, [rotateToHeading, pushHeading]);
+
+  // Fallback: bäring mellan senaste GPS-positionerna.
+  useEffect(() => {
+    if (!rotateToHeading || !livePosition) return;
+    const prev = lastPosRef.current;
+    if (prev) {
+      const d = distanceM(prev, livePosition);
+      if (d >= 8) {
+        if (!compassOkRef.current) pushHeading(bearing(prev, livePosition));
+        lastPosRef.current = livePosition;
+      }
+    } else {
+      lastPosRef.current = livePosition;
+    }
+  }, [livePosition, rotateToHeading, pushHeading]);
+
 
   // Init map once
   useEffect(() => {
@@ -407,14 +479,46 @@ const RouteMap = ({
   if (route.length === 0 && !live) return null;
 
   const mapInner = (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="relative w-full h-full overflow-hidden">
+      <div
+        className={rotationActive ? "grim-map-rotator" : "w-full h-full"}
+        style={
+          rotationActive
+            ? ({
+                transform: `rotate(${-heading}deg) scale(1.5)`,
+                ["--grim-map-counter-rot" as string]: `${heading}deg`,
+              } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <div ref={containerRef} className="w-full h-full" />
+      </div>
       {loadError && <MapFallback error={loadError} route={route} onRetry={() => setRetryKey((k) => k + 1)} />}
+      {rotateToHeading && !loadError && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setHeadingUp((v) => !v);
+          }}
+          className={`absolute right-2 top-2 z-[600] flex h-11 w-11 items-center justify-center rounded-full border shadow-soft backdrop-blur transition-colors ${
+            headingUp ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background/90 text-foreground"
+          }`}
+          aria-pressed={headingUp}
+          aria-label={headingUp ? "Riktning uppåt (tryck för norr uppåt)" : "Norr uppåt (tryck för riktning uppåt)"}
+          title={headingUp ? "Riktning uppåt" : "Norr uppåt"}
+        >
+          <Compass
+            className="h-5 w-5 transition-transform duration-500"
+            style={{ transform: headingUp ? `rotate(${-heading}deg)` : undefined }}
+          />
+        </button>
+      )}
       {returnInfo && (
         <div className="absolute top-2 left-2 z-[500] flex items-center gap-2 bg-background/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-sm">
           <Navigation
             className="w-4 h-4 text-primary"
-            style={{ transform: `rotate(${returnInfo.bearing}deg)` }}
+            style={{ transform: `rotate(${returnInfo.bearing + (rotationActive ? -heading : 0)}deg)` }}
           />
           <span className="text-[11px] font-bold tracking-tight text-foreground">
             {returnInfo.distanceM < 1000
@@ -425,6 +529,7 @@ const RouteMap = ({
       )}
     </div>
   );
+
 
   if (collapsible) {
     return (

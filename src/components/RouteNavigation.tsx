@@ -287,7 +287,9 @@ const RouteNavigation = ({
           livePosition={position}
           traveledCount={traveledCount}
           alternatives={alternatives}
+          rotateToHeading
         />
+
 
         {listOpen && steps && (
           <div className="absolute inset-x-0 bottom-0 z-10 max-h-[55%] overflow-y-auto border-t border-border bg-card/95 backdrop-blur px-3 py-2">
