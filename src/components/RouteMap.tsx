@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Map as MapIcon, MapPinOff, Navigation, RefreshCw, WifiOff } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Compass, Map as MapIcon, MapPinOff, Navigation, RefreshCw, WifiOff } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import grimMarker from "@/assets/grim-marker.png";
@@ -22,7 +22,10 @@ interface Props {
   traveledCount?: number;
   /** Aktuell GPS-position (för navigering där route är den planerade rundan). */
   livePosition?: Point | null;
+  /** Aktiv navigering: rotera kartan så färdriktningen pekar uppåt (heading-up). */
+  rotateToHeading?: boolean;
 }
+
 
 const useIsDark = () => {
   const [dark, setDark] = useState<boolean>(() =>
