@@ -479,14 +479,46 @@ const RouteMap = ({
   if (route.length === 0 && !live) return null;
 
   const mapInner = (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+    <div className="relative w-full h-full overflow-hidden">
+      <div
+        className={rotationActive ? "grim-map-rotator" : "w-full h-full"}
+        style={
+          rotationActive
+            ? ({
+                transform: `rotate(${-heading}deg) scale(1.5)`,
+                ["--grim-map-counter-rot" as string]: `${heading}deg`,
+              } as React.CSSProperties)
+            : undefined
+        }
+      >
+        <div ref={containerRef} className="w-full h-full" />
+      </div>
       {loadError && <MapFallback error={loadError} route={route} onRetry={() => setRetryKey((k) => k + 1)} />}
+      {rotateToHeading && !loadError && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setHeadingUp((v) => !v);
+          }}
+          className={`absolute right-2 top-2 z-[600] flex h-11 w-11 items-center justify-center rounded-full border shadow-soft backdrop-blur transition-colors ${
+            headingUp ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background/90 text-foreground"
+          }`}
+          aria-pressed={headingUp}
+          aria-label={headingUp ? "Riktning uppåt (tryck för norr uppåt)" : "Norr uppåt (tryck för riktning uppåt)"}
+          title={headingUp ? "Riktning uppåt" : "Norr uppåt"}
+        >
+          <Compass
+            className="h-5 w-5 transition-transform duration-500"
+            style={{ transform: headingUp ? `rotate(${-heading}deg)` : undefined }}
+          />
+        </button>
+      )}
       {returnInfo && (
         <div className="absolute top-2 left-2 z-[500] flex items-center gap-2 bg-background/90 backdrop-blur border border-border rounded-md px-2.5 py-1.5 shadow-sm">
           <Navigation
             className="w-4 h-4 text-primary"
-            style={{ transform: `rotate(${returnInfo.bearing}deg)` }}
+            style={{ transform: `rotate(${returnInfo.bearing + (rotationActive ? -heading : 0)}deg)` }}
           />
           <span className="text-[11px] font-bold tracking-tight text-foreground">
             {returnInfo.distanceM < 1000
@@ -497,6 +529,7 @@ const RouteMap = ({
       )}
     </div>
   );
+
 
   if (collapsible) {
     return (
