@@ -165,6 +165,8 @@ const RouteMap = ({
   alternatives,
   traveledCount = 0,
   livePosition = null,
+  rotateToHeading = false,
+
 }: Props) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
