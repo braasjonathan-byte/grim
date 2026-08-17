@@ -592,17 +592,21 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       // Keep existing object identities for unchanged plans. Besides reducing large
       // recount renders, this prevents open editors/dialogs inside a plan card from
       // being torn down merely because a background refetch returned fresh objects.
-      setPlans((previous) => {
+      setPlansState((previous) => {
         const previousById = new Map(previous.map((plan) => [plan.id, plan]));
         const reconciled = planData.map((nextPlan) => {
           const current = previousById.get(nextPlan.id);
           if (!current) return nextPlan;
+          // The user changed this plan moments ago and the backend answer does not
+          // contain that change yet -> the response is stale, keep the local value.
+          if (planWriteGuard.shouldKeepLocal(nextPlan.id, nextPlan as PlanDay)) return current;
           const currentKeys = Object.keys(current) as (keyof PlanDay)[];
           const nextKeys = Object.keys(nextPlan) as (keyof PlanDay)[];
           const unchanged = currentKeys.length === nextKeys.length
             && nextKeys.every((key) => Object.is(current[key], nextPlan[key]));
           return unchanged ? current : nextPlan;
         });
+
         // A refresh may briefly omit a row while a write/realtime recount is in
         // flight. Keep any row that owns open UI mounted until the user closes
         // that UI; a later refresh can then remove it authoritatively.
