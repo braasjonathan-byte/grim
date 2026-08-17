@@ -79,8 +79,43 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const [plans, setPlans] = useState<PlanDay[]>([]);
-  const [completions, setCompletions] = useState<Record<string, Completion>>({});
+  const [plans, setPlansState] = useState<PlanDay[]>([]);
+  const [completions, setCompletionsState] = useState<Record<string, Completion>>({});
+  // --- Optimistic-write protection -------------------------------------------------
+  // A background refetch must never resurrect an older value on top of an edit the
+  // user just made (planned weight, logged kg/reps, PR data, comments...).
+  const planWriteGuard = useRef(
+    new LocalWriteGuard<PlanDay>(20000, fieldsEqual<PlanDay>(["session_name", "details", "tempo", "day", "week"] as any)),
+  ).current;
+  const completionWriteGuard = useRef(
+    new LocalWriteGuard<Completion>(
+      20000,
+      fieldsEqual<Completion>(["done", "skipped", "user_comment", "logged_tempo", "logged_pulse", "logged_distance_km", "logged_weights"] as any),
+    ),
+  ).current;
+
+  const setPlans = useCallback<React.Dispatch<React.SetStateAction<PlanDay[]>>>((updater) => {
+    setPlansState((prev) => {
+      const next = typeof updater === "function" ? (updater as (p: PlanDay[]) => PlanDay[])(prev) : updater;
+      const prevById = new Map(prev.map((p) => [p.id, p]));
+      for (const plan of next) {
+        const before = prevById.get(plan.id);
+        if (!before || before !== plan) planWriteGuard.mark(plan.id, plan);
+      }
+      return next;
+    });
+  }, [planWriteGuard]);
+
+  const setCompletions = useCallback<React.Dispatch<React.SetStateAction<Record<string, Completion>>>>((updater) => {
+    setCompletionsState((prev) => {
+      const next = typeof updater === "function" ? (updater as (p: Record<string, Completion>) => Record<string, Completion>)(prev) : updater;
+      for (const [key, value] of Object.entries(next)) {
+        if (prev[key] !== value) completionWriteGuard.mark(key, value);
+      }
+      return next;
+    });
+  }, [completionWriteGuard]);
+
   const weekScrollRef = useRef<HTMLDivElement>(null);
   const [inlineIntervalRunner, setInlineIntervalRunner] = useState<{
     intervals: Array<{ time: string; tempo: string; dist: string }>;
