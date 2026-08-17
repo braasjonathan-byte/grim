@@ -17,6 +17,7 @@ import { appendRouteToHistory, loadRouteHistory } from "@/lib/routeHistory";
 import { toPng } from "html-to-image";
 import SwipeableSetRow from "@/components/SwipeableSetRow";
 import { buildPrIndex, isPrWeight } from "@/lib/prBadges";
+import { LocalWriteGuard, fieldsEqual } from "@/lib/localWriteGuard";
 
 import { format, getISOWeek } from "date-fns";
 import { sv } from "date-fns/locale";
@@ -79,8 +80,43 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const [plans, setPlans] = useState<PlanDay[]>([]);
-  const [completions, setCompletions] = useState<Record<string, Completion>>({});
+  const [plans, setPlansState] = useState<PlanDay[]>([]);
+  const [completions, setCompletionsState] = useState<Record<string, Completion>>({});
+  // --- Optimistic-write protection -------------------------------------------------
+  // A background refetch must never resurrect an older value on top of an edit the
+  // user just made (planned weight, logged kg/reps, PR data, comments...).
+  const planWriteGuard = useRef(
+    new LocalWriteGuard<PlanDay>(20000, fieldsEqual<PlanDay>(["session_name", "details", "tempo", "day", "week"] as any)),
+  ).current;
+  const completionWriteGuard = useRef(
+    new LocalWriteGuard<Completion>(
+      20000,
+      fieldsEqual<Completion>(["done", "skipped", "user_comment", "logged_tempo", "logged_pulse", "logged_distance_km", "logged_weights"] as any),
+    ),
+  ).current;
+
+  const setPlans = useCallback<React.Dispatch<React.SetStateAction<PlanDay[]>>>((updater) => {
+    setPlansState((prev) => {
+      const next = typeof updater === "function" ? (updater as (p: PlanDay[]) => PlanDay[])(prev) : updater;
+      const prevById = new Map(prev.map((p) => [p.id, p]));
+      for (const plan of next) {
+        const before = prevById.get(plan.id);
+        if (!before || before !== plan) planWriteGuard.mark(plan.id, plan);
+      }
+      return next;
+    });
+  }, [planWriteGuard]);
+
+  const setCompletions = useCallback<React.Dispatch<React.SetStateAction<Record<string, Completion>>>>((updater) => {
+    setCompletionsState((prev) => {
+      const next = typeof updater === "function" ? (updater as (p: Record<string, Completion>) => Record<string, Completion>)(prev) : updater;
+      for (const [key, value] of Object.entries(next)) {
+        if (prev[key] !== value) completionWriteGuard.mark(key, value);
+      }
+      return next;
+    });
+  }, [completionWriteGuard]);
+
   const weekScrollRef = useRef<HTMLDivElement>(null);
   const [inlineIntervalRunner, setInlineIntervalRunner] = useState<{
     intervals: Array<{ time: string; tempo: string; dist: string }>;
@@ -556,17 +592,21 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       // Keep existing object identities for unchanged plans. Besides reducing large
       // recount renders, this prevents open editors/dialogs inside a plan card from
       // being torn down merely because a background refetch returned fresh objects.
-      setPlans((previous) => {
+      setPlansState((previous) => {
         const previousById = new Map(previous.map((plan) => [plan.id, plan]));
         const reconciled = planData.map((nextPlan) => {
           const current = previousById.get(nextPlan.id);
           if (!current) return nextPlan;
+          // The user changed this plan moments ago and the backend answer does not
+          // contain that change yet -> the response is stale, keep the local value.
+          if (planWriteGuard.shouldKeepLocal(nextPlan.id, nextPlan as PlanDay)) return current;
           const currentKeys = Object.keys(current) as (keyof PlanDay)[];
           const nextKeys = Object.keys(nextPlan) as (keyof PlanDay)[];
           const unchanged = currentKeys.length === nextKeys.length
             && nextKeys.every((key) => Object.is(current[key], nextPlan[key]));
           return unchanged ? current : nextPlan;
         });
+
         // A refresh may briefly omit a row while a write/realtime recount is in
         // flight. Keep any row that owns open UI mounted until the user closes
         // that UI; a later refresh can then remove it authoritatively.
@@ -667,12 +707,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           logged_weights: c.logged_weights as Record<string, number> | null
         };
       }
-      setCompletions((previous) => {
+      setCompletionsState((previous) => {
         const next: Record<string, Completion> = {};
         for (const [key, completion] of Object.entries(map)) {
           const current = previous[key];
           if (!current) {
             next[key] = completion;
+            continue;
+          }
+          // Stale response: it does not yet contain the logging the user just did
+          // (new kg -> PR badge). Keep the optimistic row until the backend confirms.
+          if (completionWriteGuard.shouldKeepLocal(key, completion)) {
+            next[key] = current;
             continue;
           }
           const currentKeys = Object.keys(current) as (keyof Completion)[];
@@ -681,12 +727,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             && completionKeys.every((field) => Object.is(current[field], completion[field]));
           next[key] = unchanged ? current : completion;
         }
+        // Rows that only exist locally (write still in flight) must survive the
+        // refresh, otherwise freshly logged sets and PR badges flicker away.
+        for (const [key, current] of Object.entries(previous)) {
+          if (!next[key] && completionWriteGuard.hasPending(key)) next[key] = current;
+        }
         const nextKeys = Object.keys(next);
         return nextKeys.length === Object.keys(previous).length
           && nextKeys.every((key) => next[key] === previous[key])
           ? previous
           : next;
       });
+
       // Seed the data-loss guard with what the backend actually holds
       seedCheckmarkCounts(userId, compData as any);
       const commentMap: Record<string, string> = {};
