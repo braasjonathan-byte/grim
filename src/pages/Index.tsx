@@ -129,6 +129,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [notificationFriendId, setNotificationFriendId] = useState<string | null>(null);
   const [adminViewUserId, setAdminViewUserId] = useState<string | null>(null);
+  const [refreshKeys, setRefreshKeys] = useState({ home: 0, stats: 0, social: 0 });
   const [tab, setTabState] = useState<Tab>(() => {
     // Check URL params first (from push notification deep links)
     const params = new URLSearchParams(window.location.search);
