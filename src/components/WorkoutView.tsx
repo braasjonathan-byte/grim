@@ -707,12 +707,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           logged_weights: c.logged_weights as Record<string, number> | null
         };
       }
-      setCompletions((previous) => {
+      setCompletionsState((previous) => {
         const next: Record<string, Completion> = {};
         for (const [key, completion] of Object.entries(map)) {
           const current = previous[key];
           if (!current) {
             next[key] = completion;
+            continue;
+          }
+          // Stale response: it does not yet contain the logging the user just did
+          // (new kg -> PR badge). Keep the optimistic row until the backend confirms.
+          if (completionWriteGuard.shouldKeepLocal(key, completion)) {
+            next[key] = current;
             continue;
           }
           const currentKeys = Object.keys(current) as (keyof Completion)[];
@@ -721,12 +727,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             && completionKeys.every((field) => Object.is(current[field], completion[field]));
           next[key] = unchanged ? current : completion;
         }
+        // Rows that only exist locally (write still in flight) must survive the
+        // refresh, otherwise freshly logged sets and PR badges flicker away.
+        for (const [key, current] of Object.entries(previous)) {
+          if (!next[key] && completionWriteGuard.hasPending(key)) next[key] = current;
+        }
         const nextKeys = Object.keys(next);
         return nextKeys.length === Object.keys(previous).length
           && nextKeys.every((key) => next[key] === previous[key])
           ? previous
           : next;
       });
+
       // Seed the data-loss guard with what the backend actually holds
       seedCheckmarkCounts(userId, compData as any);
       const commentMap: Record<string, string> = {};
