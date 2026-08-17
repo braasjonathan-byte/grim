@@ -25,6 +25,7 @@ import WhatsNewDialog from "@/components/WhatsNewDialog";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TourPrompt from "@/components/TourPrompt";
 import PageTransition from "@/components/PageTransition";
+import PullToRefresh from "@/components/PullToRefresh";
 import { hapticLight } from "@/lib/haptics";
 import { ensureUnlocked } from "@/lib/biometric";
 import { Capacitor } from "@capacitor/core";
