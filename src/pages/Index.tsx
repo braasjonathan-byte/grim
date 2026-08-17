@@ -950,13 +950,19 @@ const Index = () => {
       <Suspense fallback={<TabSkeleton />}>
       <main className="max-w-lg mx-auto px-4 py-4" style={{ paddingBottom: bottomNavOffset }}>
         <PageTransition tabKey={tab}>
-          {tab === "home" && <HomeView userId={user.id} onNavigate={(t) => setTab(t as Tab)} />}
+          {tab === "home" && (
+            <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, home: k.home + 1 }))}>
+              <HomeView key={`home-${refreshKeys.home}`} userId={user.id} onNavigate={(t) => setTab(t as Tab)} />
+            </PullToRefresh>
+          )}
           {tab === "workout" && <>
             <OnboardingTutorial />
             <WorkoutView key={adminViewUserId || user.id} userId={adminViewUserId || user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} onBack={adminViewUserId ? () => { setAdminViewUserId(null); setTab("calc"); } : undefined} />
           </>}
           {tab === "social" &&
+            <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, social: k.social + 1 }))}>
             <SocialView
+              key={`social-${refreshKeys.social}`}
               userId={user.id}
               isAdmin={userRole === "admin"}
               isHonorary={isHonorary}
@@ -973,9 +979,14 @@ const Index = () => {
                 });
               }}
               initialFriendId={notificationFriendId} />
+            </PullToRefresh>
             }
           
-          {tab === "stats" && <WorkoutStats userId={user.id} />}
+          {tab === "stats" && (
+            <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, stats: k.stats + 1 }))}>
+              <WorkoutStats key={`stats-${refreshKeys.stats}`} userId={user.id} />
+            </PullToRefresh>
+          )}
           {tab === "nutrition" && <NutritionView userId={user.id} isHonorary={isHonorary} />}
           {tab === "calc" &&
             <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
