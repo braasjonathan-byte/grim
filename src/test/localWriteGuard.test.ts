@@ -41,13 +41,15 @@ describe("LocalWriteGuard", () => {
 
 describe("PR badge stability", () => {
   const local = [{ logged_weights: { "__setdata__Benpress": JSON.stringify([{ kg: "120" }, { kg: "100" }]) } }];
-  const stale = [{ logged_weights: { "__setdata__Benpress": JSON.stringify([{ kg: "100" }]) } }];
+  // A stale refetch that has not yet seen the row the user just logged.
+  const stale: Array<{ logged_weights: Record<string, string> }> = [];
 
   it("flags a new best as PR", () => {
     expect(isPrWeight(buildPrIndex(local), "Benpress", "120")).toBe(true);
   });
 
-  it("would lose the PR if a stale row replaced the local one (the bug we guard against)", () => {
+  it("loses the PR when a stale response drops the freshly logged row (the bug we guard against)", () => {
     expect(isPrWeight(buildPrIndex(stale), "Benpress", "120")).toBe(false);
   });
 });
+
