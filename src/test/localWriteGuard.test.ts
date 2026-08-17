@@ -53,3 +53,56 @@ describe("PR badge stability", () => {
   });
 });
 
+
+describe("Hold-time (seconds) edits – Jessicas plankfall", () => {
+  type Plan = { id: string; details: string; tempo: string | null };
+
+  it("keeps a plank hold time changed 30s -> 75s when a stale refetch returns 30s", () => {
+    const guard = new LocalWriteGuard<Plan>(20000, fieldsEqual<Plan>(["details", "tempo"]));
+    guard.mark("p-plank", { id: "p-plank", details: "Planka — 3×75 s", tempo: null });
+    expect(
+      guard.shouldKeepLocal("p-plank", { id: "p-plank", details: "Planka — 3×30 s", tempo: null }),
+    ).toBe(true);
+  });
+
+  it("still protects the 75 s value after 10 seconds", () => {
+    vi.useFakeTimers();
+    try {
+      const guard = new LocalWriteGuard<Plan>(20000, fieldsEqual<Plan>(["details", "tempo"]));
+      guard.mark("p-plank", { id: "p-plank", details: "Planka — 3×75 s", tempo: null });
+      vi.advanceTimersByTime(10_000);
+      expect(
+        guard.shouldKeepLocal("p-plank", { id: "p-plank", details: "Planka — 3×30 s", tempo: null }),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("releases the value once the backend confirms 75 s", () => {
+    const guard = new LocalWriteGuard<Plan>(20000, fieldsEqual<Plan>(["details", "tempo"]));
+    guard.mark("p-plank", { id: "p-plank", details: "Planka — 3×75 s", tempo: null });
+    expect(
+      guard.shouldKeepLocal("p-plank", { id: "p-plank", details: "Planka — 3×75 s", tempo: null }),
+    ).toBe(false);
+  });
+
+  it("protects logged hold times (time-based set data) exactly like kg/reps", () => {
+    type Completion = { done: boolean; logged_weights: Record<string, string> | null };
+    const guard = new LocalWriteGuard<Completion>(
+      20000,
+      fieldsEqual<Completion>(["done", "logged_weights"]),
+    );
+    const local: Completion = {
+      done: false,
+      logged_weights: { "__setdata__Planka": JSON.stringify([{ time: "75" }]) },
+    };
+    const stale: Completion = {
+      done: false,
+      logged_weights: { "__setdata__Planka": JSON.stringify([{ time: "30" }]) },
+    };
+    guard.mark("u|1|Måndag", local);
+    expect(guard.shouldKeepLocal("u|1|Måndag", stale)).toBe(true);
+    expect(guard.shouldKeepLocal("u|1|Måndag", local)).toBe(false);
+  });
+});
