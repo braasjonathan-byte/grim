@@ -42,6 +42,8 @@ const ToolsTab = lazyRetry(() => import("@/components/ToolsTab"));
 const ChatView = lazyRetry(() => import("@/components/ChatView"));
 const NutritionView = lazyRetry(() => import("@/components/NutritionView"));
 const HomeView = lazyRetry(() => import("@/components/HomeView"));
+const WeeklyReportView = lazyRetry(() => import("@/components/WeeklyReportView"));
+
 
 type Tab = "home" | "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
 
