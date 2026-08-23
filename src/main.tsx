@@ -222,6 +222,15 @@ if (IS_NATIVE_CAPACITOR) {
 
   void (async () => {
     try {
+      const { initSharedActivityListener } = await import("./lib/sharedActivityBus");
+      await initSharedActivityListener();
+    } catch (e) {
+      console.warn("[sharedActivity] init failed", e);
+    }
+  })();
+
+  void (async () => {
+    try {
       const { initCrashlytics } = await import("./lib/crashlytics");
       await initCrashlytics();
     } catch (e) {
