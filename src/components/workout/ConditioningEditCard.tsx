@@ -5,7 +5,7 @@ import RouteMap from "@/components/RouteMap";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import { toTitleCase } from "@/lib/workoutIntervalUtils";
-import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, kmPerTempoUnit } from "@/lib/cardioUnits";
+import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, kmPerTempoUnit, showCardioElevation } from "@/lib/cardioUnits";
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
 export const condInputCls = "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center font-bold tabular-nums placeholder:text-muted-foreground/60 placeholder:font-normal placeholder:italic";
@@ -59,6 +59,8 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const [tempo, setTempo] = useState(initTempo);
   const [distance, setDistance] = useState(initDist);
   const [pulse, setPulse] = useState(initPulse);
+  const showElevation = showCardioElevation(name);
+  const [elevation, setElevation] = useState(savedData?.elev || "");
   const [route, setRoute] = useState<[number, number][]>(() => {
     const r = savedData?.route;
     return Array.isArray(r) ? r as [number, number][] : [];
@@ -188,6 +190,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     if (distance.trim()) data.dist = distance.trim();
     if (tempo.trim()) data.tempo = tempo.trim();
     if (pulse.trim()) data.pulse = pulse.trim();
+    if (showElevation && String(elevation).trim()) data.elev = String(elevation).trim();
     if (route.length > 1) data.route = route;
     // Auto-calc tempo if time + dist (only for linked modes)
     if (tempoIsLinked && data.time && data.dist && !data.tempo) {
@@ -240,6 +243,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{formatPaceDisplay(displayTempo, bikeMode)}{tempoDisplayUnit}</span></p>}
           {displayDist && showDistance && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
 
+          {savedData?.elev && <p className="text-xs">⛰ <span className="font-mono font-semibold">{savedData.elev} m</span></p>}
           {displayPulse && <p className="text-xs">❤️ <span className="font-mono font-semibold">{displayPulse} bpm</span></p>}
         </div>
         {Array.isArray(savedData?.route) && (savedData!.route as any[]).length > 1 && (
@@ -341,6 +345,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
               dist: distStr,
               tempo: res.tempo,
               pulse: pulse.trim() || undefined,
+              elev: showElevation && String(elevation).trim() ? String(elevation).trim() : undefined,
               intervals: res.intervals,
               route: res.route && res.route.length > 1 ? res.route : undefined,
             });
@@ -388,9 +393,17 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
             </div>
           )}
         </div>
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Snittspuls (bpm)</label>
-          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className={condInputCls} />
+        <div className={`grid gap-2 ${showElevation ? "grid-cols-2" : "grid-cols-1"}`}>
+          <div className="min-w-0">
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Snittspuls (bpm)</label>
+            <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className={condInputCls} />
+          </div>
+          {showElevation && (
+            <div className="min-w-0">
+              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Höjdmeter (m)</label>
+              <input type="number" inputMode="numeric" value={elevation} onChange={(e) => setElevation(e.target.value)} placeholder="t.ex. 211" className={condInputCls} />
+            </div>
+          )}
         </div>
       </div>
       <div className="flex gap-2 pt-1">

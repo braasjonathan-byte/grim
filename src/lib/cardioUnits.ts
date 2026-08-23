@@ -40,6 +40,7 @@ export interface CustomCardioConfig {
   modes?: CardioMode[];
   distUnit?: CardioDistUnit;
   showPulse?: boolean;
+  showElevation?: boolean;
 }
 
 const ALL_MODES: CardioMode[] = ["minkm", "kmh", "watt", "min100m", "min500m", "spm", "kcal", "level"];
@@ -55,6 +56,7 @@ export function registerCustomCardioConfigs(
     cardio_modes?: string[] | null;
     cardio_dist_unit?: string | null;
     track_pulse?: boolean | null;
+    track_elevation?: boolean | null;
   }> | null | undefined,
 ) {
   if (!rows) return;
@@ -65,6 +67,7 @@ export function registerCustomCardioConfigs(
       modes: modes.length > 0 ? modes : undefined,
       distUnit: r.cardio_dist_unit === "none" ? null : (r.cardio_dist_unit as CardioDistUnit) || undefined,
       showPulse: r.track_pulse !== false,
+      showElevation: r.track_elevation === true,
     };
     customConfigs.set(r.name.toLowerCase(), cfg);
   }
@@ -78,6 +81,18 @@ export function getCustomCardioConfig(name: string): CustomCardioConfig | undefi
 export function showCardioPulse(name: string): boolean {
   const cfg = getCustomCardioConfig(name);
   return cfg?.showPulse !== false;
+}
+
+/**
+ * Ska höjdmeter (stigning) kunna fyllas i? Standard för utomhussporter som
+ * löpning, cykling, promenad/vandring och skidåkning.
+ */
+export function showCardioElevation(name: string): boolean {
+  const cfg = getCustomCardioConfig(name);
+  if (cfg && cfg.showElevation !== undefined) return cfg.showElevation;
+  const n = name || "";
+  if (re.swim.test(n) || re.row.test(n) || re.jumprope.test(n) || re.stair.test(n) || re.airbike.test(n) || re.cross.test(n)) return false;
+  return re.bike.test(n) || re.walk.test(n) || re.ski.test(n) || re.paddle.test(n) || /löp|jogg|spring|trail|terräng|maraton|milen/i.test(n);
 }
 
 /** Tillgängliga enheter per sport. Första posten är standardvalet. */
