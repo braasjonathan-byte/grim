@@ -3830,6 +3830,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               if (data.time) infoParts.push(`${data.time} min`);
                               if (data.tempo) infoParts.push(`${data.tempo}/km`);
                               if (data.dist) infoParts.push(`${data.dist} km`);
+                              if (data.elev) infoParts.push(`${data.elev} m stigning`);
                               if (data.pulse) infoParts.push(`${data.pulse} bpm`);
                               const entry = infoParts.length > 0 ? `${name} — ${infoParts.join(", ")}` : name;
                               const separator = plan.details.includes("\n") ? "\n" : "; ";
