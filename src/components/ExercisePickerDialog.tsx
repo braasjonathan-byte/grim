@@ -73,6 +73,7 @@ const ExercisePickerDialog = ({
   const [newCardioModes, setNewCardioModes] = useState<CardioMode[]>(["minkm", "kmh"]);
   const [newDistUnit, setNewDistUnit] = useState<"km" | "m" | "none">("km");
   const [newTrackPulse, setNewTrackPulse] = useState(true);
+  const [newTrackElevation, setNewTrackElevation] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -178,6 +179,7 @@ const ExercisePickerDialog = ({
       cardio_modes: isCardioCategory ? newCardioModes : [],
       cardio_dist_unit: isCardioCategory ? newDistUnit : null,
       track_pulse: isCardioCategory ? newTrackPulse : true,
+      track_elevation: isCardioCategory ? newTrackElevation : false,
     } as any);
     const { data } = await supabase.from("custom_exercises").select("*").order("name");
     registerCustomCardioConfigs(data as any);
@@ -513,6 +515,15 @@ const ExercisePickerDialog = ({
                         className="rounded border-border accent-primary w-4 h-4"
                       />
                       <span className="text-xs text-muted-foreground">Puls (bpm)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newTrackElevation}
+                        onChange={e => setNewTrackElevation(e.target.checked)}
+                        className="rounded border-border accent-primary w-4 h-4"
+                      />
+                      <span className="text-xs text-muted-foreground">Höjdmeter (m)</span>
                     </label>
                     <p className="text-[10px] text-muted-foreground">Tid (tim/min/sek) fylls alltid i.</p>
                   </div>

@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_exercises ADD COLUMN IF NOT EXISTS track_elevation boolean NOT NULL DEFAULT false;

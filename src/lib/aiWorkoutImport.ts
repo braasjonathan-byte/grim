@@ -3,7 +3,7 @@
  * en detaljrad per övning + färdigifyllda loggvärden (__setdata__ / __cond__)
  * så att passet registreras som riktiga övningar och inte bara som text.
  */
-import { getCardioModes, getCardioDistUnit, type CardioMode } from "@/lib/cardioUnits";
+import { getCardioModes, getCardioDistUnit, showCardioElevation, type CardioMode } from "@/lib/cardioUnits";
 
 export interface AiExercise {
   type?: string | null;
@@ -16,7 +16,47 @@ export interface AiExercise {
   pace_min_per_km?: string | number | null;
   watt?: number | null;
   pulse?: number | null;
+  elevation_gain_m?: number | null;
+  /** AI:n kan använda andra fältnamn – de plockas upp dynamiskt. */
+  [key: string]: unknown;
 }
+
+/** Plockar första ifyllda värdet bland flera möjliga fältnamn. */
+const pick = (ex: AiExercise, keys: string[]): unknown => {
+  for (const k of keys) {
+    const v = (ex as Record<string, unknown>)[k];
+    if (v !== null && v !== undefined && v !== "") return v;
+  }
+  return null;
+};
+
+/** Tolkar tid i format 40.5, "40:31", "1:02:15", "40 min 31 s", "2430" (sek). */
+const parseDurationMin = (ex: AiExercise): number | null => {
+  const direct = pick(ex, ["duration_min", "durationMin", "time_min", "minutes", "duration_minutes"]);
+  if (typeof direct === "number" && direct > 0) return direct;
+  const sec = pick(ex, ["duration_sec", "duration_seconds", "seconds", "moving_time_seconds", "elapsed_time_seconds"]);
+  if (sec !== null) {
+    const n = typeof sec === "number" ? sec : parseFloat(String(sec));
+    if (Number.isFinite(n) && n > 0) return n / 60;
+  }
+  const raw = direct ?? pick(ex, ["duration", "time", "duration_hms", "elapsed_time", "moving_time"]);
+  if (raw === null) return null;
+  const t = String(raw).trim().toLowerCase();
+  const colon = t.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (colon) {
+    const a = parseInt(colon[1]), b = parseInt(colon[2]), c = colon[3] ? parseInt(colon[3]) : null;
+    return c !== null ? a * 60 + b + c / 60 : a + b / 60;
+  }
+  const h = t.match(/(\d+(?:[.,]\d+)?)\s*(?:h|tim|timmar)/);
+  const m = t.match(/(\d+(?:[.,]\d+)?)\s*(?:m|min|minuter)(?![a-zåäö])/);
+  const s = t.match(/(\d+(?:[.,]\d+)?)\s*(?:s|sek|sekunder)(?![a-zåäö])/);
+  if (h || m || s) {
+    const f = (x: RegExpMatchArray | null) => (x ? parseFloat(x[1].replace(",", ".")) : 0);
+    return f(h) * 60 + f(m) + f(s) / 60;
+  }
+  const plain = parseFloat(t.replace(",", "."));
+  return Number.isFinite(plain) && plain > 0 ? plain : null;
+};
 
 const num = (v: unknown): number | null => {
   if (v === null || v === undefined || v === "") return null;
@@ -80,7 +120,7 @@ export function buildWorkoutFromAiExercises(exercises: AiExercise[]): BuiltWorko
 
     if (!isCardio) {
       const rawSets = Array.isArray(ex.sets) ? ex.sets : [];
-      const hold = num(ex.hold_seconds);
+      const hold = num(pick(ex, ["hold_seconds", "seconds", "duration_sec"]));
       const setData = rawSets.map((s) => ({
         kg: num(s?.kg) !== null ? String(round(num(s?.kg)!, 2)) : "",
         reps: num(s?.reps) !== null ? String(Math.round(num(s?.reps)!)) : hold ? String(Math.round(hold)) : "",
@@ -101,10 +141,15 @@ export function buildWorkoutFromAiExercises(exercises: AiExercise[]): BuiltWorko
     // Kondition
     const mode = resolveMode(name);
     const distUnit = getCardioDistUnit(name);
-    const minutes = num(ex.duration_min);
-    const km = num(ex.distance_km);
-    let kmh = num(ex.speed_kmh);
-    let paceMinPerKm = parsePace(ex.pace_min_per_km ?? null);
+    const minutes = parseDurationMin(ex);
+    let km = num(pick(ex, ["distance_km", "distanceKm", "distance"]));
+    const meters = num(pick(ex, ["distance_m", "distance_meters"]));
+    if (!km && meters) km = meters / 1000;
+    let kmh = num(pick(ex, ["speed_kmh", "speed", "avg_speed_kmh", "average_speed_kmh"]));
+    let paceMinPerKm = parsePace((pick(ex, ["pace_min_per_km", "pace", "pace_per_km"]) as string | number | null) ?? null);
+    const watt = num(pick(ex, ["watt", "watts", "power", "power_w", "avg_power"]));
+    const pulse = num(pick(ex, ["pulse", "heart_rate", "avg_heart_rate", "average_heartrate", "hr", "bpm"]));
+    const elevation = num(pick(ex, ["elevation_gain_m", "elevation", "elevation_m", "ascent_m", "hojdmeter", "height_gain_m"]));
     if (!kmh && paceMinPerKm) kmh = 60 / paceMinPerKm;
     if (!kmh && km && minutes) kmh = km / (minutes / 60);
     if (!paceMinPerKm && kmh) paceMinPerKm = 60 / kmh;
@@ -114,14 +159,15 @@ export function buildWorkoutFromAiExercises(exercises: AiExercise[]): BuiltWorko
     else if (mode === "kmh" && kmh) tempo = String(round(kmh, 1));
     else if (mode === "min100m" && paceMinPerKm) tempo = fmtPace(paceMinPerKm * 0.1);
     else if (mode === "min500m" && paceMinPerKm) tempo = fmtPace(paceMinPerKm * 0.5);
-    else if (mode === "watt" && num(ex.watt)) tempo = String(Math.round(num(ex.watt)!));
+    else if (mode === "watt" && watt) tempo = String(Math.round(watt));
 
     const distValue = km !== null ? (distUnit === "m" ? Math.round(km * 1000) : round(km, 2)) : null;
     const payload: Record<string, string> = {};
     if (minutes) payload.time = String(round(minutes, 2));
     if (distValue !== null && distUnit !== null) payload.dist = String(distValue);
     if (tempo) payload.tempo = tempo;
-    if (num(ex.pulse)) payload.pulse = String(Math.round(num(ex.pulse)!));
+    if (pulse) payload.pulse = String(Math.round(pulse));
+    if (elevation && showCardioElevation(name)) payload.elev = String(Math.round(elevation));
 
     if (Object.keys(payload).length > 0) {
       weights[`__cond__${name}`] = JSON.stringify(payload);
@@ -138,7 +184,8 @@ export function buildWorkoutFromAiExercises(exercises: AiExercise[]): BuiltWorko
       else info.push(`${tempo}/km`);
     }
     if (distValue !== null && distUnit !== null) info.push(`${distValue} ${distUnit}`);
-    if (num(ex.pulse)) info.push(`${Math.round(num(ex.pulse)!)} bpm`);
+    if (elevation && showCardioElevation(name)) info.push(`${Math.round(elevation)} m stigning`);
+    if (pulse) info.push(`${Math.round(pulse)} bpm`);
     lines.push(info.length > 0 ? `${name} — ${info.join(", ")}` : name);
   }
 

@@ -347,6 +347,7 @@ export type Database = {
           name: string
           secondary_muscles: Json
           submuscles: string[]
+          track_elevation: boolean
           track_pulse: boolean
         }
         Insert: {
@@ -362,6 +363,7 @@ export type Database = {
           name: string
           secondary_muscles?: Json
           submuscles?: string[]
+          track_elevation?: boolean
           track_pulse?: boolean
         }
         Update: {
@@ -377,6 +379,7 @@ export type Database = {
           name?: string
           secondary_muscles?: Json
           submuscles?: string[]
+          track_elevation?: boolean
           track_pulse?: boolean
         }
         Relationships: []

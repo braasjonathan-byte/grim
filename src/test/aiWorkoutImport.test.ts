@@ -14,3 +14,21 @@ describe("ai import", () => {
     expect(JSON.parse(r.loggedWeights["__setdata__Bänkpress"]).length).toBe(2);
   });
 });
+
+describe("ai import – robusta fält", () => {
+  it("tolkar tid som hh:mm:ss, puls och höjdmeter", () => {
+    const r = buildWorkoutFromAiExercises([
+      { type: "cardio", name: "Cykling", duration: "1:02:15", distance_km: 20, average_heartrate: 148, elevation_gain_m: 211 } as any,
+    ]);
+    const p = JSON.parse(r.loggedWeights["__cond__Cykling"]);
+    expect(Number(p.time)).toBeCloseTo(62.25, 1);
+    expect(p.pulse).toBe("148");
+    expect(p.elev).toBe("211");
+    expect(p.tempo).toBeTruthy();
+  });
+  it("tolkar '40 min 31 s'", () => {
+    const r = buildWorkoutFromAiExercises([{ type: "cardio", name: "Löpning", duration: "40 min 31 s", distance_km: 8 } as any]);
+    const p = JSON.parse(r.loggedWeights["__cond__Löpning"]);
+    expect(Number(p.time)).toBeCloseTo(40.52, 1);
+  });
+});
