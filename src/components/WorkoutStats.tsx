@@ -231,11 +231,22 @@ const getCompletionStatsDate = (
       ? getStandaloneDate(completion.archived_plan_start_date)
       : null;
     const resolvedPlanStart = archivedStart ?? planStartDate;
+    const loggedDate = getUpdatedAtDate(completion.updated_at);
     if (resolvedPlanStart && completion.week > 0) {
-      return getWorkoutCalendarDate(completion.week, completion.day, resolvedPlanStart);
+      const scheduled = getWorkoutCalendarDate(completion.week, completion.day, resolvedPlanStart);
+      // A session can never be trained in the future: if the plan schedules it
+      // ahead of today (e.g. plan starts next Monday), fall back to when it was
+      // actually marked done so it shows up in the current period.
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (scheduled && scheduled.getTime() > today.getTime() && loggedDate) {
+        return loggedDate;
+      }
+      return scheduled;
     }
-    return getUpdatedAtDate(completion.updated_at);
+    return loggedDate;
   }
+
 
 
   if (planStartDate) {
