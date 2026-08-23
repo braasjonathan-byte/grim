@@ -48,7 +48,7 @@ import AutoSaveInput from "@/components/AutoSaveInput";
 import IntervalTimeMSInput from "@/components/IntervalTimeMSInput";
 import { useSaveIndicator } from "@/components/SaveIndicator";
 import IntervalRowsEditor, { IntervalRow, emptyIntervalRow, summarizeIntervalRows } from "@/components/IntervalRowsEditor";
-import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, getStoredCardioMode, storeCardioMode, convertTempoValue, computeTempoValue, computeDistanceKm, computeTimeMin, kmPerTempoUnit, parseTempoInput } from "@/lib/cardioUnits";
+import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, getStoredCardioMode, storeCardioMode, convertTempoValue, computeTempoValue, computeDistanceKm, computeTimeMin, kmPerTempoUnit, parseTempoInput, registerCustomCardioConfigs } from "@/lib/cardioUnits";
 import CardioLogFields from "@/components/CardioLogFields";
 import EventProgressBar from "@/components/EventProgressBar";
 import SpotifyWidget from "@/components/SpotifyWidget";
@@ -779,6 +779,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   useEffect(() => {
     if (mode === "single" || mode === "plan") {
       supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
+        registerCustomCardioConfigs(data as any);
         if (data) setCustomExercises(data);
       });
     }
@@ -4757,7 +4758,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           onClose={() => setExerciseInfoState(null)}
           isAdmin={canEditExercises}
           initialEditMode={exerciseInfoState.editMode}
-          onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { if (data) setCustomExercises(data); })}
+          onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { registerCustomCardioConfigs(data as any); if (data) setCustomExercises(data); })}
         />
       )}
       {deleteExerciseConfirm && (
@@ -8587,7 +8588,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         onClose={() => setExerciseInfoState(null)}
         isAdmin={canEditExercises}
         initialEditMode={exerciseInfoState.editMode}
-        onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { if (data) setCustomExercises(data); })}
+        onCategoryChanged={() => supabase.from("custom_exercises").select("*").order("name").then(({ data }) => { registerCustomCardioConfigs(data as any); if (data) setCustomExercises(data); })}
       />
     )}
     {showFireworks && (

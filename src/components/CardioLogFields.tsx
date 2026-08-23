@@ -6,6 +6,7 @@ import {
   modeLabel,
   modePlaceholder,
   isPaceMode,
+  showCardioPulse,
   formatPaceDisplay,
 } from "@/lib/cardioUnits";
 
@@ -52,6 +53,7 @@ const CardioLogFields = ({
   const modes = getCardioModes(exerciseName);
   const distUnit = getCardioDistUnit(exerciseName) ?? "km";
   const showDistance = getCardioDistUnit(exerciseName) !== null;
+  const showPulse = showCardioPulse(exerciseName);
 
   return (
     <div className="space-y-3">
@@ -90,7 +92,7 @@ const CardioLogFields = ({
         </div>
       </div>
 
-      <div className={showDistance ? "grid grid-cols-3 gap-2" : "grid grid-cols-2 gap-2"}>
+      <div className={`grid gap-2 ${[true, showDistance, showPulse].filter(Boolean).length === 3 ? "grid-cols-3" : [true, showDistance, showPulse].filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
         <div className="min-w-0">
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Tempo</label>
           <input
@@ -126,11 +128,13 @@ const CardioLogFields = ({
             <span className={unitCls}>{distUnit}</span>
           </div>
         )}
-        <div className="min-w-0">
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Puls</label>
-          <input type="number" inputMode="numeric" value={pulse} onChange={(e) => onPulseChange(e.target.value)} placeholder="155" className={inputCls} />
-          <span className={unitCls}>bpm</span>
-        </div>
+        {showPulse && (
+          <div className="min-w-0">
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Puls</label>
+            <input type="number" inputMode="numeric" value={pulse} onChange={(e) => onPulseChange(e.target.value)} placeholder="155" className={inputCls} />
+            <span className={unitCls}>bpm</span>
+          </div>
+        )}
       </div>
     </div>
   );
