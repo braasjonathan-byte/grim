@@ -984,10 +984,32 @@ const Index = () => {
             }
           
           {tab === "stats" && (
-            <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, stats: k.stats + 1 }))}>
-              <WorkoutStats key={`stats-${refreshKeys.stats}`} userId={user.id} />
-            </PullToRefresh>
+            weeklyReport ? (
+              <WeeklyReportView
+                userId={user.id}
+                reportId={weeklyReport === "latest" ? null : weeklyReport}
+                onClose={() => setWeeklyReport(null)}
+              />
+            ) : (
+              <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, stats: k.stats + 1 }))}>
+                <button
+                  onClick={() => setWeeklyReport("latest")}
+                  className="w-full mb-4 flex items-center justify-between gap-3 rounded-2xl bg-card shadow-soft px-4 py-3 text-left active:scale-[0.99] transition-transform"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-lg">📊</span>
+                    <span>
+                      <span className="block text-sm font-bold text-foreground">Veckorapport</span>
+                      <span className="block text-xs text-muted-foreground">Se veckans pass i detalj</span>
+                    </span>
+                  </span>
+                  <span className="text-xs font-semibold text-primary">Öppna</span>
+                </button>
+                <WorkoutStats key={`stats-${refreshKeys.stats}`} userId={user.id} />
+              </PullToRefresh>
+            )
           )}
+
           {tab === "nutrition" && <NutritionView userId={user.id} isHonorary={isHonorary} />}
           {tab === "calc" &&
             <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
