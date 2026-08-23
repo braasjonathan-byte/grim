@@ -29,7 +29,8 @@ Returnera ENDAST giltig JSON:
       "speed_kmh": 23.3,
       "pace_min_per_km": "5:30",
       "watt": 161,
-      "pulse": 142
+      "pulse": 142,                               // snittpuls i bpm
+      "elevation_gain_m": 211                     // total höjdökning/stigning i meter
     }
   ]
 }
@@ -39,7 +40,11 @@ Regler:
 - Utelämna (null) fält som inte syns i bilden.
 - Konditionspass (löpning, cykling, simning, rodd, promenad m.m.) => type "cardio".
 - Styrkeövningar => type "strength" med ett set-objekt per genomfört set (vikt i kg).
-- Om bilden inte visar ett träningspass: confidence 0 och exercises [].`;
+- Om bilden inte visar ett träningspass: confidence 0 och exercises [].
+- TID är viktigast: skriv ALLTID duration_min som decimaltal (t.ex. "40 min 31 s" => 40.52, "1:02:15" => 62.25).
+- Fyll i ALLA värden som syns: tempo/hastighet, distans, effekt (W), snittpuls (bpm) och höjdmeter.
+- Om bara hastighet syns, lämna pace_min_per_km null (och tvärtom) – räkna inte om själv.
+- Blanda inte ihop effekt (W) med puls (bpm).`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -68,18 +73,23 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json({ error: "AI ej konfigurerad" }, 500);
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": LOVABLE_API_KEY,
+        "X-Lovable-AIG-SDK": "fetch",
+      },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+        model: "openai/gpt-5.6-sol",
+        stream: true,
+        instructions: SYSTEM_PROMPT,
+        input: [
           {
             role: "user",
             content: [
-              { type: "text", text: "Läs av passet i skärmdumpen och returnera endast JSON." },
-              { type: "image_url", image_url: { url: image } },
+              { type: "input_text", text: "Läs av passet i skärmdumpen och returnera endast JSON." },
+              { type: "input_image", image_url: image },
             ],
           },
         ],
@@ -88,10 +98,33 @@ Deno.serve(async (req) => {
 
     if (aiRes.status === 429) return json({ error: "För många förfrågningar, försök igen om en stund" }, 429);
     if (aiRes.status === 402) return json({ error: "AI-krediter slut" }, 402);
-    if (!aiRes.ok) return json({ error: "AI-anrop misslyckades", detail: await aiRes.text() }, 502);
+    if (!aiRes.ok || !aiRes.body) return json({ error: "AI-anrop misslyckades", detail: await aiRes.text().catch(() => "") }, 502);
 
-    const aiData = await aiRes.json();
-    const content: string = aiData.choices?.[0]?.message?.content || "";
+    // Läs SSE-strömmen och sätt ihop svarstexten
+    let content = "";
+    const reader = aiRes.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const evt = JSON.parse(payload);
+          if (evt.type === "response.output_text.delta" && typeof evt.delta === "string") content += evt.delta;
+          else if (evt.type === "response.completed" && typeof evt.response?.output_text === "string" && !content) {
+            content = evt.response.output_text;
+          }
+        } catch { /* ignorera ofullständiga event */ }
+      }
+    }
+
     const match = content.match(/\{[\s\S]*\}/);
     if (!match) return json({ error: "Kunde inte tolka AI-svaret" }, 502);
 
