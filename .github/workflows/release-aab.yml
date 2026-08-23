@@ -30,39 +30,24 @@ jobs:
           java-version: 21
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: Patch legacy send-intent plugin
+        run: node scripts/patch-send-intent-gradle.cjs
+
+      - name: Verify all Android plugins
+        run: npm run android:verify-plugins
 
       - name: Build web
         env:
           VITE_ENABLE_NATIVE_PUSH: "true"
         run: npm run build
 
-      - name: Clean everything
-        run: |
-          rm -rf android
-          rm -rf node_modules/.cache
-
-      - name: Install Capacitor core
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps --no-audit --no-fund
-
-      - name: Create Android platform
-        run: npx cap add android
-
-      - name: Copy google-services.json
-        run: |
-          if [ -f google-services.json ]; then
-            cp google-services.json android/app/google-services.json
-            echo "google-services.json copied to android/app/"
-          else
-            echo "ERROR: google-services.json missing in repo root"
-            exit 1
-          fi
-
-      - name: Patch send-intent plugin gradle (Capacitor 8 compat)
-        run: node scripts/patch-send-intent-gradle.cjs
-
       - name: Capacitor sync
         run: npx cap sync android
+
+      - name: Re-verify native plugins after sync
+        run: npm run android:verify-plugins
 
       - name: Patch Firebase / FCM
         run: node scripts/patch-android-firebase.cjs
@@ -161,12 +146,16 @@ jobs:
       # -------------------------
       - name: Build release AAB
         working-directory: android
-        run: ./gradlew bundleRelease --no-daemon
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
 
       - name: Locate AAB
         id: aab
         run: |
-          AAB=$(find android -name "*release*.aab" | head -n 1)
+          AAB=$(find android/app/build/outputs/bundle/release -maxdepth 1 -name "*.aab" -print -quit)
+          if [ -z "$AAB" ]; then
+            echo "ERROR: Release AAB was not generated"
+            exit 1
+          fi
           echo "aab_path=$AAB" >> $GITHUB_OUTPUT
           echo "Found AAB at: $AAB"
 
