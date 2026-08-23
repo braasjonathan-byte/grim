@@ -103,7 +103,40 @@ if (!xml.includes("android.intent.action.TTS_SERVICE")) {
 }
 
 
+// "Dela till Grim": ta emot GPX/TCX/FIT-filer från Garmin Connect, Strava, Zwift m.fl.
+if (!xml.includes("SHARE_TARGET_GRIM")) {
+  const mimes = [
+    "application/gpx+xml",
+    "application/vnd.garmin.tcx+xml",
+    "application/xml",
+    "text/xml",
+    "application/octet-stream",
+    "application/fit",
+    "*/*",
+  ];
+  const data = mimes.map((m) => `                <data android:mimeType="${m}" />`).join("\n");
+  const filter = `
+            <!-- SHARE_TARGET_GRIM: träningsfiler delade från andra appar -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+${data}
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+${data}
+            </intent-filter>`;
+  xml = xml.replace(
+    /(<intent-filter>\s*<action android:name="android.intent.action.MAIN" \/>[\s\S]*?<\/intent-filter>)/,
+    `$1\n${filter}`
+  );
+  changed = true;
+  console.log("[patch-android-manifest] Added SEND/SEND_MULTIPLE share-target intent filters");
+}
+
 if (changed) {
+
   fs.writeFileSync(MANIFEST, xml, "utf8");
   console.log("[patch-android-manifest] AndroidManifest.xml updated.");
 } else {

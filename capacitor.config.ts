@@ -18,6 +18,7 @@ const config: CapacitorConfig = {
       '@capacitor-community/text-to-speech',
       '@capacitor-firebase/app',
       '@capacitor-firebase/crashlytics',
+      'send-intent',
     ],
   },
   ios: {

@@ -1,6 +1,6 @@
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw, Trash2, Route as RouteIcon } from "lucide-react";
+import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw, Trash2, Route as RouteIcon, FileUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { updateApp } from "@/lib/appUpdate";
 import { APP_VERSION } from "@/lib/version";
@@ -18,6 +18,9 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
+import { toast } from "sonner";
+import { parseActivityFile } from "@/lib/activityFileParser";
+import { emitSharedActivity } from "@/lib/sharedActivityBus";
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
 const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
 const AdminUserList = lazyRetry(() => import("@/components/AdminUserList"));
@@ -68,6 +71,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const navigate = useNavigate();
   const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
   const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
+  const activityFileInputRef = useRef<HTMLInputElement>(null);
   const dragItem = useRef<string | null>(null);
   const dragOverItem = useRef<string | null>(null);
   const autoScrollRef = useRef<number | null>(null);
@@ -152,6 +156,42 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
+    )},
+    { key: "file-import", label: "Importera pass från fil", render: () => (
+      <>
+        <input
+          ref={activityFileInputRef}
+          type="file"
+          accept=".gpx,.tcx,.fit,application/gpx+xml,application/vnd.garmin.tcx+xml,application/octet-stream"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            try {
+              emitSharedActivity(await parseActivityFile(file));
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Kunde inte läsa filen");
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => activityFileInputRef.current?.click()}
+          className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <FileUp className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-foreground">Importera pass från fil</span>
+              <span className="block truncate text-xs text-muted-foreground">GPX, TCX eller FIT från Garmin, Strava eller Zwift</span>
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
+      </>
     )},
     { key: "route-builder", label: "Skapa runda", render: () => (
       <button
