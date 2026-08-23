@@ -301,7 +301,7 @@ async function parseFit(buffer: ArrayBuffer, fileName: string): Promise<ParsedAc
   const stream = Stream.fromArrayBuffer(buffer);
   const decoder = new Decoder(stream);
   if (!decoder.isFIT()) throw new Error("Filen är inte en giltig FIT-fil.");
-  const { messages } = decoder.read({ mesgListener: undefined as never });
+  const { messages } = decoder.read();
 
   const sessions: Record<string, unknown>[] = (messages as Record<string, unknown[]>).sessionMesgs as never ?? [];
   const records: Record<string, unknown>[] = (messages as Record<string, unknown[]>).recordMesgs as never ?? [];
