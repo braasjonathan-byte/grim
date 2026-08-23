@@ -31,8 +31,59 @@ const re = {
   ski: /skidåkning|skidor|längdskid|skridsko/i,
 };
 
+/**
+ * Egendefinierade konditionsövningar kan välja exakt vilka variabler som ska
+ * gå att fylla i. Konfigurationen registreras när övningslistan hämtas och
+ * har företräde framför namnbaserad gissning nedan.
+ */
+export interface CustomCardioConfig {
+  modes?: CardioMode[];
+  distUnit?: CardioDistUnit;
+  showPulse?: boolean;
+}
+
+const ALL_MODES: CardioMode[] = ["minkm", "kmh", "watt", "min100m", "min500m", "spm", "kcal", "level"];
+export const ALL_CARDIO_MODES = ALL_MODES;
+
+const customConfigs = new Map<string, CustomCardioConfig>();
+
+/** Registrerar konfiguration från raderna i custom_exercises. */
+export function registerCustomCardioConfigs(
+  rows: Array<{
+    name?: string | null;
+    category?: string | null;
+    cardio_modes?: string[] | null;
+    cardio_dist_unit?: string | null;
+    track_pulse?: boolean | null;
+  }> | null | undefined,
+) {
+  if (!rows) return;
+  for (const r of rows) {
+    if (!r?.name || r.category !== "kondition") continue;
+    const modes = (r.cardio_modes || []).filter((m): m is CardioMode => ALL_MODES.includes(m as CardioMode));
+    const cfg: CustomCardioConfig = {
+      modes: modes.length > 0 ? modes : undefined,
+      distUnit: r.cardio_dist_unit === "none" ? null : (r.cardio_dist_unit as CardioDistUnit) || undefined,
+      showPulse: r.track_pulse !== false,
+    };
+    customConfigs.set(r.name.toLowerCase(), cfg);
+  }
+}
+
+export function getCustomCardioConfig(name: string): CustomCardioConfig | undefined {
+  return customConfigs.get((name || "").trim().toLowerCase());
+}
+
+/** Ska pulsfältet visas för övningen? */
+export function showCardioPulse(name: string): boolean {
+  const cfg = getCustomCardioConfig(name);
+  return cfg?.showPulse !== false;
+}
+
 /** Tillgängliga enheter per sport. Första posten är standardvalet. */
 export function getCardioModes(name: string): CardioMode[] {
+  const custom = getCustomCardioConfig(name);
+  if (custom?.modes?.length) return custom.modes;
   const n = name || "";
   if (re.swim.test(n)) return ["min100m", "minkm", "kmh"];
   if (re.row.test(n)) return ["min500m", "watt", "minkm", "kmh"];
@@ -50,12 +101,15 @@ export function getCardioModes(name: string): CardioMode[] {
 
 /** Distansenhet för sporten. `null` = distans är inte relevant (t.ex. hopprep). */
 export function getCardioDistUnit(name: string): CardioDistUnit {
+  const custom = getCustomCardioConfig(name);
+  if (custom && custom.distUnit !== undefined) return custom.distUnit;
   const n = name || "";
   if (re.jumprope.test(n)) return null;
   if (re.swim.test(n)) return "m";
   if (re.stair.test(n)) return null;
   return "km";
 }
+
 
 /** Kort etikett i enhetsväljaren. */
 export function modeLabel(mode: CardioMode): string {
