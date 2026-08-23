@@ -19,7 +19,9 @@ export interface CardioCategoryMeta {
 
 export const CARDIO_CATEGORIES: CardioCategoryMeta[] = [
   { key: "löpning",   label: "Löpning",         icon: "🏃", keywords: /löpning|löp|jogg|sprint|tröskel|långpass|distanslöpning|intervaller?(?:löpning)?/i },
-  { key: "cykling",   label: "Cykling",         icon: "🚴", keywords: /cykling|cykel|spinning|airbike|air\s*bike|assault\s*bike/i },
+  // All slags cykling (inne, ute, virtuell/Zwift, MTB, gravel, elcykel, Strava-engelska namn)
+  { key: "cykling",   label: "Cykling",         icon: "🚴", keywords: /cykling|cykel|spinning|airbike|air\s*bike|assault\s*bike|zwift|mtb|mountainbike|gravel|velomobile|handcycle|\b(?:virtual|e|ebike|mountainbike|gravel)?ride\b|virtualride|ebikeride|biking|cycling/i },
+
   { key: "simning",   label: "Simning",         icon: "🏊", keywords: /simning|sim(?![a-zåäö])/i },
   { key: "rodd",      label: "Rodd",            icon: "🚣", keywords: /roddmaskin|rodd(?:pass|\s*–\s*intervaller)?|skierg|paddling|kajak|kanot/i },
   { key: "promenad",  label: "Promenad / Gång", icon: "🚶", keywords: /promenad|vandring|(?<![-\w])gång(?![-\w])|hopprep|skidåkning|skidor|skridsko/i },
