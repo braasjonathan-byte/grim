@@ -89,7 +89,9 @@ jobs:
 
       - name: Sync Capacitor
         if: always()
-        run: npx cap sync android || echo "::warning::cap sync failed"
+        run: |
+          node scripts/patch-send-intent-gradle.cjs || echo "::warning::send-intent gradle patch failed"
+          npx cap sync android || echo "::warning::cap sync failed"
 
       - name: Patch AndroidManifest.xml with required permissions
         if: always()

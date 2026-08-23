@@ -31,6 +31,9 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Patch send-intent plugin gradle (Capacitor 8 compat)
+      run: node scripts/patch-send-intent-gradle.cjs
+
     - name: Sync Capacitor
       run: npx cap sync android
 

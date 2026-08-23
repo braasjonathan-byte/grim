@@ -58,6 +58,9 @@ jobs:
             exit 1
           fi
 
+      - name: Patch send-intent plugin gradle (Capacitor 8 compat)
+        run: node scripts/patch-send-intent-gradle.cjs
+
       - name: Capacitor sync
         run: npx cap sync android
 
