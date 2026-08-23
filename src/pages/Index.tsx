@@ -160,6 +160,22 @@ const Index = () => {
     return () => window.removeEventListener("grim:timer-state", onState);
   }, []);
 
+  // Weekly report detail view (opened from push/in-app notification or Statistik-fliken)
+  const [weeklyReport, setWeeklyReport] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("weeklyReport");
+  });
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id as string | undefined;
+      setWeeklyReport(id || "latest");
+      setTabState("stats");
+      localStorage.setItem("grim_active_tab", "stats");
+    };
+    window.addEventListener("grim:open-weekly-report", handler);
+    return () => window.removeEventListener("grim:open-weekly-report", handler);
+  }, []);
+
   // Handle deep link params from push notifications
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -170,6 +186,7 @@ const Index = () => {
       window.history.replaceState({}, "", "/");
     }
   }, []);
+
 
   // Wrap setTab to push browser history for Android back button support
   const setTab = useCallback((newTab: Tab) => {
