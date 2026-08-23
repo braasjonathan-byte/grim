@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Bell, Trophy, MessageCircle, Flame, UserPlus } from "lucide-react";
+import { Bell, Trophy, MessageCircle, Flame, UserPlus, BarChart3 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PopoverArrow } from "@radix-ui/react-popover";
 import { avatarGradient } from "@/lib/avatarGradient";
@@ -7,8 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAchievementById } from "@/lib/achievements";
 import { onPostInteraction } from "@/lib/postInteractionBus";
 
-type NotifType = "comment" | "like" | "friend_request" | "achievement";
-type NotifTarget = "workout" | "calc" | "social" | "triathlon" | "tools";
+type NotifType = "comment" | "like" | "friend_request" | "achievement" | "weekly_report";
+type NotifTarget = "workout" | "calc" | "social" | "triathlon" | "tools" | "stats";
 
 interface Notif {
   id: string;
@@ -18,6 +18,7 @@ interface Notif {
   target: NotifTarget;
   postId?: string;
   commentId?: string;
+  reportId?: string;
   avatarUrl?: string | null;
   initial?: string;
 }
@@ -28,6 +29,7 @@ const iconFor = (type: NotifType) => {
     case "like": return Flame;
     case "friend_request": return UserPlus;
     case "achievement": return Trophy;
+    case "weekly_report": return BarChart3;
     default: return Bell;
   }
 };
@@ -79,7 +81,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
       .limit(50);
     const postIds = (myPosts || []).map((p: any) => p.id);
 
-    const [commentsRes, likesRes, friendsRes, achRes] = await Promise.all([
+    const [commentsRes, likesRes, friendsRes, achRes, weeklyRes] = await Promise.all([
       postIds.length
         ? supabase
             .from("social_post_comments")
@@ -114,6 +116,13 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
         .gte("unlocked_at", since)
         .order("unlocked_at", { ascending: false })
         .limit(10),
+      supabase
+        .from("weekly_reports")
+        .select("id, summary, created_at, week_start, week_end")
+        .eq("user_id", userId)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(5),
     ]);
 
     const actorIds = new Set<string>();
@@ -187,6 +196,17 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
       });
     });
 
+    (weeklyRes.data || []).forEach((r: any) => {
+      out.push({
+        id: `w-${r.id}`,
+        type: "weekly_report",
+        text: `📊 Veckorapport – ${r.summary || "din vecka är sammanställd"}`,
+        createdAt: r.created_at,
+        target: "stats",
+        reportId: r.id,
+      });
+    });
+
     out.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setNotifs(out.slice(0, 20));
   }, [userId]);
@@ -216,6 +236,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "social_post_likes" }, () => load())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "friendships", filter: `friend_id=eq.${userId}` }, () => load())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_achievements", filter: `user_id=eq.${userId}` }, () => load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "weekly_reports", filter: `user_id=eq.${userId}` }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [userId, load]);
@@ -236,6 +257,8 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
       try { sessionStorage.setItem("grim_pending_social_post", JSON.stringify(payload)); } catch {}
       // Also dispatch live in case SocialView is already mounted
       window.dispatchEvent(new CustomEvent("grim:open-social-post", { detail: payload }));
+    } else if (n.type === "weekly_report") {
+      window.dispatchEvent(new CustomEvent("grim:open-weekly-report", { detail: { id: n.reportId } }));
     } else if (n.type === "friend_request") {
       try { sessionStorage.setItem("grim_pending_social_subtab", "friends"); } catch {}
       window.dispatchEvent(new CustomEvent("grim:open-social-subtab", { detail: { subtab: "friends" } }));
@@ -284,11 +307,12 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
           {notifs.slice(0, 10).map(n => {
             const Icon = iconFor(n.type);
             const isUnread = new Date(n.createdAt).getTime() > lastSeen;
-            const grad = avatarGradient(n.initial || (n.type === "achievement" ? "Achievement" : "?"));
+            const grad = avatarGradient(n.initial || (n.type === "achievement" ? "Achievement" : n.type === "weekly_report" ? "Veckorapport" : "?"));
             const badgeTone =
               n.type === "like" ? "bg-destructive text-destructive-foreground"
               : n.type === "achievement" ? "bg-warning text-warning-foreground"
               : n.type === "friend_request" ? "bg-success text-success-foreground"
+              : n.type === "weekly_report" ? "bg-accent text-accent-foreground"
               : "bg-primary text-primary-foreground";
             return (
               <li key={n.id}>
