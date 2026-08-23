@@ -7,7 +7,7 @@ import { showUndoToast } from "@/lib/undoToast";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert, dequeueOfflineUpsert } from "@/hooks/useOfflineSync";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles } from "lucide-react";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
@@ -56,6 +56,7 @@ import { playSetDone, playWorkoutComplete } from "@/lib/sounds";
 import { hapticLight, hapticMedium } from "@/lib/haptics";
 import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import CircuitTimerDialog from "@/components/CircuitTimerDialog";
+import AiWorkoutScanDialog from "@/components/AiWorkoutScanDialog";
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
@@ -2078,6 +2079,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
     return next;
   };
+
+  const [showAiScan, setShowAiScan] = useState(false);
 
   const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
     const normalizedDetails = normalizeImportedDetails(rawWorkout.details);
@@ -4752,6 +4755,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           </button>
         }
       </div>
+      <AiWorkoutScanDialog
+        open={showAiScan}
+        onClose={() => setShowAiScan(false)}
+        onConfirm={(w) => { setShowAiScan(false); handleImportWorkout(w); }}
+      />
       {exerciseInfoState && (
         <ExerciseInfoDialog
           exerciseName={exerciseInfoState.name}
@@ -4789,6 +4797,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               <h3 className="font-bold text-sm">Importera färdigt pass</h3>
               <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
             </div>
+            {(isHonorary || isAdmin) && (
+              <button
+                onClick={() => setShowAiScan(true)}
+                className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" /> AI: läs av skärmdump från annan app
+              </button>
+            )}
+
             {/* User's own saved workouts */}
             {(() => {
               const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
@@ -8706,6 +8723,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         </div>
       </div>
     )}
+    <AiWorkoutScanDialog
+      open={showAiScan}
+      onClose={() => setShowAiScan(false)}
+      onConfirm={(w) => { setShowAiScan(false); handleImportWorkout(w); }}
+    />
     {/* Import workout dialog */}
     {importWorkoutTarget && (
       <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
@@ -8715,6 +8737,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             <h3 className="font-bold text-sm">Importera färdigt pass</h3>
             <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
+          {(isHonorary || isAdmin) && (
+            <button
+              onClick={() => setShowAiScan(true)}
+              className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> AI: läs av skärmdump från annan app
+            </button>
+          )}
+
           {/* User's own saved workouts */}
           {(() => {
             const myWorkouts = savedWorkouts.filter(sw => sw.user_id === userId);
