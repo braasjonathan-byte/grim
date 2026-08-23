@@ -1,3 +1,4 @@
+import { registerCustomCardioConfigs } from "@/lib/cardioUnits";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Copy, Trash2, ArrowLeft, Save, ChevronDown, ChevronUp, Search, X, Dumbbell } from "lucide-react";
@@ -58,6 +59,7 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
 
   useEffect(() => {
     supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
+        registerCustomCardioConfigs(data as any);
       if (data) setCustomExercises(data);
     });
   }, []);

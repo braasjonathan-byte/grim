@@ -335,6 +335,8 @@ export type Database = {
       }
       custom_exercises: {
         Row: {
+          cardio_dist_unit: string | null
+          cardio_modes: string[]
           category: string
           created_at: string
           created_by: string
@@ -345,8 +347,11 @@ export type Database = {
           name: string
           secondary_muscles: Json
           submuscles: string[]
+          track_pulse: boolean
         }
         Insert: {
+          cardio_dist_unit?: string | null
+          cardio_modes?: string[]
           category?: string
           created_at?: string
           created_by: string
@@ -357,8 +362,11 @@ export type Database = {
           name: string
           secondary_muscles?: Json
           submuscles?: string[]
+          track_pulse?: boolean
         }
         Update: {
+          cardio_dist_unit?: string | null
+          cardio_modes?: string[]
           category?: string
           created_at?: string
           created_by?: string
@@ -369,6 +377,7 @@ export type Database = {
           name?: string
           secondary_muscles?: Json
           submuscles?: string[]
+          track_pulse?: boolean
         }
         Relationships: []
       }
