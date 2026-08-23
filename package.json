@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "node scripts/patch-send-intent-gradle.cjs || true"
+    "android:verify-plugins": "node scripts/verify-android-plugins.cjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.2.0",
