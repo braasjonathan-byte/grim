@@ -1985,6 +1985,57 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_reports: {
+        Row: {
+          created_at: string
+          id: string
+          pass_count: number
+          pr_count: number
+          prev_distance_km: number
+          prev_pass_count: number
+          prev_tons: number
+          sessions: Json
+          summary: string
+          total_distance_km: number
+          total_tons: number
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pass_count?: number
+          pr_count?: number
+          prev_distance_km?: number
+          prev_pass_count?: number
+          prev_tons?: number
+          sessions?: Json
+          summary?: string
+          total_distance_km?: number
+          total_tons?: number
+          user_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pass_count?: number
+          pr_count?: number
+          prev_distance_km?: number
+          prev_pass_count?: number
+          prev_tons?: number
+          sessions?: Json
+          summary?: string
+          total_distance_km?: number
+          total_tons?: number
+          user_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: []
+      }
       workout_cheers: {
         Row: {
           created_at: string
