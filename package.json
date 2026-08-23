@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "postinstall": "node scripts/patch-send-intent-gradle.cjs || true"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.2.0",
