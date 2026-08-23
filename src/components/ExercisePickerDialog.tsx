@@ -5,6 +5,7 @@ import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary, muscleGroups, submusclesByGroup } from "@/data/exerciseLibrary";
 import { dedupeExerciseList } from "@/lib/exerciseNormalization";
+import { ALL_CARDIO_MODES, modeLabel, registerCustomCardioConfigs, type CardioMode, type CardioDistUnit } from "@/lib/cardioUnits";
 import { cn } from "@/lib/utils";
 
 const RECENTS_KEY = "grim_recent_exercises";
@@ -68,6 +69,10 @@ const ExercisePickerDialog = ({
   const [newSecondary, setNewSecondary] = useState<{ muscle: string; submuscles: string[] }[]>([]);
   const [newIsBodyweight, setNewIsBodyweight] = useState(false);
   const [newIsTimeBased, setNewIsTimeBased] = useState(false);
+  // Konditionsformat: vilka variabler som ska gå att fylla i
+  const [newCardioModes, setNewCardioModes] = useState<CardioMode[]>(["minkm", "kmh"]);
+  const [newDistUnit, setNewDistUnit] = useState<"km" | "m" | "none">("km");
+  const [newTrackPulse, setNewTrackPulse] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -79,7 +84,11 @@ const ExercisePickerDialog = ({
       setNewName("");
       setNewSubmuscles([]);
       setNewSecondary([]);
+      setNewCardioModes(["minkm", "kmh"]);
+      setNewDistUnit("km");
+      setNewTrackPulse(true);
       supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
+        registerCustomCardioConfigs(data as any);
         if (data) setCustomExercises(data);
       });
       // No auto-focus: keyboard should not open automatically
@@ -145,6 +154,11 @@ const ExercisePickerDialog = ({
     onClose();
   };
 
+  const isCardioCategory = newCategory === "kondition";
+  const toggleCardioMode = (m: CardioMode) => {
+    setNewCardioModes(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  };
+
   const handleCreateExercise = async () => {
     if (!newName.trim() || !userId) return;
     const trimmed = newName.trim();
@@ -161,8 +175,12 @@ const ExercisePickerDialog = ({
       created_by: userId,
       is_bodyweight_exercise: newIsBodyweight,
       is_time_based: newIsTimeBased,
+      cardio_modes: isCardioCategory ? newCardioModes : [],
+      cardio_dist_unit: isCardioCategory ? newDistUnit : null,
+      track_pulse: isCardioCategory ? newTrackPulse : true,
     } as any);
     const { data } = await supabase.from("custom_exercises").select("*").order("name");
+    registerCustomCardioConfigs(data as any);
     if (data) setCustomExercises(data);
     setNewName("");
     setNewSubmuscles([]);
@@ -450,6 +468,56 @@ const ExercisePickerDialog = ({
                     ))}
                   </select>
                 </div>
+                {isCardioCategory && (
+                  <div className="space-y-2 rounded-lg border border-border p-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Format som löpning/cykling — välj vilka variabler som ska fyllas i
+                    </p>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Tempo/effekt (första valet är standard)</p>
+                      <div className="flex flex-wrap gap-1">
+                        {ALL_CARDIO_MODES.map(m => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => toggleCardioMode(m)}
+                            className={cn(
+                              "text-[11px] px-2 py-1 rounded-md font-medium transition-colors",
+                              newCardioModes.includes(m)
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {modeLabel(m)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-1">Distans</p>
+                      <select
+                        value={newDistUnit}
+                        onChange={e => setNewDistUnit(e.target.value as "km" | "m" | "none")}
+                        className="w-full bg-secondary text-foreground text-xs p-2 rounded-lg border-none outline-none"
+                      >
+                        <option value="km">Kilometer (km)</option>
+                        <option value="m">Meter (m)</option>
+                        <option value="none">Ingen distans</option>
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newTrackPulse}
+                        onChange={e => setNewTrackPulse(e.target.checked)}
+                        className="rounded border-border accent-primary w-4 h-4"
+                      />
+                      <span className="text-xs text-muted-foreground">Puls (bpm)</span>
+                    </label>
+                    <p className="text-[10px] text-muted-foreground">Tid (tim/min/sek) fylls alltid i.</p>
+                  </div>
+                )}
+                {!isCardioCategory && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -459,6 +527,8 @@ const ExercisePickerDialog = ({
                   />
                   <span className="text-xs text-muted-foreground">Kroppsviktsövning (+/− vikt)</span>
                 </label>
+                )}
+                {!isCardioCategory && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -468,6 +538,7 @@ const ExercisePickerDialog = ({
                   />
                   <span className="text-xs text-muted-foreground">Tidsbaserad (sekunder istället för reps)</span>
                 </label>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={handleCreateExercise}
