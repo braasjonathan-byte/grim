@@ -57,6 +57,9 @@ import { hapticLight, hapticMedium } from "@/lib/haptics";
 import { normalizeImportedDetails, startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import CircuitTimerDialog from "@/components/CircuitTimerDialog";
 import AiWorkoutScanDialog from "@/components/AiWorkoutScanDialog";
+import ActivityFileImportDialog from "@/components/ActivityFileImportDialog";
+import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } from "@/lib/sharedActivityBus";
+
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
@@ -2081,6 +2084,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   const [showAiScan, setShowAiScan] = useState(false);
+  const [showFileImport, setShowFileImport] = useState(false);
+  const [sharedActivity, setSharedActivity] = useState<ParsedActivity | null>(pendingSharedActivity());
+
+  // Fil delad från t.ex. Garmin Connect/Strava via Androids delningsmeny
+  useEffect(() => {
+    if (sharedActivity) setShowFileImport(true);
+    return subscribeSharedActivity((a) => {
+      setSharedActivity(a);
+      setShowFileImport(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Färdiga loggvärden från AI-skanning (registreras som riktiga övningar vid import)
   const aiPresetWeightsRef = useRef<Record<string, string> | null>(null);
 
@@ -4766,6 +4782,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         onClose={() => setShowAiScan(false)}
         onConfirm={(w) => { setShowAiScan(false); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
       />
+      <ActivityFileImportDialog
+        open={showFileImport}
+        initialActivity={sharedActivity}
+        onClose={() => { setShowFileImport(false); setSharedActivity(null); }}
+        onConfirm={(w) => { setShowFileImport(false); setSharedActivity(null); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
+      />
+
       {exerciseInfoState && (
         <ExerciseInfoDialog
           exerciseName={exerciseInfoState.name}
@@ -4811,6 +4834,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                 <Sparkles className="w-3.5 h-3.5" /> AI: läs av skärmdump från annan app
               </button>
             )}
+            <button
+              onClick={() => setShowFileImport(true)}
+              className="w-full py-2 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" /> Importera fil (.gpx / .tcx / .fit)
+            </button>
+
 
             {/* User's own saved workouts */}
             {(() => {
@@ -8734,6 +8764,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       onClose={() => setShowAiScan(false)}
       onConfirm={(w) => { setShowAiScan(false); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
     />
+    <ActivityFileImportDialog
+      open={showFileImport}
+      initialActivity={sharedActivity}
+      onClose={() => { setShowFileImport(false); setSharedActivity(null); }}
+      onConfirm={(w) => { setShowFileImport(false); setSharedActivity(null); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
+    />
+
     {/* Import workout dialog */}
     {importWorkoutTarget && (
       <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
@@ -8751,6 +8788,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               <Sparkles className="w-3.5 h-3.5" /> AI: läs av skärmdump från annan app
             </button>
           )}
+          <button
+            onClick={() => setShowFileImport(true)}
+            className="w-full py-2 rounded-lg bg-secondary text-foreground text-xs font-semibold hover:bg-muted transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" /> Importera fil (.gpx / .tcx / .fit)
+          </button>
+
 
           {/* User's own saved workouts */}
           {(() => {
