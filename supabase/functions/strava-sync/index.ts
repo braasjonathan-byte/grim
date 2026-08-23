@@ -66,6 +66,31 @@ function isRunningActivity(activity: StravaActivity): boolean {
   return value.includes("run") || value.includes("trailrun") || value.includes("virtualrun");
 }
 
+/**
+ * Alla former av cykling (inkl. virtuell cykling/Zwift, MTB, gravel, elcykel)
+ * ska räknas som "Cykling" i statistiken.
+ */
+function isCyclingActivity(activity: StravaActivity): boolean {
+  const value = `${activity.sport_type || ""} ${activity.type || ""}`.toLowerCase();
+  return /ride|biking|cycl|handcycle|velomobile/.test(value);
+}
+
+/** Svenskt passnamn som matchar appens kondition-kategorier. */
+function swedishSessionName(activity: StravaActivity): string {
+  if (isRunningActivity(activity)) return "Löpning";
+  if (isCyclingActivity(activity)) return "Cykling";
+  const value = `${activity.sport_type || ""} ${activity.type || ""}`.toLowerCase();
+  if (value.includes("swim")) return "Simning";
+  if (value.includes("row")) return "Rodd";
+  if (value.includes("kayak") || value.includes("canoe") || value.includes("standuppaddling")) return "Paddling";
+  if (value.includes("walk") || value.includes("hike")) return "Promenad";
+  if (value.includes("ski") || value.includes("snowboard")) return "Skidåkning";
+  if (value.includes("stairstepper")) return "Trappmaskin";
+  if (value.includes("elliptical")) return "Crosstrainer";
+  return activity.sport_type || activity.type || "Strava";
+}
+
+
 function formatMovingMinutes(seconds?: number): number | null {
   if (!seconds || seconds <= 0) return null;
   return Math.round(seconds / 60);
