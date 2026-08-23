@@ -4,11 +4,17 @@ import { Loader2, Sparkles, X, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { pickImage } from "@/lib/pickImage";
+import { buildWorkoutFromAiExercises, type AiExercise } from "@/lib/aiWorkoutImport";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onConfirm: (workout: { name: string; details: string; tempo: string | null }) => void;
+  onConfirm: (workout: {
+    name: string;
+    details: string;
+    tempo: string | null;
+    loggedWeights: Record<string, string>;
+  }) => void;
 }
 
 /**
@@ -20,9 +26,12 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
   const [photo, setPhoto] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [name, setName] = useState("");
-  const [details, setDetails] = useState("");
+  const [exercises, setExercises] = useState<AiExercise[]>([]);
   const [tempo, setTempo] = useState("");
   const [hasResult, setHasResult] = useState(false);
+
+  const built = buildWorkoutFromAiExercises(exercises);
+  const preview = { ...built, lines: built.details.split("\n").filter(Boolean) };
 
   if (!open) return null;
 
@@ -30,7 +39,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
     setPhoto(null);
     setAnalyzing(false);
     setName("");
-    setDetails("");
+    setExercises([]);
     setTempo("");
     setHasResult(false);
   };
@@ -49,7 +58,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setName((data as any).name || "Importerat pass");
-      setDetails((data as any).details || "");
+      setExercises(((data as any).exercises || []) as AiExercise[]);
       setTempo((data as any).tempo || "");
       setHasResult(true);
     } catch (e: any) {
@@ -117,14 +126,35 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
                 className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-wide text-muted-foreground">Övningar (en per rad)</label>
-              <textarea
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                rows={8}
-                className="w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary font-mono resize-none"
-              />
+            <div className="space-y-1.5">
+              <label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Övningar som registreras ({exercises.length})
+              </label>
+              {preview.lines.map((line, i) => (
+                <div key={i} className="flex items-start gap-2 bg-secondary/60 rounded-lg px-2.5 py-2">
+                  <div className="flex-1 min-w-0">
+                  <input
+                    type="text"
+                    value={exercises[i]?.name || ""}
+                    onChange={(e) =>
+                      setExercises((prev) => prev.map((ex, j) => (j === i ? { ...ex, name: e.target.value } : ex)))
+                    }
+                    className="w-full bg-transparent text-sm font-semibold text-foreground outline-none border-b border-transparent focus:border-primary"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{line.replace(/^.*?( — |\s)/, "")}</p>
+                  </div>
+                  <button
+                    onClick={() => setExercises((prev) => prev.filter((_, j) => j !== i))}
+                    className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                    title="Ta bort övning"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              <pre className="text-[10px] text-muted-foreground whitespace-pre-wrap font-mono bg-secondary/30 rounded-lg p-2">
+                {preview.details}
+              </pre>
             </div>
             <div>
               <label className="text-[10px] uppercase tracking-wide text-muted-foreground">Tempo/RPE (valfritt)</label>
@@ -139,12 +169,16 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  const trimmed = details.trim();
-                  if (!trimmed) return;
-                  onConfirm({ name: name.trim() || "Importerat pass", details: trimmed, tempo: tempo.trim() || null });
+                  if (!preview.details.trim()) return;
+                  onConfirm({
+                    name: name.trim() || "Importerat pass",
+                    details: preview.details,
+                    tempo: tempo.trim() || null,
+                    loggedWeights: preview.loggedWeights,
+                  });
                   reset();
                 }}
-                disabled={!details.trim()}
+                disabled={exercises.length === 0}
                 className="flex-1 py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg text-sm disabled:opacity-40"
               >
                 Importera pass
