@@ -4,11 +4,17 @@ import { Loader2, Sparkles, X, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { pickImage } from "@/lib/pickImage";
+import { buildWorkoutFromAiExercises, type AiExercise } from "@/lib/aiWorkoutImport";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onConfirm: (workout: { name: string; details: string; tempo: string | null }) => void;
+  onConfirm: (workout: {
+    name: string;
+    details: string;
+    tempo: string | null;
+    loggedWeights: Record<string, string>;
+  }) => void;
 }
 
 /**
@@ -20,7 +26,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
   const [photo, setPhoto] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [name, setName] = useState("");
-  const [details, setDetails] = useState("");
+  const [exercises, setExercises] = useState<AiExercise[]>([]);
   const [tempo, setTempo] = useState("");
   const [hasResult, setHasResult] = useState(false);
 
@@ -30,7 +36,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
     setPhoto(null);
     setAnalyzing(false);
     setName("");
-    setDetails("");
+    setExercises([]);
     setTempo("");
     setHasResult(false);
   };
@@ -49,7 +55,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setName((data as any).name || "Importerat pass");
-      setDetails((data as any).details || "");
+      setExercises(((data as any).exercises || []) as AiExercise[]);
       setTempo((data as any).tempo || "");
       setHasResult(true);
     } catch (e: any) {
