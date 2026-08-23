@@ -132,14 +132,17 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
               </label>
               {preview.lines.map((line, i) => (
                 <div key={i} className="flex items-start gap-2 bg-secondary/60 rounded-lg px-2.5 py-2">
+                  <div className="flex-1 min-w-0">
                   <input
                     type="text"
                     value={exercises[i]?.name || ""}
                     onChange={(e) =>
                       setExercises((prev) => prev.map((ex, j) => (j === i ? { ...ex, name: e.target.value } : ex)))
                     }
-                    className="flex-1 min-w-0 bg-transparent text-sm font-semibold text-foreground outline-none border-b border-transparent focus:border-primary"
+                    className="w-full bg-transparent text-sm font-semibold text-foreground outline-none border-b border-transparent focus:border-primary"
                   />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{line.replace(/^.*?( — |\s)/, "")}</p>
+                  </div>
                   <button
                     onClick={() => setExercises((prev) => prev.filter((_, j) => j !== i))}
                     className="text-muted-foreground hover:text-destructive flex-shrink-0"
@@ -147,10 +150,8 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
-                  <p className="sr-only">{line}</p>
                 </div>
               ))}
-              {preview.lines.map((line, i) => null)}
               <pre className="text-[10px] text-muted-foreground whitespace-pre-wrap font-mono bg-secondary/30 rounded-lg p-2">
                 {preview.details}
               </pre>

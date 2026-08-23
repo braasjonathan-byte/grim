@@ -2055,7 +2055,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   const buildImportedSetWeights = (details: string, existing: Record<string, any> = {}) => {
-    const next = { ...existing };
+    const next = { ...existing, ...(aiPresetWeightsRef.current || {}) };
     for (const line of details.split("\n")) {
       const match = line.trim().match(/^(.+?)(?:\s+|\s*—\s*)((\d+)\s*[×x]\s*(\d+)(?:s)?)(?:\s*@\s*-?\d+(?:[.,]\d+)?\s*kg)?$/i);
       if (!match) continue;
@@ -2081,6 +2081,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   const [showAiScan, setShowAiScan] = useState(false);
+  // Färdiga loggvärden från AI-skanning (registreras som riktiga övningar vid import)
+  const aiPresetWeightsRef = useRef<Record<string, string> | null>(null);
 
   const handleImportWorkout = (rawWorkout: { name: string; details: string; tempo: string | null }) => {
     const normalizedDetails = normalizeImportedDetails(rawWorkout.details);
@@ -2131,6 +2133,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       if (Object.keys(importedWeights).length > 0) {
         await safeUpsertCompletion(0, uniqueKey, { done: false, logged_weights: importedWeights });
       }
+      aiPresetWeightsRef.current = null;
       setSingleName(""); setSingleDate(new Date()); setShowAddSingle(false); setShowCopyPicker(false);
       setImportWorkoutTarget(null); setPendingImport(null);
       toast.success(`"${workout.name}" importerat!`);
@@ -2145,6 +2148,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         session_name: workout.name, details: workout.details, tempo: workout.tempo || null, is_circuit: isCirc,
       }).select().single();
       if (inserted) setPlans(prev => [...prev, inserted as any]);
+      aiPresetWeightsRef.current = null;
       if (Object.keys(importedWeights).length > 0) {
         await safeUpsertCompletion(target.week, target.day, { done: false, logged_weights: importedWeights });
       }
@@ -2184,6 +2188,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setPlans(prev => prev.map(pp => pp.id === p.id ? { ...pp, session_name: newSessionName, details: newDetails, tempo: workout.tempo || null, is_circuit: isCirc } : pp));
     }
 
+    aiPresetWeightsRef.current = null;
     setImportWorkoutTarget(null);
     setPendingImport(null);
     toast.success(propagate ? `"${workout.name}" importerat på ${targetPlans.length} pass!` : `"${workout.name}" importerat!`);
@@ -4758,7 +4763,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <AiWorkoutScanDialog
         open={showAiScan}
         onClose={() => setShowAiScan(false)}
-        onConfirm={(w) => { setShowAiScan(false); handleImportWorkout(w); }}
+        onConfirm={(w) => { setShowAiScan(false); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
       />
       {exerciseInfoState && (
         <ExerciseInfoDialog
@@ -8726,7 +8731,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     <AiWorkoutScanDialog
       open={showAiScan}
       onClose={() => setShowAiScan(false)}
-      onConfirm={(w) => { setShowAiScan(false); handleImportWorkout(w); }}
+      onConfirm={(w) => { setShowAiScan(false); aiPresetWeightsRef.current = w.loggedWeights; handleImportWorkout(w); }}
     />
     {/* Import workout dialog */}
     {importWorkoutTarget && (
