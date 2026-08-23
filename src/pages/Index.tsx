@@ -42,6 +42,8 @@ const ToolsTab = lazyRetry(() => import("@/components/ToolsTab"));
 const ChatView = lazyRetry(() => import("@/components/ChatView"));
 const NutritionView = lazyRetry(() => import("@/components/NutritionView"));
 const HomeView = lazyRetry(() => import("@/components/HomeView"));
+const WeeklyReportView = lazyRetry(() => import("@/components/WeeklyReportView"));
+
 
 type Tab = "home" | "workout" | "nutrition" | "social" | "friends" | "calc" | "stats" | "profile" | "settings";
 
@@ -160,6 +162,22 @@ const Index = () => {
     return () => window.removeEventListener("grim:timer-state", onState);
   }, []);
 
+  // Weekly report detail view (opened from push/in-app notification or Statistik-fliken)
+  const [weeklyReport, setWeeklyReport] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("weeklyReport");
+  });
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent).detail?.id as string | undefined;
+      setWeeklyReport(id || "latest");
+      setTabState("stats");
+      localStorage.setItem("grim_active_tab", "stats");
+    };
+    window.addEventListener("grim:open-weekly-report", handler);
+    return () => window.removeEventListener("grim:open-weekly-report", handler);
+  }, []);
+
   // Handle deep link params from push notifications
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -170,6 +188,7 @@ const Index = () => {
       window.history.replaceState({}, "", "/");
     }
   }, []);
+
 
   // Wrap setTab to push browser history for Android back button support
   const setTab = useCallback((newTab: Tab) => {
@@ -984,10 +1003,32 @@ const Index = () => {
             }
           
           {tab === "stats" && (
-            <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, stats: k.stats + 1 }))}>
-              <WorkoutStats key={`stats-${refreshKeys.stats}`} userId={user.id} />
-            </PullToRefresh>
+            weeklyReport ? (
+              <WeeklyReportView
+                userId={user.id}
+                reportId={weeklyReport === "latest" ? null : weeklyReport}
+                onClose={() => setWeeklyReport(null)}
+              />
+            ) : (
+              <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, stats: k.stats + 1 }))}>
+                <button
+                  onClick={() => setWeeklyReport("latest")}
+                  className="w-full mb-4 flex items-center justify-between gap-3 rounded-2xl bg-card shadow-soft px-4 py-3 text-left active:scale-[0.99] transition-transform"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-lg">📊</span>
+                    <span>
+                      <span className="block text-sm font-bold text-foreground">Veckorapport</span>
+                      <span className="block text-xs text-muted-foreground">Se veckans pass i detalj</span>
+                    </span>
+                  </span>
+                  <span className="text-xs font-semibold text-primary">Öppna</span>
+                </button>
+                <WorkoutStats key={`stats-${refreshKeys.stats}`} userId={user.id} />
+              </PullToRefresh>
+            )
           )}
+
           {tab === "nutrition" && <NutritionView userId={user.id} isHonorary={isHonorary} />}
           {tab === "calc" &&
             <ToolsTab userId={user.id} isAdmin={userRole === "admin"} isHonorary={isHonorary} userRole={userRole} onLogout={handleLogout} onViewUserPlan={(targetUserId) => { setAdminViewUserId(targetUserId); setTab("workout"); }} />
