@@ -102,7 +102,7 @@ function getCalories(activity: StravaActivity): number | null {
 }
 
 function buildGrimWorkout(activity: StravaActivity, distanceKm: number | null, pace: string | null, pulse: number | null, calories: number | null) {
-  const sessionName = isRunningActivity(activity) ? "Löpning" : (activity.sport_type || activity.type || "Strava");
+  const sessionName = swedishSessionName(activity);
   const parts = [
     formatMovingMinutes(activity.moving_time) ? `${formatMovingMinutes(activity.moving_time)} min` : null,
     pace ? pace.replace(" min/km", "/km") : null,
