@@ -3,35 +3,22 @@ apply plugin: 'com.android.application'
 android {
     namespace = "se.grim.app"
     compileSdk = rootProject.ext.compileSdkVersion
-
-    signingConfigs {
-        release {
-            // Vi använder miljövariabler för att GitHub ska kunna signera säkert
-            storeFile = file("min-app-nyckel.jks")
-            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: "JonneCool98!"
-            keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "key0"
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: "JonneCool98!"
-        }
-    }
-
     defaultConfig {
-        applicationId = "se.grim.app"
+        applicationId "se.grim.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode = 1
-        versionName = "1.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-
     buildTypes {
         release {
-            signingConfig = signingConfigs.release
-            minifyEnabled = false
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
