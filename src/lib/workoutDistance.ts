@@ -271,7 +271,7 @@ export const getWorkoutDistanceKm = ({
 export type CardioCategoryKey = "löpning" | "cykling" | "simning" | "rodd" | "promenad" | "trapp";
 
 const CATEGORY_PATTERNS: { key: CardioCategoryKey; re: RegExp }[] = [
-  { key: "cykling",  re: /cykling|cykel|motioncykel|spinning/i },
+  { key: "cykling",  re: /cykling|cykel|motioncykel|spinning|zwift|mtb|mountainbike|gravel|velomobile|handcycle|virtualride|ebikeride|\bride\b|biking|cycling/i },
   { key: "simning",  re: /simning|sim(?![a-zåäö])/i },
   { key: "rodd",     re: /roddmaskin|rodd(?:pass)?/i },
   { key: "trapp",    re: /trappmaskin|stair\s*machine|crosstrainer/i },
