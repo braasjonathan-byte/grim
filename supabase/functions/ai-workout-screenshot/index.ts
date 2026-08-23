@@ -9,20 +9,37 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const SYSTEM_PROMPT = `Du läser skärmdumpar från träningsappar (Strong, Hevy, Strava, Garmin, Apple Fitness, Gymshark m.fl.) och omvandlar dem till ett strukturerat träningspass på svenska.
+const SYSTEM_PROMPT = `Du läser skärmdumpar från träningsappar (Strong, Hevy, Strava, Garmin, Apple Fitness m.fl.) och omvandlar dem till ett STRUKTURERAT träningspass på svenska.
 
-Returnera ENDAST giltig JSON med fälten:
-- name: kort passnamn (svenska), t.ex. "Push A – Bänk & Axlar" eller "Löpning 5 km"
-- details: en rad per övning, separerade med \\n
-- tempo: eventuell tempo-/RPE-notering, annars tom sträng
-- confidence: 0-1
+Returnera ENDAST giltig JSON:
+{
+  "name": "kort passnamn på svenska",
+  "tempo": "",
+  "confidence": 0-1,
+  "exercises": [
+    {
+      "type": "strength" | "cardio",
+      "name": "övningens namn på svenska",
+      // strength:
+      "sets": [{ "reps": 10, "kg": 60 }],        // en post per set som syns i bilden
+      "hold_seconds": null,                       // sätts istället för reps vid tidsbaserad övning (planka)
+      // cardio:
+      "duration_min": 40.5,                       // total tid i minuter (decimal)
+      "distance_km": 15.73,
+      "speed_kmh": 23.3,
+      "pace_min_per_km": "5:30",
+      "watt": 161,
+      "pulse": 142
+    }
+  ]
+}
 
-Format på raderna i details:
-- Styrka: "Bänkpress 4×8 @ 60 kg" (använd × mellan set och reps, @ före vikten i kg). Om vikterna skiljer sig mellan seten, ange den vanligaste/tyngsta.
-- Tidsbaserad övning (plankan m.m.): "Planka 3×45s"
-- Kondition: "Löpband — 30 min, 5:30/km, 5.4 km" (ta bara med de värden som syns)
-Använd svenska övningsnamn när du känner igen övningen, annars behåll namnet som det står i bilden.
-Hitta aldrig på övningar som inte syns i bilden. Om bilden inte innehåller ett träningspass, sätt confidence till 0 och details till tom sträng.`;
+Regler:
+- Varje övning i bilden blir ETT objekt i exercises. Hitta aldrig på övningar.
+- Utelämna (null) fält som inte syns i bilden.
+- Konditionspass (löpning, cykling, simning, rodd, promenad m.m.) => type "cardio".
+- Styrkeövningar => type "strength" med ett set-objekt per genomfört set (vikt i kg).
+- Om bilden inte visar ett träningspass: confidence 0 och exercises [].`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -85,14 +102,16 @@ Deno.serve(async (req) => {
       return json({ error: "Kunde inte tolka AI-svaret" }, 502);
     }
 
-    const details = typeof parsed.details === "string" ? parsed.details.trim() : "";
-    if (!details) return json({ error: "Hittade inget träningspass i bilden" }, 422);
+    const exercises = Array.isArray(parsed.exercises)
+      ? parsed.exercises.filter((e: any) => e && typeof e.name === "string" && e.name.trim())
+      : [];
+    if (exercises.length === 0) return json({ error: "Hittade inget träningspass i bilden" }, 422);
 
     return json({
       name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : "Importerat pass",
-      details,
       tempo: typeof parsed.tempo === "string" ? parsed.tempo.trim() : "",
       confidence: typeof parsed.confidence === "number" ? parsed.confidence : null,
+      exercises,
     });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "Okänt fel" }, 500);
