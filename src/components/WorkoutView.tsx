@@ -1759,6 +1759,56 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
   };
 
+  // Archive all standalone workouts (week 0) and go to the plan picker.
+  const startPlanFromSingles = async () => {
+    if (!confirm("Starta en träningsplan? Dina enskilda pass arkiveras under din profil först.")) return;
+
+    try {
+      const [{ data: singleData, error: singleErr }, { data: compData }] = await Promise.all([
+        supabase.from("workout_plans").select("*").eq("user_id", userId).eq("week", 0),
+        supabase.from("workout_completions").select("*").eq("user_id", userId).eq("week", 0),
+      ]);
+      if (singleErr) throw singleErr;
+
+      if (singleData && singleData.length > 0) {
+        const { error: archiveErr } = await supabase.from("archived_plans").insert({
+          user_id: userId,
+          plan_name: `Enskilda pass (${singleData.length} pass)`,
+          plan_data: singleData as any,
+          completion_data: (compData || []) as any,
+          plan_start_date: null,
+        } as any);
+        if (archiveErr) throw archiveErr;
+
+        const { error: delErr } = await supabase
+          .from("workout_plans")
+          .delete()
+          .eq("user_id", userId)
+          .eq("week", 0);
+        if (delErr) throw delErr;
+      }
+
+      await supabase
+        .from("profiles")
+        .update({ plan_start_date: null, plan_start_calibrated: false } as any)
+        .eq("user_id", userId);
+
+      setPlanStartDate(null);
+      setNeedsCalibration(false);
+      setInitialWeekSet(false);
+      setCurrentWeek(1);
+      setActivePlanWeek(1);
+      toast.success("Enskilda pass arkiverade");
+      await fetchData();
+      setMode("plan");
+    } catch (e) {
+      console.error("Failed to start plan:", e);
+      toast.error("Kunde inte starta träningsplan – inget togs bort");
+    }
+  };
+
+
+
 
   const addSingleWorkout = async (copyFrom?: PlanDay) => {
     const name = copyFrom ? copyFrom.session_name : singleName.trim();
