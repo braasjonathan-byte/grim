@@ -2276,6 +2276,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      archive_current_workouts: {
+        Args: { p_include_singles?: boolean }
+        Returns: Json
+      }
       are_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       get_inactive_users_for_nudge: {
