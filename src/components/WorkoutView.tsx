@@ -1761,6 +1761,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setInitialWeekSet(false);
       setCurrentWeek(1);
       setActivePlanWeek(1);
+      // Show the choice screen the next time the user lands on the workout tab.
+      localStorage.setItem("grim_show_workout_choice", "1");
       toast.success("Schemat är arkiverat");
       await fetchData();
     } catch (e) {
