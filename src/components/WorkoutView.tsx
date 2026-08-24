@@ -1777,32 +1777,50 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
   };
 
-  // Archive all standalone workouts (week 0) and go to the plan picker.
+  // Archive everything (standalone workouts AND any remaining plan weeks)
+  // and go straight to the plan picker.
   const startPlanFromSingles = async () => {
-    if (!confirm("Starta en träningsplan? Dina enskilda pass arkiveras under din profil först.")) return;
+    if (!confirm("Starta en träningsplan? Dina nuvarande pass arkiveras under din profil först.")) return;
 
     try {
-      const [{ data: singleData, error: singleErr }, { data: compData }] = await Promise.all([
-        supabase.from("workout_plans").select("*").eq("user_id", userId).eq("week", 0),
-        supabase.from("workout_completions").select("*").eq("user_id", userId).eq("week", 0),
+      const [{ data: allPlans, error: planErr }, { data: compData }] = await Promise.all([
+        supabase.from("workout_plans").select("*").eq("user_id", userId),
+        supabase.from("workout_completions").select("*").eq("user_id", userId),
       ]);
-      if (singleErr) throw singleErr;
+      if (planErr) throw planErr;
 
-      if (singleData && singleData.length > 0) {
+      const singles = (allPlans || []).filter(p => p.week === 0);
+      const planned = (allPlans || []).filter(p => p.week > 0);
+
+      if (planned.length > 0) {
+        const namedCount = planned.filter(p => (p.session_name || "").trim() !== "").length;
+        const weekCount = [...new Set(planned.map(p => p.week))].length;
         const { error: archiveErr } = await supabase.from("archived_plans").insert({
           user_id: userId,
-          plan_name: `Enskilda pass (${singleData.length} pass)`,
-          plan_data: singleData as any,
-          completion_data: (compData || []) as any,
+          plan_name: namedCount > 0 ? `Schema (${namedCount} pass, ${weekCount} veckor)` : "Schema",
+          plan_data: planned as any,
+          completion_data: (compData || []).filter((c: any) => c.week > 0) as any,
+          plan_start_date: planStartDate,
+        } as any);
+        if (archiveErr) throw archiveErr;
+      }
+
+      if (singles.length > 0) {
+        const { error: archiveErr } = await supabase.from("archived_plans").insert({
+          user_id: userId,
+          plan_name: `Enskilda pass (${singles.length} pass)`,
+          plan_data: singles as any,
+          completion_data: (compData || []).filter((c: any) => c.week === 0) as any,
           plan_start_date: null,
         } as any);
         if (archiveErr) throw archiveErr;
+      }
 
+      if ((allPlans || []).length > 0) {
         const { error: delErr } = await supabase
           .from("workout_plans")
           .delete()
-          .eq("user_id", userId)
-          .eq("week", 0);
+          .eq("user_id", userId);
         if (delErr) throw delErr;
       }
 
@@ -1811,19 +1829,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         .update({ plan_start_date: null, plan_start_calibrated: false } as any)
         .eq("user_id", userId);
 
+      localStorage.removeItem("grim_show_workout_choice");
       setPlanStartDate(null);
       setNeedsCalibration(false);
       setInitialWeekSet(false);
       setCurrentWeek(1);
       setActivePlanWeek(1);
-      toast.success("Enskilda pass arkiverade");
+      setPlans([]);
+      setWeeks([]);
+      toast.success("Tidigare pass arkiverade");
       await fetchData();
+      setNeedsCalibration(false);
       setMode("plan");
     } catch (e) {
       console.error("Failed to start plan:", e);
       toast.error("Kunde inte starta träningsplan – inget togs bort");
     }
   };
+
 
 
 
@@ -3357,7 +3380,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }
 
   // Calibration screen — shown once for users with active plan who haven't calibrated
-  if (mode === "plan" && needsCalibration) {
+  if (mode === "plan" && needsCalibration && weeks.filter(w => w > 0).length > 0) {
     return (
       <PlanCalibrationDialog
         userId={userId}
