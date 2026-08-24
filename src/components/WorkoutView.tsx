@@ -699,7 +699,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       // View-mode changes replace the whole workout subtree. Never perform one
       // as a side effect of a background response while the user has open UI.
       if (!openUiRef.current) {
-        if (planData.length === 0) {
+        // If the user just ended a plan, force the choice screen so they can
+        // pick between following a new plan or registering individual workouts.
+        const shouldShowChoice = localStorage.getItem("grim_show_workout_choice") === "1";
+        if (shouldShowChoice) {
+          localStorage.removeItem("grim_show_workout_choice");
+          setMode("choose");
+        } else if (planData.length === 0) {
           setMode(prev => (prev === "loading" || prev === "choose") ? "choose" : prev);
         } else {
           const allSingle = planData.every((p) => p.week === 0);
