@@ -1,7 +1,7 @@
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin, Dumbbell } from "lucide-react";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
 import ThemePicker from "@/components/ThemePicker";
@@ -34,9 +34,10 @@ interface SettingsPanelProps {
   userId?: string;
   isAdmin?: boolean;
   isHonorary?: boolean;
+  onStartPlan?: () => void;
 }
 
-const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelProps) => {
+const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: SettingsPanelProps) => {
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
   const [gpsVoiceMin, setGpsVoiceMinState] = useState<number>(() => getGpsVoiceIntervalMin());
@@ -717,6 +718,22 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false }: SettingsPanelPro
           >
             <KeyRound className="w-4 h-4 text-primary" />
             Byt lösenord
+          </button>
+        </div>
+      )}
+
+      {/* Start plan */}
+      {userId && (
+        <div className="border-t border-border pt-2">
+          <button
+            onClick={() => {
+              localStorage.setItem("grim_start_plan_from_settings", "1");
+              onStartPlan?.();
+            }}
+            className="w-full flex items-center gap-2 py-2 text-sm font-semibold text-primary hover:opacity-80 transition-opacity"
+          >
+            <Dumbbell className="w-4 h-4" />
+            Starta träningsplan
           </button>
         </div>
       )}

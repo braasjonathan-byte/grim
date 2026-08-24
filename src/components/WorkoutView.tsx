@@ -506,6 +506,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       if (data?.user) setAuthUserId(data.user.id);
     });
   }, []);
+
+  // Trigger plan-start flow when coming from Settings panel
+  useEffect(() => {
+    const flag = localStorage.getItem("grim_start_plan_from_settings");
+    if (flag === "1") {
+      localStorage.removeItem("grim_start_plan_from_settings");
+      startPlanFromSingles();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const canEditExercises = isAdmin || (authUserId ? EXERCISE_EDITOR_IDS.includes(authUserId) : false);
 
   // Calibration state

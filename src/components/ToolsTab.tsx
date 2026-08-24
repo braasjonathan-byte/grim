@@ -50,6 +50,7 @@ interface ToolsTabProps {
   userRole: string;
   onViewUserPlan?: (targetUserId: string) => void;
   onLogout?: () => void;
+  onStartPlan?: () => void;
 }
 
 interface SectionDef {
@@ -59,7 +60,7 @@ interface SectionDef {
   render: () => React.ReactNode;
 }
 
-const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout }: ToolsTabProps) => {
+const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
   const [editMode, setEditMode] = useState(false);
   const [savedOrder, setSavedOrder] = useState<string[] | null>(null);
   const [localOrder, setLocalOrder] = useState<string[]>([]);
@@ -363,7 +364,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           {subView === "settings" ? (
             <div className="space-y-3">
               <ProfileTab userId={userId} isAdmin={isAdmin} />
-              <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} />
+              <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} />
               <NotificationSettings userId={userId} />
             </div>
           ) : (
