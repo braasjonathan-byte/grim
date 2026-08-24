@@ -3380,7 +3380,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }
 
   // Calibration screen — shown once for users with active plan who haven't calibrated
-  if (mode === "plan" && needsCalibration) {
+  if (mode === "plan" && needsCalibration && weeks.filter(w => w > 0).length > 0) {
     return (
       <PlanCalibrationDialog
         userId={userId}
