@@ -1703,39 +1703,62 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   const leavePlan = async () => {
-    if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort.")) return;
+    if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort. Enstaka pass behålls.")) return;
 
-    // Archive plan data before deleting
     try {
-      const [{ data: planData }, { data: compData }] = await Promise.all([
-        supabase.from("workout_plans").select("*").eq("user_id", userId),
-        supabase.from("workout_completions").select("*").eq("user_id", userId),
+      const [{ data: planData, error: planErr }, { data: compData }] = await Promise.all([
+        supabase.from("workout_plans").select("*").eq("user_id", userId).gt("week", 0),
+        supabase.from("workout_completions").select("*").eq("user_id", userId).gt("week", 0),
       ]);
 
-      if (planData && planData.length > 0) {
-        // Derive plan name from first non-empty session
-        const firstSession = planData.find(p => p.session_name.trim() !== "");
-        const planName = firstSession ? `Schema (${planData.filter(p => p.session_name.trim() !== "").length} pass, ${[...new Set(planData.map(p => p.week))].length} veckor)` : "Schema";
+      if (planErr) throw planErr;
 
-        await supabase.from("archived_plans").insert({
-          user_id: userId,
-          plan_name: planName,
-          plan_data: planData as any,
-          completion_data: (compData || []) as any,
-          plan_start_date: planStartDate,
-        } as any);
+      if (!planData || planData.length === 0) {
+        toast.error("Hittade inget aktivt schema att avsluta");
+        return;
       }
-    } catch (e) {
-      console.error("Failed to archive plan:", e);
-    }
 
-    // Only delete plans, keep completions so stats (done count, distance) persist
-    await supabase.from("workout_plans").delete().eq("user_id", userId);
-    setPlans([]);
-    setWeeks([]);
-    setCompletions({});
-    setMode("choose");
+      const namedCount = planData.filter(p => (p.session_name || "").trim() !== "").length;
+      const weekCount = [...new Set(planData.map(p => p.week))].length;
+      const planName = namedCount > 0 ? `Schema (${namedCount} pass, ${weekCount} veckor)` : "Schema";
+
+      const { error: archiveErr } = await supabase.from("archived_plans").insert({
+        user_id: userId,
+        plan_name: planName,
+        plan_data: planData as any,
+        completion_data: (compData || []) as any,
+        plan_start_date: planStartDate,
+      } as any);
+
+      // Never delete the plan if the archive failed – that would lose data.
+      if (archiveErr) throw archiveErr;
+
+      const { error: delErr } = await supabase
+        .from("workout_plans")
+        .delete()
+        .eq("user_id", userId)
+        .gt("week", 0);
+      if (delErr) throw delErr;
+
+      // Reset calibration so a new plan starts fresh.
+      await supabase
+        .from("profiles")
+        .update({ plan_start_date: null, plan_start_calibrated: false } as any)
+        .eq("user_id", userId);
+
+      setPlanStartDate(null);
+      setNeedsCalibration(false);
+      setInitialWeekSet(false);
+      setCurrentWeek(1);
+      setActivePlanWeek(1);
+      toast.success("Schemat är arkiverat");
+      await fetchData();
+    } catch (e) {
+      console.error("Failed to end plan:", e);
+      toast.error("Kunde inte avsluta schemat – inget togs bort");
+    }
   };
+
 
   const addSingleWorkout = async (copyFrom?: PlanDay) => {
     const name = copyFrom ? copyFrom.session_name : singleName.trim();
