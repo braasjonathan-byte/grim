@@ -746,42 +746,13 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
             onClick={async () => {
               if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort. Enstaka pass behålls.")) return;
               try {
-                const [{ data: planData, error: planErr }, { data: compData }] = await Promise.all([
-                  supabase.from("workout_plans").select("*").eq("user_id", userId).gt("week", 0),
-                  supabase.from("workout_completions").select("*").eq("user_id", userId).gt("week", 0),
-                ]);
-                if (planErr) throw planErr;
-
-                if (planData && planData.length > 0) {
-                  const namedCount = planData.filter(p => (p.session_name || "").trim() !== "").length;
-                  const weekCount = [...new Set(planData.map(p => p.week))].length;
-                  const planName = namedCount > 0 ? `Schema (${namedCount} pass, ${weekCount} veckor)` : "Schema";
-                  const { data: profilePsd } = await supabase.from("profiles").select("plan_start_date").eq("user_id", userId).single();
-                  const { error: archiveError } = await supabase.from("archived_plans").insert({
-                    user_id: userId,
-                    plan_name: planName,
-                    plan_data: planData as any,
-                    completion_data: (compData || []) as any,
-                    plan_start_date: (profilePsd as any)?.plan_start_date ?? null,
-                  } as any);
-                  if (archiveError) throw archiveError;
-                }
-
-                const [{ error: deletePlansError }, { error: deleteCompletionsError }] = await Promise.all([
-                  supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0),
-                  supabase.from("workout_completions").delete().eq("user_id", userId).gt("week", 0),
-                ]);
-                if (deletePlansError) throw deletePlansError;
-                if (deleteCompletionsError) throw deleteCompletionsError;
-
-                const { error: profileError } = await supabase
-                  .from("profiles")
-                  .update({ plan_start_date: null, plan_start_calibrated: false } as any)
-                  .eq("user_id", userId);
-                if (profileError) throw profileError;
+                const { error } = await (supabase as any).rpc("archive_current_workouts", {
+                  p_include_singles: false,
+                });
+                if (error) throw error;
               } catch (e) {
                 console.error("Failed to archive plan:", e);
-                toast.error("Kunde inte arkivera schemat – inget togs bort");
+                toast.error(`Kunde inte arkivera schemat: ${(e as any)?.message || "okänt fel"}`);
                 return;
               }
               localStorage.setItem("grim_show_workout_choice", "1");

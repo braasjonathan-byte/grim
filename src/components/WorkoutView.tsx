@@ -1721,45 +1721,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort. Enstaka pass behålls.")) return;
 
     try {
-      const [{ data: planData, error: planErr }, { data: compData }] = await Promise.all([
-        supabase.from("workout_plans").select("*").eq("user_id", userId).gt("week", 0),
-        supabase.from("workout_completions").select("*").eq("user_id", userId).gt("week", 0),
-      ]);
-
-      if (planErr) throw planErr;
-
-      if (!planData || planData.length === 0) {
-        toast.error("Hittade inget aktivt schema att avsluta");
-        return;
-      }
-
-      const namedCount = planData.filter(p => (p.session_name || "").trim() !== "").length;
-      const weekCount = [...new Set(planData.map(p => p.week))].length;
-      const planName = namedCount > 0 ? `Schema (${namedCount} pass, ${weekCount} veckor)` : "Schema";
-
-      const { error: archiveErr } = await supabase.from("archived_plans").insert({
-        user_id: userId,
-        plan_name: planName,
-        plan_data: planData as any,
-        completion_data: (compData || []) as any,
-        plan_start_date: planStartDate,
-      } as any);
-
-      // Never delete the plan if the archive failed – that would lose data.
-      if (archiveErr) throw archiveErr;
-
-      const { error: delErr } = await supabase
-        .from("workout_plans")
-        .delete()
-        .eq("user_id", userId)
-        .gt("week", 0);
-      if (delErr) throw delErr;
-
-      // Reset calibration so a new plan starts fresh.
-      await supabase
-        .from("profiles")
-        .update({ plan_start_date: null, plan_start_calibrated: false } as any)
-        .eq("user_id", userId);
+      const { error } = await (supabase as any).rpc("archive_current_workouts", {
+        p_include_singles: false,
+      });
+      if (error) throw error;
 
       setPlanStartDate(null);
       setNeedsCalibration(false);
@@ -1773,7 +1738,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       await fetchData();
     } catch (e) {
       console.error("Failed to end plan:", e);
-      toast.error("Kunde inte avsluta schemat – inget togs bort");
+      toast.error(`Kunde inte avsluta schemat: ${(e as any)?.message || "okänt fel"}`);
     }
   };
 
@@ -1791,55 +1756,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         return;
       }
 
-      const [{ data: allPlans, error: planErr }, { data: compData }] = await Promise.all([
-        supabase.from("workout_plans").select("*").eq("user_id", userId),
-        supabase.from("workout_completions").select("*").eq("user_id", userId),
-      ]);
+      const { data: allPlans, error: planErr } = await supabase
+        .from("workout_plans")
+        .select("*")
+        .eq("user_id", userId);
       if (planErr) throw planErr;
 
-
-      const singles = (allPlans || []).filter(p => p.week === 0);
-      const planned = (allPlans || []).filter(p => p.week > 0);
-
-      if (planned.length > 0) {
-        const namedCount = planned.filter(p => (p.session_name || "").trim() !== "").length;
-        const weekCount = [...new Set(planned.map(p => p.week))].length;
-        const { error: archiveErr } = await supabase.from("archived_plans").insert({
-          user_id: userId,
-          plan_name: namedCount > 0 ? `Schema (${namedCount} pass, ${weekCount} veckor)` : "Schema",
-          plan_data: planned as any,
-          completion_data: (compData || []).filter((c: any) => c.week > 0) as any,
-          plan_start_date: planStartDate,
-        } as any);
-        if (archiveErr) throw archiveErr;
-      }
-
-      if (singles.length > 0) {
-        const { error: archiveErr } = await supabase.from("archived_plans").insert({
-          user_id: userId,
-          plan_name: `Enskilda pass (${singles.length} pass)`,
-          plan_data: singles as any,
-          completion_data: (compData || []).filter((c: any) => c.week === 0) as any,
-          plan_start_date: null,
-        } as any);
-        if (archiveErr) throw archiveErr;
-      }
-
-      if ((allPlans || []).length > 0) {
-        const { error: delErr } = await supabase
-          .from("workout_plans")
-          .delete()
-          .eq("user_id", userId);
-        if (delErr) throw delErr;
-
-        // Remove completions too – they belong to the archived plan/singles.
-        await supabase.from("workout_completions").delete().eq("user_id", userId);
-      }
-
-      await supabase
-        .from("profiles")
-        .update({ plan_start_date: null, plan_start_calibrated: false } as any)
-        .eq("user_id", userId);
+      const { error: archiveError } = await (supabase as any).rpc("archive_current_workouts", {
+        p_include_singles: true,
+      });
+      if (archiveError) throw archiveError;
 
       localStorage.removeItem("grim_show_workout_choice");
       forceWorkoutChoiceRef.current = false;
