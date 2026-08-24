@@ -766,19 +766,23 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
                   } as any);
                 }
 
-                await supabase
+                const [{ error: deletePlansError }, { error: deleteCompletionsError }] = await Promise.all([
+                  supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0),
+                  supabase.from("workout_completions").delete().eq("user_id", userId).gt("week", 0),
+                ]);
+                if (deletePlansError) throw deletePlansError;
+                if (deleteCompletionsError) throw deleteCompletionsError;
+
+                const { error: profileError } = await supabase
                   .from("profiles")
                   .update({ plan_start_date: null, plan_start_calibrated: false } as any)
                   .eq("user_id", userId);
+                if (profileError) throw profileError;
               } catch (e) {
                 console.error("Failed to archive plan:", e);
                 toast.error("Kunde inte arkivera schemat – inget togs bort");
                 return;
               }
-              await Promise.all([
-                supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0),
-                supabase.from("workout_completions").delete().eq("user_id", userId).gt("week", 0),
-              ]);
               localStorage.setItem("grim_show_workout_choice", "1");
               window.location.reload();
             }}

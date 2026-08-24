@@ -3417,7 +3417,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         <div className="space-y-3">
           <button
-            onClick={() => setMode("plan")}
+            onClick={startPlanFromSingles}
             className="w-full text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
 
             <div className="flex items-start gap-3">
@@ -3451,7 +3451,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }
 
   // Plan picker
-  if (mode === "plan" && weeks.length === 0) {
+  if (mode === "plan" && weeks.filter((week) => week > 0).length === 0) {
     return (
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
