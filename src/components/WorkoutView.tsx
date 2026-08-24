@@ -1831,6 +1831,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           .delete()
           .eq("user_id", userId);
         if (delErr) throw delErr;
+
+        // Remove completions too – they belong to the archived plan/singles.
+        await supabase.from("workout_completions").delete().eq("user_id", userId);
       }
 
       await supabase
@@ -1847,14 +1850,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setActivePlanWeek(1);
       setPlans([]);
       setWeeks([]);
-      toast.success("Tidigare pass arkiverade");
+      if ((allPlans || []).length > 0) toast.success("Tidigare pass arkiverade");
       await fetchData();
       setNeedsCalibration(false);
       setMode("plan");
     } catch (e) {
       console.error("Failed to start plan:", e);
-      toast.error("Kunde inte starta träningsplan – inget togs bort");
+      const msg = (e as any)?.message || (e as any)?.details || "okänt fel";
+      toast.error(`Kunde inte starta träningsplan: ${msg}`);
     }
+
   };
 
 
