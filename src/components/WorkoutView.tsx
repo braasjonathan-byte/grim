@@ -1783,11 +1783,20 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!confirm("Starta en träningsplan? Dina nuvarande pass arkiveras under din profil först.")) return;
 
     try {
+      // Make sure the auth session is hydrated before touching RLS-protected tables
+      // (in the PWA this effect can fire before the session is restored).
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData?.user) {
+        toast.error("Inte inloggad – försök igen om en stund");
+        return;
+      }
+
       const [{ data: allPlans, error: planErr }, { data: compData }] = await Promise.all([
         supabase.from("workout_plans").select("*").eq("user_id", userId),
         supabase.from("workout_completions").select("*").eq("user_id", userId),
       ]);
       if (planErr) throw planErr;
+
 
       const singles = (allPlans || []).filter(p => p.week === 0);
       const planned = (allPlans || []).filter(p => p.week > 0);
