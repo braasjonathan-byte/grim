@@ -1,0 +1,1 @@
+ALTER FUNCTION public.archive_current_workouts(boolean) SECURITY INVOKER;
