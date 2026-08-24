@@ -1,6 +1,7 @@
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
+import { toast } from "sonner";
 import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin, Dumbbell } from "lucide-react";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
@@ -743,17 +744,18 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
         <div className="border-t border-border pt-2">
           <button
             onClick={async () => {
-              if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort.")) return;
+              if (!confirm("Är du säker? Schemat arkiveras under din profil innan det tas bort. Enstaka pass behålls.")) return;
               try {
-                const [{ data: planData }, { data: compData }] = await Promise.all([
-                  supabase.from("workout_plans").select("*").eq("user_id", userId),
-                  supabase.from("workout_completions").select("*").eq("user_id", userId),
+                const [{ data: planData, error: planErr }, { data: compData }] = await Promise.all([
+                  supabase.from("workout_plans").select("*").eq("user_id", userId).gt("week", 0),
+                  supabase.from("workout_completions").select("*").eq("user_id", userId).gt("week", 0),
                 ]);
+                if (planErr) throw planErr;
+
                 if (planData && planData.length > 0) {
-                  const firstSession = planData.find(p => p.session_name.trim() !== "");
-                  const planName = firstSession
-                    ? `Schema (${planData.filter(p => p.session_name.trim() !== "").length} pass, ${[...new Set(planData.map(p => p.week))].length} veckor)`
-                    : "Schema";
+                  const namedCount = planData.filter(p => (p.session_name || "").trim() !== "").length;
+                  const weekCount = [...new Set(planData.map(p => p.week))].length;
+                  const planName = namedCount > 0 ? `Schema (${namedCount} pass, ${weekCount} veckor)` : "Schema";
                   const { data: profilePsd } = await supabase.from("profiles").select("plan_start_date").eq("user_id", userId).single();
                   await supabase.from("archived_plans").insert({
                     user_id: userId,
@@ -763,13 +765,21 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
                     plan_start_date: (profilePsd as any)?.plan_start_date ?? null,
                   } as any);
                 }
+
+                await supabase
+                  .from("profiles")
+                  .update({ plan_start_date: null, plan_start_calibrated: false } as any)
+                  .eq("user_id", userId);
               } catch (e) {
                 console.error("Failed to archive plan:", e);
+                toast.error("Kunde inte arkivera schemat – inget togs bort");
+                return;
               }
               await Promise.all([
-                supabase.from("workout_plans").delete().eq("user_id", userId),
-                supabase.from("workout_completions").delete().eq("user_id", userId),
+                supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0),
+                supabase.from("workout_completions").delete().eq("user_id", userId).gt("week", 0),
               ]);
+              localStorage.setItem("grim_show_workout_choice", "1");
               window.location.reload();
             }}
             className="w-full flex items-center gap-2 py-2 text-sm font-semibold text-destructive hover:opacity-80 transition-opacity"
