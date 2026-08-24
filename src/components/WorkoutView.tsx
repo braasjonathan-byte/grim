@@ -143,6 +143,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [comments, setComments] = useState<Record<string, string>>({});
   const [commentInput, setCommentInput] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<"loading" | "choose" | "plan" | "single">("loading");
+  const forceWorkoutChoiceRef = useRef(localStorage.getItem("grim_show_workout_choice") === "1");
 
   // Single workout form
   const [showAddSingle, setShowAddSingle] = useState(false);
@@ -701,9 +702,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       if (!openUiRef.current) {
         // If the user just ended a plan, force the choice screen so they can
         // pick between following a new plan or registering individual workouts.
-        const shouldShowChoice = localStorage.getItem("grim_show_workout_choice") === "1";
-        if (shouldShowChoice) {
-          localStorage.removeItem("grim_show_workout_choice");
+        if (forceWorkoutChoiceRef.current) {
           setMode("choose");
         } else if (planData.length === 0) {
           setMode(prev => (prev === "loading" || prev === "choose") ? "choose" : prev);
@@ -1769,6 +1768,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setActivePlanWeek(1);
       // Show the choice screen the next time the user lands on the workout tab.
       localStorage.setItem("grim_show_workout_choice", "1");
+      forceWorkoutChoiceRef.current = true;
       toast.success("Schemat är arkiverat");
       await fetchData();
     } catch (e) {
@@ -1830,6 +1830,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         .eq("user_id", userId);
 
       localStorage.removeItem("grim_show_workout_choice");
+      forceWorkoutChoiceRef.current = false;
       setPlanStartDate(null);
       setNeedsCalibration(false);
       setInitialWeekSet(false);
@@ -3417,7 +3418,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         <div className="space-y-3">
           <button
-            onClick={() => setMode("plan")}
+            onClick={startPlanFromSingles}
             className="w-full text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
 
             <div className="flex items-start gap-3">
@@ -3432,7 +3433,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           </button>
 
           <button
-            onClick={() => setMode("single")}
+            onClick={() => {
+              localStorage.removeItem("grim_show_workout_choice");
+              forceWorkoutChoiceRef.current = false;
+              setMode("single");
+            }}
             className="w-full text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
 
             <div className="flex items-start gap-3">
@@ -3451,7 +3456,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }
 
   // Plan picker
-  if (mode === "plan" && weeks.length === 0) {
+  if (mode === "plan" && weeks.filter((week) => week > 0).length === 0) {
     return (
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
