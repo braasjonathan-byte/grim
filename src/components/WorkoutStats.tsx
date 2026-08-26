@@ -572,7 +572,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   }, [completions, summaryPeriod, planStartDate]);
 
   const totalDone = filteredCompletions.reduce(
-    (sum, c) => (c.done && hasExercise(c) ? sum + passCountForDay(c) : sum),
+    (sum, c) => (c.done && hasExercise(c) ? sum + 1 : sum),
     0,
   );
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
