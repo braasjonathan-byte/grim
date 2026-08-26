@@ -29,11 +29,11 @@ if (typeof window !== "undefined") {
   let observedNav: HTMLElement | null = null;
   let navHeight = 0;
   let keyboardInset = 0;
+  let keyboardVisible = false;
 
   const applyComposerOffset = () => {
     const focused = hasFocusedTextInput();
-    const keyboardOpen = focused && keyboardInset > 80;
-    setVar("--grim-composer-offset", keyboardOpen ? keyboardInset : navHeight);
+    setVar("--grim-composer-offset", focused && keyboardVisible ? keyboardInset : navHeight);
   };
 
   const measureNav = () => {
@@ -73,6 +73,7 @@ if (typeof window !== "undefined") {
   const measureKeyboard = () => {
     const vv = window.visualViewport;
     if (!vv) {
+      keyboardVisible = false;
       keyboardInset = 0;
       setVar("--grim-keyboard-inset", keyboardInset);
       applyComposerOffset();
@@ -82,6 +83,7 @@ if (typeof window !== "undefined") {
       // No editable focus => no keyboard; current height is the baseline.
       baselineViewportHeight = Math.max(vv.height, 0);
       baselineLayoutHeight = document.documentElement.clientHeight || window.innerHeight;
+      keyboardVisible = false;
       keyboardInset = 0;
       setVar("--grim-keyboard-inset", keyboardInset);
       applyComposerOffset();
@@ -93,7 +95,8 @@ if (typeof window !== "undefined") {
 
     // In resize-mode the fixed containing block already ends above the keyboard,
     // so bottom:0 is correct. Only overlay-mode requires the visual inset.
-    keyboardInset = visualShrink > 80 ? (layoutShrink > 80 ? 1 : visualShrink) : 0;
+    keyboardVisible = visualShrink > 80;
+    keyboardInset = keyboardVisible && layoutShrink <= 80 ? visualShrink : 0;
     setVar("--grim-keyboard-inset", keyboardInset);
     applyComposerOffset();
   };
@@ -116,6 +119,7 @@ if (typeof window !== "undefined") {
   document.addEventListener("focusout", () => {
     // Clear the keyboard inset immediately so no empty gap is left behind,
     // then re-measure once the viewport animation has settled.
+    keyboardVisible = false;
     keyboardInset = 0;
     setVar("--grim-keyboard-inset", keyboardInset);
     applyComposerOffset();
@@ -129,4 +133,4 @@ if (typeof window !== "undefined") {
  * height / safe area, and lifts with the keyboard when it is open.
  */
 export const COMPOSER_BOTTOM =
-  "max(var(--grim-composer-offset, 0px), var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))";
+  "var(--grim-composer-offset, var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))";
