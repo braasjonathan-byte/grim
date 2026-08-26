@@ -54,25 +54,37 @@ if (typeof window !== "undefined") {
     const style = getComputedStyle(nav);
     const visible = rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
 
-    // Measuring rect.height assumes that the nav's lower edge is exactly at
-    // innerHeight. That is not guaranteed in an edge-to-edge native WebView:
-    // safe-area handling and the visual viewport can shift the whole nav.
-    // Its actual top edge is the only reliable composer anchor.
-    const offset = Math.max(0, window.innerHeight - rect.top);
-    setVar("--grim-nav-offset", visible ? offset : 0);
+    // `window.innerHeight` tracks the *visual* viewport (it grows/shrinks with
+    // the mobile URL bar), while `position: fixed` is laid out against the
+    // *layout* viewport (documentElement.clientHeight). Mixing them made the
+    // composer float far above the tab bar whenever the URL bar was hidden.
+    // The nav is `bottom: 0`, so its own height is the true offset; clientHeight
+    // math only acts as a guard if the nav is ever shifted upwards.
+    const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
+    const offset = Math.max(rect.height, Math.min(layoutHeight - rect.top, layoutHeight));
+    setVar("--grim-nav-offset", visible ? Math.max(0, offset) : 0);
   };
+
+  let baselineViewportHeight = window.visualViewport?.height ?? window.innerHeight;
 
   const measureKeyboard = () => {
     const vv = window.visualViewport;
-    if (!vv || !hasFocusedTextInput()) {
+    if (!vv) {
       setVar("--grim-keyboard-inset", 0);
       return;
     }
-    // Overlay-mode WebViews keep `innerHeight` at full screen size while the
+    if (!hasFocusedTextInput()) {
+      // No editable focus => no keyboard; current height is the baseline.
+      baselineViewportHeight = Math.max(vv.height, 0);
+      setVar("--grim-keyboard-inset", 0);
+      return;
+    }
+    // Overlay-mode WebViews keep the layout viewport at full size while the
     // visual viewport shrinks. Resize-mode WebViews shrink both, giving 0.
-    const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    const inset = Math.max(0, baselineViewportHeight - vv.height - vv.offsetTop);
     setVar("--grim-keyboard-inset", inset > 80 ? inset : 0);
   };
+
 
   const compute = () => {
     measureNav();
