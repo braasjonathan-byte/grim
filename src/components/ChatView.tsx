@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
+import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check, Users, Plus } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
@@ -959,9 +960,8 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       </div>
 
       {/* Input */}
-      <div
-        className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto"
-        style={{ bottom: COMPOSER_BOTTOM, touchAction: "none" }}
+      <ChatComposerPortal
+        className="px-3 pt-2 pb-2 flex gap-2 items-end"
         onTouchMove={(event) => event.preventDefault()}
       >
         <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -990,7 +990,7 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
         >
           <Send className="w-4 h-4" />
         </button>
-      </div>
+      </ChatComposerPortal>
     </div>
   );
 };
@@ -1149,9 +1149,8 @@ const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAn
       </div>
 
       {isAdmin && (
-        <div
-          className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 max-w-lg mx-auto space-y-2"
-          style={{ bottom: COMPOSER_BOTTOM, touchAction: "none" }}
+        <ChatComposerPortal
+          className="px-3 pt-2 pb-2 space-y-2"
           onTouchMove={(event) => event.preventDefault()}
         >
           <input
@@ -1186,7 +1185,7 @@ const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAn
               )}
             </button>
           </div>
-        </div>
+        </ChatComposerPortal>
       )}
     </div>
   );

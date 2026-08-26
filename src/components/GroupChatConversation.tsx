@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
+import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -290,13 +291,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         )}
       </div>
 
-      <div
-        className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto"
-        style={{
-          bottom: COMPOSER_BOTTOM,
-          touchAction: "none",
-        }}
-      >
+      <ChatComposerPortal className="px-3 pt-2 pb-2 flex gap-2 items-end">
         <input
           ref={inputRef}
           value={newMessage}
@@ -318,7 +313,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         >
           <Send className="w-4 h-4" />
         </button>
-      </div>
+      </ChatComposerPortal>
     </div>
   );
 };
