@@ -48,7 +48,7 @@ if (typeof window !== "undefined") {
   vv?.addEventListener("scroll", compute);
   window.addEventListener("resize", compute);
   document.addEventListener("focusin", compute);
-  document.addEventListener("focusout", () => window.setTimeout(compute, 0));
+  document.addEventListener("focusout", () => window.setTimeout(compute, 250));
   window.setInterval(compute, 500);
 }
 
