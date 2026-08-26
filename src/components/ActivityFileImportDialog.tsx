@@ -143,7 +143,7 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
   return createPortal(
     <div className="fixed inset-0 z-[95] flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/70" onClick={close} />
-      <div className="relative z-10 max-h-[85vh] w-full max-w-md space-y-3 overflow-y-auto rounded-t-2xl bg-card p-4 sm:rounded-2xl">
+      <div className="relative z-10 max-h-[85vh] w-full max-w-md space-y-3 overflow-y-auto rounded-t-2xl bg-card p-4 pb-safe sm:rounded-2xl">
         <div className="flex items-center justify-between">
           <h3 className="flex items-center gap-1.5 text-sm font-bold">
             <FileUp className="h-4 w-4 text-primary" /> Importera pass från fil
