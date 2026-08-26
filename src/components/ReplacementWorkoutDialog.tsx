@@ -83,7 +83,7 @@ const ReplacementWorkoutDialog = ({
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-card border border-border rounded-t-2xl p-5 space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-card border border-border rounded-t-2xl p-5 pb-safe space-y-4 animate-fade-in max-h-[85vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
