@@ -83,12 +83,11 @@ const PullToRefresh = ({ onRefresh, children, disabled }: PullToRefreshProps) =>
           )}
         </div>
       </div>
-      <div
-        className="transition-transform duration-200"
-        style={{ transform: `translateY(${active ? 0 : 0}px)` }}
-      >
-        {children}
-      </div>
+      {/* No transform here: any transform (even identity) makes this element a
+          containing block for `position: fixed` children, which would detach the
+          chat composer from the viewport bottom. */}
+      <div>{children}</div>
+
       <span className="sr-only" role="status">
         {refreshing ? "Uppdaterar…" : ""}
       </span>
