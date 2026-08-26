@@ -441,11 +441,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return false;
   };
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
-  // How many separate workouts a user has on a given (week, day). At least 1 if there's exercise data.
-  const passCountForDay = (c: CompletionRecord) => {
+  // How many workouts are SCHEDULED on a given (week, day). Used for totals only —
+  // completion is tracked per day, so a done day always counts as exactly one
+  // finished pass (otherwise unfinished workouts on the same day are counted as done).
+  const scheduledCountForDay = (c: CompletionRecord) => {
     const key = `${c.week}-${c.day}`;
     return Math.max(1, plansPerDay.get(key) || 0);
   };
+
 
   const stats = useMemo(() => {
     type Bucket = {label: string;done: number;doneWithExercise: number;skipped: number;total: number;totalWithExercise: number;distanceKm: number;sortKey: string;};
