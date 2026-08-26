@@ -1,15 +1,10 @@
 /**
  * Keeps the chat composer anchored to the bottom of the screen.
  *
- * Two CSS variables are measured directly from the DOM / visual viewport:
- * - `--grim-nav-offset`: distance from the viewport bottom to the real top
- *   edge of the bottom tab bar (0 when hidden).
- * - `--grim-keyboard-inset`: height the software keyboard covers, and only
- *   while an editable control actually has focus.
- *
- * The composer then uses `max()` of those two plus the safe area, so a stale
- * or missing value can never leave a gap: the composer falls back to sitting
- * exactly on top of the tab bar (or the safe area when the bar is hidden).
+ * One effective CSS offset is selected from two mutually exclusive states:
+ * the real bottom-nav height while the keyboard is closed, or the keyboard
+ * inset while it is open. Adding/maxing both offsets creates the characteristic
+ * empty gap above the keyboard in resize-mode Android WebViews.
  *
  * Imported for side effect; no React wiring needed.
  */
@@ -32,6 +27,14 @@ if (typeof window !== "undefined") {
 
   let navObserver: ResizeObserver | null = null;
   let observedNav: HTMLElement | null = null;
+  let navHeight = 0;
+  let keyboardInset = 0;
+
+  const applyComposerOffset = () => {
+    const focused = hasFocusedTextInput();
+    const keyboardOpen = focused && keyboardInset > 80;
+    setVar("--grim-composer-offset", keyboardOpen ? keyboardInset : navHeight);
+  };
 
   const measureNav = () => {
     const nav = document.querySelector("nav.fixed.bottom-0") as HTMLElement | null;
@@ -46,7 +49,8 @@ if (typeof window !== "undefined") {
     }
 
     if (!nav) {
-      setVar("--grim-nav-offset", 0);
+      navHeight = 0;
+      applyComposerOffset();
       return;
     }
 
@@ -54,35 +58,44 @@ if (typeof window !== "undefined") {
     const style = getComputedStyle(nav);
     const visible = rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
 
-    // `window.innerHeight` tracks the *visual* viewport (it grows/shrinks with
-    // the mobile URL bar), while `position: fixed` is laid out against the
-    // *layout* viewport (documentElement.clientHeight). Mixing them made the
-    // composer float far above the tab bar whenever the URL bar was hidden.
-    // The nav is `bottom: 0`, so its own height is the true offset; clientHeight
-    // math only acts as a guard if the nav is ever shifted upwards.
-    const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
-    const offset = Math.max(rect.height, Math.min(layoutHeight - rect.top, layoutHeight));
-    setVar("--grim-nav-offset", visible ? Math.max(0, offset) : 0);
+    // The nav itself is fixed at bottom:0 and already contains the safe-area
+    // padding. Its rendered height is therefore the only coordinate-independent
+    // distance the composer needs. Mixing rect.top with clientHeight is wrong in
+    // edge-to-edge WebViews, where those values can use different viewports.
+    navHeight = visible ? Math.max(0, rect.height) : 0;
+    setVar("--grim-nav-offset", navHeight);
+    applyComposerOffset();
   };
 
   let baselineViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  let baselineLayoutHeight = document.documentElement.clientHeight || window.innerHeight;
 
   const measureKeyboard = () => {
     const vv = window.visualViewport;
     if (!vv) {
-      setVar("--grim-keyboard-inset", 0);
+      keyboardInset = 0;
+      setVar("--grim-keyboard-inset", keyboardInset);
+      applyComposerOffset();
       return;
     }
     if (!hasFocusedTextInput()) {
       // No editable focus => no keyboard; current height is the baseline.
       baselineViewportHeight = Math.max(vv.height, 0);
-      setVar("--grim-keyboard-inset", 0);
+      baselineLayoutHeight = document.documentElement.clientHeight || window.innerHeight;
+      keyboardInset = 0;
+      setVar("--grim-keyboard-inset", keyboardInset);
+      applyComposerOffset();
       return;
     }
-    // Overlay-mode WebViews keep the layout viewport at full size while the
-    // visual viewport shrinks. Resize-mode WebViews shrink both, giving 0.
-    const inset = Math.max(0, baselineViewportHeight - vv.height - vv.offsetTop);
-    setVar("--grim-keyboard-inset", inset > 80 ? inset : 0);
+    const visualShrink = Math.max(0, baselineViewportHeight - vv.height - vv.offsetTop);
+    const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
+    const layoutShrink = Math.max(0, baselineLayoutHeight - layoutHeight);
+
+    // In resize-mode the fixed containing block already ends above the keyboard,
+    // so bottom:0 is correct. Only overlay-mode requires the visual inset.
+    keyboardInset = visualShrink > 80 ? (layoutShrink > 80 ? 1 : visualShrink) : 0;
+    setVar("--grim-keyboard-inset", keyboardInset);
+    applyComposerOffset();
   };
 
 
@@ -103,7 +116,9 @@ if (typeof window !== "undefined") {
   document.addEventListener("focusout", () => {
     // Clear the keyboard inset immediately so no empty gap is left behind,
     // then re-measure once the viewport animation has settled.
-    setVar("--grim-keyboard-inset", 0);
+    keyboardInset = 0;
+    setVar("--grim-keyboard-inset", keyboardInset);
+    applyComposerOffset();
     window.setTimeout(compute, 250);
   });
   window.setInterval(compute, 500);
@@ -114,4 +129,4 @@ if (typeof window !== "undefined") {
  * height / safe area, and lifts with the keyboard when it is open.
  */
 export const COMPOSER_BOTTOM =
-  "max(var(--grim-nav-offset, 0px), var(--grim-keyboard-inset, 0px), var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))";
+  "max(var(--grim-composer-offset, 0px), var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))";
