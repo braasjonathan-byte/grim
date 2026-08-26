@@ -2,7 +2,8 @@
  * Keeps the chat composer anchored to the bottom of the screen.
  *
  * Two CSS variables are measured directly from the DOM / visual viewport:
- * - `--grim-nav-height`: real height of the bottom tab bar (0 when hidden).
+ * - `--grim-nav-offset`: distance from the viewport bottom to the real top
+ *   edge of the bottom tab bar (0 when hidden).
  * - `--grim-keyboard-inset`: height the software keyboard covers, and only
  *   while an editable control actually has focus.
  *
@@ -45,13 +46,20 @@ if (typeof window !== "undefined") {
     }
 
     if (!nav) {
-      setVar("--grim-nav-height", 0);
+      setVar("--grim-nav-offset", 0);
       return;
     }
 
     const rect = nav.getBoundingClientRect();
-    const visible = rect.height > 0 && getComputedStyle(nav).visibility !== "hidden";
-    setVar("--grim-nav-height", visible ? rect.height : 0);
+    const style = getComputedStyle(nav);
+    const visible = rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+
+    // Measuring rect.height assumes that the nav's lower edge is exactly at
+    // innerHeight. That is not guaranteed in an edge-to-edge native WebView:
+    // safe-area handling and the visual viewport can shift the whole nav.
+    // Its actual top edge is the only reliable composer anchor.
+    const offset = Math.max(0, window.innerHeight - rect.top);
+    setVar("--grim-nav-offset", visible ? offset : 0);
   };
 
   const measureKeyboard = () => {
@@ -62,7 +70,7 @@ if (typeof window !== "undefined") {
     }
     // Overlay-mode WebViews keep `innerHeight` at full screen size while the
     // visual viewport shrinks. Resize-mode WebViews shrink both, giving 0.
-    const inset = window.innerHeight - vv.height - vv.offsetTop;
+    const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     setVar("--grim-keyboard-inset", inset > 80 ? inset : 0);
   };
 
@@ -94,4 +102,4 @@ if (typeof window !== "undefined") {
  * height / safe area, and lifts with the keyboard when it is open.
  */
 export const COMPOSER_BOTTOM =
-  "max(var(--grim-nav-height, 0px), var(--grim-keyboard-inset, 0px), var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))";
+  "max(var(--grim-nav-offset, 0px), var(--grim-keyboard-inset, 0px), var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)))";
