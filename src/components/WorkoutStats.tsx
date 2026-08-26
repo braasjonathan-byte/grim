@@ -441,11 +441,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return false;
   };
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
-  // How many separate workouts a user has on a given (week, day). At least 1 if there's exercise data.
-  const passCountForDay = (c: CompletionRecord) => {
+  // How many workouts are SCHEDULED on a given (week, day). Used for totals only —
+  // completion is tracked per day, so a done day always counts as exactly one
+  // finished pass (otherwise unfinished workouts on the same day are counted as done).
+  const scheduledCountForDay = (c: CompletionRecord) => {
     const key = `${c.week}-${c.day}`;
     return Math.max(1, plansPerDay.get(key) || 0);
   };
+
 
   const stats = useMemo(() => {
     type Bucket = {label: string;done: number;doneWithExercise: number;skipped: number;total: number;totalWithExercise: number;distanceKm: number;sortKey: string;};
@@ -481,12 +484,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: 0, distanceKm: 0, sortKey });
       }
       const b = buckets.get(key)!;
-      const dayCount = passCountForDay(c);
+      const dayCount = scheduledCountForDay(c);
       b.total++;
       if (hasExercise(c)) b.totalWithExercise += dayCount;
       if (c.done && hasExercise(c)) {
-        b.done += dayCount;
-        b.doneWithExercise += dayCount;
+        b.done += 1;
+        b.doneWithExercise += 1;
+
       }
       if (c.skipped) b.skipped++;
       if (c.done && hasExercise(c)) {
@@ -568,7 +572,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   }, [completions, summaryPeriod, planStartDate]);
 
   const totalDone = filteredCompletions.reduce(
-    (sum, c) => (c.done && hasExercise(c) ? sum + passCountForDay(c) : sum),
+    (sum, c) => (c.done && hasExercise(c) ? sum + 1 : sum),
     0,
   );
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
