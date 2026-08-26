@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCircle, Crown, Sparkles, Megaphone, Trash2, Loader2, Check, Users, Plus } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
@@ -879,8 +880,8 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       <div
         ref={scrollRef}
         data-scroll-lock-scroll="y"
-        className="min-h-0 flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
-        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        className="min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain"
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
       >
         {groupedMessages.map(group => (
           <div key={group.date}>
@@ -960,7 +961,7 @@ const GrimSupportConversation = ({ userId, isAdmin, targetNickname, targetAvatar
       {/* Input */}
       <div
         className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto"
-        style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)`, touchAction: "none" }}
+        style={{ bottom: COMPOSER_BOTTOM, touchAction: "none" }}
         onTouchMove={(event) => event.preventDefault()}
       >
         <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -1150,7 +1151,7 @@ const GrimAnnouncementConversation = ({ currentUserId, isAdmin, onBack }: GrimAn
       {isAdmin && (
         <div
           className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 max-w-lg mx-auto space-y-2"
-          style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)`, touchAction: "none" }}
+          style={{ bottom: COMPOSER_BOTTOM, touchAction: "none" }}
           onTouchMove={(event) => event.preventDefault()}
         >
           <input
