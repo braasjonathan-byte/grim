@@ -93,10 +93,11 @@ if (typeof window !== "undefined") {
     const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
     const layoutShrink = Math.max(0, baselineLayoutHeight - layoutHeight);
 
-    // In resize-mode the fixed containing block already ends above the keyboard,
-    // so bottom:0 is correct. Only overlay-mode requires the visual inset.
+    // In resize-mode the fixed containing block (including the bottom nav) moves
+    // above the keyboard, so the composer still uses the nav's rendered height.
+    // Overlay-mode keeps the layout full-height and needs the visual inset.
     keyboardVisible = visualShrink > 80;
-    keyboardInset = keyboardVisible && layoutShrink <= 80 ? visualShrink : 0;
+    keyboardInset = keyboardVisible ? (layoutShrink > 80 ? navHeight : visualShrink) : 0;
     setVar("--grim-keyboard-inset", keyboardInset);
     applyComposerOffset();
   };
