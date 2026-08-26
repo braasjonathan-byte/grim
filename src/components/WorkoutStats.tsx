@@ -484,12 +484,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: 0, distanceKm: 0, sortKey });
       }
       const b = buckets.get(key)!;
-      const dayCount = passCountForDay(c);
+      const dayCount = scheduledCountForDay(c);
       b.total++;
       if (hasExercise(c)) b.totalWithExercise += dayCount;
       if (c.done && hasExercise(c)) {
-        b.done += dayCount;
-        b.doneWithExercise += dayCount;
+        b.done += 1;
+        b.doneWithExercise += 1;
+
       }
       if (c.skipped) b.skipped++;
       if (c.done && hasExercise(c)) {
