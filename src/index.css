@@ -200,9 +200,15 @@
 }
 
 @layer utilities {
+  /* Keep interactive content clear of the Android/iOS system navigation bar */
+  .pb-safe {
+    padding-bottom: calc(1rem + var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px)));
+  }
+
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-[hsl(120,70%,60%)];
   }
+
 
   .card-glow {
     box-shadow: 0 0 30px -10px hsl(82 85% 55% / 0.15);
