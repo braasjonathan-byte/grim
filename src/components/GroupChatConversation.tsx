@@ -239,8 +239,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         ref={scrollRef}
         data-scroll-lock-scroll="y"
         className="min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain"
-        style={{ paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
-        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
       >
         {loading ? (
           <div className="flex items-center justify-center py-12">

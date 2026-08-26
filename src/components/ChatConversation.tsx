@@ -289,8 +289,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         ref={scrollRef}
         data-scroll-lock-scroll="y"
         className="min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain"
-        style={{ paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
-        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+        style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y", paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
       >
         {groupedMessages.map(group => (
           <div key={group.date}>
