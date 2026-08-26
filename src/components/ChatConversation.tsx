@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { avatarGradient } from "@/lib/avatarGradient";
@@ -287,7 +288,8 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       <div
         ref={scrollRef}
         data-scroll-lock-scroll="y"
-        className="min-h-0 flex-1 overflow-y-auto py-3 pb-24 space-y-1 overscroll-contain"
+        className="min-h-0 flex-1 overflow-y-auto py-3 space-y-1 overscroll-contain"
+        style={{ paddingBottom: `calc(${COMPOSER_BOTTOM} + 72px)` }}
         style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
       >
         {groupedMessages.map(group => (
@@ -499,7 +501,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       )}
 
       {/* Input - sticky above timer */}
-      <div className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto" style={{ bottom: `calc(60px + env(safe-area-inset-bottom, 0px) + 36px)`, touchAction: 'none' }}>
+      <div className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto" style={{ bottom: COMPOSER_BOTTOM, touchAction: 'none' }}>
         <input
           ref={inputRef}
           value={newMessage}
