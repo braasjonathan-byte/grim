@@ -83,7 +83,7 @@ export default function AiWorkoutScanDialog({ open, onClose, onConfirm }: Props)
   return createPortal(
     <div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/70" onClick={close} />
-      <div className="relative bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto p-4 space-y-3 z-10">
+      <div className="relative bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[85vh] overflow-y-auto p-4 pb-safe space-y-3 z-10">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm flex items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-primary" /> AI: läs av skärmdump
