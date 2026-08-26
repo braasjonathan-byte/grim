@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
+import type { ReactNode, TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
 
 interface ChatComposerPortalProps {
   children: ReactNode;
   className?: string;
-  onTouchMove?: (event: React.TouchEvent<HTMLDivElement>) => void;
+  onTouchMove?: (event: TouchEvent<HTMLDivElement>) => void;
 }
 
 /**
