@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
+import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { avatarGradient } from "@/lib/avatarGradient";
@@ -500,7 +501,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       )}
 
       {/* Input - sticky above timer */}
-      <div className="fixed left-0 right-0 z-40 bg-background border-t border-border px-3 pt-2 pb-2 flex gap-2 items-end max-w-lg mx-auto" style={{ bottom: COMPOSER_BOTTOM, touchAction: 'none' }}>
+      <ChatComposerPortal className="px-3 pt-2 pb-2 flex gap-2 items-end">
         <input
           ref={inputRef}
           value={newMessage}
@@ -517,7 +518,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         >
           <Send className="w-4 h-4" />
         </button>
-      </div>
+      </ChatComposerPortal>
     </div>
   );
 };
