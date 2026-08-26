@@ -18,7 +18,7 @@ const ChatComposerPortal = ({ children, className = "", onTouchMove }: ChatCompo
   return createPortal(
     <div
       className={`fixed left-0 right-0 z-40 mx-auto max-w-lg bg-background border-t border-border ${className}`}
-      style={{ bottom: COMPOSER_BOTTOM, touchAction: "none" }}
+      style={{ bottom: COMPOSER_BOTTOM, touchAction: "none", transition: "bottom 140ms ease-out" }}
       onTouchMove={onTouchMove}
     >
       {children}
