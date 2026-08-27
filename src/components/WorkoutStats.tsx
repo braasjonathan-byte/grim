@@ -397,16 +397,23 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
+        const countedWeekDays = new Set<string>();
         for (const p of withExercises) {
           const key = `${p.week}-${p.day}`;
           exerciseKeys.add(key);
           if (!detailsMap.has(key)) {
             detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
           }
-          perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
+          // Completion is tracked per DAY, so scheduled totals must count days
+          // (not plan rows) to stay comparable with the done-count.
+          if (!countedWeekDays.has(key)) {
+            countedWeekDays.add(key);
+            perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
+          }
           perDay.set(key, (perDay.get(key) || 0) + 1);
         }
       }
+
 
       setPlansWithExercises(exerciseKeys);
       setPlanDetailsMap(detailsMap);
@@ -435,13 +442,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   // A session is only "done" when the user actively marked it AND logged something.
   const isDone = (c: CompletionRecord) => isCompletedWorkout(c);
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
-  // How many workouts are SCHEDULED on a given (week, day). Used for totals only —
-  // completion is tracked per day, so a done day always counts as exactly one
-  // finished pass (otherwise unfinished workouts on the same day are counted as done).
-  const scheduledCountForDay = (c: CompletionRecord) => {
-    const key = `${c.week}-${c.day}`;
-    return Math.max(1, plansPerDay.get(key) || 0);
-  };
+  // Note: completion is tracked per DAY, so both the done-count and the
+  // scheduled total count training days — never individual plan rows.
+
 
 
   const stats = useMemo(() => {
@@ -478,9 +481,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: 0, distanceKm: 0, sortKey });
       }
       const b = buckets.get(key)!;
-      const dayCount = scheduledCountForDay(c);
       b.total++;
-      if (hasExercise(c)) b.totalWithExercise += dayCount;
+      // One training DAY = one scheduled pass, matching the done-count below.
+      if (hasExercise(c)) b.totalWithExercise += 1;
       if (isDone(c)) {
         b.done += 1;
         b.doneWithExercise += 1;
