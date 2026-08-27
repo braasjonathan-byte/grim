@@ -397,16 +397,23 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       if (planData) {
         const withExercises = planData.filter((p) => p.details && p.details.trim() !== "");
+        const countedWeekDays = new Set<string>();
         for (const p of withExercises) {
           const key = `${p.week}-${p.day}`;
           exerciseKeys.add(key);
           if (!detailsMap.has(key)) {
             detailsMap.set(key, JSON.stringify({ details: p.details, tempo: p.tempo ?? "" }));
           }
-          perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
+          // Completion is tracked per DAY, so scheduled totals must count days
+          // (not plan rows) to stay comparable with the done-count.
+          if (!countedWeekDays.has(key)) {
+            countedWeekDays.add(key);
+            perWeek.set(p.week, (perWeek.get(p.week) || 0) + 1);
+          }
           perDay.set(key, (perDay.get(key) || 0) + 1);
         }
       }
+
 
       setPlansWithExercises(exerciseKeys);
       setPlanDetailsMap(detailsMap);
