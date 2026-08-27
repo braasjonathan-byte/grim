@@ -430,16 +430,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     }).finally(() => setStatsLoading(false));
   }, [userId]);
 
-  const hasLoggedData = (c: CompletionRecord) => {
-    // Check for logged conditioning data
-    if (c.logged_distance_km || c.logged_tempo || c.logged_pulse) return true;
-    // Check for logged weights/sets
-    if (c.logged_weights && typeof c.logged_weights === "object") {
-      const keys = Object.keys(c.logged_weights as Record<string, any>);
-      return keys.some(k => k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__"));
-    }
-    return false;
-  };
+  const hasLoggedData = (c: CompletionRecord) => hasCompletionEvidence(c);
+  // A session is only "done" when the user actively marked it AND logged something.
+  const isDone = (c: CompletionRecord) => isCompletedWorkout(c);
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
   // How many workouts are SCHEDULED on a given (week, day). Used for totals only —
   // completion is tracked per day, so a done day always counts as exactly one
