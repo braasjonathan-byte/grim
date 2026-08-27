@@ -442,13 +442,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   // A session is only "done" when the user actively marked it AND logged something.
   const isDone = (c: CompletionRecord) => isCompletedWorkout(c);
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
-  // How many workouts are SCHEDULED on a given (week, day). Used for totals only —
-  // completion is tracked per day, so a done day always counts as exactly one
-  // finished pass (otherwise unfinished workouts on the same day are counted as done).
-  const scheduledCountForDay = (c: CompletionRecord) => {
-    const key = `${c.week}-${c.day}`;
-    return Math.max(1, plansPerDay.get(key) || 0);
-  };
+  // Note: completion is tracked per DAY, so both the done-count and the
+  // scheduled total count training days — never individual plan rows.
+
 
 
   const stats = useMemo(() => {
