@@ -485,9 +485,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         buckets.set(key, { label, done: 0, doneWithExercise: 0, skipped: 0, total: 0, totalWithExercise: 0, distanceKm: 0, sortKey });
       }
       const b = buckets.get(key)!;
-      const dayCount = scheduledCountForDay(c);
       b.total++;
-      if (hasExercise(c)) b.totalWithExercise += dayCount;
+      // One training DAY = one scheduled pass, matching the done-count below.
+      if (hasExercise(c)) b.totalWithExercise += 1;
       if (isDone(c)) {
         b.done += 1;
         b.doneWithExercise += 1;
