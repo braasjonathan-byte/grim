@@ -8,6 +8,7 @@ import AchievementsPanel from "@/components/AchievementsPanel";
 import IdentityTitleBadge from "@/components/IdentityTitleBadge";
 import AchievementsView from "@/components/AchievementsView";
 import { calculateAchievementMetrics, getEarnedAchievements } from "@/lib/achievements";
+import { hasCompletionEvidence, isCompletedWorkout } from "@/lib/completionCounting";
 
 interface FriendProfileViewProps {
   friendUserId: string;
@@ -308,21 +309,14 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
 
   const filtered = useMemo(() => filterByPeriod(allCompletions, period, planStartDate), [allCompletions, period, planStartDate]);
 
-  const hasLoggedData = (c: CompletionRow) => {
-    if (c.logged_distance_km || c.logged_tempo || c.logged_pulse) return true;
-    const weights = (c as any).logged_weights as Record<string, any> | null;
-    if (weights && typeof weights === "object") {
-      return Object.keys(weights).some(k => k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__"));
-    }
-    return false;
-  };
+  const hasLoggedData = (c: CompletionRow) => hasCompletionEvidence(c);
 
   const stats = useMemo(() => {
-    const done = filtered.filter((c) => c.done && (hasLoggedData(c) || plansWithExercises.has(`${c.week}-${c.day}`))).length;
+    const done = filtered.filter((c) => isCompletedWorkout(c)).length;
     const skipped = filtered.filter((c) => c.skipped).length;
     let distanceKm = 0;
     for (const c of filtered) {
-      if (!c.done) continue;
+      if (!isCompletedWorkout(c)) continue;
       distanceKm += getWorkoutDistanceKm({
         loggedDistanceKm: c.logged_distance_km,
         loggedWeights: c.logged_weights,

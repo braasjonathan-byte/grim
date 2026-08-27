@@ -13,6 +13,7 @@ import AchievementsView from "@/components/AchievementsView";
 import MuscleBalanceWarning from "@/components/MuscleBalanceWarning";
 import { getWorkoutDistanceKm, getWorkoutDistanceByCategory } from "@/lib/workoutDistance";
 import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
+import { hasCompletionEvidence, isCompletedWorkout } from "@/lib/completionCounting";
 import { useCardioVisibility, getCardioCategory, CARDIO_CATEGORIES, type CardioCategory } from "@/lib/cardioVisibility";
 
 import { calculateAchievementMetrics, unlockEarnedAchievements } from "@/lib/achievements";
@@ -480,13 +481,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const dayCount = scheduledCountForDay(c);
       b.total++;
       if (hasExercise(c)) b.totalWithExercise += dayCount;
-      if (c.done && hasExercise(c)) {
+      if (isDone(c)) {
         b.done += 1;
         b.doneWithExercise += 1;
 
       }
       if (c.skipped) b.skipped++;
-      if (c.done && hasExercise(c)) {
+      if (isDone(c)) {
         const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
         const breakdown = getWorkoutDistanceByCategory({
           loggedDistanceKm: c.logged_distance_km,
@@ -565,14 +566,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   }, [completions, summaryPeriod, planStartDate]);
 
   const totalDone = filteredCompletions.reduce(
-    (sum, c) => (c.done && hasExercise(c) ? sum + 1 : sum),
+    (sum, c) => (isDone(c) ? sum + 1 : sum),
     0,
   );
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
   const totalDistanceKm = useMemo(() => {
     let total = 0;
     for (const c of filteredCompletions) {
-      if (!c.done || !hasExercise(c)) continue;
+      if (!isDone(c)) continue;
       const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
       const breakdown = getWorkoutDistanceByCategory({
         loggedDistanceKm: c.logged_distance_km,
@@ -590,7 +591,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const perCategoryStats = useMemo(() => {
     const map = new Map<CardioCategory, { km: number; passes: number }>();
     for (const c of filteredCompletions) {
-      if (!c.done || !hasExercise(c)) continue;
+      if (!isDone(c)) continue;
       const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
       const breakdown = getWorkoutDistanceByCategory({
         loggedDistanceKm: c.logged_distance_km,
@@ -624,7 +625,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const totalLiftedTons = useMemo(() => {
     let total = 0;
     for (const row of filteredCompletions) {
-      if (!row.done || !hasExercise(row) || !row.logged_weights || typeof row.logged_weights !== "object") continue;
+      if (!isCompletedWorkout(row) || !row.logged_weights || typeof row.logged_weights !== "object") continue;
       const weights = row.logged_weights as Record<string, any>;
       // Group setdata entries by base exercise name (strip "— 3×10 @ -20 kg" style suffixes
       // that the progression engine appends when renaming). Same lift can appear under
