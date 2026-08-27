@@ -13,6 +13,7 @@ import AchievementsView from "@/components/AchievementsView";
 import MuscleBalanceWarning from "@/components/MuscleBalanceWarning";
 import { getWorkoutDistanceKm, getWorkoutDistanceByCategory } from "@/lib/workoutDistance";
 import { stripSetRepSuffix } from "@/lib/exerciseNormalization";
+import { hasCompletionEvidence, isCompletedWorkout } from "@/lib/completionCounting";
 import { useCardioVisibility, getCardioCategory, CARDIO_CATEGORIES, type CardioCategory } from "@/lib/cardioVisibility";
 
 import { calculateAchievementMetrics, unlockEarnedAchievements } from "@/lib/achievements";
@@ -430,16 +431,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     }).finally(() => setStatsLoading(false));
   }, [userId]);
 
-  const hasLoggedData = (c: CompletionRecord) => {
-    // Check for logged conditioning data
-    if (c.logged_distance_km || c.logged_tempo || c.logged_pulse) return true;
-    // Check for logged weights/sets
-    if (c.logged_weights && typeof c.logged_weights === "object") {
-      const keys = Object.keys(c.logged_weights as Record<string, any>);
-      return keys.some(k => k.startsWith("__sets__") || k.startsWith("__setdata__") || k.startsWith("__cond__"));
-    }
-    return false;
-  };
+  const hasLoggedData = (c: CompletionRecord) => hasCompletionEvidence(c);
+  // A session is only "done" when the user actively marked it AND logged something.
+  const isDone = (c: CompletionRecord) => isCompletedWorkout(c);
   const hasExercise = (c: CompletionRecord) => hasLoggedData(c) || Boolean(c.plan_details) || plansWithExercises.has(`${c.week}-${c.day}`);
   // How many workouts are SCHEDULED on a given (week, day). Used for totals only —
   // completion is tracked per day, so a done day always counts as exactly one
@@ -487,13 +481,13 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       const dayCount = scheduledCountForDay(c);
       b.total++;
       if (hasExercise(c)) b.totalWithExercise += dayCount;
-      if (c.done && hasExercise(c)) {
+      if (isDone(c)) {
         b.done += 1;
         b.doneWithExercise += 1;
 
       }
       if (c.skipped) b.skipped++;
-      if (c.done && hasExercise(c)) {
+      if (isDone(c)) {
         const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
         const breakdown = getWorkoutDistanceByCategory({
           loggedDistanceKm: c.logged_distance_km,
@@ -572,14 +566,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   }, [completions, summaryPeriod, planStartDate]);
 
   const totalDone = filteredCompletions.reduce(
-    (sum, c) => (c.done && hasExercise(c) ? sum + 1 : sum),
+    (sum, c) => (isDone(c) ? sum + 1 : sum),
     0,
   );
   const totalSkipped = filteredCompletions.filter((c) => c.skipped).length;
   const totalDistanceKm = useMemo(() => {
     let total = 0;
     for (const c of filteredCompletions) {
-      if (!c.done || !hasExercise(c)) continue;
+      if (!isDone(c)) continue;
       const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
       const breakdown = getWorkoutDistanceByCategory({
         loggedDistanceKm: c.logged_distance_km,
@@ -597,7 +591,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const perCategoryStats = useMemo(() => {
     const map = new Map<CardioCategory, { km: number; passes: number }>();
     for (const c of filteredCompletions) {
-      if (!c.done || !hasExercise(c)) continue;
+      if (!isDone(c)) continue;
       const planText = c.plan_details ?? planDetailsMap.get(`${c.week}-${c.day}`);
       const breakdown = getWorkoutDistanceByCategory({
         loggedDistanceKm: c.logged_distance_km,
@@ -631,7 +625,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const totalLiftedTons = useMemo(() => {
     let total = 0;
     for (const row of filteredCompletions) {
-      if (!row.done || !hasExercise(row) || !row.logged_weights || typeof row.logged_weights !== "object") continue;
+      if (!isCompletedWorkout(row) || !row.logged_weights || typeof row.logged_weights !== "object") continue;
       const weights = row.logged_weights as Record<string, any>;
       // Group setdata entries by base exercise name (strip "— 3×10 @ -20 kg" style suffixes
       // that the progression engine appends when renaming). Same lift can appear under

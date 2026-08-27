@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import EmptyState from "./EmptyState";
+import { isCompletedWorkout } from "@/lib/completionCounting";
 
 interface TrainingCalendarProps {
   userId: string;
@@ -15,6 +16,8 @@ const DAY_NAME_TO_OFFSET: Record<string, number> = {
   "Måndag": 0, "Tisdag": 1, "Onsdag": 2, "Torsdag": 3,
   "Fredag": 4, "Lördag": 5, "Söndag": 6,
 };
+
+const getBaseDay = (day: string) => day.replace(/_[a-z0-9]+$/i, "");
 
 const parseDateKey = (value: string | null | undefined): Date | null => {
   const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -63,7 +66,7 @@ const resolveCompletionDate = (
     const start = parseDateKey(planStartDate);
     if (!start) return updatedAt ? updatedAt.substring(0, 10) : null;
     const startMonday = getISOWeekStart(start);
-    const dayOffset = DAY_NAME_TO_OFFSET[day];
+    const dayOffset = DAY_NAME_TO_OFFSET[getBaseDay(day)];
     if (dayOffset === undefined) return updatedAt ? updatedAt.substring(0, 10) : null;
     const date = new Date(startMonday.getTime() + (week - 1) * 7 * 86400000 + dayOffset * 86400000);
     return date.toISOString().split("T")[0];
@@ -183,7 +186,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           if (!dateStr) continue;
           const hasExercise = planHasExercises.has(`${c.week}-${c.day}`);
 
-          if (c.done && (hasExercise || c.week === 0)) {
+          if (isCompletedWorkout(c) && (hasExercise || c.week === 0)) {
             done.add(dateStr);
             pending.delete(dateStr);
             addStats(dateStr, (c as any).logged_weights);
@@ -202,7 +205,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
           if (!compData || !Array.isArray(compData)) continue;
 
           for (const c of compData) {
-            if (!c.done) continue;
+            if (!isCompletedWorkout(c)) continue;
             const dateStr = resolveCompletionDate(
               c.week || 0,
               c.day || "",

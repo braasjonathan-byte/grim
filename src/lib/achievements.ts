@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
+import { isCompletedWorkout } from "@/lib/completionCounting";
 
 export type AchievementDifficulty = "brons" | "silver" | "guld" | "legend";
 
@@ -102,7 +103,7 @@ export const calculateAchievementMetrics = (
   const dateSet = new Set<string>();
 
   for (const completion of completions) {
-    if (!completion.done) continue;
+    if (!isCompletedWorkout(completion)) continue;
     workouts += 1;
     distanceKm += getWorkoutDistanceKm({
       loggedDistanceKm: completion.logged_distance_km ?? null,
