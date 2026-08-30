@@ -188,7 +188,7 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
 
   const tonsChange = report ? pctChange(report.total_tons, report.prev_tons) : null;
 
-  const distChange = report ? pctChange(report.total_distance_km, report.prev_distance_km) : null;
+  const distChange = report ? pctChange(totalDistance, report.prev_distance_km) : null;
   const passDiff = report ? report.pass_count - report.prev_pass_count : 0;
 
   return (
