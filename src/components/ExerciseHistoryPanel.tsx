@@ -59,7 +59,7 @@ const legacySets = (value: any): StrengthSet[] => {
 };
 
 const DAY_OFFSET: Record<string, number> = {
-  mån: 0, måndag: 0, tis: 1, tisdag: 2 - 1, ons: 2, onsdag: 2,
+  mån: 0, måndag: 0, tis: 1, tisdag: 1, ons: 2, onsdag: 2,
   tors: 3, tor: 3, torsdag: 3, fre: 4, fredag: 4, lör: 5, lördag: 5, sön: 6, söndag: 6,
 };
 
