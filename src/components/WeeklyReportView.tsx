@@ -313,9 +313,11 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
             <ul className="space-y-2">
               {report.sessions.map((s, i) => {
                 const metrics: string[] = [];
+                const km = s.distance_km || sessionKm[`${s.week}|${s.day}`] || 0;
                 if (s.set_count) metrics.push(`${s.set_count} set`);
                 if (s.tons) metrics.push(`${fmtNum(s.tons, 2)} ton`);
-                if (s.distance_km) metrics.push(`${fmtNum(s.distance_km)} km`);
+                if (km > 0.05) metrics.push(`${fmtNum(km)} km`);
+
                 if (s.tempo) metrics.push(String(s.tempo));
                 return (
                   <li key={`${s.date}-${i}`} className="rounded-xl bg-muted/40 px-3 py-2.5">
