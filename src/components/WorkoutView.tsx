@@ -170,6 +170,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
   const [isWarmupMode, setIsWarmupMode] = useState(false);
   const [deleteExerciseConfirm, setDeleteExerciseConfirm] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
+  // Ändra förvalda reps på en övning (och ev. alla kommande pass med samma övning)
+  const [repsEditor, setRepsEditor] = useState<{planId: string; lineIndex: number; name: string; reps: string; timeBased: boolean} | null>(null);
+  const [repsEditorSaving, setRepsEditorSaving] = useState(false);
+
   const [replaceExerciseTarget, setReplaceExerciseTarget] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
