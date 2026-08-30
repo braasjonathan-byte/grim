@@ -284,7 +284,26 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
                 <p className="text-[11px] text-muted-foreground">PR under veckan</p>
               </div>
             </div>
+
+            {categoryRows.length > 0 && (
+              <div className="pt-1 space-y-1.5">
+                <p className="text-[11px] font-semibold text-muted-foreground">Distans per gren</p>
+                {categoryRows.map(([key, km]) => (
+                  <div key={key} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-1.5">
+                    <span className="text-xs font-medium text-foreground truncate">{CATEGORY_LABELS[key]}</span>
+                    <span className="text-xs font-bold text-foreground shrink-0">
+                      {fmtNum(km)} km
+                      <span className="ml-1 font-medium text-muted-foreground">
+                        {Math.round((km / totalDistance) * 100)}%
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
+
 
           <div className="rounded-2xl bg-card shadow-soft p-4">
             <h3 className="text-sm font-bold text-foreground mb-3">Veckans pass</h3>
