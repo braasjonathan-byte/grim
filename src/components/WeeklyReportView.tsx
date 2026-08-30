@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, BarChart3, CheckCircle, Footprints, TrendingDown, TrendingUp, Weight, Star, Calendar } from "lucide-react";
+import { getWorkoutDistanceByCategory, type CardioCategoryKey } from "@/lib/workoutDistance";
+
+const CATEGORY_LABELS: Record<CardioCategoryKey, string> = {
+  "löpning": "🏃 Löpning",
+  "cykling": "🚴 Cykling",
+  "simning": "🏊 Simning",
+  "rodd": "🚣 Rodd",
+  "promenad": "🚶 Promenad",
+  "trapp": "🪜 Trappa/Crosstrainer",
+};
+
 
 interface WeeklyReportSession {
   date?: string;
@@ -91,8 +102,93 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
     [reports, selectedId],
   );
 
+  // Distansen i rapport-raden räknar bara logged_distance_km, vilket missar
+  // konditionspass som loggats via __cond__/intervaller. Räkna om per gren här.
+  const [byCategory, setByCategory] = useState<Partial<Record<CardioCategoryKey, number>>>({});
+  const [sessionKm, setSessionKm] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!report) {
+      setByCategory({});
+      setSessionKm({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: completions } = await supabase
+        .from("workout_completions")
+        .select("week, day, logged_distance_km, logged_weights")
+        .eq("user_id", userId)
+        .eq("done", true)
+        .gte("updated_at", `${report.week_start}T00:00:00Z`)
+        .lte("updated_at", `${report.week_end}T23:59:59Z`);
+      if (cancelled) return;
+      const rows = completions || [];
+      if (rows.length === 0) {
+        setByCategory({});
+        setSessionKm({});
+        return;
+      }
+
+      const weeks = [...new Set(rows.map((r: any) => r.week))];
+      const { data: plans } = await supabase
+        .from("workout_plans")
+        .select("week, day, session_name, details, tempo")
+        .eq("user_id", userId)
+        .in("week", weeks);
+      if (cancelled) return;
+
+      const planMap = new Map<string, string>();
+      (plans || []).forEach((p: any) => {
+        planMap.set(
+          `${p.week}|${p.day}`,
+          JSON.stringify({ sessionName: p.session_name, details: p.details, tempo: p.tempo }),
+        );
+      });
+
+      const totals: Partial<Record<CardioCategoryKey, number>> = {};
+      const perSession: Record<string, number> = {};
+      for (const c of rows as any[]) {
+        const cats = getWorkoutDistanceByCategory({
+          loggedDistanceKm: c.logged_distance_km,
+          loggedWeights: c.logged_weights,
+          planDetails: planMap.get(`${c.week}|${c.day}`) ?? null,
+        });
+        let sum = 0;
+        for (const [key, km] of Object.entries(cats)) {
+          if (!(km > 0)) continue;
+          totals[key as CardioCategoryKey] = (totals[key as CardioCategoryKey] ?? 0) + km;
+          sum += km;
+        }
+        if (sum > 0) {
+          const k = `${c.week}|${c.day}`;
+          perSession[k] = (perSession[k] ?? 0) + sum;
+        }
+      }
+      setByCategory(totals);
+      setSessionKm(perSession);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, report?.id, report?.week_start, report?.week_end]);
+
+  const categoryRows = useMemo(
+    () =>
+      (Object.entries(byCategory) as [CardioCategoryKey, number][])
+        .filter(([, km]) => km > 0.05)
+        .sort((a, b) => b[1] - a[1]),
+    [byCategory],
+  );
+
+  const computedDistance = useMemo(
+    () => categoryRows.reduce((sum, [, km]) => sum + km, 0),
+    [categoryRows],
+  );
+
+  const totalDistance = computedDistance > 0 ? computedDistance : report?.total_distance_km ?? 0;
+
   const tonsChange = report ? pctChange(report.total_tons, report.prev_tons) : null;
-  const distChange = report ? pctChange(report.total_distance_km, report.prev_distance_km) : null;
+
+  const distChange = report ? pctChange(totalDistance, report.prev_distance_km) : null;
   const passDiff = report ? report.pass_count - report.prev_pass_count : 0;
 
   return (
@@ -172,7 +268,7 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
                   <Footprints className="w-3.5 h-3.5" /> Distans
                 </div>
-                <p className="text-2xl font-black text-foreground">{fmtNum(report.total_distance_km)} <span className="text-sm font-bold">km</span></p>
+                <p className="text-2xl font-black text-foreground">{fmtNum(totalDistance)} <span className="text-sm font-bold">km</span></p>
                 {distChange !== null && (
                   <p className={`text-[11px] font-semibold flex items-center gap-1 ${distChange >= 0 ? "text-success" : "text-destructive"}`}>
                     {distChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -188,7 +284,26 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
                 <p className="text-[11px] text-muted-foreground">PR under veckan</p>
               </div>
             </div>
+
+            {categoryRows.length > 0 && (
+              <div className="pt-1 space-y-1.5">
+                <p className="text-[11px] font-semibold text-muted-foreground">Distans per gren</p>
+                {categoryRows.map(([key, km]) => (
+                  <div key={key} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-1.5">
+                    <span className="text-xs font-medium text-foreground truncate">{CATEGORY_LABELS[key]}</span>
+                    <span className="text-xs font-bold text-foreground shrink-0">
+                      {fmtNum(km)} km
+                      <span className="ml-1 font-medium text-muted-foreground">
+                        {Math.round((km / totalDistance) * 100)}%
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
+
 
           <div className="rounded-2xl bg-card shadow-soft p-4">
             <h3 className="text-sm font-bold text-foreground mb-3">Veckans pass</h3>
@@ -198,9 +313,11 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
             <ul className="space-y-2">
               {report.sessions.map((s, i) => {
                 const metrics: string[] = [];
+                const km = s.distance_km || sessionKm[`${s.week}|${s.day}`] || 0;
                 if (s.set_count) metrics.push(`${s.set_count} set`);
                 if (s.tons) metrics.push(`${fmtNum(s.tons, 2)} ton`);
-                if (s.distance_km) metrics.push(`${fmtNum(s.distance_km)} km`);
+                if (km > 0.05) metrics.push(`${fmtNum(km)} km`);
+
                 if (s.tempo) metrics.push(String(s.tempo));
                 return (
                   <li key={`${s.date}-${i}`} className="rounded-xl bg-muted/40 px-3 py-2.5">
