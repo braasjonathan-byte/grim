@@ -3253,12 +3253,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       return line.replace(/(\d+)(\s*[×x]\s*)(\d+)(s?)/i, `$1$2${reps}$4`);
     };
 
+    const weekDayOrder = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
     const nameLower = repsEditor.name.trim().toLowerCase();
     const targets = plans.filter(p => {
       if (p.id === sourcePlan.id) return true;
       if (!applyToFuture || p.week <= 0) return false;
       if (p.week > sourcePlan.week) return true;
-      if (p.week === sourcePlan.week) return DAYS.indexOf(p.day) > DAYS.indexOf(sourcePlan.day);
+      if (p.week === sourcePlan.week) return weekDayOrder.indexOf(p.day) > weekDayOrder.indexOf(sourcePlan.day);
       return false;
     });
 
