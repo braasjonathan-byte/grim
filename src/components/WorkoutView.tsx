@@ -170,6 +170,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [showExercisePicker, setShowExercisePicker] = useState<string | null>(null); // plan id
   const [isWarmupMode, setIsWarmupMode] = useState(false);
   const [deleteExerciseConfirm, setDeleteExerciseConfirm] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
+  // Ändra förvalda reps på en övning (och ev. alla kommande pass med samma övning)
+  const [repsEditor, setRepsEditor] = useState<{planId: string; lineIndex: number; name: string; reps: string; timeBased: boolean} | null>(null);
+  const [repsEditorSaving, setRepsEditorSaving] = useState(false);
+
   const [replaceExerciseTarget, setReplaceExerciseTarget] = useState<{planId: string; lineIndex: number; name: string} | null>(null);
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
@@ -3232,6 +3236,60 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     setDeleteExerciseConfirm(null);
   };
+
+  // Byt förvalda reps på en övningsrad. Om applyToFuture är true uppdateras
+  // samma övning i alla kommande pass i planen (senare veckor + senare dagar denna vecka).
+  const applyRepsEdit = async (applyToFuture: boolean) => {
+    if (!repsEditor) return;
+    const reps = repsEditor.reps.trim();
+    if (!reps || !/^\d+$/.test(reps)) return;
+    const sourcePlan = plans.find(p => p.id === repsEditor.planId);
+    if (!sourcePlan) { setRepsEditor(null); return; }
+    setRepsEditorSaving(true);
+
+    const rewrite = (line: string): string | null => {
+      const m = line.match(/(\d+)(\s*[×x]\s*)(\d+)(s?)/i);
+      if (!m) return null;
+      return line.replace(/(\d+)(\s*[×x]\s*)(\d+)(s?)/i, `$1$2${reps}$4`);
+    };
+
+    const weekDayOrder = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
+    const nameLower = repsEditor.name.trim().toLowerCase();
+    const targets = plans.filter(p => {
+      if (p.id === sourcePlan.id) return true;
+      if (!applyToFuture || p.week <= 0) return false;
+      if (p.week > sourcePlan.week) return true;
+      if (p.week === sourcePlan.week) return weekDayOrder.indexOf(p.day) > weekDayOrder.indexOf(sourcePlan.day);
+      return false;
+    });
+
+    const updated = [...plans];
+    for (const p of targets) {
+      const separator = p.details.includes("\n") ? "\n" : "; ";
+      const lines = p.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      let changed = false;
+      for (let i = 0; i < lines.length; i++) {
+        const isSourceLine = p.id === sourcePlan.id && i === repsEditor.lineIndex;
+        const lineName = lines[i].split(/\s*[—–]\s*/)[0].replace(/\s+\d+\s*[×x].*$/i, "").trim().toLowerCase();
+        if (!isSourceLine && lineName !== nameLower) continue;
+        const next = rewrite(lines[i]);
+        if (next && next !== lines[i]) { lines[i] = next; changed = true; }
+      }
+      if (changed) {
+        const newDetails = lines.join(separator);
+        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", p.id);
+        const idx = updated.findIndex(up => up.id === p.id);
+        if (idx >= 0) updated[idx] = { ...updated[idx], details: newDetails };
+      }
+    }
+
+    skipDayResetRef.current = true;
+    setPlans(updated);
+    setRepsEditorSaving(false);
+    setRepsEditor(null);
+    toast.success(applyToFuture ? "Reps uppdaterade i kommande pass" : "Reps uppdaterade");
+  };
+
 
   const editVilaSeconds = async (planId: string, lineIndex: number, currentSeconds: string) => {
     const newSec = prompt("Antal sekunder vila:", currentSeconds);
@@ -6628,6 +6686,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         } catch {}
                       }
                     };
+                    // Archived plans/singles first (oldest history), so data logged before
+                    // the current plan was started still shows up as "Senast".
+                    for (const archComp of archivedCompletions) {
+                      const weights = archComp.logged_weights as Record<string, any> | null;
+                      if (weights) collectSets(weights);
+                    }
                     // Search plan weeks backwards
                     for (let w = currentWeek - 1; w >= 1; w--) {
                       for (const p of plans.filter(pp => pp.week === w)) {
@@ -6639,6 +6703,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         collectSets(weights);
                       }
                     }
+
                     // Also search single workouts (week 0)
                     const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
                     for (const p of singlePlans) {
@@ -7830,6 +7895,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           <ArrowLeftRight className="w-4 h-4 mr-2" />
                                           Byt ut övning
                                         </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpenExerciseMenuId(null); setTimeout(() => setRepsEditor({ planId: plan.id, lineIndex: i, name: partName, reps: partReps || "10", timeBased: partIsTimeBased }), 0); }}>
+                                          <Pencil className="w-4 h-4 mr-2" />
+                                          Ändra reps
+                                        </DropdownMenuItem>
                                         {canEditExercises && (
                                           <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpenExerciseMenuId(null); setTimeout(() => setExerciseInfoState({ name: partName, editMode: true }), 0); }}>
                                             <Pencil className="w-4 h-4 mr-2" />
@@ -7882,7 +7951,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               <div className="space-y-1 pl-1">
                                   {(() => {
                                     const planSetData = getSetData(key, partName);
-                                    const defKg = partKg || "";
+                                    // Fall back to the last logged weight (plan, enskilda pass
+                                    // eller arkiverade pass) när planen saknar vikt.
+                                    const histKg = partKg ? null : findLastLoggedKg(partName, plan.week, partReps ? parseInt(partReps) : undefined);
+                                    const defKg = partKg || (histKg && histKg.kg > 0 ? String(histKg.kg) : "");
+
                                     const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
                                     const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
                                     const defReps = circuitDefaultSec || partReps || repsStr || "10";
@@ -9206,6 +9279,36 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             </button>
             <button onClick={executeDeleteExercise} className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
               Ta bort
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {repsEditor && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setRepsEditor(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-sm">Ändra {repsEditor.timeBased ? "sekunder" : "reps"}</h3>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">{toTitleCase(repsEditor.name)}</span>
+          </p>
+          <input
+            type="number"
+            inputMode="numeric"
+            autoFocus={false}
+            value={repsEditor.reps}
+            onChange={(e) => setRepsEditor(prev => prev ? { ...prev, reps: e.target.value.replace(/\D/g, "") } : prev)}
+            className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded-lg border border-border text-center font-mono outline-none focus:ring-1 focus:ring-primary"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Välj "Alla kommande pass" för att sätta samma förvalda {repsEditor.timeBased ? "sekunder" : "reps"} på övningen i resten av planen.
+          </p>
+          <div className="flex gap-2">
+            <button disabled={repsEditorSaving} onClick={() => applyRepsEdit(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm disabled:opacity-50">
+              Bara detta pass
+            </button>
+            <button disabled={repsEditorSaving} onClick={() => applyRepsEdit(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50">
+              Alla kommande pass
             </button>
           </div>
         </div>
