@@ -268,7 +268,7 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
                   <Footprints className="w-3.5 h-3.5" /> Distans
                 </div>
-                <p className="text-2xl font-black text-foreground">{fmtNum(report.total_distance_km)} <span className="text-sm font-bold">km</span></p>
+                <p className="text-2xl font-black text-foreground">{fmtNum(totalDistance)} <span className="text-sm font-bold">km</span></p>
                 {distChange !== null && (
                   <p className={`text-[11px] font-semibold flex items-center gap-1 ${distChange >= 0 ? "text-success" : "text-destructive"}`}>
                     {distChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
