@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, BarChart3, CheckCircle, Footprints, TrendingDown, TrendingUp, Weight, Star, Calendar } from "lucide-react";
+import { getWorkoutDistanceByCategory, type CardioCategoryKey } from "@/lib/workoutDistance";
+
+const CATEGORY_LABELS: Record<CardioCategoryKey, string> = {
+  "löpning": "🏃 Löpning",
+  "cykling": "🚴 Cykling",
+  "simning": "🏊 Simning",
+  "rodd": "🚣 Rodd",
+  "promenad": "🚶 Promenad",
+  "trapp": "🪜 Trappa/Crosstrainer",
+};
+
 
 interface WeeklyReportSession {
   date?: string;
