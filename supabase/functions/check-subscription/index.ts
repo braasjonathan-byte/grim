@@ -65,37 +65,42 @@ serve(async (req) => {
     let hasActiveSub = false;
     let subscriptionEnd = null;
 
-    if (registeredEmail || stripeCustomerId) {
-      const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    if (stripeKey && (registeredEmail || stripeCustomerId)) {
+      try {
+        const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-      // Find customer: prefer stored ID, fall back to email lookup
-      if (!stripeCustomerId && registeredEmail) {
-        const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
-        if (customers.data.length > 0) {
-          stripeCustomerId = customers.data[0].id;
-          // Persist for future lookups
-          await supabaseClient
-            .from("user_emails")
-            .update({ stripe_customer_id: stripeCustomerId })
-            .eq("user_id", user.id);
+        // Find customer: prefer stored ID, fall back to email lookup
+        if (!stripeCustomerId && registeredEmail) {
+          const customers = await stripe.customers.list({ email: registeredEmail, limit: 1 });
+          if (customers.data.length > 0) {
+            stripeCustomerId = customers.data[0].id;
+            // Persist for future lookups
+            await supabaseClient
+              .from("user_emails")
+              .update({ stripe_customer_id: stripeCustomerId })
+              .eq("user_id", user.id);
+          }
         }
-      }
 
-      if (stripeCustomerId) {
-        const subscriptions = await stripe.subscriptions.list({
-          customer: stripeCustomerId,
-          status: "active",
-          limit: 1,
-        });
+        if (stripeCustomerId) {
+          const subscriptions = await stripe.subscriptions.list({
+            customer: stripeCustomerId,
+            status: "active",
+            limit: 1,
+          });
 
-        hasActiveSub = subscriptions.data.length > 0;
+          hasActiveSub = subscriptions.data.length > 0;
 
-        if (hasActiveSub) {
-          const subscription = subscriptions.data[0];
-          subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+          if (hasActiveSub) {
+            const subscription = subscriptions.data[0];
+            subscriptionEnd = new Date((subscription as any).current_period_end * 1000).toISOString();
+          }
         }
+      } catch (stripeErr) {
+        console.error("Stripe lookup failed:", stripeErr instanceof Error ? stripeErr.message : stripeErr);
       }
     }
+
 
     // Only GRANT honorary here — never revoke. Revocation must be an explicit
     // admin action via the user-management tool, otherwise admin-granted
