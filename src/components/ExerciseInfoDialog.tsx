@@ -246,6 +246,12 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
         )}
 
         <div className="overflow-y-auto p-4 space-y-4">
+          {authUserId && (
+            <div className="rounded-xl border border-border bg-background/50 p-3">
+              <ExerciseHistoryPanel exerciseName={exerciseName} userId={authUserId} limit={10} />
+            </div>
+          )}
+
           {loading && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
