@@ -7889,7 +7889,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               <div className="space-y-1 pl-1">
                                   {(() => {
                                     const planSetData = getSetData(key, partName);
-                                    const defKg = partKg || "";
+                                    // Fall back to the last logged weight (plan, enskilda pass
+                                    // eller arkiverade pass) när planen saknar vikt.
+                                    const histKg = partKg ? null : findLastLoggedKg(partName, plan.week, partReps ? parseInt(partReps) : undefined);
+                                    const defKg = partKg || (histKg && histKg.kg > 0 ? String(histKg.kg) : "");
+
                                     const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
                                     const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
                                     const defReps = circuitDefaultSec || partReps || repsStr || "10";
