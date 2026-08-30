@@ -5,6 +5,9 @@ import { Plus, Copy, Trash2, ArrowLeft, Save, ChevronDown, ChevronUp, Search, X,
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import ExercisePickerDialog from "@/components/ExercisePickerDialog";
 import { startsWithTimeNotation } from "@/lib/exerciseNormalization";
+import { replacePlanRows } from "@/lib/planRows";
+import { toast } from "sonner";
+
 
 interface SchemaBuilderProps {
   userId: string;
@@ -210,10 +213,6 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
     if (totalDays === 0) return;
     setSaving(true);
 
-    // Rensa ev. befintlig plan först (enskilda pass i vecka 0 lämnas orörda),
-    // annars krockar inserts och planen börjar på fel veckonummer.
-    await supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0);
-
     // Rebuild details from exercises for each day before saving.
     // Veckorna numreras alltid om sekventiellt från 1.
     const allRows: { user_id: string; week: number; day: string; session_name: string; details: string; tempo: string }[] = [];
@@ -235,9 +234,14 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
       }
     });
 
-    for (let i = 0; i < allRows.length; i += 50) {
-      await supabase.from("workout_plans").insert(allRows.slice(i, i + 50));
+    try {
+      await replacePlanRows(userId, allRows);
+    } catch (e: any) {
+      setSaving(false);
+      toast.error("Kunde inte spara schemat", { description: e?.message || "Försök igen." });
+      return;
     }
+
 
 
     // Save plan_start_date as today and mark as calibrated
