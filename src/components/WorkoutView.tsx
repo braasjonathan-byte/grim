@@ -7895,6 +7895,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           <ArrowLeftRight className="w-4 h-4 mr-2" />
                                           Byt ut övning
                                         </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpenExerciseMenuId(null); setTimeout(() => setRepsEditor({ planId: plan.id, lineIndex: i, name: partName, reps: partReps || "10", timeBased: partIsTimeBased }), 0); }}>
+                                          <Pencil className="w-4 h-4 mr-2" />
+                                          Ändra reps
+                                        </DropdownMenuItem>
                                         {canEditExercises && (
                                           <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setOpenExerciseMenuId(null); setTimeout(() => setExerciseInfoState({ name: partName, editMode: true }), 0); }}>
                                             <Pencil className="w-4 h-4 mr-2" />
@@ -9275,6 +9279,36 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             </button>
             <button onClick={executeDeleteExercise} className="flex-1 py-2.5 bg-destructive text-destructive-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
               Ta bort
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    {repsEditor && (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/60" onClick={() => setRepsEditor(null)} />
+        <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
+          <h3 className="font-bold text-sm">Ändra {repsEditor.timeBased ? "sekunder" : "reps"}</h3>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">{toTitleCase(repsEditor.name)}</span>
+          </p>
+          <input
+            type="number"
+            inputMode="numeric"
+            autoFocus={false}
+            value={repsEditor.reps}
+            onChange={(e) => setRepsEditor(prev => prev ? { ...prev, reps: e.target.value.replace(/\D/g, "") } : prev)}
+            className="w-full bg-secondary text-foreground text-sm px-3 py-2 rounded-lg border border-border text-center font-mono outline-none focus:ring-1 focus:ring-primary"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Välj "Alla kommande pass" för att sätta samma förvalda {repsEditor.timeBased ? "sekunder" : "reps"} på övningen i resten av planen.
+          </p>
+          <div className="flex gap-2">
+            <button disabled={repsEditorSaving} onClick={() => applyRepsEdit(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm disabled:opacity-50">
+              Bara detta pass
+            </button>
+            <button disabled={repsEditorSaving} onClick={() => applyRepsEdit(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50">
+              Alla kommande pass
             </button>
           </div>
         </div>
