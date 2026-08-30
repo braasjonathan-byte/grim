@@ -158,10 +158,6 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
     const paddedDays = reorderDaysToPreferred(padWeeksTo7Days(days), preferredDays);
 
-    // Clear any existing plan rows (week > 0) so the new plan starts fresh at week 1.
-    // Single workouts (week = 0) are preserved.
-    await supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0);
-
     const startCreatedAt = toNoonUtcIso(startDate);
     const rows = paddedDays.map((d) => ({
       user_id: userId,
@@ -173,9 +169,14 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       created_at: startCreatedAt,
     }));
 
-    for (let i = 0; i < rows.length; i += 50) {
-      await supabase.from("workout_plans").insert(rows.slice(i, i + 50));
+    try {
+      await replacePlanRows(userId, rows);
+    } catch (e: any) {
+      setLoading(false);
+      toast.error("Kunde inte spara planen", { description: e?.message || "Försök igen." });
+      return;
     }
+
 
     // Save plan_start_date and mark as calibrated
     const startDateStr = toLocalDateKey(startDate);
