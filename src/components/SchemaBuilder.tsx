@@ -210,27 +210,35 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
     if (totalDays === 0) return;
     setSaving(true);
 
-    // Rebuild details from exercises for each day before saving
+    // Rensa ev. befintlig plan först (enskilda pass i vecka 0 lämnas orörda),
+    // annars krockar inserts och planen börjar på fel veckonummer.
+    await supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0);
+
+    // Rebuild details from exercises for each day before saving.
+    // Veckorna numreras alltid om sekventiellt från 1.
     const allRows: { user_id: string; week: number; day: string; session_name: string; details: string; tempo: string }[] = [];
 
-    for (const w of weeks) {
+    const sortedWeeks = [...weeks].sort((a, b) => a.weekNumber - b.weekNumber);
+    sortedWeeks.forEach((w, idx) => {
+      const targetWeek = idx + 1;
       const usedDays = new Set<string>();
       for (const d of w.days) {
         const details = d.exercises.length > 0 ? buildDetails(d.exercises, d.details) : d.details;
-        allRows.push({ user_id: userId, week: w.weekNumber, day: d.day, session_name: d.session_name, details, tempo: d.tempo });
+        allRows.push({ user_id: userId, week: targetWeek, day: d.day, session_name: d.session_name, details, tempo: d.tempo });
         usedDays.add(d.day);
       }
       // Fill rest days
       for (const day of DAYS) {
         if (!usedDays.has(day)) {
-          allRows.push({ user_id: userId, week: w.weekNumber, day, session_name: "Vila", details: "", tempo: "" });
+          allRows.push({ user_id: userId, week: targetWeek, day, session_name: "Vila", details: "", tempo: "" });
         }
       }
-    }
+    });
 
     for (let i = 0; i < allRows.length; i += 50) {
       await supabase.from("workout_plans").insert(allRows.slice(i, i + 50));
     }
+
 
     // Save plan_start_date as today and mark as calibrated
     const today = new Date();
