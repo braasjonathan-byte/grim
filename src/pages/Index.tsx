@@ -31,6 +31,8 @@ import { ensureUnlocked } from "@/lib/biometric";
 import { Capacitor } from "@capacitor/core";
 import { logCrashlyticsMessage, recordError, setCrashlyticsUserId } from "@/lib/crashlytics";
 import { refreshAccessLevel } from "@/hooks/useAccessLevel";
+import { NAV_BOTTOM } from "@/lib/navViewportAnchor";
+
 
 
 // Lazy-loaded tab components for code splitting
