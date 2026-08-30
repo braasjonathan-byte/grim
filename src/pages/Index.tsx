@@ -31,6 +31,8 @@ import { ensureUnlocked } from "@/lib/biometric";
 import { Capacitor } from "@capacitor/core";
 import { logCrashlyticsMessage, recordError, setCrashlyticsUserId } from "@/lib/crashlytics";
 import { refreshAccessLevel } from "@/hooks/useAccessLevel";
+import { NAV_BOTTOM } from "@/lib/navViewportAnchor";
+
 
 
 // Lazy-loaded tab components for code splitting
@@ -1091,12 +1093,16 @@ const Index = () => {
       <nav
         className="fixed left-0 right-0 bottom-0 bg-card border-t border-border z-50"
         style={{
+          // Anchor to the visual viewport bottom so the bar never drifts up
+          // while the mobile URL bar collapses/expands during scroll.
+          bottom: NAV_BOTTOM,
           paddingBottom: "var(--grim-bottom-safe, env(safe-area-inset-bottom, 0px))",
           transform: "translate3d(0,0,0)",
           WebkitTransform: "translate3d(0,0,0)",
           willChange: "transform",
         }}
       >
+
         {timerRunning && (
           <div
             className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 px-2 py-0.5 bg-primary text-primary-foreground text-[9px] font-bold uppercase tracking-wider"
