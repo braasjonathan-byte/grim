@@ -5,6 +5,9 @@ import { Plus, Copy, Trash2, ArrowLeft, Save, ChevronDown, ChevronUp, Search, X,
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import ExercisePickerDialog from "@/components/ExercisePickerDialog";
 import { startsWithTimeNotation } from "@/lib/exerciseNormalization";
+import { replacePlanRows } from "@/lib/planRows";
+import { toast } from "sonner";
+
 
 interface SchemaBuilderProps {
   userId: string;
