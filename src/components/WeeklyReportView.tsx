@@ -102,7 +102,92 @@ export default function WeeklyReportView({ userId, reportId, onClose }: WeeklyRe
     [reports, selectedId],
   );
 
+  // Distansen i rapport-raden räknar bara logged_distance_km, vilket missar
+  // konditionspass som loggats via __cond__/intervaller. Räkna om per gren här.
+  const [byCategory, setByCategory] = useState<Partial<Record<CardioCategoryKey, number>>>({});
+  const [sessionKm, setSessionKm] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!report) {
+      setByCategory({});
+      setSessionKm({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: completions } = await supabase
+        .from("workout_completions")
+        .select("week, day, logged_distance_km, logged_weights")
+        .eq("user_id", userId)
+        .eq("done", true)
+        .gte("updated_at", `${report.week_start}T00:00:00Z`)
+        .lte("updated_at", `${report.week_end}T23:59:59Z`);
+      if (cancelled) return;
+      const rows = completions || [];
+      if (rows.length === 0) {
+        setByCategory({});
+        setSessionKm({});
+        return;
+      }
+
+      const weeks = [...new Set(rows.map((r: any) => r.week))];
+      const { data: plans } = await supabase
+        .from("workout_plans")
+        .select("week, day, session_name, details, tempo")
+        .eq("user_id", userId)
+        .in("week", weeks);
+      if (cancelled) return;
+
+      const planMap = new Map<string, string>();
+      (plans || []).forEach((p: any) => {
+        planMap.set(
+          `${p.week}|${p.day}`,
+          JSON.stringify({ sessionName: p.session_name, details: p.details, tempo: p.tempo }),
+        );
+      });
+
+      const totals: Partial<Record<CardioCategoryKey, number>> = {};
+      const perSession: Record<string, number> = {};
+      for (const c of rows as any[]) {
+        const cats = getWorkoutDistanceByCategory({
+          loggedDistanceKm: c.logged_distance_km,
+          loggedWeights: c.logged_weights,
+          planDetails: planMap.get(`${c.week}|${c.day}`) ?? null,
+        });
+        let sum = 0;
+        for (const [key, km] of Object.entries(cats)) {
+          if (!(km > 0)) continue;
+          totals[key as CardioCategoryKey] = (totals[key as CardioCategoryKey] ?? 0) + km;
+          sum += km;
+        }
+        if (sum > 0) {
+          const k = `${c.week}|${c.day}`;
+          perSession[k] = (perSession[k] ?? 0) + sum;
+        }
+      }
+      setByCategory(totals);
+      setSessionKm(perSession);
+    })();
+    return () => { cancelled = true; };
+  }, [userId, report?.id, report?.week_start, report?.week_end]);
+
+  const categoryRows = useMemo(
+    () =>
+      (Object.entries(byCategory) as [CardioCategoryKey, number][])
+        .filter(([, km]) => km > 0.05)
+        .sort((a, b) => b[1] - a[1]),
+    [byCategory],
+  );
+
+  const computedDistance = useMemo(
+    () => categoryRows.reduce((sum, [, km]) => sum + km, 0),
+    [categoryRows],
+  );
+
+  const totalDistance = computedDistance > 0 ? computedDistance : report?.total_distance_km ?? 0;
+
   const tonsChange = report ? pctChange(report.total_tons, report.prev_tons) : null;
+
   const distChange = report ? pctChange(report.total_distance_km, report.prev_distance_km) : null;
   const passDiff = report ? report.pass_count - report.prev_pass_count : 0;
 
