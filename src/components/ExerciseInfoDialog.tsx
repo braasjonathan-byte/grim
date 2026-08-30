@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { X, Info, Loader2, Pencil, Save, RotateCcw, Sparkles, Flag, Check, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import ExerciseHistoryDialog from "@/components/ExerciseHistoryDialog";
+import ExerciseHistoryPanel from "@/components/ExerciseHistoryPanel";
 import { toast } from "sonner";
 
 interface ExerciseInfoDialogProps {
