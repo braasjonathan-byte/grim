@@ -6628,6 +6628,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         } catch {}
                       }
                     };
+                    // Archived plans/singles first (oldest history), so data logged before
+                    // the current plan was started still shows up as "Senast".
+                    for (const archComp of archivedCompletions) {
+                      const weights = archComp.logged_weights as Record<string, any> | null;
+                      if (weights) collectSets(weights);
+                    }
                     // Search plan weeks backwards
                     for (let w = currentWeek - 1; w >= 1; w--) {
                       for (const p of plans.filter(pp => pp.week === w)) {
@@ -6639,6 +6645,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         collectSets(weights);
                       }
                     }
+
                     // Also search single workouts (week 0)
                     const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
                     for (const p of singlePlans) {
