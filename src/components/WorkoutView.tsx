@@ -3237,6 +3237,59 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setDeleteExerciseConfirm(null);
   };
 
+  // Byt förvalda reps på en övningsrad. Om applyToFuture är true uppdateras
+  // samma övning i alla kommande pass i planen (senare veckor + senare dagar denna vecka).
+  const applyRepsEdit = async (applyToFuture: boolean) => {
+    if (!repsEditor) return;
+    const reps = repsEditor.reps.trim();
+    if (!reps || !/^\d+$/.test(reps)) return;
+    const sourcePlan = plans.find(p => p.id === repsEditor.planId);
+    if (!sourcePlan) { setRepsEditor(null); return; }
+    setRepsEditorSaving(true);
+
+    const rewrite = (line: string): string | null => {
+      const m = line.match(/(\d+)(\s*[×x]\s*)(\d+)(s?)/i);
+      if (!m) return null;
+      return line.replace(/(\d+)(\s*[×x]\s*)(\d+)(s?)/i, `$1$2${reps}$4`);
+    };
+
+    const nameLower = repsEditor.name.trim().toLowerCase();
+    const targets = plans.filter(p => {
+      if (p.id === sourcePlan.id) return true;
+      if (!applyToFuture || p.week <= 0) return false;
+      if (p.week > sourcePlan.week) return true;
+      if (p.week === sourcePlan.week) return DAYS.indexOf(p.day) > DAYS.indexOf(sourcePlan.day);
+      return false;
+    });
+
+    const updated = [...plans];
+    for (const p of targets) {
+      const separator = p.details.includes("\n") ? "\n" : "; ";
+      const lines = p.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
+      let changed = false;
+      for (let i = 0; i < lines.length; i++) {
+        const isSourceLine = p.id === sourcePlan.id && i === repsEditor.lineIndex;
+        const lineName = lines[i].split(/\s*[—–]\s*/)[0].replace(/\s+\d+\s*[×x].*$/i, "").trim().toLowerCase();
+        if (!isSourceLine && lineName !== nameLower) continue;
+        const next = rewrite(lines[i]);
+        if (next && next !== lines[i]) { lines[i] = next; changed = true; }
+      }
+      if (changed) {
+        const newDetails = lines.join(separator);
+        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", p.id);
+        const idx = updated.findIndex(up => up.id === p.id);
+        if (idx >= 0) updated[idx] = { ...updated[idx], details: newDetails };
+      }
+    }
+
+    skipDayResetRef.current = true;
+    setPlans(updated);
+    setRepsEditorSaving(false);
+    setRepsEditor(null);
+    toast.success(applyToFuture ? "Reps uppdaterade i kommande pass" : "Reps uppdaterade");
+  };
+
+
   const editVilaSeconds = async (planId: string, lineIndex: number, currentSeconds: string) => {
     const newSec = prompt("Antal sekunder vila:", currentSeconds);
     if (!newSec) return;
