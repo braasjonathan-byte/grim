@@ -8029,7 +8029,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                        // Inherit reps/kg from the previous set in this exercise when this set has no logged data
                                        const prevSaved = si > 0 ? planSetData[si - 1] : undefined;
                                        const inheritedReps = prevSaved?.reps && prevSaved.reps.trim() ? prevSaved.reps : defReps;
-                                       const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defKg;
+                                       // Vikt förifylls med senast loggade vikt för samma antal reps
+                                       const repsForSet = saved?.reps && saved.reps.trim() ? saved.reps : inheritedReps;
+                                       const repsMatchedKg = kgForReps(repsForSet);
+                                       const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : repsMatchedKg;
                                        return (
                                          <div key={si}>
                                            <SwipeableSetRow done={isSetDone} isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)} celebrationKey={`${partName}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)}>
