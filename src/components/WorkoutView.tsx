@@ -529,7 +529,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Fetch archived completion data for weight history
   useEffect(() => {
-    supabase.from("archived_plans").select("completion_data, plan_data").eq("user_id", userId).then(({ data }) => {
+    supabase.from("archived_plans").select("completion_data, plan_data, archived_at").eq("user_id", userId).order("archived_at", { ascending: true }).then(({ data }) => {
       if (data) {
         const allComps: Record<string, any>[] = [];
         for (const archive of data) {
@@ -537,18 +537,32 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const planData = archive.plan_data as any[];
           if (completionData) {
             for (const c of completionData) {
-              if (c.done && c.logged_weights && Object.keys(c.logged_weights).length > 0) {
-                // Attach plan details for fallback text search
-                const matchingPlan = planData?.find((p: any) => p.week === c.week && p.day === c.day);
-                allComps.push({ ...c, _plan_details: matchingPlan?.details || "", _plan_session_name: matchingPlan?.session_name || "" });
-              }
+              if (!c.done) continue;
+              const hasWeights = c.logged_weights && Object.keys(c.logged_weights).length > 0;
+              const matchingPlan = planData?.find((p: any) => Number(p.week) === Number(c.week) && String(p.day) === String(c.day));
+              // Ta med både pass med loggad data och pass där vikten bara står
+              // i plantexten (fallback-sökning nedan).
+              if (!hasWeights && !matchingPlan?.details) continue;
+              allComps.push({
+                ...c,
+                _archived_at: (archive as any).archived_at,
+                _plan_details: matchingPlan?.details || "",
+                _plan_session_name: matchingPlan?.session_name || "",
+              });
             }
           }
         }
+        // Kronologisk ordning så att "senast" verkligen blir det senaste passet.
+        allComps.sort((a, b) => {
+          const ta = new Date(a.updated_at || a._archived_at || 0).getTime();
+          const tb = new Date(b.updated_at || b._archived_at || 0).getTime();
+          return ta - tb;
+        });
         setArchivedCompletions(allComps);
       }
     });
   }, [userId]);
+
 
   // Plan start date from profile (timezone-safe)
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
