@@ -69,7 +69,7 @@ import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
 import { DAYS, addUtcDays, daysBetweenCalendarDates, formatDayDisplay, getBaseDay, getDayIndex, getMonday, getPlanDayDateValue, getSessionColor, getSessionIcon, getTodayInfo, getWeekdayFromDayKey, isAssistedBodyweightExercise, isDailyChallengeLabel, normalizeExerciseKey, parseDateKey, planHasAnyExercise, resolveTodayDayIndex, sameWorkoutDay, sanitizeCopiedLoggedWeights, suggestSessionName, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { estimateCalories, getPlanDayDate } from "@/lib/workoutCalories";
-import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
+import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, collectSetsForExercise, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
 
 const SHOW_STRAVA_INTEGRATION = false;
 
