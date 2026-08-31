@@ -69,7 +69,7 @@ import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
 import { DAYS, addUtcDays, daysBetweenCalendarDates, formatDayDisplay, getBaseDay, getDayIndex, getMonday, getPlanDayDateValue, getSessionColor, getSessionIcon, getTodayInfo, getWeekdayFromDayKey, isAssistedBodyweightExercise, isDailyChallengeLabel, normalizeExerciseKey, parseDateKey, planHasAnyExercise, resolveTodayDayIndex, sameWorkoutDay, sanitizeCopiedLoggedWeights, suggestSessionName, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { estimateCalories, getPlanDayDate } from "@/lib/workoutCalories";
-import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
+import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, collectSetsForExercise, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
 
 const SHOW_STRAVA_INTEGRATION = false;
 
@@ -529,7 +529,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Fetch archived completion data for weight history
   useEffect(() => {
-    supabase.from("archived_plans").select("completion_data, plan_data").eq("user_id", userId).then(({ data }) => {
+    supabase.from("archived_plans").select("completion_data, plan_data, archived_at").eq("user_id", userId).order("archived_at", { ascending: true }).then(({ data }) => {
       if (data) {
         const allComps: Record<string, any>[] = [];
         for (const archive of data) {
@@ -537,18 +537,32 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const planData = archive.plan_data as any[];
           if (completionData) {
             for (const c of completionData) {
-              if (c.done && c.logged_weights && Object.keys(c.logged_weights).length > 0) {
-                // Attach plan details for fallback text search
-                const matchingPlan = planData?.find((p: any) => p.week === c.week && p.day === c.day);
-                allComps.push({ ...c, _plan_details: matchingPlan?.details || "", _plan_session_name: matchingPlan?.session_name || "" });
-              }
+              if (!c.done) continue;
+              const hasWeights = c.logged_weights && Object.keys(c.logged_weights).length > 0;
+              const matchingPlan = planData?.find((p: any) => Number(p.week) === Number(c.week) && String(p.day) === String(c.day));
+              // Ta med både pass med loggad data och pass där vikten bara står
+              // i plantexten (fallback-sökning nedan).
+              if (!hasWeights && !matchingPlan?.details) continue;
+              allComps.push({
+                ...c,
+                _archived_at: (archive as any).archived_at,
+                _plan_details: matchingPlan?.details || "",
+                _plan_session_name: matchingPlan?.session_name || "",
+              });
             }
           }
         }
+        // Kronologisk ordning så att "senast" verkligen blir det senaste passet.
+        allComps.sort((a, b) => {
+          const ta = new Date(a.updated_at || a._archived_at || 0).getTime();
+          const tb = new Date(b.updated_at || b._archived_at || 0).getTime();
+          return ta - tb;
+        });
         setArchivedCompletions(allComps);
       }
     });
   }, [userId]);
+
 
   // Plan start date from profile (timezone-safe)
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
@@ -2470,27 +2484,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     // Helper to extract sets from a weights record
     const extractSets = (weights: Record<string, any>) => {
-      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
-      if (setDataRaw) {
-        try {
-          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-          if (Array.isArray(setData) && setData.length > 0) {
-            for (let si = 0; si < setData.length; si++) {
-              const s = setData[si];
-              const rawKg = parseFloat(s.kg);
-              const mode = weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${exLower}__${si}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${exLower}`];
-              const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
-              const reps = parseInt(s.reps);
-              if (kg !== 0 && !isNaN(kg)) {
-                allSets.push({ kg, reps: reps || 0, label: `${kg} kg (${reps || '?'} reps)` });
-              }
-            }
-          }
-        } catch {}
+      for (const s of collectSetsForExercise(weights, exerciseName)) {
+        allSets.push({ kg: s.kg, reps: s.reps, label: `${s.kg} kg (${s.reps || '?'} reps)` });
       }
     };
 
-    // Search active completions
+    // Search archived completions first (äldst historik) — plan eller enskilda pass
+    for (const archComp of archivedCompletions) {
+      const weights = archComp.logged_weights as Record<string, any> | null;
+      if (!weights) continue;
+      extractSets(weights);
+    }
+
+    // Search active completions (nyare, får företräde)
     for (const [k, comp] of Object.entries(completions)) {
       if (!comp?.done) continue;
       const weights = comp.logged_weights as Record<string, any> | null;
@@ -2498,12 +2504,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       extractSets(weights);
     }
 
-    // Search archived completions
-    for (const archComp of archivedCompletions) {
-      const weights = archComp.logged_weights as Record<string, any> | null;
-      if (!weights) continue;
-      extractSets(weights);
-    }
 
     // If we found logged sets, prefer matching rep count
     if (allSets.length > 0) {
@@ -6669,22 +6669,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     type SetInfo = { kg: number; reps: number };
                     const allSets: SetInfo[] = [];
                     const collectSets = (weights: Record<string, any>) => {
-                      const exLower = normalizeExerciseKey(exerciseName);
-                      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
-                      if (setDataRaw) {
-                        try {
-                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-                          if (Array.isArray(setData)) {
-                            for (let si = 0; si < setData.length; si++) {
-                              const s = setData[si];
-                              const rawKg = parseFloat(s.kg);
-                              const mode = weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${exLower}__${si}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${exLower}`];
-                              const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
-                              if (kg !== 0 && !isNaN(kg)) allSets.push({ kg, reps: parseInt(s.reps) || 0 });
-                            }
-                          }
-                        } catch {}
-                      }
+                      for (const s of collectSetsForExercise(weights, exerciseName)) allSets.push(s);
                     };
                     // Archived plans/singles first (oldest history), so data logged before
                     // the current plan was started still shows up as "Senast".
@@ -6692,8 +6677,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       const weights = archComp.logged_weights as Record<string, any> | null;
                       if (weights) collectSets(weights);
                     }
-                    // Search plan weeks backwards
-                    for (let w = currentWeek - 1; w >= 1; w--) {
+                    // Search plan weeks in chronological order (newest last wins)
+                    for (let w = 1; w <= currentWeek - 1; w++) {
                       for (const p of plans.filter(pp => pp.week === w)) {
                         const k = `${w}-${p.day}`;
                         const comp = completions[k];
@@ -6703,6 +6688,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         collectSets(weights);
                       }
                     }
+
 
                     // Also search single workouts (week 0)
                     const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
