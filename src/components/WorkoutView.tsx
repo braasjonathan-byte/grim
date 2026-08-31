@@ -7965,8 +7965,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               )}
                               {/* Last logged weight note */}
                               {(() => {
-                                const targetReps = partReps ? parseInt(partReps) : undefined;
-                                const lastKg = findLastLoggedKg(partName, plan.week, targetReps);
+                                const lastKg = findHeaviestSetFromLastSession(partName, plan.week);
                                 if (!lastKg) return null;
                                 // Don't show if user already has saved data for this session
                                 const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) !== 0);
