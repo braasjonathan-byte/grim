@@ -2470,27 +2470,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     // Helper to extract sets from a weights record
     const extractSets = (weights: Record<string, any>) => {
-      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
-      if (setDataRaw) {
-        try {
-          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-          if (Array.isArray(setData) && setData.length > 0) {
-            for (let si = 0; si < setData.length; si++) {
-              const s = setData[si];
-              const rawKg = parseFloat(s.kg);
-              const mode = weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${exLower}__${si}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${exLower}`];
-              const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
-              const reps = parseInt(s.reps);
-              if (kg !== 0 && !isNaN(kg)) {
-                allSets.push({ kg, reps: reps || 0, label: `${kg} kg (${reps || '?'} reps)` });
-              }
-            }
-          }
-        } catch {}
+      for (const s of collectSetsForExercise(weights, exerciseName)) {
+        allSets.push({ kg: s.kg, reps: s.reps, label: `${s.kg} kg (${s.reps || '?'} reps)` });
       }
     };
 
-    // Search active completions
+    // Search archived completions first (äldst historik) — plan eller enskilda pass
+    for (const archComp of archivedCompletions) {
+      const weights = archComp.logged_weights as Record<string, any> | null;
+      if (!weights) continue;
+      extractSets(weights);
+    }
+
+    // Search active completions (nyare, får företräde)
     for (const [k, comp] of Object.entries(completions)) {
       if (!comp?.done) continue;
       const weights = comp.logged_weights as Record<string, any> | null;
@@ -2498,12 +2490,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       extractSets(weights);
     }
 
-    // Search archived completions
-    for (const archComp of archivedCompletions) {
-      const weights = archComp.logged_weights as Record<string, any> | null;
-      if (!weights) continue;
-      extractSets(weights);
-    }
 
     // If we found logged sets, prefer matching rep count
     if (allSets.length > 0) {
