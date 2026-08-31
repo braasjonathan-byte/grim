@@ -7995,6 +7995,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     // eller arkiverade pass) när planen saknar vikt.
                                     const histKg = partKg ? null : findLastLoggedKg(partName, plan.week, partReps ? parseInt(partReps) : undefined);
                                     const defKg = partKg || (histKg && histKg.kg > 0 ? String(histKg.kg) : "");
+                                    // Cache: senast loggad vikt för ett visst repsantal
+                                    const kgByRepsCache = new Map<number, string>();
+                                    const kgForReps = (repsVal: string | undefined): string => {
+                                      const r = parseInt(String(repsVal ?? ""), 10);
+                                      if (isNaN(r) || r <= 0) return defKg;
+                                      if (kgByRepsCache.has(r)) return kgByRepsCache.get(r)!;
+                                      const hit = findLastLoggedKg(partName, plan.week, r);
+                                      const value = hit && hit.reps === r && hit.kg > 0 ? String(hit.kg) : defKg;
+                                      kgByRepsCache.set(r, value);
+                                      return value;
+                                    };
+
 
                                     const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
                                     const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
