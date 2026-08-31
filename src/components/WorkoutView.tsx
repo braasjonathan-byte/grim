@@ -6655,22 +6655,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     type SetInfo = { kg: number; reps: number };
                     const allSets: SetInfo[] = [];
                     const collectSets = (weights: Record<string, any>) => {
-                      const exLower = normalizeExerciseKey(exerciseName);
-                      const setDataRaw = weights[`__setdata__${exerciseName}`] ?? weights[`__setdata__${exLower}`];
-                      if (setDataRaw) {
-                        try {
-                          const setData = typeof setDataRaw === 'string' ? JSON.parse(setDataRaw) : setDataRaw;
-                          if (Array.isArray(setData)) {
-                            for (let si = 0; si < setData.length; si++) {
-                              const s = setData[si];
-                              const rawKg = parseFloat(s.kg);
-                              const mode = weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${exLower}__${si}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${exLower}`];
-                              const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
-                              if (kg !== 0 && !isNaN(kg)) allSets.push({ kg, reps: parseInt(s.reps) || 0 });
-                            }
-                          }
-                        } catch {}
-                      }
+                      for (const s of collectSetsForExercise(weights, exerciseName)) allSets.push(s);
                     };
                     // Archived plans/singles first (oldest history), so data logged before
                     // the current plan was started still shows up as "Senast".
@@ -6678,8 +6663,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       const weights = archComp.logged_weights as Record<string, any> | null;
                       if (weights) collectSets(weights);
                     }
-                    // Search plan weeks backwards
-                    for (let w = currentWeek - 1; w >= 1; w--) {
+                    // Search plan weeks in chronological order (newest last wins)
+                    for (let w = 1; w <= currentWeek - 1; w++) {
                       for (const p of plans.filter(pp => pp.week === w)) {
                         const k = `${w}-${p.day}`;
                         const comp = completions[k];
@@ -6689,6 +6674,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         collectSets(weights);
                       }
                     }
+
 
                     // Also search single workouts (week 0)
                     const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
