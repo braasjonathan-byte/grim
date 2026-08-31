@@ -71,3 +71,47 @@ export const formatCondTempo = (minPerKm: number): string => {
 
 // Helper: check if exercise is a stair machine (Trappmaskin)
 export const isStairMachine = (name: string) => name.toLowerCase().includes("trappmaskin");
+
+export type CollectedSet = { kg: number; reps: number };
+
+/**
+ * Samla alla loggade set för en övning ur en logged_weights-post.
+ * Matchar nyckeln oavsett skiftläge/mellanslag och stödjer även äldre
+ * format där vikten sparats direkt på övningsnamnet.
+ */
+export const collectSetsForExercise = (
+  weights: Record<string, any> | null | undefined,
+  exerciseName: string,
+): CollectedSet[] => {
+  if (!weights) return [];
+  const wanted = normalizeExerciseKey(exerciseName);
+  const out: CollectedSet[] = [];
+
+  for (const [key, value] of Object.entries(weights)) {
+    if (key.startsWith("__setdata__")) {
+      const storedName = key.substring("__setdata__".length);
+      if (normalizeExerciseKey(storedName) !== wanted) continue;
+      const storedKey = normalizeExerciseKey(storedName);
+      try {
+        const parsed = typeof value === "string" ? JSON.parse(value) : value;
+        if (!Array.isArray(parsed)) continue;
+        parsed.forEach((s: any, si: number) => {
+          const rawKg = parseFloat(String(s?.kg ?? "").replace(",", "."));
+          const mode =
+            weights[`__bw_mode__${storedName}__${si}`] ??
+            weights[`__bw_mode__${storedKey}__${si}`] ??
+            weights[`__bw_mode__${storedName}`] ??
+            weights[`__bw_mode__${storedKey}`];
+          const kg = mode === "sub" && rawKg > 0 ? -rawKg : rawKg;
+          const reps = parseInt(String(s?.reps ?? ""), 10);
+          if (!isNaN(kg) && kg !== 0) out.push({ kg, reps: isNaN(reps) ? 0 : reps });
+        });
+      } catch {}
+    } else if (!key.startsWith("__") && normalizeExerciseKey(key) === wanted) {
+      // Äldre format: logged_weights["Knäböj"] = "80"
+      const kg = parseFloat(String(value ?? "").replace(",", "."));
+      if (!isNaN(kg) && kg !== 0) out.push({ kg, reps: 0 });
+    }
+  }
+  return out;
+};
