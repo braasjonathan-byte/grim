@@ -7995,6 +7995,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     // eller arkiverade pass) när planen saknar vikt.
                                     const histKg = partKg ? null : findLastLoggedKg(partName, plan.week, partReps ? parseInt(partReps) : undefined);
                                     const defKg = partKg || (histKg && histKg.kg > 0 ? String(histKg.kg) : "");
+                                    // Cache: senast loggad vikt för ett visst repsantal
+                                    const kgByRepsCache = new Map<number, string>();
+                                    const kgForReps = (repsVal: string | undefined): string => {
+                                      const r = parseInt(String(repsVal ?? ""), 10);
+                                      if (isNaN(r) || r <= 0) return defKg;
+                                      if (kgByRepsCache.has(r)) return kgByRepsCache.get(r)!;
+                                      const hit = findLastLoggedKg(partName, plan.week, r);
+                                      const value = hit && hit.reps === r && hit.kg > 0 ? String(hit.kg) : defKg;
+                                      kgByRepsCache.set(r, value);
+                                      return value;
+                                    };
+
 
                                     const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
                                     const circuitDefaultSec = circuitSecMatch ? circuitSecMatch[1] : null;
@@ -8017,7 +8029,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                        // Inherit reps/kg from the previous set in this exercise when this set has no logged data
                                        const prevSaved = si > 0 ? planSetData[si - 1] : undefined;
                                        const inheritedReps = prevSaved?.reps && prevSaved.reps.trim() ? prevSaved.reps : defReps;
-                                       const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : defKg;
+                                       // Vikt förifylls med senast loggade vikt för samma antal reps
+                                       const repsForSet = saved?.reps && saved.reps.trim() ? saved.reps : inheritedReps;
+                                       const repsMatchedKg = kgForReps(repsForSet);
+                                       const inheritedKg = prevSaved?.kg && prevSaved.kg.trim() ? prevSaved.kg : repsMatchedKg;
                                        return (
                                          <div key={si}>
                                            <SwipeableSetRow done={isSetDone} isPR={!isBodyweight && isPrWeight(prIndex, partName, saved?.kg)} celebrationKey={`${partName}-${si}-${saved?.kg ?? ""}`} onToggle={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)}>
@@ -8048,7 +8063,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                   {currentBwMode === "add" ? "+" : "−"}
                                                 </button>
                                               )}
-                                              <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
+                                              <AutoSaveInput type="number" inputMode="decimal" initialValue={saved?.kg || inheritedKg || ""} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'kg', v, setsCountPlan, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                               <span className="text-[10px] text-muted-foreground">kg</span>
                                             </>
                                           )}
