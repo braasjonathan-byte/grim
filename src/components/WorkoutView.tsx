@@ -2478,45 +2478,45 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const findLastWeight = (exerciseName: string, targetReps?: number): string | null => {
     const exLower = exerciseName.toLowerCase();
 
-    // Collect all logged set data across all completed workouts
-    type SetInfo = { kg: number; reps: number; label: string };
-    const allSets: SetInfo[] = [];
+    // Collect sets per completed session so we can pick the heaviest set from the
+    // most recent previous session ("föregående pass").
+    type SessionInfo = { sort: number; sets: { kg: number; reps: number }[] };
+    const sessions: SessionInfo[] = [];
 
-    // Helper to extract sets from a weights record
-    const extractSets = (weights: Record<string, any>) => {
-      for (const s of collectSetsForExercise(weights, exerciseName)) {
-        allSets.push({ kg: s.kg, reps: s.reps, label: `${s.kg} kg (${s.reps || '?'} reps)` });
-      }
+    const collectSession = (weights: Record<string, any>, sort: number) => {
+      const sets = collectSetsForExercise(weights, exerciseName);
+      if (sets.length > 0) sessions.push({ sort, sets });
     };
 
     // Search archived completions first (äldst historik) — plan eller enskilda pass
-    for (const archComp of archivedCompletions) {
+    archivedCompletions.forEach((archComp, index) => {
       const weights = archComp.logged_weights as Record<string, any> | null;
-      if (!weights) continue;
-      extractSets(weights);
-    }
+      if (!weights) return;
+      const sort = archComp.archived_at ? new Date(archComp.archived_at).getTime() : -1000000 + index;
+      collectSession(weights, sort);
+    });
 
     // Search active completions (nyare, får företräde)
-    for (const [k, comp] of Object.entries(completions)) {
-      if (!comp?.done) continue;
+    Object.entries(completions).forEach(([key, comp], index) => {
+      if (!comp?.done) return;
       const weights = comp.logged_weights as Record<string, any> | null;
-      if (!weights) continue;
-      extractSets(weights);
-    }
+      if (!weights) return;
+      const [weekRaw, ...dayParts] = key.split("-");
+      const week = Number(comp.week ?? weekRaw);
+      const day = comp.day ?? dayParts.join("-");
+      const sort = getCompletionSortValue(week, day, index);
+      collectSession(weights, sort);
+    });
 
-
-    // If we found logged sets, prefer matching rep count
-    if (allSets.length > 0) {
-      if (targetReps) {
-        const matching = allSets.filter(s => s.reps === targetReps);
-        if (matching.length > 0) {
-          const best = matching[matching.length - 1];
-          return `${best.kg} kg (${best.reps} reps)`;
-        }
-      }
-      // Fallback: latest set
-      const last = allSets[allSets.length - 1];
-      return `${last.kg} kg (${last.reps || '?'} reps)`;
+    if (sessions.length > 0) {
+      sessions.sort((a, b) => a.sort - b.sort);
+      const latest = sessions[sessions.length - 1].sets;
+      const best = [...latest].sort((a, b) => {
+        if (a.kg !== b.kg) return b.kg - a.kg;
+        if (a.reps !== b.reps) return b.reps - a.reps;
+        return 0;
+      })[0];
+      return `${best.kg} kg (${best.reps || '?'} reps)`;
     }
 
     // Fallback: search plan details text for weight info (active plans)
@@ -2545,6 +2545,61 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       }
     }
     return null;
+  };
+
+  // Return the heaviest logged set from the most recent previous session.
+  // Used in the "Senast" display for planned workouts.
+  const findHeaviestSetFromLastSession = (exerciseName: string, currentWeek?: number): { kg: number; reps?: number } | null => {
+    type SessionInfo = { sort: number; sets: { kg: number; reps: number }[] };
+    const sessions: SessionInfo[] = [];
+
+    const collectSession = (weights: Record<string, any>, sort: number) => {
+      const sets = collectSetsForExercise(weights, exerciseName);
+      if (sets.length > 0) sessions.push({ sort, sets });
+    };
+
+    archivedCompletions.forEach((archComp, index) => {
+      const weights = archComp.logged_weights as Record<string, any> | null;
+      if (!weights) return;
+      const sort = archComp.archived_at ? new Date(archComp.archived_at).getTime() : -1000000 + index;
+      collectSession(weights, sort);
+    });
+
+    if (currentWeek !== undefined) {
+      for (let w = 1; w <= currentWeek - 1; w++) {
+        for (const p of plans.filter(pp => pp.week === w)) {
+          const k = `${w}-${p.day}`;
+          const comp = completions[k];
+          if (!comp?.done) continue;
+          const weights = comp.logged_weights as Record<string, any> | null;
+          if (!weights) continue;
+          const sort = getCompletionSortValue(w, p.day, 0);
+          collectSession(weights, sort);
+        }
+      }
+    }
+
+    const singlePlans = plans.filter(p => p.week === 0).sort((a, b) => b.day.localeCompare(a.day));
+    singlePlans.forEach((p, index) => {
+      const k = `0-${p.day}`;
+      const comp = completions[k];
+      if (!comp?.done) return;
+      const weights = comp.logged_weights as Record<string, any> | null;
+      if (!weights) return;
+      const sort = getCompletionSortValue(0, p.day, index);
+      collectSession(weights, sort);
+    });
+
+    if (sessions.length === 0) return null;
+
+    sessions.sort((a, b) => a.sort - b.sort);
+    const latest = sessions[sessions.length - 1].sets;
+    const best = [...latest].sort((a, b) => {
+      if (a.kg !== b.kg) return b.kg - a.kg;
+      if (a.reps !== b.reps) return b.reps - a.reps;
+      return 0;
+    })[0];
+    return { kg: best.kg, reps: best.reps || undefined };
   };
 
   // Find last logged tempo for a conditioning exercise across all workouts
@@ -7910,8 +7965,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               )}
                               {/* Last logged weight note */}
                               {(() => {
-                                const targetReps = partReps ? parseInt(partReps) : undefined;
-                                const lastKg = findLastLoggedKg(partName, plan.week, targetReps);
+                                const lastKg = findHeaviestSetFromLastSession(partName, plan.week);
                                 if (!lastKg) return null;
                                 // Don't show if user already has saved data for this session
                                 const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) !== 0);
