@@ -55,6 +55,7 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newVal = e.target.value;
+    userTouched.current = true;
     setValue(newVal);
     valueRef.current = newVal;
     if (timerRef.current) clearTimeout(timerRef.current);
