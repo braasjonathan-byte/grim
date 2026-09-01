@@ -25,7 +25,9 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
   // (not a stale echo of what we already saved or what the user is currently typing).
   // This prevents the input from "jumping back" when a parent re-render happens
   // mid-typing or while a debounced save is still pending.
+  const userTouched = useRef(false);
   useEffect(() => {
+    if (userTouched.current) return;                       // user has edited – never re-seed
     if (initialValue === valueRef.current) return;        // already in sync
     if (initialValue === lastSaved.current) return;       // echo of our own last save
     const hasPendingEdit = valueRef.current !== lastSaved.current;
@@ -34,6 +36,7 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
     valueRef.current = initialValue;
     lastSaved.current = initialValue;
   }, [initialValue]);
+
 
   // Flush pending save immediately
   const flush = useCallback(() => {
@@ -52,6 +55,7 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newVal = e.target.value;
+    userTouched.current = true;
     setValue(newVal);
     valueRef.current = newVal;
     if (timerRef.current) clearTimeout(timerRef.current);

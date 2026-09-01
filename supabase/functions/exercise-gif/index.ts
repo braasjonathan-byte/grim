@@ -316,11 +316,29 @@ function getSearchTerms(cleanName: string): string[] {
   return [...new Set(terms)];
 }
 
+let exerciseDbDisabled = false;
+
 async function searchExerciseDB(term: string): Promise<any | null> {
+  if (exerciseDbDisabled) return null;
   try {
     const apiUrl = `https://exercisedb-api.vercel.app/api/v1/exercises/search?q=${encodeURIComponent(term)}&limit=10`;
     const response = await fetch(apiUrl);
+    if (!response.ok) {
+      const body = (await response.text()).slice(0, 120);
+      console.warn(`ExerciseDB unavailable (${response.status}) for "${term}": ${body}`);
+      // Quota/plan issues won't recover within this instance – stop calling it
+      if (response.status === 402 || response.status === 401 || response.status === 403 || response.status === 429) {
+        exerciseDbDisabled = true;
+      }
+      return null;
+    }
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("json")) {
+      console.warn(`ExerciseDB returned non-JSON for "${term}"`);
+      return null;
+    }
     const data = await response.json();
+
     if (data.success && data.data && data.data.length > 0) {
       const results = data.data.filter((e: any) => e.gifUrl);
       if (results.length === 0) return data.data[0];
