@@ -15,9 +15,12 @@ interface Row {
 
 const AdminCompletionsList = () => {
   const [rows, setRows] = useState<Row[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
+    if (!expanded) return;
+    if (rows !== null) return;
     (async () => {
       setLoading(true);
       const { data: completions } = await supabase
