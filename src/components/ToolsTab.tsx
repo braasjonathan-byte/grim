@@ -39,7 +39,6 @@ const RestTimerSettings = lazyRetry(() => import("@/components/RestTimerSettings
 const OneRMCalculator = lazyRetry(() => import("@/components/OneRMCalculator"));
 const PulseZoneCalculator = lazyRetry(() => import("@/components/PulseZoneCalculator"));
 const CalorieCalculator = lazyRetry(() => import("@/components/CalorieCalculator"));
-const SuggestionBox = lazyRetry(() => import("@/components/SuggestionBox"));
 const HelpSection = lazyRetry(() => import("@/components/HelpSection"));
 const DisclaimerSection = lazyRetry(() => import("@/components/DisclaimerSection"));
 
