@@ -83,47 +83,59 @@ const AdminCompletionsList = () => {
     })();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-6">
-        <Loader2 className="w-5 h-5 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="border border-border bg-secondary p-3 space-y-2">
-      <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-        <CheckCircle2 className="w-4 h-4 text-primary" />
-        Senaste klarmarkerade pass (50)
-      </h3>
-      {rows && rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Inga klarmarkerade pass.</p>
-      ) : (
-        <ul className="divide-y divide-border">
-          {rows?.map((r) => (
-            <li key={r.id} className="py-2 flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold text-foreground truncate">
-                  {r.nickname || r.user_id.slice(0, 8)} · {r.session_name}
-                </div>
-                <div className="text-[11px] text-muted-foreground">
-                  V{r.week} · {r.day} · {new Date(r.updated_at).toLocaleString("sv-SE")}
-                </div>
-              </div>
-              <span
-                className={`text-[10px] font-bold px-2 py-1 whitespace-nowrap flex items-center gap-1 ${
-                  r.published
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                <Share2 className="w-3 h-3" />
-                {r.published ? "Publicerat" : "Ej publ."}
-              </span>
-            </li>
-          ))}
-        </ul>
+    <div className="border border-border bg-secondary rounded-2xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 p-3 text-left hover:bg-muted/40 active:bg-muted/60 transition-colors"
+      >
+        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-primary" />
+          Senaste klarmarkerade pass (50)
+        </h3>
+        <ChevronDown
+          className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2">
+          {loading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            </div>
+          ) : rows && rows.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Inga klarmarkerade pass.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {rows?.map((r) => (
+                <li key={r.id} className="py-2 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-foreground truncate">
+                      {r.nickname || r.user_id.slice(0, 8)} · {r.session_name}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      V{r.week} · {r.day} · {new Date(r.updated_at).toLocaleString("sv-SE")}
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-1 whitespace-nowrap flex items-center gap-1 ${
+                      r.published
+                        ? "bg-primary/20 text-primary"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Share2 className="w-3 h-3" />
+                    {r.published ? "Publicerat" : "Ej publ."}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
