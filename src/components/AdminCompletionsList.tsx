@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, Share2 } from "lucide-react";
+import { Loader2, CheckCircle2, Share2, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Row {
