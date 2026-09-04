@@ -486,6 +486,28 @@ serve(async (req) => {
       requestedUserId = userData.user?.id ?? null;
     }
 
+    // Delat pass från Strava-appen: hämta aktiviteten och returnera den för importdialogen
+    if (body.mode === "shared_link") {
+      if (!requestedUserId) return jsonResponse({ error: "Unauthorized" }, 401);
+      const { data: connection } = await supabaseAdmin
+        .from("strava_connections")
+        .select("id, user_id, access_token, refresh_token, expires_at, last_synced_at, total_imported_activities")
+        .eq("user_id", requestedUserId)
+        .maybeSingle();
+      if (!connection) return jsonResponse({ error: "not_connected" }, 400);
+
+      const activity = await fetchSharedActivity(
+        supabaseAdmin,
+        connection as StravaConnection,
+        clientId,
+        clientSecret,
+        String(body.sharedText || body.url || ""),
+      );
+      if (!activity) return jsonResponse({ error: "not_found" }, 404);
+      return jsonResponse({ success: true, activity });
+    }
+
+
     let query = supabaseAdmin
       .from("strava_connections")
       .select("id, user_id, access_token, refresh_token, expires_at, last_synced_at, total_imported_activities")
