@@ -195,6 +195,98 @@ async function fetchActivities(accessToken: string, afterUnix: number): Promise<
   return activities;
 }
 
+/** Plockar ut ett Strava-aktivitets-id ur delad text/länk (även korta app.link-länkar). */
+async function resolveSharedActivityId(rawInput: string): Promise<number | null> {
+  const direct = rawInput.match(/strava\.com\/activities\/(\d+)/);
+  if (direct) return Number(direct[1]);
+
+  const shortMatch = rawInput.match(/https?:\/\/[^\s]*strava\.app\.link\/[A-Za-z0-9]+/) ||
+    rawInput.match(/https?:\/\/[^\s]*strava\.com\/[^\s]+/);
+  if (!shortMatch) return null;
+
+  try {
+    const response = await fetch(shortMatch[0], {
+      redirect: "follow",
+      headers: { "User-Agent": "Mozilla/5.0 (Linux; Android 13)" },
+    });
+    const finalUrl = response.url || "";
+    const fromUrl = finalUrl.match(/activities\/(\d+)/);
+    if (fromUrl) return Number(fromUrl[1]);
+    const html = await response.text();
+    const fromHtml = html.match(/strava\.com\/activities\/(\d+)/) || html.match(/activities%2F(\d+)/);
+    if (fromHtml) return Number(fromHtml[1]);
+  } catch (err) {
+    console.error("Kunde inte följa Strava-länk", err);
+  }
+  return null;
+}
+
+/** Hämtar en enskild aktivitet (eller senaste) och returnerar den normaliserad för importdialogen. */
+async function fetchSharedActivity(
+  supabaseAdmin: any,
+  connection: StravaConnection,
+  clientId: string,
+  clientSecret: string,
+  sharedText: string,
+) {
+  const refreshed = await refreshAccessToken(connection, clientId, clientSecret);
+  if (refreshed.accessToken !== connection.access_token) {
+    await supabaseAdmin
+      .from("strava_connections")
+      .update({
+        access_token: refreshed.accessToken,
+        refresh_token: refreshed.refreshToken,
+        expires_at: refreshed.expiresAt,
+      })
+      .eq("id", connection.id);
+  }
+
+  const activityId = await resolveSharedActivityId(sharedText);
+  let activity: StravaActivity | null = null;
+
+  if (activityId) {
+    const response = await fetch(`https://www.strava.com/api/v3/activities/${activityId}`, {
+      headers: { Authorization: `Bearer ${refreshed.accessToken}` },
+    });
+    if (response.ok) activity = await response.json();
+    else console.error("Strava activity fetch failed", response.status, await response.text());
+  }
+
+  if (!activity) {
+    // Fallback: senaste aktiviteten från de senaste 3 dygnen
+    const recent = await fetchActivities(
+      refreshed.accessToken,
+      Math.floor((Date.now() - 3 * 24 * 60 * 60 * 1000) / 1000),
+    );
+    activity = recent.sort(
+      (a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime(),
+    )[0] ?? null;
+  }
+
+  if (!activity) return null;
+
+  const raw = activity as StravaActivity & {
+    total_elevation_gain?: number;
+    average_watts?: number;
+    weighted_average_watts?: number;
+  };
+
+  return {
+    stravaActivityId: raw.id,
+    rawType: raw.sport_type || raw.type || null,
+    title: raw.name ?? null,
+    startTime: raw.start_date_local || raw.start_date,
+    durationSec: raw.moving_time ?? raw.elapsed_time ?? null,
+    distanceKm: roundDistanceKm(raw.distance),
+    elevationGainM: typeof raw.total_elevation_gain === "number" ? raw.total_elevation_gain : null,
+    avgHeartRate: raw.average_heartrate ?? null,
+    maxHeartRate: raw.max_heartrate ?? null,
+    avgWatt: raw.average_watts ?? raw.weighted_average_watts ?? null,
+    calories: getCalories(raw),
+  };
+}
+
+
 async function syncConnection(supabaseAdmin: any, connection: StravaConnection, clientId: string, clientSecret: string, targetWorkout?: { week: number; day: string }) {
   const refreshed = await refreshAccessToken(connection, clientId, clientSecret);
 
