@@ -99,17 +99,15 @@ export async function importSharedStravaLink(sharedText: string): Promise<boolea
     });
     if (error || !data?.activity) {
       console.warn("[sharedActivity] Strava-import misslyckades", error);
-      window.dispatchEvent(
-        new CustomEvent("grim:toast", {
-          detail: {
-            title: "Kunde inte hämta passet från Strava",
-            description: "Kontrollera att ditt Strava-konto är kopplat i Grim.",
-            variant: "destructive",
-          },
-        }),
-      );
+      const { toast } = await import("@/hooks/use-toast");
+      toast({
+        title: "Kunde inte hämta passet från Strava",
+        description: "Kontrollera att ditt Strava-konto är kopplat i Grim.",
+        variant: "destructive",
+      });
       return false;
     }
+
 
     const a = data.activity;
     emit({
