@@ -18,7 +18,8 @@ export interface IdentityStats {
   monthWorkouts: number;
   totalTons: number;
   distanceKm: number;
-  sportSets: Record<string, number>;
+  /** Antal registrerade pass per sport (inte set) */
+  sportSessions: Record<string, number>;
   morningRatio: number;
   eveningRatio: number;
 }
@@ -27,7 +28,6 @@ const SPORT_KEYWORDS: Record<string, string[]> = {
   simning: ["sim", "swim", "crawl", "bröstsim", "ryggsim"],
   löpning: ["löp", "spring", "run", "jogg", "intervall"],
   cykling: ["cykel", "cykl", "bike", "spinning"],
-  styrka: [],
   yoga: ["yoga", "mobility", "rörlighet", "stretch"],
   rodd: ["rodd", "row"],
   vandring: ["vandr", "promenad", "walk", "hike"],
@@ -44,15 +44,27 @@ const detectSport = (name: string): string | null => {
   return null;
 };
 
-const sportLabel: Record<string, { label: string; emoji: string }> = {
-  simning: { label: "Simmare", emoji: "🏊" },
-  löpning: { label: "Löpare", emoji: "🏃" },
-  cykling: { label: "Cyklist", emoji: "🚴" },
-  yoga: { label: "Rörlighetsnörd", emoji: "🧘" },
-  rodd: { label: "Roddare", emoji: "🚣" },
-  vandring: { label: "Vandrare", emoji: "🥾" },
-  boxning: { label: "Fighter", emoji: "🥊" },
+const sportLabel: Record<string, { label: string; emoji: string; noun: string }> = {
+  simning: { label: "Simmare", emoji: "🏊", noun: "simpass" },
+  löpning: { label: "Löpare", emoji: "🏃", noun: "löppass" },
+  cykling: { label: "Cyklist", emoji: "🚴", noun: "cykelpass" },
+  yoga: { label: "Rörlighetsnörd", emoji: "🧘", noun: "yoga-/rörlighetspass" },
+  rodd: { label: "Roddare", emoji: "🚣", noun: "roddpass" },
+  vandring: { label: "Vandrare", emoji: "🥾", noun: "vandringspass" },
+  boxning: { label: "Fighter", emoji: "🥊", noun: "boxningspass" },
 };
+
+function parseSets(value: unknown): Array<{ kg?: string | number; reps?: string | number }> {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(value) ? (value as any[]) : [];
+}
 
 function computeStats(rows: any[]): IdentityStats {
   const dateSet = new Set<string>();
@@ -61,7 +73,7 @@ function computeStats(rows: any[]): IdentityStats {
   let distanceKm = 0;
   let morning = 0;
   let evening = 0;
-  const sportSets: Record<string, number> = {};
+  const sportSessions: Record<string, number> = {};
   const now = new Date();
   const monthPrefix = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
   let monthWorkouts = 0;
@@ -78,27 +90,41 @@ function computeStats(rows: any[]): IdentityStats {
     }
     distanceKm += Number(row.logged_distance_km) || 0;
 
+    // Sporterna räknas per pass, inte per set — konditionsövningar loggas inte i set.
+    const sportsInSession = new Set<string>();
+    const sessionName = [row.session_name, row.plan_details, row.details]
+      .filter((v) => typeof v === "string")
+      .join(" ");
+    const nameSport = sessionName ? detectSport(sessionName) : null;
+    if (nameSport) sportsInSession.add(nameSport);
+
     const lw = row.logged_weights;
-    if (!lw || typeof lw !== "object") continue;
-    for (const [key, value] of Object.entries(lw as Record<string, unknown>)) {
-      if (!key.startsWith("__setdata__")) continue;
-      const name = key.substring("__setdata__".length);
-      let sets: Array<{ kg?: string | number; reps?: string | number }> = [];
-      if (typeof value === "string") {
-        try { sets = JSON.parse(value); } catch { continue; }
-      } else if (Array.isArray(value)) sets = value as typeof sets;
-      if (!Array.isArray(sets)) continue;
-      const sport = detectSport(name);
-      for (const s of sets) {
-        const kg = Number(s?.kg) || 0;
-        const reps = Number(s?.reps) || 0;
-        if (kg <= 0 && reps <= 0) continue;
-        if (sport) sportSets[sport] = (sportSets[sport] || 0) + 1;
-        else {
-          strengthSets += 1;
-          totalKg += kg * reps;
+    if (lw && typeof lw === "object") {
+      for (const [key, value] of Object.entries(lw as Record<string, unknown>)) {
+        if (key.startsWith("__cond__")) {
+          const sport = detectSport(key.substring("__cond__".length));
+          if (sport) sportsInSession.add(sport);
+          continue;
+        }
+        if (!key.startsWith("__setdata__")) continue;
+        const name = key.substring("__setdata__".length);
+        const sets = parseSets(value);
+        const sport = detectSport(name);
+        for (const s of sets) {
+          const kg = Number(s?.kg) || 0;
+          const reps = Number(s?.reps) || 0;
+          if (kg <= 0 && reps <= 0) continue;
+          if (sport) sportsInSession.add(sport);
+          else {
+            strengthSets += 1;
+            totalKg += kg * reps;
+          }
         }
       }
+    }
+
+    for (const sport of sportsInSession) {
+      sportSessions[sport] = (sportSessions[sport] || 0) + 1;
     }
   }
 
@@ -120,7 +146,7 @@ function computeStats(rows: any[]): IdentityStats {
     monthWorkouts,
     totalTons: totalKg / 1000,
     distanceKm,
-    sportSets,
+    sportSessions,
     morningRatio: workouts ? morning / workouts : 0,
     eveningRatio: workouts ? evening / workouts : 0,
   };
@@ -144,8 +170,8 @@ export function buildTitles(stats: IdentityStats): IdentityTitle[] {
   add("manadens-maskin", "Månadens maskin", "📅", "Slutför 15 pass denna månad", stats.monthWorkouts / 15);
 
   for (const [sport, meta] of Object.entries(sportLabel)) {
-    const sets = stats.sportSets[sport] || 0;
-    add(`sport-${sport}`, meta.label, meta.emoji, `Logga 20 ${sport}spass-set`, sets / 20);
+    const sessions = stats.sportSessions[sport] || 0;
+    add(`sport-${sport}`, meta.label, meta.emoji, `Registrera 10 ${meta.noun}`, sessions / 10);
   }
 
   return titles.sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || b.progress - a.progress);
@@ -156,13 +182,42 @@ export function findTitle(titles: IdentityTitle[], id: string | null | undefined
   return titles.find((t) => t.id === id) || null;
 }
 
-/** Fetch a user's behaviour data and derive their identity titles. */
+/** Fetch a user's behaviour data (active + archived plans) and derive their identity titles. */
 export async function loadIdentityTitles(userId: string): Promise<{ titles: IdentityTitle[]; stats: IdentityStats }> {
-  const { data } = await supabase
-    .from("workout_completions")
-    .select("done, updated_at, logged_weights, logged_distance_km")
-    .eq("user_id", userId)
-    .eq("done", true);
-  const stats = computeStats((data || []) as any[]);
+  const [{ data: active }, { data: archived }] = await Promise.all([
+    supabase
+      .from("workout_completions")
+      .select("done, updated_at, logged_weights, logged_distance_km")
+      .eq("user_id", userId)
+      .eq("done", true),
+    supabase
+      .from("archived_plans")
+      .select("completion_data, plan_data, archived_at")
+      .eq("user_id", userId),
+  ]);
+
+  const rows: any[] = [...((active || []) as any[])];
+
+  for (const archive of (archived || []) as any[]) {
+    const planRows: any[] = Array.isArray(archive?.plan_data) ? archive.plan_data : [];
+    const cd = archive?.completion_data;
+    const compRows: any[] = Array.isArray(cd) ? cd : cd && typeof cd === "object" ? Object.values(cd) : [];
+    for (const c of compRows) {
+      if (!c?.done) continue;
+      const plan = planRows.find(
+        (p: any) => Number(p?.week) === Number(c.week) && String(p?.day) === String(c.day)
+      );
+      rows.push({
+        done: true,
+        updated_at: c.updated_at || archive.archived_at || null,
+        logged_weights: c.logged_weights,
+        logged_distance_km: c.logged_distance_km,
+        session_name: plan?.session_name ?? null,
+        details: plan?.details ?? null,
+      });
+    }
+  }
+
+  const stats = computeStats(rows);
   return { titles: buildTitles(stats), stats };
 }
