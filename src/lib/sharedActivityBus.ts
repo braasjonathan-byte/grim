@@ -47,17 +47,33 @@ export async function initSharedActivityListener(): Promise<void> {
 
     const handle = async () => {
       try {
-        const result = await SendIntent.checkSendIntentReceived();
-        const url = (result as { url?: string })?.url;
-        const title = (result as { title?: string })?.title ?? "aktivitet";
-        if (!url) return;
-        const resolved = decodeURIComponent(url);
-        const name = isSupportedActivityFile(title) ? title : resolved.split("/").pop() || title;
-        if (!isSupportedActivityFile(name)) return;
+        const result = (await SendIntent.checkSendIntentReceived()) as {
+          url?: string;
+          title?: string;
+          description?: string;
+          additionalItems?: Array<{ url?: string; title?: string }>;
+        };
+        const url = result?.url;
+        const title = result?.title ?? "aktivitet";
 
-        const response = await fetch(resolved);
-        const blob = await response.blob();
-        emit(await parseActivityFile(new File([blob], name)));
+        if (url) {
+          const resolved = decodeURIComponent(url);
+          const name = isSupportedActivityFile(title) ? title : resolved.split("/").pop() || title;
+          if (isSupportedActivityFile(name)) {
+            const response = await fetch(resolved);
+            const blob = await response.blob();
+            emit(await parseActivityFile(new File([blob], name)));
+            return;
+          }
+        }
+
+        // Delad text/länk (t.ex. "Dela till Grim" från Strava-appen)
+        const sharedText = [url, result?.title, result?.description]
+          .filter(Boolean)
+          .join(" ");
+        if (/strava/i.test(sharedText)) {
+          await importSharedStravaLink(sharedText);
+        }
       } catch (err) {
         console.warn("[sharedActivity] kunde inte läsa delad fil", err);
       }
@@ -69,3 +85,52 @@ export async function initSharedActivityListener(): Promise<void> {
     console.warn("[sharedActivity] send-intent ej tillgängligt", err);
   }
 }
+
+/**
+ * Hämtar det delade Strava-passet via användarens Strava-koppling och
+ * skickar det vidare till importdialogen som en vanlig aktivitet.
+ */
+export async function importSharedStravaLink(sharedText: string): Promise<boolean> {
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { mapActivityType } = await import("@/lib/activityFileParser");
+    const { data, error } = await supabase.functions.invoke("strava-sync", {
+      body: { mode: "shared_link", sharedText },
+    });
+    if (error || !data?.activity) {
+      console.warn("[sharedActivity] Strava-import misslyckades", error);
+      const { toast } = await import("@/hooks/use-toast");
+      toast({
+        title: "Kunde inte hämta passet från Strava",
+        description: "Kontrollera att ditt Strava-konto är kopplat i Grim.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+
+    const a = data.activity;
+    emit({
+      rawType: a.rawType ?? null,
+      exerciseName: mapActivityType(a.rawType),
+      title: a.title ?? null,
+      startTime: a.startTime ? new Date(a.startTime) : null,
+      durationSec: a.durationSec ?? null,
+      distanceKm: a.distanceKm ?? null,
+      elevationGainM: a.elevationGainM ?? null,
+      elevationLossM: null,
+      avgHeartRate: a.avgHeartRate ?? null,
+      maxHeartRate: a.maxHeartRate ?? null,
+      avgWatt: a.avgWatt ?? null,
+      calories: a.calories ?? null,
+      points: [],
+      format: "gpx",
+      fileName: `strava-${a.stravaActivityId ?? "pass"}`,
+    });
+    return true;
+  } catch (err) {
+    console.warn("[sharedActivity] Strava-import fel", err);
+    return false;
+  }
+}
+
