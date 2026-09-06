@@ -264,6 +264,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("week");
+  const [periodOffset, setPeriodOffset] = useState(0);
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{week: number;year: number;} | null>(null);
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
@@ -718,7 +719,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
         <button
           key={p}
-          onClick={() => setSummaryPeriod(p)}
+          onClick={() => { setSummaryPeriod(p); setPeriodOffset(0); }}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
           summaryPeriod === p ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
           }>
@@ -727,6 +728,25 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         )}
       </div>
 
+
+      {summaryPeriod !== "all" &&
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={() => setPeriodOffset((o) => o - 1)}
+          aria-label="Föregående period"
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <p className="text-sm font-bold capitalize">{periodLabel}</p>
+        <button
+          onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))}
+          disabled={periodOffset >= 0}
+          aria-label="Nästa period"
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      }
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2">
@@ -748,7 +768,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           className="rounded-2xl p-3 text-center transition-colors cursor-pointer bg-card shadow-soft"
         >
           <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
-          <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
+          <p className="text-2xl font-black">{periodChallengeCount}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
         {perCategoryStats.map(({ meta, km, passes }) => (
