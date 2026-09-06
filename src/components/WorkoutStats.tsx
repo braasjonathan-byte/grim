@@ -1,7 +1,7 @@
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords } from "lucide-react";
+import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight } from "lucide-react";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import EmptyState from "@/components/EmptyState";
@@ -264,6 +264,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
   const [view, setView] = useState<View>("week");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("week");
+  const [periodOffset, setPeriodOffset] = useState(0);
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{week: number;year: number;} | null>(null);
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
   const [plansWithExercises, setPlansWithExercises] = useState<Set<string>>(new Set());
@@ -539,34 +540,57 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return result;
   }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap, planStartDate, plansWithExercises, plansPerDay, cardioVis]);
 
-  const filteredCompletions = useMemo(() => {
-    if (summaryPeriod === "all") return completions;
+  const periodRange = useMemo(() => {
+    if (summaryPeriod === "all") return null;
     const now = new Date();
-    const currentMonday = getMonday(now);
-    const endOfWeek = new Date(currentMonday);
-    endOfWeek.setDate(endOfWeek.getDate() + 7);
-
     if (summaryPeriod === "week") {
-      return completions.filter((c) => {
-        const d = getCompletionStatsDate(c, planStartDate);
-        if (!d) return false;
-        return d >= currentMonday && d < endOfWeek;
-      });
+      const start = getMonday(now);
+      start.setDate(start.getDate() + periodOffset * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      return { start, end };
     }
+    if (summaryPeriod === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth() + periodOffset, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + periodOffset + 1, 1);
+      return { start, end };
+    }
+    const start = new Date(now.getFullYear() + periodOffset, 0, 1);
+    const end = new Date(now.getFullYear() + periodOffset + 1, 0, 1);
+    return { start, end };
+  }, [summaryPeriod, periodOffset]);
 
+  const periodLabel = useMemo(() => {
+    if (!periodRange) return "Totalt";
+    const { start, end } = periodRange;
+    if (summaryPeriod === "week") {
+      const last = new Date(end);
+      last.setDate(last.getDate() - 1);
+      return `${start.getDate()}/${start.getMonth() + 1} – ${last.getDate()}/${last.getMonth() + 1} ${last.getFullYear()}`;
+    }
+    if (summaryPeriod === "month") {
+      return start.toLocaleDateString("sv-SE", { month: "long", year: "numeric" });
+    }
+    return String(start.getFullYear());
+  }, [periodRange, summaryPeriod]);
 
-    const startOfMonth = getStartOfMonth(now);
-    const startOfYear = getStartOfYear(now);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
-
+  const filteredCompletions = useMemo(() => {
+    if (!periodRange) return completions;
     return completions.filter((c) => {
       const d = getCompletionStatsDate(c, planStartDate);
       if (!d) return false;
-      if (summaryPeriod === "year") return d >= startOfYear && d < endOfYear;
-      return d >= startOfMonth && d < endOfMonth;
+      return d >= periodRange.start && d < periodRange.end;
     });
-  }, [completions, summaryPeriod, planStartDate]);
+  }, [completions, periodRange, planStartDate]);
+
+  const periodChallengeCount = useMemo(() => {
+    if (!periodRange) return challengeCounts.all;
+    return allChallenges.filter((c) => {
+      const d = new Date(c.completed_at);
+      return d >= periodRange.start && d < periodRange.end;
+    }).length;
+  }, [allChallenges, periodRange, challengeCounts.all]);
+
 
   const totalDone = filteredCompletions.reduce(
     (sum, c) => (isDone(c) ? sum + 1 : sum),
@@ -695,7 +719,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
         <button
           key={p}
-          onClick={() => setSummaryPeriod(p)}
+          onClick={() => { setSummaryPeriod(p); setPeriodOffset(0); }}
           className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
           summaryPeriod === p ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
           }>
@@ -704,6 +728,25 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         )}
       </div>
 
+
+      {summaryPeriod !== "all" &&
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={() => setPeriodOffset((o) => o - 1)}
+          aria-label="Föregående period"
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <p className="text-sm font-bold capitalize">{periodLabel}</p>
+        <button
+          onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))}
+          disabled={periodOffset >= 0}
+          aria-label="Nästa period"
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+      }
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2">
@@ -725,7 +768,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           className="rounded-2xl p-3 text-center transition-colors cursor-pointer bg-card shadow-soft"
         >
           <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
-          <p className="text-2xl font-black">{challengeCounts[summaryPeriod]}</p>
+          <p className="text-2xl font-black">{periodChallengeCount}</p>
           <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
         </button>
         {perCategoryStats.map(({ meta, km, passes }) => (
