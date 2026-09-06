@@ -50,10 +50,22 @@ export function buildWorkoutSummaryCaption(
 
   const isRunning = isRunningSession(plan.session_name);
   const stats: string[] = [];
-  // Always show cardio metrics if they exist (gäller även cykel/simning/brick)
-  if (completion.logged_distance_km) stats.push(`📏 ${completion.logged_distance_km} km`);
-  if (completion.logged_tempo) stats.push(`⏱ ${completion.logged_tempo}/km`);
-  if (completion.logged_pulse) stats.push(`❤️ ${completion.logged_pulse} bpm`);
+  // Kondition kan vara loggad antingen i kolumnerna eller i logged_weights (__cond__),
+  // t.ex. vid import från skärmdump/fil/Strava. Slå ihop båda källorna.
+  const cardio = summarizeCompletion(completion.logged_weights ?? null).cardio;
+  const cardioSport = cardio?.primaryName || plan.session_name;
+  const distanceKm = completion.logged_distance_km ?? (cardio && cardio.distanceKm > 0 ? cardio.distanceKm : null);
+  if (distanceKm) stats.push(`📏 ${formatCardioDistance(distanceKm, cardioSport)}`);
+  if (cardio && cardio.minutes > 0) stats.push(`⏱ ${formatDurationMin(Math.round(cardio.minutes))}`);
+  if (completion.logged_tempo) {
+    stats.push(`🚀 ${completion.logged_tempo}/km`);
+  } else if (cardio && cardio.minutes > 0 && cardio.distanceKm > 0) {
+    const pace = formatCardioPace(cardio.minutes, cardio.distanceKm, cardioSport);
+    if (pace.value !== "–") stats.push(`🚀 ${pace.value}`);
+  }
+  const pulse = completion.logged_pulse ?? cardio?.pulse ?? null;
+  if (pulse) stats.push(`❤️ ${pulse} bpm`);
+
 
   // Build the set of exercise names that still exist in the plan at the moment
   // of completion. Anything not in this set has been removed by the user and
