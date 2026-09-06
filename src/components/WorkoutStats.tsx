@@ -1,7 +1,7 @@
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords } from "lucide-react";
+import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight } from "lucide-react";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import EmptyState from "@/components/EmptyState";
