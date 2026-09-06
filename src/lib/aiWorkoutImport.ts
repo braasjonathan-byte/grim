@@ -134,6 +134,9 @@ export function buildWorkoutFromAiExercises(exercises: AiExercise[]): BuiltWorko
       lines.push(`${name} ${setCount}×${repsLabel}${kgLabel}`);
       if (setData.length > 0) {
         weights[`__setdata__${name}`] = JSON.stringify(setData);
+        // Importerade set är redan genomförda – markera dem som avprickade så att
+        // pass-summeringen (och därmed inlägget i social) räknar med dem.
+        weights[`__sets__${name}`] = "1".repeat(setData.length);
       }
       continue;
     }
