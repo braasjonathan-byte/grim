@@ -539,34 +539,57 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     return result;
   }, [completions, view, planStartCalendarWeek, scheduledPerWeek, planDetailsMap, planStartDate, plansWithExercises, plansPerDay, cardioVis]);
 
-  const filteredCompletions = useMemo(() => {
-    if (summaryPeriod === "all") return completions;
+  const periodRange = useMemo(() => {
+    if (summaryPeriod === "all") return null;
     const now = new Date();
-    const currentMonday = getMonday(now);
-    const endOfWeek = new Date(currentMonday);
-    endOfWeek.setDate(endOfWeek.getDate() + 7);
-
     if (summaryPeriod === "week") {
-      return completions.filter((c) => {
-        const d = getCompletionStatsDate(c, planStartDate);
-        if (!d) return false;
-        return d >= currentMonday && d < endOfWeek;
-      });
+      const start = getMonday(now);
+      start.setDate(start.getDate() + periodOffset * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 7);
+      return { start, end };
     }
+    if (summaryPeriod === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth() + periodOffset, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + periodOffset + 1, 1);
+      return { start, end };
+    }
+    const start = new Date(now.getFullYear() + periodOffset, 0, 1);
+    const end = new Date(now.getFullYear() + periodOffset + 1, 0, 1);
+    return { start, end };
+  }, [summaryPeriod, periodOffset]);
 
+  const periodLabel = useMemo(() => {
+    if (!periodRange) return "Totalt";
+    const { start, end } = periodRange;
+    if (summaryPeriod === "week") {
+      const last = new Date(end);
+      last.setDate(last.getDate() - 1);
+      return `${start.getDate()}/${start.getMonth() + 1} – ${last.getDate()}/${last.getMonth() + 1} ${last.getFullYear()}`;
+    }
+    if (summaryPeriod === "month") {
+      return start.toLocaleDateString("sv-SE", { month: "long", year: "numeric" });
+    }
+    return String(start.getFullYear());
+  }, [periodRange, summaryPeriod]);
 
-    const startOfMonth = getStartOfMonth(now);
-    const startOfYear = getStartOfYear(now);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
-
+  const filteredCompletions = useMemo(() => {
+    if (!periodRange) return completions;
     return completions.filter((c) => {
       const d = getCompletionStatsDate(c, planStartDate);
       if (!d) return false;
-      if (summaryPeriod === "year") return d >= startOfYear && d < endOfYear;
-      return d >= startOfMonth && d < endOfMonth;
+      return d >= periodRange.start && d < periodRange.end;
     });
-  }, [completions, summaryPeriod, planStartDate]);
+  }, [completions, periodRange, planStartDate]);
+
+  const periodChallengeCount = useMemo(() => {
+    if (!periodRange) return challengeCounts.all;
+    return allChallenges.filter((c) => {
+      const d = new Date(c.completed_at);
+      return d >= periodRange.start && d < periodRange.end;
+    }).length;
+  }, [allChallenges, periodRange, challengeCounts.all]);
+
 
   const totalDone = filteredCompletions.reduce(
     (sum, c) => (isDone(c) ? sum + 1 : sum),
