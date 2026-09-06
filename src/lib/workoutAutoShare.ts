@@ -1,4 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import {
+  summarizeCompletion,
+  formatCardioDistance,
+  formatCardioPace,
+  formatDurationMin,
+} from "@/lib/workoutSummary";
+
 
 interface CompletionLike {
   logged_tempo?: string | null;
