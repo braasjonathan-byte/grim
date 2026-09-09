@@ -275,6 +275,7 @@ async function fetchSharedActivity(
   };
 
   return {
+    isFallback,
     stravaActivityId: raw.id,
     rawType: raw.sport_type || raw.type || null,
     title: raw.name ?? null,

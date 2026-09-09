@@ -110,6 +110,13 @@ export async function importSharedStravaLink(sharedText: string): Promise<boolea
 
 
     const a = data.activity;
+    if (a.isFallback) {
+      const { toast } = await import("@/hooks/use-toast");
+      toast({
+        title: "Kunde inte läsa länken från Strava",
+        description: "Visar ditt senaste Strava-pass – kontrollera att det är rätt innan du sparar.",
+      });
+    }
     emit({
       rawType: a.rawType ?? null,
       exerciseName: mapActivityType(a.rawType),
