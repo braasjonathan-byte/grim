@@ -3935,10 +3935,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         const condTempoM = weightStr.match(/([\d:.]+)\/km/);
                         const condDistM = weightStr.match(/([\d.,]+)\s*km(?!\/)/);
                         const condPulseM = weightStr.match(/(\d+)\s*bpm/);
-                        const planCondTime = condTimeM ? condTimeM[1] : "";
-                        const planCondTempo = condTempoM ? condTempoM[1] : "";
-                        const planCondDist = condDistM ? condDistM[1] : "";
+                        const derivedPlanCond = derivePlanCardioValues(
+                          condTimeM ? condTimeM[1] : "",
+                          condDistM ? condDistM[1] : "",
+                          condTempoM ? condTempoM[1] : "",
+                          plan.tempo,
+                        );
+                        const planCondTime = derivedPlanCond.time;
+                        const planCondTempo = derivedPlanCond.tempo;
+                        const planCondDist = derivedPlanCond.dist;
                         const planCondPulse = condPulseM ? condPulseM[1] : "";
+
 
                         // Read saved conditioning data from logged_weights
                         const condKeyInline = `__cond__${name}`;
