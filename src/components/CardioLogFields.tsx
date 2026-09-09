@@ -100,7 +100,7 @@ const CardioLogFields = ({
             inputMode={isPaceMode(mode) ? "numeric" : "decimal"}
             pattern={isPaceMode(mode) ? "[0-9:]*" : "[0-9.,]*"}
             value={tempo}
-            onChange={(e) => onTempoChange(e.target.value)}
+            onChange={(e) => onTempoChange(isPaceMode(mode) ? sanitizePaceInput(e.target.value) : e.target.value)}
             onBlur={() => {
               if (isPaceMode(mode)) {
                 const f = formatPaceDisplay(tempo, mode);
