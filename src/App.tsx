@@ -16,6 +16,7 @@ const NotFound = lazyRetry(() => import("./pages/NotFound"));
 const Install = lazyRetry(() => import("./pages/Install"));
 const Privacy = lazyRetry(() => import("./pages/Privacy"));
 const DeleteAccount = lazyRetry(() => import("./pages/DeleteAccount"));
+const OAuthConsent = lazyRetry(() => import("./pages/OAuthConsent"));
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/integritetspolicy" element={<Suspense fallback={null}><Privacy /></Suspense>} />
               <Route path="/delete-account" element={<Suspense fallback={null}><DeleteAccount /></Suspense>} />
               <Route path="/radera-konto" element={<Suspense fallback={null}><DeleteAccount /></Suspense>} />
+              <Route path="/.lovable/oauth/consent" element={<Suspense fallback={null}><OAuthConsent /></Suspense>} />
               <Route path="*" element={<Suspense fallback={null}><NotFound /></Suspense>} />
             </Routes>
           </BrowserRouter>
