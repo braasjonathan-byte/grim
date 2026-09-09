@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronUp, Footprints, Info, Pencil, Play, X } from
 import RouteMap from "@/components/RouteMap";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
-import { toTitleCase } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, kmPerTempoUnit, showCardioElevation } from "@/lib/cardioUnits";
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
