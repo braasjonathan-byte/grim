@@ -92,8 +92,16 @@ serve(async (req) => {
           hasActiveSub = subscriptions.data.length > 0;
 
           if (hasActiveSub) {
-            const subscription = subscriptions.data[0];
-            subscriptionEnd = new Date((subscription as any).current_period_end * 1000).toISOString();
+            const subscription = subscriptions.data[0] as any;
+            // I nyare Stripe-API:er ligger current_period_end på prenumerationsraden
+            const periodEnd =
+              subscription?.items?.data?.[0]?.current_period_end ??
+              subscription?.current_period_end ??
+              null;
+            subscriptionEnd =
+              typeof periodEnd === "number" && Number.isFinite(periodEnd)
+                ? new Date(periodEnd * 1000).toISOString()
+                : null;
           }
         }
       } catch (stripeErr) {

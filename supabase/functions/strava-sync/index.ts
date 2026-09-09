@@ -252,15 +252,18 @@ async function fetchSharedActivity(
     else console.error("Strava activity fetch failed", response.status, await response.text());
   }
 
+  let isFallback = false;
   if (!activity) {
-    // Fallback: senaste aktiviteten från de senaste 3 dygnen
+    // Fallback: endast en mycket färsk aktivitet (senaste 6 timmarna), och den
+    // markeras som osäker så användaren kan bekräfta att det är rätt pass.
     const recent = await fetchActivities(
       refreshed.accessToken,
-      Math.floor((Date.now() - 3 * 24 * 60 * 60 * 1000) / 1000),
+      Math.floor((Date.now() - 6 * 60 * 60 * 1000) / 1000),
     );
     activity = recent.sort(
       (a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime(),
     )[0] ?? null;
+    isFallback = !!activity;
   }
 
   if (!activity) return null;
@@ -272,6 +275,7 @@ async function fetchSharedActivity(
   };
 
   return {
+    isFallback,
     stravaActivityId: raw.id,
     rawType: raw.sport_type || raw.type || null,
     title: raw.name ?? null,
