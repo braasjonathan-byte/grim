@@ -6093,9 +6093,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                 saveInlineIntervalField('intervals', arr);
                                               }}
                                             />
-                                            <AutoSaveInput
-                                              type="text"
-                                              initialValue={rowTempo}
+                                             <AutoSaveInput
+                                               type="text"
+                                               inputMode="numeric"
+                                               pattern="[0-9:]*"
+                                               sanitize={sanitizePaceInput}
+                                               initialValue={rowTempo}
                                               onSave={(v) => {
                                                 const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
                                                 const normalizedTempo = normalizeTempoInput(v);
