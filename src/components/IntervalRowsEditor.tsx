@@ -205,7 +205,7 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
               <label className={labelCls}>Tempo</label>
               <input
                 type="text" inputMode="numeric" pattern="[0-9:]*" value={r.tempo}
-                onChange={(e) => update(i, { tempo: e.target.value }, "tempo")}
+                onChange={(e) => update(i, { tempo: sanitizePaceInput(e.target.value) }, "tempo")}
                 onBlur={(e) => {
                   const raw = e.target.value.trim();
                   if (!raw || raw.includes(":")) return;
