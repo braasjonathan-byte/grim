@@ -13,7 +13,7 @@ interface AutoSaveInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
  * Input that auto-saves on every keystroke (debounced) and on blur.
  * Also saves before page unload to prevent data loss on app restart.
  */
-const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur, ...props }: AutoSaveInputProps) => {
+const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur, sanitize, ...props }: AutoSaveInputProps) => {
   const [value, setValue] = useState(initialValue);
   const valueRef = useRef(initialValue);
   const lastSaved = useRef(initialValue);
