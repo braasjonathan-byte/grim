@@ -81,7 +81,7 @@ const AdminCompletionsList = () => {
       );
       setLoading(false);
     })();
-  }, []);
+  }, [expanded, rows]);
 
   return (
     <div className="border border-border bg-secondary rounded-2xl overflow-hidden">
