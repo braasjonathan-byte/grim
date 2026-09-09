@@ -98,6 +98,6 @@ export const derivePlanCardioValues = (
   return {
     time: isFinite(t) && t > 0 ? String(t) : "",
     dist: isFinite(d) && d > 0 ? String(d) : "",
-    tempo: tempoStr && isFinite(tempoMin) === false && !hasP ? "" : tempoStr,
+    tempo: tempoStr,
   };
 };
