@@ -262,17 +262,32 @@ export async function autoShareCompletion(
 
     const { data: existing } = await supabase
       .from("social_posts")
-      .select("id")
+      .select("id, created_at")
       .eq("user_id", userId)
       .eq("workout_week", week)
       .eq("workout_day", day)
       .maybeSingle();
 
     if (existing?.id) {
-      await supabase
+      // Vecka/dag-nyckeln återanvänds när en ny plan startas, så ett gammalt
+      // inlägg från en tidigare plan kan blockera nyckeln. Uppdatera texten och
+      // flytta upp inlägget i flödet så att det syns som ett nytt pass.
+      const isStale =
+        !existing.created_at ||
+        Date.now() - new Date(existing.created_at as string).getTime() > 12 * 60 * 60 * 1000;
+      const { error } = await supabase
         .from("social_posts")
-        .update({ caption, visibility: "friends" })
+        .update({
+          caption,
+          visibility: "friends",
+          ...(isStale ? { created_at: new Date().toISOString() } : {}),
+        })
         .eq("id", existing.id);
+      if (!error && isStale) {
+        supabase.functions
+          .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
+          .catch(() => {});
+      }
     } else {
       const { error } = await supabase.from("social_posts").upsert(
         {
@@ -290,6 +305,7 @@ export async function autoShareCompletion(
           .catch(() => {});
       }
     }
+
   } catch {
     // best-effort
   }
