@@ -22,6 +22,8 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
   const normalizeOnBlurRef = useRef(normalizeOnBlur);
   onSaveRef.current = onSave;
   normalizeOnBlurRef.current = normalizeOnBlur;
+  const sanitizeRef = useRef(sanitize);
+  sanitizeRef.current = sanitize;
 
   // Sync from external initialValue ONLY when it represents a genuinely new value
   // (not a stale echo of what we already saved or what the user is currently typing).
