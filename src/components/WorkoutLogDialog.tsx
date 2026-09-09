@@ -378,10 +378,13 @@ const WorkoutLogDialog = ({
                 </label>
                 <input
                   type="text"
+                  inputMode={isPaceMode(mode) ? "numeric" : "decimal"}
+                  pattern={isPaceMode(mode) ? "[0-9:]*" : undefined}
                   value={tempo}
                   onChange={(e) => {
-                    setTempo(e.target.value);
-                    autoCalcSimple(duration, e.target.value, distance, "tempo");
+                    const v = isPaceMode(mode) ? sanitizePaceInput(e.target.value) : e.target.value;
+                    setTempo(v);
+                    autoCalcSimple(duration, v, distance, "tempo");
                   }}
                   placeholder={modePlaceholder(mode)}
                   className={inputClass}
