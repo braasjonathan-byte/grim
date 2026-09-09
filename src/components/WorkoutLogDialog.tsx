@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
 import {
   type CardioMode, getCardioModes, modeLabel, modeFieldLabel, modePlaceholder,
@@ -295,9 +296,11 @@ const WorkoutLogDialog = ({
                 />
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9:]*"
                   value={row.tempo}
                   onChange={(e) => {
-                    updateIntervalRow(i, "tempo", e.target.value);
+                    updateIntervalRow(i, "tempo", sanitizePaceInput(e.target.value));
                   }}
                   onBlur={(e) => {
                     // If first row tempo set and others empty, apply to all
@@ -375,10 +378,13 @@ const WorkoutLogDialog = ({
                 </label>
                 <input
                   type="text"
+                  inputMode={isPaceMode(mode) ? "numeric" : "decimal"}
+                  pattern={isPaceMode(mode) ? "[0-9:]*" : undefined}
                   value={tempo}
                   onChange={(e) => {
-                    setTempo(e.target.value);
-                    autoCalcSimple(duration, e.target.value, distance, "tempo");
+                    const v = isPaceMode(mode) ? sanitizePaceInput(e.target.value) : e.target.value;
+                    setTempo(v);
+                    autoCalcSimple(duration, v, distance, "tempo");
                   }}
                   placeholder={modePlaceholder(mode)}
                   className={inputClass}

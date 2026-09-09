@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, Square, MapPin, Volume2, Settings as SettingsIcon } from "lucide-react";
 import { useGpsTracker } from "@/hooks/useGpsTracker";
@@ -918,7 +919,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 {(unit === "distance_km" || unit === "distance_m") && (
                   <div>
                     <Label className="text-xs">{profile.paceLabel} ({profile.paceUnit})</Label>
-                    <Input value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="4:30" />
+                    <Input type="text" inputMode="numeric" pattern="[0-9:]*" value={tempo} onChange={(e) => setTempo(sanitizePaceInput(e.target.value))} placeholder="4:30" />
                   </div>
                 )}
                 <div>
