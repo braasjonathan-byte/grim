@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
 import {
   type CardioMode, getCardioModes, modeLabel, modeFieldLabel, modePlaceholder,
