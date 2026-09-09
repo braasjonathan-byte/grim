@@ -34,3 +34,16 @@ export const toSavedIntervalRows = (rows: IntervalRow[]) => rows.map((row) => {
     dist: row.distance,
   };
 });
+
+/**
+ * Rensar tempo-inmatning medan användaren skriver: punkt/komma tolkas som
+ * kolon (mm:ss) så att det numeriska tangentbordets "." fungerar som ":".
+ */
+export const sanitizePaceInput = (value: string): string => {
+  let out = value.replace(/[.,]/g, ":").replace(/[^0-9:]/g, "");
+  const first = out.indexOf(":");
+  if (first !== -1) {
+    out = out.slice(0, first + 1) + out.slice(first + 1).replace(/:/g, "");
+  }
+  return out;
+};
