@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 
 export interface IntervalRow {
   h: string;
