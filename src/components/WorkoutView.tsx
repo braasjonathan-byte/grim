@@ -6305,9 +6305,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               const scTimeM = swStr.match(/(\d+)\s*min/);
                               const scTempoM = swStr.match(/([\d:.]+)\/km/);
                               const scDistM = swStr.match(/([\d.,]+)\s*km(?!\/)/);
-                              const spTime = scTimeM ? scTimeM[1] : "";
-                              const spDist = scDistM ? scDistM[1] : "";
-                              const spTempo = scTempoM ? scTempoM[1] : "";
+                              const derivedSingleCond = derivePlanCardioValues(
+                                scTimeM ? scTimeM[1] : "",
+                                scDistM ? scDistM[1] : "",
+                                scTempoM ? scTempoM[1] : "",
+                                plan.tempo,
+                              );
+                              const spTime = derivedSingleCond.time;
+                              const spDist = derivedSingleCond.dist;
+                              const spTempo = derivedSingleCond.tempo;
                               const scKey = `__cond__${sCondName}`;
                               const scRaw = (completions[key]?.logged_weights as Record<string, any>)?.[scKey];
                               let scSaved: Record<string, any> | null = null;
