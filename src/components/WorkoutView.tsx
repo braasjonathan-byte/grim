@@ -6188,9 +6188,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   const cTimeM = cwStr.match(/(\d+)\s*min/);
                                   const cTempoM = cwStr.match(/([\d:.]+)\/km/);
                                   const cDistM = cwStr.match(/([\d.,]+)\s*km(?!\/)/);
-                                  const pTime = cTimeM ? cTimeM[1] : "";
-                                  const pDist = cDistM ? cDistM[1] : "";
-                                  const pTempo = cTempoM ? cTempoM[1] : "";
+                                  const derivedLineCond = derivePlanCardioValues(
+                                    cTimeM ? cTimeM[1] : "",
+                                    cDistM ? cDistM[1] : "",
+                                    cTempoM ? cTempoM[1] : "",
+                                    plan.tempo,
+                                  );
+                                  const pTime = derivedLineCond.time;
+                                  const pDist = derivedLineCond.dist;
+                                  const pTempo = derivedLineCond.tempo;
                                   const cKey = `__cond__${condLineName}`;
                                   const cRaw = (completions[key]?.logged_weights as Record<string, any>)?.[cKey];
                                   let cSaved: Record<string, any> | null = null;
