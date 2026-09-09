@@ -51,6 +51,9 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
       lastSaved.current = val;
       onSaveRef.current(val);
     }
+    // Redigeringen är klar/sparad – tillåt att fältet åter speglar externa
+    // ändringar (t.ex. när en övning raderas och raderna förskjuts).
+    userTouched.current = false;
   }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
