@@ -63,7 +63,7 @@ import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } f
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
-import { toTitleCase, normalizeTempoInput, toSavedIntervalRows } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
