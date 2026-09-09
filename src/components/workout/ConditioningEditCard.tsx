@@ -380,7 +380,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
               inputMode={isPaceMode(bikeMode) ? "numeric" : "decimal"}
               pattern={isPaceMode(bikeMode) ? "[0-9:]*" : "[0-9.,]*"}
               value={tempo}
-              onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
+              onChange={(e) => { const v = isPaceMode(bikeMode) ? sanitizePaceInput(e.target.value) : e.target.value; setTempo(v); liveAutoCalc(getTotalMin(), v, distance, "tempo"); }}
               onBlur={() => { if (isPaceMode(bikeMode)) { const f = formatPaceDisplay(tempo, bikeMode); if (f && f !== tempo) setTempo(f); } }}
               placeholder={modePlaceholder(bikeMode)}
               className={condInputCls}
