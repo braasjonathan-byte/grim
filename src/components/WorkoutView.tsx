@@ -63,7 +63,7 @@ import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } f
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
-import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
@@ -3935,10 +3935,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         const condTempoM = weightStr.match(/([\d:.]+)\/km/);
                         const condDistM = weightStr.match(/([\d.,]+)\s*km(?!\/)/);
                         const condPulseM = weightStr.match(/(\d+)\s*bpm/);
-                        const planCondTime = condTimeM ? condTimeM[1] : "";
-                        const planCondTempo = condTempoM ? condTempoM[1] : "";
-                        const planCondDist = condDistM ? condDistM[1] : "";
+                        const derivedPlanCond = derivePlanCardioValues(
+                          condTimeM ? condTimeM[1] : "",
+                          condDistM ? condDistM[1] : "",
+                          condTempoM ? condTempoM[1] : "",
+                          plan.tempo,
+                        );
+                        const planCondTime = derivedPlanCond.time;
+                        const planCondTempo = derivedPlanCond.tempo;
+                        const planCondDist = derivedPlanCond.dist;
                         const planCondPulse = condPulseM ? condPulseM[1] : "";
+
 
                         // Read saved conditioning data from logged_weights
                         const condKeyInline = `__cond__${name}`;
@@ -6181,9 +6188,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   const cTimeM = cwStr.match(/(\d+)\s*min/);
                                   const cTempoM = cwStr.match(/([\d:.]+)\/km/);
                                   const cDistM = cwStr.match(/([\d.,]+)\s*km(?!\/)/);
-                                  const pTime = cTimeM ? cTimeM[1] : "";
-                                  const pDist = cDistM ? cDistM[1] : "";
-                                  const pTempo = cTempoM ? cTempoM[1] : "";
+                                  const derivedLineCond = derivePlanCardioValues(
+                                    cTimeM ? cTimeM[1] : "",
+                                    cDistM ? cDistM[1] : "",
+                                    cTempoM ? cTempoM[1] : "",
+                                    plan.tempo,
+                                  );
+                                  const pTime = derivedLineCond.time;
+                                  const pDist = derivedLineCond.dist;
+                                  const pTempo = derivedLineCond.tempo;
                                   const cKey = `__cond__${condLineName}`;
                                   const cRaw = (completions[key]?.logged_weights as Record<string, any>)?.[cKey];
                                   let cSaved: Record<string, any> | null = null;
@@ -6292,9 +6305,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               const scTimeM = swStr.match(/(\d+)\s*min/);
                               const scTempoM = swStr.match(/([\d:.]+)\/km/);
                               const scDistM = swStr.match(/([\d.,]+)\s*km(?!\/)/);
-                              const spTime = scTimeM ? scTimeM[1] : "";
-                              const spDist = scDistM ? scDistM[1] : "";
-                              const spTempo = scTempoM ? scTempoM[1] : "";
+                              const derivedSingleCond = derivePlanCardioValues(
+                                scTimeM ? scTimeM[1] : "",
+                                scDistM ? scDistM[1] : "",
+                                scTempoM ? scTempoM[1] : "",
+                                plan.tempo,
+                              );
+                              const spTime = derivedSingleCond.time;
+                              const spDist = derivedSingleCond.dist;
+                              const spTempo = derivedSingleCond.tempo;
                               const scKey = `__cond__${sCondName}`;
                               const scRaw = (completions[key]?.logged_weights as Record<string, any>)?.[scKey];
                               let scSaved: Record<string, any> | null = null;

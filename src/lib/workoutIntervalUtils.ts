@@ -47,3 +47,57 @@ export const sanitizePaceInput = (value: string): string => {
   }
   return out;
 };
+
+/** Plockar ut tempo (min/km) ur en fritextsträng, t.ex. "5:30 min/km" eller "5:30/km". */
+export const parsePlanTempoText = (text?: string | null): string => {
+  if (!text) return "";
+  const m = String(text).match(/(\d{1,2})[:.](\d{1,2})\s*(?:min)?\s*\/\s*km/i)
+    || String(text).match(/(\d{1,2})[:.](\d{1,2})/);
+  if (!m) return "";
+  return `${parseInt(m[1])}:${m[2].padStart(2, "0")}`;
+};
+
+/**
+ * Ser till att planerade konditionspass alltid har tid, distans OCH tempo:
+ * saknas ett av värdena räknas det fram ur de två andra.
+ * time = minuter, dist = km, tempo = min/km ("m:ss").
+ */
+export const derivePlanCardioValues = (
+  time: string,
+  dist: string,
+  tempo: string,
+  tempoFallback?: string | null,
+): { time: string; dist: string; tempo: string } => {
+  let t = parseFloat(String(time).replace(",", "."));
+  let d = parseFloat(String(dist).replace(",", "."));
+  let tempoStr = tempo || "";
+  if (!tempoStr) tempoStr = parsePlanTempoText(tempoFallback);
+
+  const tempoMin = (() => {
+    const m = String(tempoStr).trim().match(/^(\d+)[:.](\d{1,2})$/);
+    if (m) return parseInt(m[1]) + parseInt(m[2]) / 60;
+    const n = parseFloat(String(tempoStr).replace(",", "."));
+    return isFinite(n) && n > 0 ? n : NaN;
+  })();
+
+  const fmt = (minPerKm: number) => {
+    const mn = Math.floor(minPerKm);
+    const sc = Math.round((minPerKm - mn) * 60);
+    return `${mn}:${sc.toString().padStart(2, "0")}`;
+  };
+
+  const hasT = isFinite(t) && t > 0;
+  const hasD = isFinite(d) && d > 0;
+  const hasP = isFinite(tempoMin) && tempoMin > 0;
+
+  if (hasT && hasD && !hasP) tempoStr = fmt(t / d);
+  else if (hasT && hasP && !hasD) d = Math.round((t / tempoMin) * 100) / 100;
+  else if (hasD && hasP && !hasT) t = Math.round(tempoMin * d * 100) / 100;
+  else if (hasP && !tempo) tempoStr = fmt(tempoMin);
+
+  return {
+    time: isFinite(t) && t > 0 ? String(t) : "",
+    dist: isFinite(d) && d > 0 ? String(d) : "",
+    tempo: tempoStr,
+  };
+};
