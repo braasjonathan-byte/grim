@@ -295,9 +295,11 @@ const WorkoutLogDialog = ({
                 />
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9:]*"
                   value={row.tempo}
                   onChange={(e) => {
-                    updateIntervalRow(i, "tempo", e.target.value);
+                    updateIntervalRow(i, "tempo", sanitizePaceInput(e.target.value));
                   }}
                   onBlur={(e) => {
                     // If first row tempo set and others empty, apply to all
