@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "sdk_version": "2.0.4",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://gnhbkevtoajzdpsengki.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "grim",
+      "version": "0.1.0",
+      "title": "Grim"
+    },
+    "tools": [
+      {
+        "name": "get_profile",
+        "title": "Get my Grim profile",
+        "description": "Get the signed-in user's Grim profile: nickname, title, weight, height, experience level and training days per week.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_week_plan",
+        "title": "Get training plan for a week",
+        "description": "Get the signed-in user's planned Grim sessions for a given week number, with session names and exercise details.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "week": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 104,
+              "description": "Week number in the training plan."
+            }
+          },
+          "required": [
+            "week"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_recent_workouts",
+        "title": "List recent workouts",
+        "description": "List the signed-in user's most recently completed Grim workouts, including week, day, distance, pace and pulse.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "description": "How many workouts to return."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "complete_workout",
+        "title": "Mark a workout as completed",
+        "description": "Mark a Grim session for a given week and day as completed for the signed-in user, optionally with distance, pace, pulse and a comment.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "week": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 104,
+              "description": "Week number in the training plan."
+            },
+            "day": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Day identifier used in the plan, e.g. 'Måndag'."
+            },
+            "distance_km": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000,
+              "description": "Logged distance in kilometres."
+            },
+            "tempo": {
+              "type": "string",
+              "description": "Logged pace, e.g. '5:30'."
+            },
+            "pulse": {
+              "type": "integer",
+              "minimum": 20,
+              "maximum": 250,
+              "description": "Average pulse in bpm."
+            },
+            "comment": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Short note about the session."
+            }
+          },
+          "required": [
+            "week",
+            "day"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
