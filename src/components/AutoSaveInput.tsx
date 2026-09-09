@@ -5,6 +5,8 @@ interface AutoSaveInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   onSave: (value: string) => void;
   debounceMs?: number;
   normalizeOnBlur?: (value: string) => string;
+  /** Transformerar varje tangenttryck, t.ex. "." → ":" för tempo. */
+  sanitize?: (value: string) => string;
 }
 
 /**
