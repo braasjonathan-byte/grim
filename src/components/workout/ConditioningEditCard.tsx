@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronUp, Footprints, Info, Pencil, Play, X } from
 import RouteMap from "@/components/RouteMap";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
-import { toTitleCase } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, kmPerTempoUnit, showCardioElevation } from "@/lib/cardioUnits";
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
@@ -380,7 +380,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
               inputMode={isPaceMode(bikeMode) ? "numeric" : "decimal"}
               pattern={isPaceMode(bikeMode) ? "[0-9:]*" : "[0-9.,]*"}
               value={tempo}
-              onChange={(e) => { setTempo(e.target.value); liveAutoCalc(getTotalMin(), e.target.value, distance, "tempo"); }}
+              onChange={(e) => { const v = isPaceMode(bikeMode) ? sanitizePaceInput(e.target.value) : e.target.value; setTempo(v); liveAutoCalc(getTotalMin(), v, distance, "tempo"); }}
               onBlur={() => { if (isPaceMode(bikeMode)) { const f = formatPaceDisplay(tempo, bikeMode); if (f && f !== tempo) setTempo(f); } }}
               placeholder={modePlaceholder(bikeMode)}
               className={condInputCls}

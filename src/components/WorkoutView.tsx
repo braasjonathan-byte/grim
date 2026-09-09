@@ -63,7 +63,7 @@ import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } f
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
-import { toTitleCase, normalizeTempoInput, toSavedIntervalRows } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
@@ -6093,9 +6093,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                 saveInlineIntervalField('intervals', arr);
                                               }}
                                             />
-                                            <AutoSaveInput
-                                              type="text"
-                                              initialValue={rowTempo}
+                                             <AutoSaveInput
+                                               type="text"
+                                               inputMode="numeric"
+                                               pattern="[0-9:]*"
+                                               sanitize={sanitizePaceInput}
+                                               initialValue={rowTempo}
                                               onSave={(v) => {
                                                 const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
                                                 const normalizedTempo = normalizeTempoInput(v);
@@ -7339,7 +7342,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     </div>
                                     <div>
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tempo (min/km)</label>
-                                      <AutoSaveInput type="text" inputMode="numeric" pattern="[0-9:]*" initialValue={displayTempo} onSave={(v) => saveCondField('tempo', v)} placeholder="t.ex. 5:30" className="w-24 bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
+                                      <AutoSaveInput type="text" inputMode="numeric" pattern="[0-9:]*" sanitize={sanitizePaceInput} initialValue={displayTempo} onSave={(v) => saveCondField('tempo', v)} placeholder="t.ex. 5:30" className="w-24 bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground" />
                                     </div>
                                   </div>
                                   <div className="grid grid-cols-2 gap-2 items-end">

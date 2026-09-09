@@ -5,13 +5,15 @@ interface AutoSaveInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
   onSave: (value: string) => void;
   debounceMs?: number;
   normalizeOnBlur?: (value: string) => string;
+  /** Transformerar varje tangenttryck, t.ex. "." → ":" för tempo. */
+  sanitize?: (value: string) => string;
 }
 
 /**
  * Input that auto-saves on every keystroke (debounced) and on blur.
  * Also saves before page unload to prevent data loss on app restart.
  */
-const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur, ...props }: AutoSaveInputProps) => {
+const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur, sanitize, ...props }: AutoSaveInputProps) => {
   const [value, setValue] = useState(initialValue);
   const valueRef = useRef(initialValue);
   const lastSaved = useRef(initialValue);
@@ -20,6 +22,8 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
   const normalizeOnBlurRef = useRef(normalizeOnBlur);
   onSaveRef.current = onSave;
   normalizeOnBlurRef.current = normalizeOnBlur;
+  const sanitizeRef = useRef(sanitize);
+  sanitizeRef.current = sanitize;
 
   // Sync from external initialValue ONLY when it represents a genuinely new value
   // (not a stale echo of what we already saved or what the user is currently typing).
@@ -57,7 +61,7 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
   }, []);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVal = e.target.value;
+    const newVal = sanitizeRef.current ? sanitizeRef.current(e.target.value) : e.target.value;
     userTouched.current = true;
     setValue(newVal);
     valueRef.current = newVal;
