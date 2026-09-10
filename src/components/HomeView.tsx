@@ -233,10 +233,24 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const goal = weekPlanned > 0 ? weekPlanned : 3;
   const progressPct = goal > 0 ? Math.min(100, Math.round((weekCompleted / goal) * 100)) : 0;
 
-  const streak = useMemo(
-    () => calculateAchievementMetrics(completions as never[]).currentStreak,
-    [completions],
-  );
+  const streak = useMemo(() => {
+    const dateSet = new Set<string>(archivedDates);
+    for (const c of completions) {
+      if (!c.done) continue;
+      const ts = (c as any).updated_at;
+      const d = ts ? new Date(ts) : null;
+      if (d && !Number.isNaN(d.getTime())) dateSet.add(toLocalDateKey(d));
+    }
+    if (dateSet.size === 0) return 0;
+    const cursor = new Date();
+    if (!dateSet.has(toLocalDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+    let count = 0;
+    while (dateSet.has(toLocalDateKey(cursor)) && count < 2000) {
+      count += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return count;
+  }, [completions, archivedDates]);
 
   const achievementDef = latestAchievement ? getAchievementById(latestAchievement.id) : undefined;
 
