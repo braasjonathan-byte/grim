@@ -59,6 +59,28 @@ const makeAchievements = (
   emoji,
 }));
 
+const streakDayDifficulty = (day: number): AchievementDifficulty => {
+  if (day < 7) return "brons";
+  if (day < 30) return "silver";
+  if (day < 100) return "guld";
+  return "legend";
+};
+
+// Ett nytt achievement för varje dag streaken fortsätter (1-365 dagar).
+const makeStreakDayAchievements = (): AchievementDefinition[] =>
+  Array.from({ length: 365 }, (_, i) => {
+    const day = i + 1;
+    return {
+      id: `langsta-streak-${day}`,
+      title: `Längsta streak ${day} ${day === 1 ? "dag" : "dagar"} i rad`,
+      description: `Träna ${day} ${day === 1 ? "dag" : "dagar"} i rad.`,
+      metric: "longestStreak" as keyof AchievementMetrics,
+      threshold: day,
+      difficulty: streakDayDifficulty(day),
+      emoji: "🏆",
+    };
+  });
+
 export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("pass", "Passjägare", "workouts", [1, 3, 5, 10, 15, 25, 35, 50, 75, 100, 150, 200, 300, 400, 500, 650, 800, 1000, 1250, 1500], " pass", "✅"),
   ...makeAchievements("reps", "Repmaskin", "reps", [50, 100, 250, 500, 750, 1000, 1500, 2500, 4000, 6000, 8000, 10000, 15000, 20000, 30000, 40000, 50000, 75000, 100000, 150000], " reps", "🔁"),
