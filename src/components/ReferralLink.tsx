@@ -33,8 +33,12 @@ const ReferralLink = ({ userId }: ReferralLinkProps) => {
 
   if (!referralCode) return null;
 
-  const baseUrl = window.location.origin;
-  const referralUrl = `${baseUrl}?ref=${referralCode}`;
+  // Länken måste alltid peka på den publicerade webbappen (inloggning/registrering),
+  // även när den delas från Android-appen där origin är t.ex. https://localhost.
+  const origin = window.location.origin;
+  const isWebApp = /^https:\/\/[^/]*lovable\.app$/.test(origin) || /^https:\/\/grim\./.test(origin);
+  const baseUrl = isWebApp ? origin : "https://grim.lovable.app";
+  const referralUrl = `${baseUrl}/?ref=${referralCode}`;
 
   const handleCopy = async () => {
     try {

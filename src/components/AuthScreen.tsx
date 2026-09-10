@@ -79,6 +79,8 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
     const ref = params.get("ref");
     if (ref) {
       setReferralCode(ref);
+      setIsLogin(false);
+      setShowForgot(false);
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
