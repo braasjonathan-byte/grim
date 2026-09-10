@@ -113,6 +113,7 @@ interface Props {
 }
 
 export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "min/km", distUnit = "km", hideDistance = false }: Props) {
+  const isPace = paceUnit.startsWith("/");
 
   useEffect(() => {
     if (count <= 0) return;
@@ -205,17 +206,24 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
             <div className="min-w-0">
               <label className={labelCls}>Tempo</label>
               <input
-                type="text" inputMode="numeric" pattern="[0-9:]*" value={r.tempo}
-                onChange={(e) => update(i, { tempo: sanitizePaceInput(e.target.value) }, "tempo")}
+                type="text" inputMode={isPace ? "numeric" : "decimal"} pattern={isPace ? "[0-9:]*" : "[0-9.,]*"} value={r.tempo}
+                onChange={(e) => update(i, { tempo: sanitizePaceInput(e.target.value, isPace) }, "tempo")}
                 onBlur={(e) => {
                   const raw = e.target.value.trim();
-                  if (!raw || raw.includes(":")) return;
+                  if (!raw) return;
+                  if (!isPace) {
+                    const normalized = raw.replace(",", ".");
+                    if (!/^\d+(?:\.\d+)?$/.test(normalized)) return;
+                    update(i, { tempo: normalized }, "tempo");
+                    return;
+                  }
+                  if (raw.includes(":")) return;
                   if (!/^\d+(?:[.,]\d+)?$/.test(raw)) return;
                   const v = parseFloat(raw.replace(",", "."));
                   if (!isFinite(v) || v <= 0) return;
                   update(i, { tempo: formatTempo(v) }, "tempo");
                 }}
-                placeholder="5:30" className={inputCls} />
+                placeholder={isPace ? "5:30" : "32.5"} className={inputCls} />
               <span className={unitCls}>{paceUnit}</span>
             </div>
             {!hideDistance && (

@@ -36,10 +36,20 @@ export const toSavedIntervalRows = (rows: IntervalRow[]) => rows.map((row) => {
 });
 
 /**
- * Rensar tempo-inmatning medan användaren skriver: punkt/komma tolkas som
- * kolon (mm:ss) så att det numeriska tangentbordets "." fungerar som ":".
+ * Rensar tempo-/farts-inmatning medan användaren skriver.
+ * För pace-enheter (min/km, min/100m …) tolkas punkt/komma som kolon (mm:ss)
+ * så att det numeriska tangentbordets "." fungerar som ":".
+ * För fart-enheter (km/h, mph …) behålls decimaler istället.
  */
-export const sanitizePaceInput = (value: string): string => {
+export const sanitizePaceInput = (value: string, isPace = true): string => {
+  if (!isPace) {
+    let out = value.replace(/[^0-9.,]/g, "").replace(/,/g, ".");
+    const first = out.indexOf(".");
+    if (first !== -1) {
+      out = out.slice(0, first + 1) + out.slice(first + 1).replace(/\./g, "");
+    }
+    return out;
+  }
   let out = value.replace(/[.,]/g, ":").replace(/[^0-9:]/g, "");
   const first = out.indexOf(":");
   if (first !== -1) {
