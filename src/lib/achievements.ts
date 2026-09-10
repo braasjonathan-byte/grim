@@ -69,7 +69,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("kommentar", "Hejarklacken", "commentsGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " kommentarer", "💬"),
   ...makeAchievements("tonpass", "Tonklubben", "bestSessionTons", [5, 10, 15, 20, 30, 50], "-tons pass", "💥"),
   ...makeAchievements("streak", "Streak", "currentStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "⚡"),
-  ...makeAchievements("langsta-streak", "Längsta streak", "longestStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "🏆"),
+  ...makeStreakDayAchievements(),
 ];
 
 export const getAchievementById = (id: string) => ACHIEVEMENTS.find((a) => a.id === id);
