@@ -233,24 +233,28 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const goal = weekPlanned > 0 ? weekPlanned : 3;
   const progressPct = goal > 0 ? Math.min(100, Math.round((weekCompleted / goal) * 100)) : 0;
 
+  const planStartMonday = useMemo(() => {
+    if (planStartDate) {
+      const start = parseDateKey(planStartDate);
+      if (start) return getMondayUtc(start);
+    }
+    const created = plans
+      .filter((p) => p.week > 0 && p.created_at)
+      .map((p) => new Date(p.created_at as string).getTime())
+      .filter((t) => !Number.isNaN(t));
+    if (created.length > 0) return getMondayUtc(new Date(Math.min(...created)));
+    return null;
+  }, [plans, planStartDate]);
+
   const streak = useMemo(() => {
     const dateSet = new Set<string>(archivedDates);
     for (const c of completions) {
       if (!c.done) continue;
-      const ts = (c as any).updated_at;
-      const d = ts ? new Date(ts) : null;
-      if (d && !Number.isNaN(d.getTime())) dateSet.add(toLocalDateKey(d));
+      const key = completionTrainingDate(c, planStartMonday);
+      if (key) dateSet.add(key);
     }
-    if (dateSet.size === 0) return 0;
-    const cursor = new Date();
-    if (!dateSet.has(toLocalDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
-    let count = 0;
-    while (dateSet.has(toLocalDateKey(cursor)) && count < 2000) {
-      count += 1;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-    return count;
-  }, [completions, archivedDates]);
+    return currentStreakFromDates(dateSet);
+  }, [completions, archivedDates, planStartMonday]);
 
   const achievementDef = latestAchievement ? getAchievementById(latestAchievement.id) : undefined;
 
