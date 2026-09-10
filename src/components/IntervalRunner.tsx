@@ -919,7 +919,14 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 {(unit === "distance_km" || unit === "distance_m") && (
                   <div>
                     <Label className="text-xs">{profile.paceLabel} ({profile.paceUnit})</Label>
-                    <Input type="text" inputMode="numeric" pattern="[0-9:]*" value={tempo} onChange={(e) => setTempo(sanitizePaceInput(e.target.value))} placeholder="4:30" />
+                    <Input
+                      type="text"
+                      inputMode={profile.paceUnit.startsWith("/") ? "numeric" : "decimal"}
+                      pattern={profile.paceUnit.startsWith("/") ? "[0-9:]*" : "[0-9.,]*"}
+                      value={tempo}
+                      onChange={(e) => setTempo(sanitizePaceInput(e.target.value, profile.paceUnit.startsWith("/")))}
+                      placeholder={profile.paceUnit.startsWith("/") ? "4:30" : "32.5"}
+                    />
                   </div>
                 )}
                 <div>
