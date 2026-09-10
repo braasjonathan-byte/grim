@@ -87,6 +87,32 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const [latestAchievement, setLatestAchievement] = useState<{ id: string; unlocked_at: string } | null>(null);
   const [achievementCount, setAchievementCount] = useState(0);
   const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
+  const [archivedDates, setArchivedDates] = useState<string[]>([]);
+
+  // Träningsdatum från arkiverade planer räknas också in i streaken.
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("archived_plans")
+      .select("completion_data, archived_at")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const dates: string[] = [];
+        for (const row of (data || []) as any[]) {
+          const cd = row?.completion_data;
+          const list: any[] = Array.isArray(cd) ? cd : cd && typeof cd === "object" ? Object.values(cd) : [];
+          for (const c of list) {
+            if (!c?.done) continue;
+            const ts = c.updated_at || row.archived_at;
+            const d = ts ? new Date(ts) : null;
+            if (d && !Number.isNaN(d.getTime())) dates.push(toLocalDateKey(d));
+          }
+        }
+        setArchivedDates(dates);
+      });
+    return () => { cancelled = true; };
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,10 +233,24 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const goal = weekPlanned > 0 ? weekPlanned : 3;
   const progressPct = goal > 0 ? Math.min(100, Math.round((weekCompleted / goal) * 100)) : 0;
 
-  const streak = useMemo(
-    () => calculateAchievementMetrics(completions as never[]).currentStreak,
-    [completions],
-  );
+  const streak = useMemo(() => {
+    const dateSet = new Set<string>(archivedDates);
+    for (const c of completions) {
+      if (!c.done) continue;
+      const ts = (c as any).updated_at;
+      const d = ts ? new Date(ts) : null;
+      if (d && !Number.isNaN(d.getTime())) dateSet.add(toLocalDateKey(d));
+    }
+    if (dateSet.size === 0) return 0;
+    const cursor = new Date();
+    if (!dateSet.has(toLocalDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+    let count = 0;
+    while (dateSet.has(toLocalDateKey(cursor)) && count < 2000) {
+      count += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return count;
+  }, [completions, archivedDates]);
 
   const achievementDef = latestAchievement ? getAchievementById(latestAchievement.id) : undefined;
 
