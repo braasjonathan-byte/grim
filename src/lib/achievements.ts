@@ -59,6 +59,28 @@ const makeAchievements = (
   emoji,
 }));
 
+const streakDayDifficulty = (day: number): AchievementDifficulty => {
+  if (day < 7) return "brons";
+  if (day < 30) return "silver";
+  if (day < 100) return "guld";
+  return "legend";
+};
+
+// Ett nytt achievement för varje dag streaken fortsätter (1-365 dagar).
+const makeStreakDayAchievements = (): AchievementDefinition[] =>
+  Array.from({ length: 365 }, (_, i) => {
+    const day = i + 1;
+    return {
+      id: `langsta-streak-${day}`,
+      title: `Längsta streak ${day} ${day === 1 ? "dag" : "dagar"} i rad`,
+      description: `Träna ${day} ${day === 1 ? "dag" : "dagar"} i rad.`,
+      metric: "longestStreak" as keyof AchievementMetrics,
+      threshold: day,
+      difficulty: streakDayDifficulty(day),
+      emoji: "🏆",
+    };
+  });
+
 export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("pass", "Passjägare", "workouts", [1, 3, 5, 10, 15, 25, 35, 50, 75, 100, 150, 200, 300, 400, 500, 650, 800, 1000, 1250, 1500], " pass", "✅"),
   ...makeAchievements("reps", "Repmaskin", "reps", [50, 100, 250, 500, 750, 1000, 1500, 2500, 4000, 6000, 8000, 10000, 15000, 20000, 30000, 40000, 50000, 75000, 100000, 150000], " reps", "🔁"),
@@ -69,7 +91,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("kommentar", "Hejarklacken", "commentsGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " kommentarer", "💬"),
   ...makeAchievements("tonpass", "Tonklubben", "bestSessionTons", [5, 10, 15, 20, 30, 50], "-tons pass", "💥"),
   ...makeAchievements("streak", "Streak", "currentStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "⚡"),
-  ...makeAchievements("langsta-streak", "Längsta streak", "longestStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "🏆"),
+  ...makeStreakDayAchievements(),
 ];
 
 export const getAchievementById = (id: string) => ACHIEVEMENTS.find((a) => a.id === id);
