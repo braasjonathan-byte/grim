@@ -65,7 +65,7 @@ const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Achievements"
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-[60] bg-background flex flex-col">
       <div
         className="flex items-center gap-2 border-b border-border px-3 py-3"
         style={{ paddingTop: "calc(var(--grim-header-safe-top, 0px) + 0.75rem)" }}
