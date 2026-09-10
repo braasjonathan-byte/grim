@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import { isCompletedWorkout } from "@/lib/completionCounting";
+import { longestStreakFromDates } from "@/lib/streak";
 
 export type AchievementDifficulty = "brons" | "silver" | "guld" | "legend";
 
@@ -31,6 +32,7 @@ export interface AchievementMetrics {
   commentsGiven: number;
   bestSessionTons: number;
   currentStreak: number;
+  longestStreak: number;
 }
 
 const difficultyForIndex = (index: number): AchievementDifficulty => {
@@ -67,6 +69,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   ...makeAchievements("kommentar", "Hejarklacken", "commentsGiven", [1, 5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000, 30000], " kommentarer", "💬"),
   ...makeAchievements("tonpass", "Tonklubben", "bestSessionTons", [5, 10, 15, 20, 30, 50], "-tons pass", "💥"),
   ...makeAchievements("streak", "Streak", "currentStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "⚡"),
+  ...makeAchievements("langsta-streak", "Längsta streak", "longestStreak", [3, 7, 14, 30, 60, 100, 200, 365], " dagar i rad", "🏆"),
 ];
 
 export const getAchievementById = (id: string) => ACHIEVEMENTS.find((a) => a.id === id);
@@ -148,6 +151,8 @@ export const calculateAchievementMetrics = (
     }
   }
 
+  const longestStreak = longestStreakFromDates(dateSet);
+
   return {
     workouts,
     reps,
@@ -158,6 +163,7 @@ export const calculateAchievementMetrics = (
     commentsGiven: interaction.commentsGiven ?? 0,
     bestSessionTons: Math.floor(bestSessionTons),
     currentStreak,
+    longestStreak,
   };
 };
 
@@ -172,7 +178,7 @@ export const checkInteractionAchievements = async (userId: string) => {
       supabase.from("social_post_comments").select("id", { count: "exact", head: true }).eq("user_id", userId),
     ]);
     const earned = getEarnedAchievements({
-      workouts: 0, reps: 0, tons: 0, distanceKm: 0, challenges: 0,
+      workouts: 0, reps: 0, tons: 0, distanceKm: 0, challenges: 0, longestStreak: 0,
       firesGiven: firesGiven || 0,
       commentsGiven: commentsGiven || 0,
       bestSessionTons: 0,
