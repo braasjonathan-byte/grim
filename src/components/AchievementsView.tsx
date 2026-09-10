@@ -65,7 +65,7 @@ const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Achievements"
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-[60] bg-background flex flex-col">
       <div
         className="flex items-center gap-2 border-b border-border px-3 py-3"
         style={{ paddingTop: "calc(var(--grim-header-safe-top, 0px) + 0.75rem)" }}
@@ -154,7 +154,7 @@ const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Achievements"
       </div>
 
       {selected && (
-        <div className="fixed inset-0 z-50 bg-background/80 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 z-[70] bg-background/80 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
           <div className="w-full max-w-sm border border-border bg-card p-4 space-y-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-3">
               <span className={`text-3xl leading-none ${unlockedSet.has(selected.id) ? "" : "grayscale opacity-40"}`}>{selected.emoji}</span>
