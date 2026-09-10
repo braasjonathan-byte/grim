@@ -87,6 +87,32 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const [latestAchievement, setLatestAchievement] = useState<{ id: string; unlocked_at: string } | null>(null);
   const [achievementCount, setAchievementCount] = useState(0);
   const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
+  const [archivedDates, setArchivedDates] = useState<string[]>([]);
+
+  // Träningsdatum från arkiverade planer räknas också in i streaken.
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("archived_plans")
+      .select("completion_data, archived_at")
+      .eq("user_id", userId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        const dates: string[] = [];
+        for (const row of (data || []) as any[]) {
+          const cd = row?.completion_data;
+          const list: any[] = Array.isArray(cd) ? cd : cd && typeof cd === "object" ? Object.values(cd) : [];
+          for (const c of list) {
+            if (!c?.done) continue;
+            const ts = c.updated_at || row.archived_at;
+            const d = ts ? new Date(ts) : null;
+            if (d && !Number.isNaN(d.getTime())) dates.push(toLocalDateKey(d));
+          }
+        }
+        setArchivedDates(dates);
+      });
+    return () => { cancelled = true; };
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
