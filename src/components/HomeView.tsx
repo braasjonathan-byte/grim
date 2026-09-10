@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { toLocalDateKey } from "@/lib/dateUtils";
+import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
