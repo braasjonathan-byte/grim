@@ -1,11 +1,41 @@
 import { lazyRetry } from "@/lib/lazyRetry";
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import { ChevronRight, ChevronLeft, GripVertical, Pencil, Save, X, Loader2, Check, LogOut, SlidersHorizontal, Wrench, RefreshCw, Trash2, Route as RouteIcon, FileUp } from "lucide-react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  Loader2,
+  LogOut,
+  SlidersHorizontal,
+  Wrench,
+  RefreshCw,
+  Trash2,
+  Route as RouteIcon,
+  FileUp,
+  Search,
+  Users,
+  Dumbbell,
+  Apple,
+  Weight,
+  Calendar,
+  Repeat,
+  BookOpen,
+  Sparkles,
+  Heart,
+  UserCog,
+  Share2,
+  MessageSquare,
+  ShieldCheck,
+  ListChecks,
+  Image as ImageIcon,
+  X,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { updateApp } from "@/lib/appUpdate";
 import { APP_VERSION } from "@/lib/version";
-import { supabase } from "@/integrations/supabase/client";
 import HonoraryBadge from "@/components/HonoraryBadge";
+import { helpCategories } from "@/data/helpTopics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,26 +51,26 @@ import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
 import { toast } from "sonner";
 import { parseActivityFile } from "@/lib/activityFileParser";
 import { emitSharedActivity } from "@/lib/sharedActivityBus";
+
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
 const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
 const AdminUserList = lazyRetry(() => import("@/components/AdminUserList"));
 const ExerciseGifManager = lazyRetry(() => import("@/components/ExerciseGifManager"));
 const AdminCompletionsList = lazyRetry(() => import("@/components/AdminCompletionsList"));
 const RouteBuilderDialog = lazyRetry(() => import("@/components/RouteBuilderDialog"));
-
 const ReadyWorkoutManager = lazyRetry(() => import("@/components/ReadyWorkoutManager"));
-const TriathlonView = lazyRetry(() => import("@/components/TriathlonView"));
 const SettingsPanel = lazyRetry(() => import("@/components/SettingsPanel"));
 const NotificationSettings = lazyRetry(() => import("@/components/NotificationSettings"));
 const ReferralLink = lazyRetry(() => import("@/components/ReferralLink"));
+const SuggestionBox = lazyRetry(() => import("@/components/SuggestionBox"));
 const EventCountdown = lazyRetry(() => import("@/components/EventCountdown"));
 const WorkoutTimer = lazyRetry(() => import("@/components/WorkoutTimer"));
 const RestTimerSettings = lazyRetry(() => import("@/components/RestTimerSettings"));
 const OneRMCalculator = lazyRetry(() => import("@/components/OneRMCalculator"));
 const PulseZoneCalculator = lazyRetry(() => import("@/components/PulseZoneCalculator"));
 const CalorieCalculator = lazyRetry(() => import("@/components/CalorieCalculator"));
-const HelpSection = lazyRetry(() => import("@/components/HelpSection"));
 const DisclaimerSection = lazyRetry(() => import("@/components/DisclaimerSection"));
+const GuidedTourCard = lazyRetry(() => import("@/components/GuidedTourCard"));
 
 interface ToolsTabProps {
   userId: string;
@@ -52,29 +82,89 @@ interface ToolsTabProps {
   onStartPlan?: () => void;
 }
 
-interface SectionDef {
-  key: string;
-  label: string;
-  adminOnly?: boolean;
-  render: () => React.ReactNode;
+interface ToolItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: LucideIcon;
+  keywords?: string;
+  /** Direkt åtgärd (öppnar undervy/dialog) */
+  onSelect?: () => void;
+  /** Innehåll som fälls ut inne i kortet */
+  content?: () => React.ReactNode;
+  featured?: boolean;
 }
 
+interface ToolGroup {
+  id: string;
+  title: string;
+  items: ToolItem[];
+}
+
+const STORAGE_KEY = "grim:tools-collapsed-groups";
+
+const normalize = (s: string) =>
+  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const topic = (title: string) => helpCategories.find((c) => c.title === title);
+
+const topicItem = (
+  title: string,
+  subtitle: string,
+  icon: LucideIcon,
+  id?: string
+): ToolItem => {
+  const cat = topic(title);
+  return {
+    id: id ?? `topic-${normalize(title).replace(/\s+/g, "-")}`,
+    title,
+    subtitle,
+    icon,
+    keywords: cat?.tips.join(" "),
+    content: () => (
+      <ul className="space-y-2">
+        {(cat?.tips ?? []).map((tip, i) => (
+          <li key={i} className="flex gap-2 text-xs text-muted-foreground leading-relaxed">
+            <span className="text-primary mt-0.5 flex-shrink-0">•</span>
+            <span>{tip}</span>
+          </li>
+        ))}
+      </ul>
+    ),
+  };
+};
+
 const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
-  const [editMode, setEditMode] = useState(false);
-  const [savedOrder, setSavedOrder] = useState<string[] | null>(null);
-  const [localOrder, setLocalOrder] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [confirmDelete1, setConfirmDelete1] = useState(false);
   const [confirmDelete2, setConfirmDelete2] = useState(false);
   const navigate = useNavigate();
   const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
   const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [openItem, setOpenItem] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return new Set<string>(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
   const activityFileInputRef = useRef<HTMLInputElement>(null);
-  const dragItem = useRef<string | null>(null);
-  const dragOverItem = useRef<string | null>(null);
-  const autoScrollRef = useRef<number | null>(null);
+
+  const toggleGroup = (id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   // Tour navigation – open the relevant subpage when requested
   useEffect(() => {
@@ -93,255 +183,243 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     return () => window.removeEventListener("grim:tools-expand", handler);
   }, []);
 
-  // Reset scroll when entering/leaving a subpage
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [subView]);
 
-  const helperToolKeys = new Set(["events", "timer", "1rm", "pulse", "calories"]);
-  const settingsToolKeys = new Set(["profile", "settings", "notifications"]);
+  const groups: ToolGroup[] = useMemo(() => {
+    const list: ToolGroup[] = [
+      {
+        id: "start",
+        title: "Kom igång",
+        items: [
+          {
+            id: "tour",
+            title: "Rundtur",
+            subtitle: "Guidad genomgång av appens funktioner",
+            icon: Sparkles,
+            keywords: "tour guide hjälp introduktion",
+            content: () => <GuidedTourCard />,
+          },
+        ],
+      },
+      {
+        id: "training",
+        title: "Träningsinnehåll",
+        items: [
+          topicItem("Träningsplan", "Veckor, pass och klarmarkering", Dumbbell),
+          topicItem("Övningar & loggning", "Set, reps, vikt och kondition", ListChecks),
+          {
+            id: "route-builder",
+            title: "Skapa runda",
+            subtitle: "Slingförslag på riktiga vägar och stigar",
+            icon: RouteIcon,
+            keywords: "rutt löprunda cykel karta navigering",
+            featured: true,
+            onSelect: () => setRouteBuilderOpen(true),
+          },
+          {
+            id: "file-import",
+            title: "Importera pass från fil",
+            subtitle: "GPX, TCX eller FIT från Garmin, Strava eller Zwift",
+            icon: FileUp,
+            keywords: "import garmin strava zwift fil",
+            onSelect: () => activityFileInputRef.current?.click(),
+          },
+          topicItem("Kroppsviktsövningar", "Chins, dips och extra vikt", Weight),
+          topicItem("Enskilda pass", "Fristående pass utanför planen", Calendar),
+          topicItem("Färdiga pass", "Hämta och spara favoritpass", Dumbbell, "topic-fardiga-pass"),
+          topicItem("Cirkelträning", "Rundor, tider och cirkeltimer", Repeat),
+          topicItem("Övningsbiblioteket", "Sök övningar och instruktioner", BookOpen),
+        ],
+      },
+      {
+        id: "nutrition",
+        title: "Kost",
+        items: [topicItem("Kost & måltider", "Kalorier, makron och recept", Apple)],
+      },
+      {
+        id: "helpers",
+        title: "Hjälpmedel",
+        items: [
+          {
+            id: "helpers-page",
+            title: "Hjälpmedel",
+            subtitle: "Timer, kalkylatorer och nedräkning",
+            icon: Wrench,
+            keywords: "1rm puls kalorier timer event nedräkning",
+            featured: true,
+            onSelect: () => setSubView("helpers"),
+          },
+          topicItem("Verktyg", "Så fungerar kalkylatorerna", Sparkles, "topic-verktyg"),
+          topicItem("Event & nedräkning", "Tävlingar, lopp och eventgrupper", Calendar, "topic-event"),
+        ],
+      },
+      {
+        id: "account",
+        title: "Konto",
+        items: [
+          {
+            id: "settings-page",
+            title: "Inställningar",
+            subtitle: "Profil, tema och notiser",
+            icon: SlidersHorizontal,
+            keywords: "profil tema notiser lösenord kroppsvikt",
+            featured: true,
+            onSelect: () => setSubView("settings"),
+          },
+          {
+            id: "supporter",
+            title: "Hantera medlemskap",
+            subtitle: "Stöd appen och se din prenumeration",
+            icon: Heart,
+            keywords: "supporter prenumeration betalning stripe",
+            content: () => <SupporterButton userId={userId} />,
+          },
+          topicItem("Inställningar & profil", "Tips om profil och inställningar", UserCog),
+        ],
+      },
+      {
+        id: "community",
+        title: "Community",
+        items: [
+          {
+            id: "referral",
+            title: "Bjud in en vän",
+            subtitle: "Din personliga länk och QR-kod",
+            icon: Share2,
+            keywords: "inbjudan referral qr länk",
+            content: () => <ReferralLink userId={userId} />,
+          },
+          {
+            id: "suggestions",
+            title: "Förslagslåda",
+            subtitle: "Skicka idéer och feedback till oss",
+            icon: MessageSquare,
+            keywords: "feedback förslag idé buggar",
+            content: () => <SuggestionBox userId={userId} />,
+          },
+          topicItem("Vänner & socialt", "Vänförfrågningar, delning och peppning", Users),
+          topicItem("Chatt", "Meddelanden och delade pass", MessageSquare, "topic-chatt"),
+          topicItem("Leaderboard & utmaningar", "Topplistor och dagliga utmaningar", Sparkles, "topic-leaderboard"),
+          topicItem("Statistik & PR", "Muskelkarta, personbästa och mål", ListChecks, "topic-statistik"),
+        ],
+      },
+    ];
 
-  const allSections: SectionDef[] = [
-    { key: "supporter", label: "Supporter", render: () => <SupporterButton userId={userId} /> },
-    { key: "role-badge", label: "Roll", render: () => (
-      <div className="flex items-center gap-2">
-        {userRole === "admin" ? (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
-        ) : isHonorary ? (
-          <HonoraryBadge size="md" />
-        ) : (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">👤 Medlem</span>
-        )}
-      </div>
-    )},
-    { key: "admin-users", label: "Användarlista", adminOnly: true, render: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} /> },
-    { key: "admin-exercises", label: "Övningsbibliotek", adminOnly: true, render: () => <ExerciseGifManager /> },
-    
-    { key: "admin-workout-types", label: "Passtyper", adminOnly: true, render: () => <ReadyWorkoutManager /> },
-    { key: "admin-completions", label: "Senaste klarmarkerade", adminOnly: true, render: () => <AdminCompletionsList /> },
-    { key: "settings-group", label: "Inställningar", render: () => (
-      <button
-        type="button"
-        data-tour="tools-profile"
-        onClick={() => setSubView("settings")}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
-      >
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <SlidersHorizontal className="h-4 w-4" />
-          </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-bold text-foreground">Inställningar</span>
-            <span className="block truncate text-xs text-muted-foreground">Profil, tema och notiser</span>
-          </span>
-        </span>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </button>
-    )},
-    { key: "helpers", label: "Hjälpmedel", render: () => (
-      <button
-        type="button"
-        data-tour="tools-helpers"
-        onClick={() => setSubView("helpers")}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
-      >
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Wrench className="h-4 w-4" />
-          </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-bold text-foreground">Hjälpmedel</span>
-            <span className="block truncate text-xs text-muted-foreground">Timer, kalkylatorer och nedräkning</span>
-          </span>
-        </span>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </button>
-    )},
-    { key: "file-import", label: "Importera pass från fil", render: () => (
-      <>
-        <input
-          ref={activityFileInputRef}
-          type="file"
-          accept=".gpx,.tcx,.fit,application/gpx+xml,application/vnd.garmin.tcx+xml,application/octet-stream"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (!file) return;
-            try {
-              emitSharedActivity(await parseActivityFile(file));
-            } catch (err) {
-              toast.error(err instanceof Error ? err.message : "Kunde inte läsa filen");
-            }
-          }}
-        />
+    if (isAdmin) {
+      list.push({
+        id: "admin",
+        title: "Admin",
+        items: [
+          {
+            id: "admin-users",
+            title: "Alla användare",
+            subtitle: "Sök medlemmar och visa deras planer",
+            icon: Users,
+            keywords: "användare medlemmar admin",
+            content: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} />,
+          },
+          {
+            id: "admin-exercises",
+            title: "Övningsbibliotek",
+            subtitle: "Redigera övningar, GIF:ar och kategorier",
+            icon: ImageIcon,
+            keywords: "övningar gif bibliotek admin",
+            content: () => <ExerciseGifManager />,
+          },
+          {
+            id: "admin-workout-types",
+            title: "Passtyper",
+            subtitle: "Hantera färdiga pass",
+            icon: Dumbbell,
+            keywords: "passtyper färdiga pass admin",
+            content: () => <ReadyWorkoutManager />,
+          },
+          {
+            id: "admin-completions",
+            title: "Senaste klarmarkerade",
+            subtitle: "De senaste registrerade passen",
+            icon: ShieldCheck,
+            keywords: "klarmarkerade pass logg admin",
+            content: () => <AdminCompletionsList />,
+          },
+        ],
+      });
+    }
+
+    return list;
+  }, [isAdmin, userId, onViewUserPlan]);
+
+  const q = normalize(query.trim());
+  const matches = (item: ToolItem) =>
+    !q ||
+    normalize(item.title).includes(q) ||
+    normalize(item.subtitle).includes(q) ||
+    normalize(item.keywords ?? "").includes(q);
+
+  const searchResults = useMemo(() => {
+    if (!q) return [];
+    return groups.flatMap((g) => g.items.filter(matches).map((item) => ({ group: g.title, item })));
+  }, [q, groups]);
+
+  const renderCard = (item: ToolItem, groupLabel?: string) => {
+    const Icon = item.icon;
+    const expanded = openItem === item.id;
+    return (
+      <div key={item.id} className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden">
         <button
           type="button"
-          onClick={() => activityFileInputRef.current?.click()}
-          className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
+          data-tour={
+            item.id === "settings-page" ? "tools-profile" : item.id === "helpers-page" ? "tools-helpers" : undefined
+          }
+          onClick={() => (item.onSelect ? item.onSelect() : setOpenItem(expanded ? null : item.id))}
+          className="w-full flex items-center justify-between gap-3 p-4 text-left hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
         >
           <span className="flex min-w-0 items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <FileUp className="h-4 w-4" />
+            <span
+              className={`flex shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary ${
+                item.featured ? "h-11 w-11" : "h-9 w-9"
+              }`}
+            >
+              <Icon className={item.featured ? "h-5 w-5" : "h-4 w-4"} />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-bold text-foreground">Importera pass från fil</span>
-              <span className="block truncate text-xs text-muted-foreground">GPX, TCX eller FIT från Garmin, Strava eller Zwift</span>
+              {groupLabel && (
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {groupLabel}
+                </span>
+              )}
+              <span className={`block font-bold text-foreground ${item.featured ? "text-base" : "text-sm"}`}>
+                {item.title}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">{item.subtitle}</span>
             </span>
           </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          {item.onSelect ? (
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
+            />
+          )}
         </button>
-      </>
-    )},
-    { key: "route-builder", label: "Skapa runda", render: () => (
-      <button
-        type="button"
-        onClick={() => setRouteBuilderOpen(true)}
-        className="w-full flex items-center justify-between gap-3 p-4 text-left rounded-2xl bg-card shadow-soft border border-border/40 hover:bg-muted/40 active:bg-muted/60 active:scale-[0.99] transition-all"
-      >
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <RouteIcon className="h-4 w-4" />
-          </span>
-          <span className="min-w-0">
-            <span className="block text-sm font-bold text-foreground">Skapa runda</span>
-            <span className="block truncate text-xs text-muted-foreground">Slingförslag på riktiga vägar och stigar</span>
-          </span>
-        </span>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </button>
-    )},
-    
-
-    { key: "help", label: "Hjälp", render: () => <HelpSection /> },
-  ];
-
-  const hiddenSectionKeys = new Set(["role-badge"]);
-  const defaultOrder = allSections.map(s => s.key).filter(key => !hiddenSectionKeys.has(key));
-
-  // Fetch global layout
-  useEffect(() => {
-    supabase
-      .from("tool_layout" as any)
-      .select("section_order")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        if (data?.section_order && Array.isArray(data.section_order) && data.section_order.length > 0) {
-          setSavedOrder(data.section_order);
-        } else {
-          setSavedOrder(defaultOrder);
-        }
-      });
-  }, []);
-
-  // Compute ordered sections
-  const getOrderedSections = useCallback(() => {
-    const order = editMode ? localOrder : (savedOrder || defaultOrder);
-    // Filter admin-only for non-admins
-    const available = allSections.filter(s => !s.adminOnly || isAdmin);
-    const unpinnedAvailable = available.filter(s => !hiddenSectionKeys.has(s.key));
-    const availableKeys = new Set(unpinnedAvailable.map(s => s.key));
-    
-    // Order by saved order, then append any new sections not in saved order
-    const ordered: SectionDef[] = [];
-    for (const key of order) {
-      const normalizedKey = helperToolKeys.has(key) ? "helpers" : settingsToolKeys.has(key) ? "settings-group" : key;
-      if (ordered.find(s => s.key === normalizedKey)) continue;
-      if (!availableKeys.has(normalizedKey)) continue;
-      const section = unpinnedAvailable.find(s => s.key === normalizedKey);
-      if (section) ordered.push(section);
-    }
-    // Append any missing sections
-    for (const s of unpinnedAvailable) {
-      if (!ordered.find(o => o.key === s.key)) ordered.push(s);
-    }
-    return ordered;
-  }, [editMode, localOrder, savedOrder, isAdmin, userId, userRole, isHonorary]);
-
-  const handleStartEdit = () => {
-    const current = savedOrder || defaultOrder;
-    setLocalOrder([...current]);
-    setEditMode(true);
+        {expanded && item.content && (
+          <div className="px-4 pb-4">
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                </div>
+              }
+            >
+              {item.content()}
+            </Suspense>
+          </div>
+        )}
+      </div>
+    );
   };
-
-  const handleDragStart = (key: string) => {
-    dragItem.current = key;
-  };
-
-  const handleDragEnter = (key: string) => {
-    dragOverItem.current = key;
-  };
-
-  const stopAutoScroll = () => {
-    if (autoScrollRef.current !== null) {
-      cancelAnimationFrame(autoScrollRef.current);
-      autoScrollRef.current = null;
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    const threshold = 80;
-    const speed = 8;
-    const y = e.clientY;
-    const vh = window.innerHeight;
-
-    stopAutoScroll();
-
-    const scroll = () => {
-      if (y < threshold) {
-        window.scrollBy(0, -speed);
-      } else if (y > vh - threshold) {
-        window.scrollBy(0, speed);
-      } else {
-        return;
-      }
-      autoScrollRef.current = requestAnimationFrame(scroll);
-    };
-
-    if (y < threshold || y > vh - threshold) {
-      autoScrollRef.current = requestAnimationFrame(scroll);
-    }
-  };
-
-  const handleDragEnd = () => {
-    stopAutoScroll();
-    if (dragItem.current === null || dragOverItem.current === null) return;
-    const newOrder = [...localOrder];
-    const draggedIndex = newOrder.indexOf(dragItem.current);
-    const targetIndex = newOrder.indexOf(dragOverItem.current);
-    if (draggedIndex === -1 || targetIndex === -1) return;
-    const draggedItem = newOrder.splice(draggedIndex, 1)[0];
-    newOrder.splice(targetIndex, 0, draggedItem);
-    setLocalOrder(newOrder);
-    dragItem.current = null;
-    dragOverItem.current = null;
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    // Update the single row
-    const { data: existing } = await supabase
-      .from("tool_layout" as any)
-      .select("id")
-      .limit(1)
-      .maybeSingle();
-
-    if (existing) {
-      await supabase
-        .from("tool_layout" as any)
-        .update({ section_order: localOrder, updated_at: new Date().toISOString(), updated_by: userId } as any)
-        .eq("id", (existing as any).id);
-    }
-    
-    setSavedOrder(localOrder);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => { setSaved(false); setEditMode(false); }, 1200);
-  };
-
-  const orderedSections = getOrderedSections();
 
   if (subView !== "home") {
     const title = subView === "settings" ? "Inställningar" : "Hjälpmedel";
@@ -381,8 +459,9 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   }
 
   return (
-    <div className="py-2 space-y-4">
+    <div className="py-2 space-y-5">
       <h2 className="sr-only">Verktyg och inställningar</h2>
+
       <div className="flex items-center gap-2">
         {userRole === "admin" ? (
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-primary">👑 Admin</span>
@@ -395,76 +474,87 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
 
       <ProfileCompletenessBanner userId={userId} />
 
+      {/* Sök */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Sök verktyg och inställningar"
+          className="w-full rounded-2xl bg-card border border-border/40 shadow-soft py-3 pl-10 pr-10 text-sm outline-none focus:border-primary/50"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Rensa sökning"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      <input
+        ref={activityFileInputRef}
+        type="file"
+        accept=".gpx,.tcx,.fit,application/gpx+xml,application/vnd.garmin.tcx+xml,application/octet-stream"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          try {
+            emitSharedActivity(await parseActivityFile(file));
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Kunde inte läsa filen");
+          }
+        }}
+      />
+
       {routeBuilderOpen && (
         <Suspense fallback={null}>
           <RouteBuilderDialog open={routeBuilderOpen} onOpenChange={setRouteBuilderOpen} />
         </Suspense>
       )}
 
-      <Suspense fallback={null}>
-        <ReferralLink userId={userId} />
-      </Suspense>
-
-      {/* Admin edit mode toggle */}
-      {isAdmin && !editMode && (
-        <button
-          onClick={handleStartEdit}
-          className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary bg-primary/10 rounded-full shadow-soft active:scale-[0.97] hover:bg-primary/20 transition-colors"
-        >
-          <Pencil className="w-4 h-4" />
-          Redigera ordning
-        </button>
-      )}
-
-      {editMode && (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-primary-foreground bg-primary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <><Check className="w-4 h-4" /> Sparat!</> : <><Save className="w-4 h-4" /> Spara för alla</>}
-          </button>
-          <button
-            onClick={() => setEditMode(false)}
-            className="py-2 px-4 text-sm font-semibold text-muted-foreground bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:bg-secondary/80 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+      {q ? (
+        <div className="space-y-2">
+          {searchResults.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Inget verktyg matchar "{query}".</p>
+          ) : (
+            searchResults.map(({ group, item }) => renderCard(item, group))
+          )}
         </div>
+      ) : (
+        groups.map((group) => {
+          const isCollapsed = collapsed.has(group.id);
+          return (
+            <section key={group.id} className="space-y-2">
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.id)}
+                className="w-full flex items-center justify-between gap-2 px-1 py-1"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-sm font-bold uppercase tracking-wider text-foreground">{group.title}</span>
+                  <span className="text-[10px] text-muted-foreground bg-secondary rounded-full px-1.5 py-0.5">
+                    {group.items.length}
+                  </span>
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                />
+              </button>
+              {!isCollapsed && <div className="space-y-2">{group.items.map((item) => renderCard(item))}</div>}
+            </section>
+          );
+        })
       )}
-
-      {editMode && (
-        <p className="text-xs text-muted-foreground text-center">
-          Dra och släpp för att ändra ordning. Sparar för alla användare.
-        </p>
-      )}
-
-      <Suspense fallback={null}>
-        {orderedSections.map((section) => (
-          <div
-            key={section.key}
-            draggable={editMode}
-            onDragStart={() => handleDragStart(section.key)}
-            onDragEnter={() => handleDragEnter(section.key)}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-            className={editMode ? "relative cursor-grab active:cursor-grabbing" : ""}
-          >
-            {editMode && (
-              <div className="absolute -left-1 top-1/2 -translate-y-1/2 z-10 p-1 text-muted-foreground">
-                <GripVertical className="w-4 h-4" />
-              </div>
-            )}
-            <div className={editMode ? "ml-5 border border-dashed border-border rounded-lg p-1" : ""}>
-              {section.render()}
-            </div>
-          </div>
-        ))}
-      </Suspense>
 
       {onLogout && (
-        <>
+        <div className="space-y-2 pt-2">
           <button
             onClick={() => setConfirmDelete1(true)}
             className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
@@ -479,7 +569,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             <LogOut className="w-4 h-4" />
             Logga ut
           </button>
-        </>
+        </div>
       )}
 
       <AlertDialog open={confirmDelete1} onOpenChange={setConfirmDelete1}>
