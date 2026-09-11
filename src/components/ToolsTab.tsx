@@ -297,7 +297,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             subtitle: "Skicka idéer och feedback till oss",
             icon: MessageSquare,
             keywords: "feedback förslag idé buggar",
-            content: () => <SuggestionBox userId={userId} />,
+            content: () => <SuggestionBox userId={userId} isAdmin={isAdmin} />,
           },
           topicItem("Vänner & socialt", "Vänförfrågningar, delning och peppning", Users),
           topicItem("Chatt", "Meddelanden och delade pass", MessageSquare, "topic-chatt"),
