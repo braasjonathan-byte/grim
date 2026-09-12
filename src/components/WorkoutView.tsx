@@ -6871,13 +6871,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             <div key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); toggleConditioningDone(plan.week, plan.day, condName || part); }}
-                                    className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center transition-all ${isConditioningDone(key, condName || part) ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`}
-                                    title="Klarmarkera"
-                                  >
-                                    {isConditioningDone(key, condName || part) ? <Check className="w-4 h-4" /> : null}
-                                  </button>
+                                  {/intervall/i.test(condName || part) && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); toggleConditioningDone(plan.week, plan.day, condName || part); }}
+                                      className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center transition-all ${isConditioningDone(key, condName || part) ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`}
+                                      title="Klarmarkera"
+                                    >
+                                      {isConditioningDone(key, condName || part) ? <Check className="w-4 h-4" /> : null}
+                                    </button>
+                                  )}
                                   <span className="font-semibold text-sm text-foreground flex items-center gap-1.5 min-w-0">
                                     <Footprints className="w-3.5 h-3.5 text-primary shrink-0" />
                                     <span className="truncate">{toTitleCase(condName || part)}</span>
