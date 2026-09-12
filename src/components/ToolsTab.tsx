@@ -127,9 +127,6 @@ const topicItem = (
 
 const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
   const [confirmLogout, setConfirmLogout] = useState(false);
-  const [confirmDelete1, setConfirmDelete1] = useState(false);
-  const [confirmDelete2, setConfirmDelete2] = useState(false);
-  const navigate = useNavigate();
   const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
   const [query, setQuery] = useState("");
   const [openItem, setOpenItem] = useState<string | null>(null);
