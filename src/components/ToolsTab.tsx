@@ -253,11 +253,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         ],
       },
       {
-        id: "nutrition",
-        title: "Kost",
-        items: [topicItem("Kost & måltider", "Kalorier, makron och recept", Apple)],
-      },
-      {
         id: "helpers",
         title: "Hjälpmedel",
         items: [
