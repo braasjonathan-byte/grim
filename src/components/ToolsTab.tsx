@@ -654,13 +654,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       {onLogout && (
         <div className="space-y-2 pt-2">
           <button
-            onClick={() => setConfirmDelete1(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
-          >
-            <Trash2 className="w-4 h-4" />
-            Radera konto
-          </button>
-          <button
             onClick={() => setConfirmLogout(true)}
             className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold text-destructive bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
           >
@@ -669,46 +662,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           </button>
         </div>
       )}
-
-      <AlertDialog open={confirmDelete1} onOpenChange={setConfirmDelete1}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Radera konto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Detta tar bort hela ditt konto och all data (pass, vänner, meddelanden, prenumeration). Åtgärden kan inte ångras.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Avbryt</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { setConfirmDelete1(false); setConfirmDelete2(true); }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Fortsätt
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmDelete2} onOpenChange={setConfirmDelete2}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Är du helt säker?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sista chansen att avbryta. Vill du verkligen radera kontot permanent?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Nej, behåll kontot</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { setConfirmDelete2(false); navigate("/delete-account"); }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Ja, radera permanent
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
         <AlertDialogContent>
