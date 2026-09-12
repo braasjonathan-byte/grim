@@ -379,7 +379,12 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     const Icon = item.icon;
     const expanded = openItem === item.id;
     return (
-      <div key={item.id} className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden">
+      <div
+        key={item.id}
+        id={item.id === "tour" ? "help-section" : undefined}
+        data-tour={item.id === "tour" ? "tools-help" : undefined}
+        className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden"
+      >
         <button
           type="button"
           data-tour={
