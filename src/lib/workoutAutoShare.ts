@@ -268,43 +268,54 @@ export async function autoShareCompletion(
       .eq("workout_day", day)
       .maybeSingle();
 
-    if (existing?.id) {
-      // Vecka/dag-nyckeln återanvänds när en ny plan startas, så ett gammalt
-      // inlägg från en tidigare plan kan blockera nyckeln. Uppdatera texten och
-      // flytta upp inlägget i flödet så att det syns som ett nytt pass.
-      const isStale =
-        !existing.created_at ||
-        Date.now() - new Date(existing.created_at as string).getTime() > 12 * 60 * 60 * 1000;
-      const { error } = await supabase
+    const isStale =
+      !!existing?.id &&
+      (!existing.created_at ||
+        Date.now() - new Date(existing.created_at as string).getTime() > 12 * 60 * 60 * 1000);
+
+    if (existing?.id && !isStale) {
+      // Samma pass delas om – uppdatera texten på det befintliga inlägget.
+      await supabase
         .from("social_posts")
-        .update({
-          caption,
-          visibility: "friends",
-          ...(isStale ? { created_at: new Date().toISOString() } : {}),
-        })
+        .update({ caption, visibility: "friends" })
         .eq("id", existing.id);
-      if (!error && isStale) {
+      return;
+    }
+
+    if (existing?.id && isStale) {
+      // Vecka/dag-nyckeln återanvänds när en ny plan startas. Ett gammalt inlägg
+      // (med sina reaktioner) får inte blockera nyckeln – koppla loss det och
+      // skapa ett helt nytt inlägg för dagens pass.
+      const { error: detachError } = await supabase
+        .from("social_posts")
+        .update({ workout_week: null, workout_day: null })
+        .eq("id", existing.id);
+      if (detachError) {
+        // Kan inte frigöra nyckeln – fall tillbaka på att uppdatera inlägget.
+        await supabase
+          .from("social_posts")
+          .update({ caption, visibility: "friends", created_at: new Date().toISOString() })
+          .eq("id", existing.id);
         supabase.functions
           .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
           .catch(() => {});
-      }
-    } else {
-      const { error } = await supabase.from("social_posts").upsert(
-        {
-          user_id: userId,
-          caption,
-          visibility: "friends",
-          workout_week: week,
-          workout_day: day,
-        },
-        { onConflict: "user_id,workout_week,workout_day", ignoreDuplicates: true }
-      );
-      if (!error) {
-        supabase.functions
-          .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
-          .catch(() => {});
+        return;
       }
     }
+
+    const { error } = await supabase.from("social_posts").insert({
+      user_id: userId,
+      caption,
+      visibility: "friends",
+      workout_week: week,
+      workout_day: day,
+    });
+    if (!error) {
+      supabase.functions
+        .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
+        .catch(() => {});
+    }
+
 
   } catch {
     // best-effort
