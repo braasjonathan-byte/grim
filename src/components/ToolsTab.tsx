@@ -207,36 +207,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         ],
       },
       {
-        id: "training",
-        title: "Träningsinnehåll",
-        items: [
-          topicItem("Träningsplan", "Veckor, pass och klarmarkering", Dumbbell),
-          topicItem("Övningar & loggning", "Set, reps, vikt och kondition", ListChecks),
-          {
-            id: "route-builder",
-            title: "Skapa runda",
-            subtitle: "Slingförslag på riktiga vägar och stigar",
-            icon: RouteIcon,
-            keywords: "rutt löprunda cykel karta navigering",
-            featured: true,
-            onSelect: () => setRouteBuilderOpen(true),
-          },
-          {
-            id: "file-import",
-            title: "Importera pass från fil",
-            subtitle: "GPX, TCX eller FIT från Garmin, Strava eller Zwift",
-            icon: FileUp,
-            keywords: "import garmin strava zwift fil",
-            onSelect: () => activityFileInputRef.current?.click(),
-          },
-          topicItem("Kroppsviktsövningar", "Chins, dips och extra vikt", Weight),
-          topicItem("Enskilda pass", "Fristående pass utanför planen", Calendar),
-          topicItem("Färdiga pass", "Hämta och spara favoritpass", Dumbbell, "topic-fardiga-pass"),
-          topicItem("Cirkelträning", "Rundor, tider och cirkeltimer", Repeat),
-          topicItem("Övningsbiblioteket", "Sök övningar och instruktioner", BookOpen),
-        ],
-      },
-      {
         id: "helpers",
         title: "Hjälpmedel",
         items: [
