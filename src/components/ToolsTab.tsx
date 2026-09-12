@@ -616,6 +616,19 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         </Suspense>
       )}
 
+      {isAdmin && !q && (
+        <button
+          type="button"
+          onClick={() => setEditLayout((v) => !v)}
+          className={`w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all ${
+            editLayout ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+          }`}
+        >
+          {editLayout ? <Check className="w-4 h-4" /> : <Move className="w-4 h-4" />}
+          {editLayout ? "Klar med ordningen" : "Ändra ordning (syns för alla)"}
+        </button>
+      )}
+
       {q ? (
         <div className="space-y-2">
           {searchResults.length === 0 ? (
@@ -625,26 +638,69 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           )}
         </div>
       ) : (
-        groups.map((group) => {
-          const isCollapsed = collapsed.has(group.id);
+        orderedGroups.map((group, gIndex) => {
+          const isCollapsed = collapsed.has(group.id) && !editLayout;
           return (
             <section key={group.id} className="space-y-2">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                className="w-full flex items-center justify-between gap-2 px-1 py-1"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-sm font-bold uppercase tracking-wider text-foreground">{group.title}</span>
-                  <span className="text-[10px] text-muted-foreground bg-secondary rounded-full px-1.5 py-0.5">
-                    {group.items.length}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className="flex-1 flex items-center justify-between gap-2 px-1 py-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm font-bold uppercase tracking-wider text-foreground">{group.title}</span>
+                    <span className="text-[10px] text-muted-foreground bg-secondary rounded-full px-1.5 py-0.5">
+                      {group.items.length}
+                    </span>
                   </span>
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform ${isCollapsed ? "" : "rotate-180"}`}
-                />
-              </button>
-              {!isCollapsed && <div className="space-y-2">{group.items.map((item) => renderCard(item))}</div>}
+                  {!editLayout && (
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                    />
+                  )}
+                </button>
+                {editLayout && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Flytta gruppen upp"
+                      disabled={gIndex === 0}
+                      onClick={() => moveGroup(gIndex, -1)}
+                      className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Flytta gruppen ner"
+                      disabled={gIndex === orderedGroups.length - 1}
+                      onClick={() => moveGroup(gIndex, 1)}
+                      className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {!isCollapsed && (
+                <div className="space-y-2">
+                  {group.items.map((item, iIndex) =>
+                    renderCard(
+                      item,
+                      undefined,
+                      editLayout
+                        ? {
+                            onUp: () => moveItem(group.id, iIndex, -1),
+                            onDown: () => moveItem(group.id, iIndex, 1),
+                            first: iIndex === 0,
+                            last: iIndex === group.items.length - 1,
+                          }
+                        : undefined
+                    )
+                  )}
+                </div>
+              )}
             </section>
           );
         })
