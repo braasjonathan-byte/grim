@@ -9,7 +9,7 @@ import {
   SlidersHorizontal,
   Wrench,
   RefreshCw,
-  Trash2,
+  
   Search,
   Users,
   Dumbbell,
