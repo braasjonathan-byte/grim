@@ -223,7 +223,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
       <div className="bg-primary/10 border border-primary/20 rounded-2xl shadow-soft p-3 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            {onToggleCompleted && (
+            {onToggleCompleted && isIntervalRun && (
               <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
                 {isCompleted ? <Check className="w-4 h-4" /> : null}
               </button>
@@ -257,7 +257,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     <div className="bg-primary/10 border border-primary/20 rounded-2xl shadow-soft p-3.5 space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {onToggleCompleted && (
+          {onToggleCompleted && isIntervalRun && (
             <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
               {isCompleted ? <Check className="w-4 h-4" /> : null}
             </button>
