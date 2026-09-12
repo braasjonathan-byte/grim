@@ -1,5 +1,5 @@
 import { lazyRetry } from "@/lib/lazyRetry";
-import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import {
   ChevronRight,
   ChevronLeft,
