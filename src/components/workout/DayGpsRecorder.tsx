@@ -1,18 +1,22 @@
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Trash2 } from "lucide-react";
 import { sv } from "date-fns/locale";
 import { fuzzyFilterSort } from "@/lib/fuzzySearch";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Day-level GPS recorder: first lets user pick which kondition exercise to record,
 // then starts GPS tracking. On stop, saves directly to the chosen exercise.
-export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey }: {
+export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey, isAdmin = false }: {
   konditionExercises: { name: string }[];
   onSave: (name: string, km: number, sec: number, route: [number, number][]) => Promise<void> | void;
   /** Stabil nyckel (t.ex. plan-id) så att vyn överlever att kortet remountas vid datauppdatering. */
   storageKey?: string;
+  /** Admin får ta bort övningar ur listan. */
+  isAdmin?: boolean;
 }) => {
   const sessionKey = `grim.gps.day.${storageKey ?? "default"}`;
   const [selectedName, setSelectedName] = useState<string | null>(() => {
