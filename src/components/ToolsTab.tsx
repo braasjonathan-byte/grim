@@ -174,6 +174,18 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       else if (target === "helpers") setSubView("helpers");
       else if (target === "help") {
         setSubView("home");
+        setCollapsed((prev) => {
+          if (!prev.has("start")) return prev;
+          const next = new Set(prev);
+          next.delete("start");
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+          } catch {
+            /* ignore */
+          }
+          return next;
+        });
+        setOpenItem("tour");
         requestAnimationFrame(() => {
           document.querySelector('[data-tour="tools-help"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
         });

@@ -3,11 +3,7 @@ import { startTour, type TourVariant } from "@/lib/tour";
 
 /** "Rundtur" – guidad genomgång av appen. */
 const GuidedTourCard = () => (
-  <div
-    id="help-section"
-    data-tour="tools-help"
-    className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-2"
-  >
+  <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-2">
     <div className="flex items-center gap-2">
       <Sparkles className="w-3.5 h-3.5 text-primary" />
       <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rundtur</span>
