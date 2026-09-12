@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Share2, X, Loader2, Eye, AlertCircle } from "lucide-react";
+import { Share2, X, Loader2, AlertCircle } from "lucide-react";
 
 interface ShareWorkoutPromptDialogProps {
   open: boolean;
@@ -21,6 +21,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
   const [caption, setCaption] = useState(initialCaption || "");
   const [title, setTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -70,7 +71,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
             <Share2 className="w-5 h-5 text-primary" /> Dela passet?
           </DialogTitle>
           <DialogDescription>
-            Förhandsgranska och redigera inlägget innan du publicerar för dina vänner.
+            Redigera inlägget nedan innan du publicerar det för dina vänner.
           </DialogDescription>
         </DialogHeader>
 
@@ -99,37 +100,26 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
               </div>
             )}
 
-            {/* Live preview of how the post will appear in the feed */}
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-secondary/40">
-                <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Förhandsvisning</span>
-              </div>
-              <div className="flex items-center gap-2 px-3 pt-3">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={nickname || ""} className="w-8 h-8 rounded-full object-cover" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">
-                    {initial}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold truncate">{nickname || "Du"}</div>
-                  <div className="text-[11px] text-muted-foreground">Synligt för vänner · nu</div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Inlägg</label>
+                <div className="flex items-center gap-2">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={nickname || ""} className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">
+                      {initial}
+                    </div>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">{nickname || "Du"} · vänner</span>
                 </div>
               </div>
-              <div className="px-3 py-2 text-sm whitespace-pre-line break-words min-h-[40px]">
-                {finalCaption.trim() ? finalCaption : <span className="text-muted-foreground italic">Skriv en bildtext nedan…</span>}
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Redigera inlägg</label>
               <textarea
+                ref={textareaRef}
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                rows={6}
-                className="w-full bg-secondary text-foreground text-sm p-3 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary resize-y min-h-[140px]"
+                rows={8}
+                className="w-full bg-card text-foreground text-sm p-3 rounded-lg border border-border outline-none focus:ring-2 focus:ring-primary resize-y min-h-[180px]"
                 placeholder="Skriv en bildtext…"
               />
             </div>
@@ -139,7 +129,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
         <div className="flex flex-col gap-2 mt-2">
           <Button onClick={handleConfirm} className="w-full" disabled={submitting || loading || !finalCaption.trim() || titleMissing}>
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-            {titleMissing ? "Ange passnamn för att publicera" : "Ja, publicera för vänner"}
+            {titleMissing ? "Ange passnamn för att publicera" : "Publicera för vänner"}
           </Button>
           <Button variant="outline" onClick={onSkip} className="w-full" disabled={submitting}>
             <X className="w-4 h-4" /> Nej tack
