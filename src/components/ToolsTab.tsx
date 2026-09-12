@@ -737,6 +737,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
                             onDown: () => moveItem(group.id, iIndex, 1),
                             first: iIndex === 0,
                             last: iIndex === group.items.length - 1,
+                            groupId: group.id,
+                            onMoveToGroup: (target: string) => moveItemToGroup(item.id, group.id, target),
                           }
                         : undefined
                     )
