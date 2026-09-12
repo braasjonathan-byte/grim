@@ -534,3 +534,9 @@ button:not([data-no-press]),
   .confetti-piece, .pr-gold-glow, .celebration-glow { animation: none; }
   .confetti-piece { opacity: 0; }
 }
+
+@keyframes pulse-beat {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.25); }
+  40% { transform: scale(1); }
+}
