@@ -32,10 +32,40 @@ export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey, isAdmin
   const [query, setQuery] = useState("");
 
 
+  const [hidden, setHidden] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    let cancelled = false;
+    (supabase as any)
+      .from("hidden_exercises")
+      .select("exercise_name")
+      .then(({ data }: any) => {
+        if (cancelled || !data) return;
+        setHidden(data.map((r: any) => String(r.exercise_name).toLowerCase()));
+      });
+    return () => { cancelled = true; };
+  }, [pickerOpen]);
+
+  const removeExercise = async (name: string) => {
+    const { error } = await (supabase as any)
+      .from("hidden_exercises")
+      .insert({ exercise_name: name });
+    if (error) {
+      toast.error("Kunde inte ta bort övningen");
+      return;
+    }
+    setHidden(prev => [...prev, name.toLowerCase()]);
+    toast.success(`${name} borttagen från listan`);
+  };
+
   const filtered = useMemo(() => {
-    const names = Array.from(new Set(konditionExercises.map(e => e.name))).sort((a, b) => a.localeCompare(b, "sv"));
+    const hiddenSet = new Set(hidden);
+    const names = Array.from(new Set(konditionExercises.map(e => e.name)))
+      .filter(n => !hiddenSet.has(n.toLowerCase()))
+      .sort((a, b) => a.localeCompare(b, "sv"));
     return fuzzyFilterSort(names, query, (n) => [n]);
-  }, [query, konditionExercises]);
+  }, [query, konditionExercises, hidden]);
 
   const closePicker = () => { setPickerOpen(false); setQuery(""); };
 
