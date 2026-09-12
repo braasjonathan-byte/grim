@@ -247,32 +247,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           topicItem("Inställningar & profil", "Tips om profil och inställningar", UserCog),
         ],
       },
-      {
-        id: "community",
-        title: "Community",
-        items: [
-          {
-            id: "referral",
-            title: "Bjud in en vän",
-            subtitle: "Din personliga länk och QR-kod",
-            icon: Share2,
-            keywords: "inbjudan referral qr länk",
-            content: () => <ReferralLink userId={userId} />,
-          },
-          {
-            id: "suggestions",
-            title: "Förslagslåda",
-            subtitle: "Skicka idéer och feedback till oss",
-            icon: MessageSquare,
-            keywords: "feedback förslag idé buggar",
-            content: () => <SuggestionBox userId={userId} isAdmin={isAdmin} />,
-          },
-          topicItem("Vänner & socialt", "Vänförfrågningar, delning och peppning", Users),
-          topicItem("Chatt", "Meddelanden och delade pass", MessageSquare, "topic-chatt"),
-          topicItem("Leaderboard & utmaningar", "Topplistor och dagliga utmaningar", Sparkles, "topic-leaderboard"),
-          topicItem("Statistik & PR", "Muskelkarta, personbästa och mål", ListChecks, "topic-statistik"),
-        ],
-      },
     ];
 
     if (isAdmin) {
