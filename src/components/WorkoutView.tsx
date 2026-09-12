@@ -4549,6 +4549,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
                             pulse={condPulseInput}
                             onPulseChange={setCondPulseInput}
+                            onHrResult={applyHrResult}
+                            pulseMax={condPulseMaxInput}
+                            pulseMin={condPulseMinInput}
                           />
                         )}
 
@@ -6501,6 +6504,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
                                       pulse={condPulseInput}
                                       onPulseChange={setCondPulseInput}
+                                      onHrResult={applyHrResult}
+                                      pulseMax={condPulseMaxInput}
+                                      pulseMin={condPulseMinInput}
                                     />
                                   )}
                                   <div className="flex gap-2">
@@ -8263,6 +8269,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         onDistanceChange={(v) => { setCondDistanceInput(v); autoCalcCond(condTimeTotalMin, condTempoInput, v, "distance"); }}
                         pulse={condPulseInput}
                         onPulseChange={setCondPulseInput}
+                        onHrResult={applyHrResult}
+                        pulseMax={condPulseMaxInput}
+                        pulseMin={condPulseMinInput}
                       />
                       </>
                       )}
