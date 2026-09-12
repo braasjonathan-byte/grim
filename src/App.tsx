@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SaveIndicatorProvider } from "@/components/SaveIndicator";
 import { InAppBrowserDialog } from "@/components/InAppBrowserDialog";
 import RouteNavigationHost from "@/components/RouteNavigationHost";
+import HeartRateWidget from "@/components/HeartRateWidget";
 import { startWakeLockManager } from "@/lib/wakeLock";
 
 const Index = lazyRetry(() => import("./pages/Index"));
@@ -31,6 +32,7 @@ const App = () => (
           <Sonner />
           <InAppBrowserDialog />
           <RouteNavigationHost />
+          <HeartRateWidget />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Suspense fallback={null}><Index /></Suspense>} />
