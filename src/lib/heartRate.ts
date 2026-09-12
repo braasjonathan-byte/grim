@@ -131,7 +131,7 @@ let nativeDeviceId: string | null = null;
 const nativeNotifHandler = (value: DataView) => {
   try {
     const bpm = parseHeartRate(value);
-    if (bpm > 0 && bpm < 250) setSnap({ bpm });
+    if (bpm > 0 && bpm < 250) { setSnap({ bpm }); addRecordingSample(bpm); }
   } catch {}
 };
 
@@ -320,7 +320,7 @@ const onWebValueChanged = (event: Event) => {
   if (!value) return;
   try {
     const bpm = parseHeartRate(value);
-    if (bpm > 0 && bpm < 250) setSnap({ bpm });
+    if (bpm > 0 && bpm < 250) { setSnap({ bpm }); addRecordingSample(bpm); }
   } catch {}
 };
 
