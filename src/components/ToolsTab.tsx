@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
+import HeartRateConnectCard from "@/components/HeartRateConnectCard";
 import { toast } from "sonner";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
@@ -215,6 +216,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             keywords: "1rm puls kalorier timer event nedräkning",
             featured: true,
             onSelect: () => setSubView("helpers"),
+          },
+          {
+            id: "heart-rate",
+            title: "Pulsmätare",
+            subtitle: "Anslut pulsband och visa pulsen i en flyttbar ruta",
+            icon: Heart,
+            keywords: "puls pulsband bluetooth hjärtfrekvens bpm",
+            content: () => <HeartRateConnectCard />,
           },
           topicItem("Verktyg", "Så fungerar kalkylatorerna", Sparkles, "topic-verktyg"),
           topicItem("Event & nedräkning", "Tävlingar, lopp och eventgrupper", Calendar, "topic-event"),
