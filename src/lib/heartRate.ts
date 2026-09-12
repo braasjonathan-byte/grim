@@ -97,6 +97,73 @@ const nativeStart = async (deviceId: string, deviceName: string | null) => {
   });
 };
 
+export type ScanDevice = { id: string; name: string | null; rssi?: number | null };
+
+/**
+ * Skannar efter pulsmätare. Native: bred skanning (alla BLE-enheter) så även
+ * band som inte annonserar Heart Rate-tjänsten hittas. Web: visar webbläsarens
+ * egen väljare med acceptAllDevices.
+ */
+export const scanHeartRateDevices = async (
+  onDevice: (d: ScanDevice) => void,
+  durationMs = 15000
+): Promise<void> => {
+  if (!isNative) {
+    const nav: any = navigator;
+    if (!nav?.bluetooth) throw new Error("Bluetooth stöds inte i denna webbläsare.");
+    const dev = await nav.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: ["heart_rate", "battery_service", HR_SERVICE],
+    });
+    if (dev) onDevice({ id: dev.id || dev.name || "web", name: dev.name || null });
+    webPickedDevice = dev || null;
+    return;
+  }
+
+  const { BleClient } = await import("@capacitor-community/bluetooth-le");
+  await BleClient.initialize({ androidNeverForLocation: false });
+  try { await BleClient.requestLEScan({ allowDuplicates: false }, (res) => {
+    const id = res?.device?.deviceId;
+    if (!id) return;
+    onDevice({ id, name: res.device.name ?? res.localName ?? null, rssi: res.rssi ?? null });
+  }); } catch (err: any) {
+    throw new Error(err?.message || "Kunde inte starta Bluetooth-sökning");
+  }
+  await new Promise((r) => setTimeout(r, durationMs));
+  try { await BleClient.stopLEScan(); } catch {}
+};
+
+export const stopHeartRateScan = async () => {
+  if (!isNative) return;
+  try {
+    const { BleClient } = await import("@capacitor-community/bluetooth-le");
+    await BleClient.stopLEScan();
+  } catch {}
+};
+
+/** Ansluter till en enhet som hittats via scanHeartRateDevices. */
+export const connectHeartRateDevice = async (device: ScanDevice): Promise<void> => {
+  setSnap({ connecting: true, error: null });
+  try {
+    if (isNative) {
+      await stopHeartRateScan();
+      const { BleClient } = await import("@capacitor-community/bluetooth-le");
+      await BleClient.initialize({ androidNeverForLocation: false });
+      await nativeStart(device.id, device.name);
+    } else {
+      if (!webPickedDevice) throw new Error("Ingen enhet vald");
+      const ok = await attachToWebDevice(webPickedDevice);
+      if (!ok) throw new Error("Kunde inte ansluta till enheten");
+    }
+  } catch (err: any) {
+    setSnap({
+      connecting: false,
+      connected: false,
+      error: err?.message || "Kunde inte ansluta till pulsmätaren",
+    });
+  }
+};
+
 const nativeConnect = async (silent: boolean): Promise<void> => {
   const { BleClient } = await import("@capacitor-community/bluetooth-le");
   setSnap({ connecting: true, error: null });
