@@ -16,6 +16,16 @@ import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWa
 
 const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const SHOW_STRAVA_INTEGRATION = false;
 
