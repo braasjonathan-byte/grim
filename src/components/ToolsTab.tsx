@@ -370,6 +370,43 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     return list;
   }, [isAdmin, userId, onViewUserPlan]);
 
+  /** Gruppordning + kortordning enligt den delade layouten (satt av admin) */
+  const orderedGroups: ToolGroup[] = useMemo(
+    () =>
+      applyOrder(groups, order.groups).map((g) => ({
+        ...g,
+        items: applyOrder(g.items, order.items[g.id] ?? []),
+      })),
+    [groups, order]
+  );
+
+  const persist = async (next: { groups: string[]; items: Record<string, string[]> }) => {
+    try {
+      await saveLayout(next);
+    } catch {
+      toast.error("Kunde inte spara layouten");
+    }
+  };
+
+  const currentOrder = () => ({
+    groups: orderedGroups.map((g) => g.id),
+    items: { ...order.items, ...Object.fromEntries(orderedGroups.map((g) => [g.id, g.items.map((i) => i.id)])) },
+  });
+
+  const moveGroup = (index: number, dir: -1 | 1) => {
+    const base = currentOrder();
+    const groupIds = move(base.groups, index, index + dir);
+    if (groupIds === base.groups) return;
+    persist({ ...base, groups: groupIds });
+  };
+
+  const moveItem = (groupId: string, index: number, dir: -1 | 1) => {
+    const base = currentOrder();
+    const ids = move(base.items[groupId] ?? [], index, index + dir);
+    if (ids === base.items[groupId]) return;
+    persist({ ...base, items: { ...base.items, [groupId]: ids } });
+  };
+
   const q = normalize(query.trim());
   const matches = (item: ToolItem) =>
     !q ||
