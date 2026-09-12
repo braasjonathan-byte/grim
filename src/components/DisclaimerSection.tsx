@@ -61,15 +61,15 @@ const DisclaimerSection = () => {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="border border-border bg-secondary overflow-hidden">
+    <div className="overflow-hidden">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/60 transition-colors"
+        className="w-full flex items-center justify-between gap-2 py-2 px-4 text-sm font-bold bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
       >
         <div className="flex items-center gap-2.5">
           <Shield className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-bold">Friskrivningar</span>
-          <span className="text-[10px] text-muted-foreground bg-secondary rounded-full px-1.5 py-0.5 border border-border">
+          <span>Friskrivningar</span>
+          <span className="text-[10px] text-muted-foreground bg-background rounded-full px-1.5 py-0.5 border border-border">
             {disclaimers.length}
           </span>
         </div>
