@@ -143,7 +143,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       return new Set<string>();
     }
   });
-  const activityFileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleGroup = (id: string) => {
     setCollapsed((prev) => {
