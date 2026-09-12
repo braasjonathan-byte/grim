@@ -3069,6 +3069,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setCondDistanceInput(distM ? distM[1].replace(",", ".") : "");
     setCondAutoField(null);
     setCondPulseInput(pulseM ? pulseM[1] : "");
+    const hrMaxM = info.match(/max\s*(\d+)/i);
+    const hrMinM = info.match(/min\s*(\d+)\b/i);
+    setCondPulseMaxInput(hrMaxM ? hrMaxM[1] : "");
+    setCondPulseMinInput(hrMinM ? hrMinM[1] : "");
     setCondSpmInput(spmM ? spmM[1] : "");
     setCondIntervalsInput("");
     setCondRestInput("");
