@@ -5695,6 +5695,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                   });
                   return (
                     <DayGpsRecorder
+                      isAdmin={isAdmin}
                       konditionExercises={konditionExercises}
                       onSave={async (name, km, sec, gpsRoute) => {
                         const totMin = sec / 60;
