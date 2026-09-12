@@ -50,6 +50,7 @@ interface SettingsPanelProps {
 }
 
 const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: SettingsPanelProps) => {
+  const navigate = useNavigate();
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
   const [gpsVoiceMin, setGpsVoiceMinState] = useState<number>(() => getGpsVoiceIntervalMin());
