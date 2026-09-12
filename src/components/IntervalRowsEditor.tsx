@@ -113,7 +113,8 @@ interface Props {
 }
 
 export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "min/km", distUnit = "km", hideDistance = false }: Props) {
-  const isPace = paceUnit.startsWith("/");
+  // Pace-enheter: "/km", "min/km", "min/100m", "min/500m" … Fart-enheter: "km/h", "Watt", "spm" …
+  const isPace = /^\//.test(paceUnit) || /^min\s*\//i.test(paceUnit);
 
   useEffect(() => {
     if (count <= 0) return;

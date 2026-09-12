@@ -174,6 +174,18 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       else if (target === "helpers") setSubView("helpers");
       else if (target === "help") {
         setSubView("home");
+        setCollapsed((prev) => {
+          if (!prev.has("start")) return prev;
+          const next = new Set(prev);
+          next.delete("start");
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
+          } catch {
+            /* ignore */
+          }
+          return next;
+        });
+        setOpenItem("tour");
         requestAnimationFrame(() => {
           document.querySelector('[data-tour="tools-help"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
         });
@@ -367,7 +379,12 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     const Icon = item.icon;
     const expanded = openItem === item.id;
     return (
-      <div key={item.id} className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden">
+      <div
+        key={item.id}
+        id={item.id === "tour" ? "help-section" : undefined}
+        data-tour={item.id === "tour" ? "tools-help" : undefined}
+        className="rounded-2xl bg-card shadow-soft border border-border/40 overflow-hidden"
+      >
         <button
           type="button"
           data-tour={
