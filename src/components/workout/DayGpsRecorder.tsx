@@ -175,14 +175,26 @@ export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey, isAdmin
             <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
 
               {filtered.map(name => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => pick(name)}
-                  className="w-full text-left px-3 py-2 text-sm rounded-md border border-border hover:bg-secondary"
-                >
-                  {name}
-                </button>
+                <div key={name} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => pick(name)}
+                    className="flex-1 min-w-0 text-left px-3 py-2 text-sm rounded-md border border-border hover:bg-secondary truncate"
+                  >
+                    {name}
+                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      aria-label={`Ta bort ${name}`}
+                      title="Ta bort övning ur listan"
+                      onClick={(e) => { e.stopPropagation(); removeExercise(name); }}
+                      className="shrink-0 p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               ))}
               {filtered.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4">Inga övningar hittades</p>
