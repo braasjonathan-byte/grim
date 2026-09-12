@@ -269,6 +269,22 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [condIntervalsInput, setCondIntervalsInput] = useState("");
   const [condRestInput, setCondRestInput] = useState("");
   const [condPulseInput, setCondPulseInput] = useState("");
+  const [condPulseMaxInput, setCondPulseMaxInput] = useState("");
+  const [condPulseMinInput, setCondPulseMinInput] = useState("");
+  // Fyller i snitt/max/lägsta puls från en inspelad pulsmätning
+  const applyHrResult = (r: { avg: number; max: number; min: number }) => {
+    setCondPulseInput(String(r.avg));
+    setCondPulseMaxInput(String(r.max));
+    setCondPulseMinInput(String(r.min));
+  };
+  const pulseInfoPart = () => {
+    if (!condPulseInput.trim()) return null;
+    const extra = [
+      condPulseMaxInput.trim() ? `max ${condPulseMaxInput.trim()}` : null,
+      condPulseMinInput.trim() ? `min ${condPulseMinInput.trim()}` : null,
+    ].filter(Boolean);
+    return `${condPulseInput.trim()} bpm${extra.length ? ` (${extra.join("/")})` : ""}`;
+  };
   const [condSpmInput, setCondSpmInput] = useState("");
   const [condIntervalRows, setCondIntervalRows] = useState<IntervalRow[]>([]);
 
