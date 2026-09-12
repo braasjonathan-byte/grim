@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import ThemePicker from "@/components/ThemePicker";
 import { getStoredThemeId } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiometric } from "@/lib/biometric";
 import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
 import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWakeLock } from "@/lib/wakeLock";
