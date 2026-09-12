@@ -29,7 +29,12 @@ import {
   ListChecks,
   Image as ImageIcon,
   X,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  Move,
 } from "lucide-react";
+import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { updateApp } from "@/lib/appUpdate";
