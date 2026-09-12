@@ -687,7 +687,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       <button
         type="button"
         onClick={updateApp}
-        className="w-full py-2.5 mt-2 bg-secondary text-foreground text-sm font-bold border border-border flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+        className="w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold bg-secondary rounded-full shadow-soft active:scale-[0.97] hover:opacity-90 transition-opacity"
       >
         <RefreshCw className="w-4 h-4" />
         Uppdatera appen
