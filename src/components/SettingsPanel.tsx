@@ -80,6 +80,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
   const [secHasExisting, setSecHasExisting] = useState(false);
 
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [confirmDelete1, setConfirmDelete1] = useState(false);
+  const [confirmDelete2, setConfirmDelete2] = useState(false);
   const [spotifyWidget, setSpotifyWidget] = useState(() => {
     return localStorage.getItem("gymberget_spotify_widget") !== "false";
   });
