@@ -370,17 +370,26 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     return list;
   }, [isAdmin, userId, onViewUserPlan]);
 
-  /** Gruppordning + kortordning enligt den delade layouten (satt av admin) */
-  const orderedGroups: ToolGroup[] = useMemo(
-    () =>
-      applyOrder(groups, order.groups).map((g) => ({
-        ...g,
-        items: applyOrder(g.items, order.items[g.id] ?? []),
-      })),
-    [groups, order]
-  );
+  /** Gruppordning, flyttade kort och kortordning enligt den delade layouten (satt av admin) */
+  const orderedGroups: ToolGroup[] = useMemo(() => {
+    const sorted = applyOrder(groups, order.groups);
+    const valid = new Set(sorted.map((g) => g.id));
+    const buckets = new Map<string, ToolItem[]>(sorted.map((g) => [g.id, []]));
+    for (const g of sorted) {
+      for (const item of g.items) {
+        const target = order.assign[item.id];
+        const groupId = target && valid.has(target) ? target : g.id;
+        buckets.get(groupId)!.push(item);
+      }
+    }
+    return sorted.map((g) => ({ ...g, items: applyOrder(buckets.get(g.id) ?? [], order.items[g.id] ?? []) }));
+  }, [groups, order]);
 
-  const persist = async (next: { groups: string[]; items: Record<string, string[]> }) => {
+  const persist = async (next: {
+    groups: string[];
+    items: Record<string, string[]>;
+    assign: Record<string, string>;
+  }) => {
     try {
       await saveLayout(next);
     } catch {
@@ -391,7 +400,17 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const currentOrder = () => ({
     groups: orderedGroups.map((g) => g.id),
     items: { ...order.items, ...Object.fromEntries(orderedGroups.map((g) => [g.id, g.items.map((i) => i.id)])) },
+    assign: { ...order.assign },
   });
+
+  const moveItemToGroup = (itemId: string, fromGroupId: string, toGroupId: string) => {
+    if (fromGroupId === toGroupId) return;
+    const base = currentOrder();
+    const items = { ...base.items };
+    items[fromGroupId] = (items[fromGroupId] ?? []).filter((id) => id !== itemId);
+    items[toGroupId] = [...(items[toGroupId] ?? []), itemId];
+    persist({ ...base, items, assign: { ...base.assign, [itemId]: toGroupId } });
+  };
 
   const moveGroup = (index: number, dir: -1 | 1) => {
     const base = currentOrder();
