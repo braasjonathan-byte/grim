@@ -2827,7 +2827,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setCondAutoField(null);
       setCondIntervalsInput("");
       setCondRestInput("");
-      setCondPulseInput("");
+      setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
       return;
     }
     const lastWeight = findLastWeight(exerciseName);
@@ -2957,7 +2957,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       if (condTempoInput.trim()) infoParts.push(`${formatPaceDisplay(condTempoInput.trim(), condMode)}${modeDisplaySuffix(condMode)}`);
       if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} ${condDistUnit}`);
     }
-    if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
+    { const p = pulseInfoPart(); if (p) infoParts.push(p); }
 
     const entry = infoParts.length > 0 ? `${conditioningDialog.exerciseName} — ${infoParts.join(", ")}` : conditioningDialog.exerciseName;
     const savedIntervalRows = isInterval && condIntervalsInput.trim()
@@ -3000,7 +3000,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setCondAutoField(null);
     setCondIntervalsInput("");
     setCondRestInput("");
-    setCondPulseInput("");
+    setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
     setCondSpmInput("");
     setCondIntervalRows([]);
     setIsWarmupMode(false);
@@ -3094,7 +3094,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       if (condTempoInput.trim()) infoParts.push(`${formatPaceDisplay(condTempoInput.trim(), condMode)}${modeDisplaySuffix(condMode)}`);
       if (condDistanceInput.trim()) infoParts.push(`${condDistanceInput.trim()} ${condDistUnit}`);
     }
-    if (condPulseInput.trim()) infoParts.push(`${condPulseInput.trim()} bpm`);
+    { const p = pulseInfoPart(); if (p) infoParts.push(p); }
     const entry = infoParts.length > 0 ? `${editingCondLine.name} — ${infoParts.join(", ")}` : editingCondLine.name;
     const separator = plan.details.includes("\n") ? "\n" : "; ";
     const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
@@ -3109,7 +3109,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setCondTempoInput("");
     setCondDistanceInput("");
     setCondAutoField(null);
-    setCondPulseInput("");
+    setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
     setCondSpmInput("");
   };
 
@@ -4606,7 +4606,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               setCondAutoField(null);
                               setCondIntervalsInput("");
                               setCondRestInput("");
-                              setCondPulseInput("");
+                              setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
                             }}
                             className="w-full bg-warning/10 border border-warning/30 rounded-lg p-3 text-left hover:bg-warning/20 transition-colors animate-fade-in"
                           >
@@ -8323,7 +8323,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             setCondDistanceInput("");
                             setCondIntervalsInput("");
                             setCondRestInput("");
-                            setCondPulseInput("");
+                            setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
                           }}
                           className="w-full bg-warning/10 border border-warning/30 rounded-lg p-3 text-left hover:bg-warning/20 transition-colors animate-fade-in"
                         >
