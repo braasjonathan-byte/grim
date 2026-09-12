@@ -29,6 +29,10 @@ interface CardioLogFieldsProps {
   onDistanceChange: (value: string) => void;
   pulse: string;
   onPulseChange: (value: string) => void;
+  /** Snitt/max/lägsta puls från en inspelning. */
+  onHrResult?: (r: { avg: number; max: number; min: number }) => void;
+  pulseMax?: string;
+  pulseMin?: string;
 }
 
 /**
@@ -50,6 +54,9 @@ const CardioLogFields = ({
   onDistanceChange,
   pulse,
   onPulseChange,
+  onHrResult,
+  pulseMax,
+  pulseMin,
 }: CardioLogFieldsProps) => {
   const modes = getCardioModes(exerciseName);
   const distUnit = getCardioDistUnit(exerciseName) ?? "km";
@@ -137,6 +144,17 @@ const CardioLogFields = ({
           </div>
         )}
       </div>
+
+      {showPulse && onHrResult && (
+        <div className="space-y-1.5">
+          <HeartRateRecorder onResult={onHrResult} />
+          {(pulseMax || pulseMin) && (
+            <p className="text-[10px] text-muted-foreground text-center">
+              Sparas med passet: snitt {pulse || "–"} bpm · max {pulseMax || "–"} · lägsta {pulseMin || "–"}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
