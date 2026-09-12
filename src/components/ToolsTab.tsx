@@ -419,9 +419,45 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     return groups.flatMap((g) => g.items.filter(matches).map((item) => ({ group: g.title, item })));
   }, [q, groups]);
 
-  const renderCard = (item: ToolItem, groupLabel?: string) => {
+  const renderCard = (
+    item: ToolItem,
+    groupLabel?: string,
+    reorder?: { onUp: () => void; onDown: () => void; first: boolean; last: boolean }
+  ) => {
     const Icon = item.icon;
-    const expanded = openItem === item.id;
+    const expanded = openItem === item.id && !reorder;
+    if (reorder) {
+      const Ico = item.icon;
+      return (
+        <div
+          key={item.id}
+          className="flex items-center gap-2 rounded-2xl bg-card shadow-soft border border-dashed border-primary/40 p-3"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Ico className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{item.title}</span>
+          <button
+            type="button"
+            aria-label="Flytta upp"
+            disabled={reorder.first}
+            onClick={reorder.onUp}
+            className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Flytta ner"
+            disabled={reorder.last}
+            onClick={reorder.onDown}
+            className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+        </div>
+      );
+    }
     return (
       <div
         key={item.id}
