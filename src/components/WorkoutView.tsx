@@ -3801,9 +3801,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     {weekdayName && (
                       <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">{weekdayName}</span>
                     )}
-                    <span className={`font-semibold text-sm block break-words ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                        setRenameInput(plan.session_name);
+                      }}
+                      className={`font-semibold text-sm block break-words text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
+                      title="Ändra passnamn"
+                    >
                       {plan.session_name}
-                    </span>
+                    </button>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <CalendarIcon className="w-3 h-3" />
                       {formatDayDisplay(plan.day)}
@@ -3823,93 +3832,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     
                   </div>
                 </div>
-                {/* Action buttons row */}
-                <div className="grid grid-cols-2 gap-1.5 px-4 pb-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
-                      setRenameInput(plan.session_name);
-                    }}
-                    className="relative z-20 min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                    title="Inställningar">
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>Inställningar</span>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
-                    }}
-                    className="min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                    title="Dela pass">
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>Dela</span>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
-                      setSaveWorkoutName(plan.session_name);
-                      setSaveWorkoutVisibility("private");
-                    }}
-                    className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                    title="Spara pass">
-                    <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
-                    <span>Spara       </span>
-                  </button>
-                  {(() => {
-                    const konditionExercises = allExercises.filter(e => {
-                      if (e.category !== "kondition" || !e.name) return false;
-                      const n = e.name.toLowerCase();
-                      return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
-                    });
-                    return (
-                      <DayGpsRecorder
-                        storageKey={String(plan.id)}
-                        isAdmin={isAdmin}
-                        konditionExercises={konditionExercises}
-
-                        onSave={async (name, km, sec, gpsRoute) => {
-                          const totMin = sec / 60;
-                          const distRounded = Math.round(km * 100) / 100;
-                          const tempoMin = km > 0 ? totMin / km : 0;
-                          const tMin = Math.floor(tempoMin);
-                          const tSec = Math.round((tempoMin - tMin) * 60);
-                          const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
-                          const dataObj: Record<string, any> = {
-                            time: String(Math.round(totMin * 10) / 10),
-                            dist: String(distRounded),
-                            tempo: tempoStr,
-                            route: gpsRoute,
-                          };
-                          await updateCompletionWeights(plan.week, plan.day, (existing) => {
-                            return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
-                          });
-                          const infoParts: string[] = [];
-                          infoParts.push(`${Math.round(totMin)} min`);
-                          if (tempoStr) infoParts.push(`${tempoStr}/km`);
-                          infoParts.push(`${distRounded} km`);
-                          const entry = `${name} — ${infoParts.join(", ")}`;
-                          const existingLines = (plan.details || "").split(/[;\n]/).map(x => x.trim()).filter(Boolean);
-                          const idx = existingLines.findIndex(l => l.toLowerCase().startsWith(name.toLowerCase()));
-                          if (idx >= 0) existingLines[idx] = entry; else existingLines.push(entry);
-                          const newDetails = existingLines.join("\n");
-                          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                          setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
-                          triggerSave();
-                        }}
-                      />
-                    );
-                  })()}
-                  <button
-                    onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
-                    className="col-span-2 min-h-9 flex items-center justify-center gap-1.5 px-[5px] py-1 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
-                    title="Ta bort">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
                 {expanded &&
                 <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
 
@@ -4820,7 +4742,96 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         </div>
                       )
                     )}
-                  </div>
+
+                  {/* Passåtgärder längst ned i träningskortet */}
+              {/* Action buttons row */}
+                <div className="grid grid-cols-2 gap-1.5 px-4 pb-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                      setRenameInput(plan.session_name);
+                    }}
+                    className="relative z-20 min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                    title="Inställningar">
+                    <Settings className="w-3.5 h-3.5" />
+                    <span>Inställningar</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
+                    }}
+                    className="min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                    title="Dela pass">
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Dela</span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+                      setSaveWorkoutName(plan.session_name);
+                      setSaveWorkoutVisibility("private");
+                    }}
+                    className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                    title="Spara pass">
+                    <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
+                    <span>Spara       </span>
+                  </button>
+                  {(() => {
+                    const konditionExercises = allExercises.filter(e => {
+                      if (e.category !== "kondition" || !e.name) return false;
+                      const n = e.name.toLowerCase();
+                      return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
+                    });
+                    return (
+                      <DayGpsRecorder
+                        storageKey={String(plan.id)}
+                        isAdmin={isAdmin}
+                        konditionExercises={konditionExercises}
+
+                        onSave={async (name, km, sec, gpsRoute) => {
+                          const totMin = sec / 60;
+                          const distRounded = Math.round(km * 100) / 100;
+                          const tempoMin = km > 0 ? totMin / km : 0;
+                          const tMin = Math.floor(tempoMin);
+                          const tSec = Math.round((tempoMin - tMin) * 60);
+                          const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
+                          const dataObj: Record<string, any> = {
+                            time: String(Math.round(totMin * 10) / 10),
+                            dist: String(distRounded),
+                            tempo: tempoStr,
+                            route: gpsRoute,
+                          };
+                          await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                            return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
+                          });
+                          const infoParts: string[] = [];
+                          infoParts.push(`${Math.round(totMin)} min`);
+                          if (tempoStr) infoParts.push(`${tempoStr}/km`);
+                          infoParts.push(`${distRounded} km`);
+                          const entry = `${name} — ${infoParts.join(", ")}`;
+                          const existingLines = (plan.details || "").split(/[;\n]/).map(x => x.trim()).filter(Boolean);
+                          const idx = existingLines.findIndex(l => l.toLowerCase().startsWith(name.toLowerCase()));
+                          if (idx >= 0) existingLines[idx] = entry; else existingLines.push(entry);
+                          const newDetails = existingLines.join("\n");
+                          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                          setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                          triggerSave();
+                        }}
+                      />
+                    );
+                  })()}
+                  <button
+                    onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
+                    className="col-span-2 min-h-9 flex items-center justify-center gap-1.5 px-[5px] py-1 text-xs text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-muted"
+                    title="Ta bort">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                    </div>
                 }
               </div>);
 
@@ -5623,10 +5634,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       title="Byt veckodag">
                       {getBaseDay(plan.day)}
                     </button>
-                    <span
-                      className={`font-semibold text-sm break-words text-left ${isDone ? "line-through text-muted-foreground" : ""}`}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                        setRenameInput(plan.session_name);
+                      }}
+                      className={`font-semibold text-sm break-words text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
+                      title="Ändra passnamn"
+                    >
                       {plan.session_name}
-                    </span>
+                    </button>
                   </div>
                   {(() => {
                     const dateStr = getPlanDayDate(planStartDate, plan.week, plan.day);
@@ -5651,84 +5670,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                   })()}
                     
                   </div>
-              </div>
-              {/* Action buttons row */}
-              <div className="grid grid-cols-2 gap-1.5 px-4 pb-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
-                    setSaveWorkoutName(plan.session_name);
-                    setSaveWorkoutVisibility("private");
-                  }}
-                  className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                  title="Spara pass">
-                  <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
-                  <span>Spara       </span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
-                  }}
-                  className="min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                  title="Dela pass">
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Dela</span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
-                    setRenameInput(plan.session_name);
-                  }}
-                  className="relative z-20 min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
-                  title="Inställningar">
-                  <Settings className="w-3.5 h-3.5" />
-                  <span>Inställningar</span>
-                </button>
-                {(() => {
-                  const konditionExercises = allExercises.filter(e => {
-                    if (e.category !== "kondition" || !e.name) return false;
-                    const n = e.name.toLowerCase();
-                    return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
-                  });
-                  return (
-                    <DayGpsRecorder
-                      isAdmin={isAdmin}
-                      konditionExercises={konditionExercises}
-                      onSave={async (name, km, sec, gpsRoute) => {
-                        const totMin = sec / 60;
-                        const distRounded = Math.round(km * 100) / 100;
-                        const tempoMin = km > 0 ? totMin / km : 0;
-                        const tMin = Math.floor(tempoMin);
-                        const tSec = Math.round((tempoMin - tMin) * 60);
-                        const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
-                        const dataObj: Record<string, any> = {
-                          time: String(Math.round(totMin * 10) / 10),
-                          dist: String(distRounded),
-                          tempo: tempoStr,
-                          route: gpsRoute,
-                        };
-                        await updateCompletionWeights(plan.week, plan.day, (existing) => {
-                          return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
-                        });
-                        const infoParts: string[] = [];
-                        infoParts.push(`${Math.round(totMin)} min`);
-                        if (tempoStr) infoParts.push(`${tempoStr}/km`);
-                        infoParts.push(`${distRounded} km`);
-                        const entry = `${name} — ${infoParts.join(", ")}`;
-                        const existingLines = (plan.details || "").split(/[;\n]/).map(x => x.trim()).filter(Boolean);
-                        const idx = existingLines.findIndex(l => l.toLowerCase().startsWith(name.toLowerCase()));
-                        if (idx >= 0) existingLines[idx] = entry; else existingLines.push(entry);
-                        const newDetails = existingLines.join("\n");
-                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-                        setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
-                        triggerSave();
-                      }}
-                    />
-                  );
-                })()}
               </div>
               {expanded &&
               <div className="px-4 pb-8 space-y-3 border-t border-border pt-3">
@@ -8644,6 +8585,86 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         </div>
                       )
                     )}
+
+                  {/* Passåtgärder längst ned i träningskortet */}
+              {/* Action buttons row */}
+              <div className="grid grid-cols-2 gap-1.5 px-4 pb-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSaveWorkoutSource({ details: plan.details, tempo: plan.tempo, defaultName: plan.session_name });
+                    setSaveWorkoutName(plan.session_name);
+                    setSaveWorkoutVisibility("private");
+                  }}
+                  className="min-h-9 gap-1.5 px-[26px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                  title="Spara pass">
+                  <Download className="lucide lucide-download w-3.5 h-3.5 mx-0" />
+                  <span>Spara       </span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShareTarget({ plan, completion: completions[key] || { week: plan.week, day: plan.day, done: false, skipped: false, user_comment: "" } as Completion });
+                  }}
+                  className="min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                  title="Dela pass">
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Dela</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                    setRenameInput(plan.session_name);
+                  }}
+                  className="relative z-20 min-h-9 gap-1.5 px-[24px] py-1 text-xs text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-muted flex items-center justify-center"
+                  title="Inställningar">
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Inställningar</span>
+                </button>
+                {(() => {
+                  const konditionExercises = allExercises.filter(e => {
+                    if (e.category !== "kondition" || !e.name) return false;
+                    const n = e.name.toLowerCase();
+                    return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
+                  });
+                  return (
+                    <DayGpsRecorder
+                      isAdmin={isAdmin}
+                      konditionExercises={konditionExercises}
+                      onSave={async (name, km, sec, gpsRoute) => {
+                        const totMin = sec / 60;
+                        const distRounded = Math.round(km * 100) / 100;
+                        const tempoMin = km > 0 ? totMin / km : 0;
+                        const tMin = Math.floor(tempoMin);
+                        const tSec = Math.round((tempoMin - tMin) * 60);
+                        const tempoStr = km > 0 ? `${tMin}:${String(tSec).padStart(2, "0")}` : "";
+                        const dataObj: Record<string, any> = {
+                          time: String(Math.round(totMin * 10) / 10),
+                          dist: String(distRounded),
+                          tempo: tempoStr,
+                          route: gpsRoute,
+                        };
+                        await updateCompletionWeights(plan.week, plan.day, (existing) => {
+                          return { ...existing, [`__cond__${name}`]: JSON.stringify(dataObj) };
+                        });
+                        const infoParts: string[] = [];
+                        infoParts.push(`${Math.round(totMin)} min`);
+                        if (tempoStr) infoParts.push(`${tempoStr}/km`);
+                        infoParts.push(`${distRounded} km`);
+                        const entry = `${name} — ${infoParts.join(", ")}`;
+                        const existingLines = (plan.details || "").split(/[;\n]/).map(x => x.trim()).filter(Boolean);
+                        const idx = existingLines.findIndex(l => l.toLowerCase().startsWith(name.toLowerCase()));
+                        if (idx >= 0) existingLines[idx] = entry; else existingLines.push(entry);
+                        const newDetails = existingLines.join("\n");
+                        await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+                        setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
+                        triggerSave();
+                      }}
+                    />
+                  );
+                })()}
+              </div>
                 </div>
               }
             </div>
