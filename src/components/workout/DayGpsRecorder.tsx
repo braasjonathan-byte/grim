@@ -1,18 +1,22 @@
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Trash2 } from "lucide-react";
 import { sv } from "date-fns/locale";
 import { fuzzyFilterSort } from "@/lib/fuzzySearch";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Day-level GPS recorder: first lets user pick which kondition exercise to record,
 // then starts GPS tracking. On stop, saves directly to the chosen exercise.
-export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey }: {
+export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey, isAdmin = false }: {
   konditionExercises: { name: string }[];
   onSave: (name: string, km: number, sec: number, route: [number, number][]) => Promise<void> | void;
   /** Stabil nyckel (t.ex. plan-id) så att vyn överlever att kortet remountas vid datauppdatering. */
   storageKey?: string;
+  /** Admin får ta bort övningar ur listan. */
+  isAdmin?: boolean;
 }) => {
   const sessionKey = `grim.gps.day.${storageKey ?? "default"}`;
   const [selectedName, setSelectedName] = useState<string | null>(() => {
@@ -28,10 +32,40 @@ export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey }: {
   const [query, setQuery] = useState("");
 
 
+  const [hidden, setHidden] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    let cancelled = false;
+    (supabase as any)
+      .from("hidden_exercises")
+      .select("exercise_name")
+      .then(({ data }: any) => {
+        if (cancelled || !data) return;
+        setHidden(data.map((r: any) => String(r.exercise_name).toLowerCase()));
+      });
+    return () => { cancelled = true; };
+  }, [pickerOpen]);
+
+  const removeExercise = async (name: string) => {
+    const { error } = await (supabase as any)
+      .from("hidden_exercises")
+      .insert({ exercise_name: name });
+    if (error) {
+      toast.error("Kunde inte ta bort övningen");
+      return;
+    }
+    setHidden(prev => [...prev, name.toLowerCase()]);
+    toast.success(`${name} borttagen från listan`);
+  };
+
   const filtered = useMemo(() => {
-    const names = Array.from(new Set(konditionExercises.map(e => e.name))).sort((a, b) => a.localeCompare(b, "sv"));
+    const hiddenSet = new Set(hidden);
+    const names = Array.from(new Set(konditionExercises.map(e => e.name)))
+      .filter(n => !hiddenSet.has(n.toLowerCase()))
+      .sort((a, b) => a.localeCompare(b, "sv"));
     return fuzzyFilterSort(names, query, (n) => [n]);
-  }, [query, konditionExercises]);
+  }, [query, konditionExercises, hidden]);
 
   const closePicker = () => { setPickerOpen(false); setQuery(""); };
 
@@ -141,14 +175,26 @@ export const DayGpsRecorder = ({ konditionExercises, onSave, storageKey }: {
             <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
 
               {filtered.map(name => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => pick(name)}
-                  className="w-full text-left px-3 py-2 text-sm rounded-md border border-border hover:bg-secondary"
-                >
-                  {name}
-                </button>
+                <div key={name} className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => pick(name)}
+                    className="flex-1 min-w-0 text-left px-3 py-2 text-sm rounded-md border border-border hover:bg-secondary truncate"
+                  >
+                    {name}
+                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      aria-label={`Ta bort ${name}`}
+                      title="Ta bort övning ur listan"
+                      onClick={(e) => { e.stopPropagation(); removeExercise(name); }}
+                      className="shrink-0 p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               ))}
               {filtered.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-4">Inga övningar hittades</p>
