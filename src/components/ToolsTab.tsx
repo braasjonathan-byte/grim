@@ -370,17 +370,26 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     return list;
   }, [isAdmin, userId, onViewUserPlan]);
 
-  /** Gruppordning + kortordning enligt den delade layouten (satt av admin) */
-  const orderedGroups: ToolGroup[] = useMemo(
-    () =>
-      applyOrder(groups, order.groups).map((g) => ({
-        ...g,
-        items: applyOrder(g.items, order.items[g.id] ?? []),
-      })),
-    [groups, order]
-  );
+  /** Gruppordning, flyttade kort och kortordning enligt den delade layouten (satt av admin) */
+  const orderedGroups: ToolGroup[] = useMemo(() => {
+    const sorted = applyOrder(groups, order.groups);
+    const valid = new Set(sorted.map((g) => g.id));
+    const buckets = new Map<string, ToolItem[]>(sorted.map((g) => [g.id, []]));
+    for (const g of sorted) {
+      for (const item of g.items) {
+        const target = order.assign[item.id];
+        const groupId = target && valid.has(target) ? target : g.id;
+        buckets.get(groupId)!.push(item);
+      }
+    }
+    return sorted.map((g) => ({ ...g, items: applyOrder(buckets.get(g.id) ?? [], order.items[g.id] ?? []) }));
+  }, [groups, order]);
 
-  const persist = async (next: { groups: string[]; items: Record<string, string[]> }) => {
+  const persist = async (next: {
+    groups: string[];
+    items: Record<string, string[]>;
+    assign: Record<string, string>;
+  }) => {
     try {
       await saveLayout(next);
     } catch {
@@ -391,7 +400,17 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const currentOrder = () => ({
     groups: orderedGroups.map((g) => g.id),
     items: { ...order.items, ...Object.fromEntries(orderedGroups.map((g) => [g.id, g.items.map((i) => i.id)])) },
+    assign: { ...order.assign },
   });
+
+  const moveItemToGroup = (itemId: string, fromGroupId: string, toGroupId: string) => {
+    if (fromGroupId === toGroupId) return;
+    const base = currentOrder();
+    const items = { ...base.items };
+    items[fromGroupId] = (items[fromGroupId] ?? []).filter((id) => id !== itemId);
+    items[toGroupId] = [...(items[toGroupId] ?? []), itemId];
+    persist({ ...base, items, assign: { ...base.assign, [itemId]: toGroupId } });
+  };
 
   const moveGroup = (index: number, dir: -1 | 1) => {
     const base = currentOrder();
@@ -422,7 +441,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const renderCard = (
     item: ToolItem,
     groupLabel?: string,
-    reorder?: { onUp: () => void; onDown: () => void; first: boolean; last: boolean }
+    reorder?: {
+      onUp: () => void;
+      onDown: () => void;
+      first: boolean;
+      last: boolean;
+      groupId: string;
+      onMoveToGroup: (groupId: string) => void;
+    }
   ) => {
     const Icon = item.icon;
     const expanded = openItem === item.id && !reorder;
@@ -431,30 +457,46 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
       return (
         <div
           key={item.id}
-          className="flex items-center gap-2 rounded-2xl bg-card shadow-soft border border-dashed border-primary/40 p-3"
+          className="space-y-2 rounded-2xl bg-card shadow-soft border border-dashed border-primary/40 p-3"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Ico className="h-4 w-4" />
-          </span>
-          <span className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{item.title}</span>
-          <button
-            type="button"
-            aria-label="Flytta upp"
-            disabled={reorder.first}
-            onClick={reorder.onUp}
-            className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
-          >
-            <ArrowUp className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            aria-label="Flytta ner"
-            disabled={reorder.last}
-            onClick={reorder.onDown}
-            className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
-          >
-            <ArrowDown className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Ico className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{item.title}</span>
+            <button
+              type="button"
+              aria-label="Flytta upp"
+              disabled={reorder.first}
+              onClick={reorder.onUp}
+              className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+            >
+              <ArrowUp className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Flytta ner"
+              disabled={reorder.last}
+              onClick={reorder.onDown}
+              className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+            >
+              <ArrowDown className="h-4 w-4" />
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Kategori
+            <select
+              value={reorder.groupId}
+              onChange={(e) => reorder.onMoveToGroup(e.target.value)}
+              className="flex-1 rounded-xl bg-secondary px-2 py-1.5 text-xs font-semibold normal-case tracking-normal text-foreground outline-none"
+            >
+              {orderedGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.title}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       );
     }
@@ -695,6 +737,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
                             onDown: () => moveItem(group.id, iIndex, 1),
                             first: iIndex === 0,
                             last: iIndex === group.items.length - 1,
+                            groupId: group.id,
+                            onMoveToGroup: (target: string) => moveItemToGroup(item.id, group.id, target),
                           }
                         : undefined
                     )

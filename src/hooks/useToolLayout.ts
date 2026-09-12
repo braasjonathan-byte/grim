@@ -6,23 +6,31 @@ export interface ToolLayoutOrder {
   groups: string[];
   /** Ordning på kort inom varje grupp */
   items: Record<string, string[]>;
+  /** Kort som flyttats till en annan kategori: kort-id -> grupp-id */
+  assign: Record<string, string>;
 }
 
-const EMPTY: ToolLayoutOrder = { groups: [], items: {} };
+const EMPTY: ToolLayoutOrder = { groups: [], items: {}, assign: {} };
+
+const strArray = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 
 const parse = (value: unknown): ToolLayoutOrder => {
-  if (Array.isArray(value)) return { groups: value.filter((v) => typeof v === "string"), items: {} };
+  if (Array.isArray(value)) return { groups: strArray(value), items: {}, assign: {} };
   if (value && typeof value === "object") {
-    const v = value as { groups?: unknown; items?: unknown };
+    const v = value as { groups?: unknown; items?: unknown; assign?: unknown };
     return {
-      groups: Array.isArray(v.groups) ? v.groups.filter((x): x is string => typeof x === "string") : [],
+      groups: strArray(v.groups),
       items:
         v.items && typeof v.items === "object" && !Array.isArray(v.items)
+          ? Object.fromEntries(Object.entries(v.items as Record<string, unknown>).map(([k, arr]) => [k, strArray(arr)]))
+          : {},
+      assign:
+        v.assign && typeof v.assign === "object" && !Array.isArray(v.assign)
           ? Object.fromEntries(
-              Object.entries(v.items as Record<string, unknown>).map(([k, arr]) => [
-                k,
-                Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [],
-              ])
+              Object.entries(v.assign as Record<string, unknown>).filter(
+                (entry): entry is [string, string] => typeof entry[1] === "string"
+              )
             )
           : {},
     };
