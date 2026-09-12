@@ -5627,34 +5627,37 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <button
-                      onClick={(e) => {e.stopPropagation(); setChangeDayDialog({ planId: plan.id, currentDay: plan.day, week: plan.week, sessionName: plan.session_name });}}
-                      className="text-xs font-mono text-muted-foreground uppercase hover:text-primary transition-colors"
-                      title="Byt veckodag">
-                      {getBaseDay(plan.day)}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
-                        setRenameInput(plan.session_name);
-                      }}
-                      className={`font-semibold text-sm break-words text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
-                      title="Ändra passnamn"
-                    >
-                      {plan.session_name}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenameDialog({ planId: plan.id, currentName: plan.session_name, week: plan.week, day: plan.day, sessionName: plan.session_name });
+                      setRenameInput(plan.session_name);
+                    }}
+                    className={`font-semibold text-sm block break-words text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
+                    title="Ändra passnamn"
+                  >
+                    {plan.session_name}
+                  </button>
                   {(() => {
                     const dateStr = getPlanDayDate(planStartDate, plan.week, plan.day);
-                    return dateStr ? (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <CalendarIcon className="w-3 h-3" />
-                        {dateStr}
-                      </span>
-                    ) : null;
+                    return (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <button
+                          onClick={(e) => {e.stopPropagation(); setChangeDayDialog({ planId: plan.id, currentDay: plan.day, week: plan.week, sessionName: plan.session_name });}}
+                          className="font-mono uppercase hover:text-primary transition-colors"
+                          title="Byt veckodag"
+                        >
+                          {getBaseDay(plan.day)}
+                        </button>
+                        {dateStr ? (
+                          <span className="flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            {dateStr}
+                          </span>
+                        ) : null}
+                      </div>
+                    );
                   })()}
                 </div>
                 <div className="flex items-center gap-1 text-muted-foreground">
