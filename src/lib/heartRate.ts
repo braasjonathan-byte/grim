@@ -48,6 +48,63 @@ export const subscribeHeartRate = (l: () => void) => {
 
 export const getHeartRateSnapshot = (): Snapshot => snapshot;
 
+// ---------------- Inspelning av puls ----------------
+
+export type HeartRateRecording = {
+  recording: boolean;
+  samples: number;
+  avg: number | null;
+  max: number | null;
+  min: number | null;
+  startedAt: number | null;
+};
+
+let recording: HeartRateRecording = {
+  recording: false,
+  samples: 0,
+  avg: null,
+  max: null,
+  min: null,
+  startedAt: null,
+};
+let recSum = 0;
+
+export const getHeartRateRecording = (): HeartRateRecording => recording;
+
+const addRecordingSample = (bpm: number) => {
+  if (!recording.recording) return;
+  recSum += bpm;
+  const samples = recording.samples + 1;
+  recording = {
+    ...recording,
+    samples,
+    avg: Math.round(recSum / samples),
+    max: recording.max == null ? bpm : Math.max(recording.max, bpm),
+    min: recording.min == null ? bpm : Math.min(recording.min, bpm),
+  };
+  emit();
+};
+
+export const startHeartRateRecording = () => {
+  recSum = 0;
+  recording = { recording: true, samples: 0, avg: null, max: null, min: null, startedAt: Date.now() };
+  if (snapshot.bpm) addRecordingSample(snapshot.bpm);
+  emit();
+};
+
+export const stopHeartRateRecording = (): HeartRateRecording => {
+  recording = { ...recording, recording: false };
+  emit();
+  return recording;
+};
+
+export const clearHeartRateRecording = () => {
+  recSum = 0;
+  recording = { recording: false, samples: 0, avg: null, max: null, min: null, startedAt: null };
+  emit();
+};
+
+
 const rememberDevice = (id: string, name: string | null) => {
   try { localStorage.setItem(REMEMBER_KEY, JSON.stringify({ id, name })); } catch {}
 };
