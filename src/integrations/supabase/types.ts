@@ -742,6 +742,30 @@ export type Database = {
         }
         Relationships: []
       }
+      hidden_exercises: {
+        Row: {
+          created_at: string
+          exercise_name: string
+          exercise_name_lower: string | null
+          hidden_by: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          exercise_name: string
+          exercise_name_lower?: string | null
+          hidden_by?: string | null
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          exercise_name?: string
+          exercise_name_lower?: string | null
+          hidden_by?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       meal_logs: {
         Row: {
           amount: number
