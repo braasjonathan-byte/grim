@@ -15,7 +15,6 @@ import {
   Search,
   Users,
   Dumbbell,
-  Apple,
   Weight,
   Calendar,
   Repeat,
@@ -251,11 +250,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           topicItem("Cirkelträning", "Rundor, tider och cirkeltimer", Repeat),
           topicItem("Övningsbiblioteket", "Sök övningar och instruktioner", BookOpen),
         ],
-      },
-      {
-        id: "nutrition",
-        title: "Kost",
-        items: [topicItem("Kost & måltider", "Kalorier, makron och recept", Apple)],
       },
       {
         id: "helpers",
