@@ -10,6 +10,7 @@ import {
   formatPaceDisplay,
 } from "@/lib/cardioUnits";
 import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
+import HeartRateRecorder from "@/components/HeartRateRecorder";
 
 const inputCls =
   "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold tabular-nums placeholder:text-muted-foreground placeholder:font-normal";
