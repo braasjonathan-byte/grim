@@ -29,7 +29,12 @@ import {
   ListChecks,
   Image as ImageIcon,
   X,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  Move,
 } from "lucide-react";
+import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { updateApp } from "@/lib/appUpdate";
@@ -143,6 +148,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [openItem, setOpenItem] = useState<string | null>(null);
+  const [editLayout, setEditLayout] = useState(false);
+  const { order, save: saveLayout } = useToolLayout();
   const [collapsed, setCollapsed] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -363,6 +370,43 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     return list;
   }, [isAdmin, userId, onViewUserPlan]);
 
+  /** Gruppordning + kortordning enligt den delade layouten (satt av admin) */
+  const orderedGroups: ToolGroup[] = useMemo(
+    () =>
+      applyOrder(groups, order.groups).map((g) => ({
+        ...g,
+        items: applyOrder(g.items, order.items[g.id] ?? []),
+      })),
+    [groups, order]
+  );
+
+  const persist = async (next: { groups: string[]; items: Record<string, string[]> }) => {
+    try {
+      await saveLayout(next);
+    } catch {
+      toast.error("Kunde inte spara layouten");
+    }
+  };
+
+  const currentOrder = () => ({
+    groups: orderedGroups.map((g) => g.id),
+    items: { ...order.items, ...Object.fromEntries(orderedGroups.map((g) => [g.id, g.items.map((i) => i.id)])) },
+  });
+
+  const moveGroup = (index: number, dir: -1 | 1) => {
+    const base = currentOrder();
+    const groupIds = move(base.groups, index, index + dir);
+    if (groupIds === base.groups) return;
+    persist({ ...base, groups: groupIds });
+  };
+
+  const moveItem = (groupId: string, index: number, dir: -1 | 1) => {
+    const base = currentOrder();
+    const ids = move(base.items[groupId] ?? [], index, index + dir);
+    if (ids === base.items[groupId]) return;
+    persist({ ...base, items: { ...base.items, [groupId]: ids } });
+  };
+
   const q = normalize(query.trim());
   const matches = (item: ToolItem) =>
     !q ||
@@ -375,9 +419,45 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     return groups.flatMap((g) => g.items.filter(matches).map((item) => ({ group: g.title, item })));
   }, [q, groups]);
 
-  const renderCard = (item: ToolItem, groupLabel?: string) => {
+  const renderCard = (
+    item: ToolItem,
+    groupLabel?: string,
+    reorder?: { onUp: () => void; onDown: () => void; first: boolean; last: boolean }
+  ) => {
     const Icon = item.icon;
-    const expanded = openItem === item.id;
+    const expanded = openItem === item.id && !reorder;
+    if (reorder) {
+      const Ico = item.icon;
+      return (
+        <div
+          key={item.id}
+          className="flex items-center gap-2 rounded-2xl bg-card shadow-soft border border-dashed border-primary/40 p-3"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Ico className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">{item.title}</span>
+          <button
+            type="button"
+            aria-label="Flytta upp"
+            disabled={reorder.first}
+            onClick={reorder.onUp}
+            className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label="Flytta ner"
+            disabled={reorder.last}
+            onClick={reorder.onDown}
+            className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </button>
+        </div>
+      );
+    }
     return (
       <div
         key={item.id}
@@ -536,6 +616,19 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         </Suspense>
       )}
 
+      {isAdmin && !q && (
+        <button
+          type="button"
+          onClick={() => setEditLayout((v) => !v)}
+          className={`w-full flex items-center justify-center gap-2 py-2 px-4 text-sm font-semibold rounded-full shadow-soft active:scale-[0.97] transition-all ${
+            editLayout ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"
+          }`}
+        >
+          {editLayout ? <Check className="w-4 h-4" /> : <Move className="w-4 h-4" />}
+          {editLayout ? "Klar med ordningen" : "Ändra ordning (syns för alla)"}
+        </button>
+      )}
+
       {q ? (
         <div className="space-y-2">
           {searchResults.length === 0 ? (
@@ -545,26 +638,69 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           )}
         </div>
       ) : (
-        groups.map((group) => {
-          const isCollapsed = collapsed.has(group.id);
+        orderedGroups.map((group, gIndex) => {
+          const isCollapsed = collapsed.has(group.id) && !editLayout;
           return (
             <section key={group.id} className="space-y-2">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                className="w-full flex items-center justify-between gap-2 px-1 py-1"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="text-sm font-bold uppercase tracking-wider text-foreground">{group.title}</span>
-                  <span className="text-[10px] text-muted-foreground bg-secondary rounded-full px-1.5 py-0.5">
-                    {group.items.length}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className="flex-1 flex items-center justify-between gap-2 px-1 py-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm font-bold uppercase tracking-wider text-foreground">{group.title}</span>
+                    <span className="text-[10px] text-muted-foreground bg-secondary rounded-full px-1.5 py-0.5">
+                      {group.items.length}
+                    </span>
                   </span>
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform ${isCollapsed ? "" : "rotate-180"}`}
-                />
-              </button>
-              {!isCollapsed && <div className="space-y-2">{group.items.map((item) => renderCard(item))}</div>}
+                  {!editLayout && (
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${isCollapsed ? "" : "rotate-180"}`}
+                    />
+                  )}
+                </button>
+                {editLayout && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Flytta gruppen upp"
+                      disabled={gIndex === 0}
+                      onClick={() => moveGroup(gIndex, -1)}
+                      className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+                    >
+                      <ArrowUp className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Flytta gruppen ner"
+                      disabled={gIndex === orderedGroups.length - 1}
+                      onClick={() => moveGroup(gIndex, 1)}
+                      className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {!isCollapsed && (
+                <div className="space-y-2">
+                  {group.items.map((item, iIndex) =>
+                    renderCard(
+                      item,
+                      undefined,
+                      editLayout
+                        ? {
+                            onUp: () => moveItem(group.id, iIndex, -1),
+                            onDown: () => moveItem(group.id, iIndex, 1),
+                            first: iIndex === 0,
+                            last: iIndex === group.items.length - 1,
+                          }
+                        : undefined
+                    )
+                  )}
+                </div>
+              )}
             </section>
           );
         })
