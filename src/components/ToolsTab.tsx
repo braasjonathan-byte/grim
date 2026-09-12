@@ -148,6 +148,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [openItem, setOpenItem] = useState<string | null>(null);
+  const [editLayout, setEditLayout] = useState(false);
+  const { order, save: saveLayout } = useToolLayout();
   const [collapsed, setCollapsed] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
