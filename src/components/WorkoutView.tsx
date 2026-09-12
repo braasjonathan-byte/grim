@@ -3867,6 +3867,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     return (
                       <DayGpsRecorder
                         storageKey={String(plan.id)}
+                        isAdmin={isAdmin}
                         konditionExercises={konditionExercises}
 
                         onSave={async (name, km, sec, gpsRoute) => {
