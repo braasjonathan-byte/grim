@@ -15,7 +15,6 @@ import {
   Search,
   Users,
   Dumbbell,
-  Apple,
   Weight,
   Calendar,
   Repeat,
