@@ -131,7 +131,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
   const [confirmDelete2, setConfirmDelete2] = useState(false);
   const navigate = useNavigate();
   const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
-  const [routeBuilderOpen, setRouteBuilderOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [openItem, setOpenItem] = useState<string | null>(null);
   const [editLayout, setEditLayout] = useState(false);
