@@ -558,28 +558,6 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
         )}
       </div>
 
-      <input
-        ref={activityFileInputRef}
-        type="file"
-        accept=".gpx,.tcx,.fit,application/gpx+xml,application/vnd.garmin.tcx+xml,application/octet-stream"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (!file) return;
-          try {
-            emitSharedActivity(await parseActivityFile(file));
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Kunde inte läsa filen");
-          }
-        }}
-      />
-
-      {routeBuilderOpen && (
-        <Suspense fallback={null}>
-          <RouteBuilderDialog open={routeBuilderOpen} onOpenChange={setRouteBuilderOpen} />
-        </Suspense>
-      )}
 
       {isAdmin && !q && (
         <button
