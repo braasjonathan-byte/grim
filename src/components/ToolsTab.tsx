@@ -45,8 +45,6 @@ import {
 
 import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
 import { toast } from "sonner";
-import { parseActivityFile } from "@/lib/activityFileParser";
-import { emitSharedActivity } from "@/lib/sharedActivityBus";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
 const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
