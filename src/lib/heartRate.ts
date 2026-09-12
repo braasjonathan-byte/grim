@@ -168,7 +168,7 @@ const nativeConnect = async (silent: boolean): Promise<void> => {
   const { BleClient } = await import("@capacitor-community/bluetooth-le");
   setSnap({ connecting: true, error: null });
   try {
-    await BleClient.initialize({ androidNeverForLocation: true });
+    await BleClient.initialize({ androidNeverForLocation: false });
 
     // Silent path: try the remembered device id first (no scan needed)
     const remembered = getRemembered();
@@ -254,6 +254,7 @@ const nativeDisconnect = async () => {
 // ---------------- Web Bluetooth ----------------
 
 let webDevice: any = null;
+let webPickedDevice: any = null;
 let webChar: any = null;
 
 const onWebValueChanged = (event: Event) => {
