@@ -15,6 +15,7 @@ import {
   Plus,
 } from "lucide-react";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
+import { syncAchievements } from "@/lib/achievementSync";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
