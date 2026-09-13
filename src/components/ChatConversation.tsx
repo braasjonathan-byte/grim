@@ -601,7 +601,22 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       )}
 
       {/* Input - sticky above timer */}
-      <ChatComposerPortal className="px-3 pt-2 pb-2 flex gap-2 items-end">
+      <ChatComposerPortal className="px-3 pt-2 pb-2 flex flex-col gap-2">
+        {replyTo && (
+          <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
+            <Reply className="w-3.5 h-3.5 text-primary shrink-0" />
+            <div className="min-w-0 flex-1 border-l-2 border-primary pl-2">
+              <p className="text-[10px] font-semibold text-primary">
+                Svarar {replyTo.sender_id === userId ? "dig själv" : friend.nickname}
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">{messagePreview(replyTo)}</p>
+            </div>
+            <button onClick={() => setReplyTo(null)} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Avbryt svar">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <div className="flex gap-2 items-end">
         <input
           ref={inputRef}
           value={newMessage}
