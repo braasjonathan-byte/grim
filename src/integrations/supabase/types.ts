@@ -280,6 +280,7 @@ export type Database = {
           message_type: string
           read: boolean
           receiver_id: string | null
+          reply_to_id: string | null
           sender_id: string
           shared_workout: Json | null
         }
@@ -291,6 +292,7 @@ export type Database = {
           message_type?: string
           read?: boolean
           receiver_id?: string | null
+          reply_to_id?: string | null
           sender_id: string
           shared_workout?: Json | null
         }
@@ -302,6 +304,7 @@ export type Database = {
           message_type?: string
           read?: boolean
           receiver_id?: string | null
+          reply_to_id?: string | null
           sender_id?: string
           shared_workout?: Json | null
         }
@@ -311,6 +314,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "chat_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
             referencedColumns: ["id"]
           },
         ]
