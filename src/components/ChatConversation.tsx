@@ -54,6 +54,16 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   const [importing, setImporting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Search
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Reply
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
   // Plan picker state for import
   const [planSlots, setPlanSlots] = useState<PlanSlot[]>([]);
