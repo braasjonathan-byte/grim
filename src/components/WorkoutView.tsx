@@ -2798,6 +2798,21 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       }
       return;
     }
+    // Dubblettvarning: samma övning finns redan i passet
+    const targetPlanForDup = plans.find((p) => p.id === planId);
+    if (targetPlanForDup) {
+      const existingNames = (targetPlanForDup.details || "")
+        .split(/[;\n]/)
+        .map((line) => line.split("—")[0].trim().toLowerCase())
+        .filter(Boolean);
+      if (existingNames.includes(exerciseName.trim().toLowerCase())) {
+        const proceed = window.confirm(
+          `"${exerciseName}" finns redan i passet. Vill du lägga till den en gång till?`
+        );
+        if (!proceed) return;
+      }
+    }
+
     // Check if exercise is conditioning type
     const exercise = allExercises.find((e) => e.name === exerciseName);
     if (exercise && exercise.category === "kondition") {
