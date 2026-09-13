@@ -310,7 +310,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
         aria-label="Dagens pass"
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
               {todayDone ? <CheckCircle2 className="w-5 h-5" /> : <Dumbbell className="w-5 h-5" />}
             </div>
@@ -327,7 +327,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
             </div>
           </div>
           {todaysPlans.length > 0 && (
-            <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
+            <span className={`shrink-0 whitespace-nowrap text-[10px] font-bold uppercase px-2 py-1 rounded-full ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
               {todayDone ? "Klart" : "Ej klart"}
             </span>
           )}
