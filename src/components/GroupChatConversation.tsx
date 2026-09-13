@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
 import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2, X } from "lucide-react";
+import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2, X, Search, Reply, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 interface GroupChatConversationProps {
@@ -20,6 +20,7 @@ interface Msg {
   message_type: string;
   created_at: string;
   group_id: string | null;
+  reply_to_id?: string | null;
 }
 
 interface MemberProfile {
@@ -38,6 +39,12 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<Msg | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +105,25 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const jumpToMessage = (id: string) => {
+    const el = msgRefs.current[id];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(id);
+    window.setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 1800);
+  };
+
+  const searchMatches = searchQuery.trim()
+    ? messages.filter((m) => (m.message || "").toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : [];
+
+  const stepSearch = (dir: number) => {
+    if (searchMatches.length === 0) return;
+    const next = (searchIndex + dir + searchMatches.length) % searchMatches.length;
+    setSearchIndex(next);
+    jumpToMessage(searchMatches[next].id);
+  };
+
   const send = async () => {
     if (!newMessage.trim()) return;
     const text = newMessage.trim();
@@ -107,6 +133,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
       group_id: groupId,
       message: text,
       message_type: "text",
+      reply_to_id: replyTo?.id ?? null,
     });
     setSending(false);
     if (error) {
@@ -114,6 +141,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
       return;
     }
     setNewMessage("");
+    setReplyTo(null);
     inputRef.current?.focus();
   };
 
