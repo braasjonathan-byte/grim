@@ -91,6 +91,18 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
 
   const addExerciseToTarget = (name: string) => {
     if (!pickerTarget) return;
+
+    // Dubblettvarning: samma övning finns redan i passet
+    const currentExercises = pickerTarget.isNew
+      ? newDay.exercises
+      : weeks[pickerTarget.weekIdx]?.days[pickerTarget.dayIdx]?.exercises || [];
+    if (currentExercises.some((ex) => ex.name.trim().toLowerCase() === name.trim().toLowerCase())) {
+      const proceed = window.confirm(
+        `"${name}" finns redan i passet. Vill du lägga till den en gång till?`
+      );
+      if (!proceed) return;
+    }
+
     const entry: ExerciseEntry = { name, sets: 3, reps: "10", weight: "" };
 
     if (pickerTarget.isNew) {
