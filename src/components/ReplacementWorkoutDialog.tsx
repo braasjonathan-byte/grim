@@ -30,6 +30,13 @@ const ReplacementWorkoutDialog = ({
   const [saving, setSaving] = useState(false);
 
   const addExercise = (name: string) => {
+    // Dubblettvarning: samma övning finns redan i passet
+    if (exercises.some((ex) => ex.trim().toLowerCase() === name.trim().toLowerCase())) {
+      const proceed = window.confirm(
+        `"${name}" finns redan i passet. Vill du lägga till den en gång till?`
+      );
+      if (!proceed) return;
+    }
     setExercises((prev) => [...prev, name]);
     setShowPicker(false);
   };
