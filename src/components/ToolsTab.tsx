@@ -24,6 +24,8 @@ import {
   ArrowDown,
   Check,
   Move,
+  Link,
+  MessageSquarePlus,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
@@ -63,6 +65,8 @@ const PulseZoneCalculator = lazyRetry(() => import("@/components/PulseZoneCalcul
 const CalorieCalculator = lazyRetry(() => import("@/components/CalorieCalculator"));
 const DisclaimerSection = lazyRetry(() => import("@/components/DisclaimerSection"));
 const GuidedTourCard = lazyRetry(() => import("@/components/GuidedTourCard"));
+const ReferralLink = lazyRetry(() => import("@/components/ReferralLink"));
+const SuggestionBox = lazyRetry(() => import("@/components/SuggestionBox"));
 
 interface ToolsTabProps {
   userId: string;
@@ -249,6 +253,22 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             icon: Heart,
             keywords: "supporter prenumeration betalning stripe",
             content: () => <SupporterButton userId={userId} />,
+          },
+          {
+            id: "referral",
+            title: "Bjud in en vän",
+            subtitle: "Din personliga länk och QR-kod",
+            icon: Link,
+            keywords: "invite vän referral qr kod bjud in",
+            content: () => <ReferralLink userId={userId} />,
+          },
+          {
+            id: "suggestions",
+            title: "Förslagslåda",
+            subtitle: "Skicka idéer och feedback",
+            icon: MessageSquarePlus,
+            keywords: "förslag feedback idé synpunkter",
+            content: () => <SuggestionBox userId={userId} isAdmin={isAdmin} />,
           },
           topicItem("Inställningar & profil", "Tips om profil och inställningar", UserCog),
         ],
