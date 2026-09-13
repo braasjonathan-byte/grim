@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
 import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2, X } from "lucide-react";
+import { ArrowLeft, Send, Users, MoreVertical, LogOut, Loader2, X, Search, Reply, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 interface GroupChatConversationProps {
@@ -20,6 +20,7 @@ interface Msg {
   message_type: string;
   created_at: string;
   group_id: string | null;
+  reply_to_id?: string | null;
 }
 
 interface MemberProfile {
@@ -38,6 +39,12 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<Msg | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +68,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
       }
       const { data: msgs } = await supabase
         .from("chat_messages")
-        .select("id, sender_id, message, message_type, created_at, group_id")
+        .select("id, sender_id, message, message_type, created_at, group_id, reply_to_id")
         .eq("group_id", groupId)
         .order("created_at", { ascending: true })
         .limit(300);
@@ -98,6 +105,25 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const jumpToMessage = (id: string) => {
+    const el = msgRefs.current[id];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(id);
+    window.setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 1800);
+  };
+
+  const searchMatches = searchQuery.trim()
+    ? messages.filter((m) => (m.message || "").toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : [];
+
+  const stepSearch = (dir: number) => {
+    if (searchMatches.length === 0) return;
+    const next = (searchIndex + dir + searchMatches.length) % searchMatches.length;
+    setSearchIndex(next);
+    jumpToMessage(searchMatches[next].id);
+  };
+
   const send = async () => {
     if (!newMessage.trim()) return;
     const text = newMessage.trim();
@@ -107,6 +133,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
       group_id: groupId,
       message: text,
       message_type: "text",
+      reply_to_id: replyTo?.id ?? null,
     });
     setSending(false);
     if (error) {
@@ -114,6 +141,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
       return;
     }
     setNewMessage("");
+    setReplyTo(null);
     inputRef.current?.focus();
   };
 
@@ -153,6 +181,13 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
           </span>
         </div>
         <button
+          onClick={() => { setSearchOpen((v) => !v); setSearchQuery(""); setSearchIndex(0); }}
+          className="p-1.5 hover:bg-muted transition-colors"
+          aria-label="Sök i chatten"
+        >
+          {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+        </button>
+        <button
           onClick={() => setShowMenu((v) => !v)}
           className="p-1.5 hover:bg-muted transition-colors"
           aria-label="Mer"
@@ -184,6 +219,28 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
           </div>
         )}
       </div>
+
+      {searchOpen && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border py-2">
+          <input
+            autoFocus
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setSearchIndex(0); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); stepSearch(1); } }}
+            placeholder="Sök i chatten..."
+            className="flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <span className="text-[11px] text-muted-foreground tabular-nums min-w-[42px] text-center">
+            {searchQuery.trim() ? `${searchMatches.length ? searchIndex + 1 : 0}/${searchMatches.length}` : ""}
+          </span>
+          <button onClick={() => stepSearch(-1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <button onClick={() => stepSearch(1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {showMembers && (
         <div
@@ -261,13 +318,40 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
               {g.msgs.map((m) => {
                 const isMine = m.sender_id === userId;
                 const sender = members[m.sender_id];
+                const parent = m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) : null;
                 return (
-                  <div key={m.id} className={`flex ${isMine ? "justify-end" : "justify-start"} mb-1`}>
+                  <div
+                    key={m.id}
+                    ref={(el) => { msgRefs.current[m.id] = el; }}
+                    className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start flex-row-reverse"} mb-1`}
+                  >
+                    <button
+                      onClick={() => { setReplyTo(m); inputRef.current?.focus(); }}
+                      className="p-1.5 rounded-full text-muted-foreground hover:bg-muted opacity-60 shrink-0"
+                      aria-label="Svara på meddelandet"
+                    >
+                      <Reply className="w-3.5 h-3.5" />
+                    </button>
                     <div
                       className={`max-w-[80%] px-3 py-2 ${
                         isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                      }`}
+                      } ${highlightId === m.id ? "ring-2 ring-primary" : ""}`}
                     >
+                      {parent && (
+                        <button
+                          onClick={() => jumpToMessage(parent.id)}
+                          className={`block w-full text-left mb-1.5 border-l-2 pl-2 py-0.5 ${
+                            isMine ? "border-primary-foreground/50 bg-primary-foreground/10" : "border-primary bg-background/50"
+                          }`}
+                        >
+                          <span className={`block text-[10px] font-semibold ${isMine ? "text-primary-foreground/80" : "text-primary"}`}>
+                            {parent.sender_id === userId ? "Du" : members[parent.sender_id]?.nickname || "Medlem"}
+                          </span>
+                          <span className={`block text-[11px] line-clamp-2 ${isMine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                            {parent.message}
+                          </span>
+                        </button>
+                      )}
                       {!isMine && sender && (
                         <p className="text-[10px] font-bold text-primary mb-0.5">{sender.nickname}</p>
                       )}
@@ -291,7 +375,22 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         )}
       </div>
 
-      <ChatComposerPortal className="px-3 pt-2 pb-2 flex gap-2 items-end">
+      <ChatComposerPortal className="px-3 pt-2 pb-2 flex flex-col gap-2">
+        {replyTo && (
+          <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
+            <Reply className="w-3.5 h-3.5 text-primary shrink-0" />
+            <div className="min-w-0 flex-1 border-l-2 border-primary pl-2">
+              <p className="text-[10px] font-semibold text-primary">
+                Svarar {replyTo.sender_id === userId ? "dig själv" : members[replyTo.sender_id]?.nickname || "medlem"}
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">{replyTo.message}</p>
+            </div>
+            <button onClick={() => setReplyTo(null)} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Avbryt svar">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <div className="flex gap-2 items-end">
         <input
           ref={inputRef}
           value={newMessage}
@@ -313,6 +412,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
         >
           <Send className="w-4 h-4" />
         </button>
+        </div>
       </ChatComposerPortal>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
 import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown, Search, Reply, ChevronUp, ChevronDown } from "lucide-react";
 import { avatarGradient } from "@/lib/avatarGradient";
 import { useTypingListener, useTypingSender } from "@/hooks/useTypingIndicator";
 import TypingDots from "@/components/TypingDots";
@@ -24,6 +24,7 @@ interface ChatMessage {
   shared_workout: any;
   read: boolean;
   created_at: string;
+  reply_to_id?: string | null;
 }
 
 interface ChatConversationProps {
@@ -53,6 +54,16 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   const [importing, setImporting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Search
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Reply
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
   // Plan picker state for import
   const [planSlots, setPlanSlots] = useState<PlanSlot[]>([]);
@@ -129,6 +140,31 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   }, [friend.user_id]);
 
 
+  const messagePreview = (m: ChatMessage) => {
+    if (m.message_type === "workout") return "Delat pass";
+    if (m.message_type === "route") return "Delad runda";
+    return m.message || "";
+  };
+
+  const jumpToMessage = (id: string) => {
+    const el = msgRefs.current[id];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(id);
+    window.setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 1800);
+  };
+
+  const searchMatches = searchQuery.trim()
+    ? messages.filter((m) => messagePreview(m).toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : [];
+
+  const stepSearch = (dir: number) => {
+    if (searchMatches.length === 0) return;
+    const next = (searchIndex + dir + searchMatches.length) % searchMatches.length;
+    setSearchIndex(next);
+    jumpToMessage(searchMatches[next].id);
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
     const msgText = newMessage.trim();
@@ -138,8 +174,10 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       receiver_id: friend.user_id,
       message: msgText,
       message_type: "text",
+      reply_to_id: replyTo?.id ?? null,
     });
     setNewMessage("");
+    setReplyTo(null);
     stopTyping();
     setSending(false);
     inputRef.current?.focus();
@@ -278,12 +316,45 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             </span>
           )}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <span className="block font-semibold text-sm truncate">{friend.nickname}</span>
           {friendIsTyping && <TypingDots className="text-[11px]" />}
         </div>
-
+        <button
+          onClick={() => {
+            setSearchOpen(v => !v);
+            setSearchQuery("");
+            setSearchIndex(0);
+          }}
+          className="p-1.5 hover:bg-muted rounded-full transition-colors"
+          aria-label="Sök i chatten"
+        >
+          {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+        </button>
       </div>
+
+      {searchOpen && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border/50 py-2">
+          <input
+            autoFocus
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); stepSearch(1); } }}
+            placeholder="Sök i chatten..."
+            className="flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <span className="text-[11px] text-muted-foreground tabular-nums min-w-[42px] text-center">
+            {searchQuery.trim() ? `${searchMatches.length ? searchIndex + 1 : 0}/${searchMatches.length}` : ""}
+          </span>
+          <button onClick={() => stepSearch(-1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <button onClick={() => stepSearch(1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
 
       {/* Messages */}
       <div
@@ -302,13 +373,41 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             {group.msgs.map(msg => {
               const isMine = msg.sender_id === userId;
               const showSeen = isMine && msg.read && msg.id === lastReadMineId;
+              const parent = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
               return (
-                <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} mb-1.5`}>
-                  <div className={`max-w-[80%] px-3.5 py-2 ${
+                <div
+                  key={msg.id}
+                  ref={el => { msgRefs.current[msg.id] = el; }}
+                  className={`group flex flex-col ${isMine ? 'items-end' : 'items-start'} mb-1.5`}
+                >
+                  <div className={`flex items-center gap-1 ${isMine ? 'flex-row' : 'flex-row-reverse'} max-w-[88%]`}>
+                    <button
+                      onClick={() => { setReplyTo(msg); inputRef.current?.focus(); }}
+                      className="p-1.5 rounded-full text-muted-foreground hover:bg-muted opacity-60 hover:opacity-100 shrink-0"
+                      aria-label="Svara på meddelandet"
+                    >
+                      <Reply className="w-3.5 h-3.5" />
+                    </button>
+                  <div className={`px-3.5 py-2 ${
                     isMine
                       ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
                       : 'bg-card text-foreground rounded-2xl rounded-bl-sm shadow-soft'
-                  }`}>
+                  } ${highlightId === msg.id ? 'ring-2 ring-primary' : ''}`}>
+                    {parent && (
+                      <button
+                        onClick={() => jumpToMessage(parent.id)}
+                        className={`block w-full text-left mb-1.5 border-l-2 pl-2 py-0.5 rounded-r ${
+                          isMine ? 'border-primary-foreground/50 bg-primary-foreground/10' : 'border-primary bg-muted/60'
+                        }`}
+                      >
+                        <span className={`block text-[10px] font-semibold ${isMine ? 'text-primary-foreground/80' : 'text-primary'}`}>
+                          {parent.sender_id === userId ? "Du" : friend.nickname}
+                        </span>
+                        <span className={`block text-[11px] line-clamp-2 ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                          {messagePreview(parent)}
+                        </span>
+                      </button>
+                    )}
                     {msg.message_type === 'route' && msg.shared_workout ? (
                       <RouteBubble payload={msg.shared_workout} isMine={isMine} />
                     ) : msg.message_type === 'workout' && msg.shared_workout ? (
@@ -326,6 +425,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                         ? <CheckCheck className="w-3 h-3" aria-label="Sedd" />
                         : <Check className="w-3 h-3" aria-label="Skickad" />)}
                     </p>
+                  </div>
                   </div>
                   {showSeen && (
                     <span className="mt-0.5 mr-1 text-[10px] text-muted-foreground animate-fade-in">Sedd</span>
@@ -501,7 +601,22 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       )}
 
       {/* Input - sticky above timer */}
-      <ChatComposerPortal className="px-3 pt-2 pb-2 flex gap-2 items-end">
+      <ChatComposerPortal className="px-3 pt-2 pb-2 flex flex-col gap-2">
+        {replyTo && (
+          <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2">
+            <Reply className="w-3.5 h-3.5 text-primary shrink-0" />
+            <div className="min-w-0 flex-1 border-l-2 border-primary pl-2">
+              <p className="text-[10px] font-semibold text-primary">
+                Svarar {replyTo.sender_id === userId ? "dig själv" : friend.nickname}
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">{messagePreview(replyTo)}</p>
+            </div>
+            <button onClick={() => setReplyTo(null)} className="p-1 text-muted-foreground hover:text-foreground" aria-label="Avbryt svar">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <div className="flex gap-2 items-end">
         <input
           ref={inputRef}
           value={newMessage}
@@ -518,6 +633,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
         >
           <Send className="w-4 h-4" />
         </button>
+        </div>
       </ChatComposerPortal>
     </div>
   );
