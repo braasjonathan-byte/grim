@@ -140,6 +140,31 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
   }, [friend.user_id]);
 
 
+  const messagePreview = (m: ChatMessage) => {
+    if (m.message_type === "workout") return "Delat pass";
+    if (m.message_type === "route") return "Delad runda";
+    return m.message || "";
+  };
+
+  const jumpToMessage = (id: string) => {
+    const el = msgRefs.current[id];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightId(id);
+    window.setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 1800);
+  };
+
+  const searchMatches = searchQuery.trim()
+    ? messages.filter((m) => messagePreview(m).toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : [];
+
+  const stepSearch = (dir: number) => {
+    if (searchMatches.length === 0) return;
+    const next = (searchIndex + dir + searchMatches.length) % searchMatches.length;
+    setSearchIndex(next);
+    jumpToMessage(searchMatches[next].id);
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
     const msgText = newMessage.trim();
@@ -149,8 +174,10 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
       receiver_id: friend.user_id,
       message: msgText,
       message_type: "text",
+      reply_to_id: replyTo?.id ?? null,
     });
     setNewMessage("");
+    setReplyTo(null);
     stopTyping();
     setSending(false);
     inputRef.current?.focus();
