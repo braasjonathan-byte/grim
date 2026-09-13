@@ -131,19 +131,20 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
       supabase.from("profiles").select("nickname, plan_start_date").eq("user_id", userId).maybeSingle(),
       supabase.from("workout_plans").select("week, day, details, session_name, created_at").eq("user_id", userId),
       supabase.from("workout_completions").select("week, day, done, skipped, updated_at, logged_distance_km, logged_weights").eq("user_id", userId),
-      supabase.from("user_achievements" as any).select("achievement_id, unlocked_at").eq("user_id", userId).order("unlocked_at", { ascending: false }),
+      syncAchievements(userId).catch(() => null),
     ])
-      .then(([{ data: profile }, { data: planData }, { data: compData }, { data: achData }]) => {
+      .then(([{ data: profile }, { data: planData }, { data: compData }, achSync]) => {
         if (cancelled) return;
         const p = profile as { nickname?: string | null; plan_start_date?: string | null } | null;
         if (p?.nickname) setNickname(p.nickname);
         if (p?.plan_start_date) setPlanStartDate(p.plan_start_date);
         setPlans((planData as PlanRow[]) ?? []);
         setCompletions((compData as CompletionRow[]) ?? []);
-        const achievements = (achData as unknown as { achievement_id: string; unlocked_at: string }[]) ?? [];
-        setAchievementCount(achievements.length);
-        if (achievements.length > 0) {
-          setLatestAchievement({ id: achievements[0].achievement_id, unlocked_at: achievements[0].unlocked_at });
+        if (achSync) {
+          setAchievementCount(achSync.ids.length);
+          if (achSync.latestId) {
+            setLatestAchievement({ id: achSync.latestId, unlocked_at: achSync.stamps[achSync.latestId] });
+          }
         }
       })
       .finally(() => {
