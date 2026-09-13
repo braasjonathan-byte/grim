@@ -65,6 +65,8 @@ const PulseZoneCalculator = lazyRetry(() => import("@/components/PulseZoneCalcul
 const CalorieCalculator = lazyRetry(() => import("@/components/CalorieCalculator"));
 const DisclaimerSection = lazyRetry(() => import("@/components/DisclaimerSection"));
 const GuidedTourCard = lazyRetry(() => import("@/components/GuidedTourCard"));
+const ReferralLink = lazyRetry(() => import("@/components/ReferralLink"));
+const SuggestionBox = lazyRetry(() => import("@/components/SuggestionBox"));
 
 interface ToolsTabProps {
   userId: string;
