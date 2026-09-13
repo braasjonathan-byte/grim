@@ -373,13 +373,41 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             {group.msgs.map(msg => {
               const isMine = msg.sender_id === userId;
               const showSeen = isMine && msg.read && msg.id === lastReadMineId;
+              const parent = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
               return (
-                <div key={msg.id} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} mb-1.5`}>
-                  <div className={`max-w-[80%] px-3.5 py-2 ${
+                <div
+                  key={msg.id}
+                  ref={el => { msgRefs.current[msg.id] = el; }}
+                  className={`group flex flex-col ${isMine ? 'items-end' : 'items-start'} mb-1.5`}
+                >
+                  <div className={`flex items-center gap-1 ${isMine ? 'flex-row' : 'flex-row-reverse'} max-w-[88%]`}>
+                    <button
+                      onClick={() => { setReplyTo(msg); inputRef.current?.focus(); }}
+                      className="p-1.5 rounded-full text-muted-foreground hover:bg-muted opacity-60 hover:opacity-100 shrink-0"
+                      aria-label="Svara på meddelandet"
+                    >
+                      <Reply className="w-3.5 h-3.5" />
+                    </button>
+                  <div className={`px-3.5 py-2 ${
                     isMine
                       ? 'bg-primary text-primary-foreground rounded-2xl rounded-br-sm'
                       : 'bg-card text-foreground rounded-2xl rounded-bl-sm shadow-soft'
-                  }`}>
+                  } ${highlightId === msg.id ? 'ring-2 ring-primary' : ''}`}>
+                    {parent && (
+                      <button
+                        onClick={() => jumpToMessage(parent.id)}
+                        className={`block w-full text-left mb-1.5 border-l-2 pl-2 py-0.5 rounded-r ${
+                          isMine ? 'border-primary-foreground/50 bg-primary-foreground/10' : 'border-primary bg-muted/60'
+                        }`}
+                      >
+                        <span className={`block text-[10px] font-semibold ${isMine ? 'text-primary-foreground/80' : 'text-primary'}`}>
+                          {parent.sender_id === userId ? "Du" : friend.nickname}
+                        </span>
+                        <span className={`block text-[11px] line-clamp-2 ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                          {messagePreview(parent)}
+                        </span>
+                      </button>
+                    )}
                     {msg.message_type === 'route' && msg.shared_workout ? (
                       <RouteBubble payload={msg.shared_workout} isMine={isMine} />
                     ) : msg.message_type === 'workout' && msg.shared_workout ? (
