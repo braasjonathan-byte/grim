@@ -310,7 +310,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
         aria-label="Dagens pass"
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
               {todayDone ? <CheckCircle2 className="w-5 h-5" /> : <Dumbbell className="w-5 h-5" />}
             </div>
