@@ -327,7 +327,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
             </div>
           </div>
           {todaysPlans.length > 0 && (
-            <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
+            <span className={`shrink-0 whitespace-nowrap text-[10px] font-bold uppercase px-2 py-1 rounded-full ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
               {todayDone ? "Klart" : "Ej klart"}
             </span>
           )}
