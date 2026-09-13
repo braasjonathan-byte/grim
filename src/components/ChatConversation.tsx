@@ -426,6 +426,7 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
                         : <Check className="w-3 h-3" aria-label="Skickad" />)}
                     </p>
                   </div>
+                  </div>
                   {showSeen && (
                     <span className="mt-0.5 mr-1 text-[10px] text-muted-foreground animate-fade-in">Sedd</span>
                   )}
