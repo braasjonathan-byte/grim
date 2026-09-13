@@ -3828,7 +3828,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       className={`font-semibold text-sm block break-words text-left hover:text-primary transition-colors ${isDone ? "line-through text-muted-foreground" : ""}`}
                       title="Ändra passnamn"
                     >
-                      {plan.session_name}
+                      {plan.session_name.trim() || (
+                        <span className="italic text-muted-foreground font-normal">tryck här för att döpa passet</span>
+                      )}
                     </button>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                       {weekdayName && (
