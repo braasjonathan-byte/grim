@@ -377,7 +377,11 @@ const PlanEditor = ({ userId }: PlanEditorProps) => {
                 </div>
               ) : (
                 <div>
-                  <p className="font-semibold text-sm">{plan.session_name}</p>
+                  <p className="font-semibold text-sm">
+                    {plan.session_name.trim() || (
+                      <span className="italic text-muted-foreground font-normal">tryck här för att döpa passet</span>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">{plan.details}</p>
                   {plan.tempo && <p className="text-xs text-muted-foreground font-mono mt-1">{plan.tempo}</p>}
                 </div>
