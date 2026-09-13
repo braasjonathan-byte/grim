@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { COMPOSER_BOTTOM } from "@/hooks/useChatComposerBottom";
 import ChatComposerPortal from "@/components/ChatComposerPortal";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { ArrowLeft, Send, Dumbbell, X, Check, CheckCheck, ChevronLeft, ChevronRight, Crown, Search, Reply, ChevronUp, ChevronDown } from "lucide-react";
 import { avatarGradient } from "@/lib/avatarGradient";
 import { useTypingListener, useTypingSender } from "@/hooks/useTypingIndicator";
 import TypingDots from "@/components/TypingDots";
@@ -24,6 +24,7 @@ interface ChatMessage {
   shared_workout: any;
   read: boolean;
   created_at: string;
+  reply_to_id?: string | null;
 }
 
 interface ChatConversationProps {
