@@ -316,12 +316,45 @@ const ChatConversation = ({ userId, friend, onBack }: ChatConversationProps) => 
             </span>
           )}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <span className="block font-semibold text-sm truncate">{friend.nickname}</span>
           {friendIsTyping && <TypingDots className="text-[11px]" />}
         </div>
-
+        <button
+          onClick={() => {
+            setSearchOpen(v => !v);
+            setSearchQuery("");
+            setSearchIndex(0);
+          }}
+          className="p-1.5 hover:bg-muted rounded-full transition-colors"
+          aria-label="Sök i chatten"
+        >
+          {searchOpen ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+        </button>
       </div>
+
+      {searchOpen && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-border/50 py-2">
+          <input
+            autoFocus
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setSearchIndex(0); }}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); stepSearch(searchMatches.length && searchQuery ? 1 : 0); } }}
+            placeholder="Sök i chatten..."
+            className="flex-1 text-sm bg-muted rounded-full px-4 py-2 outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <span className="text-[11px] text-muted-foreground tabular-nums min-w-[42px] text-center">
+            {searchQuery.trim() ? `${searchMatches.length ? searchIndex + 1 : 0}/${searchMatches.length}` : ""}
+          </span>
+          <button onClick={() => stepSearch(-1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <button onClick={() => stepSearch(1)} disabled={searchMatches.length === 0} className="p-1.5 rounded-full hover:bg-muted disabled:opacity-30">
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
 
       {/* Messages */}
       <div
