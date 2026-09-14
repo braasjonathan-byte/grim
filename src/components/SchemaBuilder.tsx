@@ -188,14 +188,15 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
 
   const addDayToWeek = (weekIdx: number) => {
     if (!newDay.session_name.trim() && newDay.exercises.length === 0) return;
-    const finalDetails = buildDetails(newDay.exercises, newDay.details);
+    // OBS: details byggs först vid sparning utifrån exercises – annars dubbleras övningarna.
     setWeeks(prev => prev.map((w, i) => {
       if (i !== weekIdx) return w;
-      return { ...w, days: [...w.days, { ...newDay, details: finalDetails }] };
+      return { ...w, days: [...w.days, { ...newDay }] };
     }));
     setNewDay({ day: "Mån", session_name: "", details: "", tempo: "", exercises: [] });
     setShowAddDay(null);
   };
+
 
   const updateDay = (weekIdx: number, dayIdx: number, field: keyof BuilderDay, value: string) => {
     setWeeks(prev => prev.map((w, wi) => {
