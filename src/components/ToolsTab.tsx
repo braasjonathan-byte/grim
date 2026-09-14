@@ -234,14 +234,18 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             keywords: "teknik form video kamera djup tempo symmetri",
             content: () => <FormCheckCard />,
           },
-          {
-            id: "health-sync",
-            title: "Hälsodata",
-            subtitle: "Hämta steg och aktiva kalorier från Apple Health eller Health Connect",
-            icon: Activity,
-            keywords: "hälsa health connect apple health steg kalorier klocka",
-            content: () => <HealthConnectCard />,
-          },
+          ...(isHealthSupported()
+            ? [
+                {
+                  id: "health-sync",
+                  title: "Hälsodata",
+                  subtitle: "Hämta steg och aktiva kalorier från Apple Health eller Health Connect",
+                  icon: Activity,
+                  keywords: "hälsa health connect apple health steg kalorier klocka",
+                  content: () => <HealthConnectCard />,
+                },
+              ]
+            : []),
           {
             id: "heart-rate",
             title: "Pulsmätare",
