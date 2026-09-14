@@ -96,6 +96,7 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
     } finally {
       setLoading(false);
       if (inputRef.current) inputRef.current.value = "";
+      if (galleryRef.current) galleryRef.current.value = "";
     }
   };
 
