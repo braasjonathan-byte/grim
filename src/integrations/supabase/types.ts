@@ -814,6 +814,36 @@ export type Database = {
         }
         Relationships: []
       }
+      health_daily: {
+        Row: {
+          active_calories: number
+          day: string
+          id: string
+          source: string
+          steps: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_calories?: number
+          day: string
+          id?: string
+          source?: string
+          steps?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_calories?: number
+          day?: string
+          id?: string
+          source?: string
+          steps?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       hidden_exercises: {
         Row: {
           created_at: string
