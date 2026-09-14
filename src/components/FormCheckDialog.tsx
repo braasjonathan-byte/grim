@@ -297,13 +297,27 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
               <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyserar…
             </Button>
           ) : !cameraOn ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Button onClick={() => startCamera()}>
-                <Camera className="w-4 h-4 mr-2" /> Filma i appen
-              </Button>
-              <Button variant="secondary" onClick={() => galleryRef.current?.click()}>
-                <ImageIcon className="w-4 h-4 mr-2" /> Galleri
-              </Button>
+            <div className="space-y-2">
+              {clips.length > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {clips.length} film{clips.length > 1 ? "er" : ""} med i bedömningen. Lägg till en film till – gärna från
+                  en annan vinkel – så blir bedömningen mer träffsäker.
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={() => startCamera()}>
+                  <Camera className="w-4 h-4 mr-2" />
+                  {clips.length > 0 ? "Filma en till" : "Filma i appen"}
+                </Button>
+                <Button variant="secondary" onClick={() => galleryRef.current?.click()}>
+                  <ImageIcon className="w-4 h-4 mr-2" /> Galleri
+                </Button>
+              </div>
+              {clips.length > 0 && (
+                <Button variant="ghost" className="w-full" onClick={() => { setClips([]); setFeedback(null); }}>
+                  Börja om med ny analys
+                </Button>
+              )}
             </div>
           ) : null}
 
