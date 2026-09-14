@@ -193,7 +193,7 @@ async function sendWebPush(
   payload: string,
   vapidPublicKey: string,
   vapidPrivateKey: string
-): Promise<boolean> {
+): Promise<"sent" | "stale" | "error"> {
   try {
     const authorization = await createVapidJwt(subscription.endpoint, vapidPublicKey, vapidPrivateKey);
 
@@ -221,7 +221,7 @@ async function sendWebPush(
     return true;
   } catch (e) {
     console.error("Push send error:", e);
-    return false;
+    return "error";
   }
 }
 
@@ -297,7 +297,7 @@ serve(async (req) => {
         { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
         payload, vapid.public_key, vapid.private_key
       );
-      if (ok) { sent++; } else { staleEndpoints.push(sub.endpoint); }
+      if (ok === "sent") { sent++; } else if (ok === "stale") { staleEndpoints.push(sub.endpoint); }
     }
 
     if (staleEndpoints.length > 0) {
