@@ -186,10 +186,12 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
     setFeedback(null);
     setLoading(true);
     try {
-      const frames = await extractFrames(file);
-      if (frames.length < 2) throw new Error("Filmen är för kort");
+      const clip = await extractFrames(file);
+      if (clip.frames.length < 2) throw new Error("Filmen är för kort");
+      const allClips = [...clips, clip].slice(-3);
+      setClips(allClips);
       const { data, error } = await supabase.functions.invoke("form-check", {
-        body: { frames, exercise: exerciseName || "" },
+        body: { clips: allClips, exercise: exerciseName || "" },
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
