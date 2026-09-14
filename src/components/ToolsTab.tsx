@@ -27,6 +27,7 @@ import {
   Link,
   MessageSquarePlus,
   Camera,
+  Activity,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
@@ -49,6 +50,7 @@ import {
 import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
 import HeartRateConnectCard from "@/components/HeartRateConnectCard";
 import FormCheckCard from "@/components/FormCheckCard";
+import HealthConnectCard from "@/components/HealthConnectCard";
 import { toast } from "sonner";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
@@ -230,6 +232,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             icon: Camera,
             keywords: "teknik form video kamera djup tempo symmetri",
             content: () => <FormCheckCard />,
+          },
+          {
+            id: "health-sync",
+            title: "Hälsodata",
+            subtitle: "Hämta steg och aktiva kalorier från Apple Health eller Health Connect",
+            icon: Activity,
+            keywords: "hälsa health connect apple health steg kalorier klocka",
+            content: () => <HealthConnectCard />,
           },
           {
             id: "heart-rate",
