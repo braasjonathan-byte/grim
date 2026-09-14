@@ -240,20 +240,65 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
             onChange={(e) => handleFile(e.target.files?.[0])}
           />
 
+          {cameraOn && (
+            <div className="space-y-2">
+              <div className="relative overflow-hidden rounded-2xl bg-black">
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  autoPlay
+                  className="w-full aspect-[3/4] object-cover"
+                />
+                {recording && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-destructive/90 text-destructive-foreground rounded-full px-2 py-0.5 text-[11px] font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                    {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {recording ? (
+                  <Button className="col-span-3" variant="destructive" onClick={stopRecording}>
+                    <Square className="w-4 h-4 mr-2" /> Stoppa
+                  </Button>
+                ) : (
+                  <>
+                    <Button className="col-span-2" onClick={startRecording}>
+                      <Camera className="w-4 h-4 mr-2" /> Spela in
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => startCamera(facing === "environment" ? "user" : "environment")}
+                      aria-label="Byt kamera"
+                    >
+                      <SwitchCamera className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+              {!recording && (
+                <Button variant="ghost" className="w-full" onClick={stopCamera}>
+                  <X className="w-4 h-4 mr-2" /> Stäng kameran
+                </Button>
+              )}
+            </div>
+          )}
+
           {loading ? (
             <Button className="w-full" disabled>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyserar…
             </Button>
-          ) : (
+          ) : !cameraOn ? (
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={() => inputRef.current?.click()}>
-                <Camera className="w-4 h-4 mr-2" /> Filma
+              <Button onClick={() => startCamera()}>
+                <Camera className="w-4 h-4 mr-2" /> Filma i appen
               </Button>
               <Button variant="secondary" onClick={() => galleryRef.current?.click()}>
                 <ImageIcon className="w-4 h-4 mr-2" /> Galleri
               </Button>
             </div>
-          )}
+          ) : null}
 
 
           {feedback && (
