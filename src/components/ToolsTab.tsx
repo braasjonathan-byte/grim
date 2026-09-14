@@ -48,6 +48,7 @@ import {
 
 import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
 import HeartRateConnectCard from "@/components/HeartRateConnectCard";
+import FormCheckCard from "@/components/FormCheckCard";
 import { toast } from "sonner";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
