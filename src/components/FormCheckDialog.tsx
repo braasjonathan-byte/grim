@@ -32,7 +32,9 @@ interface Props {
   exerciseName?: string;
 }
 
-const MAX_FRAMES = 6;
+const MAX_FRAMES = 8;
+
+interface Clip { frames: string[]; times: number[]; duration: number }
 
 const ratingColor = (rating?: string) => {
   if (rating === "bra") return "text-primary";
