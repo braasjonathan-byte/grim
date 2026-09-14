@@ -97,7 +97,7 @@ async function encryptPayload(
 async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: string, vapidPublicKey: string, vapidPrivateKey: string
-): Promise<boolean> {
+): Promise<"sent" | "stale" | "error"> {
   try {
     const authorization = await createVapidJwt(subscription.endpoint, vapidPublicKey, vapidPrivateKey);
     const body = await encryptPayload(payload, base64UrlDecode(subscription.p256dh), base64UrlDecode(subscription.auth));
@@ -110,10 +110,12 @@ async function sendWebPush(
 
     if (!response.ok && response.status !== 201) {
       console.error(`Push failed: ${response.status} ${await response.text()}`);
-      return false;
+      // Only 404/410 mean the subscription is truly gone. Other errors (e.g. 403
+      // BadJwtToken from a VAPID key mismatch) must not delete valid subscriptions.
+      return response.status === 404 || response.status === 410 ? "stale" : "error";
     }
-    return true;
-  } catch (e) { console.error("Push send error:", e); return false; }
+    return "sent";
+  } catch (e) { console.error("Push send error:", e); return "error"; }
 }
 
 serve(async (req) => {
@@ -190,7 +192,7 @@ serve(async (req) => {
 
     for (const sub of subscriptions) {
       const ok = await sendWebPush({ endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth }, payload, vapid.public_key, vapid.private_key);
-      if (ok) { sent++; } else { staleEndpoints.push(sub.endpoint); }
+      if (ok === "sent") { sent++; } else if (ok === "stale") { staleEndpoints.push(sub.endpoint); }
     }
 
     if (staleEndpoints.length > 0) {
