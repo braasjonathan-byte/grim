@@ -27,6 +27,7 @@ import {
   Link,
   MessageSquarePlus,
   Camera,
+  Activity,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
