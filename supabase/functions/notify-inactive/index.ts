@@ -172,8 +172,8 @@ serve(async (req) => {
               { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
               payload, vapid.public_key, vapid.private_key
             );
-            if (ok) totalSent++;
-            else staleEndpoints.push(sub.endpoint);
+            if (ok === "sent") totalSent++;
+            else if (ok === "stale") staleEndpoints.push(sub.endpoint);
           }
         }
       }
