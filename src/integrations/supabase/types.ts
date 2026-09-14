@@ -725,6 +725,68 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_challenge_participants: {
+        Row: {
+          challenge_id: string
+          id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          id?: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friend_challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "friend_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      friend_challenges: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_date: string
+          id: string
+          metric: string
+          start_date: string
+          target: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          end_date: string
+          id?: string
+          metric?: string
+          start_date: string
+          target?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          id?: string
+          metric?: string
+          start_date?: string
+          target?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           blocked_by: string | null
@@ -2384,6 +2446,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_challenge_participant: {
+        Args: { _challenge_id: string; _user_id: string }
         Returns: boolean
       }
       is_chat_group_admin: {
