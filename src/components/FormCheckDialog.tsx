@@ -1,8 +1,17 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, AlertTriangle, CheckCircle2, Image as ImageIcon } from "lucide-react";
+import {
+  Camera,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
+  Image as ImageIcon,
+  Square,
+  SwitchCamera,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface Aspect { rating?: string; comment?: string }
@@ -75,8 +84,97 @@ async function extractFrames(file: File): Promise<string[]> {
 export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<FormFeedback | null>(null);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [facing, setFacing] = useState<"environment" | "user">("environment");
+
+  const stopCamera = useCallback(() => {
+    try {
+      recorderRef.current?.state === "recording" && recorderRef.current.stop();
+    } catch { /* ignore */ }
+    recorderRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setRecording(false);
+    setCameraOn(false);
+    setSeconds(0);
+  }, []);
+
+  useEffect(() => {
+    if (!open) stopCamera();
+  }, [open, stopCamera]);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
+
+  useEffect(() => {
+    if (!recording) return;
+    const id = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [recording]);
+
+  const startCamera = async (mode: "environment" | "user" = facing) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = stream;
+      setFacing(mode);
+      setCameraOn(true);
+      setFeedback(null);
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      });
+    } catch {
+      toast.error("Kunde inte komma åt kamera och mikrofon. Ge appen behörighet och försök igen.");
+    }
+  };
+
+  const startRecording = () => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    chunksRef.current = [];
+    const types = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+    const mimeType = types.find((t) => MediaRecorder.isTypeSupported?.(t));
+    try {
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      rec.onstop = () => {
+        const type = rec.mimeType || mimeType || "video/webm";
+        const blob = new Blob(chunksRef.current, { type });
+        chunksRef.current = [];
+        const ext = type.includes("mp4") ? "mp4" : "webm";
+        stopCamera();
+        handleFile(new File([blob], `formkoll.${ext}`, { type }));
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setSeconds(0);
+      setRecording(true);
+    } catch {
+      toast.error("Inspelning stöds inte på den här enheten");
+    }
+  };
+
+  const stopRecording = () => {
+    setRecording(false);
+    try {
+      recorderRef.current?.stop();
+    } catch {
+      stopCamera();
+    }
+  };
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
@@ -142,20 +240,65 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
             onChange={(e) => handleFile(e.target.files?.[0])}
           />
 
+          {cameraOn && (
+            <div className="space-y-2">
+              <div className="relative overflow-hidden rounded-2xl bg-black">
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  autoPlay
+                  className="w-full aspect-[3/4] object-cover"
+                />
+                {recording && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-destructive/90 text-destructive-foreground rounded-full px-2 py-0.5 text-[11px] font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                    {String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {recording ? (
+                  <Button className="col-span-3" variant="destructive" onClick={stopRecording}>
+                    <Square className="w-4 h-4 mr-2" /> Stoppa
+                  </Button>
+                ) : (
+                  <>
+                    <Button className="col-span-2" onClick={startRecording}>
+                      <Camera className="w-4 h-4 mr-2" /> Spela in
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => startCamera(facing === "environment" ? "user" : "environment")}
+                      aria-label="Byt kamera"
+                    >
+                      <SwitchCamera className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+              {!recording && (
+                <Button variant="ghost" className="w-full" onClick={stopCamera}>
+                  <X className="w-4 h-4 mr-2" /> Stäng kameran
+                </Button>
+              )}
+            </div>
+          )}
+
           {loading ? (
             <Button className="w-full" disabled>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyserar…
             </Button>
-          ) : (
+          ) : !cameraOn ? (
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={() => inputRef.current?.click()}>
-                <Camera className="w-4 h-4 mr-2" /> Filma
+              <Button onClick={() => startCamera()}>
+                <Camera className="w-4 h-4 mr-2" /> Filma i appen
               </Button>
               <Button variant="secondary" onClick={() => galleryRef.current?.click()}>
                 <ImageIcon className="w-4 h-4 mr-2" /> Galleri
               </Button>
             </div>
-          )}
+          ) : null}
 
 
           {feedback && (
