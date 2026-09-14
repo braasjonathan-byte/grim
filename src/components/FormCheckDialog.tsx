@@ -43,7 +43,7 @@ const ratingColor = (rating?: string) => {
 };
 
 /** Plockar jämnt fördelade stillbilder ur en inspelad film. */
-async function extractFrames(file: File): Promise<string[]> {
+async function extractFrames(file: File): Promise<Clip> {
   const url = URL.createObjectURL(file);
   try {
     const video = document.createElement("video");
