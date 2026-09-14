@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Camera, Loader2, AlertTriangle, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface Aspect { rating?: string; comment?: string }
