@@ -74,6 +74,7 @@ async function extractFrames(file: File): Promise<string[]> {
 /** Filma ett set och få AI-feedback på djup, tempo och symmetri. */
 export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<FormFeedback | null>(null);
 
