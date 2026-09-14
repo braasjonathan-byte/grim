@@ -32,7 +32,9 @@ interface Props {
   exerciseName?: string;
 }
 
-const MAX_FRAMES = 6;
+const MAX_FRAMES = 8;
+
+interface Clip { frames: string[]; times: number[]; duration: number }
 
 const ratingColor = (rating?: string) => {
   if (rating === "bra") return "text-primary";
@@ -41,7 +43,7 @@ const ratingColor = (rating?: string) => {
 };
 
 /** Plockar jämnt fördelade stillbilder ur en inspelad film. */
-async function extractFrames(file: File): Promise<string[]> {
+async function extractFrames(file: File): Promise<Clip> {
   const url = URL.createObjectURL(file);
   try {
     const video = document.createElement("video");
@@ -64,6 +66,7 @@ async function extractFrames(file: File): Promise<string[]> {
     if (!ctx) throw new Error("Kunde inte behandla filmen");
 
     const frames: string[] = [];
+    const times: number[] = [];
     for (let i = 0; i < MAX_FRAMES; i++) {
       const time = (duration * (i + 0.5)) / MAX_FRAMES;
       await new Promise<void>((resolve) => {
@@ -73,8 +76,9 @@ async function extractFrames(file: File): Promise<string[]> {
       });
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       frames.push(canvas.toDataURL("image/jpeg", 0.7));
+      times.push(Number(video.currentTime.toFixed(2)));
     }
-    return frames;
+    return { frames, times, duration };
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -94,6 +98,7 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [facing, setFacing] = useState<"environment" | "user">("environment");
+  const [clips, setClips] = useState<Clip[]>([]);
 
   const stopCamera = useCallback(() => {
     try {
@@ -108,7 +113,7 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
   }, []);
 
   useEffect(() => {
-    if (!open) stopCamera();
+    if (!open) { stopCamera(); setClips([]); setFeedback(null); }
   }, [open, stopCamera]);
 
   useEffect(() => () => stopCamera(), [stopCamera]);
@@ -181,10 +186,12 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
     setFeedback(null);
     setLoading(true);
     try {
-      const frames = await extractFrames(file);
-      if (frames.length < 2) throw new Error("Filmen är för kort");
+      const clip = await extractFrames(file);
+      if (clip.frames.length < 2) throw new Error("Filmen är för kort");
+      const allClips = [...clips, clip].slice(-3);
+      setClips(allClips);
       const { data, error } = await supabase.functions.invoke("form-check", {
-        body: { frames, exercise: exerciseName || "" },
+        body: { clips: allClips, exercise: exerciseName || "" },
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
@@ -290,13 +297,27 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
               <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyserar…
             </Button>
           ) : !cameraOn ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Button onClick={() => startCamera()}>
-                <Camera className="w-4 h-4 mr-2" /> Filma i appen
-              </Button>
-              <Button variant="secondary" onClick={() => galleryRef.current?.click()}>
-                <ImageIcon className="w-4 h-4 mr-2" /> Galleri
-              </Button>
+            <div className="space-y-2">
+              {clips.length > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {clips.length} film{clips.length > 1 ? "er" : ""} med i bedömningen. Lägg till en film till – gärna från
+                  en annan vinkel – så blir bedömningen mer träffsäker.
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={() => startCamera()}>
+                  <Camera className="w-4 h-4 mr-2" />
+                  {clips.length > 0 ? "Filma en till" : "Filma i appen"}
+                </Button>
+                <Button variant="secondary" onClick={() => galleryRef.current?.click()}>
+                  <ImageIcon className="w-4 h-4 mr-2" /> Galleri
+                </Button>
+              </div>
+              {clips.length > 0 && (
+                <Button variant="ghost" className="w-full" onClick={() => { setClips([]); setFeedback(null); }}>
+                  Börja om med ny analys
+                </Button>
+              )}
             </div>
           ) : null}
 
