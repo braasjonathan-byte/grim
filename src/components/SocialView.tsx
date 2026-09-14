@@ -20,6 +20,7 @@ import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId }
 import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 import { FeedSkeleton } from "@/components/LoadingSkeletons";
 import EmptyState from "@/components/EmptyState";
+import FriendChallenges from "@/components/FriendChallenges";
 
 const FriendsView = lazyRetry(() => import("./FriendsView"));
 const ChatView = lazyRetry(() => import("./ChatView"));
@@ -1142,6 +1143,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       {/* FRIENDS TAB */}
       {subTab === "friends" && (
         <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
+          <FriendChallenges userId={userId} />
           <FriendsView
             userId={userId}
             isAdmin={isAdmin}

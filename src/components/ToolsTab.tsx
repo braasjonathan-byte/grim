@@ -26,6 +26,7 @@ import {
   Move,
   Link,
   MessageSquarePlus,
+  Camera,
 } from "lucide-react";
 import { useToolLayout, applyOrder, move } from "@/hooks/useToolLayout";
 import type { LucideIcon } from "lucide-react";
@@ -47,6 +48,7 @@ import {
 
 import ProfileCompletenessBanner from "@/components/ProfileCompletenessBanner";
 import HeartRateConnectCard from "@/components/HeartRateConnectCard";
+import FormCheckCard from "@/components/FormCheckCard";
 import { toast } from "sonner";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
@@ -220,6 +222,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             keywords: "1rm puls kalorier timer event nedräkning",
             featured: true,
             onSelect: () => setSubView("helpers"),
+          },
+          {
+            id: "form-check",
+            title: "Formkoll",
+            subtitle: "Filma ett set och få feedback på djup, tempo och symmetri",
+            icon: Camera,
+            keywords: "teknik form video kamera djup tempo symmetri",
+            content: () => <FormCheckCard />,
           },
           {
             id: "heart-rate",
