@@ -1,7 +1,8 @@
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight } from "lucide-react";
+import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import PeriodRecapView from "@/components/PeriodRecapView";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import EmptyState from "@/components/EmptyState";
@@ -704,12 +705,23 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     setSummaryPeriod(order[(idx + 1) % order.length]);
   };
 
+  if (showRecap) {
+    return <PeriodRecapView userId={userId} onClose={() => setShowRecap(false)} />;
+  }
+
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center gap-2">
         <BarChart3 className="w-5 h-5 text-primary" />
         <h2 className="text-xl font-black tracking-tight">Statistik</h2>
+        <button
+          onClick={() => setShowRecap(true)}
+          className="ml-auto flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-primary" /> Krönika
+        </button>
       </div>
+
 
       {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
 
