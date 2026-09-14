@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { countCheckmarks, logDestructiveWrite } from "@/lib/completionGuard";
 
@@ -22,8 +22,47 @@ function getQueue(): PendingUpsert[] {
   }
 }
 
+const QUEUE_EVENT = "grim-offline-queue-changed";
+
 function saveQueue(queue: PendingUpsert[]) {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  try {
+    window.dispatchEvent(new CustomEvent(QUEUE_EVENT));
+  } catch {
+    // non-browser environment
+  }
+}
+
+export function getPendingUpsertCount(): number {
+  return getQueue().length;
+}
+
+/**
+ * Connection state plus how many saves are still waiting to reach the backend,
+ * so the training view can tell the user their logging is safe.
+ */
+export function useOfflineStatus() {
+  const [online, setOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
+  const [pending, setPending] = useState(() => getPendingUpsertCount());
+
+  useEffect(() => {
+    const sync = () => {
+      setOnline(navigator.onLine);
+      setPending(getPendingUpsertCount());
+    };
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    window.addEventListener(QUEUE_EVENT, sync);
+    const timer = setInterval(sync, 5000);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+      window.removeEventListener(QUEUE_EVENT, sync);
+      clearInterval(timer);
+    };
+  }, []);
+
+  return { online, pending };
 }
 
 export function queueOfflineUpsert(table: string, data: Record<string, unknown>, onConflict: string) {

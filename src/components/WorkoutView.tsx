@@ -5,7 +5,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { showUndoToast } from "@/lib/undoToast";
 import { supabase } from "@/integrations/supabase/client";
-import { queueOfflineUpsert, dequeueOfflineUpsert } from "@/hooks/useOfflineSync";
+import { queueOfflineUpsert, dequeueOfflineUpsert, useOfflineStatus } from "@/hooks/useOfflineSync";
+import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles } from "lucide-react";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
@@ -80,6 +81,7 @@ const SHOW_STRAVA_INTEGRATION = false;
 const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
+  const offlineStatus = useOfflineStatus();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -632,10 +634,20 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }, [userId]);
 
   const fetchData = useCallback(async () => {
-    const [{ data: planData }, { data: compData }] = await Promise.all([
+    const [{ data: fetchedPlans }, { data: fetchedCompletions }] = await Promise.all([
       supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
       supabase.from("workout_completions").select("*").eq("user_id", userId),
     ]);
+
+    // Offline / failed request: fall back to the last snapshot so the whole
+    // training view still renders and can be logged into without coverage.
+    const usingCache = !fetchedPlans;
+    const cached = usingCache ? readOfflineWorkoutCache(userId) : null;
+    const planData: any[] | null = fetchedPlans ?? cached?.plans ?? null;
+    const compData: any[] | null = fetchedCompletions ?? cached?.completions ?? null;
+    if (fetchedPlans) {
+      writeOfflineWorkoutCache(userId, fetchedPlans, fetchedCompletions ?? []);
+    }
 
     if (planData) {
       // Keep existing object identities for unchanged plans. Besides reducing large
@@ -801,7 +813,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       setComments((prev) => ({ ...commentMap, ...prev }));
     }
 
-    await refreshSocialInteractions();
+    if (!usingCache) await refreshSocialInteractions();
   }, [userId, initialWeekSet, planStartDate, profileLoaded, refreshSocialInteractions]);
 
   useEffect(() => {
@@ -1397,6 +1409,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     // Queue to localStorage first so data survives if the page is killed before network completes
     queueOfflineUpsert("workout_completions", upsertData as any, "user_id,week,day");
+    // Mirror into the offline snapshot so a reload without coverage still shows it
+    patchOfflineWorkoutCache(userId, upsertData as any);
 
     const { error } = await supabase.from("workout_completions").upsert(
       upsertData as any,
@@ -3448,6 +3462,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     triggerSave();
   };
 
+  const offlineBanner = (!offlineStatus.online || offlineStatus.pending > 0) ? (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${offlineStatus.online ? "bg-primary/10 text-primary" : "bg-warning/15 text-warning"}`}>
+      <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${offlineStatus.online ? "animate-spin" : ""}`} />
+      <span>
+        {offlineStatus.online
+          ? `Synkar ${offlineStatus.pending} sparad${offlineStatus.pending === 1 ? "" : "e"} loggning${offlineStatus.pending === 1 ? "" : "ar"}…`
+          : "Offline – du kan logga som vanligt. Allt sparas i mobilen och synkas när täckningen är tillbaka."}
+      </span>
+    </div>
+  ) : null;
+
   const adminBanner = onBack ? (
     <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 mb-4 flex items-center justify-between">
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-warning hover:text-warning/80 transition-colors">
@@ -3461,6 +3486,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return (
       <div>
         {adminBanner}
+        {offlineBanner}
         <div className="flex items-center justify-center py-16">
           <Dumbbell className="w-8 h-8 text-primary animate-pulse" />
         </div>
@@ -3496,6 +3522,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return (
       <div className="space-y-6 animate-fade-in">
         {adminBanner}
+        {offlineBanner}
         <div className="text-center space-y-2">
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
           <h2 className="text-2xl font-black tracking-tight">Hur vill du träna?</h2>
@@ -3548,6 +3575,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return (
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
+        {offlineBanner}
         <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); setPlanStartDate(null); setActivePlanWeek(1); fetchData(); }} />
       </div>
     );
@@ -3640,6 +3668,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <>
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
+        {offlineBanner}
         {singlePlans.length === 0 && (
           <button
             onClick={() => setMode("choose")}
@@ -5411,6 +5440,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     <>
     <div className="space-y-4">
       {adminBanner}
+        {offlineBanner}
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
