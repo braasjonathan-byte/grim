@@ -20,6 +20,7 @@ import { isSocialInteractionId, mergeWorkoutComments, stripSocialInteractionId }
 import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 import { FeedSkeleton } from "@/components/LoadingSkeletons";
 import EmptyState from "@/components/EmptyState";
+import FriendChallenges from "@/components/FriendChallenges";
 
 const FriendsView = lazyRetry(() => import("./FriendsView"));
 const ChatView = lazyRetry(() => import("./ChatView"));

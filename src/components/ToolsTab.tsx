@@ -222,6 +222,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             onSelect: () => setSubView("helpers"),
           },
           {
+            id: "form-check",
+            title: "Formkoll",
+            subtitle: "Filma ett set och få feedback på djup, tempo och symmetri",
+            icon: Camera,
+            keywords: "teknik form video kamera djup tempo symmetri",
+            content: () => <FormCheckCard />,
+          },
+          {
             id: "heart-rate",
             title: "Pulsmätare",
             subtitle: "Anslut pulsband och visa pulsen i en flyttbar ruta",
