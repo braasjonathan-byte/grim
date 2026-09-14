@@ -1142,6 +1142,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       {/* FRIENDS TAB */}
       {subTab === "friends" && (
         <Suspense fallback={<div className="py-4 text-center text-xs text-muted-foreground">Laddar...</div>}>
+          <FriendChallenges userId={userId} />
           <FriendsView
             userId={userId}
             isAdmin={isAdmin}
