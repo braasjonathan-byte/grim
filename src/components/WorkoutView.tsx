@@ -81,6 +81,7 @@ const SHOW_STRAVA_INTEGRATION = false;
 const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
+  const offlineStatus = useOfflineStatus();
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | null>(null);
   const touchStartX = useRef<number | null>(null);
