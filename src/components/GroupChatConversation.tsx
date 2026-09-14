@@ -323,7 +323,7 @@ const GroupChatConversation = ({ userId, groupId, groupName, onBack, onLeft }: G
                   <div
                     key={m.id}
                     ref={(el) => { msgRefs.current[m.id] = el; }}
-                    className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-start flex-row-reverse"} mb-1`}
+                    className={`flex items-center gap-1 ${isMine ? "justify-end" : "justify-end flex-row-reverse"} mb-1`}
                   >
                     <button
                       onClick={() => { setReplyTo(m); inputRef.current?.focus(); }}
