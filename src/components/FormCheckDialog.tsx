@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Camera, Loader2, AlertTriangle, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface Aspect { rating?: string; comment?: string }
@@ -74,6 +74,7 @@ async function extractFrames(file: File): Promise<string[]> {
 /** Filma ett set och få AI-feedback på djup, tempo och symmetri. */
 export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<FormFeedback | null>(null);
 
@@ -95,6 +96,7 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
     } finally {
       setLoading(false);
       if (inputRef.current) inputRef.current.value = "";
+      if (galleryRef.current) galleryRef.current.value = "";
     }
   };
 
@@ -132,10 +134,29 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
             className="hidden"
             onChange={(e) => handleFile(e.target.files?.[0])}
           />
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
 
-          <Button className="w-full" disabled={loading} onClick={() => inputRef.current?.click()}>
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyserar…</> : <><Camera className="w-4 h-4 mr-2" /> Filma ett set</>}
-          </Button>
+          {loading ? (
+            <Button className="w-full" disabled>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyserar…
+            </Button>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={() => inputRef.current?.click()}>
+                <Camera className="w-4 h-4 mr-2" /> Filma
+              </Button>
+              <Button variant="secondary" onClick={() => galleryRef.current?.click()}>
+                <ImageIcon className="w-4 h-4 mr-2" /> Galleri
+              </Button>
+            </div>
+          )}
+
 
           {feedback && (
             <div className="space-y-2 animate-fade-in">
