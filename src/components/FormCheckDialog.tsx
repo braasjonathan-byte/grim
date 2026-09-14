@@ -98,6 +98,7 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [facing, setFacing] = useState<"environment" | "user">("environment");
+  const [clips, setClips] = useState<Clip[]>([]);
 
   const stopCamera = useCallback(() => {
     try {
