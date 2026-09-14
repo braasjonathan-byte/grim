@@ -113,7 +113,7 @@ export default function FormCheckDialog({ open, onOpenChange, exerciseName }: Pr
   }, []);
 
   useEffect(() => {
-    if (!open) stopCamera();
+    if (!open) { stopCamera(); setClips([]); setFeedback(null); }
   }, [open, stopCamera]);
 
   useEffect(() => () => stopCamera(), [stopCamera]);
