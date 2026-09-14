@@ -66,6 +66,7 @@ async function extractFrames(file: File): Promise<Clip> {
     if (!ctx) throw new Error("Kunde inte behandla filmen");
 
     const frames: string[] = [];
+    const times: number[] = [];
     for (let i = 0; i < MAX_FRAMES; i++) {
       const time = (duration * (i + 0.5)) / MAX_FRAMES;
       await new Promise<void>((resolve) => {
@@ -75,8 +76,9 @@ async function extractFrames(file: File): Promise<Clip> {
       });
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       frames.push(canvas.toDataURL("image/jpeg", 0.7));
+      times.push(Number(video.currentTime.toFixed(2)));
     }
-    return frames;
+    return { frames, times, duration };
   } finally {
     URL.revokeObjectURL(url);
   }
