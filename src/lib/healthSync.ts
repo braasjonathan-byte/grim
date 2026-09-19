@@ -9,9 +9,12 @@ export type HealthDay = {
 
 const PERMISSIONS = ["READ_STEPS", "READ_ACTIVE_CALORIES"] as const;
 
+type PermissionResponse = { permissions: Record<string, boolean>[] };
+
 type HealthPluginLike = {
   isHealthAvailable: () => Promise<{ available: boolean }>;
-  requestHealthPermissions: (req: { permissions: string[] }) => Promise<unknown>;
+  checkHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
+  requestHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
   openHealthConnectSettings: () => Promise<void>;
   showHealthConnectInPlayStore: () => Promise<void>;
   queryAggregated: (req: {
@@ -49,10 +52,51 @@ export async function isHealthAvailable(): Promise<boolean> {
   }
 }
 
+function anyGranted(res: PermissionResponse | undefined): boolean {
+  const list = res?.permissions ?? [];
+  return list.some((entry) => Object.values(entry ?? {}).some(Boolean));
+}
+
 export async function requestHealthPermissions(): Promise<void> {
   const plugin = await loadPlugin();
   if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
-  await plugin.requestHealthPermissions({ permissions: [...PERMISSIONS] });
+
+  const available = await plugin.isHealthAvailable().catch(() => ({ available: false }));
+  if (!available?.available) {
+    throw new Error(
+      Capacitor.getPlatform() === "android"
+        ? "Health Connect saknas på telefonen. Installera appen och försök igen."
+        : "Apple Health är inte tillgängligt på den här enheten."
+    );
+  }
+
+  const req = { permissions: [...PERMISSIONS] };
+  let granted = false;
+  try {
+    granted = anyGranted(await plugin.checkHealthPermissions(req));
+  } catch {
+    /* iOS saknar check – fortsätt med request */
+  }
+  if (granted) return;
+
+  let res: PermissionResponse | undefined;
+  try {
+    res = await plugin.requestHealthPermissions(req);
+  } catch (err: any) {
+    throw new Error(err?.message || "Behörighet till hälsodata nekades.");
+  }
+  if (anyGranted(res)) return;
+
+  try {
+    granted = anyGranted(await plugin.checkHealthPermissions(req));
+  } catch {
+    granted = Capacitor.getPlatform() === "ios";
+  }
+  if (!granted) {
+    throw new Error(
+      "Grim har inte behörighet till steg och kalorier. Öppna Behörigheter och tillåt Steg samt Aktiva kalorier."
+    );
+  }
 }
 
 export async function openHealthSettings(): Promise<void> {
