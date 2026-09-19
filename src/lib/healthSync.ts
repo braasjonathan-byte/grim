@@ -136,6 +136,17 @@ export async function requestHealthPermissions(): Promise<void> {
   }
 }
 
+/** Har appen redan behörighet att läsa hälsodata? */
+export async function hasHealthPermissions(): Promise<boolean> {
+  const plugin = await loadPlugin();
+  if (!plugin) return false;
+  try {
+    return anyGranted(await plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }));
+  } catch {
+    return false;
+  }
+}
+
 export async function openHealthSettings(): Promise<void> {
   const plugin = await loadPlugin();
   if (!plugin) return;
