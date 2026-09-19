@@ -16,14 +16,15 @@ export function mapGroupToRegions(group: string): string[] {
   }
 }
 
+/**
+ * Övningsnamn → muskler. Primära och sekundära muskler kommer från
+ * exerciseMuscleMap; saknas regel används övningens muskelgrupp som tidigare.
+ */
 const MUSCLE_GROUP_MAP: Record<string, string[]> = {};
 for (const ex of exerciseLibrary) {
-  MUSCLE_GROUP_MAP[ex.name.toLowerCase()] = mapGroupToRegions(ex.muscleGroup);
+  const detailed = exerciseAllRegions(ex.name);
+  MUSCLE_GROUP_MAP[ex.name.toLowerCase()] = detailed.length ? detailed : mapGroupToRegions(ex.muscleGroup);
 }
-// Knäböj tränar även rumpa
-MUSCLE_GROUP_MAP["knäböj"] = ["quads", "calves", "hamstrings", "glutes"];
-MUSCLE_GROUP_MAP["böj"] = ["quads", "calves", "hamstrings", "glutes"];
-MUSCLE_GROUP_MAP["mark"] = MUSCLE_GROUP_MAP["marklyft"] || ["traps", "lats", "lowerBack"];
 
 export const REGION_LABELS: Record<string, string> = {
   chest: "Bröst", traps: "Trapezius", lats: "Latissimus", lowerBack: "Nedre rygg",
