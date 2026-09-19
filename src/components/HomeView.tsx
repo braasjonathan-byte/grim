@@ -28,6 +28,7 @@ import { syncAchievements } from "@/lib/achievementSync";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
+import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
@@ -446,6 +447,8 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
       )}
 
 
+
+      <HealthWorkoutPrompt userId={userId} />
 
       {/* 1c. Steg och aktiva kalorier från hälsoappen */}
       {healthToday && (
