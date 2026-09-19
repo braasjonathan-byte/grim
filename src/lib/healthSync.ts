@@ -93,8 +93,17 @@ export async function requestHealthPermissions(): Promise<void> {
     granted = Capacitor.getPlatform() === "ios";
   }
   if (!granted) {
+    // Health Connect visar ingen dialog om användaren nekat två gånger –
+    // öppna inställningarna direkt så behörigheten kan ges manuellt.
+    if (Capacitor.getPlatform() === "android") {
+      try {
+        await plugin.openHealthConnectSettings();
+      } catch {
+        /* ignore */
+      }
+    }
     throw new Error(
-      "Grim har inte behörighet till steg och kalorier. Öppna Behörigheter och tillåt Steg samt Aktiva kalorier."
+      "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på."
     );
   }
 }
