@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
-import { Activity, Download, Loader2, RefreshCw, Settings } from "lucide-react";
+import { Activity, CheckCircle2, Download, Loader2, RefreshCw, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   activityTrend,
+  hasHealthPermissions,
   installHealthConnect,
   isHealthAvailable,
   isHealthSupported,
   loadStoredHealthDays,
   openHealthSettings,
   readHealthDays,
+  readHealthWorkouts,
   requestHealthPermissions,
   saveHealthDays,
   type HealthDay,
+  type HealthWorkout,
 } from "@/lib/healthSync";
+import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 
@@ -23,7 +27,11 @@ const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [rows, setRows] = useState<HealthDay[]>([]);
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [connected, setConnected] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [workouts, setWorkouts] = useState<HealthWorkout[] | null>(null);
+  const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
+  const [loadingWorkouts, setLoadingWorkouts] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -40,6 +48,7 @@ const HealthConnectCard = () => {
         }
       }
       setAvailable(isHealthSupported() ? await isHealthAvailable() : false);
+      if (isHealthSupported()) setConnected(await hasHealthPermissions());
     })();
     return () => {
       active = false;
@@ -51,6 +60,7 @@ const HealthConnectCard = () => {
     setSyncing(true);
     try {
       await requestHealthPermissions();
+      setConnected(true);
       const days = await readHealthDays(7);
       await saveHealthDays(userId, days);
       setRows(days);
@@ -61,6 +71,56 @@ const HealthConnectCard = () => {
       setSyncing(false);
     }
   }, [userId]);
+
+  const loadWorkouts = useCallback(async () => {
+    if (!userId) return;
+    setLoadingWorkouts(true);
+    try {
+      await requestHealthPermissions();
+      setConnected(true);
+      const list = await readHealthWorkouts(30);
+      setWorkouts(list);
+      setImportedKeys(await findImportedHealthWorkouts(userId, list));
+      if (list.length === 0) toast.info("Inga pass hittades de senaste 30 dagarna");
+    } catch (err: any) {
+      toast.error(err?.message || "Kunde inte hämta pass");
+    } finally {
+      setLoadingWorkouts(false);
+    }
+  }, [userId]);
+
+  const importAll = useCallback(async () => {
+    if (!userId || !workouts) return;
+    const pending = workouts.filter((w) => !importedKeys.has(healthWorkoutDayKey(w)));
+    if (pending.length === 0) {
+      toast.info("Alla pass är redan importerade");
+      return;
+    }
+    setLoadingWorkouts(true);
+    try {
+      const res = await importHealthWorkouts(userId, pending);
+      setImportedKeys(await findImportedHealthWorkouts(userId, workouts));
+      toast.success(`${res.imported} pass importerade`);
+    } catch (err: any) {
+      toast.error(err?.message || "Kunde inte importera passen");
+    } finally {
+      setLoadingWorkouts(false);
+    }
+  }, [userId, workouts, importedKeys]);
+
+  const importOne = useCallback(
+    async (w: HealthWorkout) => {
+      if (!userId) return;
+      try {
+        await importHealthWorkouts(userId, [w]);
+        setImportedKeys((prev) => new Set(prev).add(healthWorkoutDayKey(w)));
+        toast.success(`${w.label} importerat`);
+      } catch (err: any) {
+        toast.error(err?.message || "Kunde inte importera passet");
+      }
+    },
+    [userId],
+  );
 
   const maxSteps = Math.max(1, ...rows.map((r) => r.steps));
   const today = rows[rows.length - 1];
@@ -74,10 +134,27 @@ const HealthConnectCard = () => {
           {isHealthSupported()
             ? available === false
               ? "Health Connect / Apple Health hittades inte"
-              : "Hämta steg och aktiva kalorier från din hälsoapp"
+              : "Hämta steg, aktiva kalorier och genomförda pass från din hälsoapp"
             : "Fungerar i Grim-appen på mobilen"}
         </span>
       </div>
+
+      {isHealthSupported() && (
+        <div
+          className={`flex items-center gap-2 rounded-2xl border p-3 text-sm ${
+            connected
+              ? "border-success/40 bg-success/10 text-success"
+              : "border-border/60 bg-card/60 text-muted-foreground"
+          }`}
+        >
+          {connected ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Activity className="h-4 w-4 shrink-0" />}
+          <span>
+            {connected
+              ? "Kopplingen är aktiv – Grim läser din hälsodata (t.ex. Samsung Health via Health Connect)."
+              : "Inte kopplad ännu. Tryck på Synka hälsodata och godkänn behörigheterna."}
+          </span>
+        </div>
+      )}
 
       {rows.length > 0 && (
         <div className="rounded-2xl border border-border/60 bg-card/60 p-3">
@@ -114,6 +191,17 @@ const HealthConnectCard = () => {
           {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Synka hälsodata
         </Button>
+        {isHealthSupported() && (
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={loadWorkouts}
+            disabled={!userId || loadingWorkouts}
+          >
+            {loadingWorkouts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            Hämta genomförda pass
+          </Button>
+        )}
         {isHealthSupported() && available === false && (
           <Button variant="outline" className="rounded-full" onClick={() => void installHealthConnect()}>
             <Download className="mr-2 h-4 w-4" />
@@ -127,6 +215,46 @@ const HealthConnectCard = () => {
           </Button>
         )}
       </div>
+
+      {workouts && workouts.length > 0 && (
+        <div className="space-y-2 rounded-2xl border border-border/60 bg-card/60 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold">Pass senaste 30 dagarna</p>
+            <Button size="sm" className="rounded-full" onClick={importAll} disabled={loadingWorkouts}>
+              Importera alla
+            </Button>
+          </div>
+          <ul className="space-y-2">
+            {workouts.map((w) => {
+              const done = importedKeys.has(healthWorkoutDayKey(w));
+              const info = [
+                w.minutes ? `${Math.round(w.minutes)} min` : null,
+                w.distanceKm ? `${w.distanceKm} km` : null,
+                w.calories ? `${w.calories} kcal` : null,
+                w.avgHeartRate ? `${w.avgHeartRate} bpm` : null,
+              ].filter(Boolean);
+              return (
+                <li key={healthWorkoutDayKey(w)} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{w.label}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {new Date(w.start).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
+                      {info.length > 0 && ` · ${info.join(" · ")}`} · {w.source}
+                    </p>
+                  </div>
+                  {done ? (
+                    <span className="shrink-0 text-xs font-semibold text-success">Importerat</span>
+                  ) : (
+                    <Button size="sm" variant="outline" className="shrink-0 rounded-full" onClick={() => void importOne(w)}>
+                      Importera
+                    </Button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
