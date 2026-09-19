@@ -83,12 +83,15 @@ export function computePeriodStats(
       loggedWeights: row.logged_weights as any,
       planDetails,
     });
+    let rowDistanceKm = 0;
     for (const [cat, km] of Object.entries(byCat)) {
       if (!km) continue;
       stats.byCategory[cat as CardioCategoryKey] = (stats.byCategory[cat as CardioCategoryKey] ?? 0) + km;
-      stats.distanceKm += km;
+      rowDistanceKm += km;
     }
-    if (stats.distanceKm === 0 && row.logged_distance_km) stats.distanceKm += Number(row.logged_distance_km) || 0;
+    // Kunde passet inte kategoriseras används den loggade distansen för just det passet
+    if (rowDistanceKm === 0 && row.logged_distance_km) rowDistanceKm = Number(row.logged_distance_km) || 0;
+    stats.distanceKm += rowDistanceKm;
 
     for (const name of summary.exercises) {
       const clean = name.trim();
