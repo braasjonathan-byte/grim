@@ -161,7 +161,7 @@ const HeartRateConnectCard = () => {
               Se till att pulsbandet sitter på (fuktad elektrod) och inte är anslutet till en annan app eller klocka.
             </p>
           )}
-          {!scanning && sorted.length === 0 && (
+          {!scanning && devices.length === 0 && (
             <Button
               variant="outline"
               className="w-full rounded-full"
