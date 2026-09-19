@@ -7,45 +7,6 @@ interface MuscleMapProps {
   userId: string;
 }
 
-function mapGroupToRegions(group: string): string[] {
-  switch (group) {
-    case "Bröst": return ["chest"];
-    case "Rygg": return ["traps", "lats", "lowerBack"];
-    case "Ben": return ["quads", "calves", "hamstrings"];
-    case "Rumpa": return ["glutes"];
-    case "Axlar": return ["delts"];
-    case "Armar": return ["biceps", "triceps", "forearms"];
-    case "Core": return ["abs", "obliques"];
-    case "Helkropp": return ["chest", "traps", "lats", "quads", "calves", "delts", "biceps", "abs"];
-    default: return [];
-  }
-}
-
-const MUSCLE_GROUP_MAP: Record<string, string[]> = {};
-for (const ex of exerciseLibrary) {
-  MUSCLE_GROUP_MAP[ex.name.toLowerCase()] = mapGroupToRegions(ex.muscleGroup);
-}
-
-function extractExerciseNames(details: string): string[] {
-  const names: string[] = [];
-  for (const line of details.split("\n")) {
-    const trimmed = line.replace(/^[-•*]\s*/, "").trim();
-    if (!trimmed || /^\d/.test(trimmed)) continue;
-    const match = trimmed.match(/^([A-Za-zÅÄÖåäö\s\-()]+)/);
-    if (match) {
-      const name = match[1].trim().replace(/\s*—\s*$/, "");
-      if (name.length > 2) names.push(name);
-    }
-  }
-  return names;
-}
-
-function findPartialMatch(name: string, map: Record<string, string[]>): string[] | null {
-  for (const [key, regions] of Object.entries(map)) {
-    if (name.includes(key) || key.includes(name)) return regions;
-  }
-  return null;
-}
 
 const REGION_LABELS: Record<string, string> = {
   chest: "Bröst", traps: "Trapezius", lats: "Latissimus", lowerBack: "Nedre rygg",
