@@ -13,7 +13,16 @@ import {
   Sparkles,
   Lightbulb,
   Plus,
+  Footprints,
+  Flame as FlameIcon,
 } from "lucide-react";
+import {
+  isHealthSupported,
+  loadStoredHealthDays,
+  readHealthDays,
+  saveHealthDays,
+  type HealthDay,
+} from "@/lib/healthSync";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { syncAchievements } from "@/lib/achievementSync";
 import { toLocalDateKey } from "@/lib/dateUtils";
@@ -90,6 +99,38 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const [achievementCount, setAchievementCount] = useState(0);
   const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
   const [archivedDates, setArchivedDates] = useState<string[]>([]);
+  const [healthToday, setHealthToday] = useState<HealthDay | null>(null);
+
+  // Steg och aktiva kalorier från hälsoappen (sparad data visas även i webben).
+  useEffect(() => {
+    let cancelled = false;
+    const todayKeyLocal = toLocalDateKey(new Date());
+    const applyStored = async () => {
+      try {
+        const stored = await loadStoredHealthDays(userId, 7);
+        if (cancelled) return;
+        const row = stored.find((r) => r.day === todayKeyLocal) ?? stored[stored.length - 1] ?? null;
+        setHealthToday(row && (row.steps > 0 || row.activeCalories > 0) ? row : null);
+      } catch {
+        /* ignore */
+      }
+    };
+    void applyStored();
+    if (isHealthSupported()) {
+      (async () => {
+        try {
+          const days = await readHealthDays(7);
+          await saveHealthDays(userId, days);
+          if (!cancelled) await applyStored();
+        } catch {
+          /* behörighet saknas – visa sparad data */
+        }
+      })();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Träningsdatum från arkiverade planer räknas också in i streaken.
   useEffect(() => {
@@ -405,6 +446,30 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
       )}
 
 
+
+      {/* 1c. Steg och aktiva kalorier från hälsoappen */}
+      {healthToday && (
+        <div className="grid grid-cols-2 gap-3">
+          <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Steg idag">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Footprints className="w-4 h-4" />
+              <span className="text-[11px] uppercase tracking-wider font-semibold">Steg idag</span>
+            </div>
+            <p className="text-2xl font-bold leading-none">{healthToday.steps.toLocaleString("sv-SE")}</p>
+            <p className="text-[11px] text-muted-foreground">från din hälsoapp</p>
+          </section>
+          <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Aktiva kalorier idag">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <FlameIcon className="w-4 h-4" />
+              <span className="text-[11px] uppercase tracking-wider font-semibold">Aktiva kcal</span>
+            </div>
+            <p className="text-2xl font-bold leading-none">
+              {healthToday.activeCalories.toLocaleString("sv-SE")}
+            </p>
+            <p className="text-[11px] text-muted-foreground">totalt idag</p>
+          </section>
+        </div>
+      )}
 
       {/* 2. Streak + weekly progress */}
       <div className="grid grid-cols-2 gap-3">
