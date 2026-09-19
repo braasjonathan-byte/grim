@@ -55,6 +55,23 @@ export type RawHealthWorkout = {
 
 let pluginPromise: Promise<HealthPluginLike | null> | null = null;
 
+/** Health Connect kan lämna löften ohanterade – avbryt istället för att snurra för evigt. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!Capacitor.isNativePlatform()) return null;
   if (!pluginPromise) {
@@ -73,7 +90,7 @@ export async function isHealthAvailable(): Promise<boolean> {
   const plugin = await loadPlugin();
   if (!plugin) return false;
   try {
-    const res = await plugin.isHealthAvailable();
+    const res = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout");
     return !!res?.available;
   } catch {
     return false;
@@ -81,9 +98,12 @@ export async function isHealthAvailable(): Promise<boolean> {
 }
 
 function anyGranted(res: PermissionResponse | undefined): boolean {
-  const list = res?.permissions ?? [];
+  const raw = res?.permissions as unknown;
+  if (!raw) return false;
+  const list = Array.isArray(raw) ? raw : [raw as Record<string, boolean>];
   return list.some((entry) => Object.values(entry ?? {}).some(Boolean));
 }
+
 
 export async function requestHealthPermissions(): Promise<void> {
   const plugin = await loadPlugin();
