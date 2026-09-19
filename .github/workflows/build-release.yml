@@ -37,6 +37,9 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
 
+    - name: Patch AndroidManifest (permissions, Health Connect)
+      run: node scripts/patch-android-manifest.cjs
+
     - name: Patch Android system insets
       run: node scripts/patch-android-system-insets.cjs
 
