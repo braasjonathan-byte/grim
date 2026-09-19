@@ -263,3 +263,98 @@ export function activityTrend(rows: HealthDay[]) {
   if (ratio <= 0.6) return "Lugnare dag än vanligt – bra läge för ett tyngre pass.";
   return "Aktiviteten ligger i nivå med din vanliga vecka.";
 }
+
+/* ---------------- Genomförda pass från Health Connect / Apple Health ---------------- */
+
+export type HealthWorkout = {
+  key: string;
+  start: string;
+  end: string;
+  type: string;
+  label: string;
+  source: string;
+  minutes: number;
+  distanceKm: number | null;
+  calories: number | null;
+  steps: number | null;
+  avgHeartRate: number | null;
+  maxHeartRate: number | null;
+};
+
+const WORKOUT_LABELS: Array<[RegExp, string]> = [
+  [/tread/i, "Löpband"],
+  [/run|jog/i, "Löpning"],
+  [/hike|vandr/i, "Vandring"],
+  [/walk/i, "Promenad"],
+  [/spinning|indoor.?bik|stationary/i, "Spinning"],
+  [/bik|cycl|ride/i, "Cykling"],
+  [/swim/i, "Simning"],
+  [/row/i, "Rodd"],
+  [/elliptic|cross.?train/i, "Crosstrainer"],
+  [/stair/i, "Trappmaskin"],
+  [/strength|weight|resistance/i, "Styrketräning"],
+  [/yoga/i, "Yoga"],
+  [/hiit|interval/i, "Intervallpass"],
+  [/ski/i, "Skidåkning"],
+  [/paddl|kayak/i, "Paddling"],
+  [/golf/i, "Golf"],
+  [/football|soccer/i, "Fotboll"],
+  [/tennis|padel/i, "Racketsport"],
+  [/box/i, "Boxning"],
+];
+
+function labelForWorkoutType(type: string): string {
+  const clean = (type || "").replace(/_/g, " ").trim();
+  for (const [re, label] of WORKOUT_LABELS) if (re.test(clean)) return label;
+  if (!clean) return "Träningspass";
+  return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+}
+
+/** Kort, stabil nyckel per pass så samma pass inte importeras två gånger. */
+function workoutKey(w: RawHealthWorkout): string {
+  const base = w.id || `${w.startDate}|${w.workoutType}`;
+  let hash = 0;
+  for (let i = 0; i < base.length; i += 1) hash = (hash * 31 + base.charCodeAt(i)) >>> 0;
+  return hash.toString(36).slice(0, 6);
+}
+
+/** Läser genomförda pass från hälsoappen (inkl. Samsung Health via Health Connect). */
+export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
+  const plugin = await loadPlugin();
+  if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
+
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 86400000);
+  const res = await plugin.queryWorkouts({
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    includeHeartRate: true,
+    includeRoute: false,
+    includeSteps: true,
+  });
+
+  return (res?.workouts ?? [])
+    .map((w) => {
+      const bpms = (w.heartRate ?? []).map((s) => s.bpm).filter((n) => Number.isFinite(n) && n > 0);
+      const minutes = w.duration
+        ? w.duration > 600 // vissa plattformar returnerar sekunder
+          ? w.duration / 60
+          : w.duration
+        : (new Date(w.endDate).getTime() - new Date(w.startDate).getTime()) / 60000;
+      return {
+        key: workoutKey(w),
+        start: w.startDate,
+        end: w.endDate,
+        type: w.workoutType,
+        label: labelForWorkoutType(w.workoutType),
+        source: w.sourceName || "Hälsoappen",
+        minutes: Math.max(0, Math.round(minutes * 100) / 100),
+        distanceKm: w.distance ? Math.round((w.distance / 1000) * 100) / 100 : null,
+        calories: w.calories ? Math.round(w.calories) : null,
+        steps: w.steps ? Math.round(w.steps) : null,
+        avgHeartRate: bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null,
+        maxHeartRate: bpms.length ? Math.max(...bpms) : null,
+      } satisfies HealthWorkout;
+    })
+    .sort((a, b) => b.start.localeCompare(a.start));
+}
