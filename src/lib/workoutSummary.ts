@@ -62,19 +62,26 @@ const paceMinPerKm = (tempo: unknown): number => {
   return single ? parseInt(single[1], 10) : 0;
 };
 
-const entryDistanceKm = (data: Record<string, unknown>): number => {
+/** Only the intervals the user actually checked off. */
+const doneIntervals = (data: Record<string, unknown>, doneFlags: string): Array<Record<string, unknown>> => {
+  const intervals = Array.isArray(data.intervals) ? data.intervals : [];
+  return intervals
+    .map((raw) => parsePayload(raw) || {})
+    .filter((_, i) => doneFlags[i] === "1");
+};
+
+const entryDistanceKm = (data: Record<string, unknown>, doneFlags: string): number => {
   const intervals = Array.isArray(data.intervals) ? data.intervals : [];
   if (intervals.length) {
     let sum = 0;
-    for (const raw of intervals) {
-      const iv = parsePayload(raw) || {};
+    for (const iv of doneIntervals(data, doneFlags)) {
       const d = toNum(iv.dist ?? iv.distance);
       if (d > 0) { sum += d; continue; }
       const mins = toNum(iv.time);
       const pace = paceMinPerKm(iv.tempo);
       if (mins > 0 && pace > 0) sum += mins / pace;
     }
-    if (sum > 0) return sum;
+    return sum;
   }
   const direct = toNum(data.dist ?? data.distance);
   if (direct > 0) return direct;
@@ -83,11 +90,12 @@ const entryDistanceKm = (data: Record<string, unknown>): number => {
   return mins > 0 && pace > 0 ? mins / pace : 0;
 };
 
-const entryMinutes = (data: Record<string, unknown>): number => {
-  const direct = toNum(data.time);
-  if (direct > 0) return direct;
+const entryMinutes = (data: Record<string, unknown>, doneFlags: string): number => {
   const intervals = Array.isArray(data.intervals) ? data.intervals : [];
-  return intervals.reduce((s, raw) => s + toNum((parsePayload(raw) || {}).time), 0);
+  if (intervals.length) {
+    return doneIntervals(data, doneFlags).reduce((s, iv) => s + toNum(iv.time), 0);
+  }
+  return toNum(data.time);
 };
 
 /** Aggregates every logged cardio exercise in the session. */
