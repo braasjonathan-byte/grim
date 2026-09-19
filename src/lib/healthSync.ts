@@ -219,13 +219,16 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   };
 
   const [steps, calories] = await Promise.all([
-    plugin
-      .queryAggregated({ ...request, dataType: "steps" })
-      .catch(() => ({ aggregatedData: [] })),
-    plugin
-      .queryAggregated({ ...request, dataType: "active-calories" })
-      .catch(() => ({ aggregatedData: [] })),
+    withTimeout(plugin.queryAggregated({ ...request, dataType: "steps" }), 20000, "timeout").catch(
+      () => ({ aggregatedData: [] }),
+    ),
+    withTimeout(
+      plugin.queryAggregated({ ...request, dataType: "active-calories" }),
+      20000,
+      "timeout",
+    ).catch(() => ({ aggregatedData: [] })),
   ]);
+
 
   const map = new Map<string, HealthDay>();
   for (let i = 0; i < days; i += 1) {
