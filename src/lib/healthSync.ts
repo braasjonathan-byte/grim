@@ -16,6 +16,10 @@ const PERMISSIONS = [
   "READ_HEART_RATE",
 ] as const;
 
+/** Minsta uppsättning som alltid finns i Health Connect. */
+const CORE_PERMISSIONS = ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE"] as const;
+
+
 type PermissionResponse = { permissions: Record<string, boolean>[] };
 
 type HealthPluginLike = {
@@ -137,9 +141,20 @@ export async function requestHealthPermissions(): Promise<void> {
       "Health Connect svarade inte. Öppna Health Connect, ge Grim behörighet och försök igen."
     );
   } catch (err: any) {
-    throw new Error(err?.message || "Behörighet till hälsodata nekades.");
+    // Vissa enheter avvisar hela begäran om en behörighet inte stöds –
+    // försök då med enbart grunddatan.
+    try {
+      res = await withTimeout(
+        plugin.requestHealthPermissions({ permissions: [...CORE_PERMISSIONS] }),
+        120000,
+        err?.message || "Behörighet till hälsodata nekades."
+      );
+    } catch (fallbackErr: any) {
+      throw new Error(fallbackErr?.message || err?.message || "Behörighet till hälsodata nekades.");
+    }
   }
   if (anyGranted(res)) return;
+
 
   try {
     granted = anyGranted(await withTimeout(plugin.checkHealthPermissions(req), 10000, "timeout"));
