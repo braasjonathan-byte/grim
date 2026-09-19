@@ -99,6 +99,38 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   const [achievementCount, setAchievementCount] = useState(0);
   const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
   const [archivedDates, setArchivedDates] = useState<string[]>([]);
+  const [healthToday, setHealthToday] = useState<HealthDay | null>(null);
+
+  // Steg och aktiva kalorier från hälsoappen (sparad data visas även i webben).
+  useEffect(() => {
+    let cancelled = false;
+    const todayKeyLocal = toLocalDateKey(new Date());
+    const applyStored = async () => {
+      try {
+        const stored = await loadStoredHealthDays(userId, 7);
+        if (cancelled) return;
+        const row = stored.find((r) => r.day === todayKeyLocal) ?? stored[stored.length - 1] ?? null;
+        setHealthToday(row && (row.steps > 0 || row.activeCalories > 0) ? row : null);
+      } catch {
+        /* ignore */
+      }
+    };
+    void applyStored();
+    if (isHealthSupported()) {
+      (async () => {
+        try {
+          const days = await readHealthDays(7);
+          await saveHealthDays(userId, days);
+          if (!cancelled) await applyStored();
+        } catch {
+          /* behörighet saknas – visa sparad data */
+        }
+      })();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Träningsdatum från arkiverade planer räknas också in i streaken.
   useEffect(() => {
