@@ -109,11 +109,13 @@ export async function requestHealthPermissions(): Promise<void> {
   const plugin = await loadPlugin();
   if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
 
-  const available = await plugin.isHealthAvailable().catch(() => ({ available: false }));
+  const available = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout").catch(() => ({
+    available: false,
+  }));
   if (!available?.available) {
     throw new Error(
       Capacitor.getPlatform() === "android"
-        ? "Health Connect saknas på telefonen. Installera appen och försök igen."
+        ? "Health Connect svarar inte eller saknas på telefonen. Öppna Health Connect en gång och försök igen."
         : "Apple Health är inte tillgängligt på den här enheten."
     );
   }
@@ -121,7 +123,7 @@ export async function requestHealthPermissions(): Promise<void> {
   const req = { permissions: [...PERMISSIONS] };
   let granted = false;
   try {
-    granted = anyGranted(await plugin.checkHealthPermissions(req));
+    granted = anyGranted(await withTimeout(plugin.checkHealthPermissions(req), 10000, "timeout"));
   } catch {
     /* iOS saknar check – fortsätt med request */
   }
@@ -129,17 +131,22 @@ export async function requestHealthPermissions(): Promise<void> {
 
   let res: PermissionResponse | undefined;
   try {
-    res = await plugin.requestHealthPermissions(req);
+    res = await withTimeout(
+      plugin.requestHealthPermissions(req),
+      120000,
+      "Health Connect svarade inte. Öppna Health Connect, ge Grim behörighet och försök igen."
+    );
   } catch (err: any) {
     throw new Error(err?.message || "Behörighet till hälsodata nekades.");
   }
   if (anyGranted(res)) return;
 
   try {
-    granted = anyGranted(await plugin.checkHealthPermissions(req));
+    granted = anyGranted(await withTimeout(plugin.checkHealthPermissions(req), 10000, "timeout"));
   } catch {
     granted = Capacitor.getPlatform() === "ios";
   }
+
   if (!granted) {
     // Health Connect visar ingen dialog om användaren nekat två gånger –
     // öppna inställningarna direkt så behörigheten kan ges manuellt.
