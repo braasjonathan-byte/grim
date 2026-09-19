@@ -37,7 +37,16 @@ const HeartRateConnectCard = () => {
         if (!mounted.current) return;
         setDevices((prev) =>
           prev.some((p) => p.id === d.id)
-            ? prev.map((p) => (p.id === d.id ? { ...p, name: p.name ?? d.name, rssi: d.rssi ?? p.rssi } : p))
+            ? prev.map((p) =>
+                p.id === d.id
+                  ? {
+                      ...p,
+                      name: p.name ?? d.name,
+                      rssi: d.rssi ?? p.rssi,
+                      isHeartRate: p.isHeartRate || d.isHeartRate,
+                    }
+                  : p
+              )
             : [...prev, d]
         );
       });
