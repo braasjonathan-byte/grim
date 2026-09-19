@@ -168,7 +168,10 @@ export async function hasHealthPermissions(): Promise<boolean> {
   const plugin = await loadPlugin();
   if (!plugin) return false;
   try {
-    return anyGranted(await plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }));
+    return anyGranted(
+      await withTimeout(plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }), 10000, "timeout"),
+    );
+
   } catch {
     return false;
   }
