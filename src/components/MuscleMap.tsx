@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { exerciseLibrary } from "@/data/exerciseLibrary";
+import { loadTrainedRegions } from "@/lib/untrainedMuscles";
 import { Activity, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
