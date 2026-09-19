@@ -86,18 +86,31 @@ export async function loadTrainedRegions(userId: string, days = 7): Promise<Set<
     supabase.from("workout_completions").select("week, day, done, logged_weights")
       .eq("user_id", userId).eq("done", true).gte("updated_at", since.toISOString()),
     supabase.from("workout_plans").select("week, day, details").eq("user_id", userId),
-    supabase.from("custom_exercises").select("name, muscle_group"),
+    supabase.from("custom_exercises").select("name, muscle_group, submuscles, secondary_muscles"),
   ]);
 
+  // Egna övningar: huvudgrupp + submuskler + sekundära muskler
   const customMap: Record<string, string[]> = {};
-  if (customExercises) for (const ce of customExercises) customMap[ce.name.toLowerCase()] = mapGroupToRegions(ce.muscle_group);
+  if (customExercises) {
+    for (const ce of customExercises) {
+      const regions = new Set<string>(mapGroupToRegions(ce.muscle_group));
+      labelsToRegions(ce.submuscles).forEach((r) => regions.add(r));
+      labelsToRegions(ce.secondary_muscles).forEach((r) => regions.add(r));
+      exerciseAllRegions(ce.name).forEach((r) => regions.add(r));
+      customMap[ce.name.toLowerCase()] = [...regions];
+    }
+  }
   const planMap = new Map<string, string>();
   if (plans) for (const p of plans) planMap.set(`${p.week}-${p.day}`, p.details);
 
   const regions = new Set<string>();
   const addFor = (rawName: string) => {
     const lower = rawName.toLowerCase();
-    const mapped = MUSCLE_GROUP_MAP[lower] || customMap[lower]
+    // Primära + sekundära muskler från regelverket går först, så att t.ex.
+    // bänkpress även räknas som tricepsträning.
+    const detailed = exerciseAllRegions(rawName);
+    const mapped = (detailed.length ? detailed : null)
+      || MUSCLE_GROUP_MAP[lower] || customMap[lower]
       || findPartialMatch(lower, MUSCLE_GROUP_MAP) || findPartialMatch(lower, customMap);
     if (mapped) mapped.forEach(r => regions.add(r));
   };
