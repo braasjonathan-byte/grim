@@ -154,7 +154,24 @@ const nativeStart = async (deviceId: string, deviceName: string | null) => {
   });
 };
 
-export type ScanDevice = { id: string; name: string | null; rssi?: number | null };
+export type ScanDevice = {
+  id: string;
+  name: string | null;
+  rssi?: number | null;
+  isHeartRate?: boolean;
+};
+
+const HR_NAME_HINTS = [
+  "hrm", "heart", "polar", "garmin", "wahoo", "tickr", "coospo", "magene",
+  "suunto", "decathlon", "kalenji", "scosche", "rhythm", "myzone", "hw706",
+  "hw807", "h9", "h10", "h7", "verity", "oh1", "pulse", "puls", "cardio",
+];
+
+const looksLikeHeartRate = (name: string | null, uuids: string[]) => {
+  if (uuids.some((u) => (u || "").toLowerCase().includes("180d"))) return true;
+  const n = (name || "").toLowerCase();
+  return !!n && HR_NAME_HINTS.some((h) => n.includes(h));
+};
 
 /**
  * Skannar efter pulsmätare. Native: bred skanning (alla BLE-enheter) så även
