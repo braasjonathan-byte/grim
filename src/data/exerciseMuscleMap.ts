@@ -194,9 +194,20 @@ export const LABEL_TO_REGION: Record<string, MuscleRegion> = {
 export function labelsToRegions(labels: unknown): MuscleRegion[] {
   if (!Array.isArray(labels)) return [];
   const out: MuscleRegion[] = [];
-  for (const raw of labels) {
-    const region = LABEL_TO_REGION[String(raw).toLowerCase().trim()];
+  const add = (value: unknown) => {
+    const region = LABEL_TO_REGION[String(value).toLowerCase().trim()];
     if (region && !out.includes(region)) out.push(region);
+  };
+  for (const raw of labels) {
+    // Egna övningar sparar sekundära muskler som { muscle, submuscles }
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const obj = raw as { muscle?: unknown; submuscles?: unknown };
+      const subs = Array.isArray(obj.submuscles) ? obj.submuscles : [];
+      if (subs.length) subs.forEach(add);
+      else if (obj.muscle !== undefined) GROUP_REGIONS[String(obj.muscle)]?.forEach(add);
+      continue;
+    }
+    add(raw);
   }
   return out;
 }
