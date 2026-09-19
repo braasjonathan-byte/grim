@@ -7,7 +7,7 @@ export type HealthDay = {
   activeCalories: number;
 };
 
-const PERMISSIONS = ["READ_STEPS", "READ_ACTIVE_CALORIES"] as const;
+const PERMISSIONS = ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE"] as const;
 
 type PermissionResponse = { permissions: Record<string, boolean>[] };
 
