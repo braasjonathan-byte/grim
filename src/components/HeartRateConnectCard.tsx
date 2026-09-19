@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Heart, HeartOff, Loader2, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Heart, HeartOff, Loader2, RefreshCw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import {
   connectHeartRateDevice,
