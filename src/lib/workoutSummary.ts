@@ -121,8 +121,10 @@ function collectCardio(lw: Record<string, unknown>): CardioSummary | null {
     if (seen.has(sig)) continue;
     seen.add(sig);
 
-    const mins = entryMinutes(data);
-    const km = entryDistanceKm(data);
+    const rawName = key.substring("__cond__".length);
+    const intervalFlags = String(lw[`__sets__interval_${rawName}`] ?? lw[`__sets__interval_${name}`] ?? "");
+    const mins = entryMinutes(data, intervalFlags);
+    const km = entryDistanceKm(data, intervalFlags);
     if (mins <= 0 && km <= 0) continue;
     count += 1;
     minutes += mins;
