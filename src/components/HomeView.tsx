@@ -447,6 +447,8 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
 
 
 
+      <HealthWorkoutPrompt userId={userId} />
+
       {/* 1c. Steg och aktiva kalorier från hälsoappen */}
       {healthToday && (
         <div className="grid grid-cols-2 gap-3">
