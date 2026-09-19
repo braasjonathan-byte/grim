@@ -16,6 +16,8 @@ const HeartRateConnectCard = () => {
   const [scanning, setScanning] = useState(false);
   const [devices, setDevices] = useState<ScanDevice[]>([]);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
+  const [showUnknown, setShowUnknown] = useState(false);
   const mounted = useRef(true);
 
   useEffect(() => {
