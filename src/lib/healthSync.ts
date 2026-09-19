@@ -16,6 +16,10 @@ const PERMISSIONS = [
   "READ_HEART_RATE",
 ] as const;
 
+/** Minsta uppsättning som alltid finns i Health Connect. */
+const CORE_PERMISSIONS = ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE"] as const;
+
+
 type PermissionResponse = { permissions: Record<string, boolean>[] };
 
 type HealthPluginLike = {
