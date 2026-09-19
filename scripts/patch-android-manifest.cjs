@@ -135,7 +135,63 @@ ${data}
   console.log("[patch-android-manifest] Added SEND/SEND_MULTIPLE share-target intent filters");
 }
 
+// Health Connect: behörigheter, rationale-aktivitet och paketsynlighet.
+// Utan rationale-aktiviteten vägrar Health Connect visa samtyckesdialogen,
+// och behörighetsanropet returnerar "nekad" utan att något fönster öppnas.
+const HEALTH_PERMS = [
+  "android.permission.health.READ_STEPS",
+  "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+];
+for (const p of HEALTH_PERMS) {
+  if (!xml.includes(`android:name="${p}"`)) {
+    xml = xml.replace(/<\/manifest>/, `    <uses-permission android:name="${p}" />\n</manifest>`);
+    changed = true;
+    console.log(`[patch-android-manifest] Added ${p}`);
+  }
+}
+
+if (!xml.includes("HEALTH_CONNECT_GRIM")) {
+  const block = `        <!-- HEALTH_CONNECT_GRIM: rationale-vy för Health Connect (Android 13 och äldre) -->
+        <activity
+            android:name="com.fit_up.health.capacitor.PermissionsRationaleActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity="com.fit_up.health.capacitor.PermissionsRationaleActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+`;
+  xml = xml.replace(/(\s*)<\/application>/, `\n${block}$1</application>`);
+  changed = true;
+  console.log("[patch-android-manifest] Added Health Connect rationale activity + alias");
+}
+
+if (!xml.includes("com.google.android.apps.healthdata")) {
+  const q = `        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+`;
+  if (xml.includes("<queries>")) {
+    xml = xml.replace(/<\/queries>/, `${q}    </queries>`);
+  } else {
+    xml = xml.replace(/<\/manifest>/, `    <queries>\n${q}    </queries>\n</manifest>`);
+  }
+  changed = true;
+  console.log("[patch-android-manifest] Added Health Connect package visibility");
+}
+
 if (changed) {
+
 
   fs.writeFileSync(MANIFEST, xml, "utf8");
   console.log("[patch-android-manifest] AndroidManifest.xml updated.");
