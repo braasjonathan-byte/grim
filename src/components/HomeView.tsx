@@ -447,6 +447,30 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
 
 
 
+      {/* 1c. Steg och aktiva kalorier från hälsoappen */}
+      {healthToday && (
+        <div className="grid grid-cols-2 gap-3">
+          <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Steg idag">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Footprints className="w-4 h-4" />
+              <span className="text-[11px] uppercase tracking-wider font-semibold">Steg idag</span>
+            </div>
+            <p className="text-2xl font-bold leading-none">{healthToday.steps.toLocaleString("sv-SE")}</p>
+            <p className="text-[11px] text-muted-foreground">från din hälsoapp</p>
+          </section>
+          <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Aktiva kalorier idag">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <FlameIcon className="w-4 h-4" />
+              <span className="text-[11px] uppercase tracking-wider font-semibold">Aktiva kcal</span>
+            </div>
+            <p className="text-2xl font-bold leading-none">
+              {healthToday.activeCalories.toLocaleString("sv-SE")}
+            </p>
+            <p className="text-[11px] text-muted-foreground">totalt idag</p>
+          </section>
+        </div>
+      )}
+
       {/* 2. Streak + weekly progress */}
       <div className="grid grid-cols-2 gap-3">
         <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Streak">
