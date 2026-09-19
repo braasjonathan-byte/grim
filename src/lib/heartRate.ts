@@ -154,16 +154,35 @@ const nativeStart = async (deviceId: string, deviceName: string | null) => {
   });
 };
 
-export type ScanDevice = { id: string; name: string | null; rssi?: number | null };
+export type ScanDevice = {
+  id: string;
+  name: string | null;
+  rssi?: number | null;
+  isHeartRate?: boolean;
+};
+
+const HR_NAME_HINTS = [
+  "hrm", "heart", "polar", "garmin", "wahoo", "tickr", "coospo", "magene",
+  "suunto", "decathlon", "kalenji", "scosche", "rhythm", "myzone", "hw706",
+  "hw807", "h9", "h10", "h7", "verity", "oh1", "pulse", "puls", "cardio",
+];
+
+const looksLikeHeartRate = (name: string | null, uuids: string[]) => {
+  if (uuids.some((u) => (u || "").toLowerCase().includes("180d"))) return true;
+  const n = (name || "").toLowerCase();
+  return !!n && HR_NAME_HINTS.some((h) => n.includes(h));
+};
 
 /**
  * Skannar efter pulsmätare. Native: bred skanning (alla BLE-enheter) så även
  * band som inte annonserar Heart Rate-tjänsten hittas. Web: visar webbläsarens
  * egen väljare med acceptAllDevices.
  */
+let scanStopRequested = false;
+
 export const scanHeartRateDevices = async (
   onDevice: (d: ScanDevice) => void,
-  durationMs = 15000
+  durationMs = 30000
 ): Promise<void> => {
   if (!isNative) {
     const nav: any = navigator;
@@ -172,25 +191,41 @@ export const scanHeartRateDevices = async (
       acceptAllDevices: true,
       optionalServices: ["heart_rate", "battery_service", HR_SERVICE],
     });
-    if (dev) onDevice({ id: dev.id || dev.name || "web", name: dev.name || null });
+    if (dev) onDevice({ id: dev.id || dev.name || "web", name: dev.name || null, isHeartRate: true });
     webPickedDevice = dev || null;
     return;
   }
 
   const { BleClient } = await import("@capacitor-community/bluetooth-le");
   await BleClient.initialize({ androidNeverForLocation: false });
-  try { await BleClient.requestLEScan({ allowDuplicates: false }, (res) => {
+
+  // Redan anslutna/parade pulsmätare (t.ex. via systemet) visas direkt överst.
+  try {
+    const connected = await BleClient.getConnectedDevices([HR_SERVICE]);
+    for (const d of connected || []) {
+      onDevice({ id: d.deviceId, name: d.name ?? null, isHeartRate: true });
+    }
+  } catch {}
+
+  scanStopRequested = false;
+  try { await BleClient.requestLEScan({ allowDuplicates: true }, (res: any) => {
     const id = res?.device?.deviceId;
     if (!id) return;
-    onDevice({ id, name: res.device.name ?? res.localName ?? null, rssi: res.rssi ?? null });
+    const name = res.device?.name ?? res.localName ?? null;
+    const uuids: string[] = [...(res.uuids ?? []), ...(res.device?.uuids ?? [])];
+    onDevice({ id, name, rssi: res.rssi ?? null, isHeartRate: looksLikeHeartRate(name, uuids) });
   }); } catch (err: any) {
     throw new Error(err?.message || "Kunde inte starta Bluetooth-sökning");
   }
-  await new Promise((r) => setTimeout(r, durationMs));
+  const started = Date.now();
+  while (!scanStopRequested && Date.now() - started < durationMs) {
+    await new Promise((r) => setTimeout(r, 250));
+  }
   try { await BleClient.stopLEScan(); } catch {}
 };
 
 export const stopHeartRateScan = async () => {
+  scanStopRequested = true;
   if (!isNative) return;
   try {
     const { BleClient } = await import("@capacitor-community/bluetooth-le");
