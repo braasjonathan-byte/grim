@@ -129,6 +129,9 @@ jobs:
           echo "---- Final AndroidManifest.xml ----"
           cat "$MANIFEST"
 
+      - name: Patch AndroidManifest (permissions, Health Connect)
+        run: node scripts/patch-android-manifest.cjs
+
       - name: Patch Android system insets
         if: always()
         run: node scripts/patch-android-system-insets.cjs || echo "::warning::system inset patch failed"
