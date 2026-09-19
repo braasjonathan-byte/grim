@@ -147,6 +147,19 @@ export function exerciseAllRegions(name: string): MuscleRegion[] {
   return Array.from(new Set([...hit.primary, ...hit.secondary]));
 }
 
+/** Muskelgrupp → regioner, för egna övningar som bara anger en grupp. */
+export const GROUP_REGIONS: Record<string, MuscleRegion[]> = {
+  "Bröst": ["chest"],
+  "Rygg": ["traps", "lats", "lowerBack"],
+  "Ben": ["quads", "hamstrings", "calves"],
+  "Rumpa": ["glutes"],
+  "Axlar": ["delts"],
+  "Armar": ["biceps", "triceps", "forearms"],
+  "Underarmar": ["forearms"],
+  "Core": ["abs", "obliques"],
+  "Helkropp": [],
+};
+
 /** Svenska muskelnamn (t.ex. från egna övningars sekundära muskler) till region. */
 export const LABEL_TO_REGION: Record<string, MuscleRegion> = {
   "bröst": "chest",
