@@ -55,6 +55,23 @@ export type RawHealthWorkout = {
 
 let pluginPromise: Promise<HealthPluginLike | null> | null = null;
 
+/** Health Connect kan lämna löften ohanterade – avbryt istället för att snurra för evigt. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!Capacitor.isNativePlatform()) return null;
   if (!pluginPromise) {
@@ -73,7 +90,7 @@ export async function isHealthAvailable(): Promise<boolean> {
   const plugin = await loadPlugin();
   if (!plugin) return false;
   try {
-    const res = await plugin.isHealthAvailable();
+    const res = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout");
     return !!res?.available;
   } catch {
     return false;
@@ -81,19 +98,24 @@ export async function isHealthAvailable(): Promise<boolean> {
 }
 
 function anyGranted(res: PermissionResponse | undefined): boolean {
-  const list = res?.permissions ?? [];
+  const raw = res?.permissions as unknown;
+  if (!raw) return false;
+  const list = Array.isArray(raw) ? raw : [raw as Record<string, boolean>];
   return list.some((entry) => Object.values(entry ?? {}).some(Boolean));
 }
+
 
 export async function requestHealthPermissions(): Promise<void> {
   const plugin = await loadPlugin();
   if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
 
-  const available = await plugin.isHealthAvailable().catch(() => ({ available: false }));
+  const available = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout").catch(() => ({
+    available: false,
+  }));
   if (!available?.available) {
     throw new Error(
       Capacitor.getPlatform() === "android"
-        ? "Health Connect saknas på telefonen. Installera appen och försök igen."
+        ? "Health Connect svarar inte eller saknas på telefonen. Öppna Health Connect en gång och försök igen."
         : "Apple Health är inte tillgängligt på den här enheten."
     );
   }
@@ -101,7 +123,7 @@ export async function requestHealthPermissions(): Promise<void> {
   const req = { permissions: [...PERMISSIONS] };
   let granted = false;
   try {
-    granted = anyGranted(await plugin.checkHealthPermissions(req));
+    granted = anyGranted(await withTimeout(plugin.checkHealthPermissions(req), 10000, "timeout"));
   } catch {
     /* iOS saknar check – fortsätt med request */
   }
@@ -109,17 +131,22 @@ export async function requestHealthPermissions(): Promise<void> {
 
   let res: PermissionResponse | undefined;
   try {
-    res = await plugin.requestHealthPermissions(req);
+    res = await withTimeout(
+      plugin.requestHealthPermissions(req),
+      120000,
+      "Health Connect svarade inte. Öppna Health Connect, ge Grim behörighet och försök igen."
+    );
   } catch (err: any) {
     throw new Error(err?.message || "Behörighet till hälsodata nekades.");
   }
   if (anyGranted(res)) return;
 
   try {
-    granted = anyGranted(await plugin.checkHealthPermissions(req));
+    granted = anyGranted(await withTimeout(plugin.checkHealthPermissions(req), 10000, "timeout"));
   } catch {
     granted = Capacitor.getPlatform() === "ios";
   }
+
   if (!granted) {
     // Health Connect visar ingen dialog om användaren nekat två gånger –
     // öppna inställningarna direkt så behörigheten kan ges manuellt.
@@ -141,7 +168,10 @@ export async function hasHealthPermissions(): Promise<boolean> {
   const plugin = await loadPlugin();
   if (!plugin) return false;
   try {
-    return anyGranted(await plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }));
+    return anyGranted(
+      await withTimeout(plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }), 10000, "timeout"),
+    );
+
   } catch {
     return false;
   }
@@ -189,13 +219,16 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   };
 
   const [steps, calories] = await Promise.all([
-    plugin
-      .queryAggregated({ ...request, dataType: "steps" })
-      .catch(() => ({ aggregatedData: [] })),
-    plugin
-      .queryAggregated({ ...request, dataType: "active-calories" })
-      .catch(() => ({ aggregatedData: [] })),
+    withTimeout(plugin.queryAggregated({ ...request, dataType: "steps" }), 20000, "timeout").catch(
+      () => ({ aggregatedData: [] }),
+    ),
+    withTimeout(
+      plugin.queryAggregated({ ...request, dataType: "active-calories" }),
+      20000,
+      "timeout",
+    ).catch(() => ({ aggregatedData: [] })),
   ]);
+
 
   const map = new Map<string, HealthDay>();
   for (let i = 0; i < days; i += 1) {
@@ -325,13 +358,18 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
 
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
-  const res = await plugin.queryWorkouts({
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    includeHeartRate: true,
-    includeRoute: false,
-    includeSteps: true,
-  });
+  const res = await withTimeout(
+    plugin.queryWorkouts({
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      includeHeartRate: true,
+      includeRoute: false,
+      includeSteps: true,
+    }),
+    30000,
+    "Hälsoappen svarade inte i tid. Försök igen.",
+  );
+
 
   return (res?.workouts ?? [])
     .map((w) => {

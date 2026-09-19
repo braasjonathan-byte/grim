@@ -62,9 +62,14 @@ const HealthConnectCard = () => {
       await requestHealthPermissions();
       setConnected(true);
       const days = await readHealthDays(7);
-      await saveHealthDays(userId, days);
       setRows(days);
+      try {
+        await saveHealthDays(userId, days);
+      } catch {
+        /* spara kan misslyckas offline – visa ändå datan */
+      }
       toast.success("Hälsodata hämtad");
+
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte hämta hälsodata");
     } finally {
