@@ -141,7 +141,12 @@ ${data}
 const HEALTH_PERMS = [
   "android.permission.health.READ_STEPS",
   "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+  "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+  "android.permission.health.READ_DISTANCE",
+  "android.permission.health.READ_EXERCISE",
+  "android.permission.health.READ_HEART_RATE",
 ];
+
 for (const p of HEALTH_PERMS) {
   if (!xml.includes(`android:name="${p}"`)) {
     xml = xml.replace(/<\/manifest>/, `    <uses-permission android:name="${p}" />\n</manifest>`);
