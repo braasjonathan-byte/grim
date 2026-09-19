@@ -57,7 +57,19 @@ const HeartRateConnectCard = () => {
     }
   };
 
-  const sorted = [...devices].sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
+  const hiddenCount = devices.filter((d) => !d.isHeartRate && !d.name).length;
+
+  const sorted = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    return devices
+      .filter((d) => (showUnknown || d.isHeartRate || !!d.name))
+      .filter((d) => !q || (d.name || "").toLowerCase().includes(q))
+      .sort((a, b) => {
+        if (!!a.isHeartRate !== !!b.isHeartRate) return a.isHeartRate ? -1 : 1;
+        if (!!a.name !== !!b.name) return a.name ? -1 : 1;
+        return (b.rssi ?? -999) - (a.rssi ?? -999);
+      });
+  }, [devices, filter, showUnknown]);
 
   return (
     <div className="space-y-3">
