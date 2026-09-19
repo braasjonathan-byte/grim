@@ -30,6 +30,27 @@ type HealthPluginLike = {
     dataType: "steps" | "active-calories" | "mindfulness";
     bucket: string;
   }) => Promise<{ aggregatedData: { startDate: string; value: number }[] }>;
+  queryWorkouts: (req: {
+    startDate: string;
+    endDate: string;
+    includeHeartRate: boolean;
+    includeRoute: boolean;
+    includeSteps: boolean;
+  }) => Promise<{ workouts: RawHealthWorkout[] }>;
+};
+
+export type RawHealthWorkout = {
+  id?: string;
+  startDate: string;
+  endDate: string;
+  workoutType: string;
+  sourceName: string;
+  sourceBundleId?: string;
+  duration: number;
+  distance?: number;
+  steps?: number;
+  calories: number;
+  heartRate?: { timestamp: string; bpm: number }[];
 };
 
 let pluginPromise: Promise<HealthPluginLike | null> | null = null;
