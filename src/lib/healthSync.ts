@@ -358,13 +358,18 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
 
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
-  const res = await plugin.queryWorkouts({
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-    includeHeartRate: true,
-    includeRoute: false,
-    includeSteps: true,
-  });
+  const res = await withTimeout(
+    plugin.queryWorkouts({
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      includeHeartRate: true,
+      includeRoute: false,
+      includeSteps: true,
+    }),
+    30000,
+    "Hälsoappen svarade inte i tid. Försök igen.",
+  );
+
 
   return (res?.workouts ?? [])
     .map((w) => {
