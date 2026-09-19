@@ -38,13 +38,33 @@ const saveDismissed = (keys: Set<string>) => {
   }
 };
 
+const DEMO_WORKOUT: HealthWorkout = {
+  key: "samsung-health-preview",
+  start: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
+  end: new Date().toISOString(),
+  type: "running",
+  label: "Löpning",
+  source: "Samsung Health",
+  minutes: 42,
+  distanceKm: 7.12,
+  calories: 486,
+  steps: 8_421,
+  avgHeartRate: 151,
+  maxHeartRate: 174,
+};
+
 /** Frågar vid appstart om nya pass från hälsoappen ska registreras i Grim. */
-const HealthWorkoutPrompt = ({ userId }: { userId: string }) => {
+const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; preview?: boolean }) => {
   const [pending, setPending] = useState<HealthWorkout[]>([]);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (preview) {
+      setPending([DEMO_WORKOUT]);
+      setOpen(true);
+      return;
+    }
     if (!userId || !isHealthSupported()) return;
     let cancelled = false;
     (async () => {
@@ -67,16 +87,25 @@ const HealthWorkoutPrompt = ({ userId }: { userId: string }) => {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, preview]);
 
   const dismiss = useCallback(() => {
+    if (preview) {
+      setOpen(false);
+      return;
+    }
     const dismissed = loadDismissed();
     pending.forEach((w) => dismissed.add(healthWorkoutDayKey(w)));
     saveDismissed(dismissed);
     setOpen(false);
-  }, [pending]);
+  }, [pending, preview]);
 
   const confirm = useCallback(async () => {
+    if (preview) {
+      toast.success("Passet registrerat i Grim");
+      setOpen(false);
+      return;
+    }
     setSaving(true);
     try {
       const res = await importHealthWorkouts(userId, pending);
@@ -92,7 +121,7 @@ const HealthWorkoutPrompt = ({ userId }: { userId: string }) => {
     } finally {
       setSaving(false);
     }
-  }, [userId, pending]);
+  }, [userId, pending, preview]);
 
   if (pending.length === 0) return null;
 
@@ -106,19 +135,21 @@ const HealthWorkoutPrompt = ({ userId }: { userId: string }) => {
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
-              <p>Vill du registrera det i Grim?</p>
+              <p>Samsung Health har synkat ett nytt pass. Vill du registrera det i Grim?</p>
               <ul className="space-y-1 text-sm">
                 {pending.slice(0, 5).map((w) => {
                   const info = [
                     w.minutes ? `${Math.round(w.minutes)} min` : null,
                     w.distanceKm ? `${w.distanceKm} km` : null,
                     w.calories ? `${w.calories} kcal` : null,
+                    w.avgHeartRate ? `${w.avgHeartRate} bpm i snitt` : null,
                   ].filter(Boolean);
                   return (
                     <li key={healthWorkoutDayKey(w)}>
                       <span className="font-medium text-foreground">{w.label}</span>{" "}
                       {new Date(w.start).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
-                      {info.length > 0 && ` · ${info.join(" · ")}`}
+                       {info.length > 0 && ` · ${info.join(" · ")}`}
+                       <span className="mt-1 block text-xs text-muted-foreground">Källa: {w.source}</span>
                     </li>
                   );
                 })}

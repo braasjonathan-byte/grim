@@ -91,6 +91,7 @@ interface HomeViewProps {
 }
 
 const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
+  const healthPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("health-demo") === "1";
   const [loading, setLoading] = useState(true);
   const [nickname, setNickname] = useState<string>("");
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
@@ -105,6 +106,12 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   // Steg och aktiva kalorier från hälsoappen (sparad data visas även i webben).
   useEffect(() => {
     let cancelled = false;
+    if (healthPreview) {
+      setHealthToday({ day: toLocalDateKey(new Date()), steps: 8_421, activeCalories: 624 });
+      return () => {
+        cancelled = true;
+      };
+    }
     const todayKeyLocal = toLocalDateKey(new Date());
     const applyStored = async () => {
       try {
@@ -131,7 +138,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, healthPreview]);
 
   // Träningsdatum från arkiverade planer räknas också in i streaken.
   useEffect(() => {
@@ -448,20 +455,27 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
 
 
 
-      <HealthWorkoutPrompt userId={userId} />
+      <HealthWorkoutPrompt userId={userId} preview={healthPreview} />
 
       {/* 1c. Steg och aktiva kalorier från hälsoappen */}
       {healthToday && (
-        <div className="grid grid-cols-2 gap-3">
-          <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Steg idag">
+        <div className="space-y-2">
+          {healthPreview && (
+            <div className="flex items-center gap-2 px-1 text-xs font-medium text-success">
+              <CheckCircle2 className="h-4 w-4" />
+              Samsung Health synkades precis
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Steg idag">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Footprints className="w-4 h-4" />
               <span className="text-[11px] uppercase tracking-wider font-semibold">Steg idag</span>
             </div>
             <p className="text-2xl font-bold leading-none">{healthToday.steps.toLocaleString("sv-SE")}</p>
-            <p className="text-[11px] text-muted-foreground">från din hälsoapp</p>
-          </section>
-          <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Aktiva kalorier idag">
+              <p className="text-[11px] text-muted-foreground">{healthPreview ? "från Samsung Health" : "från din hälsoapp"}</p>
+            </section>
+            <section className="rounded-2xl border border-border bg-card p-4 space-y-1" aria-label="Aktiva kalorier idag">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <FlameIcon className="w-4 h-4" />
               <span className="text-[11px] uppercase tracking-wider font-semibold">Aktiva kcal</span>
@@ -469,8 +483,9 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
             <p className="text-2xl font-bold leading-none">
               {healthToday.activeCalories.toLocaleString("sv-SE")}
             </p>
-            <p className="text-[11px] text-muted-foreground">totalt idag</p>
-          </section>
+              <p className="text-[11px] text-muted-foreground">totalt idag</p>
+            </section>
+          </div>
         </div>
       )}
 
