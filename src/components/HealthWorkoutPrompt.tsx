@@ -124,6 +124,7 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
   }, [userId, pending, preview]);
 
   if (pending.length === 0) return null;
+  const sourceName = pending[0]?.source || "hälsoappen";
 
   return (
     <AlertDialog open={open} onOpenChange={(v) => (v ? setOpen(true) : dismiss())}>
@@ -135,7 +136,7 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
-              <p>Samsung Health har synkat ett nytt pass. Vill du registrera det i Grim?</p>
+              <p>{sourceName} har synkat ett nytt pass. Vill du registrera det i Grim?</p>
               <ul className="space-y-1 text-sm">
                 {pending.slice(0, 5).map((w) => {
                   const info = [

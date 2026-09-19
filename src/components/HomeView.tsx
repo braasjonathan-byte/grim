@@ -91,7 +91,8 @@ interface HomeViewProps {
 }
 
 const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
-  const healthPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get("health-demo") === "1";
+  // Visar en ofarlig Samsung Health-demonstration i Lovables förhandsvisning.
+  const healthPreview = import.meta.env.DEV;
   const [loading, setLoading] = useState(true);
   const [nickname, setNickname] = useState<string>("");
   const [planStartDate, setPlanStartDate] = useState<string | null>(null);
