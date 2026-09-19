@@ -13,7 +13,16 @@ import {
   Sparkles,
   Lightbulb,
   Plus,
+  Footprints,
+  Flame as FlameIcon,
 } from "lucide-react";
+import {
+  isHealthSupported,
+  loadStoredHealthDays,
+  readHealthDays,
+  saveHealthDays,
+  type HealthDay,
+} from "@/lib/healthSync";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { syncAchievements } from "@/lib/achievementSync";
 import { toLocalDateKey } from "@/lib/dateUtils";
