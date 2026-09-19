@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { exerciseLibrary } from "@/data/exerciseLibrary";
+import { exerciseAllRegions, labelsToRegions } from "@/data/exerciseMuscleMap";
 
 export function mapGroupToRegions(group: string): string[] {
   switch (group) {
