@@ -120,7 +120,7 @@ const HealthConnectCard = () => {
             Installera Health Connect
           </Button>
         )}
-        {isHealthSupported() && available && (
+        {isHealthSupported() && available !== false && (
           <Button variant="outline" className="rounded-full" onClick={() => void openHealthSettings()}>
             <Settings className="mr-2 h-4 w-4" />
             Behörigheter
