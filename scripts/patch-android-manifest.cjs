@@ -205,3 +205,30 @@ if (changed) {
 } else {
   console.log("[patch-android-manifest] All permissions already declared.");
 }
+
+// Health Connects samtyckesvy laddar den här adressen. Saknas strängen
+// kraschar rationale-vyn och Grim syns inte som valbar app.
+const STRINGS = path.join(
+  __dirname,
+  "..",
+  "android",
+  "app",
+  "src",
+  "main",
+  "res",
+  "values",
+  "strings.xml"
+);
+const PRIVACY_URL = "https://grim.lovable.app/privacy";
+if (fs.existsSync(STRINGS)) {
+  let strings = fs.readFileSync(STRINGS, "utf8");
+  if (!strings.includes('name="privacy_policy_url"')) {
+    strings = strings.replace(
+      /<\/resources>/,
+      `    <string name="privacy_policy_url">${PRIVACY_URL}</string>\n</resources>`
+    );
+    fs.writeFileSync(STRINGS, strings, "utf8");
+    console.log("[patch-android-manifest] Added privacy_policy_url string");
+  }
+}
+
