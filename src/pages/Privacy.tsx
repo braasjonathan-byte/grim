@@ -55,6 +55,27 @@ const Privacy = () => {
         </section>
 
         <section className="space-y-2">
+          <h2 className="text-xl font-bold">4b. Health Connect och Apple Health</h2>
+          <p className="text-sm leading-relaxed">
+            Om du själv väljer att koppla Grim till Health Connect (Android, t.ex. Samsung Health)
+            eller Apple Health läser vi följande efter ditt uttryckliga samtycke:
+          </p>
+          <ul className="list-disc pl-5 space-y-1 text-sm leading-relaxed">
+            <li><strong>Steg, aktiva kalorier och distans</strong> – för dagsöversikt och veckostatistik.</li>
+            <li><strong>Genomförda pass</strong> – så att du kan registrera dem i din träningslogg.</li>
+            <li><strong>Puls</strong> – som en del av de pass du importerar.</li>
+            <li><strong>Sömn</strong> – som underlag för återhämtning.</li>
+          </ul>
+          <p className="text-sm leading-relaxed">
+            Data läses bara när du trycker på synka eller importerar ett pass, sparas på ditt konto
+            och delas aldrig med annonsörer eller tredje part. Vi skriver ingen data tillbaka till
+            din hälsoapp. Du kan när som helst återkalla åtkomsten i Health Connect eller Apple
+            Health, och radera det som sparats genom att radera ditt Grim-konto.
+          </p>
+        </section>
+
+
+        <section className="space-y-2">
           <h2 className="text-xl font-bold">5. Lagring och säkerhet</h2>
           <p className="text-sm leading-relaxed">
             Dina uppgifter lagras krypterat hos våra molnleverantörer (Supabase/EU). Åtkomst skyddas

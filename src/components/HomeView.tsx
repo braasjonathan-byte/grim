@@ -108,7 +108,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   useEffect(() => {
     let cancelled = false;
     if (healthPreview) {
-      setHealthToday({ day: toLocalDateKey(new Date()), steps: 8_421, activeCalories: 624 });
+      setHealthToday({ day: toLocalDateKey(new Date()), steps: 8_421, activeCalories: 624, sleepMinutes: 437 });
       return () => {
         cancelled = true;
       };
