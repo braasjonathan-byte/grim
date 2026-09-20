@@ -38,5 +38,8 @@ project(':capacitor-firebase-app').projectDir = new File('../node_modules/@capac
 include ':capacitor-firebase-crashlytics'
 project(':capacitor-firebase-crashlytics').projectDir = new File('../node_modules/@capacitor-firebase/crashlytics/android')
 
+include ':capacitor-health'
+project(':capacitor-health').projectDir = new File('../node_modules/capacitor-health/android')
+
 include ':send-intent'
 project(':send-intent').projectDir = new File('../node_modules/send-intent/android')

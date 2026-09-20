@@ -14,6 +14,19 @@ const expected = {
 const failures = [];
 let checked = 0;
 
+const capacitorConfig = fs.readFileSync(path.join(root, "capacitor.config.ts"), "utf8");
+if (!capacitorConfig.includes("'capacitor-health'")) {
+  failures.push("capacitor.config.ts: capacitor-health is missing from android.includePlugins");
+}
+
+const generatedSettings = path.join(root, "android", "capacitor.settings.gradle");
+if (fs.existsSync(generatedSettings)) {
+  const settings = fs.readFileSync(generatedSettings, "utf8");
+  if (!settings.includes("include ':capacitor-health'")) {
+    failures.push("android/capacitor.settings.gradle: capacitor-health was not synced into Android");
+  }
+}
+
 function walk(directory) {
   if (!fs.existsSync(directory)) return;
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
