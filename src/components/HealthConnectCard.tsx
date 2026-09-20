@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Activity, CheckCircle2, Download, Loader2, RefreshCw, Settings } from "lucide-react";
+import { Activity, CheckCircle2, Download, Loader2, RefreshCw, Settings, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   activityTrend,
-  hasHealthPermissions,
+  checkHealthAccess,
+  FEATURE_LABELS,
+  formatSleep,
   installHealthConnect,
   isHealthAvailable,
   isHealthSupported,
@@ -15,23 +17,27 @@ import {
   readHealthWorkouts,
   requestHealthPermissions,
   saveHealthDays,
+  type HealthAccess,
   type HealthDay,
+  type HealthFeature,
   type HealthWorkout,
 } from "@/lib/healthSync";
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
+const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
 
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [rows, setRows] = useState<HealthDay[]>([]);
   const [available, setAvailable] = useState<boolean | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [access, setAccess] = useState<HealthAccess | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [workouts, setWorkouts] = useState<HealthWorkout[] | null>(null);
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
+  const connected = !!access?.activity;
 
   useEffect(() => {
     let active = true;
@@ -48,12 +54,13 @@ const HealthConnectCard = () => {
         }
       }
       setAvailable(isHealthSupported() ? await isHealthAvailable() : false);
-      if (isHealthSupported()) setConnected(await hasHealthPermissions());
+      if (isHealthSupported()) setAccess(await checkHealthAccess());
     })();
     return () => {
       active = false;
     };
   }, []);
+
 
   const sync = useCallback(async () => {
     if (!userId) return;
