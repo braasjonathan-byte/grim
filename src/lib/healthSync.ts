@@ -389,6 +389,16 @@ export function activityTrend(rows: HealthDay[]) {
   return "Aktiviteten ligger i nivå med din vanliga vecka.";
 }
 
+/** Visar sömn som t.ex. "7 h 20 min". */
+export function formatSleep(minutes: number): string {
+  const total = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  if (!hours) return `${rest} min`;
+  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+}
+
+
 /* ---------------- Genomförda pass från Health Connect / Apple Health ---------------- */
 
 export type HealthWorkout = {
