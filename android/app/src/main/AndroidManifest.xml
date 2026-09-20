@@ -114,4 +114,5 @@
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>
     </queries>
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
 </manifest>
