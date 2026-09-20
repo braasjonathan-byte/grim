@@ -66,8 +66,7 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setSyncing(true);
     try {
-      await requestHealthPermissions();
-      setConnected(true);
+      setAccess(await requestHealthPermissions());
       const days = await readHealthDays(7);
       setRows(days);
       try {
@@ -79,6 +78,7 @@ const HealthConnectCard = () => {
 
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte hämta hälsodata");
+      setAccess(await checkHealthAccess());
     } finally {
       setSyncing(false);
     }
@@ -88,8 +88,12 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setLoadingWorkouts(true);
     try {
-      await requestHealthPermissions();
-      setConnected(true);
+      const granted = await requestHealthPermissions();
+      setAccess(granted);
+      if (!granted.workouts) {
+        toast.error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
+        return;
+      }
       const list = await readHealthWorkouts(30);
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
@@ -100,6 +104,7 @@ const HealthConnectCard = () => {
       setLoadingWorkouts(false);
     }
   }, [userId]);
+
 
   const importAll = useCallback(async () => {
     if (!userId || !workouts) return;
