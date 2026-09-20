@@ -128,8 +128,45 @@ function allGranted(res: PermissionResponse | undefined, required: readonly stri
   return required.every((permission) => granted[permission] === true);
 }
 
+const EMPTY_ACCESS: HealthAccess = { activity: false, workouts: false, heartRate: false, sleep: false };
 
-export async function requestHealthPermissions(): Promise<void> {
+function accessFrom(res: PermissionResponse | undefined): HealthAccess {
+  const granted = permissionMap(res);
+  const has = (list: readonly string[]) => list.every((p) => granted[p] === true);
+  return {
+    activity: has(PERMISSION_GROUPS.activity),
+    workouts: has(PERMISSION_GROUPS.workouts),
+    heartRate: has(PERMISSION_GROUPS.heartRate),
+    sleep: has(PERMISSION_GROUPS.sleep),
+  };
+}
+
+/** Exponerad för tester: tolkar plugin-svaret till status per datatyp. */
+export function parseHealthAccess(res: PermissionResponse | undefined): HealthAccess {
+  return accessFrom(res);
+}
+
+/** Vilka datatyper Grim faktiskt får läsa just nu. */
+export async function checkHealthAccess(): Promise<HealthAccess> {
+  const plugin = await loadPlugin();
+  if (!plugin) return EMPTY_ACCESS;
+  // iOS svarar inte tillförlitligt på check – där avgörs det vid läsning.
+  if (Capacitor.getPlatform() === "ios") {
+    return { activity: true, workouts: true, heartRate: true, sleep: true };
+  }
+  try {
+    const res = await withTimeout(
+      plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }),
+      10000,
+      "timeout",
+    );
+    return accessFrom(res);
+  } catch {
+    return EMPTY_ACCESS;
+  }
+}
+
+export async function requestHealthPermissions(): Promise<HealthAccess> {
   const plugin = await loadPlugin();
   if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
 
@@ -144,16 +181,11 @@ export async function requestHealthPermissions(): Promise<void> {
     );
   }
 
+  const existing = await checkHealthAccess();
+  if (existing.activity && existing.workouts && existing.heartRate && existing.sleep) return existing;
+
   const req = { permissions: [...PERMISSIONS] };
   const coreReq = { permissions: [...CORE_PERMISSIONS] };
-  let granted = false;
-  try {
-    granted = allGranted(await withTimeout(plugin.checkHealthPermissions(coreReq), 10000, "timeout"), CORE_PERMISSIONS);
-  } catch {
-    /* iOS saknar check – fortsätt med request */
-  }
-  if (granted) return;
-
   let res: PermissionResponse | undefined;
   try {
     res = await withTimeout(
@@ -174,19 +206,17 @@ export async function requestHealthPermissions(): Promise<void> {
       throw new Error(fallbackErr?.message || err?.message || "Behörighet till hälsodata nekades.");
     }
   }
-  if (Capacitor.getPlatform() === "ios" || allGranted(res, CORE_PERMISSIONS)) return;
 
-
-  try {
-    granted = allGranted(
-      await withTimeout(plugin.checkHealthPermissions(coreReq), 10000, "timeout"),
-      CORE_PERMISSIONS,
-    );
-  } catch {
-    granted = Capacitor.getPlatform() === "ios";
+  let access = accessFrom(res);
+  if (Capacitor.getPlatform() === "ios") {
+    return { activity: true, workouts: true, heartRate: true, sleep: true };
+  }
+  if (!access.activity) {
+    // Svaret kan komma i annat format – läs av det riktiga läget.
+    access = await checkHealthAccess();
   }
 
-  if (!granted) {
+  if (!access.activity) {
     // Health Connect visar ingen dialog om användaren nekat två gånger –
     // öppna inställningarna direkt så behörigheten kan ges manuellt.
     if (Capacitor.getPlatform() === "android") {
@@ -200,23 +230,14 @@ export async function requestHealthPermissions(): Promise<void> {
       "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på."
     );
   }
+  return access;
 }
 
-/** Har appen redan behörighet att läsa hälsodata? */
+/** Har appen redan behörighet att läsa grunddatan? */
 export async function hasHealthPermissions(): Promise<boolean> {
-  const plugin = await loadPlugin();
-  if (!plugin) return false;
-  try {
-    if (Capacitor.getPlatform() === "ios") return true;
-    return allGranted(
-      await withTimeout(plugin.checkHealthPermissions({ permissions: [...CORE_PERMISSIONS] }), 10000, "timeout"),
-      CORE_PERMISSIONS,
-    );
-
-  } catch {
-    return false;
-  }
+  return (await checkHealthAccess()).activity;
 }
+
 
 export async function openHealthSettings(): Promise<void> {
   const plugin = await loadPlugin();
