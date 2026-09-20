@@ -416,11 +416,12 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
   return (res?.workouts ?? [])
     .map((w) => {
       const bpms = (w.heartRate ?? []).map((s) => s.bpm).filter((n) => Number.isFinite(n) && n > 0);
-      const minutes = w.duration
-        ? w.duration > 600 // vissa plattformar returnerar sekunder
-          ? w.duration / 60
-          : w.duration
-        : (new Date(w.endDate).getTime() - new Date(w.startDate).getTime()) / 60000;
+      // Tidsstämplarna är alltid tillförlitliga – duration (sekunder) används bara som reserv.
+      const spanMinutes =
+        (new Date(w.endDate).getTime() - new Date(w.startDate).getTime()) / 60000;
+      const minutes = Number.isFinite(spanMinutes) && spanMinutes > 0
+        ? spanMinutes
+        : (w.duration || 0) / 60;
       return {
         key: workoutKey(w),
         start: w.startDate,
