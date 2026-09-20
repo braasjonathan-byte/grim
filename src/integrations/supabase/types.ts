@@ -819,6 +819,7 @@ export type Database = {
           active_calories: number
           day: string
           id: string
+          sleep_minutes: number
           source: string
           steps: number
           updated_at: string
@@ -828,6 +829,7 @@ export type Database = {
           active_calories?: number
           day: string
           id?: string
+          sleep_minutes?: number
           source?: string
           steps?: number
           updated_at?: string
@@ -837,6 +839,7 @@ export type Database = {
           active_calories?: number
           day?: string
           id?: string
+          sleep_minutes?: number
           source?: string
           steps?: number
           updated_at?: string
