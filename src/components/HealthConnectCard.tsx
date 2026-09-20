@@ -142,6 +142,8 @@ const HealthConnectCard = () => {
   const maxSteps = Math.max(1, ...rows.map((r) => r.steps));
   const today = rows[rows.length - 1];
   const trend = activityTrend(rows);
+  const missing = access ? FEATURES.filter((f) => !access[f]) : [];
+
 
   return (
     <div className="space-y-4">
