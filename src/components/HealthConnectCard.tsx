@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Activity, CheckCircle2, Download, Loader2, RefreshCw, Settings } from "lucide-react";
+import { Activity, CheckCircle2, Download, Loader2, RefreshCw, Settings, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   activityTrend,
-  hasHealthPermissions,
+  checkHealthAccess,
+  FEATURE_LABELS,
+  formatSleep,
   installHealthConnect,
   isHealthAvailable,
   isHealthSupported,
@@ -15,23 +17,27 @@ import {
   readHealthWorkouts,
   requestHealthPermissions,
   saveHealthDays,
+  type HealthAccess,
   type HealthDay,
+  type HealthFeature,
   type HealthWorkout,
 } from "@/lib/healthSync";
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
+const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
 
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [rows, setRows] = useState<HealthDay[]>([]);
   const [available, setAvailable] = useState<boolean | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [access, setAccess] = useState<HealthAccess | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [workouts, setWorkouts] = useState<HealthWorkout[] | null>(null);
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
+  const connected = !!access?.activity;
 
   useEffect(() => {
     let active = true;
@@ -48,19 +54,19 @@ const HealthConnectCard = () => {
         }
       }
       setAvailable(isHealthSupported() ? await isHealthAvailable() : false);
-      if (isHealthSupported()) setConnected(await hasHealthPermissions());
+      if (isHealthSupported()) setAccess(await checkHealthAccess());
     })();
     return () => {
       active = false;
     };
   }, []);
 
+
   const sync = useCallback(async () => {
     if (!userId) return;
     setSyncing(true);
     try {
-      await requestHealthPermissions();
-      setConnected(true);
+      setAccess(await requestHealthPermissions());
       const days = await readHealthDays(7);
       setRows(days);
       try {
@@ -72,6 +78,7 @@ const HealthConnectCard = () => {
 
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte hämta hälsodata");
+      setAccess(await checkHealthAccess());
     } finally {
       setSyncing(false);
     }
@@ -81,8 +88,12 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setLoadingWorkouts(true);
     try {
-      await requestHealthPermissions();
-      setConnected(true);
+      const granted = await requestHealthPermissions();
+      setAccess(granted);
+      if (!granted.workouts) {
+        toast.error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
+        return;
+      }
       const list = await readHealthWorkouts(30);
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
@@ -93,6 +104,7 @@ const HealthConnectCard = () => {
       setLoadingWorkouts(false);
     }
   }, [userId]);
+
 
   const importAll = useCallback(async () => {
     if (!userId || !workouts) return;
@@ -130,6 +142,8 @@ const HealthConnectCard = () => {
   const maxSteps = Math.max(1, ...rows.map((r) => r.steps));
   const today = rows[rows.length - 1];
   const trend = activityTrend(rows);
+  const missing = access ? FEATURES.filter((f) => !access[f]) : [];
+
 
   return (
     <div className="space-y-4">
@@ -146,18 +160,46 @@ const HealthConnectCard = () => {
 
       {isHealthSupported() && (
         <div
-          className={`flex items-center gap-2 rounded-2xl border p-3 text-sm ${
-            connected
-              ? "border-success/40 bg-success/10 text-success"
-              : "border-border/60 bg-card/60 text-muted-foreground"
+          className={`space-y-2 rounded-2xl border p-3 text-sm ${
+            connected ? "border-success/40 bg-success/10" : "border-border/60 bg-card/60"
           }`}
         >
-          {connected ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Activity className="h-4 w-4 shrink-0" />}
-          <span>
-            {connected
-              ? "Kopplingen är aktiv – Grim läser din hälsodata (t.ex. Samsung Health via Health Connect)."
-              : "Inte kopplad ännu. Tryck på Synka hälsodata och godkänn behörigheterna."}
-          </span>
+          <div className={`flex items-center gap-2 ${connected ? "text-success" : "text-muted-foreground"}`}>
+            {connected ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Activity className="h-4 w-4 shrink-0" />}
+            <span>
+              {connected
+                ? "Kopplingen är aktiv – Grim läser din hälsodata (t.ex. Samsung Health via Health Connect)."
+                : "Inte kopplad ännu. Tryck på Synka hälsodata och godkänn behörigheterna."}
+            </span>
+          </div>
+          {access && (
+            <ul className="space-y-1">
+              {FEATURES.map((feature) => (
+                <li key={feature} className="flex items-center gap-2 text-xs">
+                  {access[feature] ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className={access[feature] ? "" : "text-muted-foreground"}>
+                    {FEATURE_LABELS[feature]}
+                    {!access[feature] && " – saknas"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {access && missing.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => void openHealthSettings()}
+            >
+              <Settings className="mr-2 h-3.5 w-3.5" />
+              Tillåt {missing.map((f) => FEATURE_LABELS[f].toLowerCase()).join(", ")}
+            </Button>
+          )}
         </div>
       )}
 
@@ -185,8 +227,10 @@ const HealthConnectCard = () => {
             <p className="mt-3 text-sm">
               Idag: <strong>{today.steps.toLocaleString("sv-SE")}</strong> steg
               {today.activeCalories > 0 && ` · ${today.activeCalories} kcal`}
+              {today.sleepMinutes > 0 && ` · ${formatSleep(today.sleepMinutes)} sömn`}
             </p>
           )}
+
           {trend && <p className="mt-1 text-xs text-muted-foreground">{trend}</p>}
         </div>
       )}

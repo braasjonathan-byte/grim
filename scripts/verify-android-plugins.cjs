@@ -27,6 +27,52 @@ if (fs.existsSync(generatedSettings)) {
   }
 }
 
+// Health Connect: utan integritetsadressen kraschar samtyckesvyn, och utan
+// rationale-aktiviteten syns Grim inte i Health Connects app-lista.
+const stringsPath = path.join(root, "android", "app", "src", "main", "res", "values", "strings.xml");
+if (fs.existsSync(stringsPath)) {
+  const strings = fs.readFileSync(stringsPath, "utf8");
+  if (!strings.includes('name="privacy_policy_url"')) {
+    failures.push("android/app/src/main/res/values/strings.xml: privacy_policy_url is missing (Health Connect rationale crashes)");
+  }
+}
+
+const manifestPath = path.join(root, "android", "app", "src", "main", "AndroidManifest.xml");
+if (fs.existsSync(manifestPath)) {
+  const manifest = fs.readFileSync(manifestPath, "utf8");
+  const requiredHealth = [
+    "android.permission.health.READ_STEPS",
+    "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+    "android.permission.health.READ_DISTANCE",
+    "android.permission.health.READ_EXERCISE",
+    "android.permission.health.READ_HEART_RATE",
+    "android.permission.health.READ_SLEEP",
+  ];
+  for (const permission of requiredHealth) {
+    if (!manifest.includes(permission)) {
+      failures.push(`AndroidManifest.xml: missing health permission ${permission}`);
+    }
+  }
+  if (!manifest.includes("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE")) {
+    failures.push("AndroidManifest.xml: missing Health Connect permissions-rationale intent filter");
+  }
+  if (!manifest.includes("com.google.android.apps.healthdata")) {
+    failures.push("AndroidManifest.xml: missing Health Connect package visibility <queries> entry");
+  }
+}
+
+const healthPlugin = path.join(
+  nodeModules,
+  "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPlugin.kt"
+);
+if (fs.existsSync(healthPlugin)) {
+  const source = fs.readFileSync(healthPlugin, "utf8");
+  if (!source.includes("READ_SLEEP") || !source.includes('"sleep" -> metricAndMapper')) {
+    failures.push("capacitor-health: sleep support missing — run `node scripts/patch-capacitor-health.cjs`");
+  }
+}
+
+
 function walk(directory) {
   if (!fs.existsSync(directory)) return;
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {

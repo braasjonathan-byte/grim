@@ -18,10 +18,12 @@ import {
 } from "lucide-react";
 import {
   isHealthSupported,
+  formatSleep,
   loadStoredHealthDays,
   readHealthDays,
   saveHealthDays,
   type HealthDay,
+
 } from "@/lib/healthSync";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { syncAchievements } from "@/lib/achievementSync";
@@ -108,7 +110,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   useEffect(() => {
     let cancelled = false;
     if (healthPreview) {
-      setHealthToday({ day: toLocalDateKey(new Date()), steps: 8_421, activeCalories: 624 });
+      setHealthToday({ day: toLocalDateKey(new Date()), steps: 8_421, activeCalories: 624, sleepMinutes: 437 });
       return () => {
         cancelled = true;
       };
@@ -487,6 +489,12 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
               <p className="text-[11px] text-muted-foreground">totalt idag</p>
             </section>
           </div>
+          {healthToday.sleepMinutes > 0 && (
+            <p className="px-1 text-[11px] text-muted-foreground">
+              Sömn i natt: {formatSleep(healthToday.sleepMinutes)}
+            </p>
+          )}
+
         </div>
       )}
 
