@@ -7,5 +7,4 @@
     <!-- Health Connect visar den här sidan när användaren trycker på
          integritetspolicy-länken i behörighetsdialogen. Utan strängen kraschar
          PermissionsRationaleActivity i capacitor-health. -->
-    <string name="privacy_policy_url">https://grim.lovable.app/privacy</string>
 </resources>
