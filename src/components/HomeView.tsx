@@ -18,10 +18,12 @@ import {
 } from "lucide-react";
 import {
   isHealthSupported,
+  formatSleep,
   loadStoredHealthDays,
   readHealthDays,
   saveHealthDays,
   type HealthDay,
+
 } from "@/lib/healthSync";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { syncAchievements } from "@/lib/achievementSync";
