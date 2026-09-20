@@ -5,19 +5,32 @@ export type HealthDay = {
   day: string;
   steps: number;
   activeCalories: number;
+  sleepMinutes: number;
 };
 
-const PERMISSIONS = [
-  "READ_STEPS",
-  "READ_ACTIVE_CALORIES",
-  "READ_TOTAL_CALORIES",
-  "READ_DISTANCE",
-  "READ_WORKOUTS",
-  "READ_HEART_RATE",
-] as const;
+/** Behörigheter grupperade efter vad Grim faktiskt gör med datan. */
+export const PERMISSION_GROUPS = {
+  activity: ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE"],
+  workouts: ["READ_WORKOUTS"],
+  heartRate: ["READ_HEART_RATE"],
+  sleep: ["READ_SLEEP"],
+} as const;
 
-/** Minsta uppsättning som alltid finns i Health Connect. */
-const CORE_PERMISSIONS = ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE"] as const;
+export type HealthFeature = keyof typeof PERMISSION_GROUPS;
+
+export const FEATURE_LABELS: Record<HealthFeature, string> = {
+  activity: "Steg, kalorier och distans",
+  workouts: "Genomförda pass",
+  heartRate: "Puls",
+  sleep: "Sömn",
+};
+
+export type HealthAccess = Record<HealthFeature, boolean>;
+
+const PERMISSIONS = Object.values(PERMISSION_GROUPS).flat() as string[];
+
+/** Minsta uppsättning som krävs för att kortet ska kunna visa något alls. */
+const CORE_PERMISSIONS = PERMISSION_GROUPS.activity;
 
 
 type PermissionMap = Record<string, boolean>;
@@ -32,7 +45,7 @@ type HealthPluginLike = {
   queryAggregated: (req: {
     startDate: string;
     endDate: string;
-    dataType: "steps" | "active-calories" | "mindfulness";
+    dataType: "steps" | "active-calories" | "sleep" | "mindfulness";
     bucket: string;
   }) => Promise<{ aggregatedData: { startDate: string; value: number }[] }>;
   queryWorkouts: (req: {
@@ -43,6 +56,7 @@ type HealthPluginLike = {
     includeSteps: boolean;
   }) => Promise<{ workouts: RawHealthWorkout[] }>;
 };
+
 
 export type RawHealthWorkout = {
   id?: string;
