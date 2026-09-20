@@ -145,7 +145,9 @@ const HEALTH_PERMS = [
   "android.permission.health.READ_DISTANCE",
   "android.permission.health.READ_EXERCISE",
   "android.permission.health.READ_HEART_RATE",
+  "android.permission.health.READ_SLEEP",
 ];
+
 
 for (const p of HEALTH_PERMS) {
   if (!xml.includes(`android:name="${p}"`)) {
