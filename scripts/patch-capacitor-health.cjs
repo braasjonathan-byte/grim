@@ -116,7 +116,7 @@ if (fs.existsSync(GRADLE)) {
   if (!gradle.includes("androidxCoreKTXVersion =")) {
     gradle = gradle.replace(
       /ext \{/,
-      "ext {\n    androidxCoreKTXVersion = project.hasProperty('androidxCoreKTXVersion') ? rootProject.ext.androidxCoreKTXVersion : '1.13.1'"
+      "ext {\n    androidxCoreKTXVersion = rootProject.ext.has('androidxCoreVersion') ? rootProject.ext.androidxCoreVersion : '1.13.1'"
     );
   }
   if (gradle !== gradleBefore) {
