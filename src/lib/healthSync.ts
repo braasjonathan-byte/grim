@@ -265,22 +265,20 @@ function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-/** Hämtar steg och aktiva kalorier per dag för de senaste `days` dagarna. */
+/** Hämtar steg, aktiva kalorier och sömn per dag för de senaste `days` dagarna. */
 export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const plugin = await loadPlugin();
   if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
 
+  let sleepAllowed = true;
   if (Capacitor.getPlatform() === "android") {
-    const permissions = await withTimeout(
-      plugin.checkHealthPermissions({ permissions: [...CORE_PERMISSIONS] }),
-      10000,
-      "Health Connect svarade inte vid kontroll av behörigheter.",
-    );
-    if (!allGranted(permissions, CORE_PERMISSIONS)) {
+    const access = await checkHealthAccess();
+    if (!access.activity) {
       throw new Error(
         "Grim saknar åtkomst till Steg, Aktiva kalorier eller Distans i Health Connect. Öppna Behörigheter och tillåt alla tre.",
       );
     }
+    sleepAllowed = access.sleep;
   }
 
   const end = new Date();
@@ -293,7 +291,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     bucket: "day",
   };
 
-  const [steps, calories] = await Promise.all([
+  const [steps, calories, sleep] = await Promise.all([
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "steps" }),
       20000,
@@ -304,6 +302,15 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
       20000,
       "Health Connect svarade inte när aktiva kalorier hämtades.",
     ),
+    // Sömn är frivilligt – saknad behörighet eller äldre plugin får inte
+    // stoppa steg och kalorier.
+    sleepAllowed
+      ? withTimeout(
+          plugin.queryAggregated({ ...request, dataType: "sleep" }),
+          20000,
+          "timeout",
+        ).catch(() => ({ aggregatedData: [] }))
+      : Promise.resolve({ aggregatedData: [] as { startDate: string; value: number }[] }),
   ]);
 
 
@@ -311,7 +318,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   for (let i = 0; i < days; i += 1) {
     const d = new Date(start.getTime() + i * 86400000);
     const key = dayKey(d);
-    map.set(key, { day: key, steps: 0, activeCalories: 0 });
+    map.set(key, { day: key, steps: 0, activeCalories: 0, sleepMinutes: 0 });
   }
 
   for (const sample of steps.aggregatedData ?? []) {
@@ -324,6 +331,11 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     const entry = map.get(key);
     if (entry) entry.activeCalories += Math.round(sample.value || 0);
   }
+  for (const sample of sleep.aggregatedData ?? []) {
+    const key = dayKey(new Date(sample.startDate));
+    const entry = map.get(key);
+    if (entry) entry.sleepMinutes += Math.round(sample.value || 0);
+  }
 
   return Array.from(map.values()).sort((a, b) => a.day.localeCompare(b.day));
 }
@@ -335,6 +347,7 @@ export async function saveHealthDays(userId: string, rows: HealthDay[]) {
     day: row.day,
     steps: row.steps,
     active_calories: row.activeCalories,
+    sleep_minutes: row.sleepMinutes,
     source: Capacitor.getPlatform() === "ios" ? "apple-health" : "health-connect",
     updated_at: new Date().toISOString(),
   }));
@@ -349,7 +362,7 @@ export async function loadStoredHealthDays(userId: string, days = 7): Promise<He
   start.setHours(0, 0, 0, 0);
   const { data, error } = await supabase
     .from("health_daily")
-    .select("day, steps, active_calories")
+    .select("day, steps, active_calories, sleep_minutes")
     .eq("user_id", userId)
     .gte("day", dayKey(start))
     .order("day", { ascending: true });
@@ -358,6 +371,8 @@ export async function loadStoredHealthDays(userId: string, days = 7): Promise<He
     day: row.day as string,
     steps: row.steps ?? 0,
     activeCalories: row.active_calories ?? 0,
+    sleepMinutes: (row as { sleep_minutes?: number | null }).sleep_minutes ?? 0,
+
   }));
 }
 
