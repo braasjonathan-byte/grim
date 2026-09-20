@@ -487,6 +487,12 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
               <p className="text-[11px] text-muted-foreground">totalt idag</p>
             </section>
           </div>
+          {healthToday.sleepMinutes > 0 && (
+            <p className="px-1 text-[11px] text-muted-foreground">
+              Sömn i natt: {formatSleep(healthToday.sleepMinutes)}
+            </p>
+          )}
+
         </div>
       )}
 
