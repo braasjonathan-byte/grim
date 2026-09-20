@@ -158,18 +158,46 @@ const HealthConnectCard = () => {
 
       {isHealthSupported() && (
         <div
-          className={`flex items-center gap-2 rounded-2xl border p-3 text-sm ${
-            connected
-              ? "border-success/40 bg-success/10 text-success"
-              : "border-border/60 bg-card/60 text-muted-foreground"
+          className={`space-y-2 rounded-2xl border p-3 text-sm ${
+            connected ? "border-success/40 bg-success/10" : "border-border/60 bg-card/60"
           }`}
         >
-          {connected ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Activity className="h-4 w-4 shrink-0" />}
-          <span>
-            {connected
-              ? "Kopplingen är aktiv – Grim läser din hälsodata (t.ex. Samsung Health via Health Connect)."
-              : "Inte kopplad ännu. Tryck på Synka hälsodata och godkänn behörigheterna."}
-          </span>
+          <div className={`flex items-center gap-2 ${connected ? "text-success" : "text-muted-foreground"}`}>
+            {connected ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Activity className="h-4 w-4 shrink-0" />}
+            <span>
+              {connected
+                ? "Kopplingen är aktiv – Grim läser din hälsodata (t.ex. Samsung Health via Health Connect)."
+                : "Inte kopplad ännu. Tryck på Synka hälsodata och godkänn behörigheterna."}
+            </span>
+          </div>
+          {access && (
+            <ul className="space-y-1">
+              {FEATURES.map((feature) => (
+                <li key={feature} className="flex items-center gap-2 text-xs">
+                  {access[feature] ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className={access[feature] ? "" : "text-muted-foreground"}>
+                    {FEATURE_LABELS[feature]}
+                    {!access[feature] && " – saknas"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {access && missing.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => void openHealthSettings()}
+            >
+              <Settings className="mr-2 h-3.5 w-3.5" />
+              Tillåt {missing.map((f) => FEATURE_LABELS[f].toLowerCase()).join(", ")}
+            </Button>
+          )}
         </div>
       )}
 
@@ -197,8 +225,10 @@ const HealthConnectCard = () => {
             <p className="mt-3 text-sm">
               Idag: <strong>{today.steps.toLocaleString("sv-SE")}</strong> steg
               {today.activeCalories > 0 && ` · ${today.activeCalories} kcal`}
+              {today.sleepMinutes > 0 && ` · ${formatSleep(today.sleepMinutes)} sömn`}
             </p>
           )}
+
           {trend && <p className="mt-1 text-xs text-muted-foreground">{trend}</p>}
         </div>
       )}
