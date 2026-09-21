@@ -274,20 +274,18 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   let res: PermissionResponse | undefined;
   healthLog("requesting permissions", req.permissions);
   try {
-    res = await withTimeout(
+    res = await withDialogTimeout(
       plugin.requestHealthPermissions(req),
-      90000,
-      "Health Connect svarade inte. Öppna Health Connect, ge Grim behörighet och försök igen."
+      "Kunde inte ansluta till Health Connect, försök igen.",
     );
   } catch (err: any) {
     healthLog("permission request failed", err?.message);
     // Vissa enheter avvisar hela begäran om en behörighet inte stöds –
     // försök då med enbart grunddatan.
     try {
-      res = await withTimeout(
+      res = await withDialogTimeout(
         plugin.requestHealthPermissions(coreReq),
-        90000,
-        err?.message || "Behörighet till hälsodata nekades."
+        err?.message || "Kunde inte ansluta till Health Connect, försök igen.",
       );
     } catch (fallbackErr: any) {
       throw new Error(fallbackErr?.message || err?.message || "Behörighet till hälsodata nekades.");
@@ -295,14 +293,13 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   }
 
   healthLog("permission response", res);
-  let access = accessFrom(res);
   if (Capacitor.getPlatform() === "ios") {
     return { activity: true, workouts: true, heartRate: true, sleep: true };
   }
-  if (!access.activity) {
-    // Svaret kan komma i annat format – läs av det riktiga läget.
-    access = await checkHealthAccess();
-  }
+  // Läs alltid av det verkliga läget: reservbegäran frågar bara om grunddatan,
+  // så svaret där saknar pass, puls och sömn även när de redan är beviljade.
+  let access = await checkHealthAccess();
+  if (!access.activity) access = accessFrom(res);
 
   if (!access.activity) {
     // Health Connect visar ingen dialog om användaren nekat två gånger –
