@@ -377,7 +377,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   if (!access.workouts || !access.heartRate || !access.sleep) {
     healthLog("partial access", access);
   }
-  }
+
   return access;
 }
 
