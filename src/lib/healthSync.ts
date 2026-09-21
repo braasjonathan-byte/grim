@@ -173,6 +173,52 @@ export function healthLog(step: string, detail?: unknown) {
   }
 }
 
+/** Alla feltillstånd i hälsokedjan har en egen kod så gränssnittet kan svara rätt. */
+export type HealthErrorCode =
+  | "not-supported"
+  | "not-installed"
+  | "denied"
+  | "partial"
+  | "timeout"
+  | "network"
+  | "unknown";
+
+export class HealthError extends Error {
+  code: HealthErrorCode;
+  constructor(code: HealthErrorCode, message: string) {
+    super(message);
+    this.name = "HealthError";
+    this.code = code;
+  }
+}
+
+export function healthErrorCode(err: unknown): HealthErrorCode {
+  return err instanceof HealthError ? err.code : "unknown";
+}
+
+/** Hur appen ska bete sig när hälsoplattformen inte går att nå. */
+export type HealthAvailability = "available" | "not-installed" | "not-supported";
+
+export async function healthAvailability(): Promise<HealthAvailability> {
+  const plugin = await loadPlugin();
+  if (!plugin) return "not-supported";
+  try {
+    const res = await withTimeout(
+      plugin.isHealthAvailable(),
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte.",
+    );
+    healthLog("availability", res);
+    if (res?.available) return "available";
+  } catch (err) {
+    healthLog("availability check failed", err);
+  }
+  // På Android betyder "inte tillgänglig" i praktiken att Health Connect
+  // saknas eller behöver uppdateras – då ska användaren till Play Store.
+  return Capacitor.getPlatform() === "android" ? "not-installed" : "not-supported";
+}
+
+
 async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!Capacitor.isNativePlatform()) return null;
   if (!pluginPromise) {
