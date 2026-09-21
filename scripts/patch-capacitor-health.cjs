@@ -179,11 +179,6 @@ if (!kt.includes("GRIM_SAVED_PERMISSION_CALL")) {
   );
 }
 
-// 5f. sourceName sattes ihop av appnamnet plus modellnamnet två gånger.
-kt = kt.replace(
-  /(\$\{[^}]*device\?\.model[^}]*\})\s*\1/g,
-  "$1"
-);
 
 
 
