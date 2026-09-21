@@ -35,22 +35,26 @@ export async function findImportedHealthWorkouts(
   return new Set((data ?? []).map((row) => row.day as string));
 }
 
-export type ImportResult = { imported: number; skipped: number };
+export type ImportResult = { imported: number; skipped: number; failed: number };
 
 export async function importHealthWorkouts(
   userId: string,
   workouts: HealthWorkout[],
 ): Promise<ImportResult> {
   const existing = await findImportedHealthWorkouts(userId, workouts);
+  const seen = new Set(existing);
   let imported = 0;
   let skipped = 0;
+  let failed = 0;
 
   for (const w of workouts) {
     const day = healthWorkoutDayKey(w);
-    if (existing.has(day)) {
+    // seen fångar även dubbletter inom samma anrop (t.ex. dubbelklick på importera).
+    if (seen.has(day)) {
       skipped += 1;
       continue;
     }
+    seen.add(day);
 
     const { details, loggedWeights } = buildWorkoutFromAiExercises([
       {
@@ -68,44 +72,59 @@ export async function importHealthWorkouts(
     if (w.steps) extraLines.push(`Steg: ${w.steps}`);
     extraLines.push(`Källa: ${w.source}`);
 
-    const { error: planError } = await withTimeout(
-      Promise.resolve(
-        supabase.from("workout_plans").insert({
-          user_id: userId,
-          week: 0,
-          day,
-          session_name: w.label,
-          details: [details, ...extraLines].filter(Boolean).join("\n"),
-          is_circuit: false,
-        } as never),
-      ),
-      DB_TIMEOUT_MS,
-      "Ingen kontakt med servern – försök igen.",
-    );
-    if (planError) continue;
-
-    await withTimeout(
-      Promise.resolve(
-        supabase.from("workout_completions").upsert(
-          {
+    try {
+      const { error: planError } = await withTimeout(
+        Promise.resolve(
+          supabase.from("workout_plans").insert({
             user_id: userId,
             week: 0,
             day,
-            done: true,
-            skipped: false,
-            logged_weights: loggedWeights as never,
-            logged_distance_km: w.distanceKm,
-            logged_pulse: w.avgHeartRate,
-            updated_at: w.end,
-          } as never,
-          { onConflict: "user_id,week,day" },
+            session_name: w.label,
+            details: [details, ...extraLines].filter(Boolean).join("\n"),
+            is_circuit: false,
+          } as never),
         ),
-      ),
-      DB_TIMEOUT_MS,
-      "Ingen kontakt med servern – försök igen.",
-    );
-    imported += 1;
+        DB_TIMEOUT_MS,
+        "Ingen kontakt med servern – försök igen.",
+      );
+      if (planError) {
+        healthLog("plan insert failed", planError.message);
+        failed += 1;
+        continue;
+      }
+
+      const { error: completionError } = await withTimeout(
+        Promise.resolve(
+          supabase.from("workout_completions").upsert(
+            {
+              user_id: userId,
+              week: 0,
+              day,
+              done: true,
+              skipped: false,
+              logged_weights: loggedWeights as never,
+              logged_distance_km: w.distanceKm,
+              logged_pulse: w.avgHeartRate,
+              updated_at: w.end,
+            } as never,
+            { onConflict: "user_id,week,day" },
+          ),
+        ),
+        DB_TIMEOUT_MS,
+        "Ingen kontakt med servern – försök igen.",
+      );
+      if (completionError) {
+        healthLog("completion upsert failed", completionError.message);
+        failed += 1;
+        continue;
+      }
+      imported += 1;
+    } catch (err: any) {
+      healthLog("import failed", err?.message);
+      failed += 1;
+    }
   }
 
-  return { imported, skipped };
+  return { imported, skipped, failed };
 }
+
