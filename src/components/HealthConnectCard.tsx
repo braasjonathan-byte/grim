@@ -224,9 +224,13 @@ const HealthConnectCard = () => {
     async (w: HealthWorkout) => {
       if (!userId) return;
       try {
-        await importHealthWorkouts(userId, [w]);
+        const res = await importHealthWorkouts(userId, [w]);
+        if (res.failed > 0) {
+          toast.error("Kunde inte importera passet – försök igen.");
+          return;
+        }
         setImportedKeys((prev) => new Set(prev).add(healthWorkoutDayKey(w)));
-        toast.success(`${w.label} importerat`);
+        toast.success(res.skipped > 0 ? `${w.label} var redan importerat` : `${w.label} importerat`);
       } catch (err: any) {
         toast.error(err?.message || "Kunde inte importera passet");
       }
