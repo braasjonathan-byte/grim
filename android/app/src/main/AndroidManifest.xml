@@ -50,13 +50,14 @@
             </intent-filter>
 
         </activity>
-
         <!-- HEALTH_CONNECT_GRIM: rationale-vy för Health Connect (Android 13 och äldre) -->
         <activity
             android:name="se.grim.app.HealthPrivacyActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity>
         <activity-alias
