@@ -85,9 +85,9 @@ if (!kt.includes('"sleep" -> metricAndMapper')) {
 // permissionsLauncher.launch() på Dispatchers.IO, vilket gör att Health
 // Connect-dialogen aldrig öppnas på vissa enheter – anropet varken resolvas
 // eller rejectas och appen fastnar i laddningsläge.
-if (kt.includes("CoroutineScope(Dispatchers.IO).launch {\n                requestPermissionContext.set(")) {
+if (!kt.includes("activity.runOnUiThread {")) {
   kt = kt.replace(
-    /CoroutineScope\(Dispatchers\.IO\)\.launch \{\s*\n\s*requestPermissionContext\.set\(RequestPermissionContext\(permissions, call\)\)\s*\n\s*permissionsLauncher\.launch\(healthConnectPermissions\)\s*\n\s*\} catch \(e: Exception\) \{[\s\S]*?\n        \}\n    \}/,
+    /CoroutineScope\(Dispatchers\.IO\)\.launch \{\s*\n\s*try \{\s*\n\s*requestPermissionContext\.set\(RequestPermissionContext\(permissions, call\)\)\s*\n\s*permissionsLauncher\.launch\(healthConnectPermissions\)\s*\n\s*\} catch \(e: Exception\) \{\s*\n\s*call\.reject\("Permission request failed: \$\{e\.message\}"\)\s*\n\s*requestPermissionContext\.set\(null\)\s*\n\s*\}\s*\n\s*\}/,
     `activity.runOnUiThread {
             try {
                 Log.i(tag, "requesting health permissions: $healthConnectPermissions")
@@ -98,10 +98,10 @@ if (kt.includes("CoroutineScope(Dispatchers.IO).launch {\n                reques
                 requestPermissionContext.set(null)
                 call.reject("Permission request failed: \${e.message}")
             }
-        }
-    }`
+        }`
   );
 }
+
 
 // 5c. Om callbacken saknar context (t.ex. efter att aktiviteten återskapats)
 // blev anropet hängande för alltid. Logga i stället för att tiga ihjäl det.
