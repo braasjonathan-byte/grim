@@ -170,13 +170,14 @@ if (xml.includes("com.fit_up.health.capacitor.PermissionsRationaleActivity")) {
   console.log("[patch-android-manifest] Rationale activity pointed at Grim's own view");
 }
 
-if (!xml.includes("HEALTH_CONNECT_GRIM")) {
-  const block = `        <!-- HEALTH_CONNECT_GRIM: rationale-vy för Health Connect (Android 13 och äldre) -->
+const RATIONALE_BLOCK = `        <!-- HEALTH_CONNECT_GRIM: rationale-vy för Health Connect (Android 13 och äldre) -->
         <activity
             android:name="${RATIONALE_ACTIVITY}"
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity>
         <activity-alias
@@ -190,9 +191,22 @@ if (!xml.includes("HEALTH_CONNECT_GRIM")) {
             </intent-filter>
         </activity-alias>
 `;
-  xml = xml.replace(/(\s*)<\/application>/, `\n${block}$1</application>`);
+
+if (!xml.includes("HEALTH_CONNECT_GRIM")) {
+  xml = xml.replace(/(\s*)<\/application>/, `\n${RATIONALE_BLOCK}$1</application>`);
   changed = true;
   console.log("[patch-android-manifest] Added Health Connect rationale activity + alias");
+} else {
+  // Health Connect visar policylänken som klickbar bara när aktiviteten även
+  // matchar kategorin HEALTH_PERMISSIONS. Äldre manifest saknar den.
+  const existing = xml.match(
+    /\s*<!-- HEALTH_CONNECT_GRIM[\s\S]*?<\/activity-alias>\n?/
+  );
+  if (existing && !/ACTION_SHOW_PERMISSIONS_RATIONALE"[\s\S]{0,400}?HEALTH_PERMISSIONS/.test(existing[0])) {
+    xml = xml.replace(existing[0], `\n${RATIONALE_BLOCK}`);
+    changed = true;
+    console.log("[patch-android-manifest] Rationale intent-filter: HEALTH_PERMISSIONS category added");
+  }
 }
 
 
