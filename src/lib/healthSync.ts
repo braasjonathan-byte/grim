@@ -487,6 +487,7 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
 
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
+  healthLog("reading workouts", { days });
   const res = await withTimeout(
     plugin.queryWorkouts({
       startDate: start.toISOString(),
@@ -498,6 +499,9 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
     30000,
     "Hälsoappen svarade inte i tid. Försök igen.",
   );
+  healthLog("workouts read", res?.workouts?.length ?? 0);
+
+
 
 
   return (res?.workouts ?? [])
