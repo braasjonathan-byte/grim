@@ -74,10 +74,16 @@ export type RawHealthWorkout = {
 
 let pluginPromise: Promise<HealthPluginLike | null> | null = null;
 
+/** Varje automatiskt anrop mot hälsoappen får ta max så här lång tid. */
+export const STEP_TIMEOUT_MS = 20000;
+
 /** Health Connect kan lämna löften ohanterade – avbryt istället för att snurra för evigt. */
 export function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(message)), ms);
+    const timer = setTimeout(() => {
+      healthLog("timeout", message);
+      reject(new Error(message));
+    }, ms);
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -85,6 +91,73 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, message: string)
       },
       (err) => {
         clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+type VisibilityTarget = {
+  hidden?: boolean;
+  addEventListener: (type: string, listener: () => void) => void;
+  removeEventListener: (type: string, listener: () => void) => void;
+};
+
+function visibilityTarget(): VisibilityTarget | null {
+  return typeof document === "undefined" ? null : (document as unknown as VisibilityTarget);
+}
+
+/**
+ * Behörighetsdialogen öppnas av systemet ovanpå appen. Klockan ska bara ticka
+ * medan Grim är i förgrunden – annars avbryts användaren mitt i godkännandet.
+ * Hänger anropet utan att någon dialog syns avbryts det efter `idleMs`.
+ */
+export function withDialogTimeout<T>(
+  promise: Promise<T>,
+  message: string,
+  idleMs = STEP_TIMEOUT_MS,
+): Promise<T> {
+  const target = visibilityTarget();
+  if (!target) return withTimeout(promise, idleMs, message);
+
+  return new Promise<T>((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const stop = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    const cleanup = () => {
+      stop();
+      target.removeEventListener("visibilitychange", onVisibility);
+    };
+    const start = () => {
+      stop();
+      timer = setTimeout(() => {
+        healthLog("timeout", message);
+        cleanup();
+        reject(new Error(message));
+      }, idleMs);
+    };
+    function onVisibility() {
+      if (target!.hidden) {
+        healthLog("dialogen ligger överst – tidsgränsen pausas");
+        stop();
+      } else {
+        healthLog("appen är tillbaka – tidsgränsen startas om");
+        start();
+      }
+    }
+
+    target.addEventListener("visibilitychange", onVisibility);
+    if (!target.hidden) start();
+
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (err) => {
+        cleanup();
         reject(err);
       },
     );
