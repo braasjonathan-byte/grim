@@ -77,19 +77,19 @@ const HealthConnectCard = () => {
       // Säkerhetsnät: hänger något i bryggan mot Health Connect ska knappen
       // släppa laddningsläget med ett tydligt fel i stället för att snurra.
       healthLog("sync started");
-      setAccess(
-        await withTimeout(
-          requestHealthPermissions(),
-          PERMISSION_WATCHDOG_MS,
-          "Kunde inte ansluta till Health Connect, försök igen.",
-        ),
+      const granted = await withDialogTimeout(
+        requestHealthPermissions(),
+        "Kunde inte ansluta till Health Connect, försök igen.",
+        STEP_WATCHDOG_MS,
       );
-      healthLog("permissions ok, reading days");
+      setAccess(granted);
+      healthLog("permissions ok, reading days", granted);
       const days = await withTimeout(
         readHealthDays(7),
-        DATA_WATCHDOG_MS,
+        STEP_WATCHDOG_MS,
         "Health Connect svarade inte med någon data. Försök igen.",
       );
+      healthLog("days read", days.length);
       setRows(days);
       try {
         await saveHealthDays(userId, days);
@@ -103,8 +103,8 @@ const HealthConnectCard = () => {
       toast.error(err?.message || "Kunde inte hämta hälsodata");
       try {
         setAccess(await checkHealthAccess());
-      } catch {
-        /* status kan inte läsas – behåll tidigare */
+      } catch (statusErr) {
+        healthLog("status refresh failed", statusErr);
       }
     } finally {
       setSyncing(false);
@@ -115,10 +115,11 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setLoadingWorkouts(true);
     try {
-      const granted = await withTimeout(
+      healthLog("workout fetch started");
+      const granted = await withDialogTimeout(
         requestHealthPermissions(),
-        PERMISSION_WATCHDOG_MS,
         "Kunde inte ansluta till Health Connect, försök igen.",
+        STEP_WATCHDOG_MS,
       );
       setAccess(granted);
       if (!granted.workouts) {
@@ -126,13 +127,14 @@ const HealthConnectCard = () => {
       }
       const list = await withTimeout(
         readHealthWorkouts(30),
-        DATA_WATCHDOG_MS,
+        STEP_WATCHDOG_MS,
         "Health Connect svarade inte med några pass. Försök igen.",
       );
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
       if (list.length === 0) toast.info("Inga pass hittades de senaste 30 dagarna");
     } catch (err: any) {
+      healthLog("workout fetch failed", err?.message);
       toast.error(err?.message || "Kunde inte hämta pass");
     } finally {
       setLoadingWorkouts(false);
