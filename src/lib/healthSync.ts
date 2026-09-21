@@ -749,6 +749,10 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
         avgHeartRate: bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null,
         maxHeartRate: bpms.length ? Math.max(...bpms) : null,
       } satisfies HealthWorkout;
-    })
-    .sort((a, b) => b.start.localeCompare(a.start));
+    });
+  const deduped = dedupeWorkouts(mapped).sort((a, b) => b.start.localeCompare(a.start));
+  if (deduped.length !== mapped.length) {
+    healthLog("duplicate workouts merged", mapped.length - deduped.length);
+  }
+  return deduped;
 }
