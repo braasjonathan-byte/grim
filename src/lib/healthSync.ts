@@ -307,21 +307,15 @@ export async function checkHealthAccess(): Promise<HealthAccess> {
 
 export async function requestHealthPermissions(): Promise<HealthAccess> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
+  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
-  const available = await withTimeout(
-    plugin.isHealthAvailable(),
-    STEP_TIMEOUT_MS,
-    "Health Connect svarade inte.",
-  ).catch((err) => {
-    healthLog("availability check failed", err);
-    return { available: false };
-  });
-  if (!available?.available) {
-    throw new Error(
-      Capacitor.getPlatform() === "android"
-        ? "Health Connect svarar inte eller saknas på telefonen. Öppna Health Connect en gång och försök igen."
-        : "Apple Health är inte tillgängligt på den här enheten."
+  const availability = await healthAvailability();
+  if (availability !== "available") {
+    throw new HealthError(
+      availability === "not-installed" ? "not-installed" : "not-supported",
+      availability === "not-installed"
+        ? "Health Connect saknas eller behöver uppdateras på telefonen. Installera det och försök igen."
+        : "Apple Health är inte tillgängligt på den här enheten.",
     );
   }
 
@@ -336,7 +330,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   try {
     res = await withDialogTimeout(
       plugin.requestHealthPermissions(req),
-      "Kunde inte ansluta till Health Connect, försök igen.",
+      "Health Connect svarade inte i tid. Försök igen.",
     );
   } catch (err: any) {
     healthLog("permission request failed", err?.message);
@@ -345,12 +339,16 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
     try {
       res = await withDialogTimeout(
         plugin.requestHealthPermissions(coreReq),
-        err?.message || "Kunde inte ansluta till Health Connect, försök igen.",
+        "Health Connect svarade inte i tid. Försök igen.",
       );
     } catch (fallbackErr: any) {
-      throw new Error(fallbackErr?.message || err?.message || "Behörighet till hälsodata nekades.");
+      throw new HealthError(
+        "timeout",
+        fallbackErr?.message || err?.message || "Health Connect svarade inte i tid. Försök igen.",
+      );
     }
   }
+
 
   healthLog("permission response", res);
   if (Capacitor.getPlatform() === "ios") {
