@@ -43,4 +43,16 @@ describe("Android-konfiguration för Health Connect", () => {
       read("scripts/android/HealthPrivacyActivity.java"),
     );
   });
+
+  it("kan se om Health Connect-appen är installerad", () => {
+    expect(manifest).toContain("com.google.android.apps.healthdata");
+  });
+
+  it("kräver minst Android 8 som Health Connect behöver", () => {
+    const variables = read("android/variables.gradle");
+    const match = variables.match(/minSdkVersion\s*=\s*(\d+)/);
+    expect(match).not.toBeNull();
+    expect(Number(match![1])).toBeGreaterThanOrEqual(26);
+  });
 });
+

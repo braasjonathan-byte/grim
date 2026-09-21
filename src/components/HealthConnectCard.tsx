@@ -8,8 +8,10 @@ import {
   checkHealthAccess,
   FEATURE_LABELS,
   formatSleep,
+  getLastHealthSync,
+  healthAvailability,
+  healthErrorCode,
   installHealthConnect,
-  isHealthAvailable,
   isHealthSupported,
   loadStoredHealthDays,
   openHealthSettings,
@@ -17,7 +19,10 @@ import {
   readHealthWorkouts,
   requestHealthPermissions,
   saveHealthDays,
+  setLastHealthSync,
+  syncWindowDays,
   type HealthAccess,
+  type HealthAvailability,
   type HealthDay,
   type HealthFeature,
   withTimeout,
@@ -40,13 +45,14 @@ const STEP_WATCHDOG_MS = STEP_TIMEOUT_MS;
 const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [rows, setRows] = useState<HealthDay[]>([]);
-  const [available, setAvailable] = useState<boolean | null>(null);
+  const [availability, setAvailability] = useState<HealthAvailability | null>(null);
   const [access, setAccess] = useState<HealthAccess | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [workouts, setWorkouts] = useState<HealthWorkout[] | null>(null);
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
   const connected = !!access?.activity;
+  const available = availability === null ? null : availability === "available";
 
   useEffect(() => {
     let active = true;
@@ -62,7 +68,7 @@ const HealthConnectCard = () => {
           /* ignore */
         }
       }
-      setAvailable(isHealthSupported() ? await isHealthAvailable() : false);
+      setAvailability(isHealthSupported() ? await healthAvailability() : "not-supported");
       if (isHealthSupported()) setAccess(await checkHealthAccess());
     })();
     return () => {
@@ -70,6 +76,46 @@ const HealthConnectCard = () => {
     };
   }, []);
 
+  /**
+   * Användaren kan dra tillbaka åtkomsten i Health Connect medan Grim ligger i
+   * bakgrunden – läs därför om statusen varje gång appen kommer fram igen.
+   */
+  useEffect(() => {
+    if (!isHealthSupported() || typeof document === "undefined") return;
+    const refresh = () => {
+      if (document.hidden) return;
+      void (async () => {
+        try {
+          setAccess(await checkHealthAccess());
+        } catch (err) {
+          healthLog("status refresh on resume failed", err);
+        }
+      })();
+    };
+    document.addEventListener("visibilitychange", refresh);
+    return () => document.removeEventListener("visibilitychange", refresh);
+  }, []);
+
+  /** Ger varje feltillstånd ett eget, konkret besked. */
+  const reportError = useCallback((err: unknown, fallback: string) => {
+    const code = healthErrorCode(err);
+    const message = (err as { message?: string })?.message || fallback;
+    if (code === "not-installed") {
+      setAvailability("not-installed");
+      toast.error("Health Connect saknas eller behöver uppdateras", {
+        description: "Installera Health Connect från Play Store och försök igen.",
+        action: { label: "Installera", onClick: () => void installHealthConnect() },
+      });
+      return;
+    }
+    if (code === "denied") {
+      toast.error(message, {
+        action: { label: "Behörigheter", onClick: () => void openHealthSettings() },
+      });
+      return;
+    }
+    toast.error(message);
+  }, []);
 
   const sync = useCallback(async () => {
     if (!userId) return;
@@ -80,28 +126,35 @@ const HealthConnectCard = () => {
       healthLog("sync started");
       const granted = await withDialogTimeout(
         requestHealthPermissions(),
-        "Kunde inte ansluta till Health Connect, försök igen.",
+        "Health Connect svarade inte i tid. Försök igen.",
         STEP_WATCHDOG_MS,
       );
       setAccess(granted);
-      healthLog("permissions ok, reading days", granted);
+      // Hämta från senaste lyckade synk så inga dagar hoppas över.
+      const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
+      healthLog("permissions ok, reading days", { granted, windowDays });
       const days = await withTimeout(
-        readHealthDays(7),
+        readHealthDays(windowDays),
         STEP_WATCHDOG_MS,
         "Health Connect svarade inte med någon data. Försök igen.",
       );
       healthLog("days read", days.length);
-      setRows(days);
+      setRows(days.slice(-7));
       try {
         await saveHealthDays(userId, days);
+        setLastHealthSync();
       } catch (err) {
         healthLog("save failed", err);
-        /* spara kan misslyckas offline – visa ändå datan */
+        toast.warning("Hälsodatan visas, men kunde inte sparas – ingen kontakt med servern.");
       }
-      toast.success("Hälsodata hämtad");
+      if (!granted.workouts || !granted.heartRate || !granted.sleep) {
+        toast.success("Hälsodata hämtad – vissa datatyper saknar fortfarande behörighet");
+      } else {
+        toast.success("Hälsodata hämtad");
+      }
     } catch (err: any) {
       healthLog("sync failed", err?.message);
-      toast.error(err?.message || "Kunde inte hämta hälsodata");
+      reportError(err, "Kunde inte hämta hälsodata");
       try {
         setAccess(await checkHealthAccess());
       } catch (statusErr) {
@@ -110,7 +163,7 @@ const HealthConnectCard = () => {
     } finally {
       setSyncing(false);
     }
-  }, [userId]);
+  }, [userId, reportError]);
 
   const loadWorkouts = useCallback(async () => {
     if (!userId) return;
@@ -119,7 +172,7 @@ const HealthConnectCard = () => {
       healthLog("workout fetch started");
       const granted = await withDialogTimeout(
         requestHealthPermissions(),
-        "Kunde inte ansluta till Health Connect, försök igen.",
+        "Health Connect svarade inte i tid. Försök igen.",
         STEP_WATCHDOG_MS,
       );
       setAccess(granted);
@@ -136,11 +189,12 @@ const HealthConnectCard = () => {
       if (list.length === 0) toast.info("Inga pass hittades de senaste 30 dagarna");
     } catch (err: any) {
       healthLog("workout fetch failed", err?.message);
-      toast.error(err?.message || "Kunde inte hämta pass");
+      reportError(err, "Kunde inte hämta pass");
     } finally {
       setLoadingWorkouts(false);
     }
-  }, [userId]);
+  }, [userId, reportError]);
+
 
 
   const importAll = useCallback(async () => {
@@ -154,7 +208,11 @@ const HealthConnectCard = () => {
     try {
       const res = await importHealthWorkouts(userId, pending);
       setImportedKeys(await findImportedHealthWorkouts(userId, workouts));
-      toast.success(`${res.imported} pass importerade`);
+      if (res.failed > 0) {
+        toast.warning(`${res.imported} pass importerade – ${res.failed} misslyckades, försök igen.`);
+      } else {
+        toast.success(`${res.imported} pass importerade`);
+      }
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte importera passen");
     } finally {
@@ -166,9 +224,13 @@ const HealthConnectCard = () => {
     async (w: HealthWorkout) => {
       if (!userId) return;
       try {
-        await importHealthWorkouts(userId, [w]);
+        const res = await importHealthWorkouts(userId, [w]);
+        if (res.failed > 0) {
+          toast.error("Kunde inte importera passet – försök igen.");
+          return;
+        }
         setImportedKeys((prev) => new Set(prev).add(healthWorkoutDayKey(w)));
-        toast.success(`${w.label} importerat`);
+        toast.success(res.skipped > 0 ? `${w.label} var redan importerat` : `${w.label} importerat`);
       } catch (err: any) {
         toast.error(err?.message || "Kunde inte importera passet");
       }
@@ -188,9 +250,11 @@ const HealthConnectCard = () => {
         <Activity className="h-4 w-4" />
         <span>
           {isHealthSupported()
-            ? available === false
-              ? "Health Connect / Apple Health hittades inte"
-              : "Hämta steg, aktiva kalorier och genomförda pass från din hälsoapp"
+            ? availability === "not-installed"
+              ? "Health Connect saknas eller behöver uppdateras – installera det från Play Store"
+              : availability === "not-supported"
+                ? "Hälsodata stöds inte på den här enheten"
+                : "Hämta steg, aktiva kalorier och genomförda pass från din hälsoapp"
             : "Fungerar i Grim-appen på mobilen"}
         </span>
       </div>

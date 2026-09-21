@@ -173,6 +173,52 @@ export function healthLog(step: string, detail?: unknown) {
   }
 }
 
+/** Alla feltillstånd i hälsokedjan har en egen kod så gränssnittet kan svara rätt. */
+export type HealthErrorCode =
+  | "not-supported"
+  | "not-installed"
+  | "denied"
+  | "partial"
+  | "timeout"
+  | "network"
+  | "unknown";
+
+export class HealthError extends Error {
+  code: HealthErrorCode;
+  constructor(code: HealthErrorCode, message: string) {
+    super(message);
+    this.name = "HealthError";
+    this.code = code;
+  }
+}
+
+export function healthErrorCode(err: unknown): HealthErrorCode {
+  return err instanceof HealthError ? err.code : "unknown";
+}
+
+/** Hur appen ska bete sig när hälsoplattformen inte går att nå. */
+export type HealthAvailability = "available" | "not-installed" | "not-supported";
+
+export async function healthAvailability(): Promise<HealthAvailability> {
+  const plugin = await loadPlugin();
+  if (!plugin) return "not-supported";
+  try {
+    const res = await withTimeout(
+      plugin.isHealthAvailable(),
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte.",
+    );
+    healthLog("availability", res);
+    if (res?.available) return "available";
+  } catch (err) {
+    healthLog("availability check failed", err);
+  }
+  // På Android betyder "inte tillgänglig" i praktiken att Health Connect
+  // saknas eller behöver uppdateras – då ska användaren till Play Store.
+  return Capacitor.getPlatform() === "android" ? "not-installed" : "not-supported";
+}
+
+
 async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!Capacitor.isNativePlatform()) return null;
   if (!pluginPromise) {
@@ -261,21 +307,15 @@ export async function checkHealthAccess(): Promise<HealthAccess> {
 
 export async function requestHealthPermissions(): Promise<HealthAccess> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
+  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
-  const available = await withTimeout(
-    plugin.isHealthAvailable(),
-    STEP_TIMEOUT_MS,
-    "Health Connect svarade inte.",
-  ).catch((err) => {
-    healthLog("availability check failed", err);
-    return { available: false };
-  });
-  if (!available?.available) {
-    throw new Error(
-      Capacitor.getPlatform() === "android"
-        ? "Health Connect svarar inte eller saknas på telefonen. Öppna Health Connect en gång och försök igen."
-        : "Apple Health är inte tillgängligt på den här enheten."
+  const availability = await healthAvailability();
+  if (availability !== "available") {
+    throw new HealthError(
+      availability === "not-installed" ? "not-installed" : "not-supported",
+      availability === "not-installed"
+        ? "Health Connect saknas eller behöver uppdateras på telefonen. Installera det och försök igen."
+        : "Apple Health är inte tillgängligt på den här enheten.",
     );
   }
 
@@ -290,7 +330,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   try {
     res = await withDialogTimeout(
       plugin.requestHealthPermissions(req),
-      "Kunde inte ansluta till Health Connect, försök igen.",
+      "Health Connect svarade inte i tid. Försök igen.",
     );
   } catch (err: any) {
     healthLog("permission request failed", err?.message);
@@ -299,12 +339,16 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
     try {
       res = await withDialogTimeout(
         plugin.requestHealthPermissions(coreReq),
-        err?.message || "Kunde inte ansluta till Health Connect, försök igen.",
+        "Health Connect svarade inte i tid. Försök igen.",
       );
     } catch (fallbackErr: any) {
-      throw new Error(fallbackErr?.message || err?.message || "Behörighet till hälsodata nekades.");
+      throw new HealthError(
+        "timeout",
+        fallbackErr?.message || err?.message || "Health Connect svarade inte i tid. Försök igen.",
+      );
     }
   }
+
 
   healthLog("permission response", res);
   if (Capacitor.getPlatform() === "ios") {
@@ -325,10 +369,15 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
         /* ignore */
       }
     }
-    throw new Error(
-      "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på."
+    throw new HealthError(
+      "denied",
+      "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på.",
     );
   }
+  if (!access.workouts || !access.heartRate || !access.sleep) {
+    healthLog("partial access", access);
+  }
+
   return access;
 }
 
@@ -360,20 +409,66 @@ export async function installHealthConnect(): Promise<void> {
   }
 }
 
+/**
+ * Dagnyckel i telefonens egen tidszon. Health Connect grupperar dygn lokalt, så
+ * en UTC-nyckel skulle flytta svensk data till fel datum (t.ex. midnatt 16:e
+ * blir 22:00 den 15:e i UTC).
+ */
 function dayKey(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+
+const LAST_SYNC_KEY = "grim_health_last_sync";
+
+/** Minsta respektive största fönster vi hämtar per synk. */
+export const MIN_SYNC_DAYS = 2;
+export const MAX_SYNC_DAYS = 30;
+
+export function getLastHealthSync(): string | null {
+  try {
+    return localStorage.getItem(LAST_SYNC_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setLastHealthSync(iso = new Date().toISOString()) {
+  try {
+    localStorage.setItem(LAST_SYNC_KEY, iso);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Hur många dagar bakåt som ska hämtas. Utgår från senaste lyckade synk så att
+ * inga dagar hoppas över om appen inte varit öppen på ett tag – men aldrig
+ * färre än MIN_SYNC_DAYS (dagens data ändras hela tiden) eller fler än
+ * MAX_SYNC_DAYS.
+ */
+export function syncWindowDays(lastSyncIso: string | null, now = new Date()): number {
+  if (!lastSyncIso) return 7;
+  const then = new Date(lastSyncIso).getTime();
+  if (!Number.isFinite(then)) return 7;
+  const elapsedDays = Math.ceil((now.getTime() - then) / 86400000) + 1;
+  return Math.min(MAX_SYNC_DAYS, Math.max(MIN_SYNC_DAYS, elapsedDays));
 }
 
 /** Hämtar steg, aktiva kalorier och sömn per dag för de senaste `days` dagarna. */
 export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
+  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   let sleepAllowed = true;
   if (Capacitor.getPlatform() === "android") {
     const access = await checkHealthAccess();
     if (!access.activity) {
-      throw new Error(
+      throw new HealthError(
+        "denied",
         "Grim saknar åtkomst till Steg, Aktiva kalorier eller Distans i Health Connect. Öppna Behörigheter och tillåt alla tre.",
       );
     }
@@ -383,6 +478,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const end = new Date();
   const start = new Date(end.getTime() - (days - 1) * 86400000);
   start.setHours(0, 0, 0, 0);
+
 
   const request = {
     startDate: start.toISOString(),
@@ -462,7 +558,7 @@ export async function saveHealthDays(userId: string, rows: HealthDay[]) {
     15000,
     "Kunde inte spara hälsodatan – ingen kontakt med servern.",
   );
-  if (error) throw error;
+  if (error) throw new HealthError("network", "Kunde inte spara hälsodatan – ingen kontakt med servern.");
 }
 
 export async function loadStoredHealthDays(userId: string, days = 7): Promise<HealthDay[]> {
@@ -480,7 +576,7 @@ export async function loadStoredHealthDays(userId: string, days = 7): Promise<He
     15000,
     "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.",
   );
-  if (error) throw error;
+  if (error) throw new HealthError("network", "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.");
   return (data ?? []).map((row) => ({
     day: row.day as string,
     steps: row.steps ?? 0,
@@ -559,18 +655,57 @@ function labelForWorkoutType(type: string): string {
   return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
 }
 
-/** Kort, stabil nyckel per pass så samma pass inte importeras två gånger. */
-function workoutKey(w: RawHealthWorkout): string {
+/**
+ * Stabil nyckel per pass. Nyckeln bygger på passets identitet i hälsoappen och
+ * är lång nog att två olika pass inte kan krocka.
+ */
+export function workoutKey(w: Pick<RawHealthWorkout, "id" | "startDate" | "workoutType">): string {
   const base = w.id || `${w.startDate}|${w.workoutType}`;
-  let hash = 0;
-  for (let i = 0; i < base.length; i += 1) hash = (hash * 31 + base.charCodeAt(i)) >>> 0;
-  return hash.toString(36).slice(0, 6);
+  // FNV-1a i två strömmar ger 64 bitar – tillräckligt för att undvika krockar.
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < base.length; i += 1) {
+    const c = base.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+    h2 = Math.imul(h2 + c, 2246822519) >>> 0;
+  }
+  return `${h1.toString(36)}${h2.toString(36)}`;
 }
+
+/**
+ * Samsung Health och en klocka kan skriva samma pass till Health Connect. Pass
+ * av samma typ som överlappar i tid räknas som ett – det med mest data vinner.
+ */
+export function dedupeWorkouts(list: HealthWorkout[]): HealthWorkout[] {
+  const score = (w: HealthWorkout) =>
+    (w.distanceKm ? 4 : 0) + (w.avgHeartRate ? 3 : 0) + (w.calories ? 2 : 0) + (w.steps ? 1 : 0) + w.minutes / 1000;
+  const kept: HealthWorkout[] = [];
+  for (const w of [...list].sort((a, b) => a.start.localeCompare(b.start))) {
+    const aStart = new Date(w.start).getTime();
+    const aEnd = new Date(w.end).getTime();
+    const index = kept.findIndex((k) => {
+      if (k.label !== w.label) return false;
+      const bStart = new Date(k.start).getTime();
+      const bEnd = new Date(k.end).getTime();
+      const overlap = Math.min(aEnd, bEnd) - Math.max(aStart, bStart);
+      const shortest = Math.min(aEnd - aStart, bEnd - bStart);
+      if (!Number.isFinite(overlap) || shortest <= 0) return false;
+      return overlap / shortest >= 0.5;
+    });
+    if (index === -1) {
+      kept.push(w);
+    } else if (score(w) > score(kept[index])) {
+      kept[index] = w;
+    }
+  }
+  return kept;
+}
+
 
 /** Läser genomförda pass från hälsoappen (inkl. Samsung Health via Health Connect). */
 export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
+  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
@@ -585,14 +720,14 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
     }),
     STEP_TIMEOUT_MS,
     "Hälsoappen svarade inte i tid. Försök igen.",
-  );
+  ).catch((err) => {
+    throw new HealthError("timeout", err?.message || "Hälsoappen svarade inte i tid. Försök igen.");
+  });
   healthLog("workouts read", res?.workouts?.length ?? 0);
 
-
-
-
-  return (res?.workouts ?? [])
+  const mapped = (res?.workouts ?? [])
     .map((w) => {
+
       const bpms = (w.heartRate ?? []).map((s) => s.bpm).filter((n) => Number.isFinite(n) && n > 0);
       // Tidsstämplarna är alltid tillförlitliga – duration (sekunder) används bara som reserv.
       const spanMinutes =
@@ -614,6 +749,10 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
         avgHeartRate: bpms.length ? Math.round(bpms.reduce((a, b) => a + b, 0) / bpms.length) : null,
         maxHeartRate: bpms.length ? Math.max(...bpms) : null,
       } satisfies HealthWorkout;
-    })
-    .sort((a, b) => b.start.localeCompare(a.start));
+    });
+  const deduped = dedupeWorkouts(mapped).sort((a, b) => b.start.localeCompare(a.start));
+  if (deduped.length !== mapped.length) {
+    healthLog("duplicate workouts merged", mapped.length - deduped.length);
+  }
+  return deduped;
 }
