@@ -705,7 +705,7 @@ export function dedupeWorkouts(list: HealthWorkout[]): HealthWorkout[] {
 /** Läser genomförda pass från hälsoappen (inkl. Samsung Health via Health Connect). */
 export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
+  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
@@ -720,14 +720,14 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
     }),
     STEP_TIMEOUT_MS,
     "Hälsoappen svarade inte i tid. Försök igen.",
-  );
+  ).catch((err) => {
+    throw new HealthError("timeout", err?.message || "Hälsoappen svarade inte i tid. Försök igen.");
+  });
   healthLog("workouts read", res?.workouts?.length ?? 0);
 
-
-
-
-  return (res?.workouts ?? [])
+  const mapped = (res?.workouts ?? [])
     .map((w) => {
+
       const bpms = (w.heartRate ?? []).map((s) => s.bpm).filter((n) => Number.isFinite(n) && n > 0);
       // Tidsstämplarna är alltid tillförlitliga – duration (sekunder) används bara som reserv.
       const spanMinutes =
