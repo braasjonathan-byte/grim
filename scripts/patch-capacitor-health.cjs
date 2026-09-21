@@ -81,6 +81,71 @@ if (!kt.includes('"sleep" -> metricAndMapper')) {
   );
 }
 
+// 5b. Behörighetsdialogen måste startas från UI-tråden. Pluginet kör
+// permissionsLauncher.launch() på Dispatchers.IO, vilket gör att Health
+// Connect-dialogen aldrig öppnas på vissa enheter – anropet varken resolvas
+// eller rejectas och appen fastnar i laddningsläge.
+if (kt.includes("CoroutineScope(Dispatchers.IO).launch {\n                requestPermissionContext.set(")) {
+  kt = kt.replace(
+    /CoroutineScope\(Dispatchers\.IO\)\.launch \{\s*\n\s*requestPermissionContext\.set\(RequestPermissionContext\(permissions, call\)\)\s*\n\s*permissionsLauncher\.launch\(healthConnectPermissions\)\s*\n\s*\} catch \(e: Exception\) \{[\s\S]*?\n        \}\n    \}/,
+    `activity.runOnUiThread {
+            try {
+                Log.i(tag, "requesting health permissions: $healthConnectPermissions")
+                requestPermissionContext.set(RequestPermissionContext(permissions, call))
+                permissionsLauncher.launch(healthConnectPermissions)
+            } catch (e: Exception) {
+                Log.e(tag, "permission request failed", e)
+                requestPermissionContext.set(null)
+                call.reject("Permission request failed: \${e.message}")
+            }
+        }
+    }`
+  );
+}
+
+// 5c. Om callbacken saknar context (t.ex. efter att aktiviteten återskapats)
+// blev anropet hängande för alltid. Logga i stället för att tiga ihjäl det.
+if (!kt.includes("no pending permission call")) {
+  kt = kt.replace(
+    /val context = requestPermissionContext\.get\(\)\s*\n\s*if \(context != null\) \{\s*\n\s*val result = grantedPermissionResult\(context\.requestedPermissions, grantedPermissions\)\s*\n\s*context\.pluginCal\.resolve\(result\)\s*\n\s*\}/,
+    `val context = requestPermissionContext.get()
+            if (context != null) {
+                Log.i(tag, "permission result: $grantedPermissions")
+                val result = grantedPermissionResult(context.requestedPermissions, grantedPermissions)
+                requestPermissionContext.set(null)
+                context.pluginCal.resolve(result)
+            } else {
+                Log.w(tag, "no pending permission call for result: $grantedPermissions")
+            }`
+  );
+}
+
+// 5d. checkHealthPermissions använder en lateinit-klient som bara initieras av
+// isHealthAvailable(). Anropas den först kastas UninitializedPropertyAccess.
+if (!kt.includes("fun ensureClient()")) {
+  kt = kt.replace(
+    /    @PluginMethod\n    fun checkHealthPermissions\(call: PluginCall\) \{/,
+    `    private fun ensureClient(): Boolean {
+        if (available) return true
+        return try {
+            healthConnectClient = HealthConnectClient.getOrCreate(context)
+            available = true
+            true
+        } catch (e: Exception) {
+            Log.e(tag, "health connect client unavailable", e)
+            false
+        }
+    }
+
+    @PluginMethod
+    fun checkHealthPermissions(call: PluginCall) {
+        if (!ensureClient()) {
+            call.reject("Health Connect is not available")
+            return
+        }`
+  );
+}
+
 if (kt !== ktBefore) {
   fs.writeFileSync(PLUGIN_KT, kt, "utf8");
   console.log("[patch-capacitor-health] HealthPlugin.kt: sömnstöd tillagt.");
