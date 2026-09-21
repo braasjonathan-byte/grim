@@ -257,6 +257,46 @@ if (fs.existsSync(STRINGS)) {
     );
     fs.writeFileSync(STRINGS, strings, "utf8");
     console.log("[patch-android-manifest] Added privacy_policy_url string");
+  } else if (!strings.includes(`>${PRIVACY_URL}<`)) {
+    strings = strings.replace(
+      /<string name="privacy_policy_url">[^<]*<\/string>/,
+      `<string name="privacy_policy_url">${PRIVACY_URL}</string>`
+    );
+    fs.writeFileSync(STRINGS, strings, "utf8");
+    console.log("[patch-android-manifest] Corrected privacy_policy_url string");
   }
+}
+
+// Rationale-vyn ska finnas i varje bygge, även efter `npx cap add android`
+// eller en ren CI-utcheckning där android/ genererats om.
+const ACTIVITY_TEMPLATE = path.join(__dirname, "android", "HealthPrivacyActivity.java");
+const ACTIVITY_TARGET = path.join(
+  __dirname,
+  "..",
+  "android",
+  "app",
+  "src",
+  "main",
+  "java",
+  "se",
+  "grim",
+  "app",
+  "HealthPrivacyActivity.java"
+);
+if (fs.existsSync(ACTIVITY_TEMPLATE)) {
+  const template = fs.readFileSync(ACTIVITY_TEMPLATE, "utf8");
+  const current = fs.existsSync(ACTIVITY_TARGET)
+    ? fs.readFileSync(ACTIVITY_TARGET, "utf8")
+    : null;
+  if (current !== template) {
+    fs.mkdirSync(path.dirname(ACTIVITY_TARGET), { recursive: true });
+    fs.writeFileSync(ACTIVITY_TARGET, template, "utf8");
+    console.log("[patch-android-manifest] HealthPrivacyActivity.java installed from template");
+  } else {
+    console.log("[patch-android-manifest] HealthPrivacyActivity.java already up to date");
+  }
+} else {
+  console.error("[patch-android-manifest] Missing scripts/android/HealthPrivacyActivity.java");
+  process.exit(1);
 }
 
