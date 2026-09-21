@@ -91,6 +91,15 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   });
 }
 
+/** Loggas i Android Logcat (taggen "Capacitor/Console") så fel går att spåra på riktig enhet. */
+export function healthLog(step: string, detail?: unknown) {
+  try {
+    console.info(`[health] ${step}`, detail === undefined ? "" : detail);
+  } catch {
+    /* ignore */
+  }
+}
+
 async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!Capacitor.isNativePlatform()) return null;
   if (!pluginPromise) {
@@ -160,8 +169,10 @@ export async function checkHealthAccess(): Promise<HealthAccess> {
       10000,
       "timeout",
     );
+    healthLog("check permissions response", res);
     return accessFrom(res);
-  } catch {
+  } catch (err) {
+    healthLog("check permissions failed", err);
     return EMPTY_ACCESS;
   }
 }
@@ -181,25 +192,28 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
     );
   }
 
+  healthLog("health connect available");
   const existing = await checkHealthAccess();
   if (existing.activity && existing.workouts && existing.heartRate && existing.sleep) return existing;
 
   const req = { permissions: [...PERMISSIONS] };
   const coreReq = { permissions: [...CORE_PERMISSIONS] };
   let res: PermissionResponse | undefined;
+  healthLog("requesting permissions", req.permissions);
   try {
     res = await withTimeout(
       plugin.requestHealthPermissions(req),
-      120000,
+      90000,
       "Health Connect svarade inte. Öppna Health Connect, ge Grim behörighet och försök igen."
     );
   } catch (err: any) {
+    healthLog("permission request failed", err?.message);
     // Vissa enheter avvisar hela begäran om en behörighet inte stöds –
     // försök då med enbart grunddatan.
     try {
       res = await withTimeout(
         plugin.requestHealthPermissions(coreReq),
-        120000,
+        90000,
         err?.message || "Behörighet till hälsodata nekades."
       );
     } catch (fallbackErr: any) {
@@ -207,6 +221,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
     }
   }
 
+  healthLog("permission response", res);
   let access = accessFrom(res);
   if (Capacitor.getPlatform() === "ios") {
     return { activity: true, workouts: true, heartRate: true, sleep: true };
@@ -291,6 +306,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     bucket: "day",
   };
 
+  healthLog("reading aggregated data", { days, sleepAllowed });
   const [steps, calories, sleep] = await Promise.all([
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "steps" }),
@@ -337,6 +353,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     if (entry) entry.sleepMinutes += Math.round(sample.value || 0);
   }
 
+  healthLog("aggregated data read", { days: map.size });
   return Array.from(map.values()).sort((a, b) => a.day.localeCompare(b.day));
 }
 
@@ -351,21 +368,31 @@ export async function saveHealthDays(userId: string, rows: HealthDay[]) {
     source: Capacitor.getPlatform() === "ios" ? "apple-health" : "health-connect",
     updated_at: new Date().toISOString(),
   }));
-  const { error } = await supabase
-    .from("health_daily")
-    .upsert(payload, { onConflict: "user_id,day" });
+  const { error } = await withTimeout(
+    Promise.resolve(
+      supabase.from("health_daily").upsert(payload, { onConflict: "user_id,day" }),
+    ),
+    15000,
+    "Kunde inte spara hälsodatan – ingen kontakt med servern.",
+  );
   if (error) throw error;
 }
 
 export async function loadStoredHealthDays(userId: string, days = 7): Promise<HealthDay[]> {
   const start = new Date(Date.now() - (days - 1) * 86400000);
   start.setHours(0, 0, 0, 0);
-  const { data, error } = await supabase
-    .from("health_daily")
-    .select("day, steps, active_calories, sleep_minutes")
-    .eq("user_id", userId)
-    .gte("day", dayKey(start))
-    .order("day", { ascending: true });
+  const { data, error } = await withTimeout(
+    Promise.resolve(
+      supabase
+        .from("health_daily")
+        .select("day, steps, active_calories, sleep_minutes")
+        .eq("user_id", userId)
+        .gte("day", dayKey(start))
+        .order("day", { ascending: true }),
+    ),
+    15000,
+    "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.",
+  );
   if (error) throw error;
   return (data ?? []).map((row) => ({
     day: row.day as string,
