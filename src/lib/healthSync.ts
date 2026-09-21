@@ -576,7 +576,7 @@ export async function loadStoredHealthDays(userId: string, days = 7): Promise<He
     15000,
     "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.",
   );
-  if (error) throw error;
+  if (error) throw new HealthError("network", "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.");
   return (data ?? []).map((row) => ({
     day: row.day as string,
     steps: row.steps ?? 0,
