@@ -250,9 +250,11 @@ const HealthConnectCard = () => {
         <Activity className="h-4 w-4" />
         <span>
           {isHealthSupported()
-            ? available === false
-              ? "Health Connect / Apple Health hittades inte"
-              : "Hämta steg, aktiva kalorier och genomförda pass från din hälsoapp"
+            ? availability === "not-installed"
+              ? "Health Connect saknas eller behöver uppdateras – installera det från Play Store"
+              : availability === "not-supported"
+                ? "Hälsodata stöds inte på den här enheten"
+                : "Hämta steg, aktiva kalorier och genomförda pass från din hälsoapp"
             : "Fungerar i Grim-appen på mobilen"}
         </span>
       </div>
