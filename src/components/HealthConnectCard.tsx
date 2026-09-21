@@ -21,6 +21,7 @@ import {
   type HealthDay,
   type HealthFeature,
   withTimeout,
+  STEP_TIMEOUT_MS,
   healthLog,
   type HealthWorkout,
 } from "@/lib/healthSync";
