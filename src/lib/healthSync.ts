@@ -178,7 +178,10 @@ async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!pluginPromise) {
     pluginPromise = import("capacitor-health")
       .then((mod) => (mod.Health as unknown as HealthPluginLike) ?? null)
-      .catch(() => null);
+      .catch((err) => {
+        healthLog("plugin import failed", err);
+        return null;
+      });
   }
   return pluginPromise;
 }
@@ -191,9 +194,15 @@ export async function isHealthAvailable(): Promise<boolean> {
   const plugin = await loadPlugin();
   if (!plugin) return false;
   try {
-    const res = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout");
+    const res = await withTimeout(
+      plugin.isHealthAvailable(),
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte.",
+    );
+    healthLog("availability", res);
     return !!res?.available;
-  } catch {
+  } catch (err) {
+    healthLog("availability check failed", err);
     return false;
   }
 }
