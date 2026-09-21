@@ -655,13 +655,52 @@ function labelForWorkoutType(type: string): string {
   return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
 }
 
-/** Kort, stabil nyckel per pass så samma pass inte importeras två gånger. */
-function workoutKey(w: RawHealthWorkout): string {
+/**
+ * Stabil nyckel per pass. Nyckeln bygger på passets identitet i hälsoappen och
+ * är lång nog att två olika pass inte kan krocka.
+ */
+export function workoutKey(w: Pick<RawHealthWorkout, "id" | "startDate" | "workoutType">): string {
   const base = w.id || `${w.startDate}|${w.workoutType}`;
-  let hash = 0;
-  for (let i = 0; i < base.length; i += 1) hash = (hash * 31 + base.charCodeAt(i)) >>> 0;
-  return hash.toString(36).slice(0, 6);
+  // FNV-1a i två strömmar ger 64 bitar – tillräckligt för att undvika krockar.
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < base.length; i += 1) {
+    const c = base.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+    h2 = Math.imul(h2 + c, 2246822519) >>> 0;
+  }
+  return `${h1.toString(36)}${h2.toString(36)}`;
 }
+
+/**
+ * Samsung Health och en klocka kan skriva samma pass till Health Connect. Pass
+ * av samma typ som överlappar i tid räknas som ett – det med mest data vinner.
+ */
+export function dedupeWorkouts(list: HealthWorkout[]): HealthWorkout[] {
+  const score = (w: HealthWorkout) =>
+    (w.distanceKm ? 4 : 0) + (w.avgHeartRate ? 3 : 0) + (w.calories ? 2 : 0) + (w.steps ? 1 : 0) + w.minutes / 1000;
+  const kept: HealthWorkout[] = [];
+  for (const w of [...list].sort((a, b) => a.start.localeCompare(b.start))) {
+    const aStart = new Date(w.start).getTime();
+    const aEnd = new Date(w.end).getTime();
+    const index = kept.findIndex((k) => {
+      if (k.label !== w.label) return false;
+      const bStart = new Date(k.start).getTime();
+      const bEnd = new Date(k.end).getTime();
+      const overlap = Math.min(aEnd, bEnd) - Math.max(aStart, bStart);
+      const shortest = Math.min(aEnd - aStart, bEnd - bStart);
+      if (!Number.isFinite(overlap) || shortest <= 0) return false;
+      return overlap / shortest >= 0.5;
+    });
+    if (index === -1) {
+      kept.push(w);
+    } else if (score(w) > score(kept[index])) {
+      kept[index] = w;
+    }
+  }
+  return kept;
+}
+
 
 /** Läser genomförda pass från hälsoappen (inkl. Samsung Health via Health Connect). */
 export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
