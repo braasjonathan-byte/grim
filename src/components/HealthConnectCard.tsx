@@ -28,10 +28,11 @@ import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts }
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
-/** Behörighetsdialogen kräver att användaren hinner svara. */
-const PERMISSION_WATCHDOG_MS = 90000;
-/** Efter godkännandet ska datan komma direkt – annars är något fast. */
-const DATA_WATCHDOG_MS = 20000;
+/**
+ * Varje steg får 20 sekunder. Under själva godkännandedialogen ligger Grim i
+ * bakgrunden, och då pausas klockan av withDialogTimeout inne i healthSync.
+ */
+const STEP_WATCHDOG_MS = STEP_TIMEOUT_MS;
 
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
