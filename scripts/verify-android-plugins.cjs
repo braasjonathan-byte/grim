@@ -56,6 +56,16 @@ if (fs.existsSync(manifestPath)) {
   if (!manifest.includes("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE")) {
     failures.push("AndroidManifest.xml: missing Health Connect permissions-rationale intent filter");
   }
+  // Health Connect gör policylänken klickbar först när rationale-filtret
+  // matchar BÅDE action och kategorin HEALTH_PERMISSIONS.
+  const rationaleFilter = manifest.match(
+    /<intent-filter>(?:(?!<\/intent-filter>)[\s\S])*ACTION_SHOW_PERMISSIONS_RATIONALE[\s\S]*?<\/intent-filter>/
+  );
+  if (!rationaleFilter) {
+    failures.push("AndroidManifest.xml: rationale intent-filter not found");
+  } else if (!rationaleFilter[0].includes("android.intent.category.HEALTH_PERMISSIONS")) {
+    failures.push("AndroidManifest.xml: rationale intent-filter is missing the HEALTH_PERMISSIONS category (privacy link is unclickable)");
+  }
   if (!manifest.includes("se.grim.app.HealthPrivacyActivity")) {
     failures.push("AndroidManifest.xml: rationale activity must point at se.grim.app.HealthPrivacyActivity (plugin view renders a blank page)");
   }
