@@ -56,6 +56,9 @@ if (fs.existsSync(manifestPath)) {
   if (!manifest.includes("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE")) {
     failures.push("AndroidManifest.xml: missing Health Connect permissions-rationale intent filter");
   }
+  if (!manifest.includes("se.grim.app.HealthPrivacyActivity")) {
+    failures.push("AndroidManifest.xml: rationale activity must point at se.grim.app.HealthPrivacyActivity (plugin view renders a blank page)");
+  }
   if (!manifest.includes("com.google.android.apps.healthdata")) {
     failures.push("AndroidManifest.xml: missing Health Connect package visibility <queries> entry");
   }
@@ -69,6 +72,27 @@ if (fs.existsSync(healthPlugin)) {
   const source = fs.readFileSync(healthPlugin, "utf8");
   if (!source.includes("READ_SLEEP") || !source.includes('"sleep" -> metricAndMapper')) {
     failures.push("capacitor-health: sleep support missing — run `node scripts/patch-capacitor-health.cjs`");
+  }
+  // Behörighetsdialogen måste startas från UI-tråden, annars hänger anropet.
+  if (!source.includes("activity.runOnUiThread {")) {
+    failures.push("capacitor-health: permission request still launches off the UI thread — run `node scripts/patch-capacitor-health.cjs`");
+  }
+  if (!source.includes("fun ensureClient()")) {
+    failures.push("capacitor-health: checkHealthPermissions lacks the lazy client guard — run `node scripts/patch-capacitor-health.cjs`");
+  }
+}
+
+
+const rationaleActivity = path.join(
+  root,
+  "android/app/src/main/java/se/grim/app/HealthPrivacyActivity.java"
+);
+if (!fs.existsSync(rationaleActivity)) {
+  failures.push("android: HealthPrivacyActivity.java is missing (Health Connect privacy link breaks)");
+} else {
+  const source = fs.readFileSync(rationaleActivity, "utf8");
+  if (!source.includes("setJavaScriptEnabled(true)")) {
+    failures.push("HealthPrivacyActivity.java: WebView fallback must enable JavaScript");
   }
 }
 
