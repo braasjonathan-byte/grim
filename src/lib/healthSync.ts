@@ -263,9 +263,14 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   const plugin = await loadPlugin();
   if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
 
-  const available = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout").catch(() => ({
-    available: false,
-  }));
+  const available = await withTimeout(
+    plugin.isHealthAvailable(),
+    STEP_TIMEOUT_MS,
+    "Health Connect svarade inte.",
+  ).catch((err) => {
+    healthLog("availability check failed", err);
+    return { available: false };
+  });
   if (!available?.available) {
     throw new Error(
       Capacitor.getPlatform() === "android"
