@@ -409,9 +409,18 @@ export async function installHealthConnect(): Promise<void> {
   }
 }
 
+/**
+ * Dagnyckel i telefonens egen tidszon. Health Connect grupperar dygn lokalt, så
+ * en UTC-nyckel skulle flytta svensk data till fel datum (t.ex. midnatt 16:e
+ * blir 22:00 den 15:e i UTC).
+ */
 function dayKey(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
+
 
 const LAST_SYNC_KEY = "grim_health_last_sync";
 
