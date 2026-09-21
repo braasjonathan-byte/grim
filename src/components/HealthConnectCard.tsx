@@ -28,8 +28,10 @@ import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts }
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
-/** Hårt tak för hela synk-kedjan inkl. behörighetsdialogen. */
-const WATCHDOG_MS = 100000;
+/** Behörighetsdialogen kräver att användaren hinner svara. */
+const PERMISSION_WATCHDOG_MS = 90000;
+/** Efter godkännandet ska datan komma direkt – annars är något fast. */
+const DATA_WATCHDOG_MS = 20000;
 
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
@@ -72,15 +74,19 @@ const HealthConnectCard = () => {
     try {
       // Säkerhetsnät: hänger något i bryggan mot Health Connect ska knappen
       // släppa laddningsläget med ett tydligt fel i stället för att snurra.
+      healthLog("sync started");
+      setAccess(
+        await withTimeout(
+          requestHealthPermissions(),
+          PERMISSION_WATCHDOG_MS,
+          "Kunde inte ansluta till Health Connect, försök igen.",
+        ),
+      );
+      healthLog("permissions ok, reading days");
       const days = await withTimeout(
-        (async () => {
-          healthLog("sync started");
-          setAccess(await requestHealthPermissions());
-          healthLog("permissions ok, reading days");
-          return readHealthDays(7);
-        })(),
-        WATCHDOG_MS,
-        "Kunde inte ansluta till Health Connect, försök igen.",
+        readHealthDays(7),
+        DATA_WATCHDOG_MS,
+        "Health Connect svarade inte med någon data. Försök igen.",
       );
       setRows(days);
       try {
@@ -107,17 +113,19 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setLoadingWorkouts(true);
     try {
-      const list = await withTimeout(
-        (async () => {
-          const granted = await requestHealthPermissions();
-          setAccess(granted);
-          if (!granted.workouts) {
-            throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
-          }
-          return readHealthWorkouts(30);
-        })(),
-        WATCHDOG_MS,
+      const granted = await withTimeout(
+        requestHealthPermissions(),
+        PERMISSION_WATCHDOG_MS,
         "Kunde inte ansluta till Health Connect, försök igen.",
+      );
+      setAccess(granted);
+      if (!granted.workouts) {
+        throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
+      }
+      const list = await withTimeout(
+        readHealthWorkouts(30),
+        DATA_WATCHDOG_MS,
+        "Health Connect svarade inte med några pass. Försök igen.",
       );
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
