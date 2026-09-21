@@ -90,19 +90,34 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("fun ensureClient()")) {
     failures.push("capacitor-health: checkHealthPermissions lacks the lazy client guard — run `node scripts/patch-capacitor-health.cjs`");
   }
+  // Utan sparat anrop tappas behörighetssvaret om aktiviteten återskapas,
+  // och JS-löftet blir aldrig klart (evig laddning).
+  if (!source.includes("GRIM_SAVED_PERMISSION_CALL")) {
+    failures.push("capacitor-health: permission call is not persisted via bridge.saveCall — run `node scripts/patch-capacitor-health.cjs`");
+  }
 }
 
 
+const activityTemplate = path.join(root, "scripts/android/HealthPrivacyActivity.java");
 const rationaleActivity = path.join(
   root,
   "android/app/src/main/java/se/grim/app/HealthPrivacyActivity.java"
 );
+if (!fs.existsSync(activityTemplate)) {
+  failures.push("scripts/android/HealthPrivacyActivity.java template is missing (build cannot reinstall the rationale view)");
+}
 if (!fs.existsSync(rationaleActivity)) {
   failures.push("android: HealthPrivacyActivity.java is missing (Health Connect privacy link breaks)");
 } else {
   const source = fs.readFileSync(rationaleActivity, "utf8");
-  if (!source.includes("setJavaScriptEnabled(true)")) {
-    failures.push("HealthPrivacyActivity.java: WebView fallback must enable JavaScript");
+  if (!source.includes("R.string.privacy_policy_url")) {
+    failures.push("HealthPrivacyActivity.java: must read the policy URL from R.string.privacy_policy_url");
+  }
+  if (!source.includes("Intent.ACTION_VIEW")) {
+    failures.push("HealthPrivacyActivity.java: must open the policy in the device browser");
+  }
+  if (fs.existsSync(activityTemplate) && fs.readFileSync(activityTemplate, "utf8") !== source) {
+    failures.push("android: HealthPrivacyActivity.java differs from scripts/android template — run `node scripts/patch-android-manifest.cjs`");
   }
 }
 
