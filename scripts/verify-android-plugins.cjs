@@ -34,6 +34,8 @@ if (fs.existsSync(stringsPath)) {
   const strings = fs.readFileSync(stringsPath, "utf8");
   if (!strings.includes('name="privacy_policy_url"')) {
     failures.push("android/app/src/main/res/values/strings.xml: privacy_policy_url is missing (Health Connect rationale crashes)");
+  } else if (!strings.includes("https://grim.lovable.app/privacy")) {
+    failures.push("android/app/src/main/res/values/strings.xml: privacy_policy_url must point at https://grim.lovable.app/privacy");
   }
 }
 
