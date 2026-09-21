@@ -208,7 +208,11 @@ const HealthConnectCard = () => {
     try {
       const res = await importHealthWorkouts(userId, pending);
       setImportedKeys(await findImportedHealthWorkouts(userId, workouts));
-      toast.success(`${res.imported} pass importerade`);
+      if (res.failed > 0) {
+        toast.warning(`${res.imported} pass importerade – ${res.failed} misslyckades, försök igen.`);
+      } else {
+        toast.success(`${res.imported} pass importerade`);
+      }
     } catch (err: any) {
       toast.error(err?.message || "Kunde inte importera passen");
     } finally {
