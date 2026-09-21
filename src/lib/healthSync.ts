@@ -248,8 +248,8 @@ export async function checkHealthAccess(): Promise<HealthAccess> {
   try {
     const res = await withTimeout(
       plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }),
-      10000,
-      "timeout",
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte när behörigheterna lästes.",
     );
     healthLog("check permissions response", res);
     return accessFrom(res);
