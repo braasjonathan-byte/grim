@@ -68,29 +68,41 @@ export async function importHealthWorkouts(
     if (w.steps) extraLines.push(`Steg: ${w.steps}`);
     extraLines.push(`Källa: ${w.source}`);
 
-    const { error: planError } = await supabase.from("workout_plans").insert({
-      user_id: userId,
-      week: 0,
-      day,
-      session_name: w.label,
-      details: [details, ...extraLines].filter(Boolean).join("\n"),
-      is_circuit: false,
-    } as never);
+    const { error: planError } = await withTimeout(
+      Promise.resolve(
+        supabase.from("workout_plans").insert({
+          user_id: userId,
+          week: 0,
+          day,
+          session_name: w.label,
+          details: [details, ...extraLines].filter(Boolean).join("\n"),
+          is_circuit: false,
+        } as never),
+      ),
+      DB_TIMEOUT_MS,
+      "Ingen kontakt med servern – försök igen.",
+    );
     if (planError) continue;
 
-    await supabase.from("workout_completions").upsert(
-      {
-        user_id: userId,
-        week: 0,
-        day,
-        done: true,
-        skipped: false,
-        logged_weights: loggedWeights as never,
-        logged_distance_km: w.distanceKm,
-        logged_pulse: w.avgHeartRate,
-        updated_at: w.end,
-      } as never,
-      { onConflict: "user_id,week,day" },
+    await withTimeout(
+      Promise.resolve(
+        supabase.from("workout_completions").upsert(
+          {
+            user_id: userId,
+            week: 0,
+            day,
+            done: true,
+            skipped: false,
+            logged_weights: loggedWeights as never,
+            logged_distance_km: w.distanceKm,
+            logged_pulse: w.avgHeartRate,
+            updated_at: w.end,
+          } as never,
+          { onConflict: "user_id,week,day" },
+        ),
+      ),
+      DB_TIMEOUT_MS,
+      "Ingen kontakt med servern – försök igen.",
     );
     imported += 1;
   }
