@@ -20,12 +20,16 @@ import {
   type HealthAccess,
   type HealthDay,
   type HealthFeature,
+  withTimeout,
+  healthLog,
   type HealthWorkout,
 } from "@/lib/healthSync";
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
+/** Hårt tak för hela synk-kedjan inkl. behörighetsdialogen. */
+const WATCHDOG_MS = 100000;
 
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
@@ -66,19 +70,34 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setSyncing(true);
     try {
-      setAccess(await requestHealthPermissions());
-      const days = await readHealthDays(7);
+      // Säkerhetsnät: hänger något i bryggan mot Health Connect ska knappen
+      // släppa laddningsläget med ett tydligt fel i stället för att snurra.
+      const days = await withTimeout(
+        (async () => {
+          healthLog("sync started");
+          setAccess(await requestHealthPermissions());
+          healthLog("permissions ok, reading days");
+          return readHealthDays(7);
+        })(),
+        WATCHDOG_MS,
+        "Kunde inte ansluta till Health Connect, försök igen.",
+      );
       setRows(days);
       try {
         await saveHealthDays(userId, days);
-      } catch {
+      } catch (err) {
+        healthLog("save failed", err);
         /* spara kan misslyckas offline – visa ändå datan */
       }
       toast.success("Hälsodata hämtad");
-
     } catch (err: any) {
+      healthLog("sync failed", err?.message);
       toast.error(err?.message || "Kunde inte hämta hälsodata");
-      setAccess(await checkHealthAccess());
+      try {
+        setAccess(await checkHealthAccess());
+      } catch {
+        /* status kan inte läsas – behåll tidigare */
+      }
     } finally {
       setSyncing(false);
     }
@@ -88,13 +107,18 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setLoadingWorkouts(true);
     try {
-      const granted = await requestHealthPermissions();
-      setAccess(granted);
-      if (!granted.workouts) {
-        toast.error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
-        return;
-      }
-      const list = await readHealthWorkouts(30);
+      const list = await withTimeout(
+        (async () => {
+          const granted = await requestHealthPermissions();
+          setAccess(granted);
+          if (!granted.workouts) {
+            throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
+          }
+          return readHealthWorkouts(30);
+        })(),
+        WATCHDOG_MS,
+        "Kunde inte ansluta till Health Connect, försök igen.",
+      );
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
       if (list.length === 0) toast.info("Inga pass hittades de senaste 30 dagarna");

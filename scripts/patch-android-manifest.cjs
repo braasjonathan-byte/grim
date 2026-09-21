@@ -157,10 +157,23 @@ for (const p of HEALTH_PERMS) {
   }
 }
 
+// Pluginets egen rationale-vy laddar policysidan i en WebView med JavaScript
+// avstängt – Grims sida är en React-app och blir då helt blank. Vi pekar
+// därför på vår egen vy som öppnar sidan i webbläsaren.
+const RATIONALE_ACTIVITY = "se.grim.app.HealthPrivacyActivity";
+if (xml.includes("com.fit_up.health.capacitor.PermissionsRationaleActivity")) {
+  xml = xml.replace(
+    /com\.fit_up\.health\.capacitor\.PermissionsRationaleActivity/g,
+    RATIONALE_ACTIVITY
+  );
+  changed = true;
+  console.log("[patch-android-manifest] Rationale activity pointed at Grim's own view");
+}
+
 if (!xml.includes("HEALTH_CONNECT_GRIM")) {
   const block = `        <!-- HEALTH_CONNECT_GRIM: rationale-vy för Health Connect (Android 13 och äldre) -->
         <activity
-            android:name="com.fit_up.health.capacitor.PermissionsRationaleActivity"
+            android:name="${RATIONALE_ACTIVITY}"
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
@@ -169,7 +182,7 @@ if (!xml.includes("HEALTH_CONNECT_GRIM")) {
         <activity-alias
             android:name="ViewPermissionUsageActivity"
             android:exported="true"
-            android:targetActivity="com.fit_up.health.capacitor.PermissionsRationaleActivity"
+            android:targetActivity="${RATIONALE_ACTIVITY}"
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
@@ -181,6 +194,7 @@ if (!xml.includes("HEALTH_CONNECT_GRIM")) {
   changed = true;
   console.log("[patch-android-manifest] Added Health Connect rationale activity + alias");
 }
+
 
 if (!xml.includes("com.google.android.apps.healthdata")) {
   const q = `        <package android:name="com.google.android.apps.healthdata" />
