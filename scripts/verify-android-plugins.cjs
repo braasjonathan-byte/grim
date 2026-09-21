@@ -39,6 +39,18 @@ if (fs.existsSync(stringsPath)) {
   }
 }
 
+// Health Connect kräver Android 8 (API 26) eller senare.
+const variablesPath = path.join(root, "android", "variables.gradle");
+if (fs.existsSync(variablesPath)) {
+  const variables = fs.readFileSync(variablesPath, "utf8");
+  const match = variables.match(/minSdkVersion\s*=\s*(\d+)/);
+  if (!match || Number(match[1]) < 26) {
+    failures.push(`android/variables.gradle: minSdkVersion must be at least 26 for Health Connect (found ${match ? match[1] : "none"})`);
+  }
+}
+
+
+
 const manifestPath = path.join(root, "android", "app", "src", "main", "AndroidManifest.xml");
 if (fs.existsSync(manifestPath)) {
   const manifest = fs.readFileSync(manifestPath, "utf8");
