@@ -74,10 +74,16 @@ export type RawHealthWorkout = {
 
 let pluginPromise: Promise<HealthPluginLike | null> | null = null;
 
+/** Varje automatiskt anrop mot hälsoappen får ta max så här lång tid. */
+export const STEP_TIMEOUT_MS = 20000;
+
 /** Health Connect kan lämna löften ohanterade – avbryt istället för att snurra för evigt. */
 export function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(message)), ms);
+    const timer = setTimeout(() => {
+      healthLog("timeout", message);
+      reject(new Error(message));
+    }, ms);
     promise.then(
       (value) => {
         clearTimeout(timer);
@@ -85,6 +91,73 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, message: string)
       },
       (err) => {
         clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+type VisibilityTarget = {
+  hidden?: boolean;
+  addEventListener: (type: string, listener: () => void) => void;
+  removeEventListener: (type: string, listener: () => void) => void;
+};
+
+function visibilityTarget(): VisibilityTarget | null {
+  return typeof document === "undefined" ? null : (document as unknown as VisibilityTarget);
+}
+
+/**
+ * Behörighetsdialogen öppnas av systemet ovanpå appen. Klockan ska bara ticka
+ * medan Grim är i förgrunden – annars avbryts användaren mitt i godkännandet.
+ * Hänger anropet utan att någon dialog syns avbryts det efter `idleMs`.
+ */
+export function withDialogTimeout<T>(
+  promise: Promise<T>,
+  message: string,
+  idleMs = STEP_TIMEOUT_MS,
+): Promise<T> {
+  const target = visibilityTarget();
+  if (!target) return withTimeout(promise, idleMs, message);
+
+  return new Promise<T>((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const stop = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    const cleanup = () => {
+      stop();
+      target.removeEventListener("visibilitychange", onVisibility);
+    };
+    const start = () => {
+      stop();
+      timer = setTimeout(() => {
+        healthLog("timeout", message);
+        cleanup();
+        reject(new Error(message));
+      }, idleMs);
+    };
+    function onVisibility() {
+      if (target!.hidden) {
+        healthLog("dialogen ligger överst – tidsgränsen pausas");
+        stop();
+      } else {
+        healthLog("appen är tillbaka – tidsgränsen startas om");
+        start();
+      }
+    }
+
+    target.addEventListener("visibilitychange", onVisibility);
+    if (!target.hidden) start();
+
+    promise.then(
+      (value) => {
+        cleanup();
+        resolve(value);
+      },
+      (err) => {
+        cleanup();
         reject(err);
       },
     );
@@ -105,7 +178,10 @@ async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!pluginPromise) {
     pluginPromise = import("capacitor-health")
       .then((mod) => (mod.Health as unknown as HealthPluginLike) ?? null)
-      .catch(() => null);
+      .catch((err) => {
+        healthLog("plugin import failed", err);
+        return null;
+      });
   }
   return pluginPromise;
 }
@@ -118,9 +194,15 @@ export async function isHealthAvailable(): Promise<boolean> {
   const plugin = await loadPlugin();
   if (!plugin) return false;
   try {
-    const res = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout");
+    const res = await withTimeout(
+      plugin.isHealthAvailable(),
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte.",
+    );
+    healthLog("availability", res);
     return !!res?.available;
-  } catch {
+  } catch (err) {
+    healthLog("availability check failed", err);
     return false;
   }
 }
@@ -166,8 +248,8 @@ export async function checkHealthAccess(): Promise<HealthAccess> {
   try {
     const res = await withTimeout(
       plugin.checkHealthPermissions({ permissions: [...PERMISSIONS] }),
-      10000,
-      "timeout",
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte när behörigheterna lästes.",
     );
     healthLog("check permissions response", res);
     return accessFrom(res);
@@ -181,9 +263,14 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   const plugin = await loadPlugin();
   if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
 
-  const available = await withTimeout(plugin.isHealthAvailable(), 8000, "timeout").catch(() => ({
-    available: false,
-  }));
+  const available = await withTimeout(
+    plugin.isHealthAvailable(),
+    STEP_TIMEOUT_MS,
+    "Health Connect svarade inte.",
+  ).catch((err) => {
+    healthLog("availability check failed", err);
+    return { available: false };
+  });
   if (!available?.available) {
     throw new Error(
       Capacitor.getPlatform() === "android"
@@ -201,20 +288,18 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   let res: PermissionResponse | undefined;
   healthLog("requesting permissions", req.permissions);
   try {
-    res = await withTimeout(
+    res = await withDialogTimeout(
       plugin.requestHealthPermissions(req),
-      90000,
-      "Health Connect svarade inte. Öppna Health Connect, ge Grim behörighet och försök igen."
+      "Kunde inte ansluta till Health Connect, försök igen.",
     );
   } catch (err: any) {
     healthLog("permission request failed", err?.message);
     // Vissa enheter avvisar hela begäran om en behörighet inte stöds –
     // försök då med enbart grunddatan.
     try {
-      res = await withTimeout(
+      res = await withDialogTimeout(
         plugin.requestHealthPermissions(coreReq),
-        90000,
-        err?.message || "Behörighet till hälsodata nekades."
+        err?.message || "Kunde inte ansluta till Health Connect, försök igen.",
       );
     } catch (fallbackErr: any) {
       throw new Error(fallbackErr?.message || err?.message || "Behörighet till hälsodata nekades.");
@@ -222,14 +307,13 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   }
 
   healthLog("permission response", res);
-  let access = accessFrom(res);
   if (Capacitor.getPlatform() === "ios") {
     return { activity: true, workouts: true, heartRate: true, sleep: true };
   }
-  if (!access.activity) {
-    // Svaret kan komma i annat format – läs av det riktiga läget.
-    access = await checkHealthAccess();
-  }
+  // Läs alltid av det verkliga läget: reservbegäran frågar bara om grunddatan,
+  // så svaret där saknar pass, puls och sömn även när de redan är beviljade.
+  let access = await checkHealthAccess();
+  if (!access.activity) access = accessFrom(res);
 
   if (!access.activity) {
     // Health Connect visar ingen dialog om användaren nekat två gånger –
@@ -310,22 +394,25 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const [steps, calories, sleep] = await Promise.all([
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "steps" }),
-      20000,
+      STEP_TIMEOUT_MS,
       "Health Connect svarade inte när steg hämtades.",
     ),
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "active-calories" }),
-      20000,
+      STEP_TIMEOUT_MS,
       "Health Connect svarade inte när aktiva kalorier hämtades.",
     ),
-    // Sömn är frivilligt – saknad behörighet eller äldre plugin får inte
-    // stoppa steg och kalorier.
+    // Sömn är frivilligt – saknad behörighet eller ett opatchat plugin får inte
+    // stoppa steg och kalorier, men felet ska synas i loggen.
     sleepAllowed
       ? withTimeout(
           plugin.queryAggregated({ ...request, dataType: "sleep" }),
-          20000,
-          "timeout",
-        ).catch(() => ({ aggregatedData: [] }))
+          STEP_TIMEOUT_MS,
+          "Health Connect svarade inte när sömn hämtades.",
+        ).catch((err) => {
+          healthLog("sleep query failed", err);
+          return { aggregatedData: [] };
+        })
       : Promise.resolve({ aggregatedData: [] as { startDate: string; value: number }[] }),
   ]);
 
@@ -496,7 +583,7 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
       includeRoute: false,
       includeSteps: true,
     }),
-    30000,
+    STEP_TIMEOUT_MS,
     "Hälsoappen svarade inte i tid. Försök igen.",
   );
   healthLog("workouts read", res?.workouts?.length ?? 0);

@@ -146,6 +146,42 @@ if (!kt.includes("fun ensureClient()")) {
   );
 }
 
+// 5e. Kontexten låg bara i minnet. Återskapas aktiviteten medan Health Connect
+// ligger överst (t.ex. vid rotation eller minnesbrist) tappas anropet och
+// JS-löftet blir aldrig klart. Spara därför även anropet i bryggan och svara
+// på det om kontexten är borta.
+if (!kt.includes("GRIM_SAVED_PERMISSION_CALL")) {
+  kt = kt.replace(
+    /                requestPermissionContext\.set\(RequestPermissionContext\(permissions, call\)\)/,
+    `                // GRIM_SAVED_PERMISSION_CALL
+                call.setKeepAlive(true)
+                bridge.saveCall(call)
+                lastPermissionCallId = call.callbackId
+                lastRequestedPermissions = permissions
+                requestPermissionContext.set(RequestPermissionContext(permissions, call))`
+  );
+  kt = kt.replace(
+    /                Log\.w\(tag, "no pending permission call for result: \$grantedPermissions"\)/,
+    `                val saved = lastPermissionCallId?.let { bridge.getSavedCall(it) }
+                if (saved != null) {
+                    Log.w(tag, "resolving saved permission call after activity recreation")
+                    saved.resolve(grantedPermissionResult(lastRequestedPermissions, grantedPermissions))
+                    bridge.releaseCall(saved)
+                } else {
+                    Log.w(tag, "no pending permission call for result: $grantedPermissions")
+                }`
+  );
+  kt = kt.replace(
+    /    private val requestPermissionContext = AtomicReference<RequestPermissionContext>\(\)/,
+    `    private val requestPermissionContext = AtomicReference<RequestPermissionContext>()
+    private var lastPermissionCallId: String? = null
+    private var lastRequestedPermissions: Set<CapHealthPermission> = emptySet()`
+  );
+}
+
+
+
+
 if (kt !== ktBefore) {
   fs.writeFileSync(PLUGIN_KT, kt, "utf8");
   console.log("[patch-capacitor-health] HealthPlugin.kt: sömnstöd tillagt.");

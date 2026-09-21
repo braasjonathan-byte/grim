@@ -170,13 +170,14 @@ if (xml.includes("com.fit_up.health.capacitor.PermissionsRationaleActivity")) {
   console.log("[patch-android-manifest] Rationale activity pointed at Grim's own view");
 }
 
-if (!xml.includes("HEALTH_CONNECT_GRIM")) {
-  const block = `        <!-- HEALTH_CONNECT_GRIM: rationale-vy för Health Connect (Android 13 och äldre) -->
+const RATIONALE_BLOCK = `        <!-- HEALTH_CONNECT_GRIM: rationale-vy för Health Connect (Android 13 och äldre) -->
         <activity
             android:name="${RATIONALE_ACTIVITY}"
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity>
         <activity-alias
@@ -190,9 +191,22 @@ if (!xml.includes("HEALTH_CONNECT_GRIM")) {
             </intent-filter>
         </activity-alias>
 `;
-  xml = xml.replace(/(\s*)<\/application>/, `\n${block}$1</application>`);
+
+if (!xml.includes("HEALTH_CONNECT_GRIM")) {
+  xml = xml.replace(/(\s*)<\/application>/, `\n${RATIONALE_BLOCK}$1</application>`);
   changed = true;
   console.log("[patch-android-manifest] Added Health Connect rationale activity + alias");
+} else {
+  // Health Connect visar policylänken som klickbar bara när aktiviteten även
+  // matchar kategorin HEALTH_PERMISSIONS. Äldre manifest saknar den.
+  const existing = xml.match(
+    /\s*<!-- HEALTH_CONNECT_GRIM[\s\S]*?<\/activity-alias>\n?/
+  );
+  if (existing && !/ACTION_SHOW_PERMISSIONS_RATIONALE"[\s\S]{0,400}?HEALTH_PERMISSIONS/.test(existing[0])) {
+    xml = xml.replace(existing[0], `\n${RATIONALE_BLOCK}`);
+    changed = true;
+    console.log("[patch-android-manifest] Rationale intent-filter: HEALTH_PERMISSIONS category added");
+  }
 }
 
 
@@ -243,6 +257,46 @@ if (fs.existsSync(STRINGS)) {
     );
     fs.writeFileSync(STRINGS, strings, "utf8");
     console.log("[patch-android-manifest] Added privacy_policy_url string");
+  } else if (!strings.includes(`>${PRIVACY_URL}<`)) {
+    strings = strings.replace(
+      /<string name="privacy_policy_url">[^<]*<\/string>/,
+      `<string name="privacy_policy_url">${PRIVACY_URL}</string>`
+    );
+    fs.writeFileSync(STRINGS, strings, "utf8");
+    console.log("[patch-android-manifest] Corrected privacy_policy_url string");
   }
+}
+
+// Rationale-vyn ska finnas i varje bygge, även efter `npx cap add android`
+// eller en ren CI-utcheckning där android/ genererats om.
+const ACTIVITY_TEMPLATE = path.join(__dirname, "android", "HealthPrivacyActivity.java");
+const ACTIVITY_TARGET = path.join(
+  __dirname,
+  "..",
+  "android",
+  "app",
+  "src",
+  "main",
+  "java",
+  "se",
+  "grim",
+  "app",
+  "HealthPrivacyActivity.java"
+);
+if (fs.existsSync(ACTIVITY_TEMPLATE)) {
+  const template = fs.readFileSync(ACTIVITY_TEMPLATE, "utf8");
+  const current = fs.existsSync(ACTIVITY_TARGET)
+    ? fs.readFileSync(ACTIVITY_TARGET, "utf8")
+    : null;
+  if (current !== template) {
+    fs.mkdirSync(path.dirname(ACTIVITY_TARGET), { recursive: true });
+    fs.writeFileSync(ACTIVITY_TARGET, template, "utf8");
+    console.log("[patch-android-manifest] HealthPrivacyActivity.java installed from template");
+  } else {
+    console.log("[patch-android-manifest] HealthPrivacyActivity.java already up to date");
+  }
+} else {
+  console.error("[patch-android-manifest] Missing scripts/android/HealthPrivacyActivity.java");
+  process.exit(1);
 }
 

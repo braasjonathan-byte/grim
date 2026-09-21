@@ -21,6 +21,8 @@ import {
   type HealthDay,
   type HealthFeature,
   withTimeout,
+  withDialogTimeout,
+  STEP_TIMEOUT_MS,
   healthLog,
   type HealthWorkout,
 } from "@/lib/healthSync";
@@ -28,10 +30,11 @@ import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts }
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
-/** Behörighetsdialogen kräver att användaren hinner svara. */
-const PERMISSION_WATCHDOG_MS = 90000;
-/** Efter godkännandet ska datan komma direkt – annars är något fast. */
-const DATA_WATCHDOG_MS = 20000;
+/**
+ * Varje steg får 20 sekunder. Under själva godkännandedialogen ligger Grim i
+ * bakgrunden, och då pausas klockan av withDialogTimeout inne i healthSync.
+ */
+const STEP_WATCHDOG_MS = STEP_TIMEOUT_MS;
 
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
@@ -75,19 +78,19 @@ const HealthConnectCard = () => {
       // Säkerhetsnät: hänger något i bryggan mot Health Connect ska knappen
       // släppa laddningsläget med ett tydligt fel i stället för att snurra.
       healthLog("sync started");
-      setAccess(
-        await withTimeout(
-          requestHealthPermissions(),
-          PERMISSION_WATCHDOG_MS,
-          "Kunde inte ansluta till Health Connect, försök igen.",
-        ),
+      const granted = await withDialogTimeout(
+        requestHealthPermissions(),
+        "Kunde inte ansluta till Health Connect, försök igen.",
+        STEP_WATCHDOG_MS,
       );
-      healthLog("permissions ok, reading days");
+      setAccess(granted);
+      healthLog("permissions ok, reading days", granted);
       const days = await withTimeout(
         readHealthDays(7),
-        DATA_WATCHDOG_MS,
+        STEP_WATCHDOG_MS,
         "Health Connect svarade inte med någon data. Försök igen.",
       );
+      healthLog("days read", days.length);
       setRows(days);
       try {
         await saveHealthDays(userId, days);
@@ -101,8 +104,8 @@ const HealthConnectCard = () => {
       toast.error(err?.message || "Kunde inte hämta hälsodata");
       try {
         setAccess(await checkHealthAccess());
-      } catch {
-        /* status kan inte läsas – behåll tidigare */
+      } catch (statusErr) {
+        healthLog("status refresh failed", statusErr);
       }
     } finally {
       setSyncing(false);
@@ -113,10 +116,11 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setLoadingWorkouts(true);
     try {
-      const granted = await withTimeout(
+      healthLog("workout fetch started");
+      const granted = await withDialogTimeout(
         requestHealthPermissions(),
-        PERMISSION_WATCHDOG_MS,
         "Kunde inte ansluta till Health Connect, försök igen.",
+        STEP_WATCHDOG_MS,
       );
       setAccess(granted);
       if (!granted.workouts) {
@@ -124,13 +128,14 @@ const HealthConnectCard = () => {
       }
       const list = await withTimeout(
         readHealthWorkouts(30),
-        DATA_WATCHDOG_MS,
+        STEP_WATCHDOG_MS,
         "Health Connect svarade inte med några pass. Försök igen.",
       );
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
       if (list.length === 0) toast.info("Inga pass hittades de senaste 30 dagarna");
     } catch (err: any) {
+      healthLog("workout fetch failed", err?.message);
       toast.error(err?.message || "Kunde inte hämta pass");
     } finally {
       setLoadingWorkouts(false);
