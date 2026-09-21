@@ -413,16 +413,53 @@ function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+const LAST_SYNC_KEY = "grim_health_last_sync";
+
+/** Minsta respektive största fönster vi hämtar per synk. */
+export const MIN_SYNC_DAYS = 2;
+export const MAX_SYNC_DAYS = 30;
+
+export function getLastHealthSync(): string | null {
+  try {
+    return localStorage.getItem(LAST_SYNC_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setLastHealthSync(iso = new Date().toISOString()) {
+  try {
+    localStorage.setItem(LAST_SYNC_KEY, iso);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Hur många dagar bakåt som ska hämtas. Utgår från senaste lyckade synk så att
+ * inga dagar hoppas över om appen inte varit öppen på ett tag – men aldrig
+ * färre än MIN_SYNC_DAYS (dagens data ändras hela tiden) eller fler än
+ * MAX_SYNC_DAYS.
+ */
+export function syncWindowDays(lastSyncIso: string | null, now = new Date()): number {
+  if (!lastSyncIso) return 7;
+  const then = new Date(lastSyncIso).getTime();
+  if (!Number.isFinite(then)) return 7;
+  const elapsedDays = Math.ceil((now.getTime() - then) / 86400000) + 1;
+  return Math.min(MAX_SYNC_DAYS, Math.max(MIN_SYNC_DAYS, elapsedDays));
+}
+
 /** Hämtar steg, aktiva kalorier och sömn per dag för de senaste `days` dagarna. */
 export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new Error("Hälsodata är bara tillgängligt i appen.");
+  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   let sleepAllowed = true;
   if (Capacitor.getPlatform() === "android") {
     const access = await checkHealthAccess();
     if (!access.activity) {
-      throw new Error(
+      throw new HealthError(
+        "denied",
         "Grim saknar åtkomst till Steg, Aktiva kalorier eller Distans i Health Connect. Öppna Behörigheter och tillåt alla tre.",
       );
     }
@@ -432,6 +469,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const end = new Date();
   const start = new Date(end.getTime() - (days - 1) * 86400000);
   start.setHours(0, 0, 0, 0);
+
 
   const request = {
     startDate: start.toISOString(),
