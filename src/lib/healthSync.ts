@@ -558,7 +558,7 @@ export async function saveHealthDays(userId: string, rows: HealthDay[]) {
     15000,
     "Kunde inte spara hälsodatan – ingen kontakt med servern.",
   );
-  if (error) throw error;
+  if (error) throw new HealthError("network", "Kunde inte spara hälsodatan – ingen kontakt med servern.");
 }
 
 export async function loadStoredHealthDays(userId: string, days = 7): Promise<HealthDay[]> {
