@@ -369,9 +369,14 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
         /* ignore */
       }
     }
-    throw new Error(
-      "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på."
+    throw new HealthError(
+      "denied",
+      "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på.",
     );
+  }
+  if (!access.workouts || !access.heartRate || !access.sleep) {
+    healthLog("partial access", access);
+  }
   }
   return access;
 }
