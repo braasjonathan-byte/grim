@@ -46,6 +46,9 @@ jobs:
     - name: Patch Android system insets
       run: node scripts/patch-android-system-insets.cjs
 
+    - name: Verify Android plugins (Health Connect config)
+      run: node scripts/verify-android-plugins.cjs
+
     - name: Decode Keystore
       env:
         KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
