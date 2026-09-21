@@ -145,6 +145,9 @@ jobs:
       - name: Patch Android system insets
         run: node scripts/patch-android-system-insets.cjs
 
+      - name: Verify Android plugins (Health Connect config)
+        run: node scripts/verify-android-plugins.cjs
+
       - name: Write Android Developer Verification (adi-registration.properties)
         run: |
           mkdir -p android/app/src/main/assets
