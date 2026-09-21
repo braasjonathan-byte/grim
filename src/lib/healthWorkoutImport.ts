@@ -4,7 +4,10 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { buildWorkoutFromAiExercises } from "@/lib/aiWorkoutImport";
-import type { HealthWorkout } from "@/lib/healthSync";
+import { healthLog, withTimeout, type HealthWorkout } from "@/lib/healthSync";
+
+/** Ingen nätverksförfrågan får hänga och låsa knappen i laddningsläge. */
+const DB_TIMEOUT_MS = 15000;
 
 export const healthWorkoutDayKey = (w: HealthWorkout) =>
   `${w.start.slice(0, 10)}_hc${w.key}`;
@@ -16,12 +19,19 @@ export async function findImportedHealthWorkouts(
 ): Promise<Set<string>> {
   if (workouts.length === 0) return new Set();
   const keys = workouts.map(healthWorkoutDayKey);
-  const { data } = await supabase
-    .from("workout_plans")
-    .select("day")
-    .eq("user_id", userId)
-    .eq("week", 0)
-    .in("day", keys);
+  healthLog("looking up imported workouts", keys.length);
+  const { data } = await withTimeout(
+    Promise.resolve(
+      supabase
+        .from("workout_plans")
+        .select("day")
+        .eq("user_id", userId)
+        .eq("week", 0)
+        .in("day", keys),
+    ),
+    DB_TIMEOUT_MS,
+    "Ingen kontakt med servern – försök igen.",
+  );
   return new Set((data ?? []).map((row) => row.day as string));
 }
 

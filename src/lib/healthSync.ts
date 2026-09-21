@@ -583,7 +583,7 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
       includeRoute: false,
       includeSteps: true,
     }),
-    30000,
+    STEP_TIMEOUT_MS,
     "Hälsoappen svarade inte i tid. Försök igen.",
   );
   healthLog("workouts read", res?.workouts?.length ?? 0);
