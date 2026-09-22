@@ -580,6 +580,10 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
       : Promise.resolve({ aggregatedData: [] as { startDate: string; value: number }[] }),
   ]);
 
+  // Båda misslyckades – då är det ett riktigt fel som ska nå användaren.
+  if (errors.length === 2) throw errors[0];
+
+
 
   const map = new Map<string, HealthDay>();
   for (let i = 0; i < days; i += 1) {
