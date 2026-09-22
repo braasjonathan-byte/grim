@@ -96,13 +96,13 @@ const HealthConnectCard = () => {
     return () => document.removeEventListener("visibilitychange", refresh);
   }, []);
 
-  /** Ger varje feltillstånd ett eget, konkret besked. */
+  /** Ger varje feltillstånd ett eget, konkret besked – med felkod. */
   const reportError = useCallback((err: unknown, fallback: string) => {
-    const code = healthErrorCode(err);
-    const message = (err as { message?: string })?.message || fallback;
+    const { code, ref, message, label } = formatHealthError(err, fallback);
+    setLastError({ ref, message });
     if (code === "not-installed") {
       setAvailability("not-installed");
-      toast.error("Health Connect saknas eller behöver uppdateras", {
+      toast.error(`Health Connect saknas eller behöver uppdateras (${label})`, {
         description: "Installera Health Connect från Play Store och försök igen.",
         action: { label: "Installera", onClick: () => void installHealthConnect() },
       });
@@ -110,11 +110,12 @@ const HealthConnectCard = () => {
     }
     if (code === "denied") {
       toast.error(message, {
+        description: label,
         action: { label: "Behörigheter", onClick: () => void openHealthSettings() },
       });
       return;
     }
-    toast.error(message);
+    toast.error(message, { description: label });
   }, []);
 
   const sync = useCallback(async () => {
