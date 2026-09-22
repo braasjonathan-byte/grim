@@ -37,7 +37,7 @@ type PermissionMap = Record<string, boolean>;
 type PermissionResponse = { permissions: PermissionMap[] | PermissionMap };
 
 type HealthPluginLike = {
-  isHealthAvailable: () => Promise<{ available: boolean }>;
+  isHealthAvailable: () => Promise<{ available: boolean; status?: string }>;
   checkHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
   requestHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
   openHealthConnectSettings: () => Promise<void>;
@@ -82,7 +82,7 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, message: string)
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       healthLog("timeout", message);
-      reject(new Error(message));
+      reject(new HealthError("data-timeout", message));
     }, ms);
     promise.then(
       (value) => {
@@ -135,7 +135,7 @@ export function withDialogTimeout<T>(
       timer = setTimeout(() => {
         healthLog("timeout", message);
         cleanup();
-        reject(new Error(message));
+        reject(new HealthError("dialog-timeout", message));
       }, idleMs);
     };
     function onVisibility() {
@@ -167,7 +167,7 @@ export function withDialogTimeout<T>(
 /** Loggas i Android Logcat (taggen "Capacitor/Console") så fel går att spåra på riktig enhet. */
 export function healthLog(step: string, detail?: unknown) {
   try {
-    console.info(`[health] ${step}`, detail === undefined ? "" : detail);
+    console.info(`[health] ${new Date().toISOString()} step=${step}`, detail === undefined ? "" : detail);
   } catch {
     /* ignore */
   }
@@ -175,12 +175,14 @@ export function healthLog(step: string, detail?: unknown) {
 
 /** Alla feltillstånd i hälsokedjan har en egen kod så gränssnittet kan svara rätt. */
 export type HealthErrorCode =
-  | "not-supported"
   | "not-installed"
+  | "update-required"
+  | "launcher-setup"
+  | "dialog-timeout"
   | "denied"
   | "partial"
-  | "timeout"
-  | "network"
+  | "data-timeout"
+  | "save-failed"
   | "unknown";
 
 export class HealthError extends Error {
@@ -201,23 +203,27 @@ export function healthErrorCode(err: unknown): HealthErrorCode {
  * hälsokedjan har en egen kod så att det går att skilja dem åt.
  */
 export const HEALTH_ERROR_REFS: Record<HealthErrorCode, string> = {
-  "not-supported": "HC-01",
-  "not-installed": "HC-02",
-  denied: "HC-03",
-  partial: "HC-04",
-  timeout: "HC-05",
-  network: "HC-06",
+  "not-installed": "HC-01",
+  "update-required": "HC-02",
+  "launcher-setup": "HC-03",
+  "dialog-timeout": "HC-04",
+  denied: "HC-05",
+  partial: "HC-06",
+  "data-timeout": "HC-07",
+  "save-failed": "HC-08",
   unknown: "HC-99",
 };
 
 /** Kort förklaring per felkod, visas under felmeddelandet. */
 export const HEALTH_ERROR_HINTS: Record<HealthErrorCode, string> = {
-  "not-supported": "Hälsodata fungerar bara i Grim-appen på mobilen.",
-  "not-installed": "Health Connect saknas eller behöver uppdateras.",
-  denied: "Behörighet saknas i Health Connect.",
-  partial: "Bara en del av datan kunde läsas.",
-  timeout: "Health Connect svarade inte i tid.",
-  network: "Ingen kontakt med servern.",
+  "not-installed": "Health Connect-appen är inte installerad.",
+  "update-required": "Health Connect behöver uppdateras.",
+  "launcher-setup": "Android kunde inte förbereda behörighetsdialogen.",
+  "dialog-timeout": "Dialogen startades men inget svar kom tillbaka.",
+  denied: "Behörigheten nekades.",
+  partial: "Bara en del av behörigheterna gavs.",
+  "data-timeout": "Behörighet finns, men datahämtningen svarade inte.",
+  "save-failed": "Datan hämtades men kunde inte sparas i Grim.",
   unknown: "Okänt fel i hälsokopplingen.",
 };
 
@@ -234,7 +240,7 @@ export function formatHealthError(err: unknown, fallback = "Kunde inte hämta h�
 }
 
 /** Hur appen ska bete sig när hälsoplattformen inte går att nå. */
-export type HealthAvailability = "available" | "not-installed" | "not-supported";
+export type HealthAvailability = "available" | "not-installed" | "update-required" | "not-supported";
 
 export async function healthAvailability(): Promise<HealthAvailability> {
   const plugin = await loadPlugin();
@@ -247,6 +253,8 @@ export async function healthAvailability(): Promise<HealthAvailability> {
     );
     healthLog("availability", res);
     if (res?.available) return "available";
+    if (res?.status === "update-required") return "update-required";
+    if (res?.status === "not-installed") return "not-installed";
   } catch (err) {
     healthLog("availability check failed", err);
   }
@@ -323,7 +331,7 @@ export function parseHealthAccess(res: PermissionResponse | undefined): HealthAc
 }
 
 /** Vilka datatyper Grim faktiskt får läsa just nu. */
-export async function checkHealthAccess(): Promise<HealthAccess> {
+export async function checkHealthAccess(throwOnError = false): Promise<HealthAccess> {
   const plugin = await loadPlugin();
   if (!plugin) return EMPTY_ACCESS;
   // iOS svarar inte tillförlitligt på check – där avgörs det vid läsning.
@@ -340,26 +348,42 @@ export async function checkHealthAccess(): Promise<HealthAccess> {
     return accessFrom(res);
   } catch (err) {
     healthLog("check permissions failed", err);
+    if (throwOnError) throw classifyNativeHealthError(err);
     return EMPTY_ACCESS;
   }
 }
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err ?? "");
+}
+
+function classifyNativeHealthError(err: unknown): HealthError {
+  if (err instanceof HealthError) return err;
+  const message = errorMessage(err);
+  if (message.includes("HC_NATIVE_03") || /register.*ActivityResult|launcher.*initial/i.test(message)) {
+    return new HealthError("launcher-setup", "Behörighetsdialogen kunde inte förberedas av Android. Starta om appen och försök igen.");
+  }
+  return new HealthError("unknown", message || "Okänt fel i hälsokopplingen.");
+}
+
 export async function requestHealthPermissions(): Promise<HealthAccess> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
+  if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const availability = await healthAvailability();
   if (availability !== "available") {
     throw new HealthError(
-      availability === "not-installed" ? "not-installed" : "not-supported",
+      availability === "not-installed" ? "not-installed" : availability === "update-required" ? "update-required" : "unknown",
       availability === "not-installed"
-        ? "Health Connect saknas eller behöver uppdateras på telefonen. Installera det och försök igen."
-        : "Apple Health är inte tillgängligt på den här enheten.",
+        ? "Health Connect är inte installerat på telefonen. Installera det och försök igen."
+        : availability === "update-required"
+          ? "Health Connect behöver uppdateras innan Grim kan läsa hälsodata."
+          : "Hälsoappen är inte tillgänglig på den här enheten.",
     );
   }
 
   healthLog("health connect available");
-  const existing = await checkHealthAccess();
+  const existing = await checkHealthAccess(true);
   if (existing.activity && existing.workouts && existing.heartRate && existing.sleep) return existing;
 
   const req = { permissions: [...PERMISSIONS] };
@@ -399,6 +423,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
 
   const request = async (request: { permissions: string[] }) => {
     const resumed = settledOnResume();
+    healthLog("permission dialog request started", { count: request.permissions.length });
     const result = await Promise.race([
       withDialogTimeout(
         plugin.requestHealthPermissions(request),
@@ -406,6 +431,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
       ).then((r) => ({ kind: "plugin" as const, res: r })),
       resumed.then((access) => (access ? { kind: "access" as const, access } : new Promise<never>(() => {}))),
     ]);
+    healthLog("permission dialog result received", { kind: result.kind });
     return result;
   };
 
@@ -414,7 +440,9 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
     if (first.kind === "access") return first.access;
     res = first.res;
   } catch (err: any) {
-    healthLog("permission request failed", err?.message);
+    const firstError = classifyNativeHealthError(err);
+    healthLog("permission request failed", { code: firstError.code, message: firstError.message });
+    if (firstError.code === "launcher-setup") throw firstError;
     // Har användaren hunnit godkänna trots att svaret uteblev? Läs av läget.
     const afterFirst = await checkHealthAccess();
     if (afterFirst.activity) return afterFirst;
@@ -425,7 +453,8 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
       if (second.kind === "access") return second.access;
       res = second.res;
     } catch (fallbackErr: any) {
-      healthLog("fallback permission request failed", fallbackErr?.message);
+      const fallbackError = classifyNativeHealthError(fallbackErr);
+      healthLog("fallback permission request failed", { code: fallbackError.code, message: fallbackError.message });
       const afterFallback = await checkHealthAccess();
       if (afterFallback.activity) return afterFallback;
       if (Capacitor.getPlatform() === "android") {
@@ -435,10 +464,11 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
           /* ignore */
         }
       }
-      throw new HealthError(
-        "denied",
-        "Health Connect öppnade ingen godkännanderuta. Vi har öppnat Health Connect åt dig – välj Grim under Appbehörigheter och tillåt Steg, Aktiva kalorier och Distans, gå sedan tillbaka och tryck Synka hälsodata igen.",
-      );
+      if (fallbackError.code === "launcher-setup") throw fallbackError;
+      if (firstError.code === "dialog-timeout" || fallbackError.code === "dialog-timeout") {
+        throw new HealthError("dialog-timeout", "Behörighetsdialogen startades, men Health Connect lämnade inget svar inom tidsgränsen.");
+      }
+      throw new HealthError("denied", "Grim fick inte behörighet att läsa steg eller aktiva kalorier.");
     }
   }
 
@@ -483,13 +513,19 @@ export async function hasHealthPermissions(): Promise<boolean> {
 
 export async function openHealthSettings(): Promise<void> {
   const plugin = await loadPlugin();
-  if (!plugin) return;
+  if (!plugin) throw new HealthError("unknown", "Hälsodata är inte tillgängligt i den här appen.");
+  const availability = await healthAvailability();
+  if (availability === "not-installed") throw new HealthError("not-installed", "Health Connect är inte installerat.");
+  if (availability === "update-required") throw new HealthError("update-required", "Health Connect behöver uppdateras.");
   try {
     if (Capacitor.getPlatform() === "android") {
+      healthLog("opening app health permissions");
       await plugin.openHealthConnectSettings();
+      healthLog("app health permissions opened");
     }
-  } catch {
-    /* ignore */
+  } catch (err) {
+    healthLog("app health permissions failed", err);
+    throw new HealthError("launcher-setup", "Kunde inte öppna Grims behörighetssida i Health Connect.");
   }
 }
 
@@ -555,7 +591,7 @@ export function syncWindowDays(lastSyncIso: string | null, now = new Date()): nu
 /** Hämtar steg, aktiva kalorier och sömn per dag för de senaste `days` dagarna. */
 export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
+  if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   let sleepAllowed = true;
   if (Capacitor.getPlatform() === "android") {
@@ -580,7 +616,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     bucket: "day",
   };
 
-  healthLog("reading aggregated data", { days, sleepAllowed });
+  healthLog("data request started", { days, sleepAllowed });
   const empty = { aggregatedData: [] as { startDate: string; value: number }[] };
   const errors: unknown[] = [];
   const [steps, calories, sleep] = await Promise.all([
@@ -645,7 +681,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     if (entry) entry.sleepMinutes += Math.round(sample.value || 0);
   }
 
-  healthLog("aggregated data read", { days: map.size });
+  healthLog("data response received", { days: map.size });
   return Array.from(map.values()).sort((a, b) => a.day.localeCompare(b.day));
 }
 
@@ -660,14 +696,19 @@ export async function saveHealthDays(userId: string, rows: HealthDay[]) {
     source: Capacitor.getPlatform() === "ios" ? "apple-health" : "health-connect",
     updated_at: new Date().toISOString(),
   }));
-  const { error } = await withTimeout(
-    Promise.resolve(
-      supabase.from("health_daily").upsert(payload, { onConflict: "user_id,day" }),
-    ),
-    15000,
-    "Kunde inte spara hälsodatan – ingen kontakt med servern.",
-  );
-  if (error) throw new HealthError("network", "Kunde inte spara hälsodatan – ingen kontakt med servern.");
+  healthLog("database save started", { rows: payload.length });
+  try {
+    const { error } = await withTimeout(
+      Promise.resolve(supabase.from("health_daily").upsert(payload, { onConflict: "user_id,day" })),
+      15000,
+      "Datan hämtades men databasen svarade inte i tid.",
+    );
+    if (error) throw error;
+    healthLog("database save completed", { rows: payload.length });
+  } catch (err) {
+    healthLog("database save failed", errorMessage(err));
+    throw new HealthError("save-failed", "Hälsodatan hämtades men kunde inte sparas i Grim.");
+  }
 }
 
 export async function loadStoredHealthDays(userId: string, days = 7): Promise<HealthDay[]> {
@@ -685,7 +726,7 @@ export async function loadStoredHealthDays(userId: string, days = 7): Promise<He
     15000,
     "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.",
   );
-  if (error) throw new HealthError("network", "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.");
+  if (error) throw new HealthError("save-failed", "Kunde inte hämta sparad hälsodata från Grim.");
   return (data ?? []).map((row) => ({
     day: row.day as string,
     steps: row.steps ?? 0,
@@ -814,7 +855,7 @@ export function dedupeWorkouts(list: HealthWorkout[]): HealthWorkout[] {
 /** Läser genomförda pass från hälsoappen (inkl. Samsung Health via Health Connect). */
 export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
   const plugin = await loadPlugin();
-  if (!plugin) throw new HealthError("not-supported", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
+  if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
@@ -830,7 +871,7 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
     STEP_TIMEOUT_MS,
     "Hälsoappen svarade inte i tid. Försök igen.",
   ).catch((err) => {
-    throw new HealthError("timeout", err?.message || "Hälsoappen svarade inte i tid. Försök igen.");
+    throw err instanceof HealthError ? err : new HealthError("data-timeout", err?.message || "Hälsoappen svarade inte i tid. Försök igen.");
   });
   healthLog("workouts read", res?.workouts?.length ?? 0);
 

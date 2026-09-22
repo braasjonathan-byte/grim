@@ -101,10 +101,10 @@ const HealthConnectCard = () => {
   const reportError = useCallback((err: unknown, fallback: string) => {
     const { code, ref, message, label } = formatHealthError(err, fallback);
     setLastError({ ref, message });
-    if (code === "not-installed") {
-      setAvailability("not-installed");
-      toast.error(`Health Connect saknas eller behöver uppdateras (${label})`, {
-        description: "Installera Health Connect från Play Store och försök igen.",
+    if (code === "not-installed" || code === "update-required") {
+      setAvailability(code === "not-installed" ? "not-installed" : "update-required");
+      toast.error(`${message} (${label})`, {
+        description: code === "not-installed" ? "Installera Health Connect från Play Store." : "Uppdatera Health Connect från Play Store.",
         action: { label: "Installera", onClick: () => void installHealthConnect() },
       });
       return;
@@ -126,20 +126,12 @@ const HealthConnectCard = () => {
       // Säkerhetsnät: hänger något i bryggan mot Health Connect ska knappen
       // släppa laddningsläget med ett tydligt fel i stället för att snurra.
       healthLog("sync started");
-      const granted = await withDialogTimeout(
-        requestHealthPermissions(),
-        "Health Connect svarade inte i tid. Försök igen.",
-        STEP_WATCHDOG_MS,
-      );
+      const granted = await requestHealthPermissions();
       setAccess(granted);
       // Hämta från senaste lyckade synk så inga dagar hoppas över.
       const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
       healthLog("permissions ok, reading days", { granted, windowDays });
-      const days = await withTimeout(
-        readHealthDays(windowDays),
-        STEP_WATCHDOG_MS,
-        "Health Connect svarade inte med någon data. Försök igen.",
-      );
+      const days = await readHealthDays(windowDays);
       healthLog("days read", days.length);
       setLastError(null);
       setRows(days.slice(-7));
@@ -148,7 +140,8 @@ const HealthConnectCard = () => {
         setLastHealthSync();
       } catch (err) {
         healthLog("save failed", err);
-        toast.warning("Hälsodatan visas, men kunde inte sparas – ingen kontakt med servern.");
+        reportError(err, "Hälsodatan visas, men kunde inte sparas i Grim");
+        return;
       }
       if (!granted.workouts || !granted.heartRate || !granted.sleep) {
         toast.success("Hälsodata hämtad – vissa datatyper saknar fortfarande behörighet");
@@ -173,20 +166,12 @@ const HealthConnectCard = () => {
     setLoadingWorkouts(true);
     try {
       healthLog("workout fetch started");
-      const granted = await withDialogTimeout(
-        requestHealthPermissions(),
-        "Health Connect svarade inte i tid. Försök igen.",
-        STEP_WATCHDOG_MS,
-      );
+      const granted = await requestHealthPermissions();
       setAccess(granted);
       if (!granted.workouts) {
         throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
       }
-      const list = await withTimeout(
-        readHealthWorkouts(30),
-        STEP_WATCHDOG_MS,
-        "Health Connect svarade inte med några pass. Försök igen.",
-      );
+      const list = await readHealthWorkouts(30);
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
       if (list.length === 0) toast.info("Inga pass hittades de senaste 30 dagarna");
@@ -298,7 +283,7 @@ const HealthConnectCard = () => {
               size="sm"
               variant="outline"
               className="rounded-full"
-              onClick={() => void openHealthSettings()}
+              onClick={() => void openHealthSettings().catch((err) => reportError(err, "Kunde inte öppna behörigheterna"))}
             >
               <Settings className="mr-2 h-3.5 w-3.5" />
               Tillåt {missing.map((f) => FEATURE_LABELS[f].toLowerCase()).join(", ")}
@@ -367,7 +352,7 @@ const HealthConnectCard = () => {
           </Button>
         )}
         {isHealthSupported() && available !== false && (
-          <Button variant="outline" className="rounded-full" onClick={() => void openHealthSettings()}>
+          <Button variant="outline" className="rounded-full" onClick={() => void openHealthSettings().catch((err) => reportError(err, "Kunde inte öppna behörigheterna"))}>
             <Settings className="mr-2 h-4 w-4" />
             Behörigheter
           </Button>
