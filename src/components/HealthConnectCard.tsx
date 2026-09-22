@@ -10,7 +10,7 @@ import {
   formatSleep,
   getLastHealthSync,
   healthAvailability,
-  healthErrorCode,
+  formatHealthError,
   installHealthConnect,
   isHealthSupported,
   loadStoredHealthDays,
@@ -51,6 +51,7 @@ const HealthConnectCard = () => {
   const [workouts, setWorkouts] = useState<HealthWorkout[] | null>(null);
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
+  const [lastError, setLastError] = useState<{ ref: string; message: string } | null>(null);
   const connected = !!access?.activity;
   const available = availability === null ? null : availability === "available";
 
@@ -140,6 +141,7 @@ const HealthConnectCard = () => {
         "Health Connect svarade inte med någon data. Försök igen.",
       );
       healthLog("days read", days.length);
+      setLastError(null);
       setRows(days.slice(-7));
       try {
         await saveHealthDays(userId, days);
