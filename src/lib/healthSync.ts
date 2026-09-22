@@ -544,17 +544,28 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   };
 
   healthLog("reading aggregated data", { days, sleepAllowed });
+  const empty = { aggregatedData: [] as { startDate: string; value: number }[] };
+  const errors: unknown[] = [];
   const [steps, calories, sleep] = await Promise.all([
+    // Steg och kalorier kan vara nekade var för sig – den ena får inte stoppa den andra.
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "steps" }),
       STEP_TIMEOUT_MS,
       "Health Connect svarade inte när steg hämtades.",
-    ),
+    ).catch((err) => {
+      healthLog("steps query failed", err);
+      errors.push(err);
+      return empty;
+    }),
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "active-calories" }),
       STEP_TIMEOUT_MS,
       "Health Connect svarade inte när aktiva kalorier hämtades.",
-    ),
+    ).catch((err) => {
+      healthLog("calories query failed", err);
+      errors.push(err);
+      return empty;
+    }),
     // Sömn är frivilligt – saknad behörighet eller ett opatchat plugin får inte
     // stoppa steg och kalorier, men felet ska synas i loggen.
     sleepAllowed
