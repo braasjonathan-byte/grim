@@ -59,6 +59,7 @@ jobs:
           node scripts/patch-capacitor-health.cjs
           npx cap sync android
           node scripts/verify-android-plugins.cjs
+          rm -rf node_modules/capacitor-health/android/build android/.gradle/*/executionHistory
 
       - name: Patch AndroidManifest (permissions, Health Connect)
         run: node scripts/patch-android-manifest.cjs

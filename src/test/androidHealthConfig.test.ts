@@ -63,5 +63,12 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(patch).toContain("ACTION_MANAGE_HEALTH_PERMISSIONS");
     expect(patch).toContain("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED");
   });
+
+  it("har en native watchdog som aldrig pausas av tappat fönsterfokus", () => {
+    const patch = read("scripts/patch-capacitor-health.cjs");
+    expect(patch).toContain("hard deadline independent of activity focus");
+    expect(patch).not.toContain('healthTrace("dialog-wait"');
+    expect(patch.indexOf('call.reject("HC_NATIVE_04')).toBeLessThan(patch.indexOf("bridge.releaseCall(call)"));
+  });
 });
 
