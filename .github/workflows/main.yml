@@ -164,9 +164,6 @@ jobs:
           path: _reports
           if-no-files-found: ignore
           retention-days: 3
-          name: gradle-reports
-          path: _reports
-          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v5
         if: always()
@@ -175,9 +172,7 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: ignore
           retention-days: 3
-          name: grim-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: ignore
+
 
       - name: Publish GitHub Release with APK
         if: success() && steps.apk.outcome == 'success'
