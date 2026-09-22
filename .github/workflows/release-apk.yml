@@ -49,7 +49,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'scripts/patch-android-*.cjs', '.github/workflows/release-apk.yml') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'scripts/patch-android-*.cjs', 'scripts/patch-capacitor-health.cjs', '.github/workflows/release-apk.yml') }}
           restore-keys: |
             gradle-${{ runner.os }}-
 
@@ -144,6 +144,9 @@ jobs:
 
       - name: Verify Android plugins (Health Connect config)
         run: node scripts/verify-android-plugins.cjs
+
+      - name: Invalidate capacitor-health compiled output
+        run: rm -rf node_modules/capacitor-health/android/build android/.gradle/*/executionHistory
 
       - name: Write Android Developer Verification (adi-registration.properties)
         run: |

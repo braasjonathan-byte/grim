@@ -13,6 +13,9 @@ data till systemets Health Connect-lager, och Grim läser därifrån via
 3. `requestHealthPermissions()` – begär alla behörigheter i en dialog, med
    reservbegäran för enbart grunddatan (steg, aktiva kalorier, distans) om
    enheten avvisar hela uppsättningen. Fel kastas som `HealthError` med kod.
+   Dialoganropet har en hård 20-sekundersgräns som inte kan pausas av Androids
+   fokus-/synlighetsstatus. Hela den manuella synken har dessutom ett fristående
+   45-sekunders säkerhetsnät, så knappen kan aldrig lämnas i laddningsläge.
 4. `readHealthDays(days)` – aggregerade dygnsvärden (steg, aktiva kalorier,
    sömn). Health Connect aggregerar själv över källor, så samma steg räknas
    inte dubbelt även om både telefon och klocka skriver dem.
@@ -57,6 +60,8 @@ Capacitor kör från `BridgeActivity.onCreate`. Den verkliga avvikelsen i
 originalpluginet var att den redan registrerade launchern startades från
 `Dispatchers.IO`; Grims reproducerbara patch flyttar starten till UI-tråden och
 avvisar direkt med `HC_NATIVE_03` om setupen ändå misslyckas.
+Native-watchdoggen avvisar bryggan innan det sparade anropet släpps; om ordningen
+vänds kan Capacitor tappa felet och lämna JavaScript-löftet permanent väntande.
 
 Knappen **Behörigheter** öppnar den appspecifika Health Connect-vyn för Grims
 paket, inte bara Health Connects allmänna startsida.
@@ -77,6 +82,9 @@ Statusen läses om varje gång appen kommer i förgrunden, så en åtkomst som
   `DEFAULT` och `HEALTH_PERMISSIONS`, som öppnar `privacy_policy_url`
   (https://grim.lovable.app/privacy) i telefonens webbläsare.
 - `scripts/patch-capacitor-health.cjs` lägger till sömnstöd i pluginet.
+- Alla Android-flöden patchar före `cap sync`, verifierar den installerade
+  Kotlin-källan och rensar bara pluginets kompilerade utdata för att förhindra
+  att en gammal native-klass återanvänds från cache.
 
 ## Inte byggt: bakgrundssynk
 

@@ -77,12 +77,20 @@ let pluginPromise: Promise<HealthPluginLike | null> | null = null;
 /** Varje automatiskt anrop mot hälsoappen får ta max så här lång tid. */
 export const STEP_TIMEOUT_MS = 20000;
 
-/** Health Connect kan lämna löften ohanterade – avbryt istället för att snurra för evigt. */
-export function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+/**
+ * Health Connect kan lämna löften ohanterade. Timern är helt fristående från
+ * native-anropet och måste därför alltid kunna avvisa även om bryggan kraschar.
+ */
+export function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+  code: HealthErrorCode = "data-timeout",
+): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       healthLog("timeout", message);
-      reject(new HealthError("data-timeout", message));
+      reject(new HealthError(code, message));
     }, ms);
     promise.then(
       (value) => {
@@ -108,56 +116,28 @@ function visibilityTarget(): VisibilityTarget | null {
 }
 
 /**
- * Behörighetsdialogen öppnas av systemet ovanpå appen. Klockan ska bara ticka
- * medan Grim är i förgrunden – annars avbryts användaren mitt i godkännandet.
- * Hänger anropet utan att någon dialog syns avbryts det efter `idleMs`.
+ * Hård, oberoende tidsgräns för behörighetsdialogen. En tidigare variant
+ * pausade timern när appen tappade fokus; på vissa telefoner rapporterades
+ * fönstret som dolt även när ingen användbar dialog visades och synken kunde då
+ * hänga för evigt. Native-anropet får aldrig styra eller stoppa denna timer.
  */
 export function withDialogTimeout<T>(
   promise: Promise<T>,
   message: string,
-  idleMs = STEP_TIMEOUT_MS,
+  timeoutMs = STEP_TIMEOUT_MS,
 ): Promise<T> {
-  const target = visibilityTarget();
-  if (!target) return withTimeout(promise, idleMs, message);
-
   return new Promise<T>((resolve, reject) => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const stop = () => {
-      if (timer) clearTimeout(timer);
-      timer = null;
-    };
-    const cleanup = () => {
-      stop();
-      target.removeEventListener("visibilitychange", onVisibility);
-    };
-    const start = () => {
-      stop();
-      timer = setTimeout(() => {
-        healthLog("timeout", message);
-        cleanup();
-        reject(new HealthError("dialog-timeout", message));
-      }, idleMs);
-    };
-    function onVisibility() {
-      if (target!.hidden) {
-        healthLog("dialogen ligger överst – tidsgränsen pausas");
-        stop();
-      } else {
-        healthLog("appen är tillbaka – tidsgränsen startas om");
-        start();
-      }
-    }
-
-    target.addEventListener("visibilitychange", onVisibility);
-    if (!target.hidden) start();
-
+    const timer = setTimeout(() => {
+      healthLog("permission dialog hard timeout", { timeoutMs });
+      reject(new HealthError("dialog-timeout", message));
+    }, timeoutMs);
     promise.then(
       (value) => {
-        cleanup();
+        clearTimeout(timer);
         resolve(value);
       },
       (err) => {
-        cleanup();
+        clearTimeout(timer);
         reject(err);
       },
     );
@@ -533,7 +513,11 @@ export async function openHealthSettings(): Promise<void> {
   try {
     if (Capacitor.getPlatform() === "android") {
       healthLog("opening app health permissions");
-      await plugin.openHealthConnectSettings();
+      await withTimeout(
+        plugin.openHealthConnectSettings(),
+        STEP_TIMEOUT_MS,
+        "Android svarade inte när Grims Health Connect-behörigheter skulle öppnas.",
+      );
       healthLog("app health permissions opened");
     }
   } catch (err) {

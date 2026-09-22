@@ -26,8 +26,8 @@ const GRADLE = path.join(BASE, "build.gradle");
 const AGP_VERSION = "8.13.0";
 
 if (!fs.existsSync(PLUGIN_KT)) {
-  console.log("[patch-capacitor-health] pluginet saknas — hoppar över.");
-  process.exit(0);
+  console.error("[patch-capacitor-health] pluginet saknas — bygget får inte fortsätta opatchat.");
+  process.exit(1);
 }
 
 let kt = fs.readFileSync(PLUGIN_KT, "utf8");
@@ -314,7 +314,7 @@ if (!kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG")) {
   kt = kt.replace(
     /    private var launcherSetupError: String\? = null/,
     `    private var launcherSetupError: String? = null
-    // GRIM_PERMISSION_CALLBACK_WATCHDOG
+    // GRIM_PERMISSION_CALLBACK_WATCHDOG: hard deadline independent of activity focus.
     private val mainHandler = Handler(Looper.getMainLooper())
     private var permissionWatchdog: Runnable? = null`,
   );
@@ -330,14 +330,6 @@ if (!kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG")) {
                 permissionWatchdog?.let { mainHandler.removeCallbacks(it) }
                 permissionWatchdog = object : Runnable {
                     override fun run() {
-                    // Ligger systemdialogen overst har appen tappat fonsterfokus -
-                    // anvandaren laser fortfarande, sa vanta i stallet for att avbryta.
-                    val activityFocused = bridge.activity?.hasWindowFocus() ?: true
-                    if (!activityFocused) {
-                        healthTrace("dialog-wait", "user still in system dialog")
-                        mainHandler.postDelayed(this, 5_000)
-                        return
-                    }
                     val pending = requestPermissionContext.getAndSet(null)
                     if (pending?.pluginCal?.callbackId == call.callbackId) {
                         Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-callback-timeout code=HC_NATIVE_04")
@@ -349,6 +341,28 @@ if (!kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG")) {
                 mainHandler.postDelayed(permissionWatchdog!!, 18_000)`.replace(/\u00024/g, "$"),
   );
 }
+
+// Uppgradera installationer som redan fick den äldre watchdog-patchen. Den
+// pausade på hasWindowFocus=false och kunde därför vänta för evigt på vissa
+// tillverkare. Markören ensam får inte göra patchen falskt idempotent.
+if (kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG") && !kt.includes("hard deadline independent of activity focus")) {
+  kt = kt.replace(
+    "// GRIM_PERMISSION_CALLBACK_WATCHDOG",
+    "// GRIM_PERMISSION_CALLBACK_WATCHDOG: hard deadline independent of activity focus.",
+  );
+  kt = kt.replace(
+    /\s*\/\/ Ligger systemdialogen overst[\s\S]*?mainHandler\.postDelayed\(this, 5_000\)\s*\n\s*return\s*\n\s*\}/,
+    "",
+  );
+}
+
+// Reject måste skickas över Capacitor-bryggan innan det sparade anropet
+// släpps. Om releaseCall körs först kan JS-löftet bli permanent pending.
+kt = kt.replace(
+  /bridge\.releaseCall\(call\)\s*\n\s*call\.reject\("HC_NATIVE_04: permission dialog returned no callback"\)/,
+  `call.reject("HC_NATIVE_04: permission dialog returned no callback")
+                        bridge.releaseCall(call)`,
+);
 
 
 
