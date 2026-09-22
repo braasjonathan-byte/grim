@@ -526,7 +526,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     if (!access.activity) {
       throw new HealthError(
         "denied",
-        "Grim saknar åtkomst till Steg, Aktiva kalorier eller Distans i Health Connect. Öppna Behörigheter och tillåt alla tre.",
+        "Grim saknar åtkomst till Steg och Aktiva kalorier i Health Connect. Öppna Behörigheter och tillåt minst en av dem.",
       );
     }
     sleepAllowed = access.sleep;
