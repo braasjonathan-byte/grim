@@ -8,6 +8,7 @@ import {
   checkHealthAccess,
   FEATURE_LABELS,
   formatSleep,
+  HealthError,
   getLastHealthSync,
   healthAvailability,
   formatHealthError,
@@ -135,7 +136,9 @@ const HealthConnectCard = () => {
         return;
       }
       if (!granted.workouts || !granted.heartRate || !granted.sleep) {
-        toast.success("Hälsodata hämtad – vissa datatyper saknar fortfarande behörighet");
+        const partial = formatHealthError(new HealthError("partial", "Hälsodata hämtades, men vissa datatyper saknar behörighet."));
+        setLastError({ ref: partial.ref, message: partial.message });
+        toast.warning(partial.message, { description: partial.label });
       } else {
         toast.success("Hälsodata hämtad");
       }

@@ -121,6 +121,9 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED") || !source.includes('"update-required"')) {
     failures.push("capacitor-health: installed versus update-required availability diagnostics are missing");
   }
+  if (!source.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG") || !source.includes("HC_NATIVE_04")) {
+    failures.push("capacitor-health: native permission callback watchdog is missing");
+  }
 }
 
 

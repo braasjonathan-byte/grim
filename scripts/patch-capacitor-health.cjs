@@ -305,6 +305,41 @@ if (!kt.includes("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED")) {
   );
 }
 
+// 5j. Native watchdog: om launch() återvänder men ActivityResult-callbacken aldrig
+// kommer får JS HC_NATIVE_04 före den yttre 20-sekundersgränsen.
+if (!kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG")) {
+  if (!kt.includes("import android.os.Handler")) {
+    kt = kt.replace("import android.net.Uri\n", "import android.net.Uri\nimport android.os.Handler\nimport android.os.Looper\n");
+  }
+  kt = kt.replace(
+    /    private var launcherSetupError: String\? = null/,
+    `    private var launcherSetupError: String? = null
+    // GRIM_PERMISSION_CALLBACK_WATCHDOG
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var permissionWatchdog: Runnable? = null`,
+  );
+  kt = kt.replace(
+    /                healthTrace\("dialog-response", "granted=\$\{grantedPermissions\.size\}"\)/,
+    `                healthTrace("dialog-response", "granted=4{grantedPermissions.size}")
+                permissionWatchdog?.let { mainHandler.removeCallbacks(it) }
+                permissionWatchdog = null`.replace(/\u00024/g, "$"),
+  );
+  kt = kt.replace(
+    /                healthTrace\("dialog-launch-returned"\)/,
+    `                healthTrace("dialog-launch-returned")
+                permissionWatchdog?.let { mainHandler.removeCallbacks(it) }
+                permissionWatchdog = Runnable {
+                    val pending = requestPermissionContext.getAndSet(null)
+                    if (pending?.pluginCal?.callbackId == call.callbackId) {
+                        Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-callback-timeout code=HC_NATIVE_04")
+                        bridge.releaseCall(call)
+                        call.reject("HC_NATIVE_04: permission dialog returned no callback")
+                    }
+                }
+                mainHandler.postDelayed(permissionWatchdog!!, 18_000)`.replace(/\u00024/g, "$"),
+  );
+}
+
 
 
 

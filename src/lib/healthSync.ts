@@ -363,6 +363,9 @@ function classifyNativeHealthError(err: unknown): HealthError {
   if (message.includes("HC_NATIVE_03") || /register.*ActivityResult|launcher.*initial/i.test(message)) {
     return new HealthError("launcher-setup", "Behörighetsdialogen kunde inte förberedas av Android. Starta om appen och försök igen.");
   }
+  if (message.includes("HC_NATIVE_04")) {
+    return new HealthError("dialog-timeout", "Behörighetsdialogen startades, men Android lämnade inget svar.");
+  }
   return new HealthError("unknown", message || "Okänt fel i hälsokopplingen.");
 }
 
