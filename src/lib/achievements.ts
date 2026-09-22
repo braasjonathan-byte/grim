@@ -215,9 +215,14 @@ export const checkInteractionAchievements = async (userId: string) => {
     const existingIds = new Set((existing || []).map((row: any) => row.achievement_id));
     const fresh = earned.filter((a) => !existingIds.has(a.id));
     if (fresh.length > 0) {
-      await supabase.from("user_achievements" as any).insert(
+      if (!(await hasValidSessionFor(userId))) return [];
+      const { error } = await supabase.from("user_achievements" as any).insert(
         fresh.map((a) => ({ user_id: userId, achievement_id: a.id })) as any,
       );
+      if (error) {
+        console.error("Kunde inte spara utmärkelser:", error.message);
+        return [];
+      }
     }
     return fresh;
   } catch {
@@ -243,9 +248,14 @@ export const unlockEarnedAchievements = async (
   const newAchievements = earned.filter((achievement) => !existingIds.has(achievement.id));
 
   if (newAchievements.length > 0) {
-    await supabase.from("user_achievements" as any).insert(
+    if (!(await hasValidSessionFor(userId))) return [];
+    const { error } = await supabase.from("user_achievements" as any).insert(
       newAchievements.map((achievement) => ({ user_id: userId, achievement_id: achievement.id })) as any,
     );
+    if (error) {
+      console.error("Kunde inte spara utmärkelser:", error.message);
+      return [];
+    }
   }
 
   return getHighestAchievementsByMetric(newAchievements);
