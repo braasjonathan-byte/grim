@@ -25,9 +25,6 @@ import {
   type HealthAvailability,
   type HealthDay,
   type HealthFeature,
-  withTimeout,
-  withDialogTimeout,
-  STEP_TIMEOUT_MS,
   healthLog,
   type HealthWorkout,
 } from "@/lib/healthSync";
@@ -35,12 +32,6 @@ import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts }
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
-/**
- * Varje steg får 20 sekunder. Under själva godkännandedialogen ligger Grim i
- * bakgrunden, och då pausas klockan av withDialogTimeout inne i healthSync.
- */
-const STEP_WATCHDOG_MS = STEP_TIMEOUT_MS;
-
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);
@@ -239,7 +230,9 @@ const HealthConnectCard = () => {
         <span>
           {isHealthSupported()
             ? availability === "not-installed"
-              ? "Health Connect saknas eller behöver uppdateras – installera det från Play Store"
+              ? "Health Connect saknas – installera det från Play Store"
+              : availability === "update-required"
+                ? "Health Connect behöver uppdateras från Play Store"
               : availability === "not-supported"
                 ? "Hälsodata stöds inte på den här enheten"
                 : "Hämta steg, aktiva kalorier och genomförda pass från din hälsoapp"
@@ -345,10 +338,10 @@ const HealthConnectCard = () => {
             Hämta genomförda pass
           </Button>
         )}
-        {isHealthSupported() && available === false && (
+        {isHealthSupported() && (availability === "not-installed" || availability === "update-required") && (
           <Button variant="outline" className="rounded-full" onClick={() => void installHealthConnect()}>
             <Download className="mr-2 h-4 w-4" />
-            Installera Health Connect
+            {availability === "update-required" ? "Uppdatera Health Connect" : "Installera Health Connect"}
           </Button>
         )}
         {isHealthSupported() && available !== false && (

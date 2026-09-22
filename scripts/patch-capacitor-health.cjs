@@ -287,6 +287,24 @@ if (!kt.includes("GRIM_APP_HEALTH_PERMISSIONS")) {
   );
 }
 
+// 5i. Skilj saknad installation från för gammal provider så JS kan visa HC-01
+// respektive HC-02 utan att gissa från ett gemensamt available=false.
+if (!kt.includes("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED")) {
+  kt = kt.replace(
+    /        val result = JSObject\(\)\s*\n        result\.put\("available", available\)\s*\n        call\.resolve\(result\)/,
+    `        val sdkStatus = HealthConnectClient.getSdkStatus(context)
+        val result = JSObject()
+        result.put("available", available && sdkStatus == HealthConnectClient.SDK_AVAILABLE)
+        result.put("status", when (sdkStatus) {
+            HealthConnectClient.SDK_AVAILABLE -> "available"
+            HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> "update-required"
+            else -> "not-installed"
+        })
+        healthTrace("availability-response", "status=4sdkStatus")
+        call.resolve(result)`.replace(/\u00024/g, "$"),
+  );
+}
+
 
 
 

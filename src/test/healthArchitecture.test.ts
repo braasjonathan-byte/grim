@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   dedupeWorkouts,
   healthErrorCode,
+  HEALTH_ERROR_REFS,
   HealthError,
   MAX_SYNC_DAYS,
   MIN_SYNC_DAYS,
@@ -101,5 +102,19 @@ describe("healthErrorCode", () => {
 
   it("faller tillbaka på okänt", () => {
     expect(healthErrorCode(new Error("x"))).toBe("unknown");
+  });
+
+  it("har specifika koder för hela synkkedjan", () => {
+    expect(HEALTH_ERROR_REFS).toEqual({
+      "not-installed": "HC-01",
+      "update-required": "HC-02",
+      "launcher-setup": "HC-03",
+      "dialog-timeout": "HC-04",
+      denied: "HC-05",
+      partial: "HC-06",
+      "data-timeout": "HC-07",
+      "save-failed": "HC-08",
+      unknown: "HC-99",
+    });
   });
 });

@@ -118,6 +118,9 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_APP_HEALTH_PERMISSIONS") || !source.includes("ACTION_MANAGE_HEALTH_PERMISSIONS")) {
     failures.push("capacitor-health: app-specific Health Connect permission settings intent is missing");
   }
+  if (!source.includes("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED") || !source.includes('"update-required"')) {
+    failures.push("capacitor-health: installed versus update-required availability diagnostics are missing");
+  }
 }
 
 

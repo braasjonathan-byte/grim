@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { STEP_TIMEOUT_MS, withDialogTimeout, withTimeout } from "@/lib/healthSync";
+import { healthErrorRef, STEP_TIMEOUT_MS, withDialogTimeout, withTimeout } from "@/lib/healthSync";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -12,6 +12,7 @@ describe("withTimeout", () => {
     const assertion = expect(pending).rejects.toThrow("Hänger");
     await vi.advanceTimersByTimeAsync(1001);
     await assertion;
+    await pending.catch((err) => expect(healthErrorRef(err)).toBe("HC-07"));
   });
 
   it("släpper igenom ett svar som hinner i tid", async () => {
@@ -26,6 +27,7 @@ describe("withDialogTimeout", () => {
     const assertion = expect(pending).rejects.toThrow("Kunde inte ansluta");
     await vi.advanceTimersByTimeAsync(600);
     await assertion;
+    await pending.catch((err) => expect(healthErrorRef(err)).toBe("HC-04"));
   });
 
   it("pausar klockan medan systemdialogen ligger överst", async () => {
