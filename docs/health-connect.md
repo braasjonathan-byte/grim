@@ -36,11 +36,30 @@ Dygnsrader skrivs med `upsert` på `user_id,day` – upprepad synk kan inte dubb
 Dygn grupperas i telefonens lokala tidszon. En UTC-nyckel skulle flytta svensk
 data ett dygn bakåt (lokal midnatt = 22:00 UTC föregående dag).
 
-## Felkoder
+## Felkoder och spårning
 
-`HealthError.code`: `not-supported`, `not-installed`, `denied`, `partial`,
-`timeout`, `network`, `unknown`. Kortet översätter varje kod till ett konkret
-besked och rätt knapp (installera / behörigheter / försök igen).
+- `HC-01`: Health Connect är inte installerat.
+- `HC-02`: Health Connect-providern behöver uppdateras.
+- `HC-03`: Android kunde inte registrera eller starta behörighets-launchern.
+- `HC-04`: dialogen startades men lämnade inget svar inom tidsgränsen.
+- `HC-05`: användaren nekade grundbehörighet.
+- `HC-06`: bara en del av datatyperna tilläts.
+- `HC-07`: behörighet finns men datahämtningen timeoutade.
+- `HC-08`: data hämtades men kunde inte sparas i Grim.
+- `HC-99`: verkligt okategoriserat fel.
+
+Varje steg loggas med tidsstämpel i webbappen (`[health] ... step=...`) och i
+Android Logcat med taggen `CapHealth`: launcher-registrering, dialogstart,
+dialogsvar, data-request, data-svar, databasstart och databassvar.
+
+Pluginets `ActivityResultLauncher` registreras synkront i `Plugin.load()`, som
+Capacitor kör från `BridgeActivity.onCreate`. Den verkliga avvikelsen i
+originalpluginet var att den redan registrerade launchern startades från
+`Dispatchers.IO`; Grims reproducerbara patch flyttar starten till UI-tråden och
+avvisar direkt med `HC_NATIVE_03` om setupen ändå misslyckas.
+
+Knappen **Behörigheter** öppnar den appspecifika Health Connect-vyn för Grims
+paket, inte bara Health Connects allmänna startsida.
 
 ## Livscykel
 

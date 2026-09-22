@@ -54,5 +54,14 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(match).not.toBeNull();
     expect(Number(match![1])).toBeGreaterThanOrEqual(26);
   });
+
+  it("patchar launchern tidigt och öppnar Grims egen behörighetssida", () => {
+    const patch = read("scripts/patch-capacitor-health.cjs");
+    expect(patch).toContain("GRIM_EARLY_PERMISSION_LAUNCHER");
+    expect(patch).toContain("HC_NATIVE_03");
+    expect(patch).toContain("GRIM_APP_HEALTH_PERMISSIONS");
+    expect(patch).toContain("ACTION_MANAGE_HEALTH_PERMISSIONS");
+    expect(patch).toContain("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED");
+  });
 });
 
