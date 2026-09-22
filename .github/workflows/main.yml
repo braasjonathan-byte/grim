@@ -148,7 +148,7 @@ jobs:
         working-directory: android
         run: |
           echo "Gradle JAVA_HOME=$JAVA_HOME"
-          ./gradlew assembleDebug --stacktrace --info --warning-mode all --continue -Dorg.gradle.java.home="$JAVA_HOME"
+          ./gradlew assembleDebug --build-cache --parallel --continue -Dorg.gradle.java.home="$JAVA_HOME"
 
       - name: Collect Gradle reports
         if: always()

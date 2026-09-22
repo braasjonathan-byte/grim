@@ -187,7 +187,7 @@ EOF
       # -------------------------
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --build-cache --parallel
 
       # -------------------------
       # Find APK

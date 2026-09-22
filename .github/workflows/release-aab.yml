@@ -29,6 +29,17 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'android/**/*.gradle', 'android/gradle.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
       - name: Install dependencies
         run: npm ci --legacy-peer-deps --no-audit --no-fund
 
@@ -152,7 +163,7 @@ jobs:
       # -------------------------
       - name: Build release AAB
         working-directory: android
-        run: ./gradlew bundleRelease --no-daemon --stacktrace
+        run: ./gradlew bundleRelease --no-daemon --build-cache --parallel
 
       - name: Locate AAB
         id: aab
