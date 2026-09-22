@@ -327,24 +327,78 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   const coreReq = { permissions: [...CORE_PERMISSIONS] };
   let res: PermissionResponse | undefined;
   healthLog("requesting permissions", req.permissions);
+
+  /**
+   * Systemdialogen kan starta om appens aktivitet. Då tappar hälsomodulen
+   * kopplingen till det pågående anropet och svaret kommer aldrig tillbaka.
+   * Därför läser vi av det verkliga läget så fort appen är i förgrunden igen,
+   * i stället för att lita enbart på svaret från modulen.
+   */
+  const settledOnResume = async (): Promise<HealthAccess | null> => {
+    const target = visibilityTarget();
+    if (!target) return null;
+    await new Promise<void>((resolve) => {
+      let sawHidden = false;
+      const onChange = () => {
+        if (target.hidden) {
+          sawHidden = true;
+        } else if (sawHidden) {
+          target.removeEventListener("visibilitychange", onChange);
+          resolve();
+        }
+      };
+      target.addEventListener("visibilitychange", onChange);
+    });
+    healthLog("appen tillbaka efter dialogen – läser av behörigheterna");
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      const access = await checkHealthAccess();
+      if (access.activity) return access;
+    }
+    return null;
+  };
+
+  const request = async (request: { permissions: string[] }) => {
+    const resumed = settledOnResume();
+    const result = await Promise.race([
+      withDialogTimeout(
+        plugin.requestHealthPermissions(request),
+        "Health Connect svarade inte i tid. Försök igen.",
+      ).then((r) => ({ kind: "plugin" as const, res: r })),
+      resumed.then((access) => (access ? { kind: "access" as const, access } : new Promise<never>(() => {}))),
+    ]);
+    return result;
+  };
+
   try {
-    res = await withDialogTimeout(
-      plugin.requestHealthPermissions(req),
-      "Health Connect svarade inte i tid. Försök igen.",
-    );
+    const first = await request(req);
+    if (first.kind === "access") return first.access;
+    res = first.res;
   } catch (err: any) {
     healthLog("permission request failed", err?.message);
+    // Har användaren hunnit godkänna trots att svaret uteblev? Läs av läget.
+    const afterFirst = await checkHealthAccess();
+    if (afterFirst.activity) return afterFirst;
     // Vissa enheter avvisar hela begäran om en behörighet inte stöds –
     // försök då med enbart grunddatan.
     try {
-      res = await withDialogTimeout(
-        plugin.requestHealthPermissions(coreReq),
-        "Health Connect svarade inte i tid. Försök igen.",
-      );
+      const second = await request(coreReq);
+      if (second.kind === "access") return second.access;
+      res = second.res;
     } catch (fallbackErr: any) {
+      healthLog("fallback permission request failed", fallbackErr?.message);
+      const afterFallback = await checkHealthAccess();
+      if (afterFallback.activity) return afterFallback;
+      if (Capacitor.getPlatform() === "android") {
+        try {
+          await plugin.openHealthConnectSettings();
+        } catch {
+          /* ignore */
+        }
+      }
       throw new HealthError(
-        "timeout",
-        fallbackErr?.message || err?.message || "Health Connect svarade inte i tid. Försök igen.",
+        "denied",
+        "Health Connect öppnade ingen godkännanderuta. Vi har öppnat Health Connect åt dig – välj Grim under Appbehörigheter och tillåt Steg, Aktiva kalorier och Distans, gå sedan tillbaka och tryck Synka hälsodata igen.",
       );
     }
   }
@@ -358,6 +412,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   // så svaret där saknar pass, puls och sömn även när de redan är beviljade.
   let access = await checkHealthAccess();
   if (!access.activity) access = accessFrom(res);
+
 
   if (!access.activity) {
     // Health Connect visar ingen dialog om användaren nekat två gånger –
