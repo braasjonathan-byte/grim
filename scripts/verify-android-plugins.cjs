@@ -124,6 +124,11 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG") || !source.includes("HC_NATIVE_04")) {
     failures.push("capacitor-health: native permission callback watchdog is missing");
   }
+  if (!source.includes("hard deadline independent of activity focus") || source.includes('healthTrace("dialog-wait"')) {
+    failures.push("capacitor-health: permission watchdog can still pause forever while activity focus is lost");
+  }
+} else {
+  failures.push("capacitor-health: installed native source is missing; patch verification cannot pass");
 }
 
 

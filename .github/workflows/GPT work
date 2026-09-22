@@ -53,11 +53,12 @@ jobs:
       # --------------------
       # Clean Android + full regen (FIX FOR YOUR ERROR)
       # --------------------
-      - name: Recreate Android project
+      - name: Patch and sync Android project
         run: |
-          rm -rf android
-          npx cap add android
+          node scripts/patch-send-intent-gradle.cjs
+          node scripts/patch-capacitor-health.cjs
           npx cap sync android
+          node scripts/verify-android-plugins.cjs
 
       - name: Patch AndroidManifest (permissions, Health Connect)
         run: node scripts/patch-android-manifest.cjs

@@ -12,3 +12,4 @@
 - [x] Uppdaterad integritetspolicytext om hälsodata.
 - [x] Verifiering: tester, Android-pluginverifiering, typkontroll.
 - [x] Fixa native launcher-livscykel, appspecifik Behörigheter-vy och HC-01–HC-08-diagnostik.
+- [ ] Eliminera evig hälsosynk: hård JS-timeout, rätt produktionsväg och verifierad native-patch i varje Android-bygge.

@@ -104,7 +104,10 @@ const HealthConnectCard = () => {
     if (code === "denied") {
       toast.error(message, {
         description: label,
-        action: { label: "Behörigheter", onClick: () => void openHealthSettings() },
+        action: {
+          label: "Behörigheter",
+          onClick: () => void openHealthSettings().catch((settingsError) => reportError(settingsError, "Kunde inte öppna behörigheterna")),
+        },
       });
       return;
     }

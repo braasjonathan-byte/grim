@@ -61,13 +61,11 @@ jobs:
 
       - name: Install dependencies
         id: deps
-        if: always()
-        run: npm install --legacy-peer-deps --no-audit --no-fund || echo "::warning::npm install failed"
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Build web
         id: web
-        if: always()
-        run: npm run build || echo "::warning::web build failed"
+        run: npm run build
 
       - name: Add Android platform (if missing)
         if: always()
@@ -88,11 +86,13 @@ jobs:
           fi
 
       - name: Sync Capacitor
-        if: always()
         run: |
-          node scripts/patch-send-intent-gradle.cjs || echo "::warning::send-intent gradle patch failed"
-          node scripts/patch-capacitor-health.cjs || echo "::warning::capacitor-health patch failed"
-          npx cap sync android || echo "::warning::cap sync failed"
+          node scripts/patch-send-intent-gradle.cjs
+          node scripts/patch-capacitor-health.cjs
+          npx cap sync android
+
+      - name: Verify patched native sources
+        run: node scripts/verify-android-plugins.cjs
 
       - name: Patch AndroidManifest.xml with required permissions
         if: always()

@@ -30,22 +30,17 @@ describe("withDialogTimeout", () => {
     await pending.catch((err) => expect(healthErrorRef(err)).toBe("HC-04"));
   });
 
-  it("pausar klockan medan systemdialogen ligger överst", async () => {
+  it("avbryter oberoende av om native-anropet döljer appen", async () => {
     vi.useFakeTimers();
     const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
-    let done: (v: string) => void = () => {};
     const pending = withDialogTimeout<string>(
-      new Promise((resolve) => {
-        done = resolve;
-      }),
+      new Promise(() => {}),
       "Kunde inte ansluta",
       500,
     );
-    document.dispatchEvent(new Event("visibilitychange"));
-    await vi.advanceTimersByTimeAsync(5000);
-    hidden.mockReturnValue(false);
-    done("ok");
-    await expect(pending).resolves.toBe("ok");
+    const assertion = expect(pending).rejects.toThrow("Kunde inte ansluta");
+    await vi.advanceTimersByTimeAsync(501);
+    await assertion;
     hidden.mockRestore();
   });
 
