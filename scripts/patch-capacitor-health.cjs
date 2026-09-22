@@ -179,6 +179,114 @@ if (!kt.includes("GRIM_SAVED_PERMISSION_CALL")) {
   );
 }
 
+// 5f. Registrera ActivityResultLauncher under pluginets load(), innan aktiviteten
+// når STARTED. Om Android ändå avvisar registreringen ska JS få ett omedelbart,
+// maskinläsbart fel i stället för att vänta på sin watchdog.
+if (!kt.includes("GRIM_EARLY_PERMISSION_LAUNCHER")) {
+  kt = kt.replace(
+    /    private lateinit var permissionsLauncher: ActivityResultLauncher<Set<String>>\s*\n    override fun load\(\) \{[\s\S]*?        permissionsLauncher = activity\.registerForActivityResult\(contract, callback\)\s*\n    \}/,
+    `    // GRIM_EARLY_PERMISSION_LAUNCHER: Plugin.load() körs från BridgeActivity.onCreate.
+    private var permissionsLauncher: ActivityResultLauncher<Set<String>>? = null
+    private var launcherSetupError: String? = null
+
+    private fun healthTrace(step: String, detail: String = "") {
+        Log.i(tag, "health-ts=4{System.currentTimeMillis()} step=4step 4detail")
+    }
+
+    override fun load() {
+        super.load()
+        healthTrace("launcher-registration-start")
+        try {
+            val contract: ActivityResultContract<Set<String>, Set<String>> =
+                PermissionController.createRequestPermissionResultContract()
+            val callback = ActivityResultCallback<Set<String>> { grantedPermissions ->
+                healthTrace("dialog-response", "granted=4{grantedPermissions.size}")
+                val context = requestPermissionContext.getAndSet(null)
+                if (context != null) {
+                    context.pluginCal.resolve(grantedPermissionResult(context.requestedPermissions, grantedPermissions))
+                    bridge.releaseCall(context.pluginCal)
+                } else {
+                    val saved = lastPermissionCallId?.let { bridge.getSavedCall(it) }
+                    if (saved != null) {
+                        healthTrace("dialog-response-restored")
+                        saved.resolve(grantedPermissionResult(lastRequestedPermissions, grantedPermissions))
+                        bridge.releaseCall(saved)
+                    } else {
+                        Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-response-orphan")
+                    }
+                }
+                lastPermissionCallId = null
+                lastRequestedPermissions = emptySet()
+            }
+            permissionsLauncher = activity.registerForActivityResult(contract, callback)
+            healthTrace("launcher-registration-ok")
+        } catch (e: Exception) {
+            launcherSetupError = e.message ?: e.javaClass.simpleName
+            Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=launcher-registration-failed code=HC_NATIVE_03", e)
+        }
+    }`.replace(/\u00024/g, "$"),
+  );
+}
+
+// 5g. Begäran får bara starta med en launcher som registrerats i load(). Logga
+// dialogstarten separat så HC-03 och HC-04 går att skilja i en Logcat-rapport.
+if (!kt.includes("HC_NATIVE_03")) {
+  console.error("[patch-capacitor-health] kunde inte installera tidig launcher-registrering.");
+  process.exit(1);
+}
+if (!kt.includes("step=dialog-start")) {
+  kt = kt.replace(
+    /                Log\.i\(tag, "requesting health permissions: \$healthConnectPermissions"\)/,
+    `                val launcher = permissionsLauncher
+                if (launcher == null) {
+                    val reason = launcherSetupError ?: "launcher was not initialized during plugin load"
+                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-start-blocked code=HC_NATIVE_03 reason=4reason")
+                    call.reject("HC_NATIVE_03: 4reason")
+                    return@runOnUiThread
+                }
+                healthTrace("dialog-start", "permissions=4{healthConnectPermissions.size}")`.replace(/\u00024/g, "$"),
+  );
+  kt = kt.replace(
+    /                permissionsLauncher\.launch\(healthConnectPermissions\)/,
+    `                launcher.launch(healthConnectPermissions)
+                healthTrace("dialog-launch-returned")`,
+  );
+  kt = kt.replace(
+    /                Log\.e\(tag, "permission request failed", e\)/,
+    `                Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-start-failed code=HC_NATIVE_03", e)`.replace(/\u00024/g, "$"),
+  );
+  kt = kt.replace(
+    /                call\.reject\("Permission request failed: \$\{e\.message\}"\)/,
+    `                call.reject("HC_NATIVE_03: Permission request failed: 4{e.message}")`.replace(/\u00024/g, "$"),
+  );
+}
+
+// 5h. Öppna den appspecifika behörighetssidan. Android 14 har Health Connect i
+// systemet; Android 13 och äldre använder den separata Health Connect-appen.
+if (!kt.includes("GRIM_APP_HEALTH_PERMISSIONS")) {
+  kt = kt.replace(
+    /            val intent = Intent\(\)\.apply \{\s*\n                action = HealthConnectClient\.ACTION_HEALTH_CONNECT_SETTINGS\s*\n            \}\s*\n            context\.startActivity\(intent\)/,
+    `            // GRIM_APP_HEALTH_PERMISSIONS
+            val packageName = context.packageName
+            val action = if (android.os.Build.VERSION.SDK_INT >= 34)
+                "android.health.connect.action.MANAGE_HEALTH_PERMISSIONS"
+            else
+                "androidx.health.ACTION_MANAGE_HEALTH_PERMISSIONS"
+            val intent = Intent(action).apply {
+                putExtra(Intent.EXTRA_PACKAGE_NAME, packageName)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                if (android.os.Build.VERSION.SDK_INT < 34) setPackage("com.google.android.apps.healthdata")
+            }
+            val resolved = intent.resolveActivity(context.packageManager)
+            if (resolved == null) {
+                Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=settings-open-failed code=HC_NATIVE_SETTINGS")
+                throw IllegalStateException("HC_NATIVE_SETTINGS: app permission screen unavailable")
+            }
+            healthTrace("settings-open", "component=4resolved")
+            context.startActivity(intent)`.replace(/\u00024/g, "$"),
+  );
+}
+
 
 
 

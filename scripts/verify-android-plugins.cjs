@@ -109,6 +109,15 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_SAVED_PERMISSION_CALL")) {
     failures.push("capacitor-health: permission call is not persisted via bridge.saveCall — run `node scripts/patch-capacitor-health.cjs`");
   }
+  if (!source.includes("GRIM_EARLY_PERMISSION_LAUNCHER") || !source.includes("launcher-registration-ok")) {
+    failures.push("capacitor-health: permission launcher is not registered and diagnosed during plugin load");
+  }
+  if (!source.includes("HC_NATIVE_03") || !source.includes("step=dialog-start")) {
+    failures.push("capacitor-health: native permission setup/dialog diagnostics are missing");
+  }
+  if (!source.includes("GRIM_APP_HEALTH_PERMISSIONS") || !source.includes("ACTION_MANAGE_HEALTH_PERMISSIONS")) {
+    failures.push("capacitor-health: app-specific Health Connect permission settings intent is missing");
+  }
 }
 
 
