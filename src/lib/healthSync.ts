@@ -270,8 +270,10 @@ const EMPTY_ACCESS: HealthAccess = { activity: false, workouts: false, heartRate
 function accessFrom(res: PermissionResponse | undefined): HealthAccess {
   const granted = permissionMap(res);
   const has = (list: readonly string[]) => list.every((p) => granted[p] === true);
+  // Aktivitet räcker med steg ELLER kalorier – distans används bara i pass.
+  const someActivity = PERMISSION_GROUPS.activity.some((p) => granted[p] === true);
   return {
-    activity: has(PERMISSION_GROUPS.activity),
+    activity: someActivity,
     workouts: has(PERMISSION_GROUPS.workouts),
     heartRate: has(PERMISSION_GROUPS.heartRate),
     sleep: has(PERMISSION_GROUPS.sleep),
