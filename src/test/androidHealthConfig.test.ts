@@ -68,7 +68,9 @@ describe("Android-konfiguration för Health Connect", () => {
     const patch = read("scripts/patch-capacitor-health.cjs");
     expect(patch).toContain("hard deadline independent of activity focus");
     expect(patch).not.toContain('healthTrace("dialog-wait"');
-    expect(patch.indexOf('call.reject("HC_NATIVE_04')).toBeLessThan(patch.indexOf("bridge.releaseCall(call)"));
+    expect(patch).toMatch(
+      /call\.reject\(\"HC_NATIVE_04: permission dialog returned no callback\"\)\s*\n\s*bridge\.releaseCall\(call\)/,
+    );
   });
 });
 
