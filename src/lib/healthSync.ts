@@ -386,7 +386,17 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   }
 
   healthLog("health connect available");
-  const existing = await checkHealthAccess(true);
+  // Förkontrollen får aldrig blockera dialogen. Svarar Health Connect inte i tid
+  // fortsätter vi och låter användaren godkänna – bara ett trasigt native-upplägg
+  // (launcher-setup) är ett verkligt hinder.
+  let existing = EMPTY_ACCESS;
+  try {
+    existing = await checkHealthAccess(true);
+  } catch (err) {
+    const preError = classifyNativeHealthError(err);
+    healthLog("pre-check failed – fortsätter till dialogen", { code: preError.code });
+    if (preError.code === "launcher-setup") throw preError;
+  }
   if (existing.activity && existing.workouts && existing.heartRate && existing.sleep) return existing;
 
   const req = { permissions: [...PERMISSIONS] };
