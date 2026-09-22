@@ -66,6 +66,12 @@ export function useNativePush(userId: string | null) {
           console.log("Native push token:", token.value);
           const platform = Capacitor.getPlatform(); // 'android' | 'ios'
 
+          // Utan giltig session blockerar databasen skrivningen – försök igen senare.
+          if (!(await hasValidSessionFor(userId))) {
+            console.warn("Hoppar över push-registrering: ingen giltig session.");
+            return;
+          }
+
           // Upsert token
           await supabase
             .from("device_push_tokens")
@@ -73,11 +79,15 @@ export function useNativePush(userId: string | null) {
             .eq("user_id", userId)
             .eq("token", token.value);
 
-          await supabase.from("device_push_tokens").insert({
+          const { error } = await supabase.from("device_push_tokens").insert({
             user_id: userId,
             token: token.value,
             platform,
           });
+          if (error) {
+            console.error("Kunde inte spara push-token:", error.message);
+            return;
+          }
 
           registeredRef.current = true;
         });
