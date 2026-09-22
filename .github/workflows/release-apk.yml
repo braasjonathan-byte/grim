@@ -18,13 +18,13 @@ jobs:
       # Checkout
       # -------------------------
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # -------------------------
       # Node
       # -------------------------
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -33,7 +33,7 @@ jobs:
       # Java
       # -------------------------
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -202,7 +202,7 @@ EOF
       # Upload artifact
       # -------------------------
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: app-release-apk
           path: ${{ steps.apk.outputs.apk_path }}

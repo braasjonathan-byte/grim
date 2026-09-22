@@ -15,14 +15,14 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       VITE_APK_UPDATE_URL: "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22.x'
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         id: setup-java
         with:
           distribution: temurin
@@ -157,7 +157,7 @@ jobs:
           find android -path '*/build/reports' -type d -exec cp -r {} _reports/ \; 2>/dev/null || true
           find android -name '*.log' -exec cp {} _reports/ \; 2>/dev/null || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: gradle-reports
@@ -168,7 +168,7 @@ jobs:
           path: _reports
           if-no-files-found: ignore
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: grim-debug-apk
