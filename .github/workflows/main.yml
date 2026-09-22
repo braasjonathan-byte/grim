@@ -37,7 +37,7 @@ jobs:
             ~/.gradle/wrapper
             android/.gradle
             android/app/build/intermediates
-          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'scripts/patch-android-*.cjs', '.github/workflows/main.yml') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'scripts/patch-android-*.cjs', 'scripts/patch-capacitor-health.cjs', 'scripts/patch-send-intent-gradle.cjs', '.github/workflows/main.yml') }}
           restore-keys: |
             gradle-${{ runner.os }}-
 

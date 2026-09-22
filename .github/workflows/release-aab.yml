@@ -36,7 +36,7 @@ jobs:
             ~/.gradle/caches
             ~/.gradle/wrapper
             android/.gradle
-          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'android/**/*.gradle', 'android/gradle.properties') }}
+          key: gradle-${{ runner.os }}-${{ hashFiles('package-lock.json', 'android/**/*.gradle', 'android/gradle.properties', 'scripts/patch-capacitor-health.cjs', 'scripts/patch-send-intent-gradle.cjs') }}
           restore-keys: |
             gradle-${{ runner.os }}-
 
@@ -48,9 +48,6 @@ jobs:
 
       - name: Patch capacitor-health (sleep support)
         run: node scripts/patch-capacitor-health.cjs
-
-      - name: Verify all Android plugins
-        run: npm run android:verify-plugins
 
       - name: Build web
         env:

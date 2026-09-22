@@ -72,5 +72,13 @@ describe("Android-konfiguration för Health Connect", () => {
       /call\.reject\(\"HC_NATIVE_04: permission dialog returned no callback\"\)\s*\n\s*bridge\.releaseCall\(call\)/,
     );
   });
+
+  it("låter ändringar i native-patcharna bryta Gradle-cachen", () => {
+    for (const workflow of [".github/workflows/main.yml", ".github/workflows/release-aab.yml"]) {
+      const source = read(workflow);
+      expect(source).toContain("scripts/patch-capacitor-health.cjs");
+      expect(source).toContain("scripts/patch-send-intent-gradle.cjs");
+    }
+  });
 });
 
