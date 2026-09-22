@@ -144,7 +144,7 @@ const HealthConnectCard = () => {
         } else {
           toast.success("Hälsodata hämtad");
         }
-      })(), SYNC_HARD_TIMEOUT_MS, "Hälsosynken svarade inte inom den maximala tidsgränsen.");
+      })(), SYNC_HARD_TIMEOUT_MS, "Hälsosynken svarade inte inom den maximala tidsgränsen.", "dialog-timeout");
     } catch (err: any) {
       healthLog("sync failed", err?.message);
       reportError(err, "Kunde inte hämta hälsodata");

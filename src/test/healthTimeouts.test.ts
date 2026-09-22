@@ -18,6 +18,14 @@ describe("withTimeout", () => {
   it("släpper igenom ett svar som hinner i tid", async () => {
     await expect(withTimeout(Promise.resolve(42), 1000, "Hänger")).resolves.toBe(42);
   });
+
+  it("kan märka en oberoende yttre gräns som dialog-timeout", async () => {
+    vi.useFakeTimers();
+    const pending = withTimeout(new Promise(() => {}), 500, "Dialogen hänger", "dialog-timeout");
+    const assertion = pending.catch((err) => expect(healthErrorRef(err)).toBe("HC-04"));
+    await vi.advanceTimersByTimeAsync(501);
+    await assertion;
+  });
 });
 
 describe("withDialogTimeout", () => {

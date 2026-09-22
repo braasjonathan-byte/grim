@@ -81,11 +81,16 @@ export const STEP_TIMEOUT_MS = 20000;
  * Health Connect kan lämna löften ohanterade. Timern är helt fristående från
  * native-anropet och måste därför alltid kunna avvisa även om bryggan kraschar.
  */
-export function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+export function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+  code: HealthErrorCode = "data-timeout",
+): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
       healthLog("timeout", message);
-      reject(new HealthError("data-timeout", message));
+      reject(new HealthError(code, message));
     }, ms);
     promise.then(
       (value) => {
