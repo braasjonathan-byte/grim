@@ -41,7 +41,7 @@ jobs:
       # -------------------------
       # Cache Gradle (dependencies + wrapper) so we don't re-download
       # ~500MB of Android/Google/Capacitor artifacts every build.
-      # Survives the `rm -rf android` clean below because it lives in $HOME.
+      # Lives in $HOME so it is shared across builds.
       # -------------------------
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -81,14 +81,6 @@ jobs:
         run: npm run build
 
       # -------------------------
-      # FORCE CLEAN (removes ALL Cordova remnants)
-      # -------------------------
-      - name: Clean everything
-        run: |
-          rm -rf android
-          rm -rf node_modules/.cache
-
-      # -------------------------
       # Install ONLY Capacitor (no Cordova dependency)
       # -------------------------
       - name: Install Capacitor core
@@ -96,10 +88,15 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps --no-audit --no-fund
 
       # -------------------------
-      # Create Android project clean
+      # Reuse the existing Android project; only create it if missing
       # -------------------------
       - name: Create Android platform
-        run: npx cap add android
+        run: |
+          if [ -d android ]; then
+            echo "android/ finns redan – återanvänder den."
+          else
+            npx cap add android
+          fi
 
       # -------------------------
       # Copy google-services.json BEFORE sync so Firebase initializes
