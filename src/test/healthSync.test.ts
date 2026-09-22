@@ -16,9 +16,9 @@ describe("parseHealthAccess", () => {
     expect(access).toEqual({ activity: true, workouts: true, heartRate: false, sleep: false });
   });
 
-  it("kräver alla aktivitetsbehörigheter, inte bara en", () => {
+  it("räcker med en av steg eller kalorier", () => {
     const access = parseHealthAccess({ permissions: { READ_STEPS: true } });
-    expect(access.activity).toBe(false);
+    expect(access.activity).toBe(true);
   });
 
   it("hanterar svar som kommer som lista", () => {

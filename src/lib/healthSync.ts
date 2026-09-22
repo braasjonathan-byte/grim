@@ -270,8 +270,10 @@ const EMPTY_ACCESS: HealthAccess = { activity: false, workouts: false, heartRate
 function accessFrom(res: PermissionResponse | undefined): HealthAccess {
   const granted = permissionMap(res);
   const has = (list: readonly string[]) => list.every((p) => granted[p] === true);
+  // Aktivitet räcker med steg ELLER kalorier – distans används bara i pass.
+  const someActivity = PERMISSION_GROUPS.activity.some((p) => granted[p] === true);
   return {
-    activity: has(PERMISSION_GROUPS.activity),
+    activity: someActivity,
     workouts: has(PERMISSION_GROUPS.workouts),
     heartRate: has(PERMISSION_GROUPS.heartRate),
     sleep: has(PERMISSION_GROUPS.sleep),
@@ -524,7 +526,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     if (!access.activity) {
       throw new HealthError(
         "denied",
-        "Grim saknar åtkomst till Steg, Aktiva kalorier eller Distans i Health Connect. Öppna Behörigheter och tillåt alla tre.",
+        "Grim saknar åtkomst till Steg och Aktiva kalorier i Health Connect. Öppna Behörigheter och tillåt minst en av dem.",
       );
     }
     sleepAllowed = access.sleep;
@@ -542,17 +544,28 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   };
 
   healthLog("reading aggregated data", { days, sleepAllowed });
+  const empty = { aggregatedData: [] as { startDate: string; value: number }[] };
+  const errors: unknown[] = [];
   const [steps, calories, sleep] = await Promise.all([
+    // Steg och kalorier kan vara nekade var för sig – den ena får inte stoppa den andra.
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "steps" }),
       STEP_TIMEOUT_MS,
       "Health Connect svarade inte när steg hämtades.",
-    ),
+    ).catch((err) => {
+      healthLog("steps query failed", err);
+      errors.push(err);
+      return empty;
+    }),
     withTimeout(
       plugin.queryAggregated({ ...request, dataType: "active-calories" }),
       STEP_TIMEOUT_MS,
       "Health Connect svarade inte när aktiva kalorier hämtades.",
-    ),
+    ).catch((err) => {
+      healthLog("calories query failed", err);
+      errors.push(err);
+      return empty;
+    }),
     // Sömn är frivilligt – saknad behörighet eller ett opatchat plugin får inte
     // stoppa steg och kalorier, men felet ska synas i loggen.
     sleepAllowed
@@ -566,6 +579,10 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
         })
       : Promise.resolve({ aggregatedData: [] as { startDate: string; value: number }[] }),
   ]);
+
+  // Båda misslyckades – då är det ett riktigt fel som ska nå användaren.
+  if (errors.length === 2) throw errors[0];
+
 
 
   const map = new Map<string, HealthDay>();
