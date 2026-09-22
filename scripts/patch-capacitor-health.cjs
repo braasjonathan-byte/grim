@@ -328,12 +328,22 @@ if (!kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG")) {
     /                healthTrace\("dialog-launch-returned"\)/,
     `                healthTrace("dialog-launch-returned")
                 permissionWatchdog?.let { mainHandler.removeCallbacks(it) }
-                permissionWatchdog = Runnable {
+                permissionWatchdog = object : Runnable {
+                    override fun run() {
+                    // Ligger systemdialogen overst har appen tappat fonsterfokus -
+                    // anvandaren laser fortfarande, sa vanta i stallet for att avbryta.
+                    val activityFocused = bridge.activity?.hasWindowFocus() ?: true
+                    if (!activityFocused) {
+                        healthTrace("dialog-wait", "user still in system dialog")
+                        mainHandler.postDelayed(this, 5_000)
+                        return
+                    }
                     val pending = requestPermissionContext.getAndSet(null)
                     if (pending?.pluginCal?.callbackId == call.callbackId) {
                         Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-callback-timeout code=HC_NATIVE_04")
                         bridge.releaseCall(call)
                         call.reject("HC_NATIVE_04: permission dialog returned no callback")
+                    }
                     }
                 }
                 mainHandler.postDelayed(permissionWatchdog!!, 18_000)`.replace(/\u00024/g, "$"),
