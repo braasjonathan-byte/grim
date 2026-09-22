@@ -11,4 +11,4 @@
 - [x] Datahämtning och lagring inklusive sömn (kolumnen `sleep_minutes`).
 - [x] Uppdaterad integritetspolicytext om hälsodata.
 - [x] Verifiering: tester, Android-pluginverifiering, typkontroll.
-- [ ] Fixa native launcher-livscykel, appspecifik Behörigheter-vy och HC-01–HC-08-diagnostik.
+- [x] Fixa native launcher-livscykel, appspecifik Behörigheter-vy och HC-01–HC-08-diagnostik.
