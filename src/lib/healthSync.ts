@@ -196,6 +196,43 @@ export function healthErrorCode(err: unknown): HealthErrorCode {
   return err instanceof HealthError ? err.code : "unknown";
 }
 
+/**
+ * Kort felkod som användaren kan läsa upp vid support. Varje troligt fel i
+ * hälsokedjan har en egen kod så att det går att skilja dem åt.
+ */
+export const HEALTH_ERROR_REFS: Record<HealthErrorCode, string> = {
+  "not-supported": "HC-01",
+  "not-installed": "HC-02",
+  denied: "HC-03",
+  partial: "HC-04",
+  timeout: "HC-05",
+  network: "HC-06",
+  unknown: "HC-99",
+};
+
+/** Kort förklaring per felkod, visas under felmeddelandet. */
+export const HEALTH_ERROR_HINTS: Record<HealthErrorCode, string> = {
+  "not-supported": "Hälsodata fungerar bara i Grim-appen på mobilen.",
+  "not-installed": "Health Connect saknas eller behöver uppdateras.",
+  denied: "Behörighet saknas i Health Connect.",
+  partial: "Bara en del av datan kunde läsas.",
+  timeout: "Health Connect svarade inte i tid.",
+  network: "Ingen kontakt med servern.",
+  unknown: "Okänt fel i hälsokopplingen.",
+};
+
+export function healthErrorRef(err: unknown): string {
+  return HEALTH_ERROR_REFS[healthErrorCode(err)];
+}
+
+/** Meddelande + felkod, färdigt att visa i gränssnittet. */
+export function formatHealthError(err: unknown, fallback = "Kunde inte hämta hälsodata") {
+  const code = healthErrorCode(err);
+  const ref = HEALTH_ERROR_REFS[code];
+  const message = (err as { message?: string })?.message || fallback;
+  return { code, ref, message, hint: HEALTH_ERROR_HINTS[code], label: `Felkod ${ref}` };
+}
+
 /** Hur appen ska bete sig när hälsoplattformen inte går att nå. */
 export type HealthAvailability = "available" | "not-installed" | "not-supported";
 

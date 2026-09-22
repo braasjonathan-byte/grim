@@ -10,7 +10,7 @@ import {
   formatSleep,
   getLastHealthSync,
   healthAvailability,
-  healthErrorCode,
+  formatHealthError,
   installHealthConnect,
   isHealthSupported,
   loadStoredHealthDays,
@@ -51,6 +51,7 @@ const HealthConnectCard = () => {
   const [workouts, setWorkouts] = useState<HealthWorkout[] | null>(null);
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
+  const [lastError, setLastError] = useState<{ ref: string; message: string } | null>(null);
   const connected = !!access?.activity;
   const available = availability === null ? null : availability === "available";
 
@@ -96,13 +97,13 @@ const HealthConnectCard = () => {
     return () => document.removeEventListener("visibilitychange", refresh);
   }, []);
 
-  /** Ger varje feltillstånd ett eget, konkret besked. */
+  /** Ger varje feltillstånd ett eget, konkret besked – med felkod. */
   const reportError = useCallback((err: unknown, fallback: string) => {
-    const code = healthErrorCode(err);
-    const message = (err as { message?: string })?.message || fallback;
+    const { code, ref, message, label } = formatHealthError(err, fallback);
+    setLastError({ ref, message });
     if (code === "not-installed") {
       setAvailability("not-installed");
-      toast.error("Health Connect saknas eller behöver uppdateras", {
+      toast.error(`Health Connect saknas eller behöver uppdateras (${label})`, {
         description: "Installera Health Connect från Play Store och försök igen.",
         action: { label: "Installera", onClick: () => void installHealthConnect() },
       });
@@ -110,11 +111,12 @@ const HealthConnectCard = () => {
     }
     if (code === "denied") {
       toast.error(message, {
+        description: label,
         action: { label: "Behörigheter", onClick: () => void openHealthSettings() },
       });
       return;
     }
-    toast.error(message);
+    toast.error(message, { description: label });
   }, []);
 
   const sync = useCallback(async () => {
@@ -139,6 +141,7 @@ const HealthConnectCard = () => {
         "Health Connect svarade inte med någon data. Försök igen.",
       );
       healthLog("days read", days.length);
+      setLastError(null);
       setRows(days.slice(-7));
       try {
         await saveHealthDays(userId, days);
@@ -300,6 +303,11 @@ const HealthConnectCard = () => {
               <Settings className="mr-2 h-3.5 w-3.5" />
               Tillåt {missing.map((f) => FEATURE_LABELS[f].toLowerCase()).join(", ")}
             </Button>
+          )}
+          {lastError && (
+            <p className="rounded-xl bg-destructive/10 p-2 text-xs text-destructive">
+              {lastError.message} (Felkod {lastError.ref})
+            </p>
           )}
         </div>
       )}
