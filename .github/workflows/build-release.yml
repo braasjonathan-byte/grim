@@ -49,6 +49,9 @@ jobs:
     - name: Verify Android plugins (Health Connect config)
       run: node scripts/verify-android-plugins.cjs
 
+    - name: Invalidate capacitor-health compiled output
+      run: rm -rf node_modules/capacitor-health/android/build android/.gradle/*/executionHistory
+
     - name: Decode Keystore
       env:
         KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

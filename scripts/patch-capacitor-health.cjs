@@ -342,6 +342,28 @@ if (!kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG")) {
   );
 }
 
+// Uppgradera installationer som redan fick den äldre watchdog-patchen. Den
+// pausade på hasWindowFocus=false och kunde därför vänta för evigt på vissa
+// tillverkare. Markören ensam får inte göra patchen falskt idempotent.
+if (kt.includes("GRIM_PERMISSION_CALLBACK_WATCHDOG") && !kt.includes("hard deadline independent of activity focus")) {
+  kt = kt.replace(
+    "// GRIM_PERMISSION_CALLBACK_WATCHDOG",
+    "// GRIM_PERMISSION_CALLBACK_WATCHDOG: hard deadline independent of activity focus.",
+  );
+  kt = kt.replace(
+    /\s*\/\/ Ligger systemdialogen overst[\s\S]*?mainHandler\.postDelayed\(this, 5_000\)\s*\n\s*return\s*\n\s*\}/,
+    "",
+  );
+}
+
+// Reject måste skickas över Capacitor-bryggan innan det sparade anropet
+// släpps. Om releaseCall körs först kan JS-löftet bli permanent pending.
+kt = kt.replace(
+  /bridge\.releaseCall\(call\)\s*\n\s*call\.reject\("HC_NATIVE_04: permission dialog returned no callback"\)/,
+  `call.reject("HC_NATIVE_04: permission dialog returned no callback")
+                        bridge.releaseCall(call)`,
+);
+
 
 
 

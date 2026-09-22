@@ -22,6 +22,7 @@ import {
   saveHealthDays,
   setLastHealthSync,
   syncWindowDays,
+  withTimeout,
   type HealthAccess,
   type HealthAvailability,
   type HealthDay,
@@ -33,6 +34,7 @@ import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts }
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
+const SYNC_HARD_TIMEOUT_MS = 45000;
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);
@@ -118,33 +120,31 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setSyncing(true);
     try {
-      // Säkerhetsnät: hänger något i bryggan mot Health Connect ska knappen
-      // släppa laddningsläget med ett tydligt fel i stället för att snurra.
-      healthLog("sync started");
-      const granted = await requestHealthPermissions();
-      setAccess(granted);
-      // Hämta från senaste lyckade synk så inga dagar hoppas över.
-      const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
-      healthLog("permissions ok, reading days", { granted, windowDays });
-      const days = await readHealthDays(windowDays);
-      healthLog("days read", days.length);
-      setLastError(null);
-      setRows(days.slice(-7));
-      try {
-        await saveHealthDays(userId, days);
-        setLastHealthSync();
-      } catch (err) {
-        healthLog("save failed", err);
-        reportError(err, "Hälsodatan visas, men kunde inte sparas i Grim");
-        return;
-      }
-      if (!granted.workouts || !granted.heartRate || !granted.sleep) {
-        const partial = formatHealthError(new HealthError("partial", "Hälsodata hämtades, men vissa datatyper saknar behörighet."));
-        setLastError({ ref: partial.ref, message: partial.message });
-        toast.warning(partial.message, { description: partial.label });
-      } else {
-        toast.success("Hälsodata hämtad");
-      }
+      await withTimeout((async () => {
+        healthLog("manual sync entry point started");
+        const granted = await requestHealthPermissions();
+        setAccess(granted);
+        const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
+        healthLog("permissions ok, reading days", { granted, windowDays });
+        const days = await readHealthDays(windowDays);
+        healthLog("days read", days.length);
+        setLastError(null);
+        setRows(days.slice(-7));
+        try {
+          await saveHealthDays(userId, days);
+          setLastHealthSync();
+        } catch (err) {
+          healthLog("save failed", err);
+          throw err;
+        }
+        if (!granted.workouts || !granted.heartRate || !granted.sleep) {
+          const partial = formatHealthError(new HealthError("partial", "Hälsodata hämtades, men vissa datatyper saknar behörighet."));
+          setLastError({ ref: partial.ref, message: partial.message });
+          toast.warning(partial.message, { description: partial.label });
+        } else {
+          toast.success("Hälsodata hämtad");
+        }
+      })(), SYNC_HARD_TIMEOUT_MS, "Hälsosynken svarade inte inom den maximala tidsgränsen.");
     } catch (err: any) {
       healthLog("sync failed", err?.message);
       reportError(err, "Kunde inte hämta hälsodata");

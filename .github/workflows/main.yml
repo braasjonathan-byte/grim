@@ -94,6 +94,9 @@ jobs:
       - name: Verify patched native sources
         run: node scripts/verify-android-plugins.cjs
 
+      - name: Invalidate capacitor-health compiled output
+        run: rm -rf node_modules/capacitor-health/android/build android/.gradle/*/executionHistory
+
       - name: Patch AndroidManifest.xml with required permissions
         if: always()
         run: |

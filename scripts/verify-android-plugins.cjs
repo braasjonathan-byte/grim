@@ -127,6 +127,9 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("hard deadline independent of activity focus") || source.includes('healthTrace("dialog-wait"')) {
     failures.push("capacitor-health: permission watchdog can still pause forever while activity focus is lost");
   }
+  if (/bridge\.releaseCall\(call\)\s*\n\s*call\.reject\("HC_NATIVE_04/.test(source)) {
+    failures.push("capacitor-health: watchdog releases the native call before rejecting it, leaving JS pending");
+  }
 } else {
   failures.push("capacitor-health: installed native source is missing; patch verification cannot pass");
 }
