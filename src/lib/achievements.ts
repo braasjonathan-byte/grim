@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { hasValidSessionFor } from "@/lib/sessionGuard";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import { isCompletedWorkout } from "@/lib/completionCounting";
 import { longestStreakFromDates } from "@/lib/streak";

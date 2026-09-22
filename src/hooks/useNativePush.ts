@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
+import { hasValidSessionFor } from "@/lib/sessionGuard";
 
 // Disabled by default: Capacitor PushNotifications.register/requestPermissions can
 // terminate the Android process natively on some devices/configurations, before
