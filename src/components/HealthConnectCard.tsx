@@ -304,6 +304,11 @@ const HealthConnectCard = () => {
               Tillåt {missing.map((f) => FEATURE_LABELS[f].toLowerCase()).join(", ")}
             </Button>
           )}
+          {lastError && (
+            <p className="rounded-xl bg-destructive/10 p-2 text-xs text-destructive">
+              {lastError.message} (Felkod {lastError.ref})
+            </p>
+          )}
         </div>
       )}
 
