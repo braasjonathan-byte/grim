@@ -95,6 +95,10 @@ const healthPlugin = path.join(
   nodeModules,
   "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPlugin.kt"
 );
+const healthPermissionProxy = path.join(
+  nodeModules,
+  "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt"
+);
 if (fs.existsSync(healthPlugin)) {
   const source = fs.readFileSync(healthPlugin, "utf8");
   if (!source.includes("READ_SLEEP") || !source.includes('"sleep" -> metricAndMapper')) {
@@ -137,26 +141,30 @@ if (fs.existsSync(healthPlugin)) {
 
     failures.push("capacitor-health: synchronous dialog launch failures are not reported as HC_NATIVE_05");
   }
-  if (!source.includes("GRIM_RESOLVE_NONFATAL")) {
-    failures.push("capacitor-health: en ohanterbar permission-intent avbryter fortfarande launch (GRIM_RESOLVE_NONFATAL saknas)");
-  }
-  if (!source.includes('healthTrace("dialog-launch-attempt"') || !source.includes('healthTrace("dialog-launch-ok"')) {
+  if (!source.includes('healthTrace("dialog-launch-attempt"') || !source.includes('healthTrace("dialog-launch-returned"')) {
     failures.push("capacitor-health: launch attempt/success tracing around the permission dialog is missing");
   }
   if (!source.includes("GRIM_BRIDGE_ACTIVITY_RESULT") || !source.includes("@ActivityCallback")) {
     failures.push("capacitor-health: lifecycle-safe bridge activity result handling is missing");
   }
-  if (!source.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
-    failures.push("capacitor-health: Googles dokumenterade registerForActivityResult-väg är inte primär (GRIM_OFFICIAL_LAUNCHER_FIRST saknas)");
-  }
-  if (!/healthTrace\("dialog-launch-attempt", "route=launcher"\)\s*\n\s*launcher\.launch/.test(source)) {
-    failures.push("capacitor-health: permission dialog is not launched through the official PermissionController launcher first");
-  }
-  if (!source.includes("Intent.FLAG_ACTIVITY_NEW_TASK.inv()")) {
-    failures.push("capacitor-health: fallback permission intent may run in a new task and never return a result");
+  if (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY")) {
+    failures.push("capacitor-health: lifecycle-isolated official permission launcher is missing");
   }
   if (!source.includes("HC_NATIVE_06") || !source.includes('healthTrace(\n            "dialog-result-raw"')) {
-    failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
+    if (!source.includes('healthTrace(\n            "proxy-result-raw"')) {
+      failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
+    }
+  }
+  if (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")')) {
+    failures.push("capacitor-health: Health Connect permission flow is not isolated from MainActivity");
+  }
+  if (!fs.existsSync(healthPermissionProxy)) {
+    failures.push("capacitor-health: HealthPermissionProxyActivity source is missing");
+  } else {
+    const proxy = fs.readFileSync(healthPermissionProxy, "utf8");
+    if (!proxy.includes("PermissionController.createRequestPermissionResultContract()") || !proxy.includes("registerForActivityResult(contract)")) {
+      failures.push("capacitor-health: permission proxy does not use Google's official Activity Result contract");
+    }
   }
   if (source.includes('HC_NATIVE_05: 4launchReason')) {
     failures.push("capacitor-health: launch failure contains a broken Kotlin interpolation");
