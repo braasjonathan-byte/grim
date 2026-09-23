@@ -538,15 +538,15 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
                     intentResolved = permissionIntent.resolveActivity(context.packageManager)?.flattenToShortString()
                     healthTrace(
                         "dialog-intent",
-                        "action=4{permissionIntent.action} resolved=4intentResolved permissions=4healthConnectPermissions"
+                        "action=\${permissionIntent.action} resolved=\$intentResolved permissions=\$healthConnectPermissions"
                     )
                     // GRIM_RESOLVE_NONFATAL: resolveActivity kan ge null enbart pga
                     // paketfiltrering (Android 11+) även när Health Connect finns.
                     if (intentResolved == null) {
-                        Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-intent-unresolved action=4{permissionIntent.action}")
+                        Log.w(tag, "health-ts=\${System.currentTimeMillis()} step=dialog-intent-unresolved action=\${permissionIntent.action}")
                     }
                 } catch (e: Exception) {
-                    Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-intent-inspect-failed", e)
+                    Log.w(tag, "health-ts=\${System.currentTimeMillis()} step=dialog-intent-inspect-failed", e)
                 }
                 lastIntentUnresolved = intentResolved == null
                 var launchedVia = "none"
@@ -556,7 +556,7 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
                     launchedVia = "launcher"
                     healthTrace("dialog-launch-ok", "route=launcher")
                 } catch (primary: Exception) {
-                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=launcher", primary)
+                    Log.e(tag, "health-ts=\${System.currentTimeMillis()} step=dialog-launch-failed route=launcher", primary)
                     try {
                         val fallbackIntent = permissionContract.createIntent(activity, healthConnectPermissions)
                         fallbackIntent.flags = fallbackIntent.flags and Intent.FLAG_ACTIVITY_NEW_TASK.inv()
@@ -565,10 +565,10 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
                         launchedVia = "bridge"
                         healthTrace("dialog-launch-ok", "route=bridge")
                     } catch (fallback: Exception) {
-                        val launchReason = "4{fallback.javaClass.simpleName}: 4{fallback.message ?: primary.message ?: "no message"}"
+                        val launchReason = "\${fallback.javaClass.simpleName}: \${fallback.message ?: primary.message ?: "no message"}"
                         Log.e(
                             tag,
-                            "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=bridge code=HC_NATIVE_05 reason=4launchReason",
+                            "health-ts=\${System.currentTimeMillis()} step=dialog-launch-failed route=bridge code=HC_NATIVE_05 reason=\$launchReason",
                             fallback
                         )
                         requestPermissionContext.set(null)
@@ -580,7 +580,7 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
                         return@runOnUiThread
                     }
                 }
-                healthTrace("dialog-launch-returned", "route=4launchedVia")`.replace(/\u00024/g, "$"),
+                healthTrace("dialog-launch-returned", "route=\$launchedVia")`.replace(/\u00024/g, "$"),
   );
 
   // Watchdogen ska skilja på uteblivet svar, oanvändbart svar och obekräftad start.
@@ -591,7 +591,7 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
                             lastIntentUnresolved -> "HC_NATIVE_05: permission dialog start could not be confirmed (intent unresolved)"
                             else -> "HC_NATIVE_04: permission dialog returned no callback"
                         }
-                        Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-callback-timeout code=4{timeoutCode.substringBefore(":")} callbackSeen=4permissionCallbackSeen unresolved=4lastIntentUnresolved")
+                        Log.e(tag, "health-ts=\${System.currentTimeMillis()} step=dialog-callback-timeout code=\${timeoutCode.substringBefore(":")} callbackSeen=\$permissionCallbackSeen unresolved=\$lastIntentUnresolved")
                         pendingPermissionCall = null
                         call.reject(timeoutCode)`.replace(/\u00024/g, "$"),
   );
@@ -602,14 +602,14 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
     `        permissionCallbackSeen = true
         healthTrace(
             "dialog-result-raw",
-            "resultCode=4{result.resultCode} hasData=4{result.data != null} extras=4{result.data?.extras?.keySet()?.joinToString(",") ?: "none"}"
+            "resultCode=\${result.resultCode} hasData=\${result.data != null} extras=\${result.data?.extras?.keySet()?.joinToString(",") ?: "none"}"
         )
         var parseFailed = false
         val granted = try {
             permissionContract.parseResult(result.resultCode, result.data)
         } catch (e: Exception) {
             parseFailed = true
-            Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-result-parse-failed code=HC_NATIVE_06", e)
+            Log.e(tag, "health-ts=\${System.currentTimeMillis()} step=dialog-result-parse-failed code=HC_NATIVE_06", e)
             emptySet<String>()
         }`.replace(/\u00024/g, "$"),
   );
@@ -622,7 +622,7 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
     /        if \(target == null\) \{\n            Log\.w\(tag, "health-ts=\$\{System\.currentTimeMillis\(\)\} step=bridge-dialog-response-orphan"\)\n            return\n        \}\n        target\.resolve\(grantedPermissionResult\(requested, granted\)\)\n        bridge\.releaseCall\(target\)/,
     `        pendingPermissionCall = null
         if (target == null) {
-            Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=bridge-dialog-response-orphan code=HC_NATIVE_06")
+            Log.w(tag, "health-ts=\${System.currentTimeMillis()} step=bridge-dialog-response-orphan code=HC_NATIVE_06")
             return
         }
         if (parseFailed) {
@@ -638,7 +638,7 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
   kt = kt.replace(
     /                healthTrace\("dialog-response", "granted=\$\{grantedPermissions\.size\}"\)/,
     `                permissionCallbackSeen = true
-                healthTrace("dialog-response", "granted=4{grantedPermissions.size} granted-set=4grantedPermissions")`.replace(/\u00024/g, "$"),
+                healthTrace("dialog-response", "granted=\${grantedPermissions.size} granted-set=4grantedPermissions")`.replace(/\u00024/g, "$"),
   );
   kt = kt.replace(
     /                    val saved = lastPermissionCallId\?\.let \{ bridge\.getSavedCall\(it\) \}/,
