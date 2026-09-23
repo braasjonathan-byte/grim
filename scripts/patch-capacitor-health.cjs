@@ -396,17 +396,17 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
         val granted = try {
             permissionContract.parseResult(result.resultCode, result.data)
         } catch (e: Exception) {
-            Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-result-parse-failed", e)
+            Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-result-parse-failed", e)
             emptySet<String>()
         }
         val pending = requestPermissionContext.getAndSet(null)
         val target = call ?: pending?.pluginCal ?: lastPermissionCallId?.let { bridge.getSavedCall(it) }
         val requested = if (pending != null) pending.requestedPermissions else lastRequestedPermissions
-        healthTrace("bridge-dialog-response", "granted=4{granted.size} call=4{target?.callbackId}")
+        healthTrace("bridge-dialog-response", "granted=4{granted.size} call=4{target?.callbackId}")
         lastPermissionCallId = null
         lastRequestedPermissions = emptySet()
         if (target == null) {
-            Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=bridge-dialog-response-orphan")
+            Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=bridge-dialog-response-orphan")
             return
         }
         target.resolve(grantedPermissionResult(requested, granted))
@@ -427,17 +427,17 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
                     val resolvedDialog = permissionIntent.resolveActivity(context.packageManager)
                     healthTrace(
                         "dialog-intent",
-                        "action=4{permissionIntent.action} resolved=4resolvedDialog permissions=4healthConnectPermissions"
+                        "action=4{permissionIntent.action} resolved=4resolvedDialog permissions=4healthConnectPermissions"
                     )
                     if (resolvedDialog == null) {
-                        throw ActivityNotFoundException("no activity handles 4{permissionIntent.action}")
+                        throw ActivityNotFoundException("no activity handles 4{permissionIntent.action}")
                     }
                     healthTrace("dialog-launch-attempt", "route=bridge")
                     startActivityForResult(call, permissionIntent, "handleHealthPermissionResult")
                     healthTrace("dialog-launch-ok", "route=bridge")
                     true
                 } catch (e: Exception) {
-                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=bridge", e)
+                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=bridge", e)
                     false
                 }
                 if (!handedToBridge) {
@@ -446,16 +446,16 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
                         launcher.launch(healthConnectPermissions)
                         healthTrace("dialog-launch-ok", "route=launcher")
                     } catch (e: Exception) {
-                        val launchReason = "4{e.javaClass.simpleName}: 4{e.message ?: "no message"}"
+                        val launchReason = "4{e.javaClass.simpleName}: 4{e.message ?: "no message"}"
                         Log.e(
                             tag,
-                            "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=launcher code=HC_NATIVE_05 reason=4launchReason",
+                            "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=launcher code=HC_NATIVE_05 reason=4launchReason",
                             e
                         )
                         requestPermissionContext.set(null)
                         lastPermissionCallId = null
                         lastRequestedPermissions = emptySet()
-                        call.reject("HC_NATIVE_05: 4launchReason")
+                        call.reject("HC_NATIVE_05: 4launchReason")
                         bridge.releaseCall(call)
                         return@runOnUiThread
                     }
