@@ -419,22 +419,55 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
   );
   kt = kt.replace(
     /                launcher\.launch\(healthConnectPermissions\)\n                healthTrace\("dialog-launch-returned"\)/,
-    `                val handedToBridge = try {
+    `                // GRIM_LAUNCH_GUARD: ett launch-anrop kan misslyckas synkront
+                // (ActivityNotFoundException, IllegalStateException) utan att någon
+                // dialog ritas upp. Det får aldrig maskeras som uteblivet svar.
+                val handedToBridge = try {
                     val permissionIntent = permissionContract.createIntent(activity, healthConnectPermissions)
+                    val resolvedDialog = permissionIntent.resolveActivity(context.packageManager)
+                    healthTrace(
+                        "dialog-intent",
+                        "action=4{permissionIntent.action} resolved=4resolvedDialog permissions=4healthConnectPermissions"
+                    )
+                    if (resolvedDialog == null) {
+                        throw ActivityNotFoundException("no activity handles 4{permissionIntent.action}")
+                    }
+                    healthTrace("dialog-launch-attempt", "route=bridge")
                     startActivityForResult(call, permissionIntent, "handleHealthPermissionResult")
-                    healthTrace("dialog-start-bridge")
+                    healthTrace("dialog-launch-ok", "route=bridge")
                     true
                 } catch (e: Exception) {
-                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-start-bridge-failed", e)
+                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=bridge", e)
                     false
                 }
                 if (!handedToBridge) {
-                    healthTrace("dialog-start-launcher-fallback")
-                    launcher.launch(healthConnectPermissions)
+                    try {
+                        healthTrace("dialog-launch-attempt", "route=launcher")
+                        launcher.launch(healthConnectPermissions)
+                        healthTrace("dialog-launch-ok", "route=launcher")
+                    } catch (e: Exception) {
+                        val launchReason = "4{e.javaClass.simpleName}: 4{e.message ?: "no message"}"
+                        Log.e(
+                            tag,
+                            "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed route=launcher code=HC_NATIVE_05 reason=4launchReason",
+                            e
+                        )
+                        requestPermissionContext.set(null)
+                        lastPermissionCallId = null
+                        lastRequestedPermissions = emptySet()
+                        call.reject("HC_NATIVE_05: 4launchReason")
+                        bridge.releaseCall(call)
+                        return@runOnUiThread
+                    }
                 }
                 healthTrace("dialog-launch-returned")`.replace(/\u00024/g, "$"),
   );
 }
+
+if (!kt.includes("import android.content.ActivityNotFoundException")) {
+  kt = kt.replace("import android.content.Intent\n", "import android.content.ActivityNotFoundException\nimport android.content.Intent\n");
+}
+
 
 // 5l. Watchdogen fick inte avbryta medan användaren fortfarande läser dialogen.
 kt = kt.replace(/mainHandler\.postDelayed\(permissionWatchdog!!, 18_000\)/, "mainHandler.postDelayed(permissionWatchdog!!, 150_000)");
