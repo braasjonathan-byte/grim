@@ -78,6 +78,13 @@ let pluginPromise: Promise<HealthPluginLike | null> | null = null;
 export const STEP_TIMEOUT_MS = 20000;
 
 /**
+ * Behörighetsdialogen styrs av användaren och måste få ta längre tid än ett
+ * vanligt native-anrop, utan att någonsin kunna vänta för evigt.
+ */
+export const DIALOG_TIMEOUT_MS = 120000;
+
+
+/**
  * Health Connect kan lämna löften ohanterade. Timern är helt fristående från
  * native-anropet och måste därför alltid kunna avvisa även om bryggan kraschar.
  */
