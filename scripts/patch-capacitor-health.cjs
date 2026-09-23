@@ -472,7 +472,7 @@ if (!kt.includes("import android.content.ActivityNotFoundException")) {
 // 5l. Watchdogen fick inte avbryta medan användaren fortfarande läser dialogen.
 kt = kt.replace(/mainHandler\.postDelayed\(permissionWatchdog!!, 18_000\)/, "mainHandler.postDelayed(permissionWatchdog!!, 150_000)");
 
-if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT") || !kt.includes("handleHealthPermissionResult")) {
+if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT") || !kt.includes("handleHealthPermissionResult") || !kt.includes("GRIM_LAUNCH_GUARD") || !kt.includes("HC_NATIVE_05")) {
   console.error("[patch-capacitor-health] kunde inte installera bryggans activity-result-hantering.");
   process.exit(1);
 }
