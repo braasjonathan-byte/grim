@@ -129,7 +129,9 @@ if (fs.existsSync(healthPlugin)) {
   }
   if (/bridge\.releaseCall\(call\)\s*\n\s*call\.reject\("HC_NATIVE_04/.test(source)) {
     failures.push("capacitor-health: watchdog releases the native call before rejecting it, leaving JS pending");
+  }
   if (!source.includes("GRIM_LAUNCH_GUARD") || !source.includes("HC_NATIVE_05")) {
+
     failures.push("capacitor-health: synchronous dialog launch failures are not reported as HC_NATIVE_05");
   }
   if (!source.includes('healthTrace("dialog-launch-attempt"') || !source.includes('healthTrace("dialog-launch-ok"')) {
