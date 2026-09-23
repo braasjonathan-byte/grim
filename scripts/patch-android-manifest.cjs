@@ -210,19 +210,36 @@ if (!xml.includes("HEALTH_CONNECT_GRIM")) {
 }
 
 
-if (!xml.includes("com.google.android.apps.healthdata")) {
-  const q = `        <package android:name="com.google.android.apps.healthdata" />
+const HC_QUERIES_V2 = `        <!-- HC_QUERIES_V2: Health Connect paketsynlighet (Android 11+) -->
+        <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="com.google.android.healthconnect.controller" />
+        <package android:name="com.android.healthconnect.controller" />
         <intent>
-            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            <action android:name="androidx.health.ACTION_REQUEST_PERMISSIONS" />
+        </intent>
+        <intent>
+            <action android:name="android.health.connect.action.REQUEST_HEALTH_PERMISSIONS" />
+        </intent>
+        <intent>
+            <action android:name="androidx.health.ACTION_HEALTH_CONNECT_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.health.connect.action.HEALTH_HOME_SETTINGS" />
+        </intent>
+        <intent>
+            <action android:name="android.health.connect.action.MANAGE_HEALTH_PERMISSIONS" />
         </intent>
 `;
+
+if (!xml.includes("HC_QUERIES_V2")) {
+  xml = xml.replace(/\s*<package android:name="com.google.android.apps.healthdata" \/>\n/, "\n");
   if (xml.includes("<queries>")) {
-    xml = xml.replace(/<\/queries>/, `${q}    </queries>`);
+    xml = xml.replace(/<\/queries>/, `${HC_QUERIES_V2}    </queries>`);
   } else {
-    xml = xml.replace(/<\/manifest>/, `    <queries>\n${q}    </queries>\n</manifest>`);
+    xml = xml.replace(/<\/manifest>/, `    <queries>\n${HC_QUERIES_V2}    </queries>\n</manifest>`);
   }
   changed = true;
-  console.log("[patch-android-manifest] Added Health Connect package visibility");
+  console.log("[patch-android-manifest] Added Health Connect package visibility (HC_QUERIES_V2)");
 }
 
 if (changed) {
