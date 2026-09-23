@@ -20,6 +20,7 @@ const config: CapacitorConfig = {
       '@capacitor-firebase/crashlytics',
       'capacitor-health',
       'send-intent',
+      '@capacitor/dialog',
     ],
   },
   ios: {
