@@ -140,9 +140,8 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_BRIDGE_ACTIVITY_RESULT") || !source.includes("@ActivityCallback")) {
     failures.push("capacitor-health: lifecycle-safe bridge activity result handling is missing");
   }
-}
-
 } else {
+
   failures.push("capacitor-health: installed native source is missing; patch verification cannot pass");
 }
 
