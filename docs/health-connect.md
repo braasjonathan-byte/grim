@@ -94,3 +94,16 @@ Att läsa data när appen är stängd kräver behörigheten
 implementation (t.ex. WorkManager via ett eget plugin) och ett särskilt
 godkännande av datatypanvändningen i Play Console. Inget av detta är påbörjat.
 Idag synkas data när användaren öppnar appen eller trycker på Synka.
+
+## Paketsynlighet (Android 11+)
+
+`AndroidManifest.xml` innehåller blocket `HC_QUERIES_V2` i `<queries>`: paketen
+`com.google.android.apps.healthdata`, `com.google.android.healthconnect.controller`,
+`com.android.healthconnect.controller` samt intent-actions för behörighetsbegäran
+(`androidx.health.ACTION_REQUEST_PERMISSIONS`,
+`android.health.connect.action.REQUEST_HEALTH_PERMISSIONS`), inställningar och rationale.
+Saknas detta kan `resolveActivity` ge null och tillgänglighetskontrollen ge falskt negativt.
+
+Native-patchen markerar dessutom `resolveActivity == null` som icke-fatalt
+(`GRIM_RESOLVE_NONFATAL`): det loggas som `dialog-intent-unresolved` men dialogen startas ändå.
+`scripts/verify-android-plugins.cjs` stoppar bygget om något av detta saknas.

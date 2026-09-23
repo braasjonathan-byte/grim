@@ -83,6 +83,9 @@ if (fs.existsSync(manifestPath)) {
   if (!manifest.includes("se.grim.app.HealthPrivacyActivity")) {
     failures.push("AndroidManifest.xml: rationale activity must point at se.grim.app.HealthPrivacyActivity (plugin view renders a blank page)");
   }
+  if (!manifest.includes("HC_QUERIES_V2") || !manifest.includes("androidx.health.ACTION_REQUEST_PERMISSIONS")) {
+    failures.push("android: AndroidManifest.xml saknar HC_QUERIES_V2 <queries> för Health Connect — kör `node scripts/patch-android-manifest.cjs`");
+  }
   if (!manifest.includes("com.google.android.apps.healthdata")) {
     failures.push("AndroidManifest.xml: missing Health Connect package visibility <queries> entry");
   }
@@ -133,6 +136,9 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_LAUNCH_GUARD") || !source.includes("HC_NATIVE_05")) {
 
     failures.push("capacitor-health: synchronous dialog launch failures are not reported as HC_NATIVE_05");
+  }
+  if (!source.includes("GRIM_RESOLVE_NONFATAL")) {
+    failures.push("capacitor-health: en ohanterbar permission-intent avbryter fortfarande launch (GRIM_RESOLVE_NONFATAL saknas)");
   }
   if (!source.includes('healthTrace("dialog-launch-attempt"') || !source.includes('healthTrace("dialog-launch-ok"')) {
     failures.push("capacitor-health: launch attempt/success tracing around the permission dialog is missing");

@@ -449,8 +449,10 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
                         "dialog-intent",
                         "action=4{permissionIntent.action} resolved=4resolvedDialog permissions=4healthConnectPermissions"
                     )
+                    // GRIM_RESOLVE_NONFATAL: resolveActivity kan ge null enbart pga
+                    // paketfiltrering (Android 11+) även när Health Connect finns.
                     if (resolvedDialog == null) {
-                        throw ActivityNotFoundException("no activity handles 4{permissionIntent.action}")
+                        Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-intent-unresolved action=4{permissionIntent.action}")
                     }
                     healthTrace("dialog-launch-attempt", "route=bridge")
                     startActivityForResult(call, permissionIntent, "handleHealthPermissionResult")
@@ -482,6 +484,21 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
                 }
                 healthTrace("dialog-launch-returned")`.replace(/\u00024/g, "$"),
   );
+}
+
+// GRIM_RESOLVE_NONFATAL-migrering: äldre patchar avbröt launch när resolveActivity
+// gav null, vilket bara speglar Android 11+ paketfiltrering.
+if (kt.includes('throw ActivityNotFoundException("no activity handles')) {
+  kt = kt.replace(
+    /[ ]+if \(resolvedDialog == null\) \{\n[ ]+throw ActivityNotFoundException\("no activity handles [^\n]*\n[ ]+\}\n/,
+    `                    // GRIM_RESOLVE_NONFATAL: resolveActivity kan ge null enbart pga
+                    // paketfiltrering (Android 11+) även när Health Connect finns.
+                    if (resolvedDialog == null) {
+                        Log.w(tag, "health-ts=\u00024{System.currentTimeMillis()} step=dialog-intent-unresolved action=\u00024{permissionIntent.action}")
+                    }\n`.replace(/\u00024/g, "$"),
+  );
+  changed = true;
+  console.log("[patch-capacitor-health] resolveActivity-null avbryter inte längre dialogstarten (GRIM_RESOLVE_NONFATAL)");
 }
 
 if (!kt.includes("import android.content.ActivityNotFoundException")) {

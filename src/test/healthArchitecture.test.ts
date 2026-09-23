@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   dedupeWorkouts,
@@ -117,5 +118,29 @@ describe("healthErrorCode", () => {
       "save-failed": "HC-08",
       unknown: "HC-99",
     });
+  });
+});
+
+describe("AndroidManifest package visibility", () => {
+  const manifest = readFileSync("android/app/src/main/AndroidManifest.xml", "utf8");
+
+  it("deklarerar Health Connect-paket och permission-intents (HC_QUERIES_V2)", () => {
+    expect(manifest).toContain("HC_QUERIES_V2");
+    expect(manifest).toContain("com.google.android.apps.healthdata");
+    expect(manifest).toContain("androidx.health.ACTION_REQUEST_PERMISSIONS");
+    expect(manifest).toContain("android.health.connect.action.REQUEST_HEALTH_PERMISSIONS");
+  });
+
+  it("deklarerar varje behörighet som begärs vid körning", () => {
+    for (const p of [
+      "READ_STEPS",
+      "READ_ACTIVE_CALORIES_BURNED",
+      "READ_DISTANCE",
+      "READ_EXERCISE",
+      "READ_HEART_RATE",
+      "READ_SLEEP",
+    ]) {
+      expect(manifest).toContain(`android.permission.health.${p}`);
+    }
   });
 });
