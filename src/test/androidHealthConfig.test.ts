@@ -92,5 +92,16 @@ describe("Android-konfiguration för Health Connect", () => {
       expect(source).toContain("scripts/patch-send-intent-gradle.cjs");
     }
   });
-});
+  it("startar aldrig dialogen utan fönsterfokus och skyddar den mot singleTask-intents", () => {
+    const patch = read("scripts/patch-capacitor-health.cjs");
+    expect(patch).toContain("GRIM_FOREGROUND_LAUNCH");
+    expect(patch).toContain("activity.hasWindowFocus()");
+    expect(patch).toContain("GRIM_HEALTH_REQUEST_STATE");
+    expect(patch).toContain("CoroutineScope(Dispatchers.Main).launch {");
 
+    const mainActivity = read("android/app/src/main/java/se/grim/app/MainActivity.java");
+    expect(mainActivity).toContain("GrimHealthRequestState.isInFlight()");
+    expect(mainActivity).toContain("protected void onNewIntent(Intent intent)");
+    expect(mainActivity).toContain("deferredIntent");
+  });
+});
