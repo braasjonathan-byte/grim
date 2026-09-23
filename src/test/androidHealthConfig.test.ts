@@ -66,14 +66,14 @@ describe("Android-konfiguration för Health Connect", () => {
 
   it("använder Googles dokumenterade launcher först och skiljer tomt svar från uteblivet", () => {
     const patch = read("scripts/patch-capacitor-health.cjs");
-    expect(patch).toContain("GRIM_OFFICIAL_LAUNCHER_FIRST");
-    expect(patch).toContain("Intent.FLAG_ACTIVITY_NEW_TASK.inv()");
+    expect(patch).toContain("GRIM_PERMISSION_PROXY_ACTIVITY");
+    expect(patch).toContain("registerForActivityResult(contract)");
     expect(patch).toContain("HC_NATIVE_06");
-    expect(patch).toContain("dialog-result-raw");
+    expect(patch).toContain("proxy-result-raw");
     expect(patch).toContain('call.reject("HC_NATIVE_05: \\$launchReason")');
     const verify = read("scripts/verify-android-plugins.cjs");
-    expect(verify).toContain("GRIM_OFFICIAL_LAUNCHER_FIRST");
-    expect(verify).toContain("Intent.FLAG_ACTIVITY_NEW_TASK.inv()");
+    expect(verify).toContain("GRIM_PERMISSION_PROXY_ACTIVITY");
+    expect(verify).toContain("HealthPermissionProxyActivity");
   });
 
   it("har en native watchdog som aldrig pausas av tappat fönsterfokus", () => {
