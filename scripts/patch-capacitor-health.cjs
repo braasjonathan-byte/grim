@@ -486,6 +486,21 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
   );
 }
 
+// GRIM_RESOLVE_NONFATAL-migrering: äldre patchar avbröt launch när resolveActivity
+// gav null, vilket bara speglar Android 11+ paketfiltrering.
+if (kt.includes('throw ActivityNotFoundException("no activity handles')) {
+  kt = kt.replace(
+    /[ ]+if \(resolvedDialog == null\) \{\n[ ]+throw ActivityNotFoundException\("no activity handles [^\n]*\n[ ]+\}\n/,
+    `                    // GRIM_RESOLVE_NONFATAL: resolveActivity kan ge null enbart pga
+                    // paketfiltrering (Android 11+) även när Health Connect finns.
+                    if (resolvedDialog == null) {
+                        Log.w(tag, "health-ts=\u00024{System.currentTimeMillis()} step=dialog-intent-unresolved action=\u00024{permissionIntent.action}")
+                    }\n`.replace(/\u00024/g, "$"),
+  );
+  changed = true;
+  console.log("[patch-capacitor-health] resolveActivity-null avbryter inte längre dialogstarten (GRIM_RESOLVE_NONFATAL)");
+}
+
 if (!kt.includes("import android.content.ActivityNotFoundException")) {
   kt = kt.replace("import android.content.Intent\n", "import android.content.ActivityNotFoundException\nimport android.content.Intent\n");
 }
