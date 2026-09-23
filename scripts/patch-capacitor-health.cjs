@@ -422,6 +422,26 @@ if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
     `                // GRIM_LAUNCH_GUARD: ett launch-anrop kan misslyckas synkront
                 // (ActivityNotFoundException, IllegalStateException) utan att någon
                 // dialog ritas upp. Det får aldrig maskeras som uteblivet svar.
+                if (healthConnectPermissions.isEmpty()) {
+                    val emptyReason = "no Health Connect permission strings matched the request"
+                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed code=HC_NATIVE_05 reason=4emptyReason")
+                    requestPermissionContext.set(null)
+                    lastPermissionCallId = null
+                    lastRequestedPermissions = emptySet()
+                    call.reject("HC_NATIVE_05: 4emptyReason")
+                    bridge.releaseCall(call)
+                    return@runOnUiThread
+                }
+                if (activity.isFinishing || activity.isDestroyed) {
+                    val staleReason = "activity is not in a valid state to show the dialog"
+                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-launch-failed code=HC_NATIVE_05 reason=4staleReason")
+                    requestPermissionContext.set(null)
+                    lastPermissionCallId = null
+                    lastRequestedPermissions = emptySet()
+                    call.reject("HC_NATIVE_05: 4staleReason")
+                    bridge.releaseCall(call)
+                    return@runOnUiThread
+                }
                 val handedToBridge = try {
                     val permissionIntent = permissionContract.createIntent(activity, healthConnectPermissions)
                     val resolvedDialog = permissionIntent.resolveActivity(context.packageManager)
