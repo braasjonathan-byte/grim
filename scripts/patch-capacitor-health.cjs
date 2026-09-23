@@ -575,7 +575,7 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
                         pendingPermissionCall = null
                         lastPermissionCallId = null
                         lastRequestedPermissions = emptySet()
-                        call.reject("HC_NATIVE_05: 4launchReason")
+                        call.reject("HC_NATIVE_05: \$launchReason")
                         bridge.releaseCall(call)
                         return@runOnUiThread
                     }
@@ -653,6 +653,11 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
             permissionsLauncher = activity.registerForActivityResult(contract, callback)`,
   );
 }
+
+// Äldre/partiellt applicerade versioner av patchen kunde lämna en trasig
+// Kotlin-interpolering i launch-fallbacken. Rätta den även när huvudmarkören
+// redan finns, så varje Android-bygge blir reproducerbart.
+kt = kt.replace('call.reject("HC_NATIVE_05: 4launchReason")', 'call.reject("HC_NATIVE_05: $launchReason")');
 
 const requiredMarkers = [
   "GRIM_BRIDGE_ACTIVITY_RESULT",
