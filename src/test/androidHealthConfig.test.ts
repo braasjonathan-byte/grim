@@ -70,6 +70,7 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(patch).toContain("Intent.FLAG_ACTIVITY_NEW_TASK.inv()");
     expect(patch).toContain("HC_NATIVE_06");
     expect(patch).toContain("dialog-result-raw");
+    expect(patch).not.toContain('call.reject("HC_NATIVE_05: 4launchReason")');
     const verify = read("scripts/verify-android-plugins.cjs");
     expect(verify).toContain("GRIM_OFFICIAL_LAUNCHER_FIRST");
     expect(verify).toContain("Intent.FLAG_ACTIVITY_NEW_TASK.inv()");

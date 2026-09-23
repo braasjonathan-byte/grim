@@ -158,6 +158,9 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("HC_NATIVE_06") || !source.includes('healthTrace(\n            "dialog-result-raw"')) {
     failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
   }
+  if (source.includes('HC_NATIVE_05: 4launchReason')) {
+    failures.push("capacitor-health: launch failure contains a broken Kotlin interpolation");
+  }
 } else {
 
   failures.push("capacitor-health: installed native source is missing; patch verification cannot pass");
