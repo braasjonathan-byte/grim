@@ -659,6 +659,81 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
 // redan finns, så varje Android-bygge blir reproducerbart.
 kt = kt.replace('call.reject("HC_NATIVE_05: 4launchReason")', 'call.reject("HC_NATIVE_05: $launchReason")');
 
+// 5n. GRIM_FOREGROUND_LAUNCH: dialogen kan hamna bakom appen om den startas
+// medan aktiviteten inte har fönsterfokus (t.ex. direkt efter en kall start
+// eller när en annan intent just levererats). Skjut då upp starten tills
+// aktiviteten verkligen ligger överst. Dessutom exponeras ett "in flight"-läge
+// så MainActivity (launchMode=singleTask) inte kan dra sig själv över dialogen.
+if (!kt.includes("GRIM_FOREGROUND_LAUNCH")) {
+  kt = kt.replace(
+    /    private var lastIntentUnresolved: Boolean = false/,
+    `    private var lastIntentUnresolved: Boolean = false
+    // GRIM_FOREGROUND_LAUNCH
+    private var foregroundWaitCount: Int = 0`,
+  );
+  kt = kt.replace(
+    /        activity\.runOnUiThread \{\n            try \{\n                val launcher = permissionsLauncher/,
+    `        activity.runOnUiThread {
+            try {
+                // GRIM_FOREGROUND_LAUNCH: starta aldrig dialogen utan fönsterfokus.
+                if (!activity.hasWindowFocus() && foregroundWaitCount < 20) {
+                    foregroundWaitCount++
+                    healthTrace("dialog-defer-no-focus", "attempt=\$foregroundWaitCount")
+                    mainHandler.postDelayed({ requestHealthPermissions(call) }, 250)
+                    return@runOnUiThread
+                }
+                foregroundWaitCount = 0
+                val launcher = permissionsLauncher`,
+  );
+  kt = kt.replace(
+    /                pendingPermissionCall = call\n                permissionCallbackSeen = false/,
+    `                pendingPermissionCall = call
+                GrimHealthRequestState.inFlight = true
+                permissionCallbackSeen = false`,
+  );
+  kt = kt.replace(
+    /        permissionCallbackSeen = true\n        healthTrace\(\n            "dialog-result-raw"/,
+    `        GrimHealthRequestState.inFlight = false
+        permissionCallbackSeen = true
+        healthTrace(
+            "dialog-result-raw"`,
+  );
+  kt = kt.replace(
+    /                permissionCallbackSeen = true\n                healthTrace\("dialog-response"/,
+    `                GrimHealthRequestState.inFlight = false
+                permissionCallbackSeen = true
+                healthTrace("dialog-response"`,
+  );
+  kt = kt.replace(
+    /                    val pending = requestPermissionContext\.getAndSet\(null\)\n                    if \(pending\?\.pluginCal\?\.callbackId == call\.callbackId\) \{/,
+    `                    val pending = requestPermissionContext.getAndSet(null)
+                    GrimHealthRequestState.inFlight = false
+                    if (pending?.pluginCal?.callbackId == call.callbackId) {`,
+  );
+  kt = kt.replace(
+    /                        call\.reject\("HC_NATIVE_05: \$launchReason"\)/,
+    `                        GrimHealthRequestState.inFlight = false
+                        call.reject("HC_NATIVE_05: \$launchReason")`,
+  );
+  kt = `${kt.trimEnd()}
+
+// GRIM_HEALTH_REQUEST_STATE: läses av MainActivity för att undvika att appen
+// dras fram över Health Connects behörighetsdialog (launchMode=singleTask).
+object GrimHealthRequestState {
+    @Volatile
+    @JvmStatic
+    var inFlight: Boolean = false
+}
+`;
+}
+
+// 5o. Behörighetskontrollen körs i samma trådmönster som dialogstarten. Health
+// Connect-anropen är suspend-funktioner och blockerar inte UI-tråden.
+kt = kt.replace(
+  /(fun checkHealthPermissions\(call: PluginCall\) \{[\s\S]*?)CoroutineScope\(Dispatchers\.IO\)\.launch \{/,
+  "$1CoroutineScope(Dispatchers.Main).launch {",
+);
+
 const requiredMarkers = [
   "GRIM_BRIDGE_ACTIVITY_RESULT",
   "handleHealthPermissionResult",
