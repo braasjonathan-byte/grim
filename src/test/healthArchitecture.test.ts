@@ -109,6 +109,7 @@ describe("healthErrorCode", () => {
       "not-installed": "HC-01",
       "update-required": "HC-02",
       "launcher-setup": "HC-03",
+      "launch-failed": "HC-03b",
       "dialog-timeout": "HC-04",
       denied: "HC-05",
       partial: "HC-06",

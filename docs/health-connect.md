@@ -44,7 +44,8 @@ data ett dygn bakåt (lokal midnatt = 22:00 UTC föregående dag).
 - `HC-01`: Health Connect är inte installerat.
 - `HC-02`: Health Connect-providern behöver uppdateras.
 - `HC-03`: Android kunde inte registrera eller starta behörighets-launchern.
-- `HC-04`: dialogen startades men lämnade inget svar inom tidsgränsen.
+- `HC-03b`: själva starten av behörighetsrutan misslyckades direkt (native `HC_NATIVE_05`), ingen ruta hann visas.
+- `HC-04`: inget svar kom inom tidsgränsen och det går inte att bekräfta att rutan visades.
 - `HC-05`: användaren nekade grundbehörighet.
 - `HC-06`: bara en del av datatyperna tilläts.
 - `HC-07`: behörighet finns men datahämtningen timeoutade.
