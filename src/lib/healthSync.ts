@@ -165,6 +165,7 @@ export type HealthErrorCode =
   | "not-installed"
   | "update-required"
   | "launcher-setup"
+  | "launch-failed"
   | "dialog-timeout"
   | "denied"
   | "partial"
@@ -193,6 +194,7 @@ export const HEALTH_ERROR_REFS: Record<HealthErrorCode, string> = {
   "not-installed": "HC-01",
   "update-required": "HC-02",
   "launcher-setup": "HC-03",
+  "launch-failed": "HC-03b",
   "dialog-timeout": "HC-04",
   denied: "HC-05",
   partial: "HC-06",
@@ -206,7 +208,8 @@ export const HEALTH_ERROR_HINTS: Record<HealthErrorCode, string> = {
   "not-installed": "Health Connect-appen är inte installerad.",
   "update-required": "Health Connect behöver uppdateras.",
   "launcher-setup": "Android kunde inte förbereda behörighetsdialogen.",
-  "dialog-timeout": "Dialogen startades men inget svar kom tillbaka.",
+  "launch-failed": "Android kunde inte öppna Health Connects behörighetsruta alls.",
+  "dialog-timeout": "Ingen bekräftelse på att rutan visades, och inget svar kom i tid.",
   denied: "Behörigheten nekades.",
   partial: "Bara en del av behörigheterna gavs.",
   "data-timeout": "Behörighet finns, men datahämtningen svarade inte.",
@@ -350,8 +353,14 @@ function classifyNativeHealthError(err: unknown): HealthError {
   if (message.includes("HC_NATIVE_03") || /register.*ActivityResult|launcher.*initial/i.test(message)) {
     return new HealthError("launcher-setup", "Behörighetsdialogen kunde inte förberedas av Android. Starta om appen och försök igen.");
   }
+  if (message.includes("HC_NATIVE_05") || /ActivityNotFoundException|not resolve activity/i.test(message)) {
+    return new HealthError(
+      "launch-failed",
+      "Android kunde inte öppna Health Connects behörighetsruta. Öppna Health Connect-appen en gång och försök igen.",
+    );
+  }
   if (message.includes("HC_NATIVE_04")) {
-    return new HealthError("dialog-timeout", "Behörighetsdialogen startades, men Android lämnade inget svar.");
+    return new HealthError("dialog-timeout", "Inget svar kom från Health Connect, och det går inte att bekräfta att rutan visades.");
   }
   return new HealthError("unknown", message || "Okänt fel i hälsokopplingen.");
 }
@@ -427,7 +436,8 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
     const result = await Promise.race([
       withDialogTimeout(
         plugin.requestHealthPermissions(request),
-        "Health Connect svarade inte i tid. Försök igen.",
+        "Health Connect svarade inte i tid, och vi kan inte bekräfta att godkännanderutan visades.",
+        DIALOG_TIMEOUT_MS,
       ).then((r) => ({ kind: "plugin" as const, res: r })),
       resumed.then((access) => (access ? { kind: "access" as const, access } : new Promise<never>(() => {}))),
     ]);
@@ -442,7 +452,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   } catch (err: any) {
     const firstError = classifyNativeHealthError(err);
     healthLog("permission request failed", { code: firstError.code, message: firstError.message });
-    if (firstError.code === "launcher-setup") throw firstError;
+    if (firstError.code === "launcher-setup" || firstError.code === "launch-failed") throw firstError;
     // Har användaren hunnit godkänna trots att svaret uteblev? Läs av läget.
     const afterFirst = await checkHealthAccess();
     if (afterFirst.activity) return afterFirst;
@@ -464,9 +474,12 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
           /* ignore */
         }
       }
-      if (fallbackError.code === "launcher-setup") throw fallbackError;
+      if (fallbackError.code === "launcher-setup" || fallbackError.code === "launch-failed") throw fallbackError;
       if (firstError.code === "dialog-timeout" || fallbackError.code === "dialog-timeout") {
-        throw new HealthError("dialog-timeout", "Behörighetsdialogen startades, men Health Connect lämnade inget svar inom tidsgränsen.");
+        throw new HealthError(
+          "dialog-timeout",
+          "Inget svar kom från Health Connect inom tidsgränsen, och vi kan inte bekräfta att godkännanderutan visades.",
+        );
       }
       throw new HealthError("denied", "Grim fick inte behörighet att läsa steg eller aktiva kalorier.");
     }
