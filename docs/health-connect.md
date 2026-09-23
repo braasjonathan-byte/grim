@@ -46,6 +46,7 @@ data ett dygn bakåt (lokal midnatt = 22:00 UTC föregående dag).
 - `HC-03`: Android kunde inte registrera eller starta behörighets-launchern.
 - `HC-03b`: själva starten av behörighetsrutan misslyckades direkt (native `HC_NATIVE_05`), ingen ruta hann visas.
 - `HC-04`: inget svar kom inom tidsgränsen och det går inte att bekräfta att rutan visades.
+- `HC-04b`: rutan svarade (native `HC_NATIVE_06`) men svaret gick inte att tolka eller kunde inte kopplas till det väntande anropet.
 - `HC-05`: användaren nekade grundbehörighet.
 - `HC-06`: bara en del av datatyperna tilläts.
 - `HC-07`: behörighet finns men datahämtningen timeoutade.
@@ -63,6 +64,16 @@ originalpluginet var att den redan registrerade launchern startades från
 avvisar direkt med `HC_NATIVE_03` om setupen ändå misslyckas.
 Native-watchdoggen avvisar bryggan innan det sparade anropet släpps; om ordningen
 vänds kan Capacitor tappa felet och lämna JavaScript-löftet permanent väntande.
+
+Behörighetsrutan startas alltid via Googles dokumenterade väg först:
+`PermissionController.createRequestPermissionResultContract()` + den launcher som
+registrerades i `load()` med `registerForActivityResult`. Först om den kastar ett
+fel används Capacitors `startActivityForResult` med `@ActivityCallback` som reserv,
+och då tvättas intenten från `FLAG_ACTIVITY_NEW_TASK` (en ny task levererar aldrig
+tillbaka något resultat). Callbacken loggar rått svar (`dialog-result-raw`:
+resultCode, om data finns, extras-nycklar), och watchdoggen väljer kod utifrån vad
+som faktiskt hänt: `HC_NATIVE_06` om callbacken kom men var oanvändbar,
+`HC_NATIVE_05` om intenten aldrig kunde bekräftas, annars `HC_NATIVE_04`.
 
 Knappen **Behörigheter** öppnar den appspecifika Health Connect-vyn för Grims
 paket, inte bara Health Connects allmänna startsida.

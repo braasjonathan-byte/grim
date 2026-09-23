@@ -167,6 +167,7 @@ export type HealthErrorCode =
   | "launcher-setup"
   | "launch-failed"
   | "dialog-timeout"
+  | "callback-invalid"
   | "denied"
   | "partial"
   | "data-timeout"
@@ -196,6 +197,7 @@ export const HEALTH_ERROR_REFS: Record<HealthErrorCode, string> = {
   "launcher-setup": "HC-03",
   "launch-failed": "HC-03b",
   "dialog-timeout": "HC-04",
+  "callback-invalid": "HC-04b",
   denied: "HC-05",
   partial: "HC-06",
   "data-timeout": "HC-07",
@@ -210,6 +212,7 @@ export const HEALTH_ERROR_HINTS: Record<HealthErrorCode, string> = {
   "launcher-setup": "Android kunde inte förbereda behörighetsdialogen.",
   "launch-failed": "Android kunde inte öppna Health Connects behörighetsruta alls.",
   "dialog-timeout": "Ingen bekräftelse på att rutan visades, och inget svar kom i tid.",
+  "callback-invalid": "Rutan svarade, men svaret gick inte att tolka.",
   denied: "Behörigheten nekades.",
   partial: "Bara en del av behörigheterna gavs.",
   "data-timeout": "Behörighet finns, men datahämtningen svarade inte.",
@@ -357,6 +360,12 @@ function classifyNativeHealthError(err: unknown): HealthError {
     return new HealthError(
       "launch-failed",
       "Android kunde inte öppna Health Connects behörighetsruta. Öppna Health Connect-appen en gång och försök igen.",
+    );
+  }
+  if (message.includes("HC_NATIVE_06")) {
+    return new HealthError(
+      "callback-invalid",
+      "Health Connect svarade, men svaret gick inte att tolka. Försök igen och godkänn i rutan som visas.",
     );
   }
   if (message.includes("HC_NATIVE_04")) {

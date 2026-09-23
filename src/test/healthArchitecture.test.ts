@@ -112,6 +112,7 @@ describe("healthErrorCode", () => {
       "launcher-setup": "HC-03",
       "launch-failed": "HC-03b",
       "dialog-timeout": "HC-04",
+      "callback-invalid": "HC-04b",
       denied: "HC-05",
       partial: "HC-06",
       "data-timeout": "HC-07",

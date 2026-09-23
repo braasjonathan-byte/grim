@@ -146,6 +146,18 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_BRIDGE_ACTIVITY_RESULT") || !source.includes("@ActivityCallback")) {
     failures.push("capacitor-health: lifecycle-safe bridge activity result handling is missing");
   }
+  if (!source.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
+    failures.push("capacitor-health: Googles dokumenterade registerForActivityResult-väg är inte primär (GRIM_OFFICIAL_LAUNCHER_FIRST saknas)");
+  }
+  if (!/healthTrace\("dialog-launch-attempt", "route=launcher"\)\s*\n\s*launcher\.launch/.test(source)) {
+    failures.push("capacitor-health: permission dialog is not launched through the official PermissionController launcher first");
+  }
+  if (!source.includes("Intent.FLAG_ACTIVITY_NEW_TASK.inv()")) {
+    failures.push("capacitor-health: fallback permission intent may run in a new task and never return a result");
+  }
+  if (!source.includes("HC_NATIVE_06") || !source.includes('healthTrace(\n            "dialog-result-raw"')) {
+    failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
+  }
 } else {
 
   failures.push("capacitor-health: installed native source is missing; patch verification cannot pass");
