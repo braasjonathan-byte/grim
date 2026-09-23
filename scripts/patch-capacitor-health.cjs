@@ -364,7 +364,85 @@ kt = kt.replace(
                         bridge.releaseCall(call)`,
 );
 
+// 5k. GRUNDORSAK HC-04: ActivityResultLaunchern registreras på pluginets egen
+// instans. Återskapar Android aktiviteten medan Health Connect ligger överst
+// försvinner både instansfältet och bryggans sparade anrop, och svaret når
+// aldrig JS. Capacitors egen startActivityForResult + @ActivityCallback sparar
+// anropet i bryggan och återställer det efter en återskapning — det är det
+// dokumenterade livscykelsäkra mönstret. Launchern behålls som reserv.
+if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT")) {
+  if (!kt.includes("import androidx.activity.result.ActivityResult\n")) {
+    kt = kt.replace(
+      "import androidx.activity.result.ActivityResultCallback\n",
+      "import androidx.activity.result.ActivityResult\nimport androidx.activity.result.ActivityResultCallback\n",
+    );
+  }
+  if (!kt.includes("import com.getcapacitor.annotation.ActivityCallback")) {
+    kt = kt.replace(
+      "import com.getcapacitor.annotation.CapacitorPlugin\n",
+      "import com.getcapacitor.annotation.ActivityCallback\nimport com.getcapacitor.annotation.CapacitorPlugin\n",
+    );
+  }
+  kt = kt.replace(
+    /    override fun load\(\) \{\n        super\.load\(\)\n        healthTrace\("launcher-registration-start"\)/,
+    `    // GRIM_BRIDGE_ACTIVITY_RESULT
+    private val permissionContract: ActivityResultContract<Set<String>, Set<String>> =
+        PermissionController.createRequestPermissionResultContract()
 
+    @ActivityCallback
+    fun handleHealthPermissionResult(call: PluginCall?, result: ActivityResult) {
+        permissionWatchdog?.let { mainHandler.removeCallbacks(it) }
+        permissionWatchdog = null
+        val granted = try {
+            permissionContract.parseResult(result.resultCode, result.data)
+        } catch (e: Exception) {
+            Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-result-parse-failed", e)
+            emptySet<String>()
+        }
+        val pending = requestPermissionContext.getAndSet(null)
+        val target = call ?: pending?.pluginCal ?: lastPermissionCallId?.let { bridge.getSavedCall(it) }
+        val requested = if (pending != null) pending.requestedPermissions else lastRequestedPermissions
+        healthTrace("bridge-dialog-response", "granted=4{granted.size} call=4{target?.callbackId}")
+        lastPermissionCallId = null
+        lastRequestedPermissions = emptySet()
+        if (target == null) {
+            Log.w(tag, "health-ts=4{System.currentTimeMillis()} step=bridge-dialog-response-orphan")
+            return
+        }
+        target.resolve(grantedPermissionResult(requested, granted))
+        bridge.releaseCall(target)
+    }
+
+    override fun load() {
+        super.load()
+        healthTrace("launcher-registration-start")`.replace(/\u00024/g, "$"),
+  );
+  kt = kt.replace(
+    /                launcher\.launch\(healthConnectPermissions\)\n                healthTrace\("dialog-launch-returned"\)/,
+    `                val handedToBridge = try {
+                    val permissionIntent = permissionContract.createIntent(activity, healthConnectPermissions)
+                    startActivityForResult(call, permissionIntent, "handleHealthPermissionResult")
+                    healthTrace("dialog-start-bridge")
+                    true
+                } catch (e: Exception) {
+                    Log.e(tag, "health-ts=4{System.currentTimeMillis()} step=dialog-start-bridge-failed", e)
+                    false
+                }
+                if (!handedToBridge) {
+                    healthTrace("dialog-start-launcher-fallback")
+                    launcher.launch(healthConnectPermissions)
+                }
+                healthTrace("dialog-launch-returned")`.replace(/\u00024/g, "$"),
+  );
+}
+
+// 5l. Watchdogen fick inte avbryta medan användaren fortfarande läser dialogen.
+kt = kt.replace(/mainHandler\.postDelayed\(permissionWatchdog!!, 18_000\)/, "mainHandler.postDelayed(permissionWatchdog!!, 150_000)");
+
+if (!kt.includes("GRIM_BRIDGE_ACTIVITY_RESULT") || !kt.includes("handleHealthPermissionResult")) {
+  console.error("[patch-capacitor-health] kunde inte installera bryggans activity-result-hantering.");
+  process.exit(1);
+}
 
 
 if (kt !== ktBefore) {
