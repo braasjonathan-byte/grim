@@ -64,6 +64,17 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(patch).toContain("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED");
   });
 
+  it("använder Googles dokumenterade launcher först och skiljer tomt svar från uteblivet", () => {
+    const patch = read("scripts/patch-capacitor-health.cjs");
+    expect(patch).toContain("GRIM_OFFICIAL_LAUNCHER_FIRST");
+    expect(patch).toContain("Intent.FLAG_ACTIVITY_NEW_TASK.inv()");
+    expect(patch).toContain("HC_NATIVE_06");
+    expect(patch).toContain("dialog-result-raw");
+    const verify = read("scripts/verify-android-plugins.cjs");
+    expect(verify).toContain("GRIM_OFFICIAL_LAUNCHER_FIRST");
+    expect(verify).toContain("Intent.FLAG_ACTIVITY_NEW_TASK.inv()");
+  });
+
   it("har en native watchdog som aldrig pausas av tappat fönsterfokus", () => {
     const patch = read("scripts/patch-capacitor-health.cjs");
     expect(patch).toContain("hard deadline independent of activity focus");
