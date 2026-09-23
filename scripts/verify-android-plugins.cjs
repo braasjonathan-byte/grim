@@ -95,6 +95,10 @@ const healthPlugin = path.join(
   nodeModules,
   "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPlugin.kt"
 );
+const healthPermissionProxy = path.join(
+  nodeModules,
+  "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt"
+);
 if (fs.existsSync(healthPlugin)) {
   const source = fs.readFileSync(healthPlugin, "utf8");
   if (!source.includes("READ_SLEEP") || !source.includes('"sleep" -> metricAndMapper')) {
@@ -156,7 +160,20 @@ if (fs.existsSync(healthPlugin)) {
     failures.push("capacitor-health: fallback permission intent may run in a new task and never return a result");
   }
   if (!source.includes("HC_NATIVE_06") || !source.includes('healthTrace(\n            "dialog-result-raw"')) {
-    failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
+    if (!source.includes('healthTrace(\n            "proxy-result-raw"')) {
+      failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
+    }
+  }
+  if (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")')) {
+    failures.push("capacitor-health: Health Connect permission flow is not isolated from MainActivity");
+  }
+  if (!fs.existsSync(healthPermissionProxy)) {
+    failures.push("capacitor-health: HealthPermissionProxyActivity source is missing");
+  } else {
+    const proxy = fs.readFileSync(healthPermissionProxy, "utf8");
+    if (!proxy.includes("PermissionController.createRequestPermissionResultContract()") || !proxy.includes("registerForActivityResult(contract)")) {
+      failures.push("capacitor-health: permission proxy does not use Google's official Activity Result contract");
+    }
   }
   if (source.includes('HC_NATIVE_05: 4launchReason')) {
     failures.push("capacitor-health: launch failure contains a broken Kotlin interpolation");

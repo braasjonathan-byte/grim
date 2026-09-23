@@ -104,4 +104,16 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(mainActivity).toContain("protected void onNewIntent(Intent intent)");
     expect(mainActivity).toContain("deferredIntent");
   });
+
+  it("isolerar Health Connect-dialogen från MainActivity och återställer patchen efter npm install", () => {
+    const pkg = JSON.parse(read("package.json"));
+    expect(pkg.scripts.postinstall).toContain("patch-capacitor-health.cjs");
+
+    const patch = read("scripts/patch-capacitor-health.cjs");
+    expect(patch).toContain("GRIM_PERMISSION_PROXY_ACTIVITY");
+    expect(patch).toContain("HealthPermissionProxyActivity");
+    expect(patch).toContain('healthTrace("dialog-launch-attempt", "route=proxy")');
+    expect(patch).toContain("PermissionController.createRequestPermissionResultContract()");
+    expect(patch).toContain("registerForActivityResult(contract)");
+  });
 });

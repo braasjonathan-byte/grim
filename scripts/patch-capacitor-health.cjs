@@ -22,6 +22,10 @@ const PLUGIN_KT = path.join(
   "src/main/java/com/fit_up/health/capacitor/HealthPlugin.kt"
 );
 const PLUGIN_MANIFEST = path.join(BASE, "src/main/AndroidManifest.xml");
+const PERMISSION_PROXY = path.join(
+  BASE,
+  "src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt"
+);
 const GRADLE = path.join(BASE, "build.gradle");
 const AGP_VERSION = "8.13.0";
 
@@ -734,6 +738,147 @@ kt = kt.replace(
   "$1CoroutineScope(Dispatchers.Main).launch {",
 );
 
+// 5p. Lägg Health Connect-kontraktet i en egen, överliggande Activity. Då är
+// dialogens launcher och callback bundna till samma Activity även om Grims
+// singleTask-MainActivity får fokus eller återskapas. Capacitor väntar bara på
+// proxy-aktivitetens vanliga ActivityResult, vilket även isolerar request codes.
+const proxySource = `package com.fit_up.health.capacitor
+
+import android.app.Activity
+import android.content.Intent
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.health.connect.client.PermissionController
+
+class HealthPermissionProxyActivity : ComponentActivity() {
+    companion object {
+        const val EXTRA_PERMISSIONS = "grim.health.permissions"
+        const val EXTRA_GRANTED = "grim.health.granted"
+        const val EXTRA_ERROR = "grim.health.error"
+    }
+
+    private val contract: ActivityResultContract<Set<String>, Set<String>> =
+        PermissionController.createRequestPermissionResultContract()
+
+    private val launcher = registerForActivityResult(contract) { granted ->
+        Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-response granted=\${granted.size}")
+        setResult(
+            Activity.RESULT_OK,
+            Intent().putStringArrayListExtra(EXTRA_GRANTED, ArrayList(granted))
+        )
+        finish()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState != null) return
+
+        val requested = intent.getStringArrayListExtra(EXTRA_PERMISSIONS)?.toSet().orEmpty()
+        if (requested.isEmpty()) {
+            finishWithError("No Health Connect permissions were supplied")
+            return
+        }
+
+        window.decorView.post {
+            try {
+                Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch permissions=\$requested")
+                launcher.launch(requested)
+                Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-returned")
+            } catch (error: Exception) {
+                Log.e("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-failed", error)
+                finishWithError("\${error.javaClass.simpleName}: \${error.message ?: "no message"}")
+            }
+        }
+    }
+
+    private fun finishWithError(message: String) {
+        setResult(Activity.RESULT_CANCELED, Intent().putExtra(EXTRA_ERROR, message))
+        finish()
+    }
+}
+`;
+
+fs.mkdirSync(path.dirname(PERMISSION_PROXY), { recursive: true });
+if (!fs.existsSync(PERMISSION_PROXY) || fs.readFileSync(PERMISSION_PROXY, "utf8") !== proxySource) {
+  fs.writeFileSync(PERMISSION_PROXY, proxySource, "utf8");
+  console.log("[patch-capacitor-health] lifecycle-isolerad Health Connect-proxy installerad.");
+}
+
+if (!kt.includes("GRIM_PERMISSION_PROXY_ACTIVITY")) {
+  if (!kt.includes("import android.app.Activity\n")) {
+    kt = kt.replace("import android.content.ActivityNotFoundException\n", "import android.app.Activity\nimport android.content.ActivityNotFoundException\n");
+  }
+
+  kt = kt.replace(
+    /    @ActivityCallback\n    fun handleHealthPermissionResult\(call: PluginCall\?, result: ActivityResult\) \{[\s\S]*?\n    \}\n\n    override fun load\(\)/,
+    `    // GRIM_PERMISSION_PROXY_ACTIVITY
+    @ActivityCallback
+    fun handleHealthPermissionResult(call: PluginCall?, result: ActivityResult) {
+        permissionWatchdog?.let { mainHandler.removeCallbacks(it) }
+        permissionWatchdog = null
+        GrimHealthRequestState.inFlight = false
+        permissionCallbackSeen = true
+        val error = result.data?.getStringExtra(HealthPermissionProxyActivity.EXTRA_ERROR)
+        val granted = result.data
+            ?.getStringArrayListExtra(HealthPermissionProxyActivity.EXTRA_GRANTED)
+            ?.toSet()
+            .orEmpty()
+        healthTrace(
+            "proxy-result-raw",
+            "resultCode=\${result.resultCode} hasData=\${result.data != null} granted=\${granted.size} error=\${error ?: "none"}"
+        )
+        val pending = requestPermissionContext.getAndSet(null)
+        val target = call ?: pending?.pluginCal ?: pendingPermissionCall ?: lastPermissionCallId?.let { bridge.getSavedCall(it) }
+        val requested = pending?.requestedPermissions ?: lastRequestedPermissions
+        lastPermissionCallId = null
+        lastRequestedPermissions = emptySet()
+        pendingPermissionCall = null
+        if (target == null) {
+            Log.w(tag, "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-response-orphan code=HC_NATIVE_06")
+            return
+        }
+        if (result.resultCode != Activity.RESULT_OK || error != null) {
+            target.reject("HC_NATIVE_05: \${error ?: "Health Connect permission activity was cancelled before returning a result"}")
+            bridge.releaseCall(target)
+            return
+        }
+        target.resolve(grantedPermissionResult(requested, granted))
+        bridge.releaseCall(target)
+    }
+
+    override fun load()`,
+  );
+
+  kt = kt.replace(
+    /                var intentResolved: String\? = null[\s\S]*?                healthTrace\("dialog-launch-returned", "route=\$launchedVia"\)/,
+    `                try {
+                    val proxyIntent = Intent(activity, HealthPermissionProxyActivity::class.java).apply {
+                        putStringArrayListExtra(
+                            HealthPermissionProxyActivity.EXTRA_PERMISSIONS,
+                            ArrayList(healthConnectPermissions)
+                        )
+                    }
+                    healthTrace("dialog-launch-attempt", "route=proxy")
+                    startActivityForResult(call, proxyIntent, "handleHealthPermissionResult")
+                    healthTrace("dialog-launch-returned", "route=proxy")
+                    lastIntentUnresolved = false
+                } catch (launchError: Exception) {
+                    val launchReason = "\${launchError.javaClass.simpleName}: \${launchError.message ?: "no message"}"
+                    Log.e(tag, "health-ts=\${System.currentTimeMillis()} step=dialog-launch-failed route=proxy code=HC_NATIVE_05 reason=\$launchReason", launchError)
+                    requestPermissionContext.set(null)
+                    pendingPermissionCall = null
+                    lastPermissionCallId = null
+                    lastRequestedPermissions = emptySet()
+                    GrimHealthRequestState.inFlight = false
+                    call.reject("HC_NATIVE_05: \$launchReason")
+                    bridge.releaseCall(call)
+                    return@runOnUiThread
+                }`.replace(/\\\$/g, "$"),
+  );
+}
+
 const requiredMarkers = [
   "GRIM_BRIDGE_ACTIVITY_RESULT",
   "handleHealthPermissionResult",
@@ -745,7 +890,8 @@ const requiredMarkers = [
   "GRIM_OFFICIAL_LAUNCHER_FIRST",
   "HC_NATIVE_06",
   "dialog-result-raw",
-  'healthTrace("dialog-launch-attempt", "route=launcher")',
+  "GRIM_PERMISSION_PROXY_ACTIVITY",
+  'healthTrace("dialog-launch-attempt", "route=proxy")',
 ];
 const missingMarkers = requiredMarkers.filter((m) => !kt.includes(m));
 if (missingMarkers.length > 0) {
@@ -771,6 +917,14 @@ if (fs.existsSync(PLUGIN_MANIFEST)) {
     );
     fs.writeFileSync(PLUGIN_MANIFEST, xml, "utf8");
     console.log("[patch-capacitor-health] Plugin-manifest: READ_SLEEP tillagd.");
+  }
+  if (!xml.includes("HealthPermissionProxyActivity")) {
+    xml = xml.replace(
+      "<application>",
+      `<application>\n        <activity\n            android:name=".HealthPermissionProxyActivity"\n            android:exported="false"\n            android:theme="@android:style/Theme.Translucent.NoTitleBar" />`
+    );
+    fs.writeFileSync(PLUGIN_MANIFEST, xml, "utf8");
+    console.log("[patch-capacitor-health] Plugin-manifest: permission-proxy tillagd.");
   }
 }
 
