@@ -889,8 +889,8 @@ const requiredMarkers = [
   "HC_NATIVE_05",
   "GRIM_OFFICIAL_LAUNCHER_FIRST",
   "HC_NATIVE_06",
-  "dialog-result-raw",
   "GRIM_PERMISSION_PROXY_ACTIVITY",
+  "proxy-result-raw",
   'healthTrace("dialog-launch-attempt", "route=proxy")',
 ];
 const missingMarkers = requiredMarkers.filter((m) => !kt.includes(m));
