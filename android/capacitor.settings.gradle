@@ -43,3 +43,6 @@ project(':capacitor-health').projectDir = new File('../node_modules/capacitor-he
 
 include ':send-intent'
 project(':send-intent').projectDir = new File('../node_modules/send-intent/android')
+
+include ':capacitor-dialog'
+project(':capacitor-dialog').projectDir = new File('../node_modules/@capacitor/dialog/android')

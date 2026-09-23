@@ -23,6 +23,7 @@ dependencies {
     implementation project(':capacitor-firebase-crashlytics')
     implementation project(':capacitor-health')
     implementation project(':send-intent')
+    implementation project(':capacitor-dialog')
 
 }
 
