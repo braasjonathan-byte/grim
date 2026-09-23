@@ -638,7 +638,7 @@ if (!kt.includes("GRIM_OFFICIAL_LAUNCHER_FIRST")) {
   kt = kt.replace(
     /                healthTrace\("dialog-response", "granted=\$\{grantedPermissions\.size\}"\)/,
     `                permissionCallbackSeen = true
-                healthTrace("dialog-response", "granted=\${grantedPermissions.size} granted-set=4grantedPermissions")`.replace(/\u00024/g, "$"),
+                healthTrace("dialog-response", "granted=\${grantedPermissions.size} granted-set=\$grantedPermissions")`.replace(/\u00024/g, "$"),
   );
   kt = kt.replace(
     /                    val saved = lastPermissionCallId\?\.let \{ bridge\.getSavedCall\(it\) \}/,
