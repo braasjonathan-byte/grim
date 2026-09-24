@@ -781,17 +781,20 @@ class HealthPermissionProxyActivity : ComponentActivity() {
             return
         }
 
-        window.decorView.post {
-            try {
-                Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch permissions=\$requested")
-                launcher.launch(requested)
-                Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-returned")
-            } catch (error: Exception) {
-                Log.e("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-failed", error)
-                finishWithError("\${error.javaClass.simpleName}: \${error.message ?: "no message"}")
-            }
+        launchPermissionDialog(requested)
+    }
+
+    private fun launchPermissionDialog(requested: Set<String>) {
+        try {
+            Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch permissions=\$requested")
+            launcher.launch(requested)
+            Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-returned")
+        } catch (error: Exception) {
+            Log.e("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-failed", error)
+            finishWithError("\${error.javaClass.simpleName}: \${error.message ?: "no message"}")
         }
     }
+
 
     private fun finishWithError(message: String) {
         setResult(Activity.RESULT_CANCELED, Intent().putExtra(EXTRA_ERROR, message))
