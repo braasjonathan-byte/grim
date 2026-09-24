@@ -14,3 +14,4 @@
 - [x] Fixa native launcher-livscykel, appspecifik Behörigheter-vy och HC-01–HC-08-diagnostik.
 - [x] Eliminera evig hälsosynk: hård JS-timeout, rätt produktionsväg och verifierad native-patch i varje Android-bygge.
 - [x] Isolera Health Connect-dialogens launcher/callback i en egen Android-aktivitet och återställ patchen automatiskt efter npm-installation.
+- [x] Deklarera proxy-aktiviteten även när pluginmanifestet saknar application-nod och låt native-felet hinna före UI-timeouten.

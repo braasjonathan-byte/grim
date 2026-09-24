@@ -99,6 +99,15 @@ const healthPermissionProxy = path.join(
   nodeModules,
   "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt"
 );
+const healthPluginManifest = path.join(
+  nodeModules,
+  "capacitor-health/android/src/main/AndroidManifest.xml"
+);
+if (!fs.existsSync(healthPluginManifest)) {
+  failures.push("capacitor-health: AndroidManifest.xml is missing");
+} else if (!fs.readFileSync(healthPluginManifest, "utf8").includes('android:name=".HealthPermissionProxyActivity"')) {
+  failures.push("capacitor-health: HealthPermissionProxyActivity is not declared in the plugin manifest");
+}
 if (fs.existsSync(healthPlugin)) {
   const source = fs.readFileSync(healthPlugin, "utf8");
   if (!source.includes("READ_SLEEP") || !source.includes('"sleep" -> metricAndMapper')) {
