@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 /**
- * capacitor-health@8.2.0 saknar stöd för sömn (SleepSessionRecord) och pinnar
- * androidx.core:core-ktx till en äldre version än resten av projektet.
+ * capacitor-health@8.2.0 saknar stöd för sömn (SleepSessionRecord), pinnar
+ * androidx.core:core-ktx till en äldre version än resten av projektet och bygger
+ * mot Health Connect-klienten 1.2.0-alpha01. Den klienten föregår Googles
+ * Android 16-relaterade signatur- och intentfixar i alpha05/alpha06.
  *
  * Skriptet patchar det installerade pluginet så att:
  *  1. READ_SLEEP finns som behörighet (enum, @CapacitorPlugin, permissionMapping,
  *     plugin-manifestet)
  *  2. queryAggregated stödjer dataType "sleep" (minuter per dag)
  *  3. AGP och core-ktx följer rootProject
+ *  4. Health Connect-klienten uppgraderas till den senaste Android 16-versionen
  *
  * Körs efter `npm ci`/`npm install` och före `npx cap sync android`.
  * Skriptet är idempotent.
@@ -28,6 +31,7 @@ const PERMISSION_PROXY = path.join(
 );
 const GRADLE = path.join(BASE, "build.gradle");
 const AGP_VERSION = "8.13.0";
+const HEALTH_CONNECT_CLIENT_VERSION = "1.2.0-alpha06";
 
 if (!fs.existsSync(PLUGIN_KT)) {
   console.error("[patch-capacitor-health] pluginet saknas — bygget får inte fortsätta opatchat.");
@@ -951,7 +955,9 @@ if (fs.existsSync(PLUGIN_MANIFEST)) {
   }
 }
 
-// 7. Gradle: samma AGP och core-ktx som rootProject
+// 7. Gradle: samma AGP och core-ktx som rootProject. Pluginets alpha01 är för
+// gammal för den aktuella Android 16-modulen: alpha05 säkrade intents och
+// rättade signaturvalidering, alpha06 uppdaterade Health Connect-certifikaten.
 if (fs.existsSync(GRADLE)) {
   let gradle = fs.readFileSync(GRADLE, "utf8");
   const gradleBefore = gradle;
@@ -962,6 +968,10 @@ if (fs.existsSync(GRADLE)) {
   gradle = gradle.replace(
     /implementation ["']androidx\.core:core-ktx:[^"']+["']/g,
     'implementation "androidx.core:core-ktx:$androidxCoreKTXVersion"'
+  );
+  gradle = gradle.replace(
+    /implementation ["']androidx\.health\.connect:connect-client:[^"']+["']/g,
+    `implementation 'androidx.health.connect:connect-client:${HEALTH_CONNECT_CLIENT_VERSION}'`
   );
   if (!gradle.includes("androidxCoreKTXVersion =")) {
     gradle = gradle.replace(

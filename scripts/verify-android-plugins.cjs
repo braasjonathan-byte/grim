@@ -9,6 +9,7 @@ const expected = {
   compileSdk: 36,
   targetSdk: 36,
   minSdk: 24,
+  healthConnectClient: "1.2.0-alpha06",
 };
 
 const failures = [];
@@ -103,6 +104,18 @@ const healthPluginManifest = path.join(
   nodeModules,
   "capacitor-health/android/src/main/AndroidManifest.xml"
 );
+const healthPluginGradle = path.join(nodeModules, "capacitor-health/android/build.gradle");
+if (!fs.existsSync(healthPluginGradle)) {
+  failures.push("capacitor-health: build.gradle is missing");
+} else {
+  const gradle = fs.readFileSync(healthPluginGradle, "utf8");
+  const dependency = gradle.match(/androidx\.health\.connect:connect-client:([^'\"]+)/);
+  if (!dependency || dependency[1] !== expected.healthConnectClient) {
+    failures.push(
+      `capacitor-health: connect-client must be ${expected.healthConnectClient} for current Android 16 compatibility (found ${dependency ? dependency[1] : "none"})`,
+    );
+  }
+}
 if (!fs.existsSync(healthPluginManifest)) {
   failures.push("capacitor-health: AndroidManifest.xml is missing");
 } else if (!fs.readFileSync(healthPluginManifest, "utf8").includes('android:name=".HealthPermissionProxyActivity"')) {

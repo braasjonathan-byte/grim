@@ -55,6 +55,17 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(Number(match![1])).toBeGreaterThanOrEqual(26);
   });
 
+  it("använder Health Connect-klienten med aktuella Android 16-fixar", () => {
+    expect(read("node_modules/capacitor-health/android/build.gradle")).toContain(
+      "androidx.health.connect:connect-client:1.2.0-alpha06",
+    );
+    const patch = read("scripts/patch-capacitor-health.cjs");
+    expect(patch).toContain('HEALTH_CONNECT_CLIENT_VERSION = "1.2.0-alpha06"');
+    expect(read("scripts/verify-android-plugins.cjs")).toContain(
+      'healthConnectClient: "1.2.0-alpha06"',
+    );
+  });
+
   it("patchar launchern tidigt och öppnar Grims egen behörighetssida", () => {
     const patch = read("scripts/patch-capacitor-health.cjs");
     expect(patch).toContain("GRIM_EARLY_PERMISSION_LAUNCHER");

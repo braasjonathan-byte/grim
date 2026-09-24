@@ -13,9 +13,9 @@ data till systemets Health Connect-lager, och Grim läser därifrån via
 3. `requestHealthPermissions()` – begär alla behörigheter i en dialog, med
    reservbegäran för enbart grunddatan (steg, aktiva kalorier, distans) om
    enheten avvisar hela uppsättningen. Fel kastas som `HealthError` med kod.
-   Dialoganropet har en hård 20-sekundersgräns som inte kan pausas av Androids
+   Dialoganropet har en hård 120-sekundersgräns som inte kan pausas av Androids
    fokus-/synlighetsstatus. Hela den manuella synken har dessutom ett fristående
-   45-sekunders säkerhetsnät, så knappen kan aldrig lämnas i laddningsläge.
+   180-sekunders säkerhetsnät, så knappen kan aldrig lämnas i laddningsläge.
 4. `readHealthDays(days)` – aggregerade dygnsvärden (steg, aktiva kalorier,
    sömn). Health Connect aggregerar själv över källor, så samma steg räknas
    inte dubbelt även om både telefon och klocka skriver dem.
@@ -94,6 +94,14 @@ Statusen läses om varje gång appen kommer i förgrunden, så en åtkomst som
   `DEFAULT` och `HEALTH_PERMISSIONS`, som öppnar `privacy_policy_url`
   (https://grim.lovable.app/privacy) i telefonens webbläsare.
 - `scripts/patch-capacitor-health.cjs` lägger till sömnstöd i pluginet.
+- Samma reproducerbara patch ersätter pluginets gamla
+  `androidx.health.connect:connect-client:1.2.0-alpha01` med `1.2.0-alpha06`.
+  Google rättade säkringen av Health Connect-intents och signaturvalideringen i
+  alpha05 samt uppdaterade Health Connects release-/utvecklarcertifikat i
+  alpha06. Detta är särskilt viktigt för den inbyggda Health Connect-modulen på
+  Android 14+ och den testade Android 16-enheten.
+- Projektet bygger redan med `compileSdkVersion 36` och `targetSdkVersion 36`,
+  vilket motsvarar Android 16. Ingen SDK-höjning behövdes.
 - Alla Android-flöden patchar före `cap sync`, verifierar den installerade
   Kotlin-källan och rensar bara pluginets kompilerade utdata för att förhindra
   att en gammal native-klass återanvänds från cache.
