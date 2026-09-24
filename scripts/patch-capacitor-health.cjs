@@ -781,17 +781,38 @@ class HealthPermissionProxyActivity : ComponentActivity() {
             return
         }
 
-        window.decorView.post {
-            try {
-                Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch permissions=\$requested")
-                launcher.launch(requested)
-                Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-returned")
-            } catch (error: Exception) {
-                Log.e("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-failed", error)
-                finishWithError("\${error.javaClass.simpleName}: \${error.message ?: "no message"}")
-            }
+        launchPermissionDialog(requested)
+    }
+
+    private var launched = false
+    private var resumeCount = 0
+
+    override fun onResume() {
+        super.onResume()
+        resumeCount += 1
+        // Kommer vi tillbaka hit efter att dialogen startats utan att callbacken
+        // triggats har Health Connect stängts utan svar - rapportera direkt i
+        // stället för att låta appen vänta ut hela tidsgränsen.
+        if (launched && resumeCount > 1 && !isFinishing) {
+            Log.w("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-no-result")
+            finishWithError("Health Connect closed without returning a permission result")
         }
     }
+
+    private fun launchPermissionDialog(requested: Set<String>) {
+        try {
+            Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch permissions=\$requested")
+            launched = true
+            launcher.launch(requested)
+            Log.i("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-returned")
+        } catch (error: Exception) {
+            Log.e("CapHealth", "health-ts=\${System.currentTimeMillis()} step=proxy-dialog-launch-failed", error)
+            finishWithError("\${error.javaClass.simpleName}: \${error.message ?: "no message"}")
+        }
+    }
+
+
+
 
     private fun finishWithError(message: String) {
         setResult(Activity.RESULT_CANCELED, Intent().putExtra(EXTRA_ERROR, message))
