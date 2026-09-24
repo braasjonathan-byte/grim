@@ -34,7 +34,9 @@ import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts }
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
-const SYNC_HARD_TIMEOUT_MS = 45000;
+// Sista skyddsnätet måste ligga efter native-dialogens egen diagnostik så att
+// användaren får den verkliga HC-koden i stället för ett för tidigt HC-04.
+const SYNC_HARD_TIMEOUT_MS = 180000;
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);

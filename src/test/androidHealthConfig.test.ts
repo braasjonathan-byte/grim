@@ -76,6 +76,16 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(verify).toContain("HealthPermissionProxyActivity");
   });
 
+  it("deklarerar den separata behörighetsskärmen i pluginets manifest", () => {
+    expect(read("node_modules/capacitor-health/android/src/main/AndroidManifest.xml")).toContain(
+      'android:name=".HealthPermissionProxyActivity"',
+    );
+  });
+
+  it("låter native-lagret rapportera den specifika koden före det yttre skyddsnätet", () => {
+    expect(read("src/components/HealthConnectCard.tsx")).toContain("SYNC_HARD_TIMEOUT_MS = 180000");
+  });
+
   it("har en native watchdog som aldrig pausas av tappat fönsterfokus", () => {
     const patch = read("scripts/patch-capacitor-health.cjs");
     expect(patch).toContain("hard deadline independent of activity focus");

@@ -919,10 +919,12 @@ if (fs.existsSync(PLUGIN_MANIFEST)) {
     console.log("[patch-capacitor-health] Plugin-manifest: READ_SLEEP tillagd.");
   }
   if (!xml.includes("HealthPermissionProxyActivity")) {
-    xml = xml.replace(
-      "<application>",
-      `<application>\n        <activity\n            android:name=".HealthPermissionProxyActivity"\n            android:exported="false"\n            android:theme="@android:style/Theme.Translucent.NoTitleBar" />`
-    );
+    const activity = `        <activity\n            android:name=".HealthPermissionProxyActivity"\n            android:exported="false"\n            android:theme="@android:style/Theme.Translucent.NoTitleBar" />`;
+    if (/<application(?:\s[^>]*)?>/.test(xml)) {
+      xml = xml.replace(/<application(?:\s[^>]*)?>/, (tag) => `${tag}\n${activity}`);
+    } else {
+      xml = xml.replace("</manifest>", `    <application>\n${activity}\n    </application>\n</manifest>`);
+    }
     fs.writeFileSync(PLUGIN_MANIFEST, xml, "utf8");
     console.log("[patch-capacitor-health] Plugin-manifest: permission-proxy tillagd.");
   }
