@@ -24,14 +24,14 @@ allprojects {
         mavenCentral()
     }
     // GRIM_HC_CLIENT_GUARD: bygget ska hellre misslyckas än att en gammal
-    // Health Connect-klient (t.ex. 1.2.0-alpha01) smyger in transitivt.
+    // Health Connect-klient (t.ex. 1.2.0-alpha0x som kräver AGP 9.1/compileSdk 37) smyger in transitivt.
     configurations.configureEach {
         resolutionStrategy.eachDependency { details ->
             if (details.requested.group == 'androidx.health.connect' &&
                 details.requested.name == 'connect-client' &&
                 details.requested.version != null &&
-                details.requested.version != '1.2.0-alpha06') {
-                throw new GradleException("GRIM_HC: connect-client ${details.requested.version} begärdes av ${project.path}; endast 1.2.0-alpha06 är tillåten.")
+                details.requested.version != '1.1.0') {
+                throw new GradleException("GRIM_HC: connect-client ${details.requested.version} begärdes av ${project.path}; endast 1.1.0 är tillåten.")
             }
         }
     }

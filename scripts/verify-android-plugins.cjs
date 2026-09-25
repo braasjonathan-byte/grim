@@ -9,7 +9,7 @@ const expected = {
   compileSdk: 36,
   targetSdk: 36,
   minSdk: 24,
-  healthConnectClient: "1.2.0-alpha06",
+  healthConnectClient: "1.1.0",
 };
 
 const failures = [];
@@ -112,7 +112,7 @@ if (!fs.existsSync(healthPluginGradle)) {
   const dependency = gradle.match(/androidx\.health\.connect:connect-client:([^'\"]+)/);
   if (!dependency || dependency[1] !== expected.healthConnectClient) {
     failures.push(
-      `capacitor-health: connect-client must be ${expected.healthConnectClient} for current Android 16 compatibility (found ${dependency ? dependency[1] : "none"})`,
+      `capacitor-health: connect-client must be ${expected.healthConnectClient} (latest stable compatible with AGP 8.13 / compileSdk 36) (found ${dependency ? dependency[1] : "none"})`,
     );
   }
 }
