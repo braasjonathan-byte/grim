@@ -116,6 +116,17 @@ if (!fs.existsSync(healthPluginGradle)) {
     );
   }
 }
+{
+  const rootGradle = path.join(__dirname, "..", "android", "build.gradle");
+  if (fs.existsSync(rootGradle) && !fs.readFileSync(rootGradle, "utf8").includes("GRIM_HC_CLIENT_GUARD")) {
+    failures.push("android/build.gradle: GRIM_HC_CLIENT_GUARD (fails build on old connect-client) is missing");
+  }
+  const proxy = path.join(nodeModules, "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt");
+  const proxySrc = fs.existsSync(proxy) ? fs.readFileSync(proxy, "utf8") : "";
+  for (const marker of ["GRIM_HC: BEFORE_PERMISSION_LAUNCH", "GRIM_HC: AFTER_PERMISSION_LAUNCH", "GRIM_HC: PERMISSION_RESULT", "GRIM_HC: permission intent resolvers", "HC_NATIVE_07", "HC_NATIVE_08"]) {
+    if (!proxySrc.includes(marker)) failures.push(`capacitor-health: proxy diagnostics marker missing: ${marker}`);
+  }
+}
 if (!fs.existsSync(healthPluginManifest)) {
   failures.push("capacitor-health: AndroidManifest.xml is missing");
 } else if (!fs.readFileSync(healthPluginManifest, "utf8").includes('android:name=".HealthPermissionProxyActivity"')) {

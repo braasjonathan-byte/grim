@@ -23,6 +23,10 @@ import {
   setLastHealthSync,
   syncWindowDays,
   withTimeout,
+  runHealthDiagnostics,
+  testHealthPermissionRequest,
+  HEALTH_TEST_SETS,
+  type HealthDiagnostics,
   type HealthAccess,
   type HealthAvailability,
   type HealthDay,
@@ -48,6 +52,10 @@ const HealthConnectCard = () => {
   const [importedKeys, setImportedKeys] = useState<Set<string>>(new Set());
   const [loadingWorkouts, setLoadingWorkouts] = useState(false);
   const [lastError, setLastError] = useState<{ ref: string; message: string } | null>(null);
+  const [diag, setDiag] = useState<HealthDiagnostics | null>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagBusy, setDiagBusy] = useState(false);
+  const [testLog, setTestLog] = useState<string[]>([]);
   const connected = !!access?.activity;
   const available = availability === null ? null : availability === "available";
 
@@ -146,7 +154,7 @@ const HealthConnectCard = () => {
         } else {
           toast.success("Hälsodata hämtad");
         }
-      })(), SYNC_HARD_TIMEOUT_MS, "Hälsosynken svarade inte inom den maximala tidsgränsen.", "dialog-timeout");
+      })(), SYNC_HARD_TIMEOUT_MS, "Hälsosynken svarade inte inom den maximala tidsgränsen.", "sync-timeout");
     } catch (err: any) {
       healthLog("sync failed", err?.message);
       reportError(err, "Kunde inte hämta hälsodata");
@@ -224,6 +232,33 @@ const HealthConnectCard = () => {
     },
     [userId],
   );
+
+  const refreshDiag = useCallback(async () => {
+    setDiagBusy(true);
+    try {
+      setDiag(await runHealthDiagnostics());
+    } catch (err: any) {
+      setTestLog((l) => [`${new Date().toLocaleTimeString("sv-SE")} diagnostik: ${err?.message}`, ...l]);
+    } finally {
+      setDiagBusy(false);
+    }
+  }, []);
+
+  const runTest = useCallback(async (set: keyof typeof HEALTH_TEST_SETS) => {
+    setDiagBusy(true);
+    const t = () => new Date().toLocaleTimeString("sv-SE");
+    try {
+      const granted = await testHealthPermissionRequest(set);
+      setTestLog((l) => [`${t()} Test ${set}: svar ${JSON.stringify(granted)}`, ...l]);
+      setAccess(await checkHealthAccess());
+    } catch (err) {
+      const f = formatHealthError(err);
+      setTestLog((l) => [`${t()} Test ${set}: ${f.ref} ${f.message}`, ...l]);
+    } finally {
+      setDiagBusy(false);
+      void refreshDiag();
+    }
+  }, [refreshDiag]);
 
   const maxSteps = Math.max(1, ...rows.map((r) => r.steps));
   const today = rows[rows.length - 1];
@@ -359,6 +394,71 @@ const HealthConnectCard = () => {
           </Button>
         )}
       </div>
+
+      {isHealthSupported() && (
+        <div className="rounded-2xl border border-border/60 bg-card/60 p-3 text-xs">
+          <button
+            type="button"
+            className="font-semibold text-muted-foreground"
+            onClick={() => {
+              const next = !diagOpen;
+              setDiagOpen(next);
+              if (next && !diag) void refreshDiag();
+            }}
+          >
+            {diagOpen ? "Dölj diagnostik" : "Visa diagnostik (felsökning)"}
+          </button>
+          {diagOpen && (
+            <div className="mt-2 space-y-2">
+              {diag && (
+                <dl className="grid grid-cols-[auto,1fr] gap-x-2 gap-y-0.5 break-all">
+                  {[
+                    ["Installerat", diag.installed],
+                    ["SDK tillgänglig", `${diag.sdkAvailable} (status ${diag.sdkStatus})`],
+                    ["HC-paket", diag.installedPackages],
+                    ["Grim-paket", diag.packageName],
+                    ["API-nivå", `${diag.apiLevel} ${diag.manufacturer ?? ""} ${diag.model ?? ""}`],
+                    ["Rutans intent", `${diag.permissionIntentAction ?? ""} → ${diag.permissionIntentPackage || "–"}`],
+                    ["Intent-resolvers", diag.permissionIntentResolvers],
+                    ["Begärda", diag.requestedPermissions],
+                    ["Beviljade", diag.grantedPermissions ?? diag.grantedError],
+                    ["Saknas", diag.missingPermissions],
+                    ["Launcher registrerad", diag.launcherRegistered],
+                    ["Launch försökt", diag.launchAttempted],
+                    ["Launch returnerade", diag.launchReturned],
+                    ["Resultat mottaget", diag.resultReceived],
+                    ["Senaste fel", diag.lastError || "–"],
+                  ].map(([k, v]) => (
+                    <div key={String(k)} className="contents">
+                      <dt className="text-muted-foreground">{String(k)}</dt>
+                      <dd>{Array.isArray(v) ? (v.length ? v.join(", ") : "–") : String(v ?? "–")}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void refreshDiag()}>
+                  Uppdatera
+                </Button>
+                <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void runTest("A")}>
+                  Test A: steg
+                </Button>
+                <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void runTest("B")}>
+                  Test B: steg + distans
+                </Button>
+                <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void runTest("C")}>
+                  Test C: alla
+                </Button>
+              </div>
+              {testLog.length > 0 && (
+                <ul className="space-y-0.5 text-muted-foreground">
+                  {testLog.map((line, i) => <li key={i}>{line}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {workouts && workouts.length > 0 && (
         <div className="space-y-2 rounded-2xl border border-border/60 bg-card/60 p-3">

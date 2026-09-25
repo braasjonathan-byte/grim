@@ -41,6 +41,7 @@ type HealthPluginLike = {
   checkHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
   requestHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
   openHealthConnectSettings: () => Promise<void>;
+  grimHealthDiagnostics?: () => Promise<HealthDiagnostics>;
   showHealthConnectInPlayStore: () => Promise<void>;
   queryAggregated: (req: {
     startDate: string;
@@ -166,6 +167,9 @@ export type HealthErrorCode =
   | "update-required"
   | "launcher-setup"
   | "launch-failed"
+  | "intent-unresolved"
+  | "dialog-closed"
+  | "sync-timeout"
   | "dialog-timeout"
   | "callback-invalid"
   | "denied"
@@ -196,6 +200,9 @@ export const HEALTH_ERROR_REFS: Record<HealthErrorCode, string> = {
   "update-required": "HC-02",
   "launcher-setup": "HC-03",
   "launch-failed": "HC-03b",
+  "intent-unresolved": "HC-03c",
+  "dialog-closed": "HC-04c",
+  "sync-timeout": "HC-09",
   "dialog-timeout": "HC-04",
   "callback-invalid": "HC-04b",
   denied: "HC-05",
@@ -211,6 +218,9 @@ export const HEALTH_ERROR_HINTS: Record<HealthErrorCode, string> = {
   "update-required": "Health Connect behöver uppdateras.",
   "launcher-setup": "Android kunde inte förbereda behörighetsdialogen.",
   "launch-failed": "Android kunde inte öppna Health Connects behörighetsruta alls.",
+  "intent-unresolved": "Android hittar ingen Health Connect-vy som kan visa behörighetsrutan.",
+  "dialog-closed": "Health Connect stängdes utan att skicka något svar.",
+  "sync-timeout": "Hela synken tog för lång tid (säkerhetsgräns).",
   "dialog-timeout": "Ingen bekräftelse på att rutan visades, och inget svar kom i tid.",
   "callback-invalid": "Rutan svarade, men svaret gick inte att tolka.",
   denied: "Behörigheten nekades.",
@@ -362,6 +372,12 @@ function classifyNativeHealthError(err: unknown): HealthError {
       "Android kunde inte öppna Health Connects behörighetsruta. Öppna Health Connect-appen en gång och försök igen.",
     );
   }
+  if (message.includes("HC_NATIVE_07")) {
+    return new HealthError("intent-unresolved", "Android hittar ingen Health Connect-vy för behörighetsrutan.");
+  }
+  if (message.includes("HC_NATIVE_08")) {
+    return new HealthError("dialog-closed", "Health Connect stängdes utan att skicka något svar.");
+  }
   if (message.includes("HC_NATIVE_06")) {
     return new HealthError(
       "callback-invalid",
@@ -461,7 +477,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
   } catch (err: any) {
     const firstError = classifyNativeHealthError(err);
     healthLog("permission request failed", { code: firstError.code, message: firstError.message });
-    if (firstError.code === "launcher-setup" || firstError.code === "launch-failed") throw firstError;
+    if (firstError.code === "launcher-setup" || firstError.code === "launch-failed" || firstError.code === "intent-unresolved") throw firstError;
     // Har användaren hunnit godkänna trots att svaret uteblev? Läs av läget.
     const afterFirst = await checkHealthAccess();
     if (afterFirst.activity) return afterFirst;
@@ -483,7 +499,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
           /* ignore */
         }
       }
-      if (fallbackError.code === "launcher-setup" || fallbackError.code === "launch-failed") throw fallbackError;
+      if (["launcher-setup", "launch-failed", "intent-unresolved", "dialog-closed"].includes(fallbackError.code)) throw fallbackError;
       if (firstError.code === "dialog-timeout" || fallbackError.code === "dialog-timeout") {
         throw new HealthError(
           "dialog-timeout",
@@ -931,4 +947,40 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
     healthLog("duplicate workouts merged", mapped.length - deduped.length);
   }
   return deduped;
+}
+
+
+/** Native statusrapport från Health Connect (endast Android). */
+export type HealthDiagnostics = Record<string, unknown>;
+
+export async function runHealthDiagnostics(): Promise<HealthDiagnostics> {
+  const plugin = await loadPlugin();
+  if (!plugin?.grimHealthDiagnostics) throw new HealthError("unknown", "Diagnostik finns bara i Android-appen.");
+  const res = await withTimeout(plugin.grimHealthDiagnostics(), STEP_TIMEOUT_MS, "Diagnostiken svarade inte.");
+  healthLog("diagnostics", res);
+  return res;
+}
+
+/** Testuppsättningar: A = bara steg, B = steg + distans, C = allt. */
+export const HEALTH_TEST_SETS = {
+  A: ["READ_STEPS"],
+  B: ["READ_STEPS", "READ_DISTANCE"],
+  C: PERMISSIONS,
+} as const;
+
+/**
+ * Minimal behörighetsbegäran direkt mot native-lagret, utan förkontroller,
+ * reservförsök eller datahämtning. Används för att isolera var flödet bryts.
+ */
+export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_SETS) {
+  const plugin = await loadPlugin();
+  if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
+  const permissions = [...HEALTH_TEST_SETS[set]];
+  healthLog("native test request", { set, permissions });
+  try {
+    const res = await withDialogTimeout(plugin.requestHealthPermissions({ permissions }), "Testet fick inget svar.", DIALOG_TIMEOUT_MS);
+    return permissionMap(res);
+  } catch (err) {
+    throw classifyNativeHealthError(err);
+  }
 }
