@@ -966,6 +966,79 @@ if (!kt.includes("GRIM_PERMISSION_PROXY_ACTIVITY")) {
   );
 }
 
+// 5q. GRIM_HC_DIAGNOSTICS_METHOD: native statusrapport för felsökning på enhet.
+// Går direkt mot Health Connect utan JS-synkens logik.
+if (!kt.includes("GRIM_HC_DIAGNOSTICS_METHOD")) {
+  const diagMethod = `    // GRIM_HC_DIAGNOSTICS_METHOD
+    @PluginMethod
+    fun grimHealthDiagnostics(call: PluginCall) {
+        val result = JSObject()
+        val sdkStatus = try { HealthConnectClient.getSdkStatus(context) } catch (e: Exception) { -1 }
+        result.put("apiLevel", android.os.Build.VERSION.SDK_INT)
+        result.put("manufacturer", android.os.Build.MANUFACTURER)
+        result.put("model", android.os.Build.MODEL)
+        result.put("packageName", context.packageName)
+        result.put("sdkStatus", sdkStatus)
+        result.put("sdkAvailable", sdkStatus == HealthConnectClient.SDK_AVAILABLE)
+        val candidates = listOf("com.google.android.apps.healthdata", "com.google.android.healthconnect.controller", "com.android.healthconnect.controller")
+        val installed = JSArray()
+        for (pkg in candidates) {
+            try { context.packageManager.getPackageInfo(pkg, 0); installed.put(pkg) } catch (e: Exception) { }
+        }
+        result.put("installedPackages", installed)
+        result.put("installed", installed.length() > 0 || sdkStatus == HealthConnectClient.SDK_AVAILABLE)
+        val requested = permissionMapping.values.filter { p ->
+            listOf("READ_STEPS", "READ_ACTIVE_CALORIES_BURNED", "READ_DISTANCE", "READ_EXERCISE", "READ_HEART_RATE", "READ_SLEEP").any { p.endsWith(it) }
+        }.toSet()
+        val resolvers = JSArray()
+        try {
+            val intent = permissionContract.createIntent(context, requested)
+            result.put("permissionIntentAction", intent.action ?: "")
+            result.put("permissionIntentPackage", intent.\\\`package\\\` ?: "")
+            @Suppress("DEPRECATION")
+            for (info in context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)) {
+                resolvers.put("\\${info.activityInfo.packageName}/\\${info.activityInfo.name}")
+            }
+        } catch (e: Exception) {
+            result.put("permissionIntentError", "\\${e.javaClass.simpleName}: \\${e.message}")
+        }
+        result.put("permissionIntentResolvers", resolvers)
+        Log.i("GRIM_HC", "GRIM_HC: permission intent resolvers = \\$resolvers")
+        result.put("requestedPermissions", JSArray(requested.toList()))
+        result.put("launcherRegistered", permissionsLauncher != null || GrimHcDiag.launcherRegistered)
+        result.put("proxyLauncherRegistered", GrimHcDiag.launcherRegistered)
+        result.put("launchAttempted", GrimHcDiag.launchAttempted)
+        result.put("launchReturned", GrimHcDiag.launchReturned)
+        result.put("resultReceived", GrimHcDiag.resultReceived)
+        result.put("lastRequested", JSArray(GrimHcDiag.lastRequested))
+        result.put("lastGranted", JSArray(GrimHcDiag.lastGranted))
+        result.put("lastResolvers", JSArray(GrimHcDiag.lastResolvers))
+        result.put("lastError", GrimHcDiag.lastError ?: "")
+        result.put("lastEvent", GrimHcDiag.lastEvent)
+        if (sdkStatus != HealthConnectClient.SDK_AVAILABLE || !ensureClient()) {
+            Log.i("GRIM_HC", "GRIM_HC: DIAGNOSTICS \\$result")
+            call.resolve(result)
+            return
+        }
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val granted = healthConnectClient.permissionController.getGrantedPermissions()
+                result.put("grantedPermissions", JSArray(granted.toList()))
+                result.put("missingPermissions", JSArray(requested.filter { !granted.contains(it) }))
+                // Grim syns i Health Connect oavsett om något redan är beviljat.
+                result.put("registered", true)
+            } catch (e: Exception) {
+                result.put("grantedError", "\\${e.javaClass.simpleName}: \\${e.message}")
+            }
+            Log.i("GRIM_HC", "GRIM_HC: DIAGNOSTICS \\$result")
+            call.resolve(result)
+        }
+    }
+
+`;
+  kt = kt.replace("    // Open Google Health Connect app settings\n", `${diagMethod}    // Open Google Health Connect app settings\n`);
+}
+
 const requiredMarkers = [
   "GRIM_BRIDGE_ACTIVITY_RESULT",
   "handleHealthPermissionResult",
@@ -979,6 +1052,7 @@ const requiredMarkers = [
   "GRIM_PERMISSION_PROXY_ACTIVITY",
   "proxy-result-raw",
   'healthTrace("dialog-launch-attempt", "route=proxy")',
+  "GRIM_HC_DIAGNOSTICS_METHOD",
 ];
 const missingMarkers = requiredMarkers.filter((m) => !kt.includes(m));
 if (missingMarkers.length > 0) {
