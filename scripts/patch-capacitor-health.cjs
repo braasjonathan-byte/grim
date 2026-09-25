@@ -994,16 +994,16 @@ if (!kt.includes("GRIM_HC_DIAGNOSTICS_METHOD")) {
         try {
             val intent = permissionContract.createIntent(context, requested)
             result.put("permissionIntentAction", intent.action ?: "")
-            result.put("permissionIntentPackage", intent.\\\`package\\\` ?: "")
+            result.put("permissionIntentPackage", intent.\`package\` ?: "")
             @Suppress("DEPRECATION")
             for (info in context.packageManager.queryIntentActivities(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)) {
-                resolvers.put("\\${info.activityInfo.packageName}/\\${info.activityInfo.name}")
+                resolvers.put("\${info.activityInfo.packageName}/\${info.activityInfo.name}")
             }
         } catch (e: Exception) {
-            result.put("permissionIntentError", "\\${e.javaClass.simpleName}: \\${e.message}")
+            result.put("permissionIntentError", "\${e.javaClass.simpleName}: \${e.message}")
         }
         result.put("permissionIntentResolvers", resolvers)
-        Log.i("GRIM_HC", "GRIM_HC: permission intent resolvers = \\$resolvers")
+        Log.i("GRIM_HC", "GRIM_HC: permission intent resolvers = \$resolvers")
         result.put("requestedPermissions", JSArray(requested.toList()))
         result.put("launcherRegistered", permissionsLauncher != null || GrimHcDiag.launcherRegistered)
         result.put("proxyLauncherRegistered", GrimHcDiag.launcherRegistered)
@@ -1016,7 +1016,7 @@ if (!kt.includes("GRIM_HC_DIAGNOSTICS_METHOD")) {
         result.put("lastError", GrimHcDiag.lastError ?: "")
         result.put("lastEvent", GrimHcDiag.lastEvent)
         if (sdkStatus != HealthConnectClient.SDK_AVAILABLE || !ensureClient()) {
-            Log.i("GRIM_HC", "GRIM_HC: DIAGNOSTICS \\$result")
+            Log.i("GRIM_HC", "GRIM_HC: DIAGNOSTICS \$result")
             call.resolve(result)
             return
         }
@@ -1028,9 +1028,9 @@ if (!kt.includes("GRIM_HC_DIAGNOSTICS_METHOD")) {
                 // Grim syns i Health Connect oavsett om något redan är beviljat.
                 result.put("registered", true)
             } catch (e: Exception) {
-                result.put("grantedError", "\\${e.javaClass.simpleName}: \\${e.message}")
+                result.put("grantedError", "\${e.javaClass.simpleName}: \${e.message}")
             }
-            Log.i("GRIM_HC", "GRIM_HC: DIAGNOSTICS \\$result")
+            Log.i("GRIM_HC", "GRIM_HC: DIAGNOSTICS \$result")
             call.resolve(result)
         }
     }
