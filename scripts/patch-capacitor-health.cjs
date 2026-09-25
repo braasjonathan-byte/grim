@@ -3,7 +3,8 @@
  * capacitor-health@8.2.0 saknar stöd för sömn (SleepSessionRecord), pinnar
  * androidx.core:core-ktx till en äldre version än resten av projektet och bygger
  * mot Health Connect-klienten 1.2.0-alpha01. Den klienten föregår Googles
- * Android 16-relaterade signatur- och intentfixar i alpha05/alpha06.
+ * Grim låser klienten till senaste STABILA 1.1.0 (minCompileSdk 36, AGP 8.9.1+);
+ * 1.2.0-alpha04+ kräver compileSdk 37 och AGP 9.1.
  *
  * Skriptet patchar det installerade pluginet så att:
  *  1. READ_SLEEP finns som behörighet (enum, @CapacitorPlugin, permissionMapping,
@@ -1094,8 +1095,8 @@ if (fs.existsSync(PLUGIN_MANIFEST)) {
 }
 
 // 7. Gradle: samma AGP och core-ktx som rootProject. Pluginets alpha01 är för
-// gammal för den aktuella Android 16-modulen: alpha05 säkrade intents och
-// rättade signaturvalidering, alpha06 uppdaterade Health Connect-certifikaten.
+// låses till stabila 1.1.0: alpha04–alpha06 kräver compileSdk 37 + AGP 9.1.
+// 1.1.0 är kompatibel med AGP 8.13 / compileSdk 36 / Android 16.
 if (fs.existsSync(GRADLE)) {
   let gradle = fs.readFileSync(GRADLE, "utf8");
   const gradleBefore = gradle;
