@@ -24,6 +24,7 @@ import {
   syncWindowDays,
   withTimeout,
   runHealthDiagnostics,
+  subscribeHealthTrail,
   testHealthPermissionRequest,
   HEALTH_TEST_SETS,
   type HealthDiagnostics,
@@ -233,6 +234,9 @@ const HealthConnectCard = () => {
     [userId],
   );
 
+  const [trail, setTrail] = useState<string[]>([]);
+  useEffect(() => (diagOpen ? subscribeHealthTrail(setTrail) : undefined), [diagOpen]);
+
   const refreshDiag = useCallback(async () => {
     setDiagBusy(true);
     try {
@@ -247,6 +251,7 @@ const HealthConnectCard = () => {
   const runTest = useCallback(async (set: keyof typeof HEALTH_TEST_SETS) => {
     setDiagBusy(true);
     const t = () => new Date().toLocaleTimeString("sv-SE");
+    setTestLog((l) => [`${t()} Test ${set}: startar – väntar på Health Connect (max 60 s)…`, ...l]);
     try {
       const granted = await testHealthPermissionRequest(set);
       setTestLog((l) => [`${t()} Test ${set}: svar ${JSON.stringify(granted)}`, ...l]);
@@ -450,6 +455,15 @@ const HealthConnectCard = () => {
                   Test C: alla
                 </Button>
               </div>
+              {diagBusy && <p className="text-muted-foreground">Arbetar…</p>}
+              {trail.length > 0 && (
+                <details>
+                  <summary className="text-muted-foreground">Steglogg ({trail.length})</summary>
+                  <ul className="mt-1 space-y-0.5 font-mono text-[10px] text-muted-foreground">
+                    {trail.map((line, i) => <li key={i}>{line}</li>)}
+                  </ul>
+                </details>
+              )}
               {testLog.length > 0 && (
                 <ul className="space-y-0.5 text-muted-foreground">
                   {testLog.map((line, i) => <li key={i}>{line}</li>)}

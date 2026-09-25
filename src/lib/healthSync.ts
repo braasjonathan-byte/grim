@@ -153,7 +153,22 @@ export function withDialogTimeout<T>(
 }
 
 /** Loggas i Android Logcat (taggen "Capacitor/Console") så fel går att spåra på riktig enhet. */
+const healthTrail: string[] = [];
+const trailListeners = new Set<(t: string[]) => void>();
+export function subscribeHealthTrail(fn: (t: string[]) => void) {
+  trailListeners.add(fn);
+  fn([...healthTrail]);
+  return () => void trailListeners.delete(fn);
+}
+
 export function healthLog(step: string, detail?: unknown) {
+  try {
+    let d = "";
+    try { d = detail === undefined ? "" : typeof detail === "string" ? detail : JSON.stringify(detail); } catch { d = String(detail); }
+    healthTrail.unshift(`${new Date().toLocaleTimeString("sv-SE")} ${step}${d ? " " + d.slice(0, 300) : ""}`);
+    healthTrail.length = Math.min(healthTrail.length, 60);
+    trailListeners.forEach((fn) => fn([...healthTrail]));
+  } catch { /* ignore */ }
   try {
     console.info(`[health] ${new Date().toISOString()} step=${step}`, detail === undefined ? "" : detail);
   } catch {
@@ -954,9 +969,11 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
 export type HealthDiagnostics = Record<string, unknown>;
 
 export async function runHealthDiagnostics(): Promise<HealthDiagnostics> {
+  healthLog("diagnostics start", { pluginAvailable: Capacitor.isPluginAvailable("Health"), platform: Capacitor.getPlatform() });
   const plugin = await loadPlugin();
-  if (!plugin?.grimHealthDiagnostics) throw new HealthError("unknown", "Diagnostik finns bara i Android-appen.");
-  const res = await withTimeout(plugin.grimHealthDiagnostics(), STEP_TIMEOUT_MS, "Diagnostiken svarade inte.");
+  if (!plugin) throw new HealthError("unknown", "Hälsomodulen kunde inte laddas i appen.");
+  if (typeof plugin.grimHealthDiagnostics !== "function") throw new HealthError("unknown", "Appens Android-del saknar diagnostik – installerad APK är troligen gammal.");
+  const res = await withTimeout(plugin.grimHealthDiagnostics(), 8000, "Android-delen svarade inte på diagnostik inom 8 s (bryggan hänger eller gammal APK).");
   healthLog("diagnostics", res);
   return res;
 }
@@ -978,7 +995,8 @@ export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_
   const permissions = [...HEALTH_TEST_SETS[set]];
   healthLog("native test request", { set, permissions });
   try {
-    const res = await withDialogTimeout(plugin.requestHealthPermissions({ permissions }), "Testet fick inget svar.", DIALOG_TIMEOUT_MS);
+    const res = await withDialogTimeout(plugin.requestHealthPermissions({ permissions }), "Testet fick inget svar inom 60 s.", 60000);
+    healthLog("native test result", res);
     return permissionMap(res);
   } catch (err) {
     throw classifyNativeHealthError(err);
