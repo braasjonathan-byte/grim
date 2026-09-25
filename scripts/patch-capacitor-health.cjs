@@ -49,12 +49,14 @@ if (!kt.includes("records.SleepSessionRecord")) {
   );
 }
 
-// 2. Enum-värde
-if (!/READ_SLEEP/.test(kt)) {
-  kt = kt.replace(
-    "READ_WEIGHT, READ_HEIGHT, READ_BODY_FAT, READ_LEAN_BODY_MASS;",
-    "READ_WEIGHT, READ_HEIGHT, READ_BODY_FAT, READ_LEAN_BODY_MASS, READ_SLEEP;"
-  );
+// 2. Enum-värde — kontrollera själva enum-blocket (READ_SLEEP finns även på
+// andra ställen) och lägg till sist oavsett vilka värden upstream har.
+{
+  const enumMatch = kt.match(/enum class CapHealthPermission \{([^;]*);/);
+  if (!enumMatch) throw new Error("[patch-capacitor-health] CapHealthPermission enum not found");
+  if (!/\bREAD_SLEEP\b/.test(enumMatch[1])) {
+    kt = kt.replace(enumMatch[0], enumMatch[0].replace(/;$/, ", READ_SLEEP;"));
+  }
 }
 
 // 3. @CapacitorPlugin-behörighet
