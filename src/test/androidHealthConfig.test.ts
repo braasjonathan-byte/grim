@@ -57,12 +57,12 @@ describe("Android-konfiguration för Health Connect", () => {
 
   it("använder Health Connect-klienten med aktuella Android 16-fixar", () => {
     expect(read("node_modules/capacitor-health/android/build.gradle")).toContain(
-      "androidx.health.connect:connect-client:1.2.0-alpha06",
+      "androidx.health.connect:connect-client:1.1.0",
     );
     const patch = read("scripts/patch-capacitor-health.cjs");
-    expect(patch).toContain('HEALTH_CONNECT_CLIENT_VERSION = "1.2.0-alpha06"');
+    expect(patch).toContain('HEALTH_CONNECT_CLIENT_VERSION = "1.1.0"');
     expect(read("scripts/verify-android-plugins.cjs")).toContain(
-      'healthConnectClient: "1.2.0-alpha06"',
+      'healthConnectClient: "1.1.0"',
     );
   });
 

@@ -31,7 +31,7 @@ const PERMISSION_PROXY = path.join(
 );
 const GRADLE = path.join(BASE, "build.gradle");
 const AGP_VERSION = "8.13.0";
-const HEALTH_CONNECT_CLIENT_VERSION = "1.2.0-alpha06";
+const HEALTH_CONNECT_CLIENT_VERSION = "1.1.0";
 
 if (!fs.existsSync(PLUGIN_KT)) {
   console.error("[patch-capacitor-health] pluginet saknas — bygget får inte fortsätta opatchat.");
