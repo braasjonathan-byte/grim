@@ -15,13 +15,17 @@ export async function hasValidSessionFor(userId: string | null | undefined): Pro
     const { data, error } = await supabase.auth.getUser();
     if (!error && data?.user?.id) return data.user.id === userId;
 
+    const status = (error as any)?.status;
+    // Tillfälliga nätverksfel (ingen statuskod) får inte tyst blockera
+    // achievements/push – lita på den cachade sessionen i stället.
+    if (status !== 401 && status !== 403) {
+      return sessionData.session.user?.id === userId;
+    }
+
     const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
     if (refreshError || !refreshed?.session?.user?.id) {
-      const status = (error as any)?.status;
-      if (status === 401 || status === 403) {
-        // Token avvisas permanent – logga ut så användaren kan logga in på nytt.
-        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-      }
+      // Token avvisas permanent – logga ut så användaren kan logga in på nytt.
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
       return false;
     }
     return refreshed.session.user.id === userId;
