@@ -862,9 +862,10 @@ class HealthPermissionProxyActivity : ComponentActivity() {
                 "manufacturer=\${Build.MANUFACTURER} package=\$packageName"
         )
         Log.i(TAG, "GRIM_HC: requestedPermissions=\$requested")
+        // Resolver-listan är endast diagnostik: MATCH_DEFAULT_ONLY kan ge falskt
+        // negativt för systemhanterade behörighetsintenter, så launch försöks alltid.
         if (resolvers.isEmpty()) {
-            finishWithError("HC_NATIVE_07: No activity can handle the Health Connect permission intent")
-            return
+            Log.w(TAG, "GRIM_HC: no resolvers found, attempting launch anyway")
         }
         try {
             launched = true
