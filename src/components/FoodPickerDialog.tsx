@@ -261,9 +261,44 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       fat_g: computed.fat_g,
       carbs_g: computed.carbs_g,
     });
+    // Track personal usage so ranking improves over time (fire-and-forget)
+    if (outId && !outId.startsWith("off-")) {
+      const key = usageKey(outSource, outId);
+      setUsage((m) => {
+        const n = new Map(m);
+        n.set(key, { count: (m.get(key)?.count || 0) + 1, last: Date.now() });
+        return n;
+      });
+      supabase.rpc("bump_food_usage", { p_source: outSource, p_food_id: outId }).then(({ error }) => {
+        if (error) console.error("bump_food_usage failed", error);
+      });
+    }
     setSelected(null);
     setQuery("");
   }
+
+  const renderRow = (r: FoodRow) => (
+    <li key={`${r.source}-${r.id}`} className="flex items-stretch">
+      <button onClick={() => pick(r)} className="flex-1 text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2 min-w-0">
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{r.name}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {r.source === "recipe" ? "Recept" : r.source === "custom_food" ? "Eget" : r.source === "off" ? "Open Food Facts" : r.group_name || "Livsmedel"} · {Math.round(r.kcal)} kcal / {r.source === "recipe" ? "portion" : "100 g"}
+          </p>
+        </div>
+        <Plus className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
+      </button>
+      {r.source === "recipe" && r.owner_id === userId && onEditRecipe && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onEditRecipe(r.id); }}
+          className="px-2 text-muted-foreground hover:text-primary"
+          aria-label="Redigera recept"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+      )}
+    </li>
+  );
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setSelected(null); setQuery(""); } onOpenChange(v); }}>
@@ -295,31 +330,17 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 rounded-none" autoFocus />
             </div>
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
+              {showPersonal && (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 pb-1">Senaste & dina vanliga</p>
+                  <ul className="divide-y divide-border mb-3">{personal.map(renderRow)}</ul>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pb-1">Alla livsmedel</p>
+                </>
+              )}
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && combinedResults.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
+              {!loading && combinedResults.length === 0 && !showPersonal && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
               <ul className="divide-y divide-border">
-                {combinedResults.map((r) => (
-                  <li key={`${r.source}-${r.id}`} className="flex items-stretch">
-                    <button onClick={() => pick(r)} className="flex-1 text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2 min-w-0">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{r.name}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {r.source === "recipe" ? "Recept" : r.source === "custom_food" ? "Eget" : r.source === "off" ? "Open Food Facts" : r.group_name || "Livsmedel"} · {Math.round(r.kcal)} kcal / {r.source === "recipe" ? "portion" : "100 g"}
-                        </p>
-                      </div>
-                      <Plus className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
-                    </button>
-                    {r.source === "recipe" && r.owner_id === userId && onEditRecipe && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onEditRecipe(r.id); }}
-                        className="px-2 text-muted-foreground hover:text-primary"
-                        aria-label="Redigera recept"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
-                  </li>
-                ))}
+                {combinedResults.map(renderRow)}
                 {offLoading && <li className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></li>}
               </ul>
             </div>
