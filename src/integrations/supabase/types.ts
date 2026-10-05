@@ -717,6 +717,7 @@ export type Database = {
         Row: {
           carbs_g: number
           created_at: string
+          default_piece_weight_g: number | null
           fat_g: number
           fiber_g: number
           food_number: number | null
@@ -729,6 +730,7 @@ export type Database = {
         Insert: {
           carbs_g?: number
           created_at?: string
+          default_piece_weight_g?: number | null
           fat_g?: number
           fiber_g?: number
           food_number?: number | null
@@ -741,6 +743,7 @@ export type Database = {
         Update: {
           carbs_g?: number
           created_at?: string
+          default_piece_weight_g?: number | null
           fat_g?: number
           fiber_g?: number
           food_number?: number | null
@@ -911,6 +914,7 @@ export type Database = {
           created_at: string
           custom_food_id: string | null
           fat_g: number
+          fiber_g: number
           food_id: string | null
           id: string
           item_name: string
@@ -928,6 +932,7 @@ export type Database = {
           created_at?: string
           custom_food_id?: string | null
           fat_g?: number
+          fiber_g?: number
           food_id?: string | null
           id?: string
           item_name: string
@@ -945,6 +950,7 @@ export type Database = {
           created_at?: string
           custom_food_id?: string | null
           fat_g?: number
+          fiber_g?: number
           food_id?: string | null
           id?: string
           item_name?: string
@@ -1019,12 +1025,14 @@ export type Database = {
           created_at: string
           daily_kcal: number
           fat_g: number
+          fiber_g: number | null
           goal_type: string
           id: string
           meal_slots: string[]
           protein_g: number
           updated_at: string
           user_id: string
+          water_goal_ml: number
         }
         Insert: {
           activity_level?: string
@@ -1032,12 +1040,14 @@ export type Database = {
           created_at?: string
           daily_kcal?: number
           fat_g?: number
+          fiber_g?: number | null
           goal_type?: string
           id?: string
           meal_slots?: string[]
           protein_g?: number
           updated_at?: string
           user_id: string
+          water_goal_ml?: number
         }
         Update: {
           activity_level?: string
@@ -1045,12 +1055,14 @@ export type Database = {
           created_at?: string
           daily_kcal?: number
           fat_g?: number
+          fiber_g?: number | null
           goal_type?: string
           id?: string
           meal_slots?: string[]
           protein_g?: number
           updated_at?: string
           user_id?: string
+          water_goal_ml?: number
         }
         Relationships: []
       }
@@ -2144,6 +2156,30 @@ export type Database = {
           id?: number
           private_key?: string
           public_key?: string
+        }
+        Relationships: []
+      }
+      water_logs: {
+        Row: {
+          amount_ml: number
+          id: string
+          log_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_ml?: number
+          id?: string
+          log_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_ml?: number
+          id?: string
+          log_date?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

@@ -152,7 +152,7 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
             <>
               <button
                 onClick={() => setSaveMode(true)}
-                className="w-full py-2 border border-dashed border-input text-xs font-bold flex items-center justify-center gap-1"
+                className="w-full py-2 rounded-2xl border border-dashed border-border text-xs font-bold flex items-center justify-center gap-1"
               >
                 <BookmarkPlus className="w-3.5 h-3.5" /> Spara dagens måltid som mall
               </button>
@@ -196,7 +196,7 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
                 <select
                   value={saveFromSlot}
                   onChange={(e) => setSaveFromSlot(e.target.value)}
-                  className="w-full px-3 py-2 border border-input bg-background text-sm"
+                  className="w-full input-soft"
                 >
                   <option value="">Välj måltid…</option>
                   {currentMealSlots.map((s) => {
@@ -215,13 +215,13 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
                   value={saveName}
                   onChange={(e) => setSaveName(e.target.value)}
                   placeholder="t.ex. Min frukost"
-                  className="w-full px-3 py-2 border border-input bg-background text-sm"
+                  className="w-full input-soft"
                   maxLength={60}
                 />
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setSaveMode(false); setSaveName(""); setSaveFromSlot(""); }} className="flex-1 py-2 border border-input text-xs font-bold">Avbryt</button>
-                <button onClick={saveTemplate} disabled={!saveFromSlot} className="flex-1 py-2 bg-primary text-primary-foreground text-xs font-bold disabled:opacity-40 flex items-center justify-center gap-1">
+                <button onClick={() => { setSaveMode(false); setSaveName(""); setSaveFromSlot(""); }} className="flex-1 pill-btn-ghost py-2 text-xs">Avbryt</button>
+                <button onClick={saveTemplate} disabled={!saveFromSlot} className="flex-1 pill-btn-primary py-2 text-xs disabled:opacity-40 flex items-center justify-center gap-1">
                   <Check className="w-3.5 h-3.5" /> Spara
                 </button>
               </div>
@@ -236,7 +236,7 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
                   <button
                     key={s}
                     onClick={() => applyTemplate(applyingTemplate, s)}
-                    className="w-full text-left px-3 py-3 border border-input text-sm font-bold capitalize hover:bg-accent"
+                    className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold capitalize hover:bg-muted transition-colors"
                   >
                     {s}
                   </button>

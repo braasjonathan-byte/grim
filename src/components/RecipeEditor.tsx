@@ -137,20 +137,20 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
         <div className="space-y-3">
           <div>
             <label className="text-xs font-medium">Namn</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} className="rounded-none" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="rounded-xl bg-muted/50 border-transparent" />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-medium">Portioner</label>
-              <Input value={servings} onChange={(e) => setServings(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none" />
+              <Input value={servings} onChange={(e) => setServings(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent" />
             </div>
             <div>
               <label className="text-xs font-medium">Synlighet</label>
               <div className="flex gap-1">
-                <button onClick={() => setVisibility("private")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium border ${visibility === "private" ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}>
+                <button onClick={() => setVisibility("private")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-full transition-colors ${visibility === "private" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>
                   <Lock className="w-3 h-3" /> Privat
                 </button>
-                <button onClick={() => setVisibility("public")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium border ${visibility === "public" ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}>
+                <button onClick={() => setVisibility("public")} className={`flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium rounded-full transition-colors ${visibility === "public" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>
                   <Globe className="w-3 h-3" /> Publikt
                 </button>
               </div>
@@ -164,7 +164,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
                 <button
                   key={c}
                   onClick={() => setCategory(c)}
-                  className={`px-2 py-1.5 text-[11px] font-medium border ${category === c ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}
+                  className={`px-2 py-1.5 text-[11px] font-medium rounded-full transition-colors ${category === c ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
                 >
                   {c}
                 </button>
@@ -181,7 +181,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
             {ingredients.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">Inga ingredienser ännu</p>
             ) : (
-              <ul className="border border-border divide-y divide-border">
+              <ul className="rounded-2xl bg-muted/30 overflow-hidden divide-y divide-border/40">
                 {ingredients.map((ing, idx) => (
                   <li key={idx} className="py-2 px-2">
                     <div className="flex items-center justify-between gap-2">
@@ -194,7 +194,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
                         onChange={(e) => updateIngredientAmount(idx, e.target.value)}
                         inputMode="decimal"
                         pattern="[0-9.,]*"
-                        className="rounded-none h-7 w-20 text-xs"
+                        className="rounded-xl bg-muted/50 border-transparent h-7 w-20 text-xs"
                         aria-label="Mängd"
                       />
                       <span className="text-[11px] text-muted-foreground">{ing.unit}</span>
@@ -206,7 +206,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
             )}
           </div>
 
-          <div className="bg-muted/40 p-2 grid grid-cols-4 gap-1 text-center">
+          <div className="bg-muted/40 rounded-2xl p-2 grid grid-cols-4 gap-1 text-center">
             <div><p className="text-[9px] text-muted-foreground">Kcal/p</p><p className="text-sm font-bold tabular-nums">{Math.round(totalKcal / portions)}</p></div>
             <div><p className="text-[9px] text-muted-foreground">Pro/p</p><p className="text-sm font-bold tabular-nums">{(totalProtein / portions).toFixed(1)}g</p></div>
             <div><p className="text-[9px] text-muted-foreground">Fett/p</p><p className="text-sm font-bold tabular-nums">{(totalFat / portions).toFixed(1)}g</p></div>
@@ -215,10 +215,10 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
 
           <div>
             <label className="text-xs font-medium">Instruktioner (valfritt)</label>
-            <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} className="rounded-none" rows={3} />
+            <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} className="rounded-xl bg-muted/50 border-transparent" rows={3} />
           </div>
 
-          <button disabled={saving} onClick={save} className="w-full py-3 bg-primary text-primary-foreground font-bold disabled:opacity-50">
+          <button disabled={saving} onClick={save} className="w-full pill-btn-primary py-3 disabled:opacity-50">
             {saving ? "Sparar…" : isEditing ? "Spara ändringar" : "Spara recept"}
           </button>
         </div>

@@ -23,6 +23,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [protein, setProtein] = useState("100");
   const [fat, setFat] = useState("70");
   const [carbs, setCarbs] = useState("250");
+  const [fiber, setFiber] = useState("");
+  const [water, setWater] = useState("2000");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -40,6 +42,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       if (g) {
         setKcal(String(g.daily_kcal)); setProtein(String(g.protein_g));
         setFat(String(g.fat_g)); setCarbs(String(g.carbs_g));
+        setFiber(g.fiber_g ? String(g.fiber_g) : ""); setWater(String(g.water_goal_ml ?? 2000));
         setActivity(g.activity_level as ActivityLevel); setGoal(g.goal_type as GoalType);
       }
     })();
@@ -80,6 +83,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       carbs_g: parseInt(carbs) || 250,
       activity_level: activity,
       goal_type: goal,
+      fiber_g: parseInt(fiber) || null,
+      water_goal_ml: parseInt(water) || 2000,
     }, { onConflict: "user_id" });
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
@@ -93,37 +98,41 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         <DialogHeader><DialogTitle className="font-serif">Mina kostmål</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
-            <div><label className="text-xs font-medium">Ålder</label><Input value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none" /></div>
-            <div><label className="text-xs font-medium">Vikt (kg)</label><Input value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="decimal" pattern="[0-9.,]*" className="rounded-none" /></div>
-            <div><label className="text-xs font-medium">Längd (cm)</label><Input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none" /></div>
+            <div><label className="text-xs font-medium">Ålder</label><Input value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent" /></div>
+            <div><label className="text-xs font-medium">Vikt (kg)</label><Input value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="decimal" pattern="[0-9.,]*" className="rounded-xl bg-muted/50 border-transparent" /></div>
+            <div><label className="text-xs font-medium">Längd (cm)</label><Input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent" /></div>
           </div>
           <div>
             <label className="text-xs font-medium">Kön</label>
             <div className="flex gap-1">
-              <button onClick={() => setGender("male")} className={`flex-1 py-2 text-xs font-medium border ${gender === "male" ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}>Man</button>
-              <button onClick={() => setGender("female")} className={`flex-1 py-2 text-xs font-medium border ${gender === "female" ? "bg-primary text-primary-foreground border-primary" : "border-input"}`}>Kvinna</button>
+              <button onClick={() => setGender("male")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "male" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>Man</button>
+              <button onClick={() => setGender("female")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "female" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>Kvinna</button>
             </div>
           </div>
           <div>
             <label className="text-xs font-medium">Aktivitetsnivå</label>
-            <select value={activity} onChange={(e) => setActivity(e.target.value as ActivityLevel)} className="w-full border border-input bg-background px-2 py-2 text-sm">
+            <select value={activity} onChange={(e) => setActivity(e.target.value as ActivityLevel)} className="w-full input-soft">
               {(Object.keys(ACTIVITY_LABEL) as ActivityLevel[]).map((k) => <option key={k} value={k}>{ACTIVITY_LABEL[k]}</option>)}
             </select>
           </div>
           <div>
             <label className="text-xs font-medium">Mål</label>
-            <select value={goal} onChange={(e) => setGoal(e.target.value as GoalType)} className="w-full border border-input bg-background px-2 py-2 text-sm">
+            <select value={goal} onChange={(e) => setGoal(e.target.value as GoalType)} className="w-full input-soft">
               {(Object.keys(GOAL_LABEL) as GoalType[]).map((k) => <option key={k} value={k}>{GOAL_LABEL[k]}</option>)}
             </select>
           </div>
-          <button onClick={() => computeMacros(false)} className="w-full py-2 border border-primary text-primary text-sm font-bold">Räkna ut mina makros</button>
+          <button onClick={() => computeMacros(false)} className="w-full py-2 pill-btn-soft text-sm font-bold">Räkna ut mina makros</button>
           <div className="grid grid-cols-4 gap-2">
-            <div><label className="text-[10px] font-medium">Kcal</label><Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
-            <div><label className="text-[10px] font-medium">Protein g</label><Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
-            <div><label className="text-[10px] font-medium">Fett g</label><Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
-            <div><label className="text-[10px] font-medium">Kolhydrat g</label><Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-none text-sm" /></div>
+            <div><label className="text-[10px] font-medium">Kcal</label><Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+            <div><label className="text-[10px] font-medium">Protein g</label><Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+            <div><label className="text-[10px] font-medium">Fett g</label><Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+            <div><label className="text-[10px] font-medium">Kolhydrat g</label><Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
           </div>
-          <button disabled={saving} onClick={save} className="w-full py-3 bg-primary text-primary-foreground font-bold disabled:opacity-50">{saving ? "Sparar…" : "Spara"}</button>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="text-[10px] font-medium">Fiber g (valfritt)</label><Input value={fiber} onChange={(e) => setFiber(e.target.value)} inputMode="numeric" pattern="[0-9]*" placeholder="t.ex. 30" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+            <div><label className="text-[10px] font-medium">Vattenmål ml</label><Input value={water} onChange={(e) => setWater(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+          </div>
+          <button disabled={saving} onClick={save} className="w-full pill-btn-primary py-3 disabled:opacity-50">{saving ? "Sparar…" : "Spara"}</button>
         </div>
       </DialogContent>
     </Dialog>
