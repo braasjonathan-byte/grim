@@ -232,6 +232,19 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     : unit === "st" ? ["1", "2", "3", "4"]
     : ["dl", "msk", "tsk"].includes(unit) ? ["0.5", "1", "2", "3"] : [];
 
+  // När enheten byts: räkna om mängden så samma gramvikt behålls (100 g havregryn → ~3 dl)
+  function onUnitChange(newUnit: string) {
+    if (!selected || newUnit === unit) { setUnit(newUnit); return; }
+    const a = parseFloat(amount.replace(",", ".")) || 0;
+    const grams = gramsForFood(a, unit, selected.name, selected.piece_g);
+    const perNew = gramsForFood(1, newUnit, selected.name, selected.piece_g);
+    let v = perNew > 0 ? grams / perNew : a;
+    // Rimlig avrundning: volym/st → max 1 decimal, gram → heltal
+    v = newUnit === "g" ? Math.round(v) : Math.round(v * 10) / 10;
+    if (v > 0) setAmount(String(v).replace(".", ","));
+    setUnit(newUnit);
+  }
+
   const computed = useMemo(() => {
     if (!selected) return null;
     const a = parseFloat(amount.replace(",", ".")) || 0;
@@ -394,7 +407,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   className="rounded-xl bg-muted/50 border-transparent flex-1"
                 />
                 {selected.source !== "recipe" ? (
-                  <select value={unit} onChange={(e) => setUnit(e.target.value)} className="input-soft px-2">
+                  <select value={unit} onChange={(e) => onUnitChange(e.target.value)} className="input-soft px-2">
                     {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 ) : (
