@@ -117,7 +117,8 @@ export default function FriendChallenges({ userId }: Props) {
     const { data: parts } = await supabase
       .from("friend_challenge_participants")
       .select("user_id")
-      .eq("challenge_id", challenge.id);
+      .eq("challenge_id", challenge.id)
+      .eq("status", "accepted");
     const userIds = (parts || []).map((p) => p.user_id);
     if (userIds.length === 0) return;
 
@@ -184,12 +185,15 @@ export default function FriendChallenges({ userId }: Props) {
       return;
     }
 
-    const rows = [userId, ...invited].map((id) => ({ challenge_id: data.id, user_id: id }));
+    const rows = [
+      { challenge_id: data.id, user_id: userId, status: "accepted" },
+      ...invited.map((id) => ({ challenge_id: data.id, user_id: id, status: "pending", invited_by: userId })),
+    ];
     await supabase.from("friend_challenge_participants").insert(rows);
     setSaving(false);
     setCreateOpen(false);
     setTitle(""); setTarget(""); setInvited([]); setMetric("pass");
-    toast.success("Utmaningen är igång!");
+    toast.success(invited.length ? "Utmaningen är igång – inbjudningar skickade!" : "Utmaningen är igång!");
     loadChallenges();
   };
 
@@ -204,12 +208,16 @@ export default function FriendChallenges({ userId }: Props) {
 
   const active = useMemo(() => {
     const today = todayIso();
-    return challenges.filter((c) => c.end_date >= today);
-  }, [challenges]);
+    return challenges.filter((c) => c.end_date >= today && !pendingIds.has(c.id));
+  }, [challenges, pendingIds]);
+  const invites = useMemo(() => {
+    const today = todayIso();
+    return challenges.filter((c) => pendingIds.has(c.id) && c.end_date >= today);
+  }, [challenges, pendingIds]);
   const finished = useMemo(() => {
     const today = todayIso();
-    return challenges.filter((c) => c.end_date < today);
-  }, [challenges]);
+    return challenges.filter((c) => c.end_date < today && !pendingIds.has(c.id));
+  }, [challenges, pendingIds]);
 
   const card = (c: Challenge, done: boolean) => {
     const list = standings[c.id] || [];
@@ -275,13 +283,31 @@ export default function FriendChallenges({ userId }: Props) {
 
       {loading ? (
         <p className="text-xs text-muted-foreground">Laddar…</p>
-      ) : challenges.length === 0 ? (
+      ) : (active.length + finished.length + invites.length) === 0 ? (
         <div className="bg-card border border-border rounded-2xl p-4 text-center space-y-1">
           <p className="text-xs font-semibold">Inga utmaningar än</p>
           <p className="text-[11px] text-muted-foreground">Utmana dina vänner på flest pass, längst sträcka eller mest lyft.</p>
         </div>
       ) : (
         <div className="space-y-2">
+          {invites.map((c) => (
+            <div key={c.id} className="bg-card border border-primary/40 rounded-2xl p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-primary" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-primary">Inbjudan väntar</div>
+                  <div className="text-sm font-bold truncate">{c.title}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {inviterNames[c.created_by] || "En vän"} · {METRICS.find((m) => m.key === c.metric)?.label} · {c.start_date} – {c.end_date}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" className="flex-1" onClick={() => respondInvite(c, true)}>Gå med</Button>
+                <Button size="sm" variant="outline" className="flex-1" onClick={() => respondInvite(c, false)}>Avböj</Button>
+              </div>
+            </div>
+          ))}
           {active.map((c) => card(c, false))}
           {finished.length > 0 && (
             <>
