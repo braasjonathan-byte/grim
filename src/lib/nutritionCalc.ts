@@ -202,9 +202,42 @@ export function toGrams(amount: number, unit: string, pieceG: number = DEFAULT_P
   return amount;
 }
 
+/** Natural household portions: skiva, näve, filé – weight depends on the food. */
+const NATURAL_UNITS: Record<string, { default: number; rules: [RegExp, number][] }> = {
+  skiva: { default: 25, rules: [
+    [/knäcke|hårt bröd/i, 12], [/bröd|limpa|toast|levain|surdeg/i, 38],
+    [/ost/i, 15], [/skinka|kalkon|salami|pålägg|rostbiff/i, 12], [/gurka|tomat/i, 10],
+  ] },
+  näve: { default: 28, rules: [
+    [/nötter|mandlar|cashew|jordnötter|valnöt|hasselnöt/i, 28], [/frön/i, 20],
+    [/bär|blåbär|hallon|lingon|jordgubb/i, 60], [/russin|torkad|dadlar/i, 35],
+    [/chips|popcorn|godis/i, 20], [/sallad|spenat|ruccola/i, 15],
+  ] },
+  "filé": { default: 140, rules: [
+    [/kyckling/i, 150], [/lax|torsk|fisk|sej|kolja/i, 125], [/fläsk|kotlett/i, 150], [/nöt|biff|entrecote/i, 180],
+  ] },
+};
+
+function naturalGrams(unit: string, name?: string | null): number | null {
+  const def = NATURAL_UNITS[unit];
+  if (!def) return null;
+  if (name) for (const [re, g] of def.rules) if (re.test(name)) return g;
+  return def.default;
+}
+
 /** Grams for a named food – uses piece weight and density lookups. Use this everywhere food is logged. */
 export function gramsForFood(amount: number, unit: string, name?: string | null, dbPieceG?: number | null): number {
+  const nat = naturalGrams(unit.toLowerCase(), name);
+  if (nat !== null) return amount * nat;
   return toGrams(amount, unit, pieceWeightFor(name, dbPieceG), densityFor(name));
+}
+
+/** Natural units relevant for a given food (shown in the unit picker). */
+export function naturalUnitsFor(name?: string | null): string[] {
+  if (!name) return [];
+  const out: string[] = [];
+  for (const u of ["skiva", "näve", "filé"]) if (NATURAL_UNITS[u].rules.some(([re]) => re.test(name))) out.push(u);
+  return out;
 }
 
 /** Short hint like "1 dl ≈ 35 g" for non-gram units, or null. */

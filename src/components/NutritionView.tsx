@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import MacroRings from "./MacroRings";
@@ -48,9 +48,11 @@ interface SortableMealProps {
   onRemoveLog: (id: string) => void;
   onEditLog: (l: MealLog) => void;
   onCopyYesterday?: () => void;
+  onQuickLog: () => void;
+  onSaveTemplate?: () => void;
 }
 
-function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday }: SortableMealProps) {
+function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate }: SortableMealProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -76,10 +78,13 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
               <CopyPlus className="w-4 h-4" />
             </button>
           )}
+          <button onClick={onQuickLog} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label={`Snabbpost i ${meal}`} title="Snabbpost (bara kcal)">
+            <Zap className="w-4 h-4" />
+          </button>
           <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5">
             <Plus className="w-3.5 h-3.5" /> Lägg till
           </button>
-          {isCustom && (
+          {(isCustom || onSaveTemplate) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Fler val">
@@ -87,12 +92,21 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="rounded-xl">
-                <DropdownMenuItem onClick={onRename}>
-                  <Pencil className="w-3.5 h-3.5 mr-2" /> Byt namn
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Ta bort
-                </DropdownMenuItem>
+                {onSaveTemplate && (
+                  <DropdownMenuItem onClick={onSaveTemplate}>
+                    <BookmarkPlus className="w-3.5 h-3.5 mr-2" /> Spara som måltidsmall
+                  </DropdownMenuItem>
+                )}
+                {isCustom && (
+                  <>
+                    <DropdownMenuItem onClick={onRename}>
+                      <Pencil className="w-3.5 h-3.5 mr-2" /> Byt namn
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Ta bort
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -137,6 +151,64 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [waterGoal, setWaterGoal] = useState(2000);
   const [yesterdayLogs, setYesterdayLogs] = useState<any[]>([]);
+  const [quickMeal, setQuickMeal] = useState<string | null>(null);
+  const [quick, setQuick] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+
+  async function saveQuickLog() {
+    if (!quickMeal) return;
+    const num = (v: string) => { const n = parseFloat(v.replace(",", ".")); return isFinite(n) && n > 0 ? n : 0; };
+    const kcal = num(quick.kcal);
+    if (!kcal) { toast({ title: "Ange kalorier", variant: "destructive" }); return; }
+    const { error } = await supabase.from("meal_logs").insert({
+      user_id: userId, log_date: dateKey, meal_type: quickMeal,
+      item_name: quick.name.trim() || "Snabbpost", amount: 1, unit: "portion",
+      kcal, protein_g: num(quick.protein), fat_g: num(quick.fat), carbs_g: num(quick.carbs), fiber_g: 0,
+    });
+    if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
+    setQuickMeal(null);
+    setQuick({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
+    load();
+  }
+
+  async function saveMealAsTemplate(meal: string) {
+    const rows = logs.filter((l) => l.meal_type === meal);
+    if (!rows.length) return;
+    const name = window.prompt("Namn på mallen", `Min ${meal}`);
+    if (!name?.trim()) return;
+    const items = rows.map((i: any) => ({
+      item_name: i.item_name, amount: Number(i.amount) || 0, unit: i.unit,
+      kcal: Number(i.kcal) || 0, protein_g: Number(i.protein_g) || 0, fat_g: Number(i.fat_g) || 0, carbs_g: Number(i.carbs_g) || 0,
+      food_id: i.food_id ?? null, custom_food_id: i.custom_food_id ?? null, recipe_id: i.recipe_id ?? null,
+    }));
+    const { error } = await supabase.from("meal_templates" as any).insert({ user_id: userId, name: name.trim(), items } as any);
+    if (error) toast({ title: "Kunde inte spara mall", description: error.message, variant: "destructive" });
+    else toast({ title: `Sparade mall: ${name.trim()}`, description: "Hittas under Mallar" });
+  }
+
+  async function moveLog(meal: string) {
+    if (!editingLog || meal === editingLog.meal_type) return;
+    const prev = editingLog.meal_type, id = editingLog.id;
+    const { error } = await supabase.from("meal_logs").update({ meal_type: meal }).eq("id", id);
+    if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
+    setEditingLog(null);
+    load();
+    showUndoToast(`Flyttad till ${meal}`, async () => { await supabase.from("meal_logs").update({ meal_type: prev }).eq("id", id); load(); });
+  }
+
+  async function copyLogTo(dayOffset: number) {
+    if (!editingLog) return;
+    const { data: rows } = await supabase.from("meal_logs").select("*").eq("id", editingLog.id);
+    const row: any = rows?.[0];
+    if (!row) return;
+    const d = dayOffset === 0 ? new Date() : new Date(date);
+    if (dayOffset !== 0) d.setDate(d.getDate() + dayOffset);
+    const { id, created_at, ...rest } = row;
+    const { error } = await supabase.from("meal_logs").insert({ ...rest, log_date: toLocalDateKey(d) });
+    if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
+    toast({ title: dayOffset === 0 ? "Kopierad till idag" : "Kopierad till nästa dag" });
+    setEditingLog(null);
+    load();
+  }
 
   useEffect(() => {
     if (editingLog) setEditAmount(String(editingLog.amount));
@@ -283,7 +355,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     persistSlots(arrayMove(slots, oldIdx, newIdx));
   }
 
-  async function addLog(meal: string, item: PickedItem) {
+  async function addLog(meal: string, item: PickedItem, keepOpen = false) {
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const isUuid = typeof item.id === "string" && UUID_RE.test(item.id);
     const { error } = await supabase.from("meal_logs").insert({
@@ -296,6 +368,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       recipe_id: item.source === "recipe" && isUuid ? item.id : null,
     });
     if (error) toast({ title: "Fel", description: error.message, variant: "destructive" });
+    else if (keepOpen) { load(); }
     else { setPicker(null); setCuratedTargetMeal(null); setCuratedOpen(false); load(); }
   }
 
@@ -386,6 +459,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                     onDelete={() => deleteSlot(idx)}
                     onRemoveLog={removeLog}
                     onEditLog={(l) => setEditingLog(l)}
+                    onQuickLog={() => setQuickMeal(meal)}
+                    onSaveTemplate={ml.length > 0 ? () => saveMealAsTemplate(meal) : undefined}
                     onCopyYesterday={yesterdayLogs.some((r) => r.meal_type === meal) ? () => copyFromYesterday(meal) : undefined}
                   />
                 );
@@ -406,7 +481,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         open={!!picker}
         onOpenChange={(v) => !v && setPicker(null)}
         userId={userId}
-        onPick={(item) => picker && addLog(picker, item)}
+        onPick={(item, opts) => picker && addLog(picker, item, !!opts?.keepOpen)}
         onEditRecipe={(id) => { setPicker(null); setEditingRecipeId(id); setRecipeOpen(true); }}
       />
       <RecipeEditor
@@ -509,6 +584,19 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                 );
               })()}
             </div>
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold flex items-center gap-1"><ArrowRightLeft className="w-3 h-3" /> Flytta till</p>
+              <div className="flex flex-wrap gap-1.5">
+                {allSlots.filter((m) => m !== editingLog.meal_type).map((m) => (
+                  <button key={m} onClick={() => moveLog(m)} className="px-3 py-1.5 rounded-full bg-secondary text-xs font-semibold capitalize hover:bg-muted">{m}</button>
+                ))}
+              </div>
+              <p className="text-xs font-bold flex items-center gap-1 pt-1"><Copy className="w-3 h-3" /> Kopiera till</p>
+              <div className="flex flex-wrap gap-1.5">
+                {!isToday && <button onClick={() => copyLogTo(0)} className="px-3 py-1.5 rounded-full bg-secondary text-xs font-semibold hover:bg-muted">Idag</button>}
+                <button onClick={() => copyLogTo(1)} className="px-3 py-1.5 rounded-full bg-secondary text-xs font-semibold hover:bg-muted">Nästa dag</button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button onClick={deleteEditLog} className="flex-1 py-2 rounded-full bg-destructive/10 text-destructive text-xs font-bold flex items-center justify-center gap-1">
                 <Trash2 className="w-3.5 h-3.5" /> Ta bort
@@ -518,6 +606,33 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
               </button>
             </div>
             <button onClick={() => setEditingLog(null)} className="w-full py-1 text-xs text-muted-foreground">Avbryt</button>
+          </div>
+        </div>
+      )}
+      {quickMeal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setQuickMeal(null)}>
+          <div className="bg-card rounded-2xl shadow-soft border border-border/40 w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <p className="font-serif text-lg flex items-center gap-1.5"><Zap className="w-4 h-4 text-primary" /> Snabbpost</p>
+              <p className="text-xs text-muted-foreground capitalize">{quickMeal} · ange bara kalorier om du inte vet mer</p>
+            </div>
+            <input className="w-full input-soft" placeholder="Anteckning (t.ex. Lunch på stan)" value={quick.name} onChange={(e) => setQuick({ ...quick, name: e.target.value })} />
+            <input className="w-full input-soft text-lg font-bold" inputMode="decimal" placeholder="Kalorier (kcal)" autoFocus value={quick.kcal}
+              onChange={(e) => setQuick({ ...quick, kcal: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") saveQuickLog(); }} />
+            <div className="grid grid-cols-3 gap-2">
+              {([["protein", "Protein g"], ["fat", "Fett g"], ["carbs", "Kolh. g"]] as const).map(([k, l]) => (
+                <input key={k} className="input-soft w-full text-sm" inputMode="decimal" placeholder={l} value={quick[k]} onChange={(e) => setQuick({ ...quick, [k]: e.target.value })} />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {["100", "250", "400", "600", "800"].map((k) => (
+                <button key={k} onClick={() => setQuick({ ...quick, kcal: k })} className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${quick.kcal === k ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{k} kcal</button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setQuickMeal(null)} className="flex-1 pill-btn-ghost py-2 text-xs">Avbryt</button>
+              <button onClick={saveQuickLog} className="flex-1 pill-btn-primary py-2 text-xs">Spara</button>
+            </div>
           </div>
         </div>
       )}

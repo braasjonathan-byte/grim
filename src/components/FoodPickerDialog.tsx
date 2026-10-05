@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil } from "lucide-react";
-import { UNITS, gramsForFood, unitHint, pieceWeightFor, DEFAULT_PIECE_G } from "@/lib/nutritionCalc";
+import { UNITS, gramsForFood, unitHint, pieceWeightFor, DEFAULT_PIECE_G, naturalUnitsFor } from "@/lib/nutritionCalc";
 
 const LAST_AMOUNT_KEY = "grim_food_last_amount";
 function readLastAmounts(): Record<string, { amount: string; unit: string }> {
@@ -40,7 +40,7 @@ export interface PickedItem {
 interface FoodPickerDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onPick: (item: PickedItem) => void;
+  onPick: (item: PickedItem, opts?: { keepOpen?: boolean }) => void;
   userId: string;
   /** If true, recipes are hidden (used when building a recipe) */
   hideRecipes?: boolean;
@@ -73,6 +73,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [manualOpen, setManualOpen] = useState(false);
   const [restaurantOpen, setRestaurantOpen] = useState(false);
   const { isHonorary } = useAccessLevel();
+  const [addedCount, setAddedCount] = useState(0);
+  const [lastAdded, setLastAdded] = useState<string | null>(null);
+  useEffect(() => { if (!open) { setAddedCount(0); setLastAdded(null); } }, [open]);
 
 
   const [usage, setUsage] = useState<UsageMap>(new Map());
@@ -223,6 +226,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     const last = readLastAmounts()[`${row.source}:${row.name.toLowerCase()}`];
     if (last) { setAmount(last.amount); setUnit(last.unit); return; }
     // 2) Foods normally eaten by the piece default to 1 st
+    // 2b) Natural portions (bröd → skiva, nötter → näve, kyckling → filé)
+    const nat = naturalUnitsFor(row.name);
+    if (nat.length) { setAmount("1"); setUnit(nat[0]); return; }
     const isPiece = (row.piece_g && row.piece_g > 0) || pieceWeightFor(row.name) !== DEFAULT_PIECE_G;
     setAmount(isPiece ? "1" : "100");
     setUnit(isPiece ? "st" : "g");
@@ -230,7 +236,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
   const quickAmounts = unit === "g" ? ["50", "100", "150", "200", "300"]
     : unit === "st" ? ["1", "2", "3", "4"]
-    : ["dl", "msk", "tsk"].includes(unit) ? ["0.5", "1", "2", "3"] : [];
+    : ["dl", "msk", "tsk"].includes(unit) ? ["0.5", "1", "2", "3"]
+    : ["skiva", "näve", "filé"].includes(unit) ? ["1", "2", "3"] : [];
+  const unitOptions = selected ? [...UNITS, ...naturalUnitsFor(selected.name)] : [...UNITS];
 
   // När enheten byts: räkna om mängden så samma gramvikt behålls (100 g havregryn → ~3 dl)
   function onUnitChange(newUnit: string) {
@@ -266,7 +274,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     };
   }, [selected, amount, unit]);
 
-  async function confirm() {
+  async function confirm(keepOpen = false) {
     if (!selected || !computed) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
 
@@ -303,7 +311,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       fat_g: computed.fat_g,
       carbs_g: computed.carbs_g,
       fiber_g: computed.fiber_g,
-    });
+    }, { keepOpen });
+    if (keepOpen) { setAddedCount((c) => c + 1); setLastAdded(selected.name); }
     // Track personal usage so ranking improves over time (fire-and-forget)
     if (outId && !outId.startsWith("off-")) {
       const key = usageKey(outSource, outId);
@@ -350,6 +359,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           <DialogTitle className="font-serif">{selected ? selected.name : "Välj livsmedel"}</DialogTitle>
         </DialogHeader>
 
+        {!selected && addedCount > 0 && (
+          <div className="flex items-center justify-between gap-2 rounded-2xl bg-primary/10 text-primary px-3 py-2 text-xs font-semibold">
+            <span className="truncate">✓ {addedCount} tillagda{lastAdded ? ` · senast ${lastAdded}` : ""}</span>
+            <button onClick={() => onOpenChange(false)} className="pill-btn-primary px-3 py-1 text-xs flex-shrink-0">Klar</button>
+          </div>
+        )}
         {!selected && (
           <>
             <div className={`grid ${isHonorary ? "grid-cols-4" : "grid-cols-3"} gap-2`}>
@@ -408,7 +423,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                 />
                 {selected.source !== "recipe" ? (
                   <select value={unit} onChange={(e) => onUnitChange(e.target.value)} className="input-soft px-2">
-                    {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                    {unitOptions.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 ) : (
                   <div className="px-3 flex items-center text-sm rounded-xl bg-muted">portion(er)</div>
@@ -462,13 +477,19 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             )}
             <div className="flex gap-2">
               <button onClick={() => setSelected(null)} className="flex-1 pill-btn-ghost py-2.5 text-sm">Tillbaka</button>
-              <button onClick={confirm} className="flex-1 pill-btn-primary py-2.5 text-sm">Lägg till</button>
+              <button onClick={() => confirm()} className="flex-1 pill-btn-primary py-2.5 text-sm">Lägg till</button>
             </div>
+            <button onClick={() => confirm(true)} className="w-full pill-btn-soft py-2.5 text-sm">
+              <Plus className="w-4 h-4" /> Lägg till & sök vidare
+            </button>
           </div>
         )}
       </DialogContent>
 
-      <BarcodeScannerDialog open={barcodeOpen} onOpenChange={setBarcodeOpen} onPick={(item) => { setBarcodeOpen(false); onPick(item); }} />
+      <BarcodeScannerDialog open={barcodeOpen} onOpenChange={setBarcodeOpen} onPick={(item, opts) => {
+        if (opts?.keepScanning) { onPick(item, { keepOpen: true }); setAddedCount((c) => c + 1); setLastAdded(item.name); }
+        else { setBarcodeOpen(false); onPick(item); }
+      }} />
       <ManualFoodDialog open={manualOpen} onOpenChange={setManualOpen} userId={userId} isHonorary={isHonorary} onPick={(item) => { setManualOpen(false); onPick(item); }} />
       <RestaurantSearchDialog open={restaurantOpen} onOpenChange={setRestaurantOpen} onPick={(item) => { setRestaurantOpen(false); onPick(item); }} />
     </Dialog>

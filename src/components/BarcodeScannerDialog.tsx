@@ -6,13 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { UNITS, gramsForFood } from "@/lib/nutritionCalc";
+import { UNITS, gramsForFood, naturalUnitsFor } from "@/lib/nutritionCalc";
 import type { PickedItem } from "./FoodPickerDialog";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onPick: (item: PickedItem) => void;
+  onPick: (item: PickedItem, opts?: { keepScanning?: boolean }) => void;
 }
 
 interface FoundFood {
@@ -167,6 +167,8 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
         return;
       }
       setFound(data);
+      const nat = naturalUnitsFor(data?.food?.name);
+      if (nat.length) { setAmount("1"); setUnit(nat[0]); } else { setAmount("100"); setUnit("g"); }
     } catch (e: any) {
       toast({ title: "Sökningen misslyckades", description: e?.message, variant: "destructive" });
       start();
@@ -175,7 +177,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     }
   }
 
-  function confirm() {
+  function confirm(next = false) {
     if (!found) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
     const grams = gramsForFood(a, unit, found.food.name);
@@ -189,7 +191,14 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
       protein_g: found.food.protein_g * factor,
       fat_g: found.food.fat_g * factor,
       carbs_g: found.food.carbs_g * factor,
-    });
+    }, next ? { keepScanning: true } : undefined);
+    if (next) {
+      toast({ title: `${found.food.name} tillagd`, description: "Skanna nästa vara" });
+      setFound(null);
+      setManual("");
+      start();
+      return;
+    }
     onOpenChange(false);
   }
 
@@ -254,13 +263,19 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
               <div className="flex gap-2 mt-1">
                 <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" pattern="[0-9.,]*" className="rounded-none flex-1" />
                 <select value={unit} onChange={(e) => setUnit(e.target.value)} className="border border-input bg-background px-2 text-sm">
-                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  {[...UNITS, ...naturalUnitsFor(found.food.name)].map((u) => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
+              <div className="flex gap-1 mt-2 flex-wrap">
+                {(unit === "g" ? ["50", "100", "150", "200"] : ["1", "2", "3"]).map((p) => (
+                  <button key={p} type="button" onClick={() => setAmount(p)} className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${amount === p ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{p} {unit}</button>
+                ))}
+              </div>
             </div>
+            <button onClick={() => confirm(false)} className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground text-base font-bold">Lägg till</button>
             <div className="flex gap-2">
-              <button onClick={() => { setFound(null); start(); }} className="flex-1 py-2.5 border border-input text-sm font-medium">Skanna igen</button>
-              <button onClick={confirm} className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold">Lägg till</button>
+              <button onClick={() => { setFound(null); start(); }} className="flex-1 py-2.5 rounded-xl border border-input text-sm font-medium">Skanna igen</button>
+              <button onClick={() => confirm(true)} className="flex-1 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold">Lägg till & skanna nästa</button>
             </div>
           </div>
         )}
