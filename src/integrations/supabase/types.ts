@@ -686,6 +686,33 @@ export type Database = {
         }
         Relationships: []
       }
+      food_usage_stats: {
+        Row: {
+          food_id: string
+          food_source: string
+          id: string
+          last_used_at: string
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          food_id: string
+          food_source: string
+          id?: string
+          last_used_at?: string
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          food_id?: string
+          food_source?: string
+          id?: string
+          last_used_at?: string
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       foods: {
         Row: {
           carbs_g: number
@@ -2410,6 +2437,10 @@ export type Database = {
         Returns: Json
       }
       are_blocked: { Args: { _a: string; _b: string }; Returns: boolean }
+      bump_food_usage: {
+        Args: { p_food_id: string; p_source: string }
+        Returns: undefined
+      }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
