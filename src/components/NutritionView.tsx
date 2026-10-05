@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-import MacroRings from "./MacroRings";
+import NutritionHero from "./NutritionHero";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import RecipeEditor from "./RecipeEditor";
 import NutritionGoalsDialog from "./NutritionGoalsDialog";
@@ -35,6 +35,24 @@ interface MealLog {
   fiber_g?: number;
 }
 
+const MEAL_SHARE: Record<string, number> = { frukost: 0.25, lunch: 0.35, middag: 0.3, "mellanmål": 0.1 };
+
+const FOOD_EMOJI: [RegExp, string][] = [
+  [/ägg/i, "🥚"], [/banan/i, "🍌"], [/äpple/i, "🍎"], [/apelsin|juice/i, "🍊"], [/bär|blåbär|jordgubb|hallon/i, "🫐"],
+  [/kaffe|latte|cappuccino/i, "☕"], [/te\b/i, "🍵"], [/mjölk|fil|yoghurt|kvarg/i, "🥛"], [/havre|gröt|müsli|flingor/i, "🥣"],
+  [/bröd|macka|knäck|toast/i, "🍞"], [/ost/i, "🧀"], [/kyckling|fågel/i, "🍗"], [/lax|fisk|tonfisk|torsk|räk/i, "🐟"],
+  [/nöt|biff|fläsk|kött|färs|korv|bacon/i, "🥩"], [/pasta|spagetti|nudl/i, "🍝"], [/ris/i, "🍚"], [/potatis/i, "🥔"],
+  [/sallad|grönsak|tomat|gurka|broccoli/i, "🥗"], [/pizza/i, "🍕"], [/burgare|hamburg/i, "🍔"], [/choklad|godis|kaka|bulle/i, "🍫"],
+  [/avokado/i, "🥑"], [/vatten/i, "💧"], [/öl|vin/i, "🍷"], [/snabbpost|⚡/i, "⚡"],
+];
+const foodEmoji = (name: string) => FOOD_EMOJI.find(([re]) => re.test(name))?.[1] ?? "🍽️";
+
+const FEELINGS = [
+  { key: "light", emoji: "🙂", label: "Lätt" },
+  { key: "good", emoji: "😋", label: "Lagom" },
+  { key: "full", emoji: "😮‍💨", label: "Mätt" },
+];
+
 const DEFAULT_TARGETS: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number | null } = { kcal: 2000, protein_g: 100, fat_g: 70, carbs_g: 250, fiber_g: null };
 
 interface SortableMealProps {
@@ -50,9 +68,12 @@ interface SortableMealProps {
   onCopyYesterday?: () => void;
   onQuickLog: () => void;
   onSaveTemplate?: () => void;
+  budget?: number;
+  feeling?: string;
+  onFeeling: (k: string | null) => void;
 }
 
-function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate }: SortableMealProps) {
+function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday, onQuickLog, onSaveTemplate, budget, feeling, onFeeling }: SortableMealProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -70,7 +91,9 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
         )}
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold capitalize font-serif truncate">{meal}</p>
-          <p className="text-[10px] text-muted-foreground">{Math.round(mealKcal)} kcal</p>
+          <p className={`text-[10px] tabular-nums ${budget && mealKcal > budget * 1.1 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+            {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
+          </p>
         </div>
         <div className="flex items-center gap-1.5">
           {onCopyYesterday && (
@@ -112,6 +135,22 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           )}
         </div>
       </div>
+      {logs.length > 0 && (
+        <div className="px-3 pt-2.5 flex items-center justify-between gap-2">
+          <div className="flex -space-x-1.5 overflow-hidden">
+            {logs.slice(0, 5).map((l) => (
+              <span key={l.id} className="w-9 h-9 rounded-full bg-muted border-2 border-card flex items-center justify-center text-lg" title={l.item_name}>{foodEmoji(l.item_name)}</span>
+            ))}
+            {logs.length > 5 && <span className="w-9 h-9 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-bold">+{logs.length - 5}</span>}
+          </div>
+          <div className="flex gap-1" role="group" aria-label="Hur kändes måltiden?">
+            {FEELINGS.map((f) => (
+              <button key={f.key} onClick={() => onFeeling(feeling === f.key ? null : f.key)} title={f.label} aria-label={f.label} aria-pressed={feeling === f.key}
+                className={`w-8 h-8 rounded-full text-base transition-all ${feeling === f.key ? "bg-primary/20 ring-2 ring-primary scale-110" : feeling ? "opacity-40" : "bg-muted/40"}`}>{f.emoji}</button>
+            ))}
+          </div>
+        </div>
+      )}
       {logs.length > 0 && (
         <ul className="divide-y divide-border/40">
           {logs.map((l) => (
