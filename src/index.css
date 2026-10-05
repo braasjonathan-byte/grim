@@ -186,6 +186,11 @@
     --grim-bottom-safe: max(env(safe-area-inset-bottom), 24px);
   }
 
+  html.native-android {
+    /* Android 16 may report zero CSS safe area even with three-button navigation. */
+    --grim-bottom-safe: max(env(safe-area-inset-bottom), 48px);
+  }
+
   html.light body {
     color-scheme: light;
   }

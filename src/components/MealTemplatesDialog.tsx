@@ -141,13 +141,13 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
-      <div className="w-full sm:max-w-md bg-card border-t-2 sm:border-2 border-border max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full sm:max-w-md bg-card border-t-2 sm:border-2 border-border max-h-[85dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
           <p className="text-sm font-black">Måltidsmallar</p>
           <button onClick={onClose} className="p-1 hover:bg-secondary"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-3 pb-safe">
           {!saveMode && !applyingTemplate && (
             <>
               <button

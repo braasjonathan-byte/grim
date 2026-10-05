@@ -14,6 +14,9 @@ const IS_NATIVE_CAPACITOR = Capacitor.isNativePlatform();
 // padding layer on top of the native inset handling.
 if (IS_NATIVE_CAPACITOR) {
   document.documentElement.classList.add("native-capacitor");
+  if (Capacitor.getPlatform() === "android") {
+    document.documentElement.classList.add("native-android");
+  }
 }
 
 const clearAllCaches = async () => {
