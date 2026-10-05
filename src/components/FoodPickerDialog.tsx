@@ -359,7 +359,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
                   pattern="[0-9.,]*"
-                  className="rounded-none flex-1"
+                  className="rounded-xl bg-muted/50 border-transparent flex-1"
                 />
                 {selected.source !== "recipe" ? (
                   <select value={unit} onChange={(e) => setUnit(e.target.value)} className="input-soft px-2">

@@ -194,7 +194,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
                         onChange={(e) => updateIngredientAmount(idx, e.target.value)}
                         inputMode="decimal"
                         pattern="[0-9.,]*"
-                        className="rounded-none h-7 w-20 text-xs"
+                        className="rounded-xl bg-muted/50 border-transparent h-7 w-20 text-xs"
                         aria-label="Mängd"
                       />
                       <span className="text-[11px] text-muted-foreground">{ing.unit}</span>
