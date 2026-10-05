@@ -198,7 +198,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
   function confirm() {
     if (!selected) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
-    const grams = gramsForFood(a, unit, selected.name);
+    const grams = gramsForFood(a, unit, selected.product_name);
     const factor = grams / 100;
     onPick({
       source: "custom_food",
