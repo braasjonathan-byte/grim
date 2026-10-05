@@ -216,7 +216,6 @@ const NATURAL_UNITS: Record<string, { default: number; rules: [RegExp, number][]
   "filé": { default: 140, rules: [
     [/kyckling/i, 150], [/lax|torsk|fisk|sej|kolja/i, 125], [/fläsk|kotlett/i, 150], [/nöt|biff|entrecote/i, 180],
   ] },
-  "msk smör": { default: 10, rules: [] },
 };
 
 function naturalGrams(unit: string, name?: string | null): number | null {
