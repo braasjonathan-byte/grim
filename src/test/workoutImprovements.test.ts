@@ -36,7 +36,7 @@ beforeEach(() => {
 });
 
 describe("passanpassad pepp", () => {
-  it("har 135 unika formuleringar med endast variabler som finns för förbättringen", () => {
+  it("har 133 unika formuleringar efter 100 tillägg, med endast giltiga variabler", () => {
     const source = readFileSync("src/lib/workoutImprovements.ts", "utf8");
     const block = source.slice(source.indexOf("  heavier: ["), source.indexOf("const RECENT_KEY"));
     const vars: Record<string, string[]> = {
@@ -57,8 +57,8 @@ describe("passanpassad pepp", () => {
         if (["faster", "longerDistance", "longerTime", "lowerPulse"].includes(kind)) expect(text[1]).toContain("{sport}");
       }
     }
-    expect(texts).toHaveLength(135);
-    expect(new Set(texts).size).toBe(135);
+    expect(texts).toHaveLength(133);
+    expect(new Set(texts).size).toBe(133);
   });
 
   it("peppar med den aktuella övningens riktiga viktbästa", async () => {
