@@ -496,20 +496,6 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-2">
-          <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
-            <Target className="w-3 h-3" /> Mål
-          </button>
-          <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="pill-btn-ghost shadow-soft py-2 text-xs">
-            <ChefHat className="w-3 h-3" /> Recept
-          </button>
-          <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
-            <Bookmark className="w-3 h-3" /> Mallar
-          </button>
-          <button onClick={() => copyFromYesterday()} disabled={yesterdayLogs.length === 0} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
-            <CopyPlus className="w-3 h-3" /> Igår
-          </button>
-        </div>
 
 
 
