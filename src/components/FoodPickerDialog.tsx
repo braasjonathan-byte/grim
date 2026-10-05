@@ -47,6 +47,45 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const { isHonorary } = useAccessLevel();
 
 
+  const [usage, setUsage] = useState<UsageMap>(new Map());
+  const [personal, setPersonal] = useState<FoodRow[]>([]);
+
+  // Load personal usage stats + build "Dina vanliga" list
+  useEffect(() => {
+    if (!open || !userId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("food_usage_stats")
+        .select("food_source,food_id,use_count,last_used_at")
+        .eq("user_id", userId)
+        .order("last_used_at", { ascending: false })
+        .limit(300);
+      if (cancelled || !data) return;
+      const map: UsageMap = new Map();
+      for (const u of data) map.set(usageKey(u.food_source, u.food_id), { count: u.use_count, last: new Date(u.last_used_at).getTime() });
+      setUsage(map);
+
+      // 10 most recent + 10 most frequent (deduped)
+      const recent = data.slice(0, 10);
+      const frequent = [...data].sort((a, b) => b.use_count - a.use_count).filter((u) => !recent.includes(u)).slice(0, 10);
+      const picks = [...recent, ...frequent].filter((u) => !(hideRecipes && u.food_source === "recipe"));
+      const ids = (s: string) => picks.filter((p) => p.food_source === s).map((p) => p.food_id);
+      const [fR, cR, rR] = await Promise.all([
+        ids("food").length ? supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,group_name").in("id", ids("food")) : Promise.resolve({ data: [] as any[] }),
+        ids("custom_food").length ? supabase.from("custom_foods").select("id,name,kcal,protein_g,fat_g,carbs_g").in("id", ids("custom_food")) : Promise.resolve({ data: [] as any[] }),
+        ids("recipe").length ? supabase.from("recipes").select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,servings").in("id", ids("recipe")) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      if (cancelled) return;
+      const byKey = new Map<string, FoodRow>();
+      for (const f of (fR.data || []) as any[]) byKey.set(usageKey("food", f.id), { ...f, source: "food" });
+      for (const c of (cR.data || []) as any[]) byKey.set(usageKey("custom_food", c.id), { ...c, source: "custom_food" });
+      for (const r of (rR.data || []) as any[]) byKey.set(usageKey("recipe", r.id), recipeRow(r));
+      setPersonal(picks.map((p) => byKey.get(usageKey(p.food_source, p.food_id))).filter(Boolean) as FoodRow[]);
+    })();
+    return () => { cancelled = true; };
+  }, [open, userId, hideRecipes]);
+
   // search
   useEffect(() => {
     if (!open) return;
@@ -54,13 +93,11 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     const term = query.trim();
     setLoading(true);
     (async () => {
-      // foods (global)
       const foodsQ = term
         ? supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,group_name").ilike("name", `%${term}%`).order("name").limit(40)
         : supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,group_name").order("name").limit(40);
-      // custom foods (own)
-      const customQ = supabase.from("custom_foods").select("id,name,kcal,protein_g,fat_g,carbs_g").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
-      // recipes (own + public)
+      let customQ = supabase.from("custom_foods").select("id,name,kcal,protein_g,fat_g,carbs_g").eq("user_id", userId);
+      if (term) customQ = customQ.ilike("name", `%${term}%`);
       const recipesQ = hideRecipes ? null : supabase
         .from("recipes")
         .select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,visibility,servings")
@@ -68,38 +105,17 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         .order("created_at", { ascending: false })
         .limit(50);
 
-      const [foodsR, customR, recipesR] = await Promise.all([foodsQ, customQ, recipesQ as any]);
+      const [foodsR, customR, recipesR] = await Promise.all([foodsQ, customQ.order("created_at", { ascending: false }).limit(30), recipesQ as any]);
       if (cancelled) return;
       if ((recipesR as any)?.error) console.error("recipes query error", (recipesR as any).error);
 
       const list: FoodRow[] = [];
-      if (recipesR?.data) {
-        for (const r of recipesR.data as any[]) {
-          if (term && !r.name.toLowerCase().includes(term.toLowerCase())) continue;
-          list.push({
-            id: r.id, name: r.name, source: "recipe",
-            kcal: Number(r.kcal_per_serving) || 0,
-            protein_g: Number(r.protein_g_per_serving) || 0,
-            fat_g: Number(r.fat_g_per_serving) || 0,
-            carbs_g: Number(r.carbs_g_per_serving) || 0,
-            servings: Number(r.servings) || 1,
-            owner_id: r.user_id || null,
-          });
-        }
+      for (const r of (recipesR?.data || []) as any[]) {
+        if (term && !r.name.toLowerCase().includes(term.toLowerCase())) continue;
+        list.push(recipeRow(r));
       }
       for (const c of customR.data || []) list.push({ ...(c as any), source: "custom_food" });
       for (const f of foodsR.data || []) list.push({ ...(f as any), source: "food" });
-      // Sort so names starting with the search term appear first
-      if (term) {
-        const lowerTerm = term.toLowerCase();
-        list.sort((a, b) => {
-          const aStarts = a.name.toLowerCase().startsWith(lowerTerm);
-          const bStarts = b.name.toLowerCase().startsWith(lowerTerm);
-          if (aStarts && !bStarts) return -1;
-          if (!aStarts && bStarts) return 1;
-          return a.name.localeCompare(b.name, "sv");
-        });
-      }
       setResults(list);
       setLoading(false);
     })();
@@ -159,11 +175,17 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   }, [open, query]);
 
   const combinedResults = useMemo(() => {
-    if (!query.trim()) return results;
+    const term = query.trim();
+    if (!term) {
+      const shown = new Set(personal.map((p) => usageKey(p.source, p.id)));
+      return results.filter((r) => !shown.has(usageKey(r.source, r.id)));
+    }
     const seen = new Set(results.map(r => r.name.toLowerCase()));
     const extras = offResults.filter(r => !seen.has(r.name.toLowerCase()));
-    return [...results, ...extras];
-  }, [results, offResults, query]);
+    return rankFoods([...results, ...extras], term, usage);
+  }, [results, offResults, query, usage, personal]);
+
+  const showPersonal = !query.trim() && personal.length > 0;
 
   function pick(row: FoodRow) {
     setSelected(row);
