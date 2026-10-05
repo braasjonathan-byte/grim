@@ -4,7 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil } from "lucide-react";
-import { UNITS, gramsForFood, unitHint } from "@/lib/nutritionCalc";
+import { UNITS, gramsForFood, unitHint, pieceWeightFor, DEFAULT_PIECE_G } from "@/lib/nutritionCalc";
+
+const LAST_AMOUNT_KEY = "grim_food_last_amount";
+function readLastAmounts(): Record<string, { amount: string; unit: string }> {
+  try { return JSON.parse(localStorage.getItem(LAST_AMOUNT_KEY) || "{}"); } catch { return {}; }
+}
+function saveLastAmount(key: string, amount: string, unit: string) {
+  try {
+    const all = readLastAmounts();
+    all[key] = { amount, unit };
+    const keys = Object.keys(all);
+    if (keys.length > 300) delete all[keys[0]];
+    localStorage.setItem(LAST_AMOUNT_KEY, JSON.stringify(all));
+  } catch { /* ignore */ }
+}
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import RestaurantSearchDialog from "./RestaurantSearchDialog";
 import ManualFoodDialog from "./ManualFoodDialog";
@@ -204,9 +218,19 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
 
   function pick(row: FoodRow) {
     setSelected(row);
-    setAmount(row.source === "recipe" ? "1" : "100");
-    setUnit(row.source === "recipe" ? "portion" : "g");
+    if (row.source === "recipe") { setAmount("1"); setUnit("portion"); return; }
+    // 1) Remember what the user logged last time for this food
+    const last = readLastAmounts()[`${row.source}:${row.name.toLowerCase()}`];
+    if (last) { setAmount(last.amount); setUnit(last.unit); return; }
+    // 2) Foods normally eaten by the piece default to 1 st
+    const isPiece = (row.piece_g && row.piece_g > 0) || pieceWeightFor(row.name) !== DEFAULT_PIECE_G;
+    setAmount(isPiece ? "1" : "100");
+    setUnit(isPiece ? "st" : "g");
   }
+
+  const quickAmounts = unit === "g" ? ["50", "100", "150", "200", "300"]
+    : unit === "st" ? ["1", "2", "3", "4"]
+    : ["dl", "msk", "tsk"].includes(unit) ? ["0.5", "1", "2", "3"] : [];
 
   const computed = useMemo(() => {
     if (!selected) return null;
@@ -254,6 +278,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       }
     }
 
+    if (selected.source !== "recipe") saveLastAmount(`${selected.source}:${selected.name.toLowerCase()}`, amount, unit);
     onPick({
       source: outSource,
       id: outId,
@@ -361,6 +386,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               <div className="flex gap-2 mt-1">
                 <Input
                   value={amount}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onKeyDown={(e) => { if (e.key === "Enter") confirm(); }}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
                   pattern="[0-9.,]*"
@@ -374,6 +401,20 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   <div className="px-3 flex items-center text-sm rounded-xl bg-muted">portion(er)</div>
                 )}
               </div>
+              {selected.source !== "recipe" && quickAmounts.length > 0 && (
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {quickAmounts.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setAmount(p)}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${amount.replace(",", ".") === p ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                    >
+                      {p.replace(".", ",")} {unit}
+                    </button>
+                  ))}
+                </div>
+              )}
               {selected.source !== "recipe" && unitHint(unit, selected.name, selected.piece_g) && (
                 <p className="text-[10px] text-muted-foreground mt-1">{unitHint(unit, selected.name, selected.piece_g)}</p>
               )}
