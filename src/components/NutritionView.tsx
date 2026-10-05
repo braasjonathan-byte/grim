@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import MacroRings from "./MacroRings";
@@ -10,6 +10,7 @@ import NutritionGoalsDialog from "./NutritionGoalsDialog";
 import MealNameDialog from "./MealNameDialog";
 import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import MealTemplatesDialog from "./MealTemplatesDialog";
+import WaterTracker from "./WaterTracker";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { showUndoToast } from "@/lib/undoToast";
@@ -31,9 +32,10 @@ interface MealLog {
   protein_g: number;
   fat_g: number;
   carbs_g: number;
+  fiber_g?: number;
 }
 
-const DEFAULT_TARGETS = { kcal: 2000, protein_g: 100, fat_g: 70, carbs_g: 250 };
+const DEFAULT_TARGETS: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number | null } = { kcal: 2000, protein_g: 100, fat_g: 70, carbs_g: 250, fiber_g: null };
 
 interface SortableMealProps {
   meal: string;
@@ -45,9 +47,10 @@ interface SortableMealProps {
   onDelete: () => void;
   onRemoveLog: (id: string) => void;
   onEditLog: (l: MealLog) => void;
+  onCopyYesterday?: () => void;
 }
 
-function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog }: SortableMealProps) {
+function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelete, onRemoveLog, onEditLog, onCopyYesterday }: SortableMealProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: meal, disabled: !isCustom });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -68,6 +71,11 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           <p className="text-[10px] text-muted-foreground">{Math.round(mealKcal)} kcal</p>
         </div>
         <div className="flex items-center gap-1.5">
+          {onCopyYesterday && (
+            <button onClick={onCopyYesterday} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label={`Kopiera ${meal} från igår`} title="Kopiera från igår">
+              <CopyPlus className="w-4 h-4" />
+            </button>
+          )}
           <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5">
             <Plus className="w-3.5 h-3.5" /> Lägg till
           </button>
@@ -127,6 +135,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [editingLog, setEditingLog] = useState<MealLog | null>(null);
   const [editAmount, setEditAmount] = useState<string>("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [waterGoal, setWaterGoal] = useState(2000);
+  const [yesterdayLogs, setYesterdayLogs] = useState<any[]>([]);
 
   useEffect(() => {
     if (editingLog) setEditAmount(String(editingLog.amount));
@@ -144,6 +154,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       protein_g: Number(editingLog.protein_g) * f,
       fat_g: Number(editingLog.fat_g) * f,
       carbs_g: Number(editingLog.carbs_g) * f,
+      fiber_g: Number(editingLog.fiber_g || 0) * f,
     }).eq("id", editingLog.id);
     if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
     setEditingLog(null);
@@ -167,13 +178,17 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const dateKey = toLocalDateKey(date);
 
   async function load() {
-    const [logsR, goalsR] = await Promise.all([
+    const y = new Date(date); y.setDate(y.getDate() - 1);
+    const [logsR, goalsR, yR] = await Promise.all([
       supabase.from("meal_logs").select("*").eq("user_id", userId).eq("log_date", dateKey).order("created_at"),
       supabase.from("nutrition_goals").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("meal_logs").select("*").eq("user_id", userId).eq("log_date", toLocalDateKey(y)).order("created_at"),
     ]);
     setLogs((logsR.data as MealLog[]) || []);
+    setYesterdayLogs(yR.data || []);
     if (goalsR.data) {
-      setTargets({ kcal: goalsR.data.daily_kcal, protein_g: goalsR.data.protein_g, fat_g: goalsR.data.fat_g, carbs_g: goalsR.data.carbs_g });
+      setTargets({ kcal: goalsR.data.daily_kcal, protein_g: goalsR.data.protein_g, fat_g: goalsR.data.fat_g, carbs_g: goalsR.data.carbs_g, fiber_g: goalsR.data.fiber_g ?? null });
+      setWaterGoal(goalsR.data.water_goal_ml ?? 2000);
       const ms = (goalsR.data as any).meal_slots as string[] | null;
       if (ms && ms.length) setSlots(ms);
     }
@@ -191,7 +206,25 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     protein: logs.reduce((s, l) => s + Number(l.protein_g), 0),
     fat: logs.reduce((s, l) => s + Number(l.fat_g), 0),
     carbs: logs.reduce((s, l) => s + Number(l.carbs_g), 0),
+    fiber: logs.reduce((s, l) => s + Number(l.fiber_g || 0), 0),
   }), [logs]);
+
+  /** Copy yesterday's logged items (optionally only one meal) to the shown day. */
+  async function copyFromYesterday(meal?: string) {
+    const rows = yesterdayLogs.filter((r) => !meal || r.meal_type === meal);
+    if (rows.length === 0) { toast({ title: meal ? `Inget loggat i ${meal} igår` : "Inget loggat igår" }); return; }
+    const label = meal ? `${meal} (${rows.length} livsmedel)` : `alla ${rows.length} livsmedel`;
+    if (!window.confirm(`Kopiera ${label} från igår?`)) return;
+    const insert = rows.map(({ id, created_at, ...r }: any) => ({ ...r, log_date: dateKey }));
+    const { data, error } = await supabase.from("meal_logs").insert(insert).select("id");
+    if (error) { toast({ title: "Kunde inte kopiera", description: error.message, variant: "destructive" }); return; }
+    load();
+    const ids = (data || []).map((d) => d.id);
+    showUndoToast(`Kopierade ${rows.length} livsmedel från igår`, async () => {
+      if (ids.length) await supabase.from("meal_logs").delete().in("id", ids);
+      load();
+    });
+  }
 
   async function persistSlots(next: string[]) {
     setSlots(next);
@@ -257,6 +290,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       user_id: userId, log_date: dateKey, meal_type: meal, item_name: item.name,
       amount: item.amount, unit: item.unit,
       kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g,
+      fiber_g: item.fiber_g || 0,
       food_id: item.source === "food" && isUuid ? item.id : null,
       custom_food_id: item.source === "custom_food" && isUuid ? item.id : null,
       recipe_id: item.source === "recipe" && isUuid ? item.id : null,
@@ -298,7 +332,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
-          <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} targets={targets} />
+          <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} />
         </div>
 
         {logs.length === 0 && (
@@ -316,7 +350,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <Target className="w-3 h-3" /> Mål
           </button>
@@ -325,6 +359,9 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </button>
           <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
             <Bookmark className="w-3 h-3" /> Mallar
+          </button>
+          <button onClick={() => copyFromYesterday()} disabled={yesterdayLogs.length === 0} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
+            <CopyPlus className="w-3 h-3" /> Igår
           </button>
         </div>
 
@@ -349,6 +386,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                     onDelete={() => deleteSlot(idx)}
                     onRemoveLog={removeLog}
                     onEditLog={(l) => setEditingLog(l)}
+                    onCopyYesterday={yesterdayLogs.some((r) => r.meal_type === meal) ? () => copyFromYesterday(meal) : undefined}
                   />
                 );
               })}
@@ -361,6 +399,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         </button>
 
       </div>
+
+      <WaterTracker userId={userId} dateKey={dateKey} goalMl={waterGoal} />
 
       <FoodPickerDialog
         open={!!picker}
