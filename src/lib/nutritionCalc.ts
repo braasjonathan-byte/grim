@@ -75,8 +75,45 @@ export function distributeMacros(tdee: number, weightKg: number, goal: GoalType)
   return { kcal, protein_g, fat_g, carbs_g };
 }
 
+/** Typical weight per piece (g) for common foods, matched against the food name. */
+const PIECE_WEIGHTS: [RegExp, number][] = [
+  [/\bägg/i, 53],
+  [/banan/i, 120],
+  [/äpple/i, 150],
+  [/päron/i, 170],
+  [/apelsin/i, 140],
+  [/clementin|mandarin/i, 70],
+  [/kiwi/i, 75],
+  [/knäckebröd/i, 12],
+  [/bröd|skiva|toast|limpa/i, 30],
+  [/frukostfralla|fralla|bulle/i, 60],
+  [/potatis/i, 150],
+  [/sötpotatis/i, 200],
+  [/morot|morötter/i, 70],
+  [/gul lök|rödlök|\blök/i, 100],
+  [/vitlök/i, 5],
+  [/tomat/i, 100],
+  [/gurka/i, 300],
+  [/paprika/i, 150],
+  [/avokado/i, 170],
+  [/korv|prinskorv/i, 50],
+  [/kycklingfilé|kycklingbröst/i, 150],
+];
+export const DEFAULT_PIECE_G = 50;
+
+/** Best piece weight: database value > name lookup > 50 g fallback. */
+export function pieceWeightFor(name?: string | null, dbWeight?: number | null): number {
+  if (dbWeight && dbWeight > 0) return Number(dbWeight);
+  if (name) {
+    // sötpotatis before potatis, vitlök before lök
+    const ordered = [...PIECE_WEIGHTS].sort((a, b) => b[0].source.length - a[0].source.length);
+    for (const [re, g] of ordered) if (re.test(name)) return g;
+  }
+  return DEFAULT_PIECE_G;
+}
+
 /** Convert amount+unit to grams (approximate household measures). */
-export function toGrams(amount: number, unit: string): number {
+export function toGrams(amount: number, unit: string, pieceG: number = DEFAULT_PIECE_G): number {
   const u = unit.toLowerCase();
   if (u === "g" || u === "gram") return amount;
   if (u === "kg") return amount * 1000;
@@ -86,7 +123,7 @@ export function toGrams(amount: number, unit: string): number {
   if (u === "msk") return amount * 15;
   if (u === "tsk") return amount * 5;
   if (u === "krm") return amount * 1;
-  if (u === "st" || u === "styck") return amount * 50; // rough default
+  if (u === "st" || u === "styck") return amount * pieceG;
   if (u === "portion") return amount * 250;
   return amount;
 }
