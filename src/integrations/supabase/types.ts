@@ -907,6 +907,33 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_feelings: {
+        Row: {
+          feeling: string
+          id: string
+          log_date: string
+          meal_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          feeling: string
+          id?: string
+          log_date: string
+          meal_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          feeling?: string
+          id?: string
+          log_date?: string
+          meal_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       meal_logs: {
         Row: {
           amount: number
