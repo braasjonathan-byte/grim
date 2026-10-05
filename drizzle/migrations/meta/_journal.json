@@ -43,6 +43,13 @@
       "when": 1789915350593,
       "tag": "0005_health_daily_sleep_minutes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791176537134,
+      "tag": "0006_food_usage_stats",
+      "breakpoints": true
     }
   ]
 }
