@@ -171,7 +171,7 @@ const DENSITIES: [RegExp, number][] = [
   [/morot|kålrot|palsternacka|rotselleri|rödbeta|grönsak|kål\b|broccoli|blomkål|svamp|champinjon|lök/i, 0.55],
   [/frukt|äpple|päron|ananas|melon|mango|druv|citrus|aprikos|persika|plommon/i, 0.6],
   [/tofu|sojaprotein|veteprotein|quorn|färs|köttfärs/i, 0.85],
-  [/\brå\b|\bkokt\b|\bstekt\b|filé/i, 0.8],
+  [/(^|\s)rå($|[\s,])|\bkokt\b|\bstekt\b|filé/i, 0.8],
   [/glass/i, 0.55],
   [/äppelmos|mos\b/i, 1.05],
 ];
