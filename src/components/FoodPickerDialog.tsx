@@ -8,6 +8,7 @@ import { UNITS, toGrams } from "@/lib/nutritionCalc";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import RestaurantSearchDialog from "./RestaurantSearchDialog";
 import ManualFoodDialog from "./ManualFoodDialog";
+import { rankFoods, usageKey, type UsageMap } from "@/lib/foodRanking";
 
 export interface PickedItem {
   source: "food" | "custom_food" | "recipe";
@@ -33,6 +34,18 @@ interface FoodPickerDialogProps {
 }
 
 type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string; owner_id?: string | null };
+
+function recipeRow(r: any): FoodRow {
+  return {
+    id: r.id, name: r.name, source: "recipe",
+    kcal: Number(r.kcal_per_serving) || 0,
+    protein_g: Number(r.protein_g_per_serving) || 0,
+    fat_g: Number(r.fat_g_per_serving) || 0,
+    carbs_g: Number(r.carbs_g_per_serving) || 0,
+    servings: Number(r.servings) || 1,
+    owner_id: r.user_id || null,
+  };
+}
 
 export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes, onEditRecipe }: FoodPickerDialogProps) {
   const [query, setQuery] = useState("");
