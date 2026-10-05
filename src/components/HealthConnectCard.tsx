@@ -249,7 +249,6 @@ const HealthConnectCard = () => {
   }, []);
 
   const runTest = useCallback(async (set: keyof typeof HEALTH_TEST_SETS) => {
-    setDiagBusy(true);
     const t = () => new Date().toLocaleTimeString("sv-SE");
     setTestLog((l) => [`${t()} Test ${set}: startar – väntar på Health Connect (max 60 s)…`, ...l]);
     try {
@@ -260,7 +259,6 @@ const HealthConnectCard = () => {
       const f = formatHealthError(err);
       setTestLog((l) => [`${t()} Test ${set}: ${f.ref} ${f.message}`, ...l]);
     } finally {
-      setDiagBusy(false);
       void refreshDiag();
     }
   }, [refreshDiag]);
@@ -445,13 +443,13 @@ const HealthConnectCard = () => {
                 <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void refreshDiag()}>
                   Uppdatera
                 </Button>
-                <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void runTest("A")}>
+                <Button size="sm" variant="outline" className="rounded-full" onClick={() => void runTest("A")}>
                   Test A: steg
                 </Button>
-                <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void runTest("B")}>
+                <Button size="sm" variant="outline" className="rounded-full" onClick={() => void runTest("B")}>
                   Test B: steg + distans
                 </Button>
-                <Button size="sm" variant="outline" className="rounded-full" disabled={diagBusy} onClick={() => void runTest("C")}>
+                <Button size="sm" variant="outline" className="rounded-full" onClick={() => void runTest("C")}>
                   Test C: alla
                 </Button>
               </div>
