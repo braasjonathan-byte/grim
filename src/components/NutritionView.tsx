@@ -108,6 +108,11 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           <p className={`text-[10px] tabular-nums ${budget && mealKcal > budget * 1.1 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
             {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
           </p>
+          {logs.length > 0 && (
+            <p className="text-[10px] tabular-nums text-muted-foreground truncate">
+              {Math.round(logs.reduce((s, l) => s + Number(l.protein_g || 0), 0))}g P · {Math.round(logs.reduce((s, l) => s + Number(l.carbs_g || 0), 0))}g K · {Math.round(logs.reduce((s, l) => s + Number(l.fat_g || 0), 0))}g F
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {onCopyYesterday && (
@@ -328,17 +333,43 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
   const feelKey = `grim-meal-feel:${userId}:${dateKey}`;
   useEffect(() => {
-    try { setFeelings(JSON.parse(localStorage.getItem(feelKey) || "{}")); } catch { setFeelings({}); }
+    let cancelled = false;
+    let local: Record<string, string> = {};
+    try { local = JSON.parse(localStorage.getItem(feelKey) || "{}"); } catch { /* ignore */ }
+    setFeelings(local);
+    (supabase as any).from("meal_feelings").select("meal_type, feeling").eq("user_id", userId).eq("log_date", dateKey)
+      .then(async ({ data, error }: any) => {
+        if (cancelled || error) return;
+        const remote: Record<string, string> = {};
+        for (const r of data || []) remote[r.meal_type] = r.feeling;
+        // Migrate old locally stored feelings once
+        const toMigrate = Object.entries(local).filter(([m]) => !remote[m]);
+        if (toMigrate.length) {
+          await (supabase as any).from("meal_feelings").upsert(
+            toMigrate.map(([meal_type, feeling]) => ({ user_id: userId, log_date: dateKey, meal_type, feeling })),
+            { onConflict: "user_id,log_date,meal_type" },
+          );
+          for (const [m, f] of toMigrate) remote[m] = f;
+        }
+        try { localStorage.removeItem(feelKey); } catch { /* ignore */ }
+        if (!cancelled) setFeelings(remote);
+      });
     loadWorkoutBurned(userId, dateKey).then(setBurned).catch(() => setBurned(0));
+    return () => { cancelled = true; };
   }, [feelKey, userId, dateKey]);
 
   function setFeeling(meal: string, k: string | null) {
+    hapticLight();
     setFeelings((prev) => {
       const next = { ...prev };
       if (k) next[meal] = k; else delete next[meal];
-      try { localStorage.setItem(feelKey, JSON.stringify(next)); } catch { /* ignore */ }
       return next;
     });
+    const t = (supabase as any).from("meal_feelings");
+    const p = k
+      ? t.upsert({ user_id: userId, log_date: dateKey, meal_type: meal, feeling: k, updated_at: new Date().toISOString() }, { onConflict: "user_id,log_date,meal_type" })
+      : t.delete().eq("user_id", userId).eq("log_date", dateKey).eq("meal_type", meal);
+    p.then(({ error }: any) => { if (error) toast.error("Kunde inte spara känslan"); });
   }
 
   const allSlots = useMemo(() => {

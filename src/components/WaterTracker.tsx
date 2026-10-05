@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Droplet, Plus } from "lucide-react";
+import { hapticLight } from "@/lib/haptics";
 
 interface Props { userId: string; dateKey: string; goalMl: number }
 
@@ -50,7 +51,7 @@ export default function WaterTracker({ userId, dateKey, goalMl }: Props) {
           return (
             <button
               key={i}
-              onClick={() => setAmount(isFilled && i === filled - 1 ? (filled - 1) * STEP_ML : (i + 1) * STEP_ML)}
+              onClick={() => { hapticLight(); setAmount(isFilled && i === filled - 1 ? (filled - 1) * STEP_ML : (i + 1) * STEP_ML); }}
               aria-label={isFilled ? `Glas ${i + 1} (tryck för att ta bort)` : `Fyll glas ${i + 1}`}
               className={`h-11 rounded-b-xl rounded-t-md flex items-center justify-center transition-all active:scale-90 ${
                 isFilled ? "bg-primary/70" : isNext ? "bg-primary/10 border border-dashed border-primary/40" : "bg-muted/50"
