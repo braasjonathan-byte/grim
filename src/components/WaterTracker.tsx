@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Droplet, Minus, Plus } from "lucide-react";
+import { Droplet, Plus } from "lucide-react";
 
 interface Props { userId: string; dateKey: string; goalMl: number }
 
 const STEP_ML = 250; // ett glas
 
-/** Enkel vattenräknare per dag, sparas i water_logs. */
+/** Vattenglas i rad: tryck på nästa glas för att fylla, tryck på sista fyllda för att ta bort. */
 export default function WaterTracker({ userId, dateKey, goalMl }: Props) {
   const [ml, setMl] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -18,48 +18,49 @@ export default function WaterTracker({ userId, dateKey, goalMl }: Props) {
     return () => { cancelled = true; };
   }, [userId, dateKey]);
 
-  function change(delta: number) {
-    setMl((prev) => {
-      const next = Math.max(0, prev + delta);
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        supabase.from("water_logs").upsert(
-          { user_id: userId, log_date: dateKey, amount_ml: next, updated_at: new Date().toISOString() },
-          { onConflict: "user_id,log_date" },
-        ).then(({ error }) => { if (error) console.error("water save failed", error); });
-      }, 800);
-      return next;
-    });
+  function setAmount(next: number) {
+    next = Math.max(0, next);
+    setMl(next);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      supabase.from("water_logs").upsert(
+        { user_id: userId, log_date: dateKey, amount_ml: next, updated_at: new Date().toISOString() },
+        { onConflict: "user_id,log_date" },
+      ).then(({ error }) => { if (error) console.error("water save failed", error); });
+    }, 800);
   }
 
   const goal = goalMl > 0 ? goalMl : 2000;
-  const glasses = Math.ceil(goal / STEP_ML);
   const filled = Math.floor(ml / STEP_ML);
-  const pct = Math.min(100, (ml / goal) * 100);
+  const glasses = Math.max(Math.ceil(goal / STEP_ML), filled + 1);
 
   return (
-    <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-3 space-y-2">
+    <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
+        <div>
           <p className="text-sm font-bold font-serif flex items-center gap-1.5"><Droplet className="w-4 h-4 text-primary" /> Vatten</p>
-          <p className="text-[11px] text-muted-foreground tabular-nums">{(ml / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} / {(goal / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l · {filled} glas</p>
+          <p className="text-[11px] text-muted-foreground">Mål: {(goal / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => change(-STEP_ML)} disabled={ml === 0} className="w-9 h-9 icon-round bg-secondary hover:bg-muted transition-colors disabled:opacity-40" aria-label="Ta bort ett glas"><Minus className="w-4 h-4" /></button>
-          <button onClick={() => change(STEP_ML)} className="w-9 h-9 icon-round bg-primary text-primary-foreground shadow-soft hover:opacity-90" aria-label="Lägg till ett glas"><Plus className="w-4 h-4" /></button>
-        </div>
+        <p className="text-sm font-bold tabular-nums">{(ml / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 2 })} l</p>
       </div>
-      {glasses <= 12 ? (
-        <div className="flex gap-1 flex-wrap">
-          {Array.from({ length: glasses }).map((_, i) => (
-            <Droplet key={i} className={`w-4 h-4 transition-colors ${i < filled ? "text-primary fill-primary" : "text-muted-foreground/40"}`} />
-          ))}
-        </div>
-      ) : (
-        <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-        </div>
-      )}
+      <div className="grid grid-cols-8 gap-1.5">
+        {Array.from({ length: glasses }).map((_, i) => {
+          const isFilled = i < filled;
+          const isNext = i === filled;
+          return (
+            <button
+              key={i}
+              onClick={() => setAmount(isFilled && i === filled - 1 ? (filled - 1) * STEP_ML : (i + 1) * STEP_ML)}
+              aria-label={isFilled ? `Glas ${i + 1} (tryck för att ta bort)` : `Fyll glas ${i + 1}`}
+              className={`h-11 rounded-b-xl rounded-t-md flex items-center justify-center transition-all active:scale-90 ${
+                isFilled ? "bg-primary/70" : isNext ? "bg-primary/10 border border-dashed border-primary/40" : "bg-muted/50"
+              }`}
+            >
+              {!isFilled && <Plus className={`w-3.5 h-3.5 ${isNext ? "text-primary" : "text-muted-foreground/50"}`} />}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
