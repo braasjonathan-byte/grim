@@ -24,9 +24,9 @@ function Ring({ size, stroke, pct, color, children }: { size: number; stroke: nu
   );
 }
 
-/** Kalorihjälte: Kvar = Mål − Ätit + Förbränt, plus fyra makroringar. */
+/** Kalorihjälte: Kvar = Mål − Ätit (målet bygger redan på träningsvolymen; Förbränt visas bara som info), plus fyra makroringar. */
 export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets }: Props) {
-  const budget = targets.kcal + burned;
+  const budget = targets.kcal;
   const left = Math.round(budget - kcal);
   const over = left < 0;
   const fiberTarget = targets.fiber_g && targets.fiber_g > 0 ? targets.fiber_g : 30;
