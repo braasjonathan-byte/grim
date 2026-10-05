@@ -476,6 +476,23 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         <button onClick={() => shiftDay(1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
       </div>
 
+      {/* Snabbvalen ligger precis under veckodagen, före energikortet. */}
+      <div className="grid grid-cols-4 gap-2">
+        <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
+          <Target className="w-3 h-3" /> Mål
+        </button>
+        <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="pill-btn-ghost shadow-soft py-2 text-xs">
+          <ChefHat className="w-3 h-3" /> Recept
+        </button>
+        <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
+          <Bookmark className="w-3 h-3" /> Mallar
+        </button>
+        <button onClick={() => copyFromYesterday()} disabled={yesterdayLogs.length === 0} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
+          <CopyPlus className="w-3 h-3" /> Igår
+        </button>
+      </div>
+
+
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
           <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} />
@@ -496,20 +513,6 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-2">
-          <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
-            <Target className="w-3 h-3" /> Mål
-          </button>
-          <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="pill-btn-ghost shadow-soft py-2 text-xs">
-            <ChefHat className="w-3 h-3" /> Recept
-          </button>
-          <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
-            <Bookmark className="w-3 h-3" /> Mallar
-          </button>
-          <button onClick={() => copyFromYesterday()} disabled={yesterdayLogs.length === 0} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
-            <CopyPlus className="w-3 h-3" /> Igår
-          </button>
-        </div>
 
 
 
