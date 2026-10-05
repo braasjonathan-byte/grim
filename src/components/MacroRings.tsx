@@ -13,11 +13,12 @@ interface MacroRingsProps {
   protein: number;
   fat: number;
   carbs: number;
-  targets: { kcal: number; protein_g: number; fat_g: number; carbs_g: number };
+  fiber?: number;
+  targets: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null };
   compact?: boolean;
 }
 
-export default function MacroRings({ kcal, protein, fat, carbs, targets, compact }: MacroRingsProps) {
+export default function MacroRings({ kcal, protein, fat, carbs, fiber = 0, targets, compact }: MacroRingsProps) {
   const rings: Ring[] = useMemo(() => [
     { label: "Kcal", value: kcal, target: targets.kcal, color: "hsl(var(--primary))" },
     { label: "Protein", value: protein, target: targets.protein_g, color: "hsl(var(--success, 142 71% 45%))", unit: "g" },
@@ -31,6 +32,7 @@ export default function MacroRings({ kcal, protein, fat, carbs, targets, compact
   const c = 2 * Math.PI * r;
 
   return (
+    <div>
     <div className={`grid grid-cols-4 ${compact ? "gap-2" : "gap-3"}`}>
       {rings.map((ring) => {
         const pct = ring.target > 0 ? Math.min(100, (ring.value / ring.target) * 100) : 0;
@@ -66,6 +68,19 @@ export default function MacroRings({ kcal, protein, fat, carbs, targets, compact
           </div>
         );
       })}
+    </div>
+    {!compact && !!targets.fiber_g && targets.fiber_g > 0 && (() => {
+      const pct = Math.min(100, (fiber / targets.fiber_g!) * 100);
+      return (
+        <div className="mt-3 flex items-center gap-2 text-[10px]">
+          <span className="text-muted-foreground font-medium w-10">Fiber</span>
+          <div className="flex-1 h-1.5 rounded-full bg-muted/60 overflow-hidden">
+            <div className="h-full rounded-full bg-success transition-all" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="tabular-nums"><span className="font-semibold">{Math.round(fiber)}</span><span className="text-muted-foreground">/{targets.fiber_g}g</span></span>
+        </div>
+      );
+    })()}
     </div>
   );
 }

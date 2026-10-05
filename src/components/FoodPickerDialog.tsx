@@ -374,6 +374,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   <div className="px-3 flex items-center text-sm rounded-xl bg-muted">portion(er)</div>
                 )}
               </div>
+              {selected.source !== "recipe" && unit === "st" && (
+                <p className="text-[10px] text-muted-foreground mt-1">1 st ≈ {pieceWeightFor(selected.name, selected.piece_g)} g</p>
+              )}
               {selected.source === "recipe" && (
                 <>
                   <p className="text-[10px] text-muted-foreground mt-1">
@@ -395,11 +398,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               )}
             </div>
             {computed && (
-              <div className="grid grid-cols-4 gap-2 text-center bg-muted/40 p-2">
+              <div className={`grid ${computed.fiber_g > 0 ? "grid-cols-5" : "grid-cols-4"} gap-2 text-center bg-muted/40 rounded-2xl p-2`}>
                 <div><p className="text-[10px] text-muted-foreground">Kcal</p><p className="font-bold tabular-nums">{Math.round(computed.kcal)}</p></div>
                 <div><p className="text-[10px] text-muted-foreground">Protein</p><p className="font-bold tabular-nums">{computed.protein_g.toFixed(1)}g</p></div>
                 <div><p className="text-[10px] text-muted-foreground">Fett</p><p className="font-bold tabular-nums">{computed.fat_g.toFixed(1)}g</p></div>
                 <div><p className="text-[10px] text-muted-foreground">Kolhydrater</p><p className="font-bold tabular-nums">{computed.carbs_g.toFixed(1)}g</p></div>
+                {computed.fiber_g > 0 && <div><p className="text-[10px] text-muted-foreground">Fiber</p><p className="font-bold tabular-nums">{computed.fiber_g.toFixed(1)}g</p></div>}
               </div>
             )}
             <div className="flex gap-2">

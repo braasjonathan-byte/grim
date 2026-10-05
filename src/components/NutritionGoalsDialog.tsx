@@ -23,6 +23,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [protein, setProtein] = useState("100");
   const [fat, setFat] = useState("70");
   const [carbs, setCarbs] = useState("250");
+  const [fiber, setFiber] = useState("");
+  const [water, setWater] = useState("2000");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -40,6 +42,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       if (g) {
         setKcal(String(g.daily_kcal)); setProtein(String(g.protein_g));
         setFat(String(g.fat_g)); setCarbs(String(g.carbs_g));
+        setFiber(g.fiber_g ? String(g.fiber_g) : ""); setWater(String(g.water_goal_ml ?? 2000));
         setActivity(g.activity_level as ActivityLevel); setGoal(g.goal_type as GoalType);
       }
     })();
@@ -80,6 +83,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       carbs_g: parseInt(carbs) || 250,
       activity_level: activity,
       goal_type: goal,
+      fiber_g: parseInt(fiber) || null,
+      water_goal_ml: parseInt(water) || 2000,
     }, { onConflict: "user_id" });
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
@@ -122,6 +127,10 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
             <div><label className="text-[10px] font-medium">Protein g</label><Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
             <div><label className="text-[10px] font-medium">Fett g</label><Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
             <div><label className="text-[10px] font-medium">Kolhydrat g</label><Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className="text-[10px] font-medium">Fiber g (valfritt)</label><Input value={fiber} onChange={(e) => setFiber(e.target.value)} inputMode="numeric" pattern="[0-9]*" placeholder="t.ex. 30" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+            <div><label className="text-[10px] font-medium">Vattenmål ml</label><Input value={water} onChange={(e) => setWater(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
           </div>
           <button disabled={saving} onClick={save} className="w-full pill-btn-primary py-3 disabled:opacity-50">{saving ? "Sparar…" : "Spara"}</button>
         </div>

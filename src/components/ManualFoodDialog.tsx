@@ -21,13 +21,14 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
   const [protein, setProtein] = useState("");
   const [fat, setFat] = useState("");
   const [carbs, setCarbs] = useState("");
+  const [fiber, setFiber] = useState("");
   const [amount, setAmount] = useState("100");
   const [saving, setSaving] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
 
   useEffect(() => {
     if (!open) {
-      setName(""); setKcal(""); setProtein(""); setFat(""); setCarbs(""); setAmount("100");
+      setName(""); setKcal(""); setProtein(""); setFat(""); setCarbs(""); setFiber(""); setAmount("100");
     }
   }, [open]);
 
@@ -44,6 +45,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
         protein_g: num(protein),
         fat_g: num(fat),
         carbs_g: num(carbs),
+        fiber_g: num(fiber),
       };
       const { data, error } = await supabase.from("custom_foods").insert(payload).select("id").single();
       if (error) throw error;
@@ -59,6 +61,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
         protein_g: payload.protein_g * factor,
         fat_g: payload.fat_g * factor,
         carbs_g: payload.carbs_g * factor,
+        fiber_g: payload.fiber_g * factor,
       });
       toast.success("Sparat i din livsmedelsbank");
       onOpenChange(false);
@@ -108,6 +111,10 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Kolhydrater (g)</label>
                 <Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Fiber (g, valfritt)</label>
+                <Input value={fiber} onChange={(e) => setFiber(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
               </div>
             </div>
             <div>
