@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Lägg till 100 passanpassade peppformuleringar och verifiera att jämförelserna gäller rätt övning och träningsform.
+
 - [x] Ta bort kategorierna "Träningsinnehåll" och "Community" från Verktyg-fliken.
 - [x] Flytta "Radera konto"-knappen in i Inställningar längst ner.
 - [x] Flytta passknapparna längst ned i träningskortet och gör passnamnet tryckbart för namnbyte.
