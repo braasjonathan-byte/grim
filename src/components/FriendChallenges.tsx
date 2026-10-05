@@ -51,21 +51,50 @@ export default function FriendChallenges({ userId }: Props) {
   const [endDate, setEndDate] = useState(inDays(30));
   const [invited, setInvited] = useState<string[]>([]);
 
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [inviterNames, setInviterNames] = useState<Record<string, string>>({});
+
   const loadChallenges = useCallback(async () => {
     const { data: memberships } = await supabase
       .from("friend_challenge_participants")
-      .select("challenge_id")
+      .select("challenge_id, status")
       .eq("user_id", userId);
     const ids = (memberships || []).map((m) => m.challenge_id);
+    setPendingIds(new Set((memberships || []).filter((m) => m.status === "pending").map((m) => m.challenge_id)));
     if (ids.length === 0) { setChallenges([]); setLoading(false); return; }
     const { data } = await supabase
       .from("friend_challenges")
       .select("*")
       .in("id", ids)
       .order("end_date", { ascending: true });
-    setChallenges((data || []) as Challenge[]);
+    const list = (data || []) as Challenge[];
+    setChallenges(list);
+    const creatorIds = [...new Set(list.map((c) => c.created_by))];
+    if (creatorIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("user_id, nickname").in("user_id", creatorIds);
+      setInviterNames(Object.fromEntries((profs || []).map((p) => [p.user_id, p.nickname])));
+    }
     setLoading(false);
   }, [userId]);
+
+  // Live: new invites appear without reload
+  useEffect(() => {
+    const ch = supabase
+      .channel(`challenge-invites-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "friend_challenge_participants", filter: `user_id=eq.${userId}` }, () => loadChallenges())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [userId, loadChallenges]);
+
+  const respondInvite = async (c: Challenge, accept: boolean) => {
+    const q = supabase.from("friend_challenge_participants");
+    const { error } = accept
+      ? await q.update({ status: "accepted" }).eq("challenge_id", c.id).eq("user_id", userId)
+      : await q.delete().eq("challenge_id", c.id).eq("user_id", userId);
+    if (error) { toast.error("Något gick fel"); return; }
+    toast.success(accept ? "Du är med i utmaningen!" : "Inbjudan avböjd");
+    loadChallenges();
+  };
 
   const loadFriends = useCallback(async () => {
     const { data: friendships } = await supabase
