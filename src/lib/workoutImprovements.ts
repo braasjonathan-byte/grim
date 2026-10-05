@@ -33,7 +33,7 @@ const TEMPLATES: Record<Kind, Array<{ emoji: string; title: string; text: string
     { emoji: "🦍", title: "Råstyrka", text: "{diff} tyngre i {ex} än tidigare. Kroppen svarar på jobbet." },
     { emoji: "🚀", title: "Uppåt igen", text: "{ex} har gått från {prev} till {now}. Så bygger man styrka." },
     { emoji: "🔩", title: "Järnet rör sig", text: "{now} i {ex}! Det är ditt tyngsta hittills." },
-    { emoji: "🧗", title: "Ny nivå", text: "Du klättrade {diff} i {ex}. Nästa gång blir det ännu mer." },
+    { emoji: "🧗", title: "Ny nivå", text: "Du ökade från {prev} till {now} i {ex}. Dagens nya viktbästa är ditt!" },
     {"emoji": "💪", "title": "Styrkan syns i siffrorna", "text": "Du avslutade {ex} med {now}. Det är {diff} över ditt tidigare bästa på {prev}."},
     {"emoji": "🏋️", "title": "En tyngre notering", "text": "{ex}: tidigare {prev}, nu {now}. Dagens pass gav ett nytt viktbästa!"},
     {"emoji": "🚀", "title": "Du flyttade gränsen", "text": "I {ex} lyfte du {diff} mer än din tidigare topp. {now} är den nya noteringen."},
@@ -48,10 +48,10 @@ const TEMPLATES: Record<Kind, Array<{ emoji: string; title: string; text: string
     {"emoji": "🌟", "title": "Ett lyft att minnas", "text": "{ex} sticker ut från dagens pass: {now}, upp från ditt tidigare bästa på {prev}."},
   ],
   moreReps: [
-    { emoji: "🔁", title: "Fler reps, samma vikt", text: "{ex}: {now} reps på {kg} – förra gången {prev}. Det är progression!" },
+    { emoji: "🔁", title: "Fler reps, samma vikt", text: "{ex}: {now} reps på {kg} – tidigare bästa på samma vikt var {prev}. Det är progression!" },
     { emoji: "📈", title: "Uthålligare", text: "Du pressade ut {diff} reps mer på {kg} i {ex}." },
-    { emoji: "💪", title: "Mer i tanken", text: "{now} reps på {kg} i {ex}. Snart är det dags att höja vikten." },
-    { emoji: "🎯", title: "Repsen tickar upp", text: "{ex} på {kg}: från {prev} till {now} reps. Snyggt." },
+    { emoji: "💪", title: "Mer i tanken", text: "{now} reps på {kg} i {ex}. Det är {diff} fler än ditt tidigare bästa på samma vikt." },
+    { emoji: "🎯", title: "Repsen tickar upp", text: "{ex} på {kg}: tidigare bästa {prev}, nu {now} reps. Snyggt." },
     {"emoji": "🔁", "title": "En starkare serie", "text": "{ex} på {kg}: {now} reps i dag mot ditt tidigare bästa på {prev}. Du lade till {diff} reps!"},
     {"emoji": "💪", "title": "Vikten samma, repsen fler", "text": "Du gjorde {now} reps på {kg} i {ex}. Det är {diff} fler än ditt tidigare bästa på den vikten."},
     {"emoji": "📈", "title": "Repsbästa på den vikten", "text": "{ex}: {kg} och {now} reps. Din tidigare topp på samma vikt var {prev}."},
@@ -67,7 +67,7 @@ const TEMPLATES: Record<Kind, Array<{ emoji: string; title: string; text: string
   ],
   exerciseVolume: [
     { emoji: "📦", title: "Mer jobb gjort", text: "Total volym i {ex}: {now} – {pct} % mer än förra gången." },
-    { emoji: "⚙️", title: "Volymen växer", text: "{ex} gav {now} idag mot {prev} senast. Mer arbete = mer resultat." },
+    { emoji: "⚙️", title: "Volymen växer", text: "{ex} gav {now} i lyftvolym i dag mot {prev} senast. En ökning med {pct} %!" },
     { emoji: "🧱", title: "Byggsten för byggsten", text: "{pct} % mer volym i {ex} än förra passet." },
     {"emoji": "📦", "title": "Övningen fick mer volym", "text": "{ex}: {now} i total lyftvolym mot {prev} senast. En ökning med {pct} %!"},
     {"emoji": "⚙️", "title": "Mer sammanlagt i dag", "text": "Du samlade {now} i {ex}, {pct} % mer än vid senaste jämförelsen."},
@@ -83,9 +83,9 @@ const TEMPLATES: Record<Kind, Array<{ emoji: string; title: string; text: string
     {"emoji": "🏆", "title": "Mer än senaste gången", "text": "Du lyfte sammanlagt {now} i {ex}. Förra jämförda tillfället gav {prev}."},
   ],
   faster: [
-    { emoji: "⚡", title: "Snabbare än förut", text: "{sport}: {now} idag mot {prev} senast. Benen är vassare!" },
+    { emoji: "⚡", title: "Snabbare än förut", text: "{sport}: {now} i snitt i dag mot tidigare bästa {prev}. Snyggt genomfört!" },
     { emoji: "🏎️", title: "Tempot sitter", text: "Ditt snabbaste {sport}-pass hittills: {now}." },
-    { emoji: "💨", title: "Vinden i ryggen?", text: "Nej, det är du som blivit bättre – {now} i {sport}, förra bästa {prev}." },
+    { emoji: "💨", title: "Fart i dagens pass", text: "{now} i snitt under {sport}, tidigare bästa {prev}. Din nya notering är snabbare!" },
     { emoji: "🐆", title: "Kvick idag", text: "Du höll {now} i {sport}. Det är snabbare än någon tidigare gång." },
     { emoji: "⏱️", title: "Klockan ljuger inte", text: "{sport} på {now} – en tydlig förbättring från {prev}." },
     {"emoji": "⚡", "title": "Farten fick ett lyft", "text": "{sport}: {now} i dagens pass. Ditt tidigare bästa var {prev}."},
@@ -135,9 +135,9 @@ const TEMPLATES: Record<Kind, Array<{ emoji: string; title: string; text: string
     {"emoji": "💪", "title": "Dagens uthållighetsnotering", "text": "{sport}: {now} mot tidigare längsta {prev}. Du höll på {diff} längre!"},
   ],
   lowerPulse: [
-    { emoji: "❤️", title: "Hjärtat jobbar smartare", text: "Snittpuls {now} i {sport} mot {prev} senast – med samma eller bättre tempo. Konditionen växer!" },
-    { emoji: "🫀", title: "Lugnare puls", text: "{diff} lägre puls i {sport} utan att tappa fart. Det är ren formkurva." },
-    { emoji: "🧘", title: "Mindre ansträngning", text: "Samma jobb, lägre puls ({now}). Kroppen har anpassat sig." },
+    { emoji: "❤️", title: "Lägre snittpuls", text: "Snittpuls {now} i {sport} mot {prev} senast – vid jämförbar eller högre snittfart. En fin notering!" },
+    { emoji: "🫀", title: "Lugnare puls", text: "{diff} lägre snittpuls i {sport} vid liknande eller högre snittfart. Dagens puls var {now}." },
+    { emoji: "🧘", title: "Pulsen i dagens pass", text: "{sport} gav lägre snittpuls: {now} mot {prev} senast, vid jämförbar eller högre fart." },
     {"emoji": "❤️", "title": "Lägre puls vid liknande fart", "text": "{sport}: snittpuls {now} mot {prev} senast, med samma eller snabbare snitt inom jämförelsens marginal."},
     {"emoji": "🫀", "title": "En lägre pulsnotering", "text": "Dagens {sport} gav {now} i snittpuls, {diff} lägre än senast vid jämförbar eller högre fart."},
     {"emoji": "📉", "title": "Pulsen gick ned i jämförelsen", "text": "Du loggade {now} i {sport}, mot {prev} senast, utan någon tydlig minskning av snittfarten."},
@@ -150,9 +150,9 @@ const TEMPLATES: Record<Kind, Array<{ emoji: string; title: string; text: string
     {"emoji": "💚", "title": "En positiv pulsnotering", "text": "{sport}: {now} i snittpuls, {diff} lägre än senast med liknande eller snabbare snitt."},
   ],
   sessionVolume: [
-    { emoji: "🏆", title: "Tyngsta passet på länge", text: "{now} totalt idag – {pct} % mer än ditt snittpass." },
-    { emoji: "🔥", title: "Över snittet", text: "Du lyfte {now} – klart mer än vanligt ({prev} i snitt)." },
-    { emoji: "🐘", title: "Mycket järn", text: "{pct} % mer total volym än ett vanligt pass för dig. Imponerande." },
+    { emoji: "🏆", title: "Mer än jämförbara pass", text: "{now} totalt i dag – {pct} % mer än snittet för pass med samma övningar." },
+    { emoji: "🔥", title: "Över snittet", text: "Du lyfte {now} – mer än i ditt jämförbara snitt ({prev}) för samma övningar." },
+    { emoji: "🐘", title: "Mycket järn", text: "{pct} % mer total lyftvolym än snittet för pass med samma övningar. Imponerande." },
     {"emoji": "🏋️", "title": "Mer volym i ett jämförbart pass", "text": "{now} i total lyftvolym i dag, mot {prev} i snitt för pass med samma övningar."},
     {"emoji": "📦", "title": "Över ditt jämförbara snitt", "text": "Dagens lyftvolym var {pct} % högre än snittet för samma övningsuppsättning: {now}."},
     {"emoji": "🔥", "title": "Ett större styrkejobb i dag", "text": "Du samlade {now} i lyftvolym. För jämförbara pass ligger ditt snitt på {prev}."},
@@ -165,8 +165,8 @@ const TEMPLATES: Record<Kind, Array<{ emoji: string; title: string; text: string
     {"emoji": "👏", "title": "Alla lyft gav en ökning", "text": "{pct} % över ditt jämförbara volymsnitt! Dagens total blev {now}, mot snittets {prev}."},
   ],
   moreSets: [
-    { emoji: "🧮", title: "Fler set än vanligt", text: "{now} set idag mot {prev} i snitt. Stark arbetsmoral!" },
-    { emoji: "🪜", title: "Extra steg", text: "Du körde {diff} set mer än ett vanligt pass." },
+    { emoji: "🧮", title: "Fler set än vanligt", text: "{now} set i dag mot {prev} i snitt för pass med samma övningar. Snyggt genomfört!" },
+    { emoji: "🪜", title: "Extra steg", text: "Du körde {diff} set mer än snittet för pass med samma övningar, totalt {now}." },
     {"emoji": "🧮", "title": "Fler set i ett jämförbart pass", "text": "Du avslutade {now} set. Snittet för pass med samma övningar är {prev}."},
     {"emoji": "🪜", "title": "Extra set avklarade", "text": "Dagens {now} set är {diff} fler än ditt snitt för samma övningsuppsättning."},
     {"emoji": "📈", "title": "Settotalen steg", "text": "{now} set i dag, mot {prev} i snitt för jämförbara pass. Det blev {diff} extra."},
@@ -223,9 +223,10 @@ function findFacts(current: WorkoutSummary, history: WorkoutSummary[]): Fact[] {
 
   // Cardio, same primary sport
   const c = current.cardio;
-  if (c) {
+  // Aggregated mixed-cardio totals cannot establish a sport-specific record.
+  if (c && c.count === 1) {
     const sport = c.primaryName;
-    const prev = history.map((h) => h.cardio).filter((h): h is NonNullable<typeof h> => !!h && lc(h.primaryName) === lc(sport));
+    const prev = history.map((h) => h.cardio).filter((h): h is NonNullable<typeof h> => !!h && h.count === 1 && lc(h.primaryName) === lc(sport));
     if (prev.length > 0) {
       const paceOf = (x: { minutes: number; distanceKm: number }) => (x.minutes > 0 && x.distanceKm >= 0.3 ? x.minutes / x.distanceKm : Infinity);
       const nowPace = paceOf(c);
@@ -260,8 +261,11 @@ function findFacts(current: WorkoutSummary, history: WorkoutSummary[]): Fact[] {
     }
   }
 
-  // Whole session vs. average
-  const strengthHist = history.filter((h) => h.volumeKg > 0);
+  // Whole-session claims require the same exercise roster, not unrelated workouts.
+  const exerciseRoster = (s: WorkoutSummary) => [...new Set(s.exercises.map(lc))].sort().join("|");
+  const roster = exerciseRoster(current);
+  const comparable = roster ? history.filter((h) => exerciseRoster(h) === roster) : [];
+  const strengthHist = comparable.filter((h) => h.volumeKg > 0);
   if (current.volumeKg > 0 && strengthHist.length >= 3) {
     const avg = strengthHist.reduce((s, h) => s + h.volumeKg, 0) / strengthHist.length;
     if (current.volumeKg > avg * 1.15) {
@@ -269,7 +273,7 @@ function findFacts(current: WorkoutSummary, history: WorkoutSummary[]): Fact[] {
       facts.push({ kind: "sessionVolume", weight: 5 + pct / 15, vars: { now: fmtVol(current.volumeKg), prev: fmtVol(avg), pct: String(pct) } });
     }
   }
-  const setHist = history.filter((h) => h.sets > 0);
+  const setHist = comparable.filter((h) => h.sets > 0);
   if (current.sets > 0 && setHist.length >= 3) {
     const avg = Math.round(setHist.reduce((s, h) => s + h.sets, 0) / setHist.length);
     if (current.sets >= avg + 3) {
