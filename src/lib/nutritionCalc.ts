@@ -77,7 +77,7 @@ export function distributeMacros(tdee: number, weightKg: number, goal: GoalType)
 
 /** Typical weight per piece (g) for common foods, matched against the food name. */
 const PIECE_WEIGHTS: [RegExp, number][] = [
-  [/\bägg/i, 53],
+  [/(^|[^a-zåäö])ägg/i, 53],
   [/banan/i, 120],
   [/äpple/i, 150],
   [/päron/i, 170],
@@ -90,7 +90,7 @@ const PIECE_WEIGHTS: [RegExp, number][] = [
   [/potatis/i, 150],
   [/sötpotatis/i, 200],
   [/morot|morötter/i, 70],
-  [/gul lök|rödlök|\blök/i, 100],
+  [/gul lök|rödlök|(^|[^a-zåäö])lök/i, 100],
   [/vitlök/i, 5],
   [/tomat/i, 100],
   [/gurka/i, 300],
