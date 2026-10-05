@@ -1,3 +1,4 @@
+import { hapticLight } from "@/lib/haptics";
 import { loadWorkoutBurned } from "@/lib/workoutBurned";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -369,7 +370,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     const p = k
       ? t.upsert({ user_id: userId, log_date: dateKey, meal_type: meal, feeling: k, updated_at: new Date().toISOString() }, { onConflict: "user_id,log_date,meal_type" })
       : t.delete().eq("user_id", userId).eq("log_date", dateKey).eq("meal_type", meal);
-    p.then(({ error }: any) => { if (error) toast.error("Kunde inte spara känslan"); });
+    p.then(({ error }: any) => { if (error) toast({ title: "Kunde inte spara känslan", variant: "destructive" }); });
   }
 
   const allSlots = useMemo(() => {
@@ -518,7 +519,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
           <Bookmark className="w-3 h-3" /> Mallar
         </button>
-        <button onClick={() => copyFromYesterday()} disabled={yesterdayLogs.length === 0} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
+        <button onClick={() => { hapticLight(); copyFromYesterday(); }} disabled={yesterdayLogs.length === 0} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
           <CopyPlus className="w-3 h-3" /> Igår
         </button>
       </div>
@@ -561,12 +562,12 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                     isCustom={isCustom}
                     logs={ml}
                     mealKcal={mealKcal}
-                    onAdd={() => setPicker(meal)}
+                    onAdd={() => { hapticLight(); setPicker(meal); }}
                     onRename={() => setRenameIdx(idx)}
                     onDelete={() => deleteSlot(idx)}
                     onRemoveLog={removeLog}
                     onEditLog={(l) => setEditingLog(l)}
-                    onQuickLog={() => setQuickMeal(meal)}
+                    onQuickLog={() => { hapticLight(); setQuickMeal(meal); }}
                     onSaveTemplate={ml.length > 0 ? () => saveMealAsTemplate(meal) : undefined}
                     budget={MEAL_SHARE[meal.toLowerCase()] ? MEAL_SHARE[meal.toLowerCase()] * targets.kcal : undefined}
                     feeling={feelings[meal]}
