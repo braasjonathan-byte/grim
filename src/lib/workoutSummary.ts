@@ -224,6 +224,7 @@ export function summarizeCompletion(
   const prExercises = new Set<string>();
   let sets = 0;
   let volumeKg = 0;
+  const exerciseStats: Record<string, ExerciseStat> = {};
 
   // Which set indexes are checked off, per exercise
   const doneByExercise = new Map<string, string>();
@@ -291,6 +292,7 @@ export function summarizeCompletion(
     prExercises: [...prExercises],
     durationMin: computeDuration(lw, cardio?.minutes ?? 0, endAt),
     cardio,
+    exerciseStats,
   };
 }
 
