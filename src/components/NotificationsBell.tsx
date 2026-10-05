@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Bell, Trophy, MessageCircle, Flame, UserPlus, BarChart3 } from "lucide-react";
+import { Bell, Trophy, MessageCircle, Flame, UserPlus, BarChart3, Swords } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PopoverArrow } from "@radix-ui/react-popover";
 import { avatarGradient } from "@/lib/avatarGradient";
@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAchievementById } from "@/lib/achievements";
 import { onPostInteraction } from "@/lib/postInteractionBus";
 
-type NotifType = "comment" | "like" | "friend_request" | "achievement" | "weekly_report";
+type NotifType = "comment" | "like" | "friend_request" | "achievement" | "weekly_report" | "challenge_invite";
 type NotifTarget = "workout" | "calc" | "social" | "triathlon" | "tools" | "stats";
 
 interface Notif {
@@ -30,6 +30,7 @@ const iconFor = (type: NotifType) => {
     case "friend_request": return UserPlus;
     case "achievement": return Trophy;
     case "weekly_report": return BarChart3;
+    case "challenge_invite": return Swords;
     default: return Bell;
   }
 };
@@ -81,7 +82,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
       .limit(50);
     const postIds = (myPosts || []).map((p: any) => p.id);
 
-    const [commentsRes, likesRes, friendsRes, achRes, weeklyRes] = await Promise.all([
+    const [commentsRes, likesRes, friendsRes, achRes, weeklyRes, invitesRes] = await Promise.all([
       postIds.length
         ? supabase
             .from("social_post_comments")
@@ -123,12 +124,20 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
         .gte("created_at", since)
         .order("created_at", { ascending: false })
         .limit(5),
+      supabase
+        .from("friend_challenge_participants")
+        .select("id, challenge_id, invited_by, joined_at, friend_challenges(title, created_by)")
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .order("joined_at", { ascending: false })
+        .limit(10),
     ]);
 
     const actorIds = new Set<string>();
     (commentsRes.data || []).forEach((c: any) => actorIds.add(c.user_id));
     (likesRes.data || []).forEach((l: any) => actorIds.add(l.user_id));
     (friendsRes.data || []).forEach((f: any) => actorIds.add(f.user_id));
+    (invitesRes.data || []).forEach((i: any) => { const by = i.invited_by || i.friend_challenges?.created_by; if (by) actorIds.add(by); });
 
     let profMap: Record<string, { nickname: string; avatar_url: string | null }> = {};
     if (actorIds.size > 0) {
@@ -179,6 +188,20 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
         type: "friend_request",
         text: `${p?.nickname || "Någon"} vill bli din vän`,
         createdAt: f.created_at,
+        target: "social",
+        avatarUrl: p?.avatar_url,
+        initial: (p?.nickname || "?")[0]?.toUpperCase(),
+      });
+    });
+
+    (invitesRes.data || []).forEach((i: any) => {
+      const by = i.invited_by || i.friend_challenges?.created_by;
+      const p = by ? profMap[by] : undefined;
+      out.push({
+        id: `ci-${i.id}`,
+        type: "challenge_invite",
+        text: `${p?.nickname || "Någon"} bjöd in dig till utmaningen '${i.friend_challenges?.title || "Utmaning"}'`,
+        createdAt: i.joined_at,
         target: "social",
         avatarUrl: p?.avatar_url,
         initial: (p?.nickname || "?")[0]?.toUpperCase(),
@@ -237,6 +260,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "friendships", filter: `friend_id=eq.${userId}` }, () => load())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "user_achievements", filter: `user_id=eq.${userId}` }, () => load())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "weekly_reports", filter: `user_id=eq.${userId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "friend_challenge_participants", filter: `user_id=eq.${userId}` }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [userId, load]);
@@ -259,7 +283,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
       window.dispatchEvent(new CustomEvent("grim:open-social-post", { detail: payload }));
     } else if (n.type === "weekly_report") {
       window.dispatchEvent(new CustomEvent("grim:open-weekly-report", { detail: { id: n.reportId } }));
-    } else if (n.type === "friend_request") {
+    } else if (n.type === "friend_request" || n.type === "challenge_invite") {
       try { sessionStorage.setItem("grim_pending_social_subtab", "friends"); } catch {}
       window.dispatchEvent(new CustomEvent("grim:open-social-subtab", { detail: { subtab: "friends" } }));
     }
@@ -313,6 +337,7 @@ export default function NotificationsBell({ userId, onViewAll, onNavigate }: Not
               : n.type === "achievement" ? "bg-warning text-warning-foreground"
               : n.type === "friend_request" ? "bg-success text-success-foreground"
               : n.type === "weekly_report" ? "bg-accent text-accent-foreground"
+              : n.type === "challenge_invite" ? "bg-primary text-primary-foreground"
               : "bg-primary text-primary-foreground";
             return (
               <li key={n.id}>
