@@ -756,19 +756,25 @@ export type Database = {
         Row: {
           challenge_id: string
           id: string
+          invited_by: string | null
           joined_at: string
+          status: string
           user_id: string
         }
         Insert: {
           challenge_id: string
           id?: string
+          invited_by?: string | null
           joined_at?: string
+          status?: string
           user_id: string
         }
         Update: {
           challenge_id?: string
           id?: string
+          invited_by?: string | null
           joined_at?: string
+          status?: string
           user_id?: string
         }
         Relationships: [
