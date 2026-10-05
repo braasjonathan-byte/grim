@@ -1,3 +1,4 @@
+import { loadWorkoutBurned } from "@/lib/workoutBurned";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy } from "lucide-react";
@@ -328,8 +329,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const feelKey = `grim-meal-feel:${userId}:${dateKey}`;
   useEffect(() => {
     try { setFeelings(JSON.parse(localStorage.getItem(feelKey) || "{}")); } catch { setFeelings({}); }
-    supabase.from("health_daily").select("active_calories").eq("user_id", userId).eq("day", dateKey).maybeSingle()
-      .then(({ data }) => setBurned(Number(data?.active_calories) || 0));
+    loadWorkoutBurned(userId, dateKey).then(setBurned).catch(() => setBurned(0));
   }, [feelKey, userId, dateKey]);
 
   function setFeeling(meal: string, k: string | null) {
@@ -534,7 +534,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                     onEditLog={(l) => setEditingLog(l)}
                     onQuickLog={() => setQuickMeal(meal)}
                     onSaveTemplate={ml.length > 0 ? () => saveMealAsTemplate(meal) : undefined}
-                    budget={MEAL_SHARE[meal.toLowerCase()] ? MEAL_SHARE[meal.toLowerCase()] * (targets.kcal + burned) : undefined}
+                    budget={MEAL_SHARE[meal.toLowerCase()] ? MEAL_SHARE[meal.toLowerCase()] * targets.kcal : undefined}
                     feeling={feelings[meal]}
                     onFeeling={(k) => setFeeling(meal, k)}
                     onCopyYesterday={yesterdayLogs.some((r) => r.meal_type === meal) ? () => copyFromYesterday(meal) : undefined}
