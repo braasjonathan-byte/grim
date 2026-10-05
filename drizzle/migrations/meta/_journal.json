@@ -50,6 +50,13 @@
       "when": 1791176537134,
       "tag": "0006_food_usage_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791177212316,
+      "tag": "0007_challenge_invites",
+      "breakpoints": true
     }
   ]
 }
