@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { UNITS, toGrams } from "@/lib/nutritionCalc";
+import { UNITS, gramsForFood } from "@/lib/nutritionCalc";
 import type { PickedItem } from "./FoodPickerDialog";
 
 interface Props {
@@ -178,7 +178,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
   function confirm() {
     if (!found) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
-    const grams = toGrams(a, unit);
+    const grams = gramsForFood(a, unit, found.food.name);
     const factor = grams / 100;
     onPick({
       source: found.food.id ? "food" : "custom_food",
