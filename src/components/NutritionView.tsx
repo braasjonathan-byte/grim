@@ -47,6 +47,19 @@ const FOOD_EMOJI: [RegExp, string][] = [
 ];
 const foodEmoji = (name: string) => FOOD_EMOJI.find(([re]) => re.test(name))?.[1] ?? "🍽️";
 
+// Ikoner i måltidsraden ska aldrig upprepas: vid kollision plockas en
+// oanvänd generisk ikon i stället (t.ex. två livsmedel utan träff -> 🍽️ + 🥄).
+const GENERIC_ICONS = ["🍽️", "🥄", "🍴", "🫙", "🍳", "🧂", "🥡"];
+const uniqueMealIcons = (logs: MealLog[]) => {
+  const used = new Set<string>();
+  return logs.map((l) => {
+    let e = foodEmoji(l.item_name);
+    if (used.has(e)) e = GENERIC_ICONS.find((g) => !used.has(g)) ?? e;
+    used.add(e);
+    return e;
+  });
+};
+
 const FEELINGS = [
   { key: "light", emoji: "🙂", label: "Lätt" },
   { key: "good", emoji: "😋", label: "Lagom" },
@@ -136,17 +149,20 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
         </div>
       </div>
       {logs.length > 0 && (
-        <div className="px-3 pt-2.5 flex items-center justify-between gap-2">
-          <div className="flex -space-x-1.5 overflow-hidden">
-            {logs.slice(0, 5).map((l) => (
-              <span key={l.id} className="w-9 h-9 rounded-full bg-muted border-2 border-card flex items-center justify-center text-lg" title={l.item_name}>{foodEmoji(l.item_name)}</span>
+        <div className="px-3 pt-2.5 flex items-start justify-between gap-2">
+          <div className="flex -space-x-1.5 overflow-hidden pt-0.5">
+            {uniqueMealIcons(logs.slice(0, 5)).map((emoji, i) => (
+              <span key={logs[i].id} className="w-9 h-9 rounded-full bg-muted border-2 border-card flex items-center justify-center text-lg" title={logs[i].item_name}>{emoji}</span>
             ))}
             {logs.length > 5 && <span className="w-9 h-9 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-bold">+{logs.length - 5}</span>}
           </div>
-          <div className="flex gap-1" role="group" aria-label="Hur kändes måltiden?">
+          <div className="flex gap-2" role="group" aria-label="Hur kändes måltiden?">
             {FEELINGS.map((f) => (
-              <button key={f.key} onClick={() => onFeeling(feeling === f.key ? null : f.key)} title={f.label} aria-label={f.label} aria-pressed={feeling === f.key}
-                className={`w-8 h-8 rounded-full text-base transition-all ${feeling === f.key ? "bg-primary/20 ring-2 ring-primary scale-110" : feeling ? "opacity-40" : "bg-muted/40"}`}>{f.emoji}</button>
+              <button key={f.key} onClick={() => onFeeling(feeling === f.key ? null : f.key)} title={`Måltiden kändes: ${f.label}`} aria-label={`Måltiden kändes: ${f.label}`} aria-pressed={feeling === f.key}
+                className="flex flex-col items-center gap-0.5">
+                <span className={`w-8 h-8 rounded-full text-base flex items-center justify-center transition-all ${feeling === f.key ? "bg-primary/20 ring-2 ring-primary scale-110" : feeling ? "opacity-40" : "bg-muted/40"}`}>{f.emoji}</span>
+                <span className={`text-[9px] leading-none ${feeling === f.key ? "font-semibold text-primary" : "text-muted-foreground"}`}>{f.label}</span>
+              </button>
             ))}
           </div>
         </div>
