@@ -29,6 +29,16 @@ export interface WorkoutSummary {
   durationMin: number | null;
   /** Aggregated cardio metrics, or null when no cardio was logged */
   cardio: CardioSummary | null;
+  /** Per exercise: heaviest checked set, reps at that weight, volume and best reps */
+  exerciseStats?: Record<string, ExerciseStat>;
+}
+
+export interface ExerciseStat {
+  maxKg: number;
+  repsAtMax: number;
+  volumeKg: number;
+  bestReps: number;
+  sets: number;
 }
 
 const cleanName = (n: string) => n.replace(/( —)+$/, "").trim();
@@ -214,6 +224,7 @@ export function summarizeCompletion(
   const prExercises = new Set<string>();
   let sets = 0;
   let volumeKg = 0;
+  const exerciseStats: Record<string, ExerciseStat> = {};
 
   // Which set indexes are checked off, per exercise
   const doneByExercise = new Map<string, string>();
@@ -245,6 +256,13 @@ export function summarizeCompletion(
       exercises.add(name);
       if (isFinite(kg) && kg > 0 && isFinite(reps) && reps > 0) volumeKg += kg * reps;
       if (prIndex && isPrWeight(prIndex, name, kg)) prExercises.add(name);
+      const st = (exerciseStats[name] ||= { maxKg: 0, repsAtMax: 0, volumeKg: 0, bestReps: 0, sets: 0 });
+      st.sets += 1;
+      const k = isFinite(kg) && kg > 0 ? kg : 0;
+      const r = isFinite(reps) && reps > 0 ? reps : 0;
+      st.volumeKg += k * r;
+      if (r > st.bestReps) st.bestReps = r;
+      if (k > st.maxKg || (k === st.maxKg && r > st.repsAtMax)) { st.maxKg = k; st.repsAtMax = r; }
     });
   }
 
@@ -274,6 +292,7 @@ export function summarizeCompletion(
     prExercises: [...prExercises],
     durationMin: computeDuration(lw, cardio?.minutes ?? 0, endAt),
     cardio,
+    exerciseStats,
   };
 }
 

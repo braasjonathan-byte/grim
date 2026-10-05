@@ -5,6 +5,7 @@ import ConfettiBurst from "@/components/ConfettiBurst";
 import { formatVolumeKg, formatDurationMin, formatCardioDistance, formatCardioPace, type WorkoutSummary } from "@/lib/workoutSummary";
 import { hapticLight } from "@/lib/haptics";
 import { buildSurpriseReward, type SurpriseReward } from "@/lib/surpriseRewards";
+import { findWorkoutImprovements, type Improvement } from "@/lib/workoutImprovements";
 
 interface WorkoutCompleteOverlayProps {
   open: boolean;
@@ -20,10 +21,27 @@ interface WorkoutCompleteOverlayProps {
  */
 const WorkoutCompleteOverlay = ({ open, title, summary, userId, onClose }: WorkoutCompleteOverlayProps) => {
   const [surprise, setSurprise] = useState<SurpriseReward | null>(null);
+  const [improvements, setImprovements] = useState<Improvement[]>([]);
 
   useEffect(() => {
     if (open) hapticLight();
   }, [open]);
+
+  // Real improvements vs. earlier sessions (heavier, faster, longer…)
+  useEffect(() => {
+    if (!open) {
+      setImprovements([]);
+      return;
+    }
+    let cancelled = false;
+    findWorkoutImprovements(userId || "", summary).then((list) => {
+      if (!cancelled) setImprovements(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, userId]);
 
   // Random but genuine "surprise" reward, revealed a beat after the summary
   useEffect(() => {
@@ -132,7 +150,19 @@ const WorkoutCompleteOverlay = ({ open, title, summary, userId, onClose }: Worko
           </div>
         )}
 
-        {surprise && (
+        {improvements.map((imp, i) => (
+          <div key={i} className="rounded-2xl bg-success/10 border border-success/30 p-3.5 text-left animate-scale-in">
+            <div className="flex items-start gap-3">
+              <div className="h-9 w-9 shrink-0 rounded-full bg-success/15 flex items-center justify-center text-lg">{imp.emoji}</div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-success">{imp.title}</p>
+                <p className="text-sm mt-0.5 leading-snug">{imp.text}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {surprise && improvements.length === 0 && (
           <div className="relative rounded-2xl bg-primary/10 border border-primary/25 p-3.5 text-left animate-scale-in">
             {surprise.confetti && <ConfettiBurst count={16} className="top-0" />}
             <div className="flex items-start gap-3">
