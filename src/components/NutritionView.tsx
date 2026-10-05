@@ -47,6 +47,19 @@ const FOOD_EMOJI: [RegExp, string][] = [
 ];
 const foodEmoji = (name: string) => FOOD_EMOJI.find(([re]) => re.test(name))?.[1] ?? "🍽️";
 
+// Ikoner i måltidsraden ska aldrig upprepas: vid kollision plockas en
+// oanvänd generisk ikon i stället (t.ex. två livsmedel utan träff -> 🍽️ + 🥄).
+const GENERIC_ICONS = ["🍽️", "🥄", "🍴", "🫙", "🍳", "🧂", "🥡"];
+const uniqueMealIcons = (logs: MealLog[]) => {
+  const used = new Set<string>();
+  return logs.map((l) => {
+    let e = foodEmoji(l.item_name);
+    if (used.has(e)) e = GENERIC_ICONS.find((g) => !used.has(g)) ?? e;
+    used.add(e);
+    return e;
+  });
+};
+
 const FEELINGS = [
   { key: "light", emoji: "🙂", label: "Lätt" },
   { key: "good", emoji: "😋", label: "Lagom" },
