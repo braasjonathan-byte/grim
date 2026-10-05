@@ -137,7 +137,7 @@ const DENSITIES: [RegExp, number][] = [
   [/socker|strösocker|farin/i, 0.85],
   [/kakao|o'boy|oboy/i, 0.45],
   [/proteinpulver|whey|kaseinpulver|pulver/i, 0.4],
-  [/ris\b|basmati|jasmin/i, 0.85],
+  [/ris basmati|basmatiris|jasminris|ris\b|basmati|jasmin/i, 0.85],
   [/bulgur|matvete|quinoa|couscous/i, 0.75],
   [/pasta|makaroner|spaghetti|penne|fusilli/i, 0.4],
   [/linser|bönor|kikärtor/i, 0.8],
@@ -151,6 +151,29 @@ const DENSITIES: [RegExp, number][] = [
   [/salt\b|bakpulver|bikarbonat/i, 1.2],
   [/kanel|krydd|peppar|paprikapulver/i, 0.5],
   [/sallad|spenat|ruccola|grönkål/i, 0.2],
+  // More dry goods
+  [/kli\b|vetekli|havrekli|kruskakli/i, 0.25],
+  [/kross|groddar|flakes/i, 0.4],
+  [/grynsgröt|gröt\b|välling/i, 1.05],
+  [/mannagryn|semolina|polenta|majsmjöl/i, 0.65],
+  [/nudlar/i, 0.35],
+  [/torkad|malen|mald\b|pulver/i, 0.5],
+  [/jäst torkad|näringsjäst/i, 0.3],
+  [/chips potatis|potatischips|chips|bågar|popcorn|salta pinnar|räkchips/i, 0.1],
+  [/hårt bröd|knäcke|skorpor|kex\b|rån\b/i, 0.25],
+  [/gelégodis|godis|karameller|kola\b|choklad/i, 0.6],
+  [/hampafrö|vallmofrö|pinjefrö|psyllium/i, 0.55],
+  [/kastanj|sötmandel/i, 0.6],
+  // Solid fresh foods (chopped/diced into a measure)
+  [/hårdost|ost\b|mesost|smältost|mögelost/i, 0.45],
+  [/cottage cheese|färskost/i, 1.0],
+  [/potatis|pommes/i, 0.65],
+  [/morot|kålrot|palsternacka|rotselleri|rödbeta|grönsak|kål\b|broccoli|blomkål|svamp|champinjon|lök/i, 0.55],
+  [/frukt|äpple|päron|ananas|melon|mango|druv|citrus|aprikos|persika|plommon/i, 0.6],
+  [/tofu|sojaprotein|veteprotein|quorn|färs|köttfärs/i, 0.85],
+  [/(^|\s)rå($|[\s,])|\bkokt\b|\bstekt\b|filé/i, 0.8],
+  [/glass/i, 0.55],
+  [/äppelmos|mos\b/i, 1.05],
 ];
 export const DEFAULT_DENSITY = 1.0;
 
