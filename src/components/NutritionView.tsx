@@ -489,9 +489,10 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
             <div className="space-y-1">
               <label className="text-xs font-bold">Mängd ({editingLog.unit})</label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="any"
+                onFocus={(e) => e.currentTarget.select()}
+                onKeyDown={(e) => { if (e.key === "Enter") saveEditLog(); }}
                 value={editAmount}
                 onChange={(e) => setEditAmount(e.target.value)}
                 className="w-full input-soft"

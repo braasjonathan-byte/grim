@@ -278,6 +278,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       }
     }
 
+    if (selected.source !== "recipe") saveLastAmount(`${selected.source}:${selected.name.toLowerCase()}`, amount, unit);
     onPick({
       source: outSource,
       id: outId,
@@ -385,6 +386,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               <div className="flex gap-2 mt-1">
                 <Input
                   value={amount}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onKeyDown={(e) => { if (e.key === "Enter") confirm(); }}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
                   pattern="[0-9.,]*"
@@ -398,6 +401,20 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   <div className="px-3 flex items-center text-sm rounded-xl bg-muted">portion(er)</div>
                 )}
               </div>
+              {selected.source !== "recipe" && quickAmounts.length > 0 && (
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {quickAmounts.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setAmount(p)}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${amount.replace(",", ".") === p ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                    >
+                      {p.replace(".", ",")} {unit}
+                    </button>
+                  ))}
+                </div>
+              )}
               {selected.source !== "recipe" && unitHint(unit, selected.name, selected.piece_g) && (
                 <p className="text-[10px] text-muted-foreground mt-1">{unitHint(unit, selected.name, selected.piece_g)}</p>
               )}
