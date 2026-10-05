@@ -393,7 +393,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       {pendingRecipe && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setPendingRecipe(null)}>
-          <div className="bg-card border border-border w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl shadow-soft border border-border/40 w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div>
               <p className="font-serif text-lg">Lägg till i måltid</p>
               <p className="text-xs text-muted-foreground truncate">{pendingRecipe.name}</p>
@@ -403,7 +403,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                 <button
                   key={meal}
                   onClick={() => { const it = pendingRecipe; setPendingRecipe(null); addLog(meal, it); }}
-                  className="w-full text-left px-3 py-3 border border-input text-sm font-bold capitalize hover:bg-accent"
+                  className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold capitalize hover:bg-muted transition-colors"
                 >
                   {meal}
                 </button>
@@ -441,7 +441,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       {editingLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setEditingLog(null)}>
-          <div className="bg-card border border-border w-full sm:max-w-sm p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl shadow-soft border border-border/40 w-full sm:max-w-sm p-4 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div>
               <p className="font-serif text-lg">Redigera livsmedel</p>
               <p className="text-xs text-muted-foreground truncate">{editingLog.item_name}</p>
@@ -454,7 +454,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                 step="any"
                 value={editAmount}
                 onChange={(e) => setEditAmount(e.target.value)}
-                className="w-full px-3 py-2 border border-input bg-background text-sm"
+                className="w-full input-soft"
                 autoFocus
               />
               {(() => {
@@ -469,10 +469,10 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
               })()}
             </div>
             <div className="flex gap-2">
-              <button onClick={deleteEditLog} className="flex-1 py-2 border border-destructive text-destructive text-xs font-bold flex items-center justify-center gap-1">
+              <button onClick={deleteEditLog} className="flex-1 py-2 rounded-full bg-destructive/10 text-destructive text-xs font-bold flex items-center justify-center gap-1">
                 <Trash2 className="w-3.5 h-3.5" /> Ta bort
               </button>
-              <button onClick={saveEditLog} className="flex-1 py-2 bg-primary text-primary-foreground text-xs font-bold">
+              <button onClick={saveEditLog} className="flex-1 pill-btn-primary py-2 text-xs">
                 Spara
               </button>
             </div>

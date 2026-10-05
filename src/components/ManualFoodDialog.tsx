@@ -80,7 +80,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
           {isHonorary && (
             <button
               onClick={() => setScanOpen(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 border border-primary text-primary text-xs font-bold"
+              className="w-full flex items-center justify-center gap-2 py-2.5 pill-btn-soft text-xs font-bold"
             >
               <Sparkles className="w-4 h-4" /> Skanna näringsinformation
             </button>
@@ -89,36 +89,36 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
           <div className="space-y-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Namn</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="rounded-none" placeholder="Namn på livsmedel" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="rounded-xl bg-muted/50 border-transparent" placeholder="Namn på livsmedel" />
             </div>
             <p className="text-[11px] text-muted-foreground">Värden per 100 g</p>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Kcal</label>
-                <Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="decimal" className="rounded-none" />
+                <Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Protein (g)</label>
-                <Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="decimal" className="rounded-none" />
+                <Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Fett (g)</label>
-                <Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="decimal" className="rounded-none" />
+                <Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Kolhydrater (g)</label>
-                <Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="decimal" className="rounded-none" />
+                <Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
               </div>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Mängd att lägga till (g)</label>
-              <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="rounded-none" />
+              <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
             </div>
           </div>
 
           <div className="flex gap-2 pt-2">
-            <button onClick={() => onOpenChange(false)} className="flex-1 py-2.5 border border-input text-sm font-medium">Avbryt</button>
-            <button onClick={save} disabled={saving} className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2">
+            <button onClick={() => onOpenChange(false)} className="flex-1 pill-btn-ghost py-2.5 text-sm">Avbryt</button>
+            <button onClick={save} disabled={saving} className="flex-1 pill-btn-primary py-2.5 text-sm flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />} Spara & lägg till
             </button>
           </div>

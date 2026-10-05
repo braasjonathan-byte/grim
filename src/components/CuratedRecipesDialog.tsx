@@ -72,7 +72,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
           {onCreateOwn && (
             <button
               onClick={() => { onOpenChange(false); onCreateOwn(); }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground font-bold"
+              className="w-full flex items-center justify-center gap-2 pill-btn-primary py-3"
             >
               <Plus className="w-4 h-4" /> Skapa eget recept
             </button>
@@ -103,19 +103,19 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
             {onCreateOwn && (
               <button
                 onClick={() => { onOpenChange(false); onCreateOwn(); }}
-                className="w-full flex items-center justify-center gap-2 py-2 border border-input text-xs font-bold"
+                className="w-full flex items-center justify-center gap-2 pill-btn-ghost py-2 text-xs"
               >
                 <Plus className="w-3.5 h-3.5" /> Skapa eget recept
               </button>
             )}
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök recept…" className="pl-9 rounded-none" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök recept…" className="pl-9 rounded-xl bg-muted/50 border-transparent" />
             </div>
             <div className="flex flex-wrap gap-1 pb-1">
               <button
                 onClick={() => setCat("alla")}
-                className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap border ${cat === "alla" ? "bg-primary text-primary-foreground border-primary" : "border-input bg-background"}`}
+                className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === "alla" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
               >
                 Alla
               </button>
@@ -123,7 +123,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
                 <button
                   key={c}
                   onClick={() => setCat(c)}
-                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap border ${cat === c ? "bg-primary text-primary-foreground border-primary" : "border-input bg-background"}`}
+                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === c ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
                 >
                   {c}
                 </button>
@@ -159,7 +159,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
                 </button>
               </div>
             </div>
-            <div className="bg-muted/40 p-2 grid grid-cols-4 gap-1 text-center">
+            <div className="bg-muted/40 rounded-2xl p-2 grid grid-cols-4 gap-1 text-center">
               <div><p className="text-[9px] text-muted-foreground">Kcal/p</p><p className="text-sm font-bold tabular-nums">{selected.kcal_per_serving}</p></div>
               <div><p className="text-[9px] text-muted-foreground">Protein</p><p className="text-sm font-bold tabular-nums">{selected.protein_g_per_serving}g</p></div>
               <div><p className="text-[9px] text-muted-foreground">Fett</p><p className="text-sm font-bold tabular-nums">{selected.fat_g_per_serving}g</p></div>
@@ -167,7 +167,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
             </div>
             <div>
               <p className="text-xs font-bold mb-1">Ingredienser ({selected.servings} port)</p>
-              <ul className="border border-border divide-y divide-border text-xs">
+              <ul className="rounded-2xl bg-muted/30 overflow-hidden divide-y divide-border/40 text-xs">
                 {selected.ingredients.map((i, idx) => (
                   <li key={idx} className="p-2 flex justify-between">
                     <span>{i.name}</span>
@@ -183,8 +183,8 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
             {onPick && (
               <div className="space-y-2 pt-2 border-t border-border">
                 <label className="text-xs font-medium">Antal portioner</label>
-                <Input value={portions} onChange={(e) => setPortions(e.target.value)} inputMode="decimal" className="rounded-none" />
-                <button onClick={confirmAdd} className="w-full py-3 bg-primary text-primary-foreground font-bold">
+                <Input value={portions} onChange={(e) => setPortions(e.target.value)} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent" />
+                <button onClick={confirmAdd} className="w-full pill-btn-primary py-3">
                   Lägg till i måltid
                 </button>
               </div>

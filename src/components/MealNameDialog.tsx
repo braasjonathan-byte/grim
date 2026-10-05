@@ -40,20 +40,20 @@ export default function MealNameDialog({ open, onOpenChange, initial, title, exi
             onChange={(e) => { setName(e.target.value); setErr(""); }}
             onKeyDown={(e) => e.key === "Enter" && save()}
             placeholder="t.ex. kvällsmål"
-            className="rounded-none"
+            className="rounded-xl bg-muted/50 border-transparent"
           />
           {err && <p className="text-xs text-destructive">{err}</p>}
           <div>
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Förslag</p>
             <div className="flex flex-wrap gap-1.5">
               {SUGGESTIONS.filter((s) => !existing.includes(s)).map((s) => (
-                <button key={s} onClick={() => setName(s)} className="px-2 py-1 border border-input text-xs capitalize">{s}</button>
+                <button key={s} onClick={() => setName(s)} className="px-3 py-1 rounded-full bg-secondary text-xs capitalize">{s}</button>
               ))}
             </div>
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={() => onOpenChange(false)} className="flex-1 py-2.5 border border-input text-sm font-medium">Avbryt</button>
-            <button onClick={save} className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold">Spara</button>
+            <button onClick={() => onOpenChange(false)} className="flex-1 pill-btn-ghost py-2.5 text-sm">Avbryt</button>
+            <button onClick={save} className="flex-1 pill-btn-primary py-2.5 text-sm">Spara</button>
           </div>
         </div>
       </DialogContent>

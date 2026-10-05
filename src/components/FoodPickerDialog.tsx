@@ -310,24 +310,24 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         {!selected && (
           <>
             <div className={`grid ${isHonorary ? "grid-cols-4" : "grid-cols-3"} gap-2`}>
-              <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-input text-[11px] font-bold">
+              <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <PencilLine className="w-4 h-4" /> Eget
               </button>
-              <button onClick={() => setBarcodeOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-input text-[11px] font-bold">
+              <button onClick={() => setBarcodeOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <ScanBarcode className="w-4 h-4" /> Streckkod
               </button>
-              <button onClick={() => setRestaurantOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-input text-[11px] font-bold">
+              <button onClick={() => setRestaurantOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <Utensils className="w-4 h-4" /> Restaurang
               </button>
               {isHonorary && (
-                <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2 border border-primary text-primary text-[11px] font-bold">
+                <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-primary/10 text-primary shadow-soft text-[11px] font-semibold transition-colors hover:bg-primary/20">
                   <Sparkles className="w-4 h-4" /> AI-skanna
                 </button>
               )}
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 rounded-none" autoFocus />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 rounded-xl bg-muted/50 border-transparent" autoFocus />
             </div>
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
               {showPersonal && (
@@ -362,11 +362,11 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   className="rounded-none flex-1"
                 />
                 {selected.source !== "recipe" ? (
-                  <select value={unit} onChange={(e) => setUnit(e.target.value)} className="border border-input bg-background px-2 text-sm">
+                  <select value={unit} onChange={(e) => setUnit(e.target.value)} className="input-soft px-2">
                     {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 ) : (
-                  <div className="px-3 flex items-center text-sm border border-input bg-muted">portion(er)</div>
+                  <div className="px-3 flex items-center text-sm rounded-xl bg-muted">portion(er)</div>
                 )}
               </div>
               {selected.source === "recipe" && (
@@ -380,7 +380,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                         key={p}
                         type="button"
                         onClick={() => setAmount(p)}
-                        className={`px-2.5 py-1 text-[11px] font-bold border ${amount === p ? "bg-primary text-primary-foreground border-primary" : "border-input bg-background"}`}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-full transition-colors ${amount === p ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
                       >
                         {p.replace(".", ",")}
                       </button>
@@ -398,8 +398,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               </div>
             )}
             <div className="flex gap-2">
-              <button onClick={() => setSelected(null)} className="flex-1 py-2.5 border border-input text-sm font-medium">Tillbaka</button>
-              <button onClick={confirm} className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold">Lägg till</button>
+              <button onClick={() => setSelected(null)} className="flex-1 pill-btn-ghost py-2.5 text-sm">Tillbaka</button>
+              <button onClick={confirm} className="flex-1 pill-btn-primary py-2.5 text-sm">Lägg till</button>
             </div>
           </div>
         )}
