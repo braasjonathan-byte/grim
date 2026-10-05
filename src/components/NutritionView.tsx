@@ -189,6 +189,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [editAmount, setEditAmount] = useState<string>("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [waterGoal, setWaterGoal] = useState(2000);
+  const [burned, setBurned] = useState(0);
+  const [feelings, setFeelings] = useState<Record<string, string>>({});
   const [yesterdayLogs, setYesterdayLogs] = useState<any[]>([]);
   const [quickMeal, setQuickMeal] = useState<string | null>(null);
   const [quick, setQuick] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
@@ -306,6 +308,22 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   }
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [userId, dateKey]);
+
+  const feelKey = `grim-meal-feel:${userId}:${dateKey}`;
+  useEffect(() => {
+    try { setFeelings(JSON.parse(localStorage.getItem(feelKey) || "{}")); } catch { setFeelings({}); }
+    supabase.from("health_daily").select("active_calories").eq("user_id", userId).eq("day", dateKey).maybeSingle()
+      .then(({ data }) => setBurned(Number(data?.active_calories) || 0));
+  }, [feelKey, userId, dateKey]);
+
+  function setFeeling(meal: string, k: string | null) {
+    setFeelings((prev) => {
+      const next = { ...prev };
+      if (k) next[meal] = k; else delete next[meal];
+      try { localStorage.setItem(feelKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
 
   const allSlots = useMemo(() => {
     const extras = Array.from(new Set(logs.map((l) => l.meal_type))).filter((m) => !slots.includes(m));
@@ -444,7 +462,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
-          <MacroRings kcal={totals.kcal} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} />
+          <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} />
         </div>
 
         {logs.length === 0 && (
@@ -500,6 +518,9 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                     onEditLog={(l) => setEditingLog(l)}
                     onQuickLog={() => setQuickMeal(meal)}
                     onSaveTemplate={ml.length > 0 ? () => saveMealAsTemplate(meal) : undefined}
+                    budget={MEAL_SHARE[meal.toLowerCase()] ? MEAL_SHARE[meal.toLowerCase()] * (targets.kcal + burned) : undefined}
+                    feeling={feelings[meal]}
+                    onFeeling={(k) => setFeeling(meal, k)}
                     onCopyYesterday={yesterdayLogs.some((r) => r.meal_type === meal) ? () => copyFromYesterday(meal) : undefined}
                   />
                 );
