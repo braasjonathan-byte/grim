@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, Utensils, Plus } from "lucide-react";
 import type { PickedItem } from "./FoodPickerDialog";
-import { UNITS, toGrams } from "@/lib/nutritionCalc";
+import { UNITS, gramsForFood } from "@/lib/nutritionCalc";
 
 interface Props {
   open: boolean;
@@ -198,7 +198,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
   function confirm() {
     if (!selected) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
-    const grams = toGrams(a, unit);
+    const grams = gramsForFood(a, unit, selected.product_name);
     const factor = grams / 100;
     onPick({
       source: "custom_food",

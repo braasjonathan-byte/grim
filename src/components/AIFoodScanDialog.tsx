@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, Camera, Sparkles, Utensils, FileText, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { UNITS, toGrams } from "@/lib/nutritionCalc";
+import { UNITS, gramsForFood } from "@/lib/nutritionCalc";
 import { pickImage } from "@/lib/pickImage";
 import { Capacitor } from "@capacitor/core";
 import type { PickedItem } from "./FoodPickerDialog";
@@ -131,7 +131,7 @@ export default function AIFoodScanDialog({ open, onOpenChange, onPick }: Props) 
   async function confirm() {
     if (!result) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
-    const grams = toGrams(a, unit);
+    const grams = gramsForFood(a, unit, (productName.trim() || result.food.name));
     const factor = grams / 100;
     const name = (productName.trim() || result.food.name || "Produkt");
 

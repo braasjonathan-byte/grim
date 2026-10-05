@@ -77,7 +77,7 @@ export function distributeMacros(tdee: number, weightKg: number, goal: GoalType)
 
 /** Typical weight per piece (g) for common foods, matched against the food name. */
 const PIECE_WEIGHTS: [RegExp, number][] = [
-  [/\bägg/i, 53],
+  [/(^|[^a-zåäö])ägg/i, 53],
   [/banan/i, 120],
   [/äpple/i, 150],
   [/päron/i, 170],
@@ -90,7 +90,7 @@ const PIECE_WEIGHTS: [RegExp, number][] = [
   [/potatis/i, 150],
   [/sötpotatis/i, 200],
   [/morot|morötter/i, 70],
-  [/gul lök|rödlök|\blök/i, 100],
+  [/gul lök|rödlök|(^|[^a-zåäö])lök/i, 100],
   [/vitlök/i, 5],
   [/tomat/i, 100],
   [/gurka/i, 300],
@@ -112,20 +112,84 @@ export function pieceWeightFor(name?: string | null, dbWeight?: number | null): 
   return DEFAULT_PIECE_G;
 }
 
+/**
+ * Density (g per ml) for common foods, matched against the name.
+ * Volume units (dl/ml/msk/tsk) must be converted with density – 1 dl havregryn ≈ 35 g, not 100 g.
+ * Longest pattern wins, so "havremjölk" (liquid) beats "havre" (flakes).
+ */
+const DENSITIES: [RegExp, number][] = [
+  // Liquids
+  [/mjölk|filmjölk|fil\b|yoghurt|kefir|grädde|juice|saft|läsk|vatten|buljong|soppa|dryck|öl\b|vin\b|kaffe|\bte\b/i, 1.03],
+  [/havremjölk|havredryck|sojadryck|mandeldryck|oatly/i, 1.03],
+  [/kvarg|keso|kesella|crème fraiche|creme fraiche|gräddfil|turkisk/i, 1.05],
+  [/olja|olivolja|rapsolja/i, 0.92],
+  [/smör|margarin|bregott/i, 0.95],
+  [/honung|sirap/i, 1.4],
+  [/sylt|marmelad/i, 1.3],
+  [/ketchup|senap|majonnäs|dressing|sås/i, 1.05],
+  [/jordnötssmör|nötsmör/i, 1.05],
+  // Dry goods
+  [/havregryn|havrefras|gryn\b|grötgryn|\bhavre/i, 0.35],
+  [/müsli|granola/i, 0.4],
+  [/cornflakes|flingor|puffat|rice krispies|special k/i, 0.13],
+  [/vetemjöl|rågmjöl|dinkelmjöl|mjöl\b|mjöl /i, 0.6],
+  [/florsocker/i, 0.6],
+  [/socker|strösocker|farin/i, 0.85],
+  [/kakao|o'boy|oboy/i, 0.45],
+  [/proteinpulver|whey|kaseinpulver|pulver/i, 0.4],
+  [/ris\b|basmati|jasmin/i, 0.85],
+  [/bulgur|matvete|quinoa|couscous/i, 0.75],
+  [/pasta|makaroner|spaghetti|penne|fusilli/i, 0.4],
+  [/linser|bönor|kikärtor/i, 0.8],
+  [/ärtor|majs/i, 0.65],
+  [/nötter|mandlar|cashew|jordnötter|valnöt|hasselnöt/i, 0.6],
+  [/frön|chiafrö|linfrö|solrosfrö|pumpafrö|sesam/i, 0.6],
+  [/riven ost|ost riven|parmesan/i, 0.4],
+  [/bär|blåbär|hallon|jordgubb|lingon/i, 0.6],
+  [/russin|torkad frukt|dadlar/i, 0.65],
+  [/kokosflingor|kokos/i, 0.35],
+  [/salt\b|bakpulver|bikarbonat/i, 1.2],
+  [/kanel|krydd|peppar|paprikapulver/i, 0.5],
+  [/sallad|spenat|ruccola|grönkål/i, 0.2],
+];
+export const DEFAULT_DENSITY = 1.0;
+
+/** Best density (g/ml) for a food name; 1.0 (water) fallback. */
+export function densityFor(name?: string | null): number {
+  if (!name) return DEFAULT_DENSITY;
+  const ordered = [...DENSITIES].sort((a, b) => b[0].source.length - a[0].source.length);
+  let best: { len: number; d: number } | null = null;
+  for (const [re, d] of ordered) {
+    const m = name.match(re);
+    if (m && (!best || m[0].length > best.len)) best = { len: m[0].length, d };
+  }
+  return best ? best.d : DEFAULT_DENSITY;
+}
+
+const ML_PER_UNIT: Record<string, number> = { ml: 1, dl: 100, l: 1000, msk: 15, tsk: 5, krm: 1 };
+
 /** Convert amount+unit to grams (approximate household measures). */
-export function toGrams(amount: number, unit: string, pieceG: number = DEFAULT_PIECE_G): number {
+export function toGrams(amount: number, unit: string, pieceG: number = DEFAULT_PIECE_G, density: number = DEFAULT_DENSITY): number {
   const u = unit.toLowerCase();
   if (u === "g" || u === "gram") return amount;
   if (u === "kg") return amount * 1000;
-  if (u === "dl") return amount * 100;       // approx for water-like
-  if (u === "ml") return amount;
-  if (u === "l") return amount * 1000;
-  if (u === "msk") return amount * 15;
-  if (u === "tsk") return amount * 5;
-  if (u === "krm") return amount * 1;
+  if (ML_PER_UNIT[u]) return amount * ML_PER_UNIT[u] * density;
   if (u === "st" || u === "styck") return amount * pieceG;
   if (u === "portion") return amount * 250;
   return amount;
+}
+
+/** Grams for a named food – uses piece weight and density lookups. Use this everywhere food is logged. */
+export function gramsForFood(amount: number, unit: string, name?: string | null, dbPieceG?: number | null): number {
+  return toGrams(amount, unit, pieceWeightFor(name, dbPieceG), densityFor(name));
+}
+
+/** Short hint like "1 dl ≈ 35 g" for non-gram units, or null. */
+export function unitHint(unit: string, name?: string | null, dbPieceG?: number | null): string | null {
+  const u = unit.toLowerCase();
+  if (u === "g" || u === "kg" || u === "portion") return null;
+  const g = gramsForFood(1, u, name, dbPieceG);
+  return `1 ${u} ≈ ${g < 10 ? g.toFixed(1).replace(".", ",") : Math.round(g)} g`;
 }
 
 export const UNITS = ["g", "kg", "dl", "ml", "msk", "tsk", "st", "portion"] as const;

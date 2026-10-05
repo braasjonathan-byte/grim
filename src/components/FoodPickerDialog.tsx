@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil } from "lucide-react";
-import { UNITS, toGrams, pieceWeightFor } from "@/lib/nutritionCalc";
+import { UNITS, gramsForFood, unitHint } from "@/lib/nutritionCalc";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import RestaurantSearchDialog from "./RestaurantSearchDialog";
 import ManualFoodDialog from "./ManualFoodDialog";
@@ -217,7 +217,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       factor = a;
     } else {
       // per 100g
-      const grams = toGrams(a, unit, pieceWeightFor(selected.name, selected.piece_g));
+      const grams = gramsForFood(a, unit, selected.name, selected.piece_g);
       factor = grams / 100;
     }
     return {
@@ -374,8 +374,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   <div className="px-3 flex items-center text-sm rounded-xl bg-muted">portion(er)</div>
                 )}
               </div>
-              {selected.source !== "recipe" && unit === "st" && (
-                <p className="text-[10px] text-muted-foreground mt-1">1 st ≈ {pieceWeightFor(selected.name, selected.piece_g)} g</p>
+              {selected.source !== "recipe" && unitHint(unit, selected.name, selected.piece_g) && (
+                <p className="text-[10px] text-muted-foreground mt-1">{unitHint(unit, selected.name, selected.piece_g)}</p>
               )}
               {selected.source === "recipe" && (
                 <>
