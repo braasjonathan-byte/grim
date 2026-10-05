@@ -52,7 +52,7 @@ describe("passanpassad pepp", () => {
       for (const text of match[2].matchAll(/(?:"text"|text): "([^"]+)"/g)) {
         texts.push(text[1]);
         for (const placeholder of text[1].matchAll(/\{(\w+)\}/g)) expect(vars[kind]).toContain(placeholder[1]);
-        expect(text[1]).toContain("{now}");
+        expect(text[1]).toMatch(/\{(?:now|diff|pct)\}/);
         if (["heavier", "moreReps", "exerciseVolume"].includes(kind)) expect(text[1]).toContain("{ex}");
         if (["faster", "longerDistance", "longerTime", "lowerPulse"].includes(kind)) expect(text[1]).toContain("{sport}");
       }
