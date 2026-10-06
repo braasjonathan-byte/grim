@@ -3481,6 +3481,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     triggerSave();
   };
 
+  const startPlanDialog = (
+    <ConfirmValueDialog
+      message={confirmStartPlanOpen ? "Dina nuvarande pass arkiveras under din profil först." : null}
+      title="Starta en träningsplan?"
+      confirmLabel="Starta plan"
+      cancelLabel="Avbryt"
+      onConfirm={() => { setConfirmStartPlanOpen(false); startPlanFromSingles(true); }}
+      onCancel={() => setConfirmStartPlanOpen(false)}
+    />
+  );
   const offlineBanner = (!offlineStatus.online || offlineStatus.pending > 0) ? (
     <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${offlineStatus.online ? "bg-primary/10 text-primary" : "bg-warning/15 text-warning"}`}>
       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${offlineStatus.online ? "animate-spin" : ""}`} />
@@ -3542,6 +3552,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-6 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {startPlanDialog}
         <div className="text-center space-y-2">
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
           <h2 className="text-2xl font-black tracking-tight">Hur vill du träna?</h2>
@@ -3688,6 +3699,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {startPlanDialog}
         {singlePlans.length === 0 && (
           <button
             onClick={() => setMode("choose")}
