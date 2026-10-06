@@ -16,6 +16,7 @@ import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWa
 
 const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
+import PrivacySocialSettings from "@/components/PrivacySocialSettings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -721,6 +722,8 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
           )}
         </div>
       )}
+      {userId && <PrivacySocialSettings userId={userId} />}
+
       {/* Receipts */}
       {userId && <ReceiptsList />}
 
