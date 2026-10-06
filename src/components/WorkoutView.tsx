@@ -2803,32 +2803,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           ? `${exerciseName} — ${paramsNoWeight} @ ${newWeight} kg`
           : `${exerciseName} — ${paramsNoWeight}`;
         const oldName = replaceExerciseTarget.name;
-        lines[replaceExerciseTarget.lineIndex] = entry;
-        const newDetails = lines.join(separator);
-        const targetPlanId = plan.id;
-        const targetWeek = plan.week;
+        const lineIndex = replaceExerciseTarget.lineIndex;
         setReplaceExerciseTarget(null);
         setShowExercisePicker(null);
-        (async () => {
-          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", targetPlanId);
-          skipDayResetRef.current = true;
-          setPlans((prev) => prev.map((p) => p.id === targetPlanId ? { ...p, details: newDetails } : p));
-          triggerSave();
-          // Pre-populate per-set weight data
-          if (newWeight) {
-            const setsMatch = paramsNoWeight.match(/^(\d+)\s*[×x]\s*(\d+)/);
-            const sets = setsMatch ? parseInt(setsMatch[1]) : 3;
-            const reps = setsMatch ? parseInt(setsMatch[2]) : 10;
-            const initData = Array.from({ length: sets }, () => ({ kg: newWeight, reps: String(reps) }));
-            await updateCompletionWeights(targetWeek, plan.day, (existing) => ({
-              ...existing,
-              [`__setdata__${exerciseName}`]: JSON.stringify(initData),
-            }));
-          }
-          if (mode === "plan" && targetWeek > 0) {
-            setReplacePropagateDialog({ oldExerciseName: oldName, newEntry: entry, sourcePlanId: targetPlanId });
-          }
-        })();
+        let weightsPatch: Record<string, any> | undefined;
+        if (newWeight) {
+          const setsMatch = paramsNoWeight.match(/^(\d+)\s*[×x]\s*(\d+)/);
+          const sets = setsMatch ? parseInt(setsMatch[1]) : 3;
+          const reps = setsMatch ? parseInt(setsMatch[2]) : 10;
+          const initData = Array.from({ length: sets }, () => ({ kg: newWeight, reps: String(reps) }));
+          weightsPatch = { [`__setdata__${exerciseName}`]: JSON.stringify(initData) };
+        }
+        startReplace({ planId: plan.id, lineIndex, oldName, entry, weightsPatch });
       }
       return;
     }
@@ -2921,15 +2907,20 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     let wasReplace = false;
     let oldName = "";
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
-      // Replace mode: substitute the line at the target index
-      const separator = plan.details.includes("\n") ? "\n" : "; ";
-      const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-      lines[replaceExerciseTarget.lineIndex] = entry;
-      newDetails = lines.join(separator);
-      wasReplace = true;
-      oldName = replaceExerciseTarget.name;
+      // Byt ut: frågan ställs först, bytet görs efter svaret.
+      const weightsPatch = weightStr
+        ? { [`__setdata__${weightDialog.exerciseName}`]: JSON.stringify(Array.from({ length: sets }, () => ({ kg: weightStr, reps: String(reps) }))) }
+        : undefined;
+      startReplace({ planId: plan.id, lineIndex: replaceExerciseTarget.lineIndex, oldName: replaceExerciseTarget.name, entry, weightsPatch });
       setReplaceExerciseTarget(null);
       setShowExercisePicker(null);
+      setWeightDialog(null);
+      setWeightInput("");
+      setRepsInput("10");
+      setSetsInput("3");
+      setRepsUnit("reps");
+      setIsWarmupMode(false);
+      return;
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
       newDetails = isWarmupMode
@@ -3017,14 +3008,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     let wasReplace = false;
     let oldName = "";
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
-      const separator = plan.details.includes("\n") ? "\n" : "; ";
-      const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-      lines[replaceExerciseTarget.lineIndex] = entry;
-      newDetails = lines.join(separator);
-      wasReplace = true;
-      oldName = replaceExerciseTarget.name;
+      const weightsPatch = savedIntervalRows.length > 0
+        ? { [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify({ intervals: savedIntervalRows }) }
+        : undefined;
+      startReplace({ planId: plan.id, lineIndex: replaceExerciseTarget.lineIndex, oldName: replaceExerciseTarget.name, entry, weightsPatch });
       setReplaceExerciseTarget(null);
       setShowExercisePicker(null);
+      setConditioningDialog(null);
+      setCondTempoInput("");
+      resetCondTime();
+      setCondDistanceInput("");
+      setCondAutoField(null);
+      setCondIntervalsInput("");
+      setCondRestInput("");
+      setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+      setCondSpmInput("");
+      setCondIntervalRows([]);
+      setIsWarmupMode(false);
+      return;
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
       newDetails = isWarmupMode
@@ -3272,6 +3273,80 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       return;
     }
     setPropagateDialog(null);
+  };
+
+  // Byt ut övning: fråga först, behåll loggade set, erbjud Ångra.
+  type PendingReplace = { planId: string; lineIndex: number; oldName: string; entry: string; weightsPatch?: Record<string, any> };
+  const [replaceAsk, setReplaceAsk] = useState<PendingReplace | null>(null);
+  const hasLoggedSets = (lw: Record<string, any> | null | undefined, name: string) => {
+    const v = lw?.[`__sets__${name}`];
+    return typeof v === "string" && v.includes("1");
+  };
+  const startReplace = (r: PendingReplace) => {
+    const plan = plans.find((p) => p.id === r.planId);
+    if (!plan) return;
+    if (mode === "plan" && plan.week > 0) setReplaceAsk(r);
+    else applyReplace(r, false);
+  };
+  const applyReplace = async (r: PendingReplace, propagate: boolean) => {
+    const plan = plans.find((p) => p.id === r.planId);
+    if (!plan) return;
+    const lineName = (l: string) => l.split(/\s*—\s*/)[0].trim().toLowerCase();
+    const rewrite = (p: PlanDay, onlyIndex?: number) => {
+      const sep = p.details.includes("\n") ? "\n" : "; ";
+      const lines = p.details.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
+      const logged = hasLoggedSets(completions[`${p.week}-${p.day}`]?.logged_weights as any, r.oldName);
+      const idxs = onlyIndex !== undefined
+        ? [onlyIndex]
+        : lines.map((l, i) => (lineName(l) === r.oldName.toLowerCase() ? i : -1)).filter((i) => i >= 0);
+      if (idxs.length === 0) return null;
+      for (const i of [...idxs].reverse()) {
+        // Loggade set raderas aldrig: behåll den gamla övningen och lägg den nya under.
+        if (logged) lines.splice(i + 1, 0, r.entry);
+        else lines[i] = r.entry;
+      }
+      return { id: p.id, week: p.week, day: p.day, before: p.details, after: lines.join(sep), logged };
+    };
+    const changes: { id: string; week: number; day: string; before: string; after: string; logged: boolean }[] = [];
+    const first = rewrite(plan, r.lineIndex);
+    if (first) changes.push(first);
+    if (propagate) {
+      for (const p of plans) {
+        if (p.id === plan.id || p.week <= 0 || p.day !== plan.day) continue;
+        const c = rewrite(p);
+        if (c) changes.push(c);
+      }
+    }
+    if (changes.length === 0) return;
+    const prevWeights = { ...((completions[`${plan.week}-${plan.day}`]?.logged_weights as any) || {}) };
+    for (const c of changes) await supabase.from("workout_plans").update({ details: c.after }).eq("id", c.id);
+    skipDayResetRef.current = true;
+    setPlans((prev) => prev.map((p) => { const c = changes.find((x) => x.id === p.id); return c ? { ...p, details: c.after } : p; }));
+    triggerSave();
+    const keptOld = changes[0].logged;
+    await updateCompletionWeights(plan.week, plan.day, (existing) => {
+      const next = { ...existing, ...(r.weightsPatch || {}) };
+      if (!keptOld && r.oldName.toLowerCase() !== lineName(r.entry)) {
+        // Övningen syns inte längre i passet – dess ologgade data får inte räknas.
+        delete next[`__setdata__${r.oldName}`];
+        delete next[`__sets__${r.oldName}`];
+      }
+      return next;
+    });
+    toast("Övningen byttes", {
+      duration: 8000,
+      action: {
+        label: "Ångra",
+        onClick: async () => {
+          for (const c of changes) await supabase.from("workout_plans").update({ details: c.before }).eq("id", c.id);
+          skipDayResetRef.current = true;
+          setPlans((prev) => prev.map((p) => { const c = changes.find((x) => x.id === p.id); return c ? { ...p, details: c.before } : p; }));
+          await safeUpsertCompletion(plan.week, plan.day, { logged_weights: prevWeights });
+          triggerSave();
+          toast.success("Bytet ångrades");
+        },
+      },
+    });
   };
 
   // Handle replace exercise propagation across all weeks
@@ -9555,20 +9630,25 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         </div>
       </div>
     )}
-    {replacePropagateDialog && (
+    {replaceAsk && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setReplacePropagateDialog(null)} />
+        <div className="absolute inset-0 bg-black/60" onClick={() => setReplaceAsk(null)} />
         <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
           <h3 className="font-bold text-sm">Byt ut i hela schemat?</h3>
           <p className="text-sm text-muted-foreground">
-            Vill du byta ut <span className="font-semibold text-foreground">{replacePropagateDialog.oldExerciseName}</span> i alla veckor?
+            Vill du byta ut <span className="font-semibold text-foreground">{replaceAsk.oldName}</span> bara i detta pass eller i alla veckor?
           </p>
-          <div className="flex gap-2">
-            <button onClick={() => handleReplacePropagate(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
-              Bara denna vecka
-            </button>
-            <button onClick={() => handleReplacePropagate(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
-              Alla veckor
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, false); }} className="flex-1 py-2.5 bg-secondary text-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+                Bara detta pass
+              </button>
+              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, true); }} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
+                Hela schemat
+              </button>
+            </div>
+            <button onClick={() => setReplaceAsk(null)} className="w-full py-2 text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+              Avbryt
             </button>
           </div>
         </div>
