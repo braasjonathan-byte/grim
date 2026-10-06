@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Trash2, Plus, Globe, Lock, Loader2 } from "lucide-react";
+import { Trash2, Plus, Globe, Lock, Loader2, Link2, AlertTriangle } from "lucide-react";
+import { aiItemToPicked, type AiFoodItem } from "@/lib/aiFood";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
 import { RECIPE_CATEGORIES } from "@/data/curatedRecipes";
@@ -30,6 +31,10 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
   const { toast } = useToast();
 
   const isEditing = !!initialRecipeId;
@@ -37,6 +42,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
   function reset() {
     setName(EMPTY.name); setServings(EMPTY.servings); setInstructions(EMPTY.instructions);
     setIngredients(EMPTY.ingredients); setVisibility(EMPTY.visibility); setCategory(EMPTY.category);
+    setImportUrl(""); setImported(false); setReviewed(false);
   }
 
   // Load existing recipe when editing
@@ -95,7 +101,30 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
     }));
   }
 
+  async function importFromUrl() {
+    const u = importUrl.trim();
+    if (!/^https?:\/\//i.test(u)) { toast({ title: "Klistra in en länk som börjar med https://", variant: "destructive" }); return; }
+    setImporting(true);
+    const { data, error } = await supabase.functions.invoke("recipe-import", { body: { url: u } });
+    setImporting(false);
+    if (error || !data || data.error) {
+      let msg = data?.error;
+      try { msg = msg || (await (error as any)?.context?.json())?.error; } catch { /* ignore */ }
+      toast({ title: "Kunde inte importera receptet", description: msg || "Försök med en annan länk.", variant: "destructive" });
+      return;
+    }
+    if (data.name) setName(data.name);
+    if (data.servings > 0) setServings(String(Math.round(data.servings)));
+    if (data.instructions) setInstructions(data.instructions);
+    setIngredients(((data.ingredients || []) as AiFoodItem[]).map(aiItemToPicked));
+    setImported(true); setReviewed(false);
+  }
+
   async function save() {
+    if (imported && !reviewed) {
+      toast({ title: "Granska receptet först", description: "Bekräfta att ingredienser och mängder stämmer.", variant: "destructive" });
+      return;
+    }
     if (!name.trim() || ingredients.length === 0) {
       toast({ title: "Namn och minst en ingrediens krävs", variant: "destructive" });
       return;
@@ -135,6 +164,27 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
           <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
         ) : (
         <div className="space-y-3">
+          {!isEditing && (
+            <div>
+              <label className="text-xs font-medium">Importera från länk</label>
+              <div className="flex gap-2">
+                <Input value={importUrl} onChange={(e) => setImportUrl(e.target.value)} placeholder="https://matblogg.se/recept…" inputMode="url" className="rounded-xl bg-muted/50 border-transparent" />
+                <button onClick={importFromUrl} disabled={importing || !importUrl.trim()} className="pill-btn-soft px-3 text-xs font-bold flex items-center gap-1 disabled:opacity-50">
+                  {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Hämta
+                </button>
+              </div>
+            </div>
+          )}
+          {imported && (
+            <div className="rounded-2xl border border-warning/40 bg-warning/10 p-3 space-y-2">
+              <p className="text-sm font-bold flex items-center gap-1.5"><AlertTriangle className="w-4 h-4 text-warning" /> Granska innan du sparar</p>
+              <p className="text-xs text-muted-foreground">Receptet tolkades av AI och kan innehålla fel. Kontrollera namn, portioner, ingredienser och gram nedan – ändra eller ta bort det som inte stämmer.</p>
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} className="accent-primary w-4 h-4" />
+                Jag har granskat ingredienserna och mängderna
+              </label>
+            </div>
+          )}
           <div>
             <label className="text-xs font-medium">Namn</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} className="rounded-xl bg-muted/50 border-transparent" />
@@ -185,7 +235,12 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
                 {ingredients.map((ing, idx) => (
                   <li key={idx} className="py-2 px-2">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium truncate flex-1">{ing.name}</p>
+                      {imported ? (
+                        <Input value={ing.name} onChange={(e) => setIngredients((arr) => arr.map((x, i) => i === idx ? { ...x, name: e.target.value } : x))}
+                          className="h-7 text-sm rounded-lg bg-muted/50 border-transparent flex-1" aria-label="Ingrediensnamn" />
+                      ) : (
+                        <p className="text-sm font-medium truncate flex-1">{ing.name}</p>
+                      )}
                       <button onClick={() => setIngredients(ingredients.filter((_, i) => i !== idx))} className="text-destructive p-1" aria-label="Ta bort"><Trash2 className="w-4 h-4" /></button>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
@@ -218,7 +273,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
             <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} className="rounded-xl bg-muted/50 border-transparent" rows={3} />
           </div>
 
-          <button disabled={saving} onClick={save} className="w-full pill-btn-primary py-3 disabled:opacity-50">
+          <button disabled={saving || (imported && !reviewed)} onClick={save} className="w-full pill-btn-primary py-3 disabled:opacity-50">
             {saving ? "Sparar…" : isEditing ? "Spara ändringar" : "Spara recept"}
           </button>
         </div>
