@@ -1,3 +1,4 @@
+import { isPlausibleSet } from "@/lib/inputValidation";
 import { normalizeExerciseKey } from "@/lib/workoutDayUtils";
 
 export const parseExerciseWeight = (line: string | null | undefined): {name: string;weight: string | null;} => {
@@ -36,7 +37,10 @@ export const getExerciseSetDataFromWeights = (weights: Record<string, any> | nul
       const reps = set?.reps !== undefined && set?.reps !== null ? String(set.reps).trim() : "";
       const kgNum = parseFloat(kgRaw.replace(",", "."));
       const modeRaw = weights[`__bw_mode__${storedName}__${si}`] ?? weights[`__bw_mode__${storedKey}__${si}`] ?? weights[`__bw_mode__${exerciseName}__${si}`] ?? weights[`__bw_mode__${wantedKey}__${si}`] ?? weights[`__bw_mode__${storedName}`] ?? weights[`__bw_mode__${storedKey}`] ?? weights[`__bw_mode__${exerciseName}`] ?? weights[`__bw_mode__${wantedKey}`];
-      const mode: LoggedSetInfo["mode"] = modeRaw === "sub" || (!isNaN(kgNum) && kgNum < 0) ? "sub" : modeRaw === "add" ? "add" : undefined;
+      const mode: LoggedSetInfo["mode"] = modeRaw === "sub" ? "sub" : modeRaw === "add" ? "add" : undefined;
+      // Förifyll aldrig ett ogiltigt värde, och ta aldrig bort ett minustecken tyst.
+      if (!isPlausibleSet(kgRaw, reps)) return { kg: "", reps: "", mode };
+      if (!isNaN(kgNum) && kgNum < 0 && mode !== "sub") return { kg: "", reps, mode };
       const kg = kgRaw && !isNaN(kgNum) ? String(Math.abs(kgNum)) : kgRaw;
       return { kg, reps, mode };
     }).filter((set) => set.kg || set.reps);
@@ -96,6 +100,7 @@ export const collectSetsForExercise = (
         const parsed = typeof value === "string" ? JSON.parse(value) : value;
         if (!Array.isArray(parsed)) continue;
         parsed.forEach((s: any, si: number) => {
+          if (!isPlausibleSet(s?.kg, s?.reps)) return;
           const rawKg = parseFloat(String(s?.kg ?? "").replace(",", "."));
           const mode =
             weights[`__bw_mode__${storedName}__${si}`] ??
@@ -110,7 +115,7 @@ export const collectSetsForExercise = (
     } else if (!key.startsWith("__") && normalizeExerciseKey(key) === wanted) {
       // Äldre format: logged_weights["Knäböj"] = "80"
       const kg = parseFloat(String(value ?? "").replace(",", "."));
-      if (!isNaN(kg) && kg !== 0) out.push({ kg, reps: 0 });
+      if (!isNaN(kg) && kg !== 0 && isPlausibleSet(kg, 0)) out.push({ kg, reps: 0 });
     }
   }
   return out;

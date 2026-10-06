@@ -1,4 +1,5 @@
 import { formatUtcDate, getPlanDayDateValue } from "@/lib/workoutDayUtils";
+import { parseNum } from "@/lib/inputValidation";
 
 // Compute date for a plan week/day given a plan start date
 export const getPlanDayDate = (planStart: string | null, week: number, dayAbbr: string): string | null => {
@@ -56,8 +57,8 @@ export const estimateCalories = (
       if (!k.startsWith('__cond__')) continue;
       try {
         const data = typeof v === 'string' ? JSON.parse(v) : v;
-        const t = parseFloat(data?.time);
-        const dist = parseFloat(data?.dist);
+        const t = parseNum(data?.time);
+        const dist = parseNum(data?.dist);
         const name = k.replace(/^__cond__/, '').replace(/_\d+$/, '');
         condKeysHandled.push(name.toLowerCase());
         const isRun = /löpning|jogg|spring|run/i.test(name);

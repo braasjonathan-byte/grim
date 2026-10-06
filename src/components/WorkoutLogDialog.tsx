@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
@@ -211,7 +212,7 @@ const WorkoutLogDialog = ({
   }, []);
 
   // Compute totals for interval mode
-  const totalDistance = intervals.reduce((sum, r) => sum + (parseFloat(r.distance) || 0), 0);
+  const totalDistance = intervals.reduce((sum, r) => sum + (parseNum(r.distance) || 0), 0);
   const totalTime = intervals.reduce((sum, r) => sum + (parseFloat(r.time.replace(",", ".")) || 0), 0);
   const avgTempo = totalDistance > 0 ? formatTempo(totalTime / totalDistance) : "";
 
@@ -219,7 +220,7 @@ const WorkoutLogDialog = ({
     setSaving(true);
 
     const saveTempo = isInterval ? avgTempo : (isPaceMode(mode) ? formatPaceDisplay(tempo.trim(), mode) : tempo.trim());
-    const saveDist = isInterval ? totalDistance : parseFloat(distance) || null;
+    const saveDist = isInterval ? totalDistance : parseNum(distance) || null;
 
     // First read existing record to preserve logged_weights
     const { data: existing } = await supabase
@@ -287,7 +288,7 @@ const WorkoutLogDialog = ({
               <div key={i} className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 items-center">
                 <span className="text-xs text-muted-foreground font-bold w-6 text-center">{i + 1}</span>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   value={row.time}
                   onChange={(e) => updateIntervalRow(i, "time", e.target.value)}
@@ -314,7 +315,7 @@ const WorkoutLogDialog = ({
                   autoFocus={i === 0}
                 />
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   value={row.distance}
                   readOnly
@@ -360,7 +361,7 @@ const WorkoutLogDialog = ({
                   <Clock className="w-3 h-3" /> Tid (min)
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   value={duration}
                   onChange={(e) => {
@@ -398,7 +399,7 @@ const WorkoutLogDialog = ({
                   )}
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   value={distance}
                   onChange={(e) => {
@@ -419,7 +420,7 @@ const WorkoutLogDialog = ({
             <Heart className="w-3 h-3" /> Genomsnittspuls (bpm)
           </label>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
             value={pulse}
             onChange={(e) => setPulse(e.target.value)}

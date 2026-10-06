@@ -1,4 +1,5 @@
 import NutritionTrendCard from "./NutritionTrendCard";
+import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -314,7 +315,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     ]).then(async ([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
-        if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
+        if ((profileData as any).weight_kg) setUserWeightKg(parseNum((profileData as any).weight_kg));
         if ((profileData as any).plan_start_date) {
           const psd = new Date((profileData as any).plan_start_date + "T00:00:00");
           if (!isNaN(psd.getTime())) profileStartDate = psd;
@@ -675,8 +676,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         let entryTotal = 0;
         for (let si = 0; si < sets.length; si++) {
           const s = sets[si];
-          let kg = Number(s.kg) || 0;
-          const reps = Number(s.reps) || 0;
+          if (!isPlausibleSet(s.kg, s.reps)) continue;
+          let kg = parseNum(s.kg) || 0;
+          const reps = parseNum(s.reps) || 0;
           const bwMode = weights[`__bw_mode__${exerciseName}__${si}`] ?? bwModeExercise ?? (isAssistedBodyweightExercise(exerciseName) ? "sub" : undefined);
           if (bwMode && userWeightKg) {
             const absKg = Math.abs(kg);

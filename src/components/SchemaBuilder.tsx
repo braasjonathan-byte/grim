@@ -274,7 +274,7 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
           <Dumbbell className="w-3.5 h-3.5 text-primary flex-shrink-0" />
           <span className="text-xs font-medium flex-1 min-w-0 truncate">{ex.name}</span>
           <input
-            type="number"
+            type="text" inputMode="decimal"
             value={ex.sets}
             onChange={e => isNew ? updateNewDayExercise(exIdx, "sets", parseInt(e.target.value) || 1) : updateExercise(weekIdx, dayIdx, exIdx, "sets", parseInt(e.target.value) || 1)}
             className="w-10 bg-background text-foreground text-xs p-1 rounded text-center border border-border"

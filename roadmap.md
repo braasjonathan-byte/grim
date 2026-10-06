@@ -1,5 +1,6 @@
 # Roadmap
 
+- [x] Gemensam inmatningsvalidering: decimalkomma, gränser, felmeddelanden, bekräftelser, databasskydd och uteslutning av orimliga gamla värden.
 - [x] Lägg till 100 passanpassade peppformuleringar och verifiera att jämförelserna gäller rätt övning och träningsform (13 tester godkända).
 
 - [x] Ta bort kategorierna "Träningsinnehåll" och "Community" från Verktyg-fliken.

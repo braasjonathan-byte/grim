@@ -12,6 +12,19 @@ export interface AchievementSyncResult {
   latestId: string | null;
 }
 
+/**
+ * Märken för ton/reps som inte längre uppfylls (t.ex. upplåsta av ett orimligt
+ * 99999 kg-set som nu inte räknas) låses igen.
+ */
+const relockUnearnedVolumeAchievements = async (metrics: ReturnType<typeof calculateAchievementMetrics>) => {
+  const unearned = ACHIEVEMENTS.filter(
+    (a) => (a.metric === "tons" || a.metric === "bestSessionTons" || a.metric === "reps") && metrics[a.metric] < a.threshold,
+  ).map((a) => a.id);
+  if (unearned.length === 0) return;
+  const { error } = await supabase.rpc("relock_achievements" as any, { p_ids: unearned } as any);
+  if (error) console.error("Kunde inte låsa om märken:", error.message);
+};
+
 const ORDER = new Map(ACHIEVEMENTS.map((a, i) => [a.id, i]));
 
 /**
@@ -95,6 +108,7 @@ export const syncAchievements = async (userId: string): Promise<AchievementSyncR
   });
 
   await unlockEarnedAchievements(userId, metrics);
+  await relockUnearnedVolumeAchievements(metrics);
 
   const { data: stored } = await supabase
     .from("user_achievements" as any)

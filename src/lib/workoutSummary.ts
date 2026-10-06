@@ -1,3 +1,4 @@
+import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { isPrWeight, type PrIndex } from "@/lib/prBadges";
 import {
   getCardioDistUnit,
@@ -248,8 +249,10 @@ export function summarizeCompletion(
     const doneFlags = doneByExercise.get(name) || "";
     rows.forEach((row, i) => {
       const isDone = doneFlags[i] === "1";
-      const kg = Number(row?.kg);
-      const reps = Number(row?.reps);
+      // Orimliga värden (t.ex. 99999 kg) räknas aldrig i volym, PR eller statistik.
+      if (!isPlausibleSet(row?.kg, row?.reps)) return;
+      const kg = parseNum(row?.kg);
+      const reps = parseNum(row?.reps);
       if (!isDone && !isFinite(kg) && !isFinite(reps)) return;
       if (!isDone) return;
       sets += 1;

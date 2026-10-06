@@ -2658,6 +2658,7 @@ export type Database = {
         Returns: undefined
       }
       can_view_post: { Args: { _post_id: string }; Returns: boolean }
+      count_implausible_sets: { Args: { lw: Json }; Returns: number }
       get_inactive_users_for_nudge: {
         Args: { cutoff_date: string }
         Returns: {
@@ -2746,6 +2747,7 @@ export type Database = {
         Returns: boolean
       }
       purchase_avatar_item: { Args: { p_item_id: string }; Returns: boolean }
+      relock_achievements: { Args: { p_ids: string[] }; Returns: number }
       search_users_by_nickname: {
         Args: { requesting_user_id: string; search_term: string }
         Returns: {

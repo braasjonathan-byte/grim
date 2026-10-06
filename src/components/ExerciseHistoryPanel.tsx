@@ -1,3 +1,4 @@
+import { isPlausibleSet, parseNum, formatDecimal, IMPLAUSIBLE_LABEL } from "@/lib/inputValidation";
 import { useEffect, useState } from "react";
 import { Loader2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,6 +6,7 @@ import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 
 interface StrengthSet {
+  implausible?: boolean;
   kg: number;
   reps: number;
 }
@@ -31,7 +33,7 @@ const safelyParseSets = (value: any): StrengthSet[] => {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((s: any) => ({ kg: Number(s?.kg) || 0, reps: Number(s?.reps) || 0 }))
+      .map((s: any) => ({ kg: parseNum(s?.kg) || 0, reps: parseNum(s?.reps) || 0, implausible: !isPlausibleSet(s?.kg, s?.reps) }))
       .filter((s) => s.reps > 0 || s.kg > 0);
   } catch {
     return [];
@@ -156,8 +158,8 @@ const ExerciseHistoryPanel = ({
                 kind: "strength",
                 source,
                 sets,
-                topKg: Math.max(0, ...sets.map((s) => s.kg)),
-                totalVolume: sets.reduce((sum, s) => sum + s.kg * s.reps, 0),
+                topKg: Math.max(0, ...sets.filter((s) => !s.implausible).map((s) => s.kg)),
+                totalVolume: sets.filter((s) => !s.implausible).reduce((sum, s) => sum + s.kg * s.reps, 0),
                 isPr: false,
               });
             } else if (k.startsWith("__cond__")) {
@@ -182,8 +184,8 @@ const ExerciseHistoryPanel = ({
                 kind: "strength",
                 source,
                 sets,
-                topKg: Math.max(0, ...sets.map((s) => s.kg)),
-                totalVolume: sets.reduce((sum, s) => sum + s.kg * s.reps, 0),
+                topKg: Math.max(0, ...sets.filter((s) => !s.implausible).map((s) => s.kg)),
+                totalVolume: sets.filter((s) => !s.implausible).reduce((sum, s) => sum + s.kg * s.reps, 0),
                 isPr: false,
               });
             }
@@ -315,7 +317,7 @@ const ExerciseHistoryPanel = ({
                     className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-card border border-border"
                   >
                     {set.reps > 0 ? `${set.reps} × ` : ""}
-                    {set.kg > 0 ? `${set.kg}kg` : "BW"}
+                    {set.kg > 0 ? `${formatDecimal(set.kg)}kg` : "BW"}{set.implausible && <span className="ml-1 text-destructive font-semibold">{IMPLAUSIBLE_LABEL}</span>}
                   </span>
                 ))}
               </div>

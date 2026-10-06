@@ -1,3 +1,4 @@
+import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";
 
 export type PrIndex = Map<string, { best: number; secondBest: number }>;
@@ -36,12 +37,12 @@ export function buildPrIndex(completions: AnyCompletion[]): PrIndex {
           sets = value as Array<{ kg?: string | number }>;
         } else continue;
         if (!Array.isArray(sets)) continue;
-        for (const s of sets) push(name, Number(s?.kg));
+        for (const s of sets) if (isPlausibleSet(s?.kg, (s as any)?.reps)) push(name, parseNum(s?.kg));
         continue;
       }
       if (key.startsWith("__")) continue;
       // Legacy format: exerciseName -> weight
-      if (typeof value === "number") push(key, value);
+      if (typeof value === "number" && isPlausibleSet(value, 0)) push(key, value);
     }
   }
 
@@ -74,4 +75,12 @@ export function isPrWeight(index: PrIndex, exerciseName: string, kg: number | st
   const entry = index.get(normalizeExerciseName(String(exerciseName).replace(/( —)+$/, "").trim()));
   if (!entry) return false;
   return w >= entry.best && w > entry.secondBest;
+}
+
+/** Bekräftelsetext när en set-vikt är mer än dubbelt användarens nuvarande rekord. */
+export function prDoubleWarning(index: PrIndex, exerciseName: string, kg: number): string | null {
+  const entry = index.get(normalizeExerciseName(String(exerciseName).replace(/( —)+$/, "").trim()));
+  if (!entry || !(entry.best > 0) || !(kg > entry.best * 2)) return null;
+  const best = String(Math.round(entry.best * 100) / 100).replace(".", ",");
+  return `Det här är mer än dubbelt ditt rekord (${best} kg). Stämmer det?`;
 }

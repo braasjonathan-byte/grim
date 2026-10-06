@@ -1,3 +1,4 @@
+import { parseNum } from "@/lib/inputValidation";
 /**
  * Omvandlar AI-tolkade övningar från en skärmdump till riktiga övningsrader:
  * en detaljrad per övning + färdigifyllda loggvärden (__setdata__ / __cond__)
@@ -36,7 +37,7 @@ const parseDurationMin = (ex: AiExercise): number | null => {
   if (typeof direct === "number" && direct > 0) return direct;
   const sec = pick(ex, ["duration_sec", "duration_seconds", "seconds", "moving_time_seconds", "elapsed_time_seconds"]);
   if (sec !== null) {
-    const n = typeof sec === "number" ? sec : parseFloat(String(sec));
+    const n = typeof sec === "number" ? sec : parseNum(String(sec));
     if (Number.isFinite(n) && n > 0) return n / 60;
   }
   const raw = direct ?? pick(ex, ["duration", "time", "duration_hms", "elapsed_time", "moving_time"]);
@@ -129,7 +130,7 @@ export function buildWorkoutFromAiExercises(exercises: AiExercise[]): BuiltWorko
       const repsLabel = hold
         ? `${Math.round(hold)}s`
         : String(setData.find((s) => s.reps)?.reps || "10");
-      const kgValues = setData.map((s) => parseFloat(s.kg)).filter((n) => Number.isFinite(n));
+      const kgValues = setData.map((s) => parseNum(s.kg)).filter((n) => Number.isFinite(n));
       const kgLabel = kgValues.length ? ` @ ${round(Math.max(...kgValues), 2)} kg` : "";
       lines.push(`${name} ${setCount}×${repsLabel}${kgLabel}`);
       if (setData.length > 0) {

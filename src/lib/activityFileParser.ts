@@ -1,3 +1,4 @@
+import { parseNum } from "@/lib/inputValidation";
 /**
  * Parsning av träningsfiler (GPX / TCX / FIT) från Garmin Connect, Strava,
  * Zwift m.fl. Modulen är helt fristående och innehåller ingen sparlogik –
@@ -137,7 +138,7 @@ function avg(nums: number[]): number | null {
 
 const numOrNull = (v: string | null | undefined): number | null => {
   if (v == null || v === "") return null;
-  const n = parseFloat(v);
+  const n = parseNum(v);
   return Number.isFinite(n) ? n : null;
 };
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { Flame } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,9 +48,9 @@ const CalorieCalculator = () => {
   const [result, setResult] = useState<{ bmr: number; tdee: number; target: number; macroType: string } | null>(null);
 
   const calculate = () => {
-    const a = parseFloat(age);
-    const w = parseFloat(weight);
-    const h = parseFloat(height);
+    const a = parseNum(age);
+    const w = parseNum(weight);
+    const h = parseNum(height);
     if (!a || !w || !h) return;
 
     // Mifflin-St Jeor
@@ -57,9 +58,9 @@ const CalorieCalculator = () => {
       ? 10 * w + 6.25 * h - 5 * a + 5
       : 10 * w + 6.25 * h - 5 * a - 161;
 
-    const activityFactor = parseFloat(activity);
-    const trainingExtra = parseFloat(training);
-    const goalAdj = parseFloat(goal);
+    const activityFactor = parseNum(activity);
+    const trainingExtra = parseNum(training);
+    const goalAdj = parseNum(goal);
     const selectedGoal = goals.find((g) => g.value === goal);
     const macroType = selectedGoal?.macro ?? "maintain";
 
@@ -109,15 +110,15 @@ const CalorieCalculator = () => {
           <div className="grid grid-cols-3 gap-2">
             <div>
               <Label className="text-[10px] text-muted-foreground">Ålder</Label>
-              <Input type="number" placeholder="25" value={age} onChange={(e) => setAge(e.target.value)} className="h-8 text-xs" />
+              <Input type="text" inputMode="decimal" placeholder="25" value={age} onChange={(e) => setAge(e.target.value)} className="h-8 text-xs" />
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">Vikt (kg)</Label>
-              <Input type="number" placeholder="80" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-8 text-xs" />
+              <Input type="text" placeholder="80" value={weight} onChange={(e) => setWeight(e.target.value)} className="h-8 text-xs" />
             </div>
             <div>
               <Label className="text-[10px] text-muted-foreground">Längd (cm)</Label>
-              <Input type="number" placeholder="178" value={height} onChange={(e) => setHeight(e.target.value)} className="h-8 text-xs" />
+              <Input type="text" inputMode="decimal" placeholder="178" value={height} onChange={(e) => setHeight(e.target.value)} className="h-8 text-xs" />
             </div>
           </div>
 

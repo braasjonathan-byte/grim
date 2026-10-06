@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { parseNum, isPlausibleSet, formatDecimal } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar, Pencil } from "lucide-react";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";
@@ -99,7 +100,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
       for (const [ex, w] of Object.entries(c.logged_weights)) {
         // Handle legacy format: exerciseName: weight (number)
         if (!ex.startsWith("__")) {
-          if (typeof w !== "number" || w <= 0) continue;
+          if (typeof w !== "number" || w <= 0 || !isPlausibleSet(w, 0)) continue;
           const cleanEx = ex.replace(/( —)+$/, "");
           const normName = normalizeExerciseName(cleanEx);
           const existing = prMap.get(normName);
@@ -123,7 +124,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           } else if (Array.isArray(w)) {
             sets = w;
           } else { continue; }
-          const maxKg = Math.max(0, ...sets.map(s => Number(s.kg) || 0));
+          const maxKg = Math.max(0, ...sets.filter(s => isPlausibleSet(s.kg, s.reps)).map(s => parseNum(s.kg) || 0));
           if (maxKg <= 0) continue;
           const existing = prMap.get(exerciseName);
           if (!existing || maxKg > existing.weight) {
@@ -183,7 +184,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
 
   const saveOverride = async () => {
     if (!editDialog || !editWeight.trim()) return;
-    const w = parseFloat(editWeight);
+    const w = parseNum(editWeight);
     if (isNaN(w) || w <= 0) return;
 
     await supabase.from("pr_overrides").upsert(
@@ -211,7 +212,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
 
   const saveGoal = async () => {
     if (!goalDialog || !goalWeight.trim()) return;
-    const tw = parseFloat(goalWeight);
+    const tw = parseNum(goalWeight);
     if (isNaN(tw) || tw <= 0) return;
 
     const targetDate = goalDate || null;
@@ -317,7 +318,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 className="text-left group/weight"
               >
                 <p className="text-xl font-black group-hover/weight:text-primary transition-colors">
-                  {pr.weight} <span className="text-xs font-normal text-muted-foreground">kg</span>
+                  {formatDecimal(pr.weight)} <span className="text-xs font-normal text-muted-foreground">kg</span>
                 </p>
               </button>
 
@@ -326,7 +327,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               <div className="space-y-0.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted-foreground">
-                      Mål: {goal.target_weight} kg
+                      Mål: {formatDecimal(goal.target_weight)} kg
                     </span>
                     {goal.target_date &&
                   <span className="text-[9px] text-muted-foreground">
@@ -410,7 +411,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Målvikt (kg)</label>
                 <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={goalWeight}
                 onChange={(e) => setGoalWeight(e.target.value)}
@@ -482,7 +483,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Ny vikt (kg)</label>
                 <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={editWeight}
                 onChange={(e) => setEditWeight(e.target.value)}
@@ -532,7 +533,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
             <div className="p-4 space-y-4">
               <div className="text-center space-y-1">
                 <p className="text-xs text-muted-foreground">{percentilePopup.exercise}</p>
-                <p className="text-3xl font-black">{percentilePopup.weight} <span className="text-base font-normal text-muted-foreground">kg</span></p>
+                <p className="text-3xl font-black">{formatDecimal(percentilePopup.weight)} <span className="text-base font-normal text-muted-foreground">kg</span></p>
               </div>
 
               {/* Percentile bar */}

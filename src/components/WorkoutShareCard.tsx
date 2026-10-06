@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { X, Download, Share2, Palette, Send, Copy, Image as ImageIcon, Trash2 } from "lucide-react";
 import grimIcon from "@/assets/grim-icon.webp";
 import {
@@ -120,7 +121,7 @@ const WorkoutShareCard = ({
       if (last && last.kg === s.kg && last.reps === s.reps) last.count++;
       else groups.push({ ...s, count: 1 });
     });
-    return groups.map((g) => `${g.count}×${g.reps} @ ${g.kg}kg`).join(", ");
+    return groups.map((g) => `${g.count}×${g.reps} @ ${String(g.kg).replace(".", ",")}kg`).join(", ");
   };
 
   // Build detailed exercise summaries
@@ -149,7 +150,7 @@ const WorkoutShareCard = ({
             info,
             type: "strength" as const,
             sets: completedData.map((s: any) => ({
-              kg: String(parseFloat(s.kg) || 0),
+              kg: String(parseNum(s.kg) || 0),
               reps: String(parseInt(s.reps) || 0),
             })),
           };
@@ -182,7 +183,7 @@ const WorkoutShareCard = ({
             const setsKey = key.replace("__setdata__", "__sets__");
             const setsStr = (loggedWeights[setsKey] as string) || "";
             data.forEach((s: any, i: number) => {
-              if (setsStr[i] === "1") vol += (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0);
+              if (setsStr[i] === "1") vol += (parseNum(s.kg) || 0) * (parseInt(s.reps) || 0);
             });
           }
         } catch {}
