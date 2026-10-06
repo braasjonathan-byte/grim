@@ -252,7 +252,7 @@ export async function autoShareCompletion(
   week: number,
   day: string,
   captionOverride?: string,
-  visibility | "public" = "friends"
+  visibility: "friends" | "public" = "friends"
 ): Promise<void> {
   try {
     let caption = captionOverride;
