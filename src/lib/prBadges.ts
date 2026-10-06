@@ -75,3 +75,11 @@ export function isPrWeight(index: PrIndex, exerciseName: string, kg: number | st
   if (!entry) return false;
   return w >= entry.best && w > entry.secondBest;
 }
+
+/** Bekräftelsetext när en set-vikt är mer än dubbelt användarens nuvarande rekord. */
+export function prDoubleWarning(index: PrIndex, exerciseName: string, kg: number): string | null {
+  const entry = index.get(normalizeExerciseName(String(exerciseName).replace(/( —)+$/, "").trim()));
+  if (!entry || !(entry.best > 0) || !(kg > entry.best * 2)) return null;
+  const best = String(Math.round(entry.best * 100) / 100).replace(".", ",");
+  return `Det här är mer än dubbelt ditt rekord (${best} kg). Stämmer det?`;
+}
