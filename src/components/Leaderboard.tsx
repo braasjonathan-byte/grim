@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Medal, Crown, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import HonoraryBadge from "./HonoraryBadge";
 import EmptyState from "./EmptyState";
+import { loadPrivacySettings } from "@/lib/socialPrivacy";
 
 interface LeaderboardProps {
   userId: string;
@@ -24,6 +25,10 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
   const [month, setMonth] = useState<number | null>(now.getMonth() + 1);
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hiddenFromOthers, setHiddenFromOthers] = useState(false);
+  useEffect(() => {
+    if (userId) loadPrivacySettings(userId).then((s) => setHiddenFromOthers(!s.show_on_leaderboard));
+  }, [userId]);
 
   useEffect(() => {
     setLoading(true);
@@ -83,6 +88,11 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
       <div className="flex items-center gap-2">
         <Medal className="w-5 h-5 text-warning" />
         <h3 className="text-lg font-bold tracking-tight">Topplista</h3>
+      </div>
+      {hiddenFromOthers && (
+        <p className="text-xs text-muted-foreground">Du syns inte för andra – ändra i Inställningar</p>
+      )}
+      <div className="hidden">
       </div>
 
       {/* Filter controls */}
