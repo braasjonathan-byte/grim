@@ -121,7 +121,7 @@ const WorkoutShareCard = ({
       if (last && last.kg === s.kg && last.reps === s.reps) last.count++;
       else groups.push({ ...s, count: 1 });
     });
-    return groups.map((g) => `${g.count}×${g.reps} @ ${g.kg}kg`).join(", ");
+    return groups.map((g) => `${g.count}×${g.reps} @ ${String(g.kg).replace(".", ",")}kg`).join(", ");
   };
 
   // Build detailed exercise summaries

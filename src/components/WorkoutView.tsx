@@ -1,3 +1,4 @@
+import { formatDecimal } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { parseNum } from "@/lib/inputValidation";
 import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react";
@@ -2547,7 +2548,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         if (a.reps !== b.reps) return b.reps - a.reps;
         return 0;
       })[0];
-      return `${best.kg} kg (${best.reps || '?'} reps)`;
+      return `${formatDecimal(best.kg)} kg (${best.reps || '?'} reps)`;
     }
 
     // Fallback: search plan details text for weight info (active plans)
@@ -4162,7 +4163,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   <div className="pl-1 mb-1">
                                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                                       <Weight className="w-3 h-3" />
-                                      Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
+                                      Senast: <span className="font-mono font-semibold text-foreground">{formatDecimal(lastKg.kg)} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
                                     </p>
                                     {isNegative && effectiveKg !== null && (
                                       <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>
@@ -8030,7 +8031,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   <div className="pl-1">
                                     <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                                       <Weight className="w-3 h-3" />
-                                      Senast: <span className="font-mono font-semibold text-foreground">{lastKg.kg} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
+                                      Senast: <span className="font-mono font-semibold text-foreground">{formatDecimal(lastKg.kg)} kg{lastKg.reps ? ` (${lastKg.reps} reps)` : ''}</span>
                                     </p>
                                     {isNegative && effectiveKg !== null && (
                                       <p className="text-[10px] text-muted-foreground pl-4">= {Math.round(effectiveKg * 10) / 10} kg effektiv vikt (kroppsvikt {profileWeight} kg)</p>

@@ -318,7 +318,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 className="text-left group/weight"
               >
                 <p className="text-xl font-black group-hover/weight:text-primary transition-colors">
-                  {pr.weight} <span className="text-xs font-normal text-muted-foreground">kg</span>
+                  {formatDecimal(pr.weight)} <span className="text-xs font-normal text-muted-foreground">kg</span>
                 </p>
               </button>
 
@@ -327,7 +327,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               <div className="space-y-0.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-muted-foreground">
-                      Mål: {goal.target_weight} kg
+                      Mål: {formatDecimal(goal.target_weight)} kg
                     </span>
                     {goal.target_date &&
                   <span className="text-[9px] text-muted-foreground">
@@ -533,7 +533,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
             <div className="p-4 space-y-4">
               <div className="text-center space-y-1">
                 <p className="text-xs text-muted-foreground">{percentilePopup.exercise}</p>
-                <p className="text-3xl font-black">{percentilePopup.weight} <span className="text-base font-normal text-muted-foreground">kg</span></p>
+                <p className="text-3xl font-black">{formatDecimal(percentilePopup.weight)} <span className="text-base font-normal text-muted-foreground">kg</span></p>
               </div>
 
               {/* Percentile bar */}
