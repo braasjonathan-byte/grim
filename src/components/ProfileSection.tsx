@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { pickImage } from "@/lib/pickImage";
 
 
@@ -65,6 +66,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [spotifyName, setSpotifyName] = useState("");
   const [spotifyThumb, setSpotifyThumb] = useState<string | null>(null);
   const [fetchingSpotify, setFetchingSpotify] = useState(false);
+  const spotifyUrlEdited = useRef(false);
   const { isHonorary, isAdmin } = useAccessLevel();
 
   const [loaded, setLoaded] = useState(false);
@@ -83,7 +85,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       if (data) {
         setAge(data.age?.toString() || "");
         setGender(data.gender || "");
-        setWeightKg((data as any).weight_kg != null ? formatDecimal((data as any).weight_kg) : "");
+        const w = (data as any).weight_kg != null ? formatDecimal((data as any).weight_kg) : "";
+        savedWeight.current = w;
+        setWeightKg(w);
         setAvatarUrl(data.avatar_url || null);
         setInstagram((data as any).instagram || "");
         setTiktok((data as any).tiktok || "");
@@ -97,25 +101,78 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   }, [userId]);
 
 
-  // Auto-save profile with debounce
+  // Kroppsvikt sparas direkt vid blur/Enter (inte fördröjt) och bekräftas med toast.
+  const savedWeight = useRef<string>("");
+  const weightRef = useRef(weightKg);
+  weightRef.current = weightKg;
+  const accessToken = useRef<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => { accessToken.current = data.session?.access_token ?? null; });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { accessToken.current = session?.access_token ?? null; });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+  const weightDirty = () => weightRef.current.trim() !== savedWeight.current.trim();
+  const saveWeight = useCallback(async () => {
+    if (!weightDirty()) return;
+    const wRes = validateNumber(weightRef.current, "bodyWeightKg");
+    if (wRes.error) return; // ogiltiga värden sparas aldrig
+    const value = weightRef.current;
+    const { error } = await supabase.from("profiles").update({ weight_kg: wRes.value } as any).eq("user_id", userId);
+    if (error) { toast.error("Vikten kunde inte sparas."); return; }
+    savedWeight.current = value;
+    toast.success("Vikt sparad");
+  }, [userId]);
+  // Lämnar användaren sidan med osparad vikt: skicka ändringen så att den överlever omladdningen.
+  useEffect(() => {
+    const flush = () => {
+      if (!weightDirty() || !accessToken.current) return;
+      const wRes = validateNumber(weightRef.current, "bodyWeightKg");
+      if (wRes.error) return;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?user_id=eq.${userId}`;
+      try {
+        fetch(url, {
+          method: "PATCH",
+          keepalive: true,
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${accessToken.current}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ weight_kg: wRes.value }),
+        });
+        savedWeight.current = weightRef.current;
+      } catch {}
+    };
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+      if (weightDirty()) saveWeight();
+    };
+  }, [userId, saveWeight]);
+
+  // Auto-save profile with debounce (kroppsvikt hanteras separat ovan)
   const doSave = useCallback(async () => {
     const ageRes = validateNumber(age, "ageYears");
-    const wRes = validateNumber(weightKg, "bodyWeightKg");
-    if (ageRes.error || wRes.error) return; // ogiltiga värden sparas aldrig
+    if (ageRes.error) return; // ogiltiga värden sparas aldrig
+    const url = spotifyUrl.trim();
+    const name = spotifyName.trim();
     await supabase
       .from("profiles")
       .update({
         age: ageRes.value,
         gender: gender || null,
-        weight_kg: wRes.value,
         instagram: extractUsername(instagram, "instagram.com") || null,
         tiktok: extractUsername(tiktok, "tiktok.com") || null,
         snapchat: extractUsername(snapchat, "snapchat.com") || null,
-        spotify_anthem_url: spotifyUrl.trim() || null,
-        spotify_anthem_name: spotifyName.trim() || null,
+        // Tom länk = ingen anthem; namnet följer med bara om det finns en länk.
+        spotify_anthem_url: url || null,
+        spotify_anthem_name: url ? (name || null) : null,
       } as any)
       .eq("user_id", userId);
-  }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
+  }, [age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
 
   // Trigger auto-save when any field changes (after initial load AND user interaction)
   useEffect(() => {
@@ -125,7 +182,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       doSave();
     }, 1000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [age, gender, weightKg, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
+  }, [age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
 
   // Save on unmount/visibility change (only if user changed something)
   useEffect(() => {
@@ -155,9 +212,12 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         if (res.ok) {
           const data = await res.json();
           if (data.thumbnail_url) setSpotifyThumb(data.thumbnail_url);
-          if (data.title) {
+          // Fyll bara i namnet när användaren själv bytt länk och fältet är tomt –
+          // skriv aldrig över "Låt – Artist" som användaren angett.
+          if (data.title && spotifyUrlEdited.current) {
+            const artist = typeof data.author_name === "string" && data.author_name.trim() ? data.author_name.trim() : "";
             dirty.current = true;
-            setSpotifyName(data.title);
+            setSpotifyName((prev) => (prev.trim() ? prev : artist ? `${data.title} – ${artist}` : data.title));
           }
         }
       } catch {
@@ -301,7 +361,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
               type="text"
               inputMode="decimal"
               value={weightKg}
-              onChange={(e) => { dirty.current = true; setWeightKg(e.target.value); }}
+              onChange={(e) => setWeightKg(e.target.value)}
+              onBlur={() => saveWeight()}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); saveWeight(); } }}
               placeholder="Ange din vikt"
               min={30}
               max={300}
@@ -341,7 +403,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       {/* Anthem */}
       <SettingsSection title="Anthem" icon={Music} defaultOpen={false}>
         <div className="space-y-3">
-          {(spotifyThumb || spotifyName) && (
+          {spotifyUrl.trim() && (spotifyThumb || spotifyName) && (
             <div className="flex items-center gap-3 rounded-xl bg-secondary/60 border border-border/60 p-2.5 shadow-soft">
               <div className="w-12 h-12 rounded-lg overflow-hidden bg-background flex items-center justify-center shrink-0">
                 {spotifyThumb ? (
@@ -362,7 +424,13 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             <input
               type="url"
               value={spotifyUrl}
-              onChange={(e) => { dirty.current = true; setSpotifyUrl(e.target.value); }}
+              onChange={(e) => {
+                dirty.current = true;
+                spotifyUrlEdited.current = true;
+                // Ny länk = ny låt: töm det gamla namnet så att det fylls i på nytt.
+                if (e.target.value.trim() !== spotifyUrl.trim()) setSpotifyName("");
+                setSpotifyUrl(e.target.value);
+              }}
               placeholder="https://open.spotify.com/track/..."
               className={inputClass}
             />
@@ -376,10 +444,31 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
               type="text"
               value={spotifyName}
               onChange={(e) => { dirty.current = true; setSpotifyName(e.target.value); }}
-              placeholder="Fylls i automatiskt från länken"
+              placeholder="Låt – Artist"
               className={inputClass}
             />
           </div>
+
+          {(spotifyUrl.trim() || spotifyName.trim()) && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (saveTimer.current) clearTimeout(saveTimer.current);
+                setSpotifyUrl("");
+                setSpotifyName("");
+                setSpotifyThumb(null);
+                const { error } = await supabase
+                  .from("profiles")
+                  .update({ spotify_anthem_url: null, spotify_anthem_name: null } as any)
+                  .eq("user_id", userId);
+                if (error) toast.error("Anthem kunde inte tas bort.");
+                else toast.success("Anthem borttagen");
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-destructive/40 text-destructive text-sm font-semibold py-2 hover:bg-destructive/10 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" /> Ta bort anthem
+            </button>
+          )}
         </div>
       </SettingsSection>
 
