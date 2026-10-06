@@ -475,6 +475,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               {!loading && combinedResults.length === 0 && !showPersonal && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
               <ul className="divide-y divide-border">
                 {combinedResults.map(renderRow)}
+              </ul>
+              {brandResults.length > 0 && (
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-3 pb-1">Märkesprodukter</p>
+              )}
+              <ul className="divide-y divide-border">
+                {brandResults.map(renderRow)}
                 {offLoading && <li className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></li>}
               </ul>
             </div>
