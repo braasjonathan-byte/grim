@@ -1002,7 +1002,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
    * marked as done (__sets__) and has set data (__setdata__), merged on top of
    * `base`. Never removes existing marks — only adds.
    */
-  const buildAllSetsWeights = (week: number, day: string, base: Record<string, any>) => {
+  const buildAllSetsWeights = (week: number, day: string, base: Record<string, any>, trims?: { planId: string; part: string; keep: number }[]) => {
     const acc: Record<string, any> = { ...base };
     const dayPlans = plans.filter((p) => p.week === week && p.day === day);
     for (const plan of dayPlans) {
@@ -1021,8 +1021,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, "") : exerciseName || cleanPart;
         if (!pName) continue;
         const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
-        acc[`__sets__${pName}`] = "1".repeat(sc);
         const setDataKey = `__setdata__${pName}`;
+        const prevSetsStr = typeof acc[`__sets__${pName}`] === "string" ? (acc[`__sets__${pName}`] as string) : "";
         // Reuse planned kg/reps when the user has not logged their own.
         const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
         const defReps = partStructMatch ? partStructMatch[3] : circuitSecMatch ? circuitSecMatch[1] : "10";
@@ -1032,14 +1032,46 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const raw = acc[setDataKey];
           if (raw) existingData = JSON.parse(raw as string) || [];
         } catch {}
-        const initData = Array.from({ length: sc }, (_, i) => ({
-          kg: existingData[i]?.kg ?? defKg,
-          reps: existingData[i]?.reps ?? defReps,
-        }));
-        acc[setDataKey] = JSON.stringify(initData);
+        // Bocka bara av set som är avbockade eller har reps ifyllda; tomma set tas bort.
+        const keep: { kg: string; reps: string }[] = [];
+        for (let i = 0; i < sc; i++) {
+          const row = existingData[i];
+          const reps = String(row?.reps ?? "").trim();
+          const checked = prevSetsStr[i] === "1";
+          if (!checked && !reps) continue;
+          keep.push({ kg: String(row?.kg ?? "").trim() || defKg, reps: reps || defReps });
+        }
+        acc[`__sets__${pName}`] = "1".repeat(keep.length);
+        acc[setDataKey] = JSON.stringify(keep);
+        if (keep.length < sc) trims?.push({ planId: plan.id, part, keep: keep.length });
       }
     }
     return acc;
+  };
+
+  // Tar bort tomma set ur det avslutade passet (setantalet på passets rad).
+  const trimEmptySets = async (trims: { planId: string; part: string; keep: number }[]) => {
+    if (trims.length === 0) return;
+    const byPlan = new Map<string, { part: string; keep: number }[]>();
+    trims.forEach((t) => byPlan.set(t.planId, [...(byPlan.get(t.planId) || []), t]));
+    const updates: { id: string; details: string }[] = [];
+    for (const [planId, list] of byPlan) {
+      const plan = plans.find((p) => p.id === planId);
+      if (!plan) continue;
+      const sep = plan.details.includes("\n") ? "\n" : "; ";
+      let lines = plan.details.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
+      for (const t of list) {
+        const i = lines.indexOf(t.part);
+        if (i < 0) continue;
+        if (t.keep === 0) lines[i] = "";
+        else lines[i] = lines[i].replace(/(\d+)(\s*[×x])/, `${t.keep}$2`);
+      }
+      lines = lines.filter(Boolean);
+      updates.push({ id: planId, details: lines.join(sep) });
+    }
+    for (const u of updates) await supabase.from("workout_plans").update({ details: u.details }).eq("id", u.id);
+    skipDayResetRef.current = true;
+    setPlans((prev) => prev.map((p) => { const u = updates.find((x) => x.id === p.id); return u ? { ...p, details: u.details } : p; }));
   };
 
   // Auto-check all sets for a given week/day (used when marking workout as done)
@@ -5490,11 +5522,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                 onClick={async () => {
                   const { week, day } = uncheckedSetsDialog;
                   setUncheckedSetsDialog(null);
+                  const trims: { planId: string; part: string; keep: number }[] = [];
                   const k = `${week}-${day}`;
                   const accumulated: Record<string, any> = await new Promise((resolve) => {
                     setCompletions((prev) => {
                       const prevComp = prev[k] || ({} as any);
-                      const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>);
+                      const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>, trims);
                       resolve(acc);
                       return {
                         ...prev,
@@ -5503,6 +5536,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     });
                   });
                   await safeUpsertCompletion(week, day, { logged_weights: accumulated });
+                  await trimEmptySets(trims);
                   await performToggleDone(week, day);
                 }}
                 className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
@@ -9488,13 +9522,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               onClick={async () => {
                 const { week, day } = uncheckedSetsDialog;
                 setUncheckedSetsDialog(null);
+                const trims: { planId: string; part: string; keep: number }[] = [];
                 const k = `${week}-${day}`;
 
                 // Build accumulated logged_weights using fresh state via functional setState
                 const accumulated: Record<string, any> = await new Promise((resolve) => {
                   setCompletions((prev) => {
                     const prevComp = prev[k] || ({} as any);
-                    const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>);
+                    const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>, trims);
                     resolve(acc);
                     // Optimistically update state immediately so checkboxes re-render as checked
                     return {
@@ -9506,6 +9541,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
 
                 await safeUpsertCompletion(week, day, { logged_weights: accumulated });
+                await trimEmptySets(trims);
                 await performToggleDone(week, day);
               }}
               className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
