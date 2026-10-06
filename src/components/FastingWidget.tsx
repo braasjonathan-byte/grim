@@ -89,7 +89,7 @@ export default function FastingWidget({ userId }: { userId: string }) {
     <div className="rounded-2xl bg-muted/40 p-3 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold flex items-center gap-1.5"><Timer className="w-3.5 h-3.5 text-primary" /> Periodisk fasta</p>
-        <button onClick={() => setHiddenPref(true)} aria-label="Dölj fastetimer" className="text-muted-foreground p-1"><EyeOff className="w-3.5 h-3.5" /></button>
+        <button onClick={() => setFastingEnabled(false)} aria-label="Dölj fastetimer" className="text-muted-foreground p-1"><EyeOff className="w-3.5 h-3.5" /></button>
       </div>
 
       {active ? (
