@@ -7,6 +7,9 @@ import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
 import AchievementsPanel from "@/components/AchievementsPanel";
 import IdentityTitleBadge from "@/components/IdentityTitleBadge";
 import AchievementsView from "@/components/AchievementsView";
+import ReportDialog from "@/components/ReportDialog";
+import { blockUser, muteUser } from "@/lib/socialPrivacy";
+import { Flag, VolumeX } from "lucide-react";
 import { calculateAchievementMetrics, getEarnedAchievements } from "@/lib/achievements";
 import { hasCompletionEvidence, isCompletedWorkout } from "@/lib/completionCounting";
 
@@ -187,6 +190,8 @@ interface SocialData {
 }
 
 const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileViewProps) => {
+  const [reportOpen, setReportOpen] = useState(false);
+  const [meId, setMeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [challengeCount, setChallengeCount] = useState(0);
   const [starredPRs, setStarredPRs] = useState<StarredPR[]>([]);
@@ -377,22 +382,37 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
            <div className="flex items-center gap-1">
              <button
                onClick={async () => {
+                 const { data: auth } = await supabase.auth.getUser();
+                 if (auth.user?.id) { setMeId(auth.user.id); setReportOpen(true); }
+               }}
+               className="p-1.5 text-muted-foreground hover:text-destructive"
+               title="Rapportera användare"
+               aria-label="Rapportera användare"
+             >
+               <Flag className="w-4 h-4" />
+             </button>
+             <button
+               onClick={async () => {
+                 const { data: auth } = await supabase.auth.getUser();
+                 if (!auth.user?.id) return;
+                 if (await muteUser(auth.user.id, friendUserId)) toast.success(`${nickname} är tystad`);
+                 else toast.error("Kunde inte tysta användaren.");
+               }}
+               className="p-1.5 text-muted-foreground hover:text-foreground"
+               title="Tysta"
+               aria-label="Tysta"
+             >
+               <VolumeX className="w-4 h-4" />
+             </button>
+             <button
+               onClick={async () => {
                  if (!confirm(`Blockera ${nickname}? Ni kommer inte längre se varandras inlägg.`)) return;
                  const { data: auth } = await supabase.auth.getUser();
                  const me = auth.user?.id;
                  if (!me) return;
-                 // Remove any existing friendships rows both directions
-                 await supabase.from("friendships").delete().or(
-                   `and(user_id.eq.${me},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${me})`
-                 );
-                 const { error } = await supabase.from("friendships").insert({
-                   user_id: me,
-                   friend_id: friendUserId,
-                   status: "blocked",
-                   blocked_by: me,
-                 } as any);
-                 if (error) {
-                   toast.error("Kunde inte blockera: " + error.message);
+                 const blockError = await blockUser(me, friendUserId);
+                 if (blockError) {
+                   toast.error("Kunde inte blockera: " + blockError);
                    return;
                  }
                  toast.success(`${nickname} är nu blockerad`);
@@ -557,6 +577,9 @@ const FriendProfileView = ({ friendUserId, nickname, onClose }: FriendProfileVie
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+      {meId && (
+        <ReportDialog open={reportOpen} onOpenChange={setReportOpen} reporterId={meId} reportedUserId={friendUserId} title={`Rapportera ${nickname}`} />
       )}
     </>
   );
