@@ -5821,7 +5821,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const isCardToday = sameWorkoutDay(plan.day, cardTodayNames[new Date().getDay()]) && plan.week === activePlanWeek;
 
           return (
-            <div key={key + "-wrap"} className="w-full">
+            <div key={key + "-wrap"} className="w-full" style={{ order: getDayIndex(plan.day) * 2 + 1 }}>
             <div
               className={`relative w-full rounded-lg border transition-colors bg-secondary ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
               <div className="flex items-center gap-3 px-4 pt-4 pb-2 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>
@@ -9034,7 +9034,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           // On mobile with swipe, don't show empty days inline
           if (isMobile && weekDays.length > 1) return null;
           return emptyDays.map(day => (
-            <div key={`empty-${currentWeek}-${day}`} className="rounded-lg border border-dashed border-border bg-card/50 p-4 space-y-2">
+            <div key={`empty-${currentWeek}-${day}`} style={{ order: getDayIndex(day) * 2 }} className="rounded-lg border border-dashed border-border bg-card/50 p-4 space-y-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full border-2 border-border flex items-center justify-center">
                   <Plus className="w-4 h-4 text-muted-foreground" />
