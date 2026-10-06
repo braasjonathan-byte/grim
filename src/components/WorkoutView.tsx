@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { showUndoToast } from "@/lib/undoToast";
 import { supabase } from "@/integrations/supabase/client";
-import { queueOfflineUpsert, dequeueOfflineUpsert, useOfflineStatus } from "@/hooks/useOfflineSync";
+import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles } from "lucide-react";
@@ -666,7 +666,20 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const usingCache = !fetchedPlans;
     const cached = usingCache ? readOfflineWorkoutCache(userId) : null;
     const planData: any[] | null = fetchedPlans ?? cached?.plans ?? null;
-    const compData: any[] | null = fetchedCompletions ?? cached?.completions ?? null;
+    let compData: any[] | null = fetchedCompletions ?? cached?.completions ?? null;
+    // A checkmark set right before a reload may still sit in the offline queue;
+    // overlay it so the reload never shows the older server state.
+    if (compData) {
+      const pending = getPendingRows("workout_completions").filter((r: any) => r.user_id === userId);
+      if (pending.length) {
+        const byKey = new Map(compData.map((c: any) => [`${c.week}-${c.day}`, c]));
+        for (const r of pending as any[]) {
+          const k = `${r.week}-${r.day}`;
+          byKey.set(k, { ...(byKey.get(k) || {}), ...r });
+        }
+        compData = Array.from(byKey.values());
+      }
+    }
     if (fetchedPlans) {
       writeOfflineWorkoutCache(userId, fetchedPlans, fetchedCompletions ?? []);
     }

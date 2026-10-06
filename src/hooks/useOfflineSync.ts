@@ -33,6 +33,15 @@ function saveQueue(queue: PendingUpsert[]) {
   }
 }
 
+'/** Pending (not yet synced) rows for a table — lets a reload show writes still in the queue. */
+export function getPendingRows(table: string): Record<string, unknown>[] {
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY);
+    const q = raw ? JSON.parse(raw) : [];
+    return Array.isArray(q) ? q.filter((e: any) => e?.table === table && e?.data).map((e: any) => e.data) : [];
+  } catch { return []; }
+}
+
 export function getPendingUpsertCount(): number {
   return getQueue().length;
 }
