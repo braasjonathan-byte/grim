@@ -33,7 +33,7 @@ function saveQueue(queue: PendingUpsert[]) {
   }
 }
 
-'/** Pending (not yet synced) rows for a table — lets a reload show writes still in the queue. */
+/** Pending (not yet synced) rows for a table — lets a reload show writes still in the queue. */
 export function getPendingRows(table: string): Record<string, unknown>[] {
   try {
     const raw = localStorage.getItem(QUEUE_KEY);
