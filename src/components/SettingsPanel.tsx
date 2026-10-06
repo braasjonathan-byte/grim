@@ -372,6 +372,25 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
         </button>
       </div>
 
+      {/* Fasting widget toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Timer className="w-4 h-4 text-primary" />
+          <span className="text-sm">Periodisk fasta i Kost</span>
+        </div>
+        <button
+          onClick={() => {
+            const next = !fastingOn;
+            setFastingEnabled(next);
+            setFastingOn(next);
+          }}
+          aria-label="Visa periodisk fasta i Kost"
+          className={`relative w-11 h-6 rounded-full transition-colors ${fastingOn ? "bg-primary" : "bg-secondary border border-border"}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${fastingOn ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
+        </button>
+      </div>
+
       {/* Sound feedback toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
