@@ -44,6 +44,7 @@ import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
+import ConfirmValueDialog from "@/components/ConfirmValueDialog";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import { loadPrivacySettings, DEFAULT_PRIVACY, type PrivacySettings } from "@/lib/socialPrivacy";
 import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
