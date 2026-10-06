@@ -160,6 +160,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
         body: { exerciseName, action: "save_instructions", instructions },
       });
       if (fnError) throw fnError;
+      if (!saved?.success) throw new Error("not saved");
       setData(prev => prev ? { ...prev, instructions, hasCustomInstructions: true, aiGenerated: false, isReported: false } : prev);
       setEditing(false);
       toast.success("Beskrivningen har sparats");
