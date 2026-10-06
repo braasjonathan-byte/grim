@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import ExerciseHistoryDialog from "@/components/ExerciseHistoryDialog";
 import ExerciseHistoryPanel from "@/components/ExerciseHistoryPanel";
 import { toast } from "sonner";
+import ExerciseMappingPicker from "@/components/ExerciseMappingPicker";
 
 interface ExerciseInfoDialogProps {
   exerciseName: string;
@@ -25,6 +26,8 @@ interface ExerciseData {
   aiGenerated?: boolean;
   creatorId?: string | null;
   isReported?: boolean;
+  linkedName?: string | null;
+  noLink?: boolean;
 }
 
 const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEditMode = false, onCategoryChanged }: ExerciseInfoDialogProps) => {
@@ -41,6 +44,8 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showMapping, setShowMapping] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => setAuthUserId(user?.id || null));
@@ -56,7 +61,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
         });
         if (fnError) throw fnError;
 
-        if (result?.isCardio || result?.gifUrl || (result?.instructions && result.instructions.length > 0) || result?.creatorId || result?.isReported) {
+        if (result?.isCardio || result?.gifUrl || result?.adminLinked || result?.imageUrls?.length || (result?.instructions && result.instructions.length > 0) || result?.creatorId || result?.isReported) {
           setData(result);
           if (shouldOpenEditor) {
             setEditText((result.instructions || []).join("\n"));
@@ -92,13 +97,13 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
     setShowReport(false);
     setReportReason("");
     fetchData();
-  }, [exerciseName, initialEditMode, isAdmin]);
+  }, [exerciseName, initialEditMode, isAdmin, reloadKey]);
 
   useEffect(() => {
     const fetchCategory = async () => {
-      const { data: custom } = await supabase.from("custom_exercises").select("category").eq("name", exerciseName).maybeSingle();
-      if (custom) {
-        setCurrentCategory(custom.category);
+      const { data: rows } = await supabase.from("custom_exercises").select("category").ilike("name", exerciseName).order("created_at").limit(1);
+      if (rows?.[0]) {
+        setCurrentCategory(rows[0].category);
       } else {
         const { exerciseLibrary } = await import("@/data/exerciseLibrary");
         const found = exerciseLibrary.find(e => e.name.toLowerCase() === exerciseName.toLowerCase());
@@ -108,22 +113,30 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
     fetchCategory();
   }, [exerciseName]);
 
+  const CATEGORY_LABEL: Record<string, string> = { styrka: "Styrka", kondition: "Kondition", "rörlighet": "Rörlighet", core: "Core" };
   const saveCategory = async (newCategory: string) => {
+    const previous = currentCategory;
     setSavingCategory(true);
     setCurrentCategory(newCategory);
     try {
-      const { data: existing } = await supabase.from("custom_exercises").select("id").eq("name", exerciseName).maybeSingle();
-      if (existing) {
-        await supabase.from("custom_exercises").update({ category: newCategory }).eq("id", existing.id);
+      const { data: rows, error: readErr } = await supabase.from("custom_exercises").select("id").ilike("name", exerciseName).limit(20);
+      if (readErr) throw readErr;
+      if (rows && rows.length > 0) {
+        const { data: updated, error } = await supabase.from("custom_exercises").update({ category: newCategory }).in("id", rows.map(r => r.id)).select("id");
+        if (error) throw error;
+        if (!updated?.length) throw new Error("no rows updated");
       } else {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from("custom_exercises").insert({ name: exerciseName, category: newCategory, muscle_group: "Helkropp", created_by: user.id });
-        }
+        if (!user) throw new Error("not signed in");
+        const { error } = await supabase.from("custom_exercises").insert({ name: exerciseName, category: newCategory, muscle_group: "Helkropp", created_by: user.id });
+        if (error) throw error;
       }
+      toast.success(`Kategori sparad: ${CATEGORY_LABEL[newCategory] || newCategory}`);
       onCategoryChanged?.();
     } catch (e) {
       console.error("Failed to save category:", e);
+      setCurrentCategory(previous);
+      toast.error("Kunde inte spara kategorin");
     } finally {
       setSavingCategory(false);
     }
@@ -143,7 +156,7 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
     setSaving(true);
     const instructions = editText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
     try {
-      const { error: fnError } = await supabase.functions.invoke("exercise-gif", {
+      const { data: saved, error: fnError } = await supabase.functions.invoke("exercise-gif", {
         body: { exerciseName, action: "save_instructions", instructions },
       });
       if (fnError) throw fnError;
@@ -309,10 +322,23 @@ const ExerciseInfoDialog = ({ exerciseName, onClose, isAdmin = false, initialEdi
                 </div>
               )}
 
-              {data.name && (
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">Engelsk benämning:</span> {data.name.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground min-w-0">
+                  <span className="font-semibold text-foreground">Engelsk benämning:</span>{" "}
+                  {data.noLink || !(data.gifUrl || data.imageUrls?.length || data.linkedName)
+                    ? "Ingen koppling"
+                    : data.name.split(' ').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 </p>
+                {canEditDescription && !showMapping && (
+                  <button onClick={() => setShowMapping(true)} className="text-xs text-primary font-semibold flex-shrink-0">Ändra koppling</button>
+                )}
+              </div>
+              {showMapping && (
+                <ExerciseMappingPicker
+                  exerciseName={exerciseName}
+                  onClose={() => setShowMapping(false)}
+                  onSaved={() => { setShowMapping(false); setReloadKey(k => k + 1); }}
+                />
               )}
 
               {data.targetMuscles && data.targetMuscles.length > 0 && (
