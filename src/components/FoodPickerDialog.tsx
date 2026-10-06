@@ -130,37 +130,30 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    const term = query.trim();
     setLoading(true);
     (async () => {
-      const foodsQ = term
-        ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).ilike("name", `%${term}%`).order("name").limit(40)
-        : supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).order("name").limit(40);
-      let customQ = supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).eq("user_id", userId);
-      if (term) customQ = customQ.ilike("name", `%${term}%`);
+      const foodsP = loadAllFoods();
+      const customQ = supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).eq("user_id", userId);
       const recipesQ = hideRecipes ? null : supabase
         .from("recipes")
         .select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,visibility,servings")
         .or(`user_id.eq.${userId},visibility.eq.public`)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
 
-      const [foodsR, customR, recipesR] = await Promise.all([foodsQ, customQ.order("created_at", { ascending: false }).limit(30), recipesQ as any]);
+      const [foods, customR, recipesR] = await Promise.all([foodsP, customQ.order("created_at", { ascending: false }).limit(500), recipesQ as any]);
       if (cancelled) return;
       if ((recipesR as any)?.error) console.error("recipes query error", (recipesR as any).error);
 
       const list: FoodRow[] = [];
-      for (const r of (recipesR?.data || []) as any[]) {
-        if (term && !r.name.toLowerCase().includes(term.toLowerCase())) continue;
-        list.push(recipeRow(r));
-      }
+      for (const r of (recipesR?.data || []) as any[]) list.push(recipeRow(r));
       for (const c of customR.data || []) list.push({ ...(c as any), source: "custom_food" });
-      for (const f of foodsR.data || []) list.push({ ...(f as any), piece_g: (f as any).default_piece_weight_g, source: "food" });
+      for (const f of foods) list.push({ ...(f as any), piece_g: (f as any).default_piece_weight_g, source: "food" });
       setResults(list);
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [open, query, userId, hideRecipes]);
+  }, [open, userId, hideRecipes]);
 
   // Open Food Facts search (debounced)
   const [offResults, setOffResults] = useState<FoodRow[]>([]);
