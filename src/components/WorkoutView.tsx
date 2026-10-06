@@ -3552,7 +3552,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         <div className="space-y-3">
           <button
-            onClick={startPlanFromSingles}
+            onClick={() => startPlanFromSingles()}
             className="w-full text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
 
             <div className="flex items-start gap-3">
@@ -3717,7 +3717,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         </div>
 
         <button
-          onClick={startPlanFromSingles}
+          onClick={() => startPlanFromSingles()}
           className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/10 transition-colors"
         >
           <Dumbbell className="w-4 h-4" /> Starta träningsplan
