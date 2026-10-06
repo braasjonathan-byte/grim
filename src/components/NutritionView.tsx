@@ -1,3 +1,6 @@
+import { validateNumber, parseDecimal, formatDecimal, isPlausibleMealLog, IMPLAUSIBLE_LABEL, UNUSUAL_FOOD_GRAMS, UNUSUAL_QUICK_KCAL, type NumberRule } from "@/lib/inputValidation";
+import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
+const QUICK_MACRO: NumberRule = { min: 0, max: 1000, unit: "g", optional: true };
 import { hapticLight } from "@/lib/haptics";
 import { loadWorkoutBurned } from "@/lib/workoutBurned";
 import { useEffect, useMemo, useState } from "react";
@@ -113,7 +116,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </p>
           {logs.length > 0 && (
             <p className="text-[10px] tabular-nums text-muted-foreground truncate">
-              {Math.round(logs.reduce((s, l) => s + Number(l.protein_g || 0), 0))}g P · {Math.round(logs.reduce((s, l) => s + Number(l.carbs_g || 0), 0))}g K · {Math.round(logs.reduce((s, l) => s + Number(l.fat_g || 0), 0))}g F
+              {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}g P · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}g K · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}g F
             </p>
           )}
         </div>
@@ -183,7 +186,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
               <div className="min-w-0">
                 <p className="text-sm truncate">{l.item_name}</p>
                 <p className="text-[10px] text-muted-foreground tabular-nums">
-                  {l.amount} {l.unit} · {Math.round(Number(l.kcal))} kcal · P{Number(l.protein_g).toFixed(0)} F{Number(l.fat_g).toFixed(0)} K{Number(l.carbs_g).toFixed(0)}
+                  {!isPlausibleMealLog(l) && <span className="text-destructive font-semibold">{IMPLAUSIBLE_LABEL} · </span>}{formatDecimal(l.amount)} {l.unit} · {Math.round(Number(l.kcal))} kcal · P{Number(l.protein_g).toFixed(0)} F{Number(l.fat_g).toFixed(0)} K{Number(l.carbs_g).toFixed(0)}
                 </p>
               </div>
               <button onClick={() => onEditLog(l)} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
@@ -292,7 +295,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   }
 
   useEffect(() => {
-    if (editingLog) setEditAmount(String(editingLog.amount));
+    if (editingLog) setEditAmount(formatDecimal(editingLog.amount));
   }, [editingLog]);
 
   const editAmountError = editingLog
@@ -407,13 +410,15 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     return [...slots, ...extras];
   }, [slots, logs]);
 
+  // Kostposter utanför gränserna räknas inte i totalerna (visas märkta i listan).
+  const plausibleLogs = useMemo(() => logs.filter((l) => isPlausibleMealLog(l)), [logs]);
   const totals = useMemo(() => ({
     kcal: plausibleLogs.reduce((s, l) => s + Number(l.kcal), 0),
-    protein: logs.reduce((s, l) => s + Number(l.protein_g), 0),
-    fat: logs.reduce((s, l) => s + Number(l.fat_g), 0),
-    carbs: logs.reduce((s, l) => s + Number(l.carbs_g), 0),
-    fiber: logs.reduce((s, l) => s + Number(l.fiber_g || 0), 0),
-  }), [logs]);
+    protein: plausibleLogs.reduce((s, l) => s + Number(l.protein_g), 0),
+    fat: plausibleLogs.reduce((s, l) => s + Number(l.fat_g), 0),
+    carbs: plausibleLogs.reduce((s, l) => s + Number(l.carbs_g), 0),
+    fiber: plausibleLogs.reduce((s, l) => s + Number(l.fiber_g || 0), 0),
+  }), [plausibleLogs]);
 
   const microTotals = useMemo(() => {
     const out: Micros = {};
@@ -597,7 +602,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
               {allSlots.map((meal, idx) => {
                 const isCustom = idx < slots.length;
                 const ml = logs.filter((l) => l.meal_type === meal);
-                const mealKcal = ml.reduce((s, l) => s + Number(l.kcal), 0);
+                const mealKcal = ml.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.kcal), 0);
                 return (
                   <SortableMeal
                     key={meal}
