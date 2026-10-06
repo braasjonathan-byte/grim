@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
+import { parseNum, isPlausibleSet, formatDecimal } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar, Pencil } from "lucide-react";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";

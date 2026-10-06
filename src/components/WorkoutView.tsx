@@ -1,4 +1,4 @@
-import { formatDecimal } from "@/lib/inputValidation";
+import { formatDecimal, isPlausibleSet } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { parseNum } from "@/lib/inputValidation";
 import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react";
@@ -2452,7 +2452,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       if (!setDataRaw) return;
       try {
         const setData = typeof setDataRaw === "string" ? JSON.parse(setDataRaw) : setDataRaw;
-        if (Array.isArray(setData) && setData[setIndex]?.reps) {
+        if (Array.isArray(setData) && setData[setIndex]?.reps && isPlausibleSet(setData[setIndex]?.kg, setData[setIndex]?.reps)) {
           const r = String(setData[setIndex].reps).trim();
           if (r) candidates.push({ key: "", reps: r, ts });
         }
