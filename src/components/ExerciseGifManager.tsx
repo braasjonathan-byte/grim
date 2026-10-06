@@ -169,7 +169,6 @@ const ExerciseGifManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("exercise_gif_mappings").insert({
         exercise_name: linkingExercise,
-        exercise_name_lower: linkingExercise.toLowerCase(),
         exercisedb_name: result.name,
         gif_url: result.gifUrl,
         created_by: user!.id,
@@ -237,7 +236,6 @@ const ExerciseGifManager = () => {
         .from("exercise_gif_mappings")
         .update({
           exercise_name: editSwedishName.trim(),
-          exercise_name_lower: editSwedishName.trim().toLowerCase(),
           exercisedb_name: editEnglishName.trim(),
         })
         .eq("id", mappingId);
