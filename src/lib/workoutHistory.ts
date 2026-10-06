@@ -36,8 +36,10 @@ export interface HistorySession {
 }
 
 export const WORKOUTS_CHANGED_EVENT = "grim:workouts-changed";
-export const notifyWorkoutsChanged = () => {
+export const notifyWorkoutsChanged = (userId?: string) => {
   try { window.dispatchEvent(new CustomEvent(WORKOUTS_CHANGED_EVENT)); } catch { /* non-browser */ }
+  // Achievements/titles are recomputed from the remaining data (and relocked if no longer earned).
+  if (userId) import("@/lib/achievementSync").then((m) => m.syncAchievements(userId)).catch(() => null);
 };
 
 const resolveDate = (week: number, day: string, planStart: string | null, updatedAt?: string | null): string | null => {
@@ -169,7 +171,7 @@ export async function saveSessionEdit(
     const { error } = await supabase.from("archived_plans").update({ completion_data: cd } as any).eq("id", s.source.archiveId);
     if (error) throw error;
   }
-  notifyWorkoutsChanged();
+  notifyWorkoutsChanged(userId);
 }
 
 /** Deletes the workout and its feed post; returns an undo function. */
@@ -182,12 +184,12 @@ export async function deleteSession(userId: string, s: HistorySession): Promise<
     // Single workouts disappear entirely; plan days stay in the plan as not done.
     if (s.week === 0) for (const id of s.source.planIds) await supabase.from("workout_plans").delete().eq("id", id);
     await removeSocialPost(userId, s);
-    notifyWorkoutsChanged();
+    notifyWorkoutsChanged(userId);
     return async () => {
       if (s.week === 0 && planRows?.length) await supabase.from("workout_plans").insert(planRows as any);
       await supabase.from("workout_completions").insert(s.completion as any);
       if (posts?.length) await supabase.from("social_posts").insert(posts as any);
-      notifyWorkoutsChanged();
+      notifyWorkoutsChanged(userId);
     };
   }
   const src = s.source;
@@ -197,10 +199,10 @@ export async function deleteSession(userId: string, s: HistorySession): Promise<
   const { error } = await supabase.from("archived_plans").update({ completion_data: next } as any).eq("id", src.archiveId);
   if (error) throw error;
   await removeSocialPost(userId, s);
-  notifyWorkoutsChanged();
+  notifyWorkoutsChanged(userId);
   return async () => {
     await supabase.from("archived_plans").update({ completion_data: original } as any).eq("id", src.archiveId);
     if (posts?.length) await supabase.from("social_posts").insert(posts as any);
-    notifyWorkoutsChanged();
+    notifyWorkoutsChanged(userId);
   };
 }
