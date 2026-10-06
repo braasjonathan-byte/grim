@@ -27,7 +27,28 @@ import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import RestaurantSearchDialog from "./RestaurantSearchDialog";
 import ManualFoodDialog from "./ManualFoodDialog";
 import { MICRO_SELECT, microsFromOFF, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
-import { rankFoods, usageKey, type UsageMap } from "@/lib/foodRanking";
+import { usageKey, type UsageMap } from "@/lib/foodRanking";
+import { searchFoods, normalizeFoodText } from "@/lib/foodSearch";
+
+// Livsmedelsbanken (~2,5k rader) laddas en gång och söks lokalt med ordbaserad matchning.
+let foodsCache: Promise<any[]> | null = null;
+function loadAllFoods(): Promise<any[]> {
+  if (!foodsCache) {
+    foodsCache = (async () => {
+      const all: any[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase.from("foods")
+          .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`)
+          .order("name").range(from, from + 999);
+        if (error) { foodsCache = null; throw error; }
+        all.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+      return all;
+    })();
+  }
+  return foodsCache;
+}
 
 export interface PickedItem {
   source: "food" | "custom_food" | "recipe";
@@ -130,37 +151,30 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    const term = query.trim();
     setLoading(true);
     (async () => {
-      const foodsQ = term
-        ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).ilike("name", `%${term}%`).order("name").limit(40)
-        : supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).order("name").limit(40);
-      let customQ = supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).eq("user_id", userId);
-      if (term) customQ = customQ.ilike("name", `%${term}%`);
+      const foodsP = loadAllFoods();
+      const customQ = supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).eq("user_id", userId);
       const recipesQ = hideRecipes ? null : supabase
         .from("recipes")
         .select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,visibility,servings")
         .or(`user_id.eq.${userId},visibility.eq.public`)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
 
-      const [foodsR, customR, recipesR] = await Promise.all([foodsQ, customQ.order("created_at", { ascending: false }).limit(30), recipesQ as any]);
+      const [foods, customR, recipesR] = await Promise.all([foodsP, customQ.order("created_at", { ascending: false }).limit(500), recipesQ as any]);
       if (cancelled) return;
       if ((recipesR as any)?.error) console.error("recipes query error", (recipesR as any).error);
 
       const list: FoodRow[] = [];
-      for (const r of (recipesR?.data || []) as any[]) {
-        if (term && !r.name.toLowerCase().includes(term.toLowerCase())) continue;
-        list.push(recipeRow(r));
-      }
+      for (const r of (recipesR?.data || []) as any[]) list.push(recipeRow(r));
       for (const c of customR.data || []) list.push({ ...(c as any), source: "custom_food" });
-      for (const f of foodsR.data || []) list.push({ ...(f as any), piece_g: (f as any).default_piece_weight_g, source: "food" });
+      for (const f of foods) list.push({ ...(f as any), piece_g: (f as any).default_piece_weight_g, source: "food" });
       setResults(list);
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [open, query, userId, hideRecipes]);
+  }, [open, userId, hideRecipes]);
 
   // Open Food Facts search (debounced)
   const [offResults, setOffResults] = useState<FoodRow[]>([]);
@@ -183,6 +197,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         ]);
         if (cancelled) return;
         const seenCodes = new Set<string>();
+        const seenNames = new Set<string>();
         const rows: FoodRow[] = [];
         for (const p of [...(r1?.products || []), ...(r2?.products || [])]) {
           if (!p?.code || seenCodes.has(p.code)) continue;
@@ -192,7 +207,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           const n = p.nutriments || {};
           const kcal = Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0);
           if (!kcal) continue;
+          // Dölj produkter som saknar makron
+          if ([n.proteins_100g, n.fat_100g, n.carbohydrates_100g].some((v) => v == null || v === "" || !Number.isFinite(Number(v)))) continue;
           const brand = (p.brands || "").split(",")[0]?.trim() || "";
+          const dupKey = `${normalizeFoodText(name)}|${normalizeFoodText(brand)}`;
+          if (seenNames.has(dupKey)) continue;
+          seenNames.add(dupKey);
           rows.push({
             id: `off-${p.code}`,
             name: brand ? `${name} (${brand})` : name,
@@ -222,12 +242,19 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     const term = query.trim();
     if (!term) {
       const shown = new Set(personal.map((p) => usageKey(p.source, p.id)));
-      return results.filter((r) => !shown.has(usageKey(r.source, r.id)));
+      return results.filter((r) => !shown.has(usageKey(r.source, r.id)) && r.source !== "recipe").slice(0, 40)
+        .concat(results.filter((r) => r.source === "recipe").slice(0, 10));
     }
-    const seen = new Set(results.map(r => r.name.toLowerCase()));
-    const extras = offResults.filter(r => !seen.has(r.name.toLowerCase()));
-    return rankFoods([...results, ...extras], term, usage);
-  }, [results, offResults, query, usage, personal]);
+    return searchFoods(results, term, (r) => usage.has(usageKey(r.source, r.id))).slice(0, 60);
+  }, [results, query, usage, personal]);
+
+  const brandResults = useMemo(() => {
+    const term = query.trim();
+    if (!term) return [];
+    const ranked = searchFoods(offResults, term);
+    const rest = offResults.filter((r) => !ranked.includes(r));
+    return [...ranked, ...rest];
+  }, [offResults, query]);
 
   const showPersonal = !query.trim() && personal.length > 0;
 
@@ -448,6 +475,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               {!loading && combinedResults.length === 0 && !showPersonal && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
               <ul className="divide-y divide-border">
                 {combinedResults.map(renderRow)}
+              </ul>
+              {brandResults.length > 0 && (
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-3 pb-1">Märkesprodukter</p>
+              )}
+              <ul className="divide-y divide-border">
+                {brandResults.map(renderRow)}
                 {offLoading && <li className="flex justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></li>}
               </ul>
             </div>
