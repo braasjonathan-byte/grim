@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ACTIVITY_LABEL, ActivityLevel, GOAL_LABEL, GoalType, calcBMR, calcTDEE, distributeMacros } from "@/lib/nutritionCalc";
+import { MICROS, type MicroKey } from "@/lib/micronutrients";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
@@ -25,6 +26,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [carbs, setCarbs] = useState("250");
   const [fiber, setFiber] = useState("");
   const [water, setWater] = useState("2000");
+  const [micro, setMicro] = useState<Partial<Record<MicroKey, string>>>({});
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -43,6 +45,9 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         setKcal(String(g.daily_kcal)); setProtein(String(g.protein_g));
         setFat(String(g.fat_g)); setCarbs(String(g.carbs_g));
         setFiber(g.fiber_g ? String(g.fiber_g) : ""); setWater(String(g.water_goal_ml ?? 2000));
+        const mv: Partial<Record<MicroKey, string>> = {};
+        for (const m of MICROS) { const v = (g as any)[m.key]; if (v != null) mv[m.key] = String(v); }
+        setMicro(mv);
         setActivity(g.activity_level as ActivityLevel); setGoal(g.goal_type as GoalType);
       }
     })();
@@ -85,7 +90,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       goal_type: goal,
       fiber_g: parseInt(fiber) || null,
       water_goal_ml: parseInt(water) || 2000,
-    }, { onConflict: "user_id" });
+      ...Object.fromEntries(MICROS.map((m) => { const v = parseFloat((micro[m.key] || "").replace(",", ".")); return [m.key, v > 0 ? v : null]; })),
+    } as any, { onConflict: "user_id" });
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Mål sparade" });
@@ -131,6 +137,15 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
           <div className="grid grid-cols-2 gap-2">
             <div><label className="text-[10px] font-medium">Fiber g (valfritt)</label><Input value={fiber} onChange={(e) => setFiber(e.target.value)} inputMode="numeric" pattern="[0-9]*" placeholder="t.ex. 30" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
             <div><label className="text-[10px] font-medium">Vattenmål ml</label><Input value={water} onChange={(e) => setWater(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+          </div>
+          <div className="pt-1">
+            <p className="text-xs font-semibold">Mikronäringsämnen <span className="font-normal text-muted-foreground">(valfria dagsmål)</span></p>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {MICROS.map((m) => (
+                <div key={m.key}><label className="text-[10px] font-medium">{m.label} ({m.unit})</label>
+                  <Input value={micro[m.key] ?? ""} onChange={(e) => setMicro((p) => ({ ...p, [m.key]: e.target.value }))} inputMode="decimal" className="rounded-xl bg-muted/50 border-transparent text-sm" /></div>
+              ))}
+            </div>
           </div>
           <button disabled={saving} onClick={save} className="w-full pill-btn-primary py-3 disabled:opacity-50">{saving ? "Sparar…" : "Spara"}</button>
         </div>
