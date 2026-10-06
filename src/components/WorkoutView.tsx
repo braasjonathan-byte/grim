@@ -555,7 +555,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const flag = localStorage.getItem("grim_start_plan_from_settings");
     if (flag === "1") {
       localStorage.removeItem("grim_start_plan_from_settings");
-      startPlanFromSingles();
+      // Bekräftad redan i Inställningar.
+      startPlanFromSingles(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1809,8 +1810,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Archive everything (standalone workouts AND any remaining plan weeks)
   // and go straight to the plan picker.
-  const startPlanFromSingles = async () => {
-    if (!confirm("Starta en träningsplan? Dina nuvarande pass arkiveras under din profil först.")) return;
+  const [confirmStartPlanOpen, setConfirmStartPlanOpen] = useState(false);
+  const startPlanFromSingles = async (confirmed = false) => {
+    if (!confirmed) { setConfirmStartPlanOpen(true); return; }
 
     try {
       // Make sure the auth session is hydrated before touching RLS-protected tables
