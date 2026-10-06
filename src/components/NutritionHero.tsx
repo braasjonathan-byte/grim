@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { MICROS, formatMicro, type Micros } from "@/lib/micronutrients";
+import { MICROS, formatMicro, qualityTone, type Micros } from "@/lib/micronutrients";
 
 interface Props {
   kcal: number;
@@ -10,6 +10,7 @@ interface Props {
   carbs: number;
   fiber: number;
   micros?: Micros;
+  quality?: number | null;
   microTargets?: Micros;
   targets: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null };
 }
@@ -31,7 +32,7 @@ function Ring({ size, stroke, pct, color, children }: { size: number; stroke: nu
 }
 
 /** Kalorihjälte: Kvar = Mål − Ätit (målet bygger redan på träningsvolymen; Förbränt visas bara som info), plus fyra makroringar. */
-export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets, micros = {}, microTargets = {} }: Props) {
+export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets, micros = {}, microTargets = {}, quality = null }: Props) {
   const [microOpen, setMicroOpen] = useState(false);
   const microRows = MICROS.filter((m) => (microTargets[m.key] ?? 0) > 0 || micros[m.key] != null);
   const budget = targets.kcal;
@@ -46,6 +47,11 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
   ];
   return (
     <div className="space-y-4">
+      {quality != null && (
+        <div className="flex justify-end -mb-2">
+          <span title="Matkvalitet: andel hela livsmedel vs. processad mat" className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${qualityTone(quality)}`}>Matkvalitet {quality}/100</span>
+        </div>
+      )}
       <div className="rounded-2xl bg-primary/10 p-4 flex items-center justify-between">
         <div className="text-center w-16">
           <p className="text-xl font-bold tabular-nums">{Math.round(kcal)}</p>

@@ -37,6 +37,8 @@ export interface PickedItem {
   carbs_g: number;
   fiber_g?: number;
   micros?: Micros;
+  nova_group?: number | null;
+  sugar_g?: number | null;
 }
 
 interface FoodPickerDialogProps {
@@ -197,6 +199,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             carbs_g: Number(n.carbohydrates_100g) || 0,
             fiber_g: Number(n.fiber_100g) || 0,
             ...microsFromOFF(n),
+            nova_group: Number(p.nova_group) || null,
+            sugar_g: n.sugars_100g != null ? Number(n.sugars_100g) : null,
           });
         }
         setOffResults(rows);
@@ -275,6 +279,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       carbs_g: selected.carbs_g * factor,
       fiber_g: (Number(selected.fiber_g) || 0) * factor,
       micros: scaleMicros(pickMicros(selected), factor),
+      sugar_g: selected.sugar_g != null ? Number(selected.sugar_g) * factor : null,
     };
   }, [selected, amount, unit]);
 
@@ -296,6 +301,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           carbs_g: selected.carbs_g,
           fiber_g: Number(selected.fiber_g) || 0,
           ...pickMicros(selected),
+          nova_group: selected.nova_group ?? null,
+          sugar_g: selected.sugar_g ?? null,
         } as any).select("id").single();
         if (error) throw error;
         outId = data!.id;
@@ -317,6 +324,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       carbs_g: computed.carbs_g,
       fiber_g: computed.fiber_g,
       micros: computed.micros,
+      nova_group: selected.nova_group ?? null,
+      sugar_g: computed.sugar_g,
     }, { keepOpen });
     if (keepOpen) { setAddedCount((c) => c + 1); setLastAdded(selected.name); }
     // Track personal usage so ranking improves over time (fire-and-forget)
