@@ -1,3 +1,4 @@
+import { parseNum } from "@/lib/inputValidation";
 /**
  * Omvandlar AI-tolkade övningar från en skärmdump till riktiga övningsrader:
  * en detaljrad per övning + färdigifyllda loggvärden (__setdata__ / __cond__)

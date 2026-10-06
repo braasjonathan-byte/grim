@@ -1,3 +1,4 @@
+import { parseNum } from "@/lib/inputValidation";
 /**
  * Parsning av träningsfiler (GPX / TCX / FIT) från Garmin Connect, Strava,
  * Zwift m.fl. Modulen är helt fristående och innehåller ingen sparlogik –
