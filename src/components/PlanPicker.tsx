@@ -5,6 +5,8 @@ import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorder
 import SchemaBuilder from "@/components/SchemaBuilder";
 import TriathlonWizard from "@/components/TriathlonWizard";
 import FitnessProfileForm from "@/components/FitnessProfileForm";
+import { FieldError } from "@/components/ConfirmValueDialog";
+import { parseDecimal, validateNumber } from "@/lib/inputValidation";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addDays } from "date-fns";
 import { sv } from "date-fns/locale";
@@ -203,7 +205,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const handleApplyWith1RM = () => {
     const rmValues: Record<string, number> = {};
     for (const lift of selectedTemplate!.requiredLifts) {
-      rmValues[lift] = parseFloat(rms[lift] || "0");
+      rmValues[lift] = parseDecimal(rms[lift] || "0");
     }
     setPendingRmValues(rmValues);
     setStep("preferred-days");
@@ -626,13 +628,15 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
                 {liftLabels[lift] || lift} — 1RM (kg)
               </label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
+                aria-invalid={!!rmErrors[lift] || undefined}
                 value={rms[lift] || ""}
                 onChange={(e) => setRms((prev) => ({ ...prev, [lift]: e.target.value }))}
                 placeholder="t.ex. 100"
                 className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
               />
+              <FieldError error={rmErrors[lift]} />
             </div>
           ))}
         </div>
@@ -645,7 +649,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
         <button
           onClick={handleApplyWith1RM}
-          disabled={!allRmsFilled || loading}
+          disabled={!allRmsFilled || rmInvalid || loading}
           className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
         >
           Skapa schema med beräknade vikter
