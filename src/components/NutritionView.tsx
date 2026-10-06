@@ -14,7 +14,7 @@ import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import MealTemplatesDialog from "./MealTemplatesDialog";
 import WaterTracker from "./WaterTracker";
 import FastingWidget from "./FastingWidget";
-import { MICROS, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
+import { foodQualityScore, MICROS, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { showUndoToast } from "@/lib/undoToast";
@@ -295,6 +295,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       carbs_g: Number(editingLog.carbs_g) * f,
       fiber_g: Number(editingLog.fiber_g || 0) * f,
       ...scaleMicros(pickMicros(editingLog), f),
+      sugar_g: (editingLog as any).sugar_g != null ? Number((editingLog as any).sugar_g) * f : null,
     } as any).eq("id", editingLog.id);
     if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
     setEditingLog(null);
@@ -483,6 +484,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g,
       fiber_g: item.fiber_g || 0,
       ...(item.micros || {}),
+      nova_group: item.nova_group ?? null,
+      sugar_g: item.sugar_g ?? null,
       food_id: item.source === "food" && isUuid ? item.id : null,
       custom_food_id: item.source === "custom_food" && isUuid ? item.id : null,
       recipe_id: item.source === "recipe" && isUuid ? item.id : null,
@@ -542,7 +545,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
-          <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} microTargets={microTargets} />
+          <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />
         </div>
 
         <FastingWidget userId={userId} />

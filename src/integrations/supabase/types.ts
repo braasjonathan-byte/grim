@@ -406,9 +406,11 @@ export type Database = {
           kcal: number
           magnesium_mg: number | null
           name: string
+          nova_group: number | null
           potassium_mg: number | null
           protein_g: number
           sodium_mg: number | null
+          sugar_g: number | null
           user_id: string
           vitamin_b12_ug: number | null
           vitamin_c_mg: number | null
@@ -425,9 +427,11 @@ export type Database = {
           kcal?: number
           magnesium_mg?: number | null
           name: string
+          nova_group?: number | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
+          sugar_g?: number | null
           user_id: string
           vitamin_b12_ug?: number | null
           vitamin_c_mg?: number | null
@@ -444,9 +448,11 @@ export type Database = {
           kcal?: number
           magnesium_mg?: number | null
           name?: string
+          nova_group?: number | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
+          sugar_g?: number | null
           user_id?: string
           vitamin_b12_ug?: number | null
           vitamin_c_mg?: number | null
@@ -782,9 +788,11 @@ export type Database = {
           kcal: number
           magnesium_mg: number | null
           name: string
+          nova_group: number | null
           potassium_mg: number | null
           protein_g: number
           sodium_mg: number | null
+          sugar_g: number | null
           vitamin_b12_ug: number | null
           vitamin_c_mg: number | null
           vitamin_d_ug: number | null
@@ -803,9 +811,11 @@ export type Database = {
           kcal?: number
           magnesium_mg?: number | null
           name: string
+          nova_group?: number | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
+          sugar_g?: number | null
           vitamin_b12_ug?: number | null
           vitamin_c_mg?: number | null
           vitamin_d_ug?: number | null
@@ -824,9 +834,11 @@ export type Database = {
           kcal?: number
           magnesium_mg?: number | null
           name?: string
+          nova_group?: number | null
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
+          sugar_g?: number | null
           vitamin_b12_ug?: number | null
           vitamin_c_mg?: number | null
           vitamin_d_ug?: number | null
@@ -1029,10 +1041,12 @@ export type Database = {
           log_date: string
           magnesium_mg: number | null
           meal_type: string
+          nova_group: number | null
           potassium_mg: number | null
           protein_g: number
           recipe_id: string | null
           sodium_mg: number | null
+          sugar_g: number | null
           unit: string
           user_id: string
           vitamin_b12_ug: number | null
@@ -1055,10 +1069,12 @@ export type Database = {
           log_date: string
           magnesium_mg?: number | null
           meal_type?: string
+          nova_group?: number | null
           potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
           sodium_mg?: number | null
+          sugar_g?: number | null
           unit?: string
           user_id: string
           vitamin_b12_ug?: number | null
@@ -1081,10 +1097,12 @@ export type Database = {
           log_date?: string
           magnesium_mg?: number | null
           meal_type?: string
+          nova_group?: number | null
           potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
           sodium_mg?: number | null
+          sugar_g?: number | null
           unit?: string
           user_id?: string
           vitamin_b12_ug?: number | null
