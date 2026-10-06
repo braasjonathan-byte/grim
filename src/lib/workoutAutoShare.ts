@@ -251,7 +251,8 @@ export async function autoShareCompletion(
   userId: string,
   week: number,
   day: string,
-  captionOverride?: string
+  captionOverride?: string,
+  visibility | "public" = "friends"
 ): Promise<void> {
   try {
     let caption = captionOverride;
@@ -278,7 +279,7 @@ export async function autoShareCompletion(
       // Samma pass delas om – uppdatera texten på det befintliga inlägget.
       await supabase
         .from("social_posts")
-        .update({ caption, visibility: "friends" })
+        .update({ caption, visibility })
         .eq("id", existing.id);
       return;
     }
@@ -295,10 +296,10 @@ export async function autoShareCompletion(
         // Kan inte frigöra nyckeln – fall tillbaka på att uppdatera inlägget.
         await supabase
           .from("social_posts")
-          .update({ caption, visibility: "friends", created_at: new Date().toISOString() })
+          .update({ caption, visibility, created_at: new Date().toISOString() })
           .eq("id", existing.id);
         supabase.functions
-          .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
+          .invoke("notify-social-post", { body: { caption, visibility } })
           .catch(() => {});
         return;
       }
@@ -307,13 +308,13 @@ export async function autoShareCompletion(
     const { error } = await supabase.from("social_posts").insert({
       user_id: userId,
       caption,
-      visibility: "friends",
+      visibility,
       workout_week: week,
       workout_day: day,
     });
     if (!error) {
       supabase.functions
-        .invoke("notify-social-post", { body: { caption, visibility: "friends" } })
+        .invoke("notify-social-post", { body: { caption, visibility } })
         .catch(() => {});
     }
 
