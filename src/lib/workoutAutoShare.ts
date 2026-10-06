@@ -230,13 +230,15 @@ export async function previewWorkoutCaption(
 
     const { data: completion } = await supabase
       .from("workout_completions")
-      .select("logged_tempo, logged_pulse, logged_distance_km, logged_weights")
+      .select("logged_tempo, logged_pulse, logged_distance_km, logged_weights, user_comment")
       .eq("user_id", userId)
       .eq("week", week)
       .eq("day", day)
       .maybeSingle();
 
-    return buildWorkoutSummaryCaption(plan, (completion || {}) as any, week, day);
+    const summary = buildWorkoutSummaryCaption(plan, (completion || {}) as any, week, day);
+    const note = ((completion as any)?.user_comment || "").trim();
+    return note ? `${summary}\n\n💬 ${note}` : summary;
   } catch {
     return null;
   }
