@@ -7,7 +7,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { showUndoToast } from "@/lib/undoToast";
 import { supabase } from "@/integrations/supabase/client";
-import { queueOfflineUpsert, dequeueOfflineUpsert, useOfflineStatus } from "@/hooks/useOfflineSync";
+import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles } from "lucide-react";
@@ -44,6 +44,7 @@ import FireworksOverlay from "@/components/FireworksOverlay";
 import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
+import ConfirmValueDialog from "@/components/ConfirmValueDialog";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
 import { loadPrivacySettings, DEFAULT_PRIVACY, type PrivacySettings } from "@/lib/socialPrivacy";
 import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
@@ -555,7 +556,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const flag = localStorage.getItem("grim_start_plan_from_settings");
     if (flag === "1") {
       localStorage.removeItem("grim_start_plan_from_settings");
-      startPlanFromSingles();
+      // Bekräftad redan i Inställningar.
+      startPlanFromSingles(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -664,7 +666,20 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const usingCache = !fetchedPlans;
     const cached = usingCache ? readOfflineWorkoutCache(userId) : null;
     const planData: any[] | null = fetchedPlans ?? cached?.plans ?? null;
-    const compData: any[] | null = fetchedCompletions ?? cached?.completions ?? null;
+    let compData: any[] | null = fetchedCompletions ?? cached?.completions ?? null;
+    // A checkmark set right before a reload may still sit in the offline queue;
+    // overlay it so the reload never shows the older server state.
+    if (compData) {
+      const pending = getPendingRows("workout_completions").filter((r: any) => r.user_id === userId);
+      if (pending.length) {
+        const byKey = new Map(compData.map((c: any) => [`${c.week}-${c.day}`, c]));
+        for (const r of pending as any[]) {
+          const k = `${r.week}-${r.day}`;
+          byKey.set(k, { ...(byKey.get(k) || {}), ...r });
+        }
+        compData = Array.from(byKey.values());
+      }
+    }
     if (fetchedPlans) {
       writeOfflineWorkoutCache(userId, fetchedPlans, fetchedCompletions ?? []);
     }
@@ -1000,7 +1015,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
    * marked as done (__sets__) and has set data (__setdata__), merged on top of
    * `base`. Never removes existing marks — only adds.
    */
-  const buildAllSetsWeights = (week: number, day: string, base: Record<string, any>) => {
+  const buildAllSetsWeights = (week: number, day: string, base: Record<string, any>, trims?: { planId: string; part: string; keep: number }[]) => {
     const acc: Record<string, any> = { ...base };
     const dayPlans = plans.filter((p) => p.week === week && p.day === day);
     for (const plan of dayPlans) {
@@ -1019,8 +1034,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         const pName = partStructMatch ? partStructMatch[1].trim().replace(/\s*[—–]\s*$/, "") : exerciseName || cleanPart;
         if (!pName) continue;
         const sc = partStructMatch ? parseInt(partStructMatch[2]) : fallbackSetsMatch ? parseInt(fallbackSetsMatch[1]) : 1;
-        acc[`__sets__${pName}`] = "1".repeat(sc);
         const setDataKey = `__setdata__${pName}`;
+        const prevSetsStr = typeof acc[`__sets__${pName}`] === "string" ? (acc[`__sets__${pName}`] as string) : "";
         // Reuse planned kg/reps when the user has not logged their own.
         const circuitSecMatch = plan.is_circuit ? plan.tempo?.match(/^circuit:(\d+)(?::\d+)?(?::\d+)?$/) : null;
         const defReps = partStructMatch ? partStructMatch[3] : circuitSecMatch ? circuitSecMatch[1] : "10";
@@ -1030,14 +1045,46 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const raw = acc[setDataKey];
           if (raw) existingData = JSON.parse(raw as string) || [];
         } catch {}
-        const initData = Array.from({ length: sc }, (_, i) => ({
-          kg: existingData[i]?.kg ?? defKg,
-          reps: existingData[i]?.reps ?? defReps,
-        }));
-        acc[setDataKey] = JSON.stringify(initData);
+        // Bocka bara av set som är avbockade eller har reps ifyllda; tomma set tas bort.
+        const keep: { kg: string; reps: string }[] = [];
+        for (let i = 0; i < sc; i++) {
+          const row = existingData[i];
+          const reps = String(row?.reps ?? "").trim();
+          const checked = prevSetsStr[i] === "1";
+          if (!checked && !reps) continue;
+          keep.push({ kg: String(row?.kg ?? "").trim() || defKg, reps: reps || defReps });
+        }
+        acc[`__sets__${pName}`] = "1".repeat(keep.length);
+        acc[setDataKey] = JSON.stringify(keep);
+        if (keep.length < sc) trims?.push({ planId: plan.id, part, keep: keep.length });
       }
     }
     return acc;
+  };
+
+  // Tar bort tomma set ur det avslutade passet (setantalet på passets rad).
+  const trimEmptySets = async (trims: { planId: string; part: string; keep: number }[]) => {
+    if (trims.length === 0) return;
+    const byPlan = new Map<string, { part: string; keep: number }[]>();
+    trims.forEach((t) => byPlan.set(t.planId, [...(byPlan.get(t.planId) || []), t]));
+    const updates: { id: string; details: string }[] = [];
+    for (const [planId, list] of byPlan) {
+      const plan = plans.find((p) => p.id === planId);
+      if (!plan) continue;
+      const sep = plan.details.includes("\n") ? "\n" : "; ";
+      let lines = plan.details.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
+      for (const t of list) {
+        const i = lines.indexOf(t.part);
+        if (i < 0) continue;
+        if (t.keep === 0) lines[i] = "";
+        else lines[i] = lines[i].replace(/(\d+)(\s*[×x])/, `${t.keep}$2`);
+      }
+      lines = lines.filter(Boolean);
+      updates.push({ id: planId, details: lines.join(sep) });
+    }
+    for (const u of updates) await supabase.from("workout_plans").update({ details: u.details }).eq("id", u.id);
+    skipDayResetRef.current = true;
+    setPlans((prev) => prev.map((p) => { const u = updates.find((x) => x.id === p.id); return u ? { ...p, details: u.details } : p; }));
   };
 
   // Auto-check all sets for a given week/day (used when marking workout as done)
@@ -1116,16 +1163,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const key = `${week}-${day}`;
     const current = completions[key];
     const newDone = !current?.done;
+    // Keep any unsent text from "Skriv en kommentar..." with the workout.
+    const draft = commentInput[key]?.trim();
+    const existingComment = comments[key]?.trim() || "";
+    const finalComment = draft ? (existingComment ? `${existingComment}\n${draft}` : draft) : (comments[key] || "");
+    if (draft) {
+      setComments((prev) => ({ ...prev, [key]: finalComment }));
+      setCommentInput((prev) => ({ ...prev, [key]: "" }));
+    }
 
     setCompletions((prev) => ({
       ...prev,
-      [key]: { ...prev[key], week, day, done: newDone, skipped: false, user_comment: comments[key] || "" }
+      [key]: { ...prev[key], week, day, done: newDone, skipped: false, user_comment: finalComment }
     }));
 
     await safeUpsertCompletion(week, day, {
       done: newDone,
       skipped: false,
-      user_comment: comments[key] || "",
+      user_comment: finalComment,
     });
 
     if (newDone) {
@@ -1195,13 +1250,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
       // Prepare the share dialog; it opens once the celebration is dismissed.
       offerShare(week, day, true);
-      checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
+      checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: finalComment } });
 
 
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
         const scheduledPlans = weekPlans.filter((p) => p.session_name.trim() !== "" && p.details.trim() !== "");
-        const updatedCompletions = { ...completions, [key]: { week, day, done: true, skipped: false, user_comment: comments[key] || "" } };
+        const updatedCompletions = { ...completions, [key]: { week, day, done: true, skipped: false, user_comment: finalComment } };
         const allDone = scheduledPlans.length > 0 && scheduledPlans.every((p) => {
           const k = `${p.week}-${p.day}`;
           return updatedCompletions[k]?.done;
@@ -1694,8 +1749,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const saveSetFieldData = async (week: number, day: string, exerciseName: string, setIndex: number, field: 'kg' | 'reps', value: string, totalSets: number, defaultKg: string, defaultReps: string) => {
     const k = `${week}-${day}`;
     const currentData = getSetData(k, exerciseName);
-    const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: defaultKg, reps: defaultReps });
-    data[setIndex] = { ...data[setIndex], [field]: value };
+    // Andra set får inte fyllas i automatiskt – då skulle tomma set räknas som ifyllda.
+    const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: "", reps: "" });
+    data[setIndex] = { ...(currentData[setIndex] || { kg: defaultKg, reps: defaultReps }), [field]: value };
 
     await updateCompletionWeights(week, day, (existing) => {
       const next = {
@@ -1809,8 +1865,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   // Archive everything (standalone workouts AND any remaining plan weeks)
   // and go straight to the plan picker.
-  const startPlanFromSingles = async () => {
-    if (!confirm("Starta en träningsplan? Dina nuvarande pass arkiveras under din profil först.")) return;
+  const [confirmStartPlanOpen, setConfirmStartPlanOpen] = useState(false);
+  const startPlanFromSingles = async (confirmed = false) => {
+    if (!confirmed) { setConfirmStartPlanOpen(true); return; }
 
     try {
       // Make sure the auth session is hydrated before touching RLS-protected tables
@@ -2800,32 +2857,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           ? `${exerciseName} — ${paramsNoWeight} @ ${newWeight} kg`
           : `${exerciseName} — ${paramsNoWeight}`;
         const oldName = replaceExerciseTarget.name;
-        lines[replaceExerciseTarget.lineIndex] = entry;
-        const newDetails = lines.join(separator);
-        const targetPlanId = plan.id;
-        const targetWeek = plan.week;
+        const lineIndex = replaceExerciseTarget.lineIndex;
         setReplaceExerciseTarget(null);
         setShowExercisePicker(null);
-        (async () => {
-          await supabase.from("workout_plans").update({ details: newDetails }).eq("id", targetPlanId);
-          skipDayResetRef.current = true;
-          setPlans((prev) => prev.map((p) => p.id === targetPlanId ? { ...p, details: newDetails } : p));
-          triggerSave();
-          // Pre-populate per-set weight data
-          if (newWeight) {
-            const setsMatch = paramsNoWeight.match(/^(\d+)\s*[×x]\s*(\d+)/);
-            const sets = setsMatch ? parseInt(setsMatch[1]) : 3;
-            const reps = setsMatch ? parseInt(setsMatch[2]) : 10;
-            const initData = Array.from({ length: sets }, () => ({ kg: newWeight, reps: String(reps) }));
-            await updateCompletionWeights(targetWeek, plan.day, (existing) => ({
-              ...existing,
-              [`__setdata__${exerciseName}`]: JSON.stringify(initData),
-            }));
-          }
-          if (mode === "plan" && targetWeek > 0) {
-            setReplacePropagateDialog({ oldExerciseName: oldName, newEntry: entry, sourcePlanId: targetPlanId });
-          }
-        })();
+        let weightsPatch: Record<string, any> | undefined;
+        if (newWeight) {
+          const setsMatch = paramsNoWeight.match(/^(\d+)\s*[×x]\s*(\d+)/);
+          const sets = setsMatch ? parseInt(setsMatch[1]) : 3;
+          const reps = setsMatch ? parseInt(setsMatch[2]) : 10;
+          const initData = Array.from({ length: sets }, () => ({ kg: newWeight, reps: String(reps) }));
+          weightsPatch = { [`__setdata__${exerciseName}`]: JSON.stringify(initData) };
+        }
+        startReplace({ planId: plan.id, lineIndex, oldName, entry, weightsPatch });
       }
       return;
     }
@@ -2918,15 +2961,20 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     let wasReplace = false;
     let oldName = "";
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
-      // Replace mode: substitute the line at the target index
-      const separator = plan.details.includes("\n") ? "\n" : "; ";
-      const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-      lines[replaceExerciseTarget.lineIndex] = entry;
-      newDetails = lines.join(separator);
-      wasReplace = true;
-      oldName = replaceExerciseTarget.name;
+      // Byt ut: frågan ställs först, bytet görs efter svaret.
+      const weightsPatch = weightStr
+        ? { [`__setdata__${weightDialog.exerciseName}`]: JSON.stringify(Array.from({ length: sets }, () => ({ kg: weightStr, reps: String(reps) }))) }
+        : undefined;
+      startReplace({ planId: plan.id, lineIndex: replaceExerciseTarget.lineIndex, oldName: replaceExerciseTarget.name, entry, weightsPatch });
       setReplaceExerciseTarget(null);
       setShowExercisePicker(null);
+      setWeightDialog(null);
+      setWeightInput("");
+      setRepsInput("10");
+      setSetsInput("3");
+      setRepsUnit("reps");
+      setIsWarmupMode(false);
+      return;
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
       newDetails = isWarmupMode
@@ -3014,14 +3062,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     let wasReplace = false;
     let oldName = "";
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
-      const separator = plan.details.includes("\n") ? "\n" : "; ";
-      const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-      lines[replaceExerciseTarget.lineIndex] = entry;
-      newDetails = lines.join(separator);
-      wasReplace = true;
-      oldName = replaceExerciseTarget.name;
+      const weightsPatch = savedIntervalRows.length > 0
+        ? { [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify({ intervals: savedIntervalRows }) }
+        : undefined;
+      startReplace({ planId: plan.id, lineIndex: replaceExerciseTarget.lineIndex, oldName: replaceExerciseTarget.name, entry, weightsPatch });
       setReplaceExerciseTarget(null);
       setShowExercisePicker(null);
+      setConditioningDialog(null);
+      setCondTempoInput("");
+      resetCondTime();
+      setCondDistanceInput("");
+      setCondAutoField(null);
+      setCondIntervalsInput("");
+      setCondRestInput("");
+      setCondPulseInput(""); setCondPulseMaxInput(""); setCondPulseMinInput("");
+      setCondSpmInput("");
+      setCondIntervalRows([]);
+      setIsWarmupMode(false);
+      return;
     } else {
       const joinSep = plan.details.includes("\n") ? "\n" : plan.details.includes(";") ? "; " : "\n";
       newDetails = isWarmupMode
@@ -3271,6 +3329,80 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     setPropagateDialog(null);
   };
 
+  // Byt ut övning: fråga först, behåll loggade set, erbjud Ångra.
+  type PendingReplace = { planId: string; lineIndex: number; oldName: string; entry: string; weightsPatch?: Record<string, any> };
+  const [replaceAsk, setReplaceAsk] = useState<PendingReplace | null>(null);
+  const hasLoggedSets = (lw: Record<string, any> | null | undefined, name: string) => {
+    const v = lw?.[`__sets__${name}`];
+    return typeof v === "string" && v.includes("1");
+  };
+  const startReplace = (r: PendingReplace) => {
+    const plan = plans.find((p) => p.id === r.planId);
+    if (!plan) return;
+    if (mode === "plan" && plan.week > 0) setReplaceAsk(r);
+    else applyReplace(r, false);
+  };
+  const applyReplace = async (r: PendingReplace, propagate: boolean) => {
+    const plan = plans.find((p) => p.id === r.planId);
+    if (!plan) return;
+    const lineName = (l: string) => l.split(/\s*—\s*/)[0].trim().toLowerCase();
+    const rewrite = (p: PlanDay, onlyIndex?: number) => {
+      const sep = p.details.includes("\n") ? "\n" : "; ";
+      const lines = p.details.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
+      const logged = hasLoggedSets(completions[`${p.week}-${p.day}`]?.logged_weights as any, r.oldName);
+      const idxs = onlyIndex !== undefined
+        ? [onlyIndex]
+        : lines.map((l, i) => (lineName(l) === r.oldName.toLowerCase() ? i : -1)).filter((i) => i >= 0);
+      if (idxs.length === 0) return null;
+      for (const i of [...idxs].reverse()) {
+        // Loggade set raderas aldrig: behåll den gamla övningen och lägg den nya under.
+        if (logged) lines.splice(i + 1, 0, r.entry);
+        else lines[i] = r.entry;
+      }
+      return { id: p.id, week: p.week, day: p.day, before: p.details, after: lines.join(sep), logged };
+    };
+    const changes: { id: string; week: number; day: string; before: string; after: string; logged: boolean }[] = [];
+    const first = rewrite(plan, r.lineIndex);
+    if (first) changes.push(first);
+    if (propagate) {
+      for (const p of plans) {
+        if (p.id === plan.id || p.week <= 0 || p.day !== plan.day) continue;
+        const c = rewrite(p);
+        if (c) changes.push(c);
+      }
+    }
+    if (changes.length === 0) return;
+    const prevWeights = { ...((completions[`${plan.week}-${plan.day}`]?.logged_weights as any) || {}) };
+    for (const c of changes) await supabase.from("workout_plans").update({ details: c.after }).eq("id", c.id);
+    skipDayResetRef.current = true;
+    setPlans((prev) => prev.map((p) => { const c = changes.find((x) => x.id === p.id); return c ? { ...p, details: c.after } : p; }));
+    triggerSave();
+    const keptOld = changes[0].logged;
+    await updateCompletionWeights(plan.week, plan.day, (existing) => {
+      const next = { ...existing, ...(r.weightsPatch || {}) };
+      if (!keptOld && r.oldName.toLowerCase() !== lineName(r.entry)) {
+        // Övningen syns inte längre i passet – dess ologgade data får inte räknas.
+        delete next[`__setdata__${r.oldName}`];
+        delete next[`__sets__${r.oldName}`];
+      }
+      return next;
+    });
+    toast("Övningen byttes", {
+      duration: 8000,
+      action: {
+        label: "Ångra",
+        onClick: async () => {
+          for (const c of changes) await supabase.from("workout_plans").update({ details: c.before }).eq("id", c.id);
+          skipDayResetRef.current = true;
+          setPlans((prev) => prev.map((p) => { const c = changes.find((x) => x.id === p.id); return c ? { ...p, details: c.before } : p; }));
+          await safeUpsertCompletion(plan.week, plan.day, { logged_weights: prevWeights });
+          triggerSave();
+          toast.success("Bytet ångrades");
+        },
+      },
+    });
+  };
+
   // Handle replace exercise propagation across all weeks
   const handleReplacePropagate = async (doPropagate: boolean) => {
     if (doPropagate && replacePropagateDialog) {
@@ -3479,6 +3611,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     triggerSave();
   };
 
+  const startPlanDialog = (
+    <ConfirmValueDialog
+      message={confirmStartPlanOpen ? "Dina nuvarande pass arkiveras under din profil först." : null}
+      title="Starta en träningsplan?"
+      confirmLabel="Starta plan"
+      cancelLabel="Avbryt"
+      onConfirm={() => { setConfirmStartPlanOpen(false); startPlanFromSingles(true); }}
+      onCancel={() => setConfirmStartPlanOpen(false)}
+    />
+  );
   const offlineBanner = (!offlineStatus.online || offlineStatus.pending > 0) ? (
     <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${offlineStatus.online ? "bg-primary/10 text-primary" : "bg-warning/15 text-warning"}`}>
       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${offlineStatus.online ? "animate-spin" : ""}`} />
@@ -3540,6 +3682,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-6 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {startPlanDialog}
         <div className="text-center space-y-2">
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
           <h2 className="text-2xl font-black tracking-tight">Hur vill du träna?</h2>
@@ -3550,7 +3693,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
         <div className="space-y-3">
           <button
-            onClick={startPlanFromSingles}
+            onClick={() => startPlanFromSingles()}
             className="w-full text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 transition-all">
 
             <div className="flex items-start gap-3">
@@ -3686,6 +3829,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {startPlanDialog}
         {singlePlans.length === 0 && (
           <button
             onClick={() => setMode("choose")}
@@ -3715,7 +3859,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         </div>
 
         <button
-          onClick={startPlanFromSingles}
+          onClick={() => startPlanFromSingles()}
           className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/5 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/10 transition-colors"
         >
           <Dumbbell className="w-4 h-4" /> Starta träningsplan
@@ -5400,11 +5544,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                 onClick={async () => {
                   const { week, day } = uncheckedSetsDialog;
                   setUncheckedSetsDialog(null);
+                  const trims: { planId: string; part: string; keep: number }[] = [];
                   const k = `${week}-${day}`;
                   const accumulated: Record<string, any> = await new Promise((resolve) => {
                     setCompletions((prev) => {
                       const prevComp = prev[k] || ({} as any);
-                      const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>);
+                      const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>, trims);
                       resolve(acc);
                       return {
                         ...prev,
@@ -5413,6 +5558,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     });
                   });
                   await safeUpsertCompletion(week, day, { logged_weights: accumulated });
+                  await trimEmptySets(trims);
                   await performToggleDone(week, day);
                 }}
                 className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
@@ -5696,7 +5842,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           const isCardToday = sameWorkoutDay(plan.day, cardTodayNames[new Date().getDay()]) && plan.week === activePlanWeek;
 
           return (
-            <div key={key + "-wrap"} className="w-full">
+            <div key={key + "-wrap"} className="w-full" style={{ order: getDayIndex(plan.day) * 2 + 1 }}>
             <div
               className={`relative w-full rounded-lg border transition-colors bg-secondary ${isDone ? "workout-done opacity-80" : ""} ${isSkipped ? "opacity-60" : ""} ${isRest ? "workout-rest" : ""}`}>
               <div className="flex items-center gap-3 px-4 pt-4 pb-2 cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; if (expanded) { const sameDayPlans = plans.filter(p2 => p2.week === plan.week && p2.day === plan.day); if (sameDayPlans.length <= 1) return; } setExpandedDay(expanded ? null : key); }}>
@@ -8909,7 +9055,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           // On mobile with swipe, don't show empty days inline
           if (isMobile && weekDays.length > 1) return null;
           return emptyDays.map(day => (
-            <div key={`empty-${currentWeek}-${day}`} className="rounded-lg border border-dashed border-border bg-card/50 p-4 space-y-2">
+            <div key={`empty-${currentWeek}-${day}`} style={{ order: getDayIndex(day) * 2 }} className="rounded-lg border border-dashed border-border bg-card/50 p-4 space-y-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full border-2 border-border flex items-center justify-center">
                   <Plus className="w-4 h-4 text-muted-foreground" />
@@ -9398,13 +9544,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               onClick={async () => {
                 const { week, day } = uncheckedSetsDialog;
                 setUncheckedSetsDialog(null);
+                const trims: { planId: string; part: string; keep: number }[] = [];
                 const k = `${week}-${day}`;
 
                 // Build accumulated logged_weights using fresh state via functional setState
                 const accumulated: Record<string, any> = await new Promise((resolve) => {
                   setCompletions((prev) => {
                     const prevComp = prev[k] || ({} as any);
-                    const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>);
+                    const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>, trims);
                     resolve(acc);
                     // Optimistically update state immediately so checkboxes re-render as checked
                     return {
@@ -9416,6 +9563,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
 
                 await safeUpsertCompletion(week, day, { logged_weights: accumulated });
+                await trimEmptySets(trims);
                 await performToggleDone(week, day);
               }}
               className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
@@ -9540,20 +9688,25 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         </div>
       </div>
     )}
-    {replacePropagateDialog && (
+    {replaceAsk && (
       <div className="fixed inset-0 z-[80] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/60" onClick={() => setReplacePropagateDialog(null)} />
+        <div className="absolute inset-0 bg-black/60" onClick={() => setReplaceAsk(null)} />
         <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
           <h3 className="font-bold text-sm">Byt ut i hela schemat?</h3>
           <p className="text-sm text-muted-foreground">
-            Vill du byta ut <span className="font-semibold text-foreground">{replacePropagateDialog.oldExerciseName}</span> i alla veckor?
+            Vill du byta ut <span className="font-semibold text-foreground">{replaceAsk.oldName}</span> bara i detta pass eller i alla veckor?
           </p>
-          <div className="flex gap-2">
-            <button onClick={() => handleReplacePropagate(false)} className="flex-1 py-2.5 bg-secondary text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
-              Bara denna vecka
-            </button>
-            <button onClick={() => handleReplacePropagate(true)} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
-              Alla veckor
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, false); }} className="flex-1 py-2.5 bg-secondary text-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+                Bara detta pass
+              </button>
+              <button onClick={() => { const r = replaceAsk; setReplaceAsk(null); applyReplace(r, true); }} className="flex-1 py-2.5 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity text-sm">
+                Hela schemat
+              </button>
+            </div>
+            <button onClick={() => setReplaceAsk(null)} className="w-full py-2 text-muted-foreground font-semibold rounded-lg hover:bg-muted transition-colors text-sm">
+              Avbryt
             </button>
           </div>
         </div>

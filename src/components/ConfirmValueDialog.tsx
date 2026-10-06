@@ -13,17 +13,18 @@ interface Props {
   message: string | null;
   confirmLabel?: string;
   cancelLabel?: string;
+  title?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /** Appens egen bekräftelse för ovanliga men tillåtna värden (ersätter window.confirm). */
-export default function ConfirmValueDialog({ message, confirmLabel = "Ja, spara", cancelLabel = "Ändra", onConfirm, onCancel }: Props) {
+export default function ConfirmValueDialog({ message, title = "Stämmer värdet?", confirmLabel = "Ja, spara", cancelLabel = "Ändra", onConfirm, onCancel }: Props) {
   return (
     <AlertDialog open={!!message} onOpenChange={(o) => { if (!o) onCancel(); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Stämmer värdet?</AlertDialogTitle>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{message}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

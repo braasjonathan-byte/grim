@@ -81,6 +81,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
   const [secHasExisting, setSecHasExisting] = useState(false);
 
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [confirmStartPlan, setConfirmStartPlan] = useState(false);
   const [confirmDelete1, setConfirmDelete1] = useState(false);
   const [confirmDelete2, setConfirmDelete2] = useState(false);
   const [spotifyWidget, setSpotifyWidget] = useState(() => {
@@ -744,10 +745,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
       {userId && (
         <div className="border-t border-border pt-2">
           <button
-            onClick={() => {
-              localStorage.setItem("grim_start_plan_from_settings", "1");
-              onStartPlan?.();
-            }}
+            onClick={() => setConfirmStartPlan(true)}
             className="w-full flex items-center gap-2 py-2 text-sm font-semibold text-primary hover:opacity-80 transition-opacity"
           >
             <Dumbbell className="w-4 h-4" />
@@ -755,6 +753,24 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
           </button>
         </div>
       )}
+
+      <AlertDialog open={confirmStartPlan} onOpenChange={setConfirmStartPlan}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Starta en träningsplan?</AlertDialogTitle>
+            <AlertDialogDescription>Dina nuvarande pass arkiveras under din profil först.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                localStorage.setItem("grim_start_plan_from_settings", "1");
+                onStartPlan?.();
+              }}
+            >Starta plan</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Leave plan */}
       {userId && (
