@@ -1728,8 +1728,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const saveSetFieldData = async (week: number, day: string, exerciseName: string, setIndex: number, field: 'kg' | 'reps', value: string, totalSets: number, defaultKg: string, defaultReps: string) => {
     const k = `${week}-${day}`;
     const currentData = getSetData(k, exerciseName);
-    const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: defaultKg, reps: defaultReps });
-    data[setIndex] = { ...data[setIndex], [field]: value };
+    // Andra set får inte fyllas i automatiskt – då skulle tomma set räknas som ifyllda.
+    const data = Array.from({ length: totalSets }, (_, i) => currentData[i] || { kg: "", reps: "" });
+    data[setIndex] = { ...(currentData[setIndex] || { kg: defaultKg, reps: defaultReps }), [field]: value };
 
     await updateCompletionWeights(week, day, (existing) => {
       const next = {
