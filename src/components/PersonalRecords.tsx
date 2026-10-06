@@ -246,7 +246,19 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
     });
   };
 
-  if (records.length === 0) return null;
+  if (records.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="w-8 h-8 icon-round bg-warning/15"><Trophy className="w-4 h-4 text-warning" /></span>
+          <h3 className="text-lg font-bold tracking-tight">Personliga rekord</h3>
+        </div>
+        <div className="rounded-2xl p-4 bg-card shadow-soft border border-border/40 text-sm text-muted-foreground">
+          Inga rekord än – logga ett pass så dyker de upp här.
+        </div>
+      </div>
+    );
+  }
 
   const displayRecords = expanded ? records : records.slice(0, 4);
 

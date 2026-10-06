@@ -6,6 +6,9 @@ import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { showUndoToast } from "@/lib/undoToast";
+import { PastWorkoutsDialog, DeleteWorkoutConfirm } from "@/components/workout/WorkoutHistoryDialogs";
+import { WORKOUTS_CHANGED_EVENT, notifyWorkoutsChanged } from "@/lib/workoutHistory";
+import SetRowsEditor, { validateSetRows, type SetRow } from "@/components/workout/SetRowsEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
@@ -198,7 +201,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [setsInput, setSetsInput] = useState("3");
 
   // Inline editing of existing exercise
-  const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;originalName: string;sets: string;reps: string;weight: string;} | null>(null);
+  const [editingExercise, setEditingExercise] = useState<{planId: string;lineIndex: number;name: string;originalName: string;sets: string;reps: string;weight: string;perSet?: SetRow[];} | null>(null);
   const [editingCondLine, setEditingCondLine] = useState<{ planId: string; lineIndex: number; name: string } | null>(null);
 
   // Conditioning exercise dialog
@@ -2388,17 +2391,35 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     triggerSave();
   };
 
+  const [deleteWorkoutAsk, setDeleteWorkoutAsk] = useState<PlanDay | null>(null);
+  const [showPastWorkouts, setShowPastWorkouts] = useState(false);
+  useEffect(() => {
+    const refresh = () => fetchData();
+    window.addEventListener(WORKOUTS_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(WORKOUTS_CHANGED_EVENT, refresh);
+  }, [fetchData]);
+
   const deleteSingleWorkout = async (plan: PlanDay) => {
-    if (!confirm("Ta bort detta pass?")) return;
+    setDeleteWorkoutAsk(plan);
+  };
+
+  const performDeleteSingleWorkout = async (plan: PlanDay) => {
     if (plan.id) {
+      const { data: compRows } = await supabase.from("workout_completions").select("*")
+        .eq("user_id", userId).eq("week", plan.week).eq("day", plan.day);
+      const { data: postRows } = await supabase.from("social_posts").select("*")
+        .eq("user_id", userId).eq("workout_week", plan.week).eq("workout_day", plan.day);
       await supabase.from("workout_plans").delete().eq("id", plan.id);
       await supabase.from("workout_completions").delete().
       eq("user_id", userId).
       eq("week", plan.week).
       eq("day", plan.day);
-      fetchData();
+      await supabase.from("social_posts").delete().eq("user_id", userId).eq("workout_week", plan.week).eq("workout_day", plan.day);
+      notifyWorkoutsChanged(userId);
       const snapshot = plan;
       showUndoToast("Pass borttaget", async () => {
+        if (compRows?.length) await supabase.from("workout_completions").insert(compRows as any);
+        if (postRows?.length) await supabase.from("social_posts").insert(postRows as any);
         await supabase.from("workout_plans").insert({
           user_id: userId,
           week: snapshot.week,
@@ -2408,7 +2429,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           tempo: snapshot.tempo ?? null,
           is_circuit: (snapshot as any).is_circuit ?? false,
         });
-        fetchData();
+        notifyWorkoutsChanged(userId);
       });
     }
   };
@@ -3234,18 +3255,46 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   // Save edited exercise line (sets/reps/weight)
+  /** One row per logged set — never merge sets with different values into one line. */
+  const withPerSet = (plan: PlanDay, e: { planId: string; lineIndex: number; name: string; originalName: string; sets: string; reps: string; weight: string }) => {
+    const data = getSetData(`${plan.week}-${plan.day}`, e.name);
+    const count = Math.max(parseInt(e.sets) || 1, data.length);
+    const perSet: SetRow[] = Array.from({ length: count }, (_, i) => ({
+      reps: String(data[i]?.reps ?? "").trim() || e.reps,
+      kg: String(data[i]?.kg ?? "").trim() || e.weight,
+    }));
+    return { ...e, perSet };
+  };
+
   const saveEditedExercise = async (
     propagate = false,
-    override?: { planId: string; lineIndex: number; name: string; originalName: string; sets: string; reps: string; weight: string }
+    override?: { planId: string; lineIndex: number; name: string; originalName: string; sets: string; reps: string; weight: string; perSet?: SetRow[] }
   ) => {
     const src = override ?? editingExercise;
     if (!src) return;
     const plan = plans.find((p) => p.id === src.planId);
     if (!plan) return;
 
-    const sets = parseInt(src.sets) || 3;
-    const reps = parseInt(src.reps) || 10;
-    const w = src.weight.trim();
+    const perSet = src.perSet;
+    if (perSet) {
+      const err = validateSetRows(perSet);
+      if (err) { toast.error(err); return; }
+    }
+    const sets = perSet ? perSet.length : (parseInt(src.sets) || 3);
+    const reps = perSet ? (parseInt(perSet[0]?.reps) || 10) : (parseInt(src.reps) || 10);
+    const w = perSet ? (perSet[0]?.kg || "").trim().replace(",", ".") : src.weight.trim();
+    if (perSet) {
+      // Store each set's own values so saving never overwrites sets with one row.
+      const oldName = src.originalName;
+      await updateCompletionWeights(plan.week, plan.day, (existing) => {
+        const next: Record<string, any> = { ...existing };
+        const prevSets = String(next[`__sets__${oldName}`] || "");
+        if (oldName !== src.name) { delete next[`__setdata__${oldName}`]; delete next[`__sets__${oldName}`]; }
+        next[`__setdata__${src.name}`] = JSON.stringify(perSet.map((r) => ({ reps: r.reps.trim(), kg: r.kg.trim().replace(",", ".") })));
+        if (prevSets) next[`__sets__${src.name}`] = prevSets.padEnd(perSet.length, "0").slice(0, perSet.length);
+        return next;
+      });
+    }
 
     const originalLines = plan.details.split(/[;\n]/).map((s) => s.trim()).filter(Boolean);
     const originalLine = originalLines[src.lineIndex] || "";
@@ -3641,6 +3690,22 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     </div>
   ) : null;
 
+  const pastWorkoutsUi = (
+    <>
+      <button type="button" onClick={() => setShowPastWorkouts(true)} className="w-full flex items-center justify-between rounded-2xl bg-card shadow-soft border border-border/40 px-4 py-3 text-sm font-semibold">
+        <span>📖 Tidigare pass</span><ChevronRight className="w-4 h-4 text-muted-foreground" />
+      </button>
+      <PastWorkoutsDialog userId={userId} open={showPastWorkouts} onClose={() => setShowPastWorkouts(false)} />
+      <DeleteWorkoutConfirm
+        open={!!deleteWorkoutAsk}
+        name={deleteWorkoutAsk?.session_name || "Pass"}
+        date={deleteWorkoutAsk && /^\d{4}-\d{2}-\d{2}/.test(deleteWorkoutAsk.day) ? deleteWorkoutAsk.day.slice(0, 10) : null}
+        onCancel={() => setDeleteWorkoutAsk(null)}
+        onConfirm={() => { const p = deleteWorkoutAsk; setDeleteWorkoutAsk(null); if (p) performDeleteSingleWorkout(p); }}
+      />
+    </>
+  );
+
   if (mode === "loading") {
     return (
       <div>
@@ -3682,6 +3747,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-6 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
         {startPlanDialog}
         <div className="text-center space-y-2">
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
@@ -3736,6 +3802,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
         <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); setPlanStartDate(null); setActivePlanWeek(1); fetchData(); }} />
       </div>
     );
@@ -3829,6 +3896,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
         {startPlanDialog}
         {singlePlans.length === 0 && (
           <button
@@ -4235,20 +4303,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         return (
                           <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
                                 <span className="font-semibold text-sm text-foreground">{editingExercise.name}</span>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
-                                    <input type="text" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
-                                    <input type="text" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
-                                    <input type="text" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
-                                  </div>
-                                </div>
+                                {editingExercise.perSet ? <SetRowsEditor rows={editingExercise.perSet} onChange={(rows) => setEditingExercise((prev) => prev ? { ...prev, perSet: rows } : null)} /> : null}
                                 <div className="flex gap-2">
                                   <button onClick={() => saveEditedExercise()} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
                                   <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
@@ -4279,15 +4334,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                onClick={() => setEditingExercise({
-                                  planId: plan.id,
-                                  lineIndex: i,
-                                  name,
-                                  originalName: name,
-                                  sets: sets || "3",
-                                  reps: reps || "10",
-                                  weight: kg?.replace(/\s*kg\s*/i, "").trim() || ""
-                                })}
+                                onClick={() => setEditingExercise(withPerSet(plan, { planId: plan.id, lineIndex: i, name, originalName: name, sets: sets || "3", reps: reps || "10", weight: kg?.replace(/\s*kg\s*/i, "").trim() || "" }))}
                                 className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
                                 title="Redigera">
                                     <Dumbbell className="w-3 h-3" />
@@ -5605,6 +5652,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     <div className="space-y-4">
       {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
@@ -7614,20 +7662,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Övning</label>
                                   <input type="text" value={editingExercise.name} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, name: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary font-semibold" />
                                 </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
-                                    <input type="text" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
-                                    <input type="text" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
-                                    <input type="text" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
-                                  </div>
-                                </div>
+                                {editingExercise.perSet ? <SetRowsEditor rows={editingExercise.perSet} onChange={(rows) => setEditingExercise((prev) => prev ? { ...prev, perSet: rows } : null)} /> : null}
                                 <div className="flex gap-2">
                                   <button onClick={() => saveEditedExercise()} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
                                   <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
@@ -8103,15 +8138,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   </button>
                                   <span
                                     className="font-semibold text-sm text-foreground cursor-pointer hover:text-primary transition-colors"
-                                    onClick={() => setEditingExercise({
-                                      planId: plan.id,
-                                      lineIndex: i,
-                                      name: partName,
-                                      originalName: partName,
-                                      sets: partSets || "3",
-                                      reps: partReps || repsStr || "10",
-                                      weight: partKg || ""
-                                    })}>
+                                    onClick={() => setEditingExercise(withPerSet(plan, { planId: plan.id, lineIndex: i, name: partName, originalName: partName, sets: partSets || "3", reps: partReps || repsStr || "10", weight: partKg || "" }))}>
                                     {toTitleCase(partName)}
                                     {partRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{partRpe}</span>}
                                   </span>

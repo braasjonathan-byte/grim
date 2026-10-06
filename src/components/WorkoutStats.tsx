@@ -1,3 +1,4 @@
+import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
 import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
@@ -924,4 +925,15 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
 };
 
-export default WorkoutStats;
+/** Remounts on any workout edit/delete so every figure is recomputed from the remaining data. */
+const WorkoutStatsWithRefresh = (props: WorkoutStatsProps) => {
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    const bump = () => setK((x) => x + 1);
+    window.addEventListener(WORKOUTS_CHANGED_EVENT, bump);
+    return () => window.removeEventListener(WORKOUTS_CHANGED_EVENT, bump);
+  }, []);
+  return <WorkoutStats key={k} {...props} />;
+};
+
+export default WorkoutStatsWithRefresh;
