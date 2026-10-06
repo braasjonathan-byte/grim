@@ -70,14 +70,11 @@ export default function FastingWidget({ userId }: { userId: string }) {
     setSession({ ...session, end_time });
   }
 
-  if (hidden === null) return null;
-  if (hidden) {
-    return (
-      <button onClick={() => setHiddenPref(false)} className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground py-1">
-        <Eye className="w-3.5 h-3.5" /> Visa fastetimer
-      </button>
-    );
-  }
+  if (!loaded) return null;
+  // Dold som standard – visas bara om användaren slagit på den i Inställningar,
+  // eller om en fasta pågår (så man alltid kan avsluta den).
+  const activeSession = session && !session.end_time;
+  if (!enabled && !activeSession) return null;
 
   const active = session && !session.end_time;
   const startMs = session ? new Date(session.start_time).getTime() : 0;
