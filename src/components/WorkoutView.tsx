@@ -45,6 +45,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import DailyChallenge from "@/components/DailyChallenge";
 import WorkoutShareCard from "@/components/WorkoutShareCard";
 import ShareWorkoutPromptDialog from "@/components/ShareWorkoutPromptDialog";
+import { loadPrivacySettings, DEFAULT_PRIVACY, type PrivacySettings } from "@/lib/socialPrivacy";
 import WorkoutCompleteOverlay from "@/components/WorkoutCompleteOverlay";
 import { summarizeCompletion, type WorkoutSummary } from "@/lib/workoutSummary";
 import AutoSaveInput from "@/components/AutoSaveInput";
@@ -349,6 +350,23 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [pendingShare, setPendingShare] = useState<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   const pendingShareRef = useRef<{ week: number; day: string; caption: string | null; loading: boolean } | null>(null);
   useEffect(() => { pendingShareRef.current = pendingShare; }, [pendingShare]);
+  const [privacy, setPrivacy] = useState<PrivacySettings>(DEFAULT_PRIVACY);
+  useEffect(() => { if (userId) loadPrivacySettings(userId).then(setPrivacy); }, [userId]);
+  // Delning sker bara via aktivt val ("Dela") eller om användaren valt "Alltid".
+  const offerShare = async (week: number, day: string, viaCelebration: boolean) => {
+    const settings = userId ? await loadPrivacySettings(userId) : DEFAULT_PRIVACY;
+    setPrivacy(settings);
+    if (settings.auto_share_workouts === "off") return;
+    if (settings.auto_share_workouts === "always") {
+      autoShareCompletion(userId, week, day, undefined, settings.default_post_visibility);
+      return;
+    }
+    const set = viaCelebration ? setPendingShare : setSharePromptDialog;
+    set({ week, day, caption: null, loading: true });
+    previewWorkoutCaption(userId, week, day).then((caption) => {
+      set((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
+    });
+  };
   const closeCelebration = () => {
     setCompleteCelebration(null);
     const p = pendingShareRef.current;
@@ -1176,10 +1194,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
 
       // Prepare the share dialog; it opens once the celebration is dismissed.
-      setPendingShare({ week, day, caption: null, loading: true });
-      previewWorkoutCaption(userId, week, day).then((caption) => {
-        setPendingShare((prev) => (prev && prev.week === week && prev.day === day ? { ...prev, caption: caption || "", loading: false } : prev));
-      });
+      offerShare(week, day, true);
       checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
 
 
@@ -1579,7 +1594,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       playWorkoutComplete();
       hapticMedium();
       
-      autoShareCompletion(userId, week, day);
+      offerShare(week, day, false);
 
       // Check if all scheduled workouts in this week are now done
       if (week > 0) {
@@ -5292,7 +5307,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         initialCaption={sharePromptDialog?.caption ?? ""}
         loading={!!sharePromptDialog?.loading}
         nickname={userNickname}
-          onConfirm={async (caption, newTitle) => {
+          defaultVisibility={privacy.default_post_visibility}
+        onConfirm={async (caption, newTitle, visibility) => {
             const target = sharePromptDialog;
             setSharePromptDialog(null);
             if (!target) return;
@@ -5318,8 +5334,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                 }
               } catch {}
             }
-            await autoShareCompletion(userId, target.week, target.day, caption);
-            toast.success("Passet publicerades för dina vänner");
+            await autoShareCompletion(userId, target.week, target.day, caption, visibility);
+            toast.success(visibility === "public" ? "Passet delades med alla" : "Passet delades med dina vänner");
           }}
         onSkip={() => {
           setSharePromptDialog(null);
@@ -8959,10 +8975,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           setRunLogTarget(null);
           fetchData();
           if (target) {
-            setSharePromptDialog({ week: target.week, day: target.day, caption: null, loading: true });
-            previewWorkoutCaption(userId, target.week, target.day).then((caption) => {
-              setSharePromptDialog((prev) => (prev && prev.week === target.week && prev.day === target.day ? { ...prev, caption: caption || "", loading: false } : prev));
-            });
+            offerShare(target.week, target.day, false);
           }
         }} />
 
@@ -9425,7 +9438,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       initialCaption={sharePromptDialog?.caption ?? ""}
       loading={!!sharePromptDialog?.loading}
       nickname={userNickname}
-      onConfirm={async (caption, newTitle) => {
+      defaultVisibility={privacy.default_post_visibility}
+        onConfirm={async (caption, newTitle, visibility) => {
         const target = sharePromptDialog;
         setSharePromptDialog(null);
         if (!target) return;
@@ -9451,8 +9465,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             }
           } catch {}
         }
-        await autoShareCompletion(userId, target.week, target.day, caption);
-        toast.success("Passet publicerades för dina vänner");
+        await autoShareCompletion(userId, target.week, target.day, caption, visibility);
+        toast.success(visibility === "public" ? "Passet delades med alla" : "Passet delades med dina vänner");
       }}
       onSkip={() => {
         setSharePromptDialog(null);
