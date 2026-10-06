@@ -2,7 +2,8 @@ import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin, Dumbbell, Trash2 } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
+import { isFastingEnabled, setFastingEnabled } from "@/components/FastingWidget";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
 import ThemePicker from "@/components/ThemePicker";
@@ -87,6 +88,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
   const [spotifyWidget, setSpotifyWidget] = useState(() => {
     return localStorage.getItem("gymberget_spotify_widget") !== "false";
   });
+  const [fastingOn, setFastingOn] = useState(() => isFastingEnabled());
   const [soundEnabled, setSoundEnabled] = useState(() => {
     return localStorage.getItem("gymberget_sound_enabled") !== "false";
   });
