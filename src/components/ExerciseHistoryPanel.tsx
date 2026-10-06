@@ -1,4 +1,4 @@
-import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
+import { isPlausibleSet, parseNum, formatDecimal, IMPLAUSIBLE_LABEL } from "@/lib/inputValidation";
 import { useEffect, useState } from "react";
 import { Loader2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { sv } from "date-fns/locale";
 
 interface StrengthSet {
+  implausible?: boolean;
   kg: number;
   reps: number;
 }
@@ -157,8 +158,8 @@ const ExerciseHistoryPanel = ({
                 kind: "strength",
                 source,
                 sets,
-                topKg: Math.max(0, ...sets.map((s) => s.kg)),
-                totalVolume: sets.reduce((sum, s) => sum + s.kg * s.reps, 0),
+                topKg: Math.max(0, ...sets.filter((s) => !s.implausible).map((s) => s.kg)),
+                totalVolume: sets.filter((s) => !s.implausible).reduce((sum, s) => sum + s.kg * s.reps, 0),
                 isPr: false,
               });
             } else if (k.startsWith("__cond__")) {
@@ -183,8 +184,8 @@ const ExerciseHistoryPanel = ({
                 kind: "strength",
                 source,
                 sets,
-                topKg: Math.max(0, ...sets.map((s) => s.kg)),
-                totalVolume: sets.reduce((sum, s) => sum + s.kg * s.reps, 0),
+                topKg: Math.max(0, ...sets.filter((s) => !s.implausible).map((s) => s.kg)),
+                totalVolume: sets.filter((s) => !s.implausible).reduce((sum, s) => sum + s.kg * s.reps, 0),
                 isPr: false,
               });
             }
@@ -316,7 +317,7 @@ const ExerciseHistoryPanel = ({
                     className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-card border border-border"
                   >
                     {set.reps > 0 ? `${set.reps} × ` : ""}
-                    {set.kg > 0 ? `${set.kg}kg` : "BW"}
+                    {set.kg > 0 ? `${formatDecimal(set.kg)}kg` : "BW"}{set.implausible && <span className="ml-1 text-destructive font-semibold">{IMPLAUSIBLE_LABEL}</span>}
                   </span>
                 ))}
               </div>
