@@ -1,8 +1,20 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Timer, EyeOff, Eye } from "lucide-react";
+import { Timer, EyeOff } from "lucide-react";
 import { hapticLight } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
+
+export const FASTING_ENABLED_KEY = "grim_fasting_enabled";
+export const FASTING_CHANGED_EVENT = "grim:fasting-changed";
+
+export function isFastingEnabled() {
+  return localStorage.getItem(FASTING_ENABLED_KEY) === "true";
+}
+
+export function setFastingEnabled(v: boolean) {
+  localStorage.setItem(FASTING_ENABLED_KEY, v ? "true" : "false");
+  window.dispatchEvent(new Event(FASTING_CHANGED_EVENT));
+}
 
 const SCHEDULES: Record<string, number> = { "16:8": 16, "18:6": 18, "20:4": 20 };
 
