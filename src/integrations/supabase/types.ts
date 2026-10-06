@@ -646,6 +646,7 @@ export type Database = {
       }
       exercise_gif_mappings: {
         Row: {
+          ai_instructions: Json | null
           created_at: string
           created_by: string
           custom_instructions: Json | null
@@ -657,6 +658,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_instructions?: Json | null
           created_at?: string
           created_by: string
           custom_instructions?: Json | null
@@ -668,6 +670,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_instructions?: Json | null
           created_at?: string
           created_by?: string
           custom_instructions?: Json | null
