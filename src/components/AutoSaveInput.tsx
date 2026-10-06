@@ -143,6 +143,11 @@ const AutoSaveInput = ({ initialValue, onSave, debounceMs = 800, normalizeOnBlur
       value={value}
       onChange={handleChange}
       onBlur={handleBlur}
+      onFocus={(e) => {
+        // Markera hela talet så att nästa inmatning ersätter värdet i stället för att läggas till.
+        if (numeric) e.currentTarget.select();
+        props.onFocus?.(e);
+      }}
     />
   );
 
