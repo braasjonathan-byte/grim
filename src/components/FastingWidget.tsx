@@ -1,8 +1,20 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Timer, EyeOff, Eye } from "lucide-react";
+import { Timer, EyeOff } from "lucide-react";
 import { hapticLight } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
+
+export const FASTING_ENABLED_KEY = "grim_fasting_enabled";
+export const FASTING_CHANGED_EVENT = "grim:fasting-changed";
+
+export function isFastingEnabled() {
+  return localStorage.getItem(FASTING_ENABLED_KEY) === "true";
+}
+
+export function setFastingEnabled(v: boolean) {
+  localStorage.setItem(FASTING_ENABLED_KEY, v ? "true" : "false");
+  window.dispatchEvent(new Event(FASTING_CHANGED_EVENT));
+}
 
 const SCHEDULES: Record<string, number> = { "16:8": 16, "18:6": 18, "20:4": 20 };
 
@@ -15,30 +27,29 @@ function fmt(ms: number) {
 }
 
 export default function FastingWidget({ userId }: { userId: string }) {
-  const [hidden, setHidden] = useState<boolean | null>(null);
+  const [enabled, setEnabled] = useState<boolean>(isFastingEnabled());
   const [session, setSession] = useState<Session | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [schedule, setSchedule] = useState("16:8");
   const [customH, setCustomH] = useState("14");
   const [now, setNow] = useState(Date.now());
   const { toast } = useToast();
 
   useEffect(() => {
+    const onChange = () => setEnabled(isFastingEnabled());
+    window.addEventListener(FASTING_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(FASTING_CHANGED_EVENT, onChange);
+  }, []);
+
+  useEffect(() => {
     (async () => {
-      const [p, s] = await Promise.all([
-        supabase.from("profiles").select("fasting_widget_hidden").eq("user_id", userId).maybeSingle(),
-        supabase.from("fasting_sessions").select("*").eq("user_id", userId).order("start_time", { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      setHidden(!!p.data?.fasting_widget_hidden);
+      const s = await supabase.from("fasting_sessions").select("*").eq("user_id", userId).order("start_time", { ascending: false }).limit(1).maybeSingle();
       if (s.data) { setSession(s.data as Session); setSchedule(s.data.schedule_type); if (!SCHEDULES[s.data.schedule_type]) setCustomH(String(s.data.target_hours)); }
+      setLoaded(true);
     })();
   }, [userId]);
 
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
-
-  async function setHiddenPref(v: boolean) {
-    setHidden(v);
-    await supabase.from("profiles").update({ fasting_widget_hidden: v }).eq("user_id", userId);
-  }
 
   const targetHours = SCHEDULES[schedule] ?? Math.min(23, Math.max(1, parseFloat(customH.replace(",", ".")) || 14));
 
@@ -59,14 +70,11 @@ export default function FastingWidget({ userId }: { userId: string }) {
     setSession({ ...session, end_time });
   }
 
-  if (hidden === null) return null;
-  if (hidden) {
-    return (
-      <button onClick={() => setHiddenPref(false)} className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground py-1">
-        <Eye className="w-3.5 h-3.5" /> Visa fastetimer
-      </button>
-    );
-  }
+  if (!loaded) return null;
+  // Dold som standard – visas bara om användaren slagit på den i Inställningar,
+  // eller om en fasta pågår (så man alltid kan avsluta den).
+  const activeSession = session && !session.end_time;
+  if (!enabled && !activeSession) return null;
 
   const active = session && !session.end_time;
   const startMs = session ? new Date(session.start_time).getTime() : 0;
@@ -81,7 +89,7 @@ export default function FastingWidget({ userId }: { userId: string }) {
     <div className="rounded-2xl bg-muted/40 p-3 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold flex items-center gap-1.5"><Timer className="w-3.5 h-3.5 text-primary" /> Periodisk fasta</p>
-        <button onClick={() => setHiddenPref(true)} aria-label="Dölj fastetimer" className="text-muted-foreground p-1"><EyeOff className="w-3.5 h-3.5" /></button>
+        <button onClick={() => setFastingEnabled(false)} aria-label="Dölj fastetimer" className="text-muted-foreground p-1"><EyeOff className="w-3.5 h-3.5" /></button>
       </div>
 
       {active ? (

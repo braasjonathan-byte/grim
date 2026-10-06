@@ -2,7 +2,8 @@ import { lazyRetry } from "@/lib/lazyRetry";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin, Dumbbell, Trash2 } from "lucide-react";
+import { Check, Loader2, ShieldQuestion, ChevronDown, Smartphone, Mail, KeyRound, LogOut, Music, Volume2, Link2, Unlink, RefreshCw, Fingerprint, Eye, MapPin, Dumbbell, Trash2, Timer } from "lucide-react";
+import { isFastingEnabled, setFastingEnabled } from "@/components/FastingWidget";
 import { getGpsVoiceIntervalMin, setGpsVoiceIntervalMin, getGpsVoiceIntervalKm, setGpsVoiceIntervalKm, speakPace } from "@/lib/gpsSettings";
 import { Slider } from "@/components/ui/slider";
 import ThemePicker from "@/components/ThemePicker";
@@ -87,6 +88,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
   const [spotifyWidget, setSpotifyWidget] = useState(() => {
     return localStorage.getItem("gymberget_spotify_widget") !== "false";
   });
+  const [fastingOn, setFastingOn] = useState(() => isFastingEnabled());
   const [soundEnabled, setSoundEnabled] = useState(() => {
     return localStorage.getItem("gymberget_sound_enabled") !== "false";
   });
@@ -367,6 +369,25 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
           className={`relative w-11 h-6 rounded-full transition-colors ${spotifyWidget ? "bg-primary" : "bg-secondary border border-border"}`}
         >
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${spotifyWidget ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
+        </button>
+      </div>
+
+      {/* Fasting widget toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Timer className="w-4 h-4 text-primary" />
+          <span className="text-sm">Periodisk fasta i Kost</span>
+        </div>
+        <button
+          onClick={() => {
+            const next = !fastingOn;
+            setFastingEnabled(next);
+            setFastingOn(next);
+          }}
+          aria-label="Visa periodisk fasta i Kost"
+          className={`relative w-11 h-6 rounded-full transition-colors ${fastingOn ? "bg-primary" : "bg-secondary border border-border"}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${fastingOn ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
         </button>
       </div>
 
