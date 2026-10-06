@@ -1356,6 +1356,15 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         </div>
         )
       )}
+      {reportTarget && (
+        <ReportDialog
+          open={!!reportTarget}
+          onOpenChange={(v) => { if (!v) setReportTarget(null); }}
+          reporterId={userId}
+          reportedUserId={reportTarget.userId}
+          postId={reportTarget.postId}
+        />
+      )}
     </div>
   );
 };
