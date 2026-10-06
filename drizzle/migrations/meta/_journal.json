@@ -99,6 +99,13 @@
       "when": 1791300412712,
       "tag": "0013_social_privacy",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791301481259,
+      "tag": "0014_archived_plans_owner_update",
+      "breakpoints": true
     }
   ]
 }
