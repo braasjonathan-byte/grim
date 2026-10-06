@@ -3248,7 +3248,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
   const saveEditedExercise = async (
     propagate = false,
-    override?: { planId: string; lineIndex: number; name: string; originalName: string; sets: string; reps: string; weight: string }
+    override?: { planId: string; lineIndex: number; name: string; originalName: string; sets: string; reps: string; weight: string; perSet?: SetRow[] }
   ) => {
     const src = override ?? editingExercise;
     if (!src) return;
