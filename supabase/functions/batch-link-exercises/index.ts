@@ -138,7 +138,6 @@ serve(async (req) => {
       if (gifUrl || englishName) {
         await sb.from("exercise_gif_mappings").insert({
           exercise_name: config.properName,
-          exercise_name_lower: swedish,
           exercisedb_name: englishName,
           gif_url: gifUrl,
           created_by: user.id,

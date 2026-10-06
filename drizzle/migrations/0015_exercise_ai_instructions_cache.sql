@@ -1,0 +1,2 @@
+ALTER TABLE public.exercise_gif_mappings ADD COLUMN IF NOT EXISTS ai_instructions jsonb;
+COMMENT ON COLUMN public.exercise_gif_mappings.ai_instructions IS 'Cached AI-generated instructions, generated once per exercise. custom_instructions (edited/approved) always takes priority.';

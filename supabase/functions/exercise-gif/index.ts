@@ -306,17 +306,25 @@ function getSearchTerms(cleanName: string): string[] {
     terms.push(cleanName);
   }
 
-  // Also try broader single-word searches as last resort
-  const english = exerciseTranslations[lower] || cleanName;
-  const mainWord = english.split(" ").pop();
-  if (mainWord && mainWord.length > 3 && !terms.includes(mainWord)) {
-    terms.push(mainWord);
-  }
+  // Inga breda enordssökningar: hellre ingen koppling än fel bild.
 
   return [...new Set(terms)];
 }
 
 let exerciseDbDisabled = false;
+
+const STOP = new Set(["the", "a", "an", "to", "on", "with", "of", "and", "med", "på", "och"]);
+function tokens(s: string): string[] {
+  return s.toLowerCase().replace(/[^a-z0-9åäö]+/g, " ").split(" ").filter((w) => w.length > 1 && !STOP.has(w));
+}
+/** Säker träff: varje ord i söktermen måste finnas i namnet (ordprefix/stam). */
+function isRelevantMatch(term: string, name: string): boolean {
+  const t = tokens(term);
+  const n = tokens(name);
+  if (!t.length || !n.length) return false;
+  const stem = (w: string) => w.replace(/(es|s)$/, "");
+  return t.every((w) => n.some((nw) => stem(nw) === stem(w) || (w.length >= 4 && (nw.startsWith(w) || w.startsWith(nw) && nw.length >= 4))));
+}
 
 async function searchExerciseDB(term: string): Promise<any | null> {
   if (exerciseDbDisabled) return null;
@@ -340,8 +348,10 @@ async function searchExerciseDB(term: string): Promise<any | null> {
     const data = await response.json();
 
     if (data.success && data.data && data.data.length > 0) {
-      const results = data.data.filter((e: any) => e.gifUrl);
-      if (results.length === 0) return data.data[0];
+      const relevant = data.data.filter((e: any) => isRelevantMatch(term, e.name || ""));
+      if (relevant.length === 0) return null;
+      const results = relevant.filter((e: any) => e.gifUrl);
+      if (results.length === 0) return relevant[0];
       // Prefer exact name match
       const exact = results.find((e: any) => e.name?.toLowerCase() === term.toLowerCase());
       if (exact) return exact;
@@ -395,7 +405,7 @@ async function searchFreeExerciseDB(term: string): Promise<any | null> {
   }
   
   // Reverse contains: search term contains exercise name
-  const reverseMatch = exercises.filter((e: any) => lower.includes(e.name?.toLowerCase()));
+  const reverseMatch = exercises.filter((e: any) => (e.name || "").length >= 6 && lower.includes(e.name?.toLowerCase()) && isRelevantMatch(e.name, term));
   if (reverseMatch.length > 0) {
     reverseMatch.sort((a: any, b: any) => (b.name || "").length - (a.name || "").length);
     return formatFreeExercise(reverseMatch[0]);
@@ -408,7 +418,7 @@ async function searchFreeExerciseDB(term: string): Promise<any | null> {
   for (const ex of exercises) {
     const nameWords = (ex.name || "").toLowerCase().split(/\s+/);
     const overlap = termWords.filter((w: string) => nameWords.some((nw: string) => nw.includes(w) || w.includes(nw))).length;
-    if (overlap > bestScore && overlap >= 2) {
+    if (overlap > bestScore && overlap >= 2 && isRelevantMatch(term, ex.name || "")) {
       bestScore = overlap;
       bestMatch = ex;
     }
@@ -490,6 +500,46 @@ async function translateToSwedish(instructions: string[]): Promise<string[]> {
   }
 }
 
+const json = (obj: unknown, status = 200) =>
+  new Response(JSON.stringify(obj), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+/** Explicit "ingen koppling" vs. automatisk rad som bara cachar text (sök igen efter bild). */
+const NO_LINK = "";
+const AUTO_LINK = "_AUTO_";
+
+type MappingRow = { id: string; exercise_name: string; exercisedb_name: string; gif_url: string | null; custom_instructions: unknown; ai_instructions: unknown };
+
+async function findMapping(sb: any, cleanName: string): Promise<MappingRow | null> {
+  // exercise_name_lower är genererad (lower(exercise_name)) och unik
+  const { data, error } = await sb
+    .from("exercise_gif_mappings")
+    .select("id, exercise_name, exercisedb_name, gif_url, custom_instructions, ai_instructions")
+    .eq("exercise_name_lower", cleanName.toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Skriver fält till kopplingsraden; skapar raden om den saknas. Kastar vid fel. */
+async function upsertMapping(sb: any, cleanName: string, fields: Record<string, unknown>, userId: string) {
+  const existing = await findMapping(sb, cleanName);
+  if (existing) {
+    const { error } = await sb.from("exercise_gif_mappings").update(fields).eq("id", existing.id);
+    if (error) throw error;
+  } else {
+    const { error } = await sb.from("exercise_gif_mappings").insert({
+      exercise_name: cleanName,
+      exercisedb_name: AUTO_LINK,
+      created_by: userId,
+      ...fields,
+    });
+    if (error) throw error;
+  }
+}
+
+const asList = (v: unknown): string[] | null =>
+  Array.isArray(v) && v.length > 0 ? (v as unknown[]).map(String) : null;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -499,321 +549,179 @@ serve(async (req) => {
     const body = await req.json();
     const { exerciseName, action, instructions: saveInstructions, reason } = body;
 
-    // Save instructions action — admin, exercise editor, or creator of the custom exercise
-    if (action === "save_instructions" && exerciseName && saveInstructions) {
-      const authHeader = req.headers.get("authorization") || "";
-      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const token = (req.headers.get("authorization") || "").replace("Bearer ", "").trim();
+    if (!token) return json({ error: "Unauthorized" }, 401);
+    const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
+    if (!user) return json({ error: "Unauthorized" }, 401);
+    if (!exerciseName) return json({ error: "Missing exerciseName" }, 400);
 
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      const EXERCISE_EDITOR_IDS = ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"]; // test2
-
-      let cleanNameAuth = cleanExerciseName(exerciseName);
-      if (!cleanNameAuth) cleanNameAuth = exerciseName.trim();
-
-      // Check if user is creator of a matching custom exercise
-      let isCreator = false;
-      if (!isAdmin && !EXERCISE_EDITOR_IDS.includes(user.id)) {
-        const { data: customEx } = await sb
-          .from("custom_exercises")
-          .select("created_by")
-          .ilike("name", cleanNameAuth)
-          .maybeSingle();
-        isCreator = !!(customEx && customEx.created_by === user.id);
-      }
-
-      if (!isAdmin && !EXERCISE_EDITOR_IDS.includes(user.id) && !isCreator) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
-      let cleanName = cleanNameAuth;
-
-      // Clear any existing report — once a description is approved/edited the report is resolved
-      await sb
-        .from("exercise_description_reports")
-        .update({ resolved: true })
-        .eq("exercise_name_lower", cleanName.toLowerCase())
-        .eq("resolved", false);
-
-      // Upsert into exercise_gif_mappings
-      const { data: existing } = await sb
-        .from("exercise_gif_mappings")
-        .select("id")
-        .ilike("exercise_name", cleanName)
-        .maybeSingle();
-
-      if (existing) {
-        await sb.from("exercise_gif_mappings").update({ custom_instructions: saveInstructions }).eq("id", existing.id);
-      } else {
-        await sb.from("exercise_gif_mappings").insert({
-          exercise_name: cleanName,
-          exercise_name_lower: cleanName.toLowerCase(),
-          exercisedb_name: cleanName,
-          custom_instructions: saveInstructions,
-          created_by: user.id,
-        });
-      }
-
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Report incorrect AI description (any authenticated user)
-    if (action === "report_description" && exerciseName) {
-      const authHeader = req.headers.get("authorization") || "";
-      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      let cn = cleanExerciseName(exerciseName);
-      if (!cn) cn = exerciseName.trim();
-
-      await sb.from("exercise_description_reports").insert({
-        exercise_name: cn,
-        exercise_name_lower: cn.toLowerCase(),
-        reported_by: user.id,
-        reason: typeof reason === "string" ? reason.slice(0, 500) : null,
-      });
-
-      // Notify admins via the suggestions table so it surfaces in the suggestion box
-      await sb.from("suggestions").insert({
-        user_id: user.id,
-        message: `[Felaktig övningsbeskrivning] "${cn}"${reason ? ` — ${reason}` : ""}`,
-      });
-
-      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Default lookup path: require authentication to prevent AI credit abuse
-    {
-      const authHeader = req.headers.get("authorization") || "";
-      const token = authHeader.replace("Bearer ", "").trim();
-      if (!token) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      const { data: { user } } = await createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "").auth.getUser(token);
-      if (!user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-    }
-
-    if (!exerciseName) {
-      return new Response(JSON.stringify({ error: "Missing exerciseName" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     let cleanName = cleanExerciseName(exerciseName);
     if (!cleanName) cleanName = exerciseName.trim();
 
-    // Lookup creator + report status (used to gate AI-generated descriptions)
+    const canEdit = async () => {
+      const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (isAdmin || ["4ddd1300-eeb9-4b33-9c9e-59e3d12c0c04"].includes(user.id)) return true;
+      const { data: rows } = await sb.from("custom_exercises").select("created_by").ilike("name", cleanName).limit(5);
+      return (rows || []).some((r: any) => r.created_by === user.id);
+    };
+
+    // Spara redigerade/godkända instruktioner (admin: globalt; skapare: egen övning)
+    if (action === "save_instructions" && Array.isArray(saveInstructions)) {
+      if (!(await canEdit())) return json({ error: "Forbidden" }, 403);
+      const list = saveInstructions.map((l: unknown) => String(l).trim()).filter(Boolean).slice(0, 30);
+      if (!list.length) return json({ error: "Tom beskrivning" }, 400);
+      try {
+        await sb.from("exercise_description_reports").update({ resolved: true })
+          .eq("exercise_name_lower", cleanName.toLowerCase()).eq("resolved", false);
+        await upsertMapping(sb, cleanName, { custom_instructions: list }, user.id);
+        const check = await findMapping(sb, cleanName);
+        if (!asList(check?.custom_instructions)) throw new Error("verify failed");
+      } catch (e) {
+        console.error("save_instructions failed:", e);
+        return json({ error: "Kunde inte spara i databasen" }, 500);
+      }
+      return json({ success: true, instructions: list });
+    }
+
+    // Ändra koppling till engelsk benämning (null = ingen koppling)
+    if (action === "set_mapping") {
+      if (!(await canEdit())) return json({ error: "Forbidden" }, 403);
+      const dbName = typeof body.exercisedbName === "string" ? body.exercisedbName.trim().slice(0, 200) : "";
+      const gif = typeof body.gifUrl === "string" && /^https:\/\//.test(body.gifUrl) ? body.gifUrl : null;
+      try {
+        await upsertMapping(sb, cleanName, { exercisedb_name: dbName || NO_LINK, gif_url: dbName ? gif : null }, user.id);
+      } catch (e) {
+        console.error("set_mapping failed:", e);
+        return json({ error: "Kunde inte spara kopplingen" }, 500);
+      }
+      return json({ success: true });
+    }
+
+    if (action === "report_description") {
+      await sb.from("exercise_description_reports").insert({
+        exercise_name: cleanName,
+        exercise_name_lower: cleanName.toLowerCase(),
+        reported_by: user.id,
+        reason: typeof reason === "string" ? reason.slice(0, 500) : null,
+      });
+      await sb.from("suggestions").insert({
+        user_id: user.id,
+        message: `[Felaktig övningsbeskrivning] "${cleanName}"${reason ? ` — ${reason}` : ""}`,
+      });
+      // Ett rapporterat AI-förslag ska inte visas igen; nästa granskning genererar nytt
+      try { const m = await findMapping(sb, cleanName); if (m) await sb.from("exercise_gif_mappings").update({ ai_instructions: null }).eq("id", m.id); } catch { /* ignore */ }
+      return json({ success: true });
+    }
+
+    // ---- Uppslag ----
     let creatorId: string | null = null;
     let isReported = false;
     try {
-      const sbMeta = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const { data: customEx } = await sbMeta
-        .from("custom_exercises")
-        .select("created_by")
-        .ilike("name", cleanName)
-        .maybeSingle();
-      creatorId = customEx?.created_by || null;
-      const { data: reportRow } = await sbMeta
-        .from("exercise_description_reports")
-        .select("id")
-        .eq("exercise_name_lower", cleanName.toLowerCase())
-        .eq("resolved", false)
-        .limit(1)
-        .maybeSingle();
+      const { data: rows } = await sb.from("custom_exercises").select("created_by").ilike("name", cleanName).limit(1);
+      creatorId = rows?.[0]?.created_by || null;
+      const { data: reportRow } = await sb.from("exercise_description_reports").select("id")
+        .eq("exercise_name_lower", cleanName.toLowerCase()).eq("resolved", false).limit(1).maybeSingle();
       isReported = !!reportRow;
     } catch (e) {
       console.error("creator/report lookup failed:", e);
     }
 
-    // 1. Check database for admin-managed mapping first
-    try {
-      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      // Try exact match first, then lowercase match
-      let { data: dbMapping } = await sb
-        .from("exercise_gif_mappings")
-        .select("exercisedb_name, gif_url, custom_instructions")
-        .ilike("exercise_name", cleanName)
-        .maybeSingle();
+    let mapping: MappingRow | null = null;
+    try { mapping = await findMapping(sb, cleanName); } catch (e) { console.error("mapping lookup failed:", e); }
+    const custom = asList(mapping?.custom_instructions);
+    const cachedAi = asList(mapping?.ai_instructions);
 
-      if (!dbMapping) {
-        const res = await sb
-          .from("exercise_gif_mappings")
-          .select("exercisedb_name, gif_url, custom_instructions")
-          .eq("exercise_name_lower", cleanName.toLowerCase())
-          .maybeSingle();
-        dbMapping = res.data;
+    /** AI-förslag: genereras en gång per övning och sparas. */
+    const aiFor = async (prompt: string): Promise<string[]> => {
+      if (isReported) return [];
+      if (cachedAi) return cachedAi;
+      const gen = await generateAIInstructions(prompt);
+      if (gen.length) {
+        try { await upsertMapping(sb, cleanName, { ai_instructions: gen }, user.id); } catch (e) { console.error("cache ai failed:", e); }
       }
+      return gen;
+    };
 
-      if (dbMapping) {
-        const hasCustomInstructions = dbMapping.custom_instructions && Array.isArray(dbMapping.custom_instructions) && dbMapping.custom_instructions.length > 0;
-
-        let exercise: any = null;
-        try {
-          exercise = await searchExerciseDB(dbMapping.exercisedb_name);
-        } catch (e) {
-          console.error("ExerciseDB enrichment failed:", e);
-        }
-
-        let instructions: string[] = [];
-        let aiGen = false;
-        if (hasCustomInstructions) {
-          instructions = dbMapping.custom_instructions as string[];
-        } else if (exercise?.instructions?.length > 0) {
-          instructions = await translateToSwedish(exercise.instructions);
-        } else {
-          const freeResult = await searchFreeExerciseDB(dbMapping.exercisedb_name);
-          if (freeResult?.instructions?.length > 0) {
-            instructions = await translateToSwedish(freeResult.instructions);
-          } else if (!isReported) {
-            instructions = await generateAIInstructions(dbMapping.exercisedb_name + " (" + cleanName + ")");
-            aiGen = instructions.length > 0;
-          }
-        }
-
-        return new Response(JSON.stringify({
-          gifUrl: dbMapping.gif_url || exercise?.gifUrl || null,
-          name: dbMapping.exercisedb_name || exercise?.name || cleanName,
-          instructions: aiGen && isReported ? [] : instructions,
-          targetMuscles: exercise?.targetMuscles || [],
-          equipments: exercise?.equipments || [],
-          adminLinked: true,
-          hasCustomInstructions: !!hasCustomInstructions,
-          aiGenerated: aiGen,
-          creatorId,
-          isReported,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    /** Prioritet: redigerade/godkända > källtext > AI-förslag. */
+    const respond = (obj: Record<string, any>) => {
+      const out: Record<string, any> = { creatorId, isReported, linkedName: mapping?.exercisedb_name && mapping.exercisedb_name !== AUTO_LINK ? mapping.exercisedb_name : null, noLink: mapping?.exercisedb_name === NO_LINK, ...obj };
+      if (custom) {
+        out.instructions = custom;
+        out.hasCustomInstructions = true;
+        out.aiGenerated = false;
+        out.error = null;
       }
-    } catch (e) {
-      console.error("DB mapping lookup failed:", e);
+      return json(out);
+    };
+
+    // 1. Uttrycklig koppling (admin eller användare)
+    if (mapping && mapping.exercisedb_name !== AUTO_LINK) {
+      if (mapping.exercisedb_name === NO_LINK) {
+        const instr = custom ? [] : await aiFor(cleanName);
+        return respond({ gifUrl: null, name: cleanName, instructions: instr, targetMuscles: [], equipments: [], adminLinked: true, aiGenerated: instr.length > 0 });
+      }
+      let exercise: any = null;
+      try { exercise = await searchExerciseDB(mapping.exercisedb_name); } catch (e) { console.error(e); }
+      let instructions: string[] = [];
+      let aiGen = false;
+      if (!custom) {
+        if (exercise?.instructions?.length > 0) instructions = await translateToSwedish(exercise.instructions);
+        else {
+          const free = await searchFreeExerciseDB(mapping.exercisedb_name);
+          if (free?.instructions?.length > 0) instructions = await translateToSwedish(free.instructions);
+          else { instructions = await aiFor(mapping.exercisedb_name + " (" + cleanName + ")"); aiGen = instructions.length > 0; }
+        }
+      }
+      return respond({
+        gifUrl: mapping.gif_url || exercise?.gifUrl || null,
+        name: mapping.exercisedb_name,
+        instructions,
+        targetMuscles: exercise?.targetMuscles || [],
+        equipments: exercise?.equipments || [],
+        adminLinked: true,
+        aiGenerated: aiGen,
+      });
     }
 
-    // 2. Fall back to hardcoded translations
+    // 2. Automatisk sökning
     const searchTerms = getSearchTerms(cleanName);
-
-    // Check if this is a cardio/mobility exercise without GIF support
     if (searchTerms.length === 1 && searchTerms[0] === "_CARDIO_") {
-      return new Response(JSON.stringify({
-        gifUrl: null,
-        name: cleanName,
-        instructions: [],
-        targetMuscles: [],
-        equipments: [],
-        isCardio: true,
-        creatorId,
-        isReported,
-        error: "Konditions- och rörlighetsövningar har ingen GIF-demonstration.",
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond({ gifUrl: null, name: cleanName, instructions: [], targetMuscles: [], equipments: [], isCardio: true, error: "Konditions- och rörlighetsövningar har ingen GIF-demonstration." });
     }
 
-    if (searchTerms.length === 1 && searchTerms[0] === "_NO_GIF_") {
-      const freeResult = await searchFreeExerciseDB(cleanName);
-      if (freeResult) {
-        const instructions = await translateToSwedish(freeResult.instructions || []);
-        return new Response(JSON.stringify({
-          gifUrl: null,
-          imageUrls: freeResult.imageUrls || [],
-          name: freeResult.name,
-          instructions,
-          targetMuscles: freeResult.targetMuscles || [],
-          equipments: freeResult.equipments || [],
-          source: "free-exercise-db",
-          creatorId,
-          isReported,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const aiInstructions = isReported ? [] : await generateAIInstructions(cleanName);
-      return new Response(JSON.stringify({
-        gifUrl: null,
-        name: cleanName,
-        instructions: aiInstructions,
-        targetMuscles: [],
-        equipments: [],
-        aiGenerated: aiInstructions.length > 0,
-        creatorId,
-        isReported,
-        error: aiInstructions.length > 0 ? null : (isReported ? "Beskrivning rapporterad — väntar på admin." : "Denna övning saknar GIF-demonstration."),
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    const noGif = searchTerms.length === 1 && searchTerms[0] === "_NO_GIF_";
     const validTerms = searchTerms.filter(t => t !== "_CARDIO_" && t !== "_NO_GIF_");
 
-    for (const term of validTerms) {
-      const exercise = await searchExerciseDB(term);
-      if (exercise?.gifUrl) {
-        const rawInstructions = exercise.instructions || [];
-        const instructions = await translateToSwedish(rawInstructions);
-        return new Response(JSON.stringify({
-          gifUrl: exercise.gifUrl,
-          name: exercise.name,
-          instructions,
-          targetMuscles: exercise.targetMuscles || [],
-          equipments: exercise.equipments || [],
-          creatorId,
-          isReported,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    if (!noGif) {
+      for (const term of validTerms) {
+        const exercise = await searchExerciseDB(term);
+        if (exercise?.gifUrl) {
+          const instructions = custom ? [] : await translateToSwedish(exercise.instructions || []);
+          return respond({ gifUrl: exercise.gifUrl, name: exercise.name, instructions, targetMuscles: exercise.targetMuscles || [], equipments: exercise.equipments || [] });
+        }
+      }
+    }
+    for (const term of noGif ? [cleanName] : validTerms) {
+      const free = await searchFreeExerciseDB(term);
+      if (free) {
+        const instructions = custom ? [] : await translateToSwedish(free.instructions || []);
+        return respond({ gifUrl: null, imageUrls: free.imageUrls || [], name: free.name, instructions, targetMuscles: free.targetMuscles || [], equipments: free.equipments || [], source: "free-exercise-db" });
       }
     }
 
-    for (const term of validTerms) {
-      const freeResult = await searchFreeExerciseDB(term);
-      if (freeResult) {
-        const instructions = await translateToSwedish(freeResult.instructions || []);
-        return new Response(JSON.stringify({
-          gifUrl: null,
-          imageUrls: freeResult.imageUrls || [],
-          name: freeResult.name,
-          instructions,
-          targetMuscles: freeResult.targetMuscles || [],
-          equipments: freeResult.equipments || [],
-          source: "free-exercise-db",
-          creatorId,
-          isReported,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    const aiInstructions = isReported ? [] : await generateAIInstructions(cleanName);
-    return new Response(JSON.stringify({
+    const ai = custom ? [] : await aiFor(cleanName);
+    return respond({
       gifUrl: null,
       name: cleanName,
-      instructions: aiInstructions,
+      instructions: ai,
       targetMuscles: [],
       equipments: [],
-      aiGenerated: aiInstructions.length > 0,
-      creatorId,
-      isReported,
-      error: aiInstructions.length > 0 ? null : (isReported ? "Beskrivning rapporterad — väntar på admin." : "Exercise not found"),
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      aiGenerated: ai.length > 0,
+      error: ai.length > 0 ? null : (isReported ? "Beskrivning rapporterad — väntar på admin." : "Ingen demonstration hittades."),
     });
   } catch (error) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: "Internal error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "Internal error" }, 500);
   }
 });
