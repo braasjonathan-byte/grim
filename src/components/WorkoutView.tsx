@@ -1163,16 +1163,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const key = `${week}-${day}`;
     const current = completions[key];
     const newDone = !current?.done;
+    // Keep any unsent text from "Skriv en kommentar..." with the workout.
+    const draft = commentInput[key]?.trim();
+    const existingComment = comments[key]?.trim() || "";
+    const finalComment = draft ? (existingComment ? `${existingComment}\n${draft}` : draft) : (comments[key] || "");
+    if (draft) {
+      setComments((prev) => ({ ...prev, [key]: finalComment }));
+      setCommentInput((prev) => ({ ...prev, [key]: "" }));
+    }
 
     setCompletions((prev) => ({
       ...prev,
-      [key]: { ...prev[key], week, day, done: newDone, skipped: false, user_comment: comments[key] || "" }
+      [key]: { ...prev[key], week, day, done: newDone, skipped: false, user_comment: finalComment }
     }));
 
     await safeUpsertCompletion(week, day, {
       done: newDone,
       skipped: false,
-      user_comment: comments[key] || "",
+      user_comment: finalComment,
     });
 
     if (newDone) {
