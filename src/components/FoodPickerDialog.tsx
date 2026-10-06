@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil } from "lucide-react";
+import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic } from "lucide-react";
+import VoiceFoodDialog from "./VoiceFoodDialog";
 import { UNITS, gramsForFood, unitHint, pieceWeightFor, DEFAULT_PIECE_G, naturalUnitsFor } from "@/lib/nutritionCalc";
 
 const LAST_AMOUNT_KEY = "grim_food_last_amount";
@@ -74,6 +75,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState<string>("g");
   const [barcodeOpen, setBarcodeOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [restaurantOpen, setRestaurantOpen] = useState(false);
   const { isHonorary } = useAccessLevel();
@@ -400,7 +402,10 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 rounded-xl bg-muted/50 border-transparent" autoFocus />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 pr-11 rounded-xl bg-muted/50 border-transparent" autoFocus />
+              <button onClick={() => setVoiceOpen(true)} aria-label="Logga med rösten" className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20">
+                <Mic className="w-4 h-4" />
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
               {showPersonal && (
@@ -506,6 +511,11 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         else { setBarcodeOpen(false); onPick(item); }
       }} />
       <ManualFoodDialog open={manualOpen} onOpenChange={setManualOpen} userId={userId} isHonorary={isHonorary} onPick={(item) => { setManualOpen(false); onPick(item); }} />
+      <VoiceFoodDialog open={voiceOpen} onOpenChange={setVoiceOpen} onConfirm={(items) => {
+        items.forEach((it) => onPick(it, { keepOpen: true }));
+        setVoiceOpen(false);
+        onOpenChange(false);
+      }} />
       <RestaurantSearchDialog open={restaurantOpen} onOpenChange={setRestaurantOpen} onPick={(item) => { setRestaurantOpen(false); onPick(item); }} />
     </Dialog>
   );
