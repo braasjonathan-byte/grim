@@ -1,3 +1,4 @@
+import NutritionTrendCard from "./NutritionTrendCard";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -723,6 +724,8 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         </button>
       </div>
 
+
+      <NutritionTrendCard userId={userId} />
 
       {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
 
