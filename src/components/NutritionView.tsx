@@ -696,6 +696,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         currentMealSlots={allSlots}
         currentDayItemsBySlot={Object.fromEntries(allSlots.map((s) => [s, logs.filter((l) => l.meal_type === s)]))}
         onApplied={load}
+        dateKey={dateKey}
       />
       <MealNameDialog
         open={addNameOpen}

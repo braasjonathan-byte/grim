@@ -33,9 +33,11 @@ interface Props {
   currentDayItemsBySlot: Record<string, TemplateItem[]>;
   /** Reload meal logs after applying a template */
   onApplied: () => void;
+  /** Datum som visas i Kost; mallen loggas hit. */
+  dateKey: string;
 }
 
-const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentDayItemsBySlot, onApplied }: Props) => {
+const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentDayItemsBySlot, onApplied, dateKey: targetDateKey }: Props) => {
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
   const [saveMode, setSaveMode] = useState(false);
@@ -109,7 +111,7 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
   }
 
   async function applyTemplate(tpl: MealTemplate, slot: string) {
-    const dateKey = toLocalDateKey(new Date());
+    const dateKey = targetDateKey;
     const rows = tpl.items.map((i) => ({
       user_id: userId,
       log_date: dateKey,
