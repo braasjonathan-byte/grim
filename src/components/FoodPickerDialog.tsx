@@ -1,5 +1,7 @@
 import { useAccessLevel } from "@/hooks/useAccessLevel";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { validateNumber, parseDecimal, UNUSUAL_FOOD_GRAMS } from "@/lib/inputValidation";
+import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
