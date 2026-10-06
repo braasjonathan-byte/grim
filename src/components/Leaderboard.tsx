@@ -92,8 +92,6 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
       {hiddenFromOthers && (
         <p className="text-xs text-muted-foreground">Du syns inte för andra – ändra i Inställningar</p>
       )}
-      <div className="hidden">
-      </div>
 
       {/* Filter controls */}
       <div className="flex items-center justify-between">
