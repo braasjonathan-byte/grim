@@ -168,7 +168,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     setOffLoading(true);
     const t = setTimeout(async () => {
       try {
-        const fields = "code,product_name,product_name_sv,brands,nutriments";
+        const fields = "code,product_name,product_name_sv,brands,nutriments,nova_group";
         // Two parallel queries: free text + brand tag (so svenska varumärken som "Tyngre" hittas)
         const url1 = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=50&sort_by=popularity_key&fields=${fields}`;
         const url2 = `https://world.openfoodfacts.org/cgi/search.pl?action=process&json=1&page_size=50&sort_by=popularity_key&tagtype_0=brands&tag_contains_0=contains&tag_0=${encodeURIComponent(term)}&fields=${fields}`;
