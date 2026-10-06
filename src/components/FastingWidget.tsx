@@ -27,30 +27,29 @@ function fmt(ms: number) {
 }
 
 export default function FastingWidget({ userId }: { userId: string }) {
-  const [hidden, setHidden] = useState<boolean | null>(null);
+  const [enabled, setEnabled] = useState<boolean>(isFastingEnabled());
   const [session, setSession] = useState<Session | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [schedule, setSchedule] = useState("16:8");
   const [customH, setCustomH] = useState("14");
   const [now, setNow] = useState(Date.now());
   const { toast } = useToast();
 
   useEffect(() => {
+    const onChange = () => setEnabled(isFastingEnabled());
+    window.addEventListener(FASTING_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(FASTING_CHANGED_EVENT, onChange);
+  }, []);
+
+  useEffect(() => {
     (async () => {
-      const [p, s] = await Promise.all([
-        supabase.from("profiles").select("fasting_widget_hidden").eq("user_id", userId).maybeSingle(),
-        supabase.from("fasting_sessions").select("*").eq("user_id", userId).order("start_time", { ascending: false }).limit(1).maybeSingle(),
-      ]);
-      setHidden(!!p.data?.fasting_widget_hidden);
+      const s = await supabase.from("fasting_sessions").select("*").eq("user_id", userId).order("start_time", { ascending: false }).limit(1).maybeSingle();
       if (s.data) { setSession(s.data as Session); setSchedule(s.data.schedule_type); if (!SCHEDULES[s.data.schedule_type]) setCustomH(String(s.data.target_hours)); }
+      setLoaded(true);
     })();
   }, [userId]);
 
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
-
-  async function setHiddenPref(v: boolean) {
-    setHidden(v);
-    await supabase.from("profiles").update({ fasting_widget_hidden: v }).eq("user_id", userId);
-  }
 
   const targetHours = SCHEDULES[schedule] ?? Math.min(23, Math.max(1, parseFloat(customH.replace(",", ".")) || 14));
 
