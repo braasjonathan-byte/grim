@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { showUndoToast } from "@/lib/undoToast";
+import { PastWorkoutsDialog, DeleteWorkoutConfirm } from "@/components/workout/WorkoutHistoryDialogs";
+import { WORKOUTS_CHANGED_EVENT, notifyWorkoutsChanged } from "@/lib/workoutHistory";
 import SetRowsEditor, { validateSetRows, type SetRow } from "@/components/workout/SetRowsEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus } from "@/hooks/useOfflineSync";
@@ -2389,17 +2391,35 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     triggerSave();
   };
 
+  const [deleteWorkoutAsk, setDeleteWorkoutAsk] = useState<PlanDay | null>(null);
+  const [showPastWorkouts, setShowPastWorkouts] = useState(false);
+  useEffect(() => {
+    const refresh = () => fetchData();
+    window.addEventListener(WORKOUTS_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(WORKOUTS_CHANGED_EVENT, refresh);
+  }, [fetchData]);
+
   const deleteSingleWorkout = async (plan: PlanDay) => {
-    if (!confirm("Ta bort detta pass?")) return;
+    setDeleteWorkoutAsk(plan);
+  };
+
+  const performDeleteSingleWorkout = async (plan: PlanDay) => {
     if (plan.id) {
+      const { data: compRows } = await supabase.from("workout_completions").select("*")
+        .eq("user_id", userId).eq("week", plan.week).eq("day", plan.day);
+      const { data: postRows } = await supabase.from("social_posts").select("*")
+        .eq("user_id", userId).eq("workout_week", plan.week).eq("workout_day", plan.day);
       await supabase.from("workout_plans").delete().eq("id", plan.id);
       await supabase.from("workout_completions").delete().
       eq("user_id", userId).
       eq("week", plan.week).
       eq("day", plan.day);
-      fetchData();
+      await supabase.from("social_posts").delete().eq("user_id", userId).eq("workout_week", plan.week).eq("workout_day", plan.day);
+      notifyWorkoutsChanged(userId);
       const snapshot = plan;
       showUndoToast("Pass borttaget", async () => {
+        if (compRows?.length) await supabase.from("workout_completions").insert(compRows as any);
+        if (postRows?.length) await supabase.from("social_posts").insert(postRows as any);
         await supabase.from("workout_plans").insert({
           user_id: userId,
           week: snapshot.week,
@@ -2409,7 +2429,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           tempo: snapshot.tempo ?? null,
           is_circuit: (snapshot as any).is_circuit ?? false,
         });
-        fetchData();
+        notifyWorkoutsChanged(userId);
       });
     }
   };
@@ -3670,6 +3690,22 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     </div>
   ) : null;
 
+  const pastWorkoutsUi = (
+    <>
+      <button type="button" onClick={() => setShowPastWorkouts(true)} className="w-full flex items-center justify-between rounded-2xl bg-card shadow-soft border border-border/40 px-4 py-3 text-sm font-semibold">
+        <span>📖 Tidigare pass</span><ChevronRight className="w-4 h-4 text-muted-foreground" />
+      </button>
+      <PastWorkoutsDialog userId={userId} open={showPastWorkouts} onClose={() => setShowPastWorkouts(false)} />
+      <DeleteWorkoutConfirm
+        open={!!deleteWorkoutAsk}
+        name={deleteWorkoutAsk?.session_name || "Pass"}
+        date={deleteWorkoutAsk && /^\d{4}-\d{2}-\d{2}/.test(deleteWorkoutAsk.day) ? deleteWorkoutAsk.day.slice(0, 10) : null}
+        onCancel={() => setDeleteWorkoutAsk(null)}
+        onConfirm={() => { const p = deleteWorkoutAsk; setDeleteWorkoutAsk(null); if (p) performDeleteSingleWorkout(p); }}
+      />
+    </>
+  );
+
   if (mode === "loading") {
     return (
       <div>
@@ -3711,6 +3747,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-6 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
         {startPlanDialog}
         <div className="text-center space-y-2">
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
@@ -3765,6 +3802,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
         <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); setPlanStartDate(null); setActivePlanWeek(1); fetchData(); }} />
       </div>
     );
@@ -3858,6 +3896,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
         {startPlanDialog}
         {singlePlans.length === 0 && (
           <button
@@ -5613,6 +5652,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     <div className="space-y-4">
       {adminBanner}
         {offlineBanner}
+        {pastWorkoutsUi}
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
 
