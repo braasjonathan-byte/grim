@@ -1250,13 +1250,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
       // Prepare the share dialog; it opens once the celebration is dismissed.
       offerShare(week, day, true);
-      checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: comments[key] || "" } });
+      checkAchievementUnlocks({ ...completions, [key]: { ...current, week, day, done: true, skipped: false, user_comment: finalComment } });
 
 
       if (week > 0) {
         const weekPlans = plans.filter((p) => p.week === week);
         const scheduledPlans = weekPlans.filter((p) => p.session_name.trim() !== "" && p.details.trim() !== "");
-        const updatedCompletions = { ...completions, [key]: { week, day, done: true, skipped: false, user_comment: comments[key] || "" } };
+        const updatedCompletions = { ...completions, [key]: { week, day, done: true, skipped: false, user_comment: finalComment } };
         const allDone = scheduledPlans.length > 0 && scheduledPlans.every((p) => {
           const k = `${p.week}-${p.day}`;
           return updatedCompletions[k]?.done;
