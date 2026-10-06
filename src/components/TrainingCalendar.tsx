@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import EmptyState from "./EmptyState";
 import { isCompletedWorkout } from "@/lib/completionCounting";
+import { PastWorkoutsDialog } from "@/components/workout/WorkoutHistoryDialogs";
+import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 
 interface TrainingCalendarProps {
   userId: string;
@@ -124,6 +126,14 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set());
   const [dayStats, setDayStats] = useState<Record<string, DayStats>>({});
   const [activeDate, setActiveDate] = useState<string | null>(null);
+  const [openDate, setOpenDate] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  useEffect(() => {
+    const bump = () => setReloadKey((k) => k + 1);
+    window.addEventListener(WORKOUTS_CHANGED_EVENT, bump);
+    return () => window.removeEventListener(WORKOUTS_CHANGED_EVENT, bump);
+  }, []);
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [year, setYear] = useState(() => new Date().getFullYear());
 
@@ -228,7 +238,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
     };
 
     load();
-  }, [userId]);
+  }, [userId, reloadKey]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1);
@@ -261,7 +271,9 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
       <div className="flex items-center gap-2">
         <CalendarDays className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-bold tracking-tight">Träningskalender</h3>
+        <button type="button" onClick={() => setShowAll(true)} className="ml-auto text-xs font-semibold text-primary">Tidigare pass</button>
       </div>
+      <PastWorkoutsDialog userId={userId} open={showAll || !!openDate} onlyDate={showAll ? null : openDate} onClose={() => { setShowAll(false); setOpenDate(null); setActiveDate(null); }} />
 
       <div className="rounded-2xl p-4 bg-card shadow-soft border border-border/40">
         <div className="flex items-center justify-between mb-3">
@@ -325,7 +337,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
               </div>
             );
 
-            if (!hasStats) {
+            if (!hasStats && !isDone) {
               return (
                 <div key={dateStr} className="aspect-square flex items-center justify-center">
                   {cell}
@@ -337,12 +349,12 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
               <button
                 key={dateStr}
                 type="button"
-                onClick={() => setActiveDate(isActive ? null : dateStr)}
-                aria-label={`${date.getDate()} ${MONTH_NAMES[month]}: ${stats!.sets} set${stats!.volume > 0 ? `, ${formatVolume(stats!.volume)}` : ""}`}
+                onClick={() => { setActiveDate(dateStr); setOpenDate(dateStr); }}
+                aria-label={`${date.getDate()} ${MONTH_NAMES[month]}: visa pass`}
                 className="group relative aspect-square flex items-center justify-center"
               >
                 {cell}
-                <span
+                {hasStats && <span
                   className={`pointer-events-none absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full z-20 whitespace-nowrap rounded-lg bg-foreground text-background text-[10px] font-semibold px-2 py-1 shadow-soft transition-opacity ${
                     isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                   }`}
@@ -350,7 +362,7 @@ const TrainingCalendar = ({ userId }: TrainingCalendarProps) => {
                   {stats!.sets > 0 ? `${stats!.sets} set` : ""}
                   {stats!.sets > 0 && stats!.volume > 0 ? " · " : ""}
                   {stats!.volume > 0 ? formatVolume(stats!.volume) : ""}
-                </span>
+                </span>}
               </button>
             );
           })}
