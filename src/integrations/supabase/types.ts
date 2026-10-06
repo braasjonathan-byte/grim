@@ -1138,6 +1138,27 @@ export type Database = {
         }
         Relationships: []
       }
+      muted_users: {
+        Row: {
+          created_at: string
+          id: string
+          muted_user_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          muted_user_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          muted_user_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notification_log: {
         Row: {
           created_at: string
@@ -1294,6 +1315,44 @@ export type Database = {
         }
         Relationships: []
       }
+      post_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          post_id: string | null
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          post_id?: string | null
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          post_id?: string | null
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "social_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pr_goals: {
         Row: {
           created_at: string
@@ -1372,8 +1431,10 @@ export type Database = {
       profiles: {
         Row: {
           age: number | null
+          auto_share_workouts: string
           avatar_url: string | null
           created_at: string
+          default_post_visibility: string
           deletion_scheduled_at: string | null
           display_title: string | null
           experience_level: string | null
@@ -1391,6 +1452,8 @@ export type Database = {
           protein_bars: number
           referral_code: string | null
           referred_by: string | null
+          share_plan_with_friends: boolean
+          show_on_leaderboard: boolean
           snapchat: string | null
           spotify_anthem_name: string | null
           spotify_anthem_url: string | null
@@ -1405,8 +1468,10 @@ export type Database = {
         }
         Insert: {
           age?: number | null
+          auto_share_workouts?: string
           avatar_url?: string | null
           created_at?: string
+          default_post_visibility?: string
           deletion_scheduled_at?: string | null
           display_title?: string | null
           experience_level?: string | null
@@ -1424,6 +1489,8 @@ export type Database = {
           protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null
+          share_plan_with_friends?: boolean
+          show_on_leaderboard?: boolean
           snapchat?: string | null
           spotify_anthem_name?: string | null
           spotify_anthem_url?: string | null
@@ -1438,8 +1505,10 @@ export type Database = {
         }
         Update: {
           age?: number | null
+          auto_share_workouts?: string
           avatar_url?: string | null
           created_at?: string
+          default_post_visibility?: string
           deletion_scheduled_at?: string | null
           display_title?: string | null
           experience_level?: string | null
@@ -1457,6 +1526,8 @@ export type Database = {
           protein_bars?: number
           referral_code?: string | null
           referred_by?: string | null
+          share_plan_with_friends?: boolean
+          show_on_leaderboard?: boolean
           snapchat?: string | null
           spotify_anthem_name?: string | null
           spotify_anthem_url?: string | null
@@ -2755,6 +2826,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      shares_plan_with_friends: { Args: { _user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }

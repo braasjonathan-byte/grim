@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, X, KeyRound } from "lucide-react";
 
@@ -9,6 +9,7 @@ interface ChangePasswordProps {
 }
 
 const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => {
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -16,10 +17,21 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (forced) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [forced, onClose]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
+    if (!currentPassword) {
+      setError("Ange ditt nuvarande lösenord.");
+      return;
+    }
     if (newPassword.length < 8) {
       setError("Lösenord måste vara minst 8 tecken");
       return;
@@ -34,6 +46,21 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
     }
 
     setLoading(true);
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser?.email) {
+      setError("Kunde inte verifiera inloggningen. Logga in igen.");
+      setLoading(false);
+      return;
+    }
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: authUser.email,
+      password: currentPassword,
+    });
+    if (verifyError) {
+      setError("Fel nuvarande lösenord.");
+      setLoading(false);
+      return;
+    }
     const { error: updateError } = await supabase.auth.updateUser({
       password: newPassword,
     });
@@ -84,6 +111,20 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Nuvarande lösenord</label>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="••••••"
+                maxLength={50}
+                autoComplete="current-password"
+                className="w-full bg-secondary text-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+                autoFocus
+              />
+            </div>
+
+            <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nytt lösenord</label>
               <div className="relative">
                 <input
@@ -92,8 +133,8 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••"
                   maxLength={50}
+                  autoComplete="new-password"
                   className="w-full bg-secondary text-foreground text-base p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground pr-12"
-                  autoFocus
                 />
                 <button
                   type="button"
@@ -106,7 +147,7 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
             </div>
 
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Bekräfta lösenord</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Bekräfta nytt lösenord</label>
               <input
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
@@ -126,6 +167,16 @@ const ChangePassword = ({ onClose, onChanged, forced }: ChangePasswordProps) => 
             >
               {loading ? "Sparar..." : "Byt lösenord"}
             </button>
+            {!forced && (
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="w-full py-3 bg-secondary text-foreground font-semibold rounded-lg hover:bg-muted transition-colors"
+              >
+                Avbryt
+              </button>
+            )}
           </form>
         )}
       </div>

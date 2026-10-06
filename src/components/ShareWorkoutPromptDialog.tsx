@@ -9,7 +9,8 @@ interface ShareWorkoutPromptDialogProps {
   loading?: boolean;
   nickname?: string | null;
   avatarUrl?: string | null;
-  onConfirm: (caption: string, newTitle?: string) => void | Promise<void>;
+  defaultVisibility?: "friends" | "public";
+  onConfirm: (caption: string, newTitle: string | undefined, visibility: "friends" | "public") => void | Promise<void>;
   onSkip: () => void;
 }
 
@@ -17,10 +18,11 @@ interface ShareWorkoutPromptDialogProps {
 //   "🏋️ Pass – Vecka 3 · 5 jun"  or  "🏋️ Pass · 5 jun"
 const MISSING_TITLE_RE = /^(🏋️\s+)Pass(\s+[–·])/;
 
-const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, avatarUrl, onConfirm, onSkip }: ShareWorkoutPromptDialogProps) => {
+const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, avatarUrl, defaultVisibility = "friends", onConfirm, onSkip }: ShareWorkoutPromptDialogProps) => {
   const [caption, setCaption] = useState(initialCaption || "");
   const [title, setTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [visibility, setVisibility] = useState<"friends" | "public">(defaultVisibility);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -28,8 +30,9 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
       setCaption(initialCaption || "");
       setTitle("");
       setSubmitting(false);
+      setVisibility(defaultVisibility);
     }
-  }, [open, initialCaption]);
+  }, [open, initialCaption, defaultVisibility]);
 
   // Keep caption in sync if it loads asynchronously
   useEffect(() => {
@@ -54,7 +57,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
     if (needsTitle && !title.trim()) return;
     setSubmitting(true);
     try {
-      await onConfirm(finalCaption.trim(), needsTitle ? title.trim() : undefined);
+      await onConfirm(finalCaption.trim(), needsTitle ? title.trim() : undefined, visibility);
     } finally {
       setSubmitting(false);
     }
@@ -71,7 +74,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
             <Share2 className="w-5 h-5 text-primary" /> Dela passet?
           </DialogTitle>
           <DialogDescription>
-            Redigera inlägget nedan innan du publicerar det för dina vänner.
+            Inget publiceras om du inte trycker Dela.
           </DialogDescription>
         </DialogHeader>
 
@@ -111,7 +114,7 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
                       {initial}
                     </div>
                   )}
-                  <span className="text-[11px] text-muted-foreground">{nickname || "Du"} · vänner</span>
+                  <span className="text-[11px] text-muted-foreground">{nickname || "Du"}</span>
                 </div>
               </div>
               <textarea
@@ -126,10 +129,26 @@ const ShareWorkoutPromptDialog = ({ open, initialCaption, loading, nickname, ava
           </>
         )}
 
+        {!loading && (
+          <div className="flex gap-2" role="radiogroup" aria-label="Synlighet">
+            {([["friends", "👫 Bara vänner"], ["public", "🌍 Alla"]] as const).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                role="radio"
+                aria-checked={visibility === v}
+                onClick={() => setVisibility(v)}
+                className={`flex-1 rounded-xl border px-3 py-2 text-sm ${visibility === v ? "border-primary bg-primary/10 font-semibold" : "border-border text-muted-foreground"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex flex-col gap-2 mt-2">
           <Button onClick={handleConfirm} className="w-full" disabled={submitting || loading || !finalCaption.trim() || titleMissing}>
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-            {titleMissing ? "Ange passnamn för att publicera" : "Publicera för vänner"}
+            {titleMissing ? "Ange passnamn för att publicera" : "Dela"}
           </Button>
           <Button variant="outline" onClick={onSkip} className="w-full" disabled={submitting}>
             <X className="w-4 h-4" /> Nej tack
