@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { parseNum } from "@/lib/inputValidation";
 import {
   summarizeCompletion,
   formatCardioDistance,
@@ -124,15 +125,15 @@ export function buildWorkoutSummaryCaption(
             const done = setsStr
               ? data.filter((_: any, i: number) => setsStr[i] === "1")
               : data.filter(
-                  (s: any) => (parseFloat(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0
+                  (s: any) => (parseNum(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0
                 );
             if (done.length > 0) {
               if (!hadSetsMarkers) completedSets += done.length;
               done.forEach((s: any) => {
-                totalVolume += (parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0);
+                totalVolume += (parseNum(s.kg) || 0) * (parseInt(s.reps) || 0);
               });
               const normalized = done.map((s: any) => ({
-                kg: parseFloat(s.kg) || 0,
+                kg: parseNum(s.kg) || 0,
                 reps: parseInt(s.reps) || 0,
               }));
               const hasWeight = normalized.some((s) => s.kg > 0);

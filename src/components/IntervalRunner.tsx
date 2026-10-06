@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { CapacitorHttp } from "@capacitor/core";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -583,7 +584,7 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
   const effective = (() => {
     if (hasPreset) {
       return presetIntervals!.map((r) => {
-        const tMin = parseFloat(r.time) || 0;
+        const tMin = parseNum(r.time) || 0;
         const dKm = parseFloat((r.dist || "").replace(",", ".")) || 0;
         const tempoStr = (r.tempo || "").trim();
         let durSec = Math.round(tMin * 60);
@@ -910,11 +911,11 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Antal intervaller</Label>
-                  <Input type="number" min={1} max={30} value={numIntervals} onChange={(e) => setNumIntervals(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} />
+                  <Input type="text" inputMode="decimal" min={1} max={30} value={numIntervals} onChange={(e) => setNumIntervals(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} />
                 </div>
                 <div>
                   <Label className="text-xs">{UNIT_LABELS[unit]} / intervall</Label>
-                  <Input type="number" min={1} step={unit === "distance_km" ? 0.1 : 1} value={unitValue} onChange={(e) => setUnitValue(Math.max(1, parseFloat(e.target.value) || 1))} />
+                  <Input type="text" min={1} step={unit === "distance_km" ? 0.1 : 1} value={unitValue} onChange={(e) => setUnitValue(Math.max(1, parseNum(e.target.value) || 1))} />
                 </div>
                 {(unit === "distance_km" || unit === "distance_m") && (
                   <div>
@@ -931,15 +932,15 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
                 )}
                 <div>
                   <Label className="text-xs">Vila (sek)</Label>
-                  <Input type="number" min={0} step={5} value={restSec} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setRestSec(n); }} />
+                  <Input type="text" inputMode="decimal" min={0} step={5} value={restSec} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setRestSec(n); }} />
                 </div>
                 <div>
                   <Label className="text-xs">Uppvärmning (min)</Label>
-                  <Input type="number" min={0} value={warmupMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setWarmupMin(n); }} />
+                  <Input type="text" min={0} value={warmupMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setWarmupMin(n); }} />
                 </div>
                 <div>
                   <Label className="text-xs">Nedvarvning (min)</Label>
-                  <Input type="number" min={0} value={cooldownMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setCooldownMin(n); }} />
+                  <Input type="text" inputMode="decimal" min={0} value={cooldownMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setCooldownMin(n); }} />
                 </div>
                 {profile.supportsGps && (
                   <div className="col-span-2 flex items-center gap-2">
@@ -977,11 +978,11 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Vila (sek)</Label>
-                  <Input type="number" min={0} step={5} value={restSec} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setRestSec(n); }} />
+                  <Input type="text" inputMode="decimal" min={0} step={5} value={restSec} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setRestSec(n); }} />
                 </div>
                 <div>
                   <Label className="text-xs">Uppvärmning (min)</Label>
-                  <Input type="number" min={0} value={warmupMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setWarmupMin(n); }} />
+                  <Input type="text" min={0} value={warmupMin} onChange={(e) => { const n = Math.max(0, parseInt(e.target.value) || 0); if (e.target.value !== String(n)) e.target.value = String(n); setWarmupMin(n); }} />
                 </div>
               </div>
             </div>

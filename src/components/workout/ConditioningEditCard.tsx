@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { format } from "date-fns";
 import { Check, ChevronDown, ChevronUp, Footprints, Info, Pencil, Play, X } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
@@ -52,7 +53,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const initTempo = savedData?.tempo || planCondTempo || "";
   const initPulse = savedData?.pulse || planCondPulse || "";
 
-  const totalMin = parseFloat(initTime) || 0;
+  const totalMin = parseNum(initTime) || 0;
   const [hours, setHours] = useState(() => { const h = Math.floor(totalMin / 60); return h > 0 ? String(h) : ""; });
   const [minutes, setMinutes] = useState(() => { const m = Math.floor(totalMin % 60); return totalMin > 0 ? String(m) : ""; });
   const [seconds, setSeconds] = useState(() => { const s = Math.round((totalMin % 1) * 60); return s > 0 ? String(s) : ""; });
@@ -194,7 +195,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     if (route.length > 1) data.route = route;
     // Auto-calc tempo if time + dist (only for linked modes)
     if (tempoIsLinked && data.time && data.dist && !data.tempo) {
-      const tVal = parseFloat(data.time);
+      const tVal = parseNum(data.time);
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
         if (bikeMode === "kmh") {
@@ -359,15 +360,15 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
           <div className="grid grid-cols-3 gap-2">
             <div className="min-w-0">
-              <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <input type="text" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
               <span className={condUnitCls}>tim</span>
             </div>
             <div className="min-w-0">
-              <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <input type="text" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
               <span className={condUnitCls}>min</span>
             </div>
             <div className="min-w-0">
-              <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
+              <input type="text" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
               <span className={condUnitCls}>sek</span>
             </div>
           </div>
@@ -389,19 +390,19 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           {showDistance && (
             <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Distans ({distUnit})</label>
-              <input type="number" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || (distUnit === "m" ? "400" : "5.0")} className={condInputCls} />
+              <input type="text" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || (distUnit === "m" ? "400" : "5.0")} className={condInputCls} />
             </div>
           )}
         </div>
         <div className={`grid gap-2 ${showElevation ? "grid-cols-2" : "grid-cols-1"}`}>
           <div className="min-w-0">
             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Snittspuls (bpm)</label>
-            <input type="number" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className={condInputCls} />
+            <input type="text" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className={condInputCls} />
           </div>
           {showElevation && (
             <div className="min-w-0">
               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Höjdmeter (m)</label>
-              <input type="number" inputMode="numeric" value={elevation} onChange={(e) => setElevation(e.target.value)} placeholder="t.ex. 211" className={condInputCls} />
+              <input type="text" inputMode="numeric" value={elevation} onChange={(e) => setElevation(e.target.value)} placeholder="t.ex. 211" className={condInputCls} />
             </div>
           )}
         </div>
@@ -431,11 +432,11 @@ export const ConditioningHMSInput = ({ initialH, initialM, initialS, onSave }: {
   const inputCls = "w-12 bg-primary/10 text-foreground text-xs px-1 py-1.5 rounded-md border border-primary/20 outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal";
   return (
     <div className="flex items-center gap-1">
-      <input type="number" inputMode="numeric" min="0" value={h} onChange={(e) => { setH(e.target.value); save(e.target.value, m, s); }} placeholder="0" className={inputCls} />
+      <input type="text" inputMode="numeric" min="0" value={h} onChange={(e) => { setH(e.target.value); save(e.target.value, m, s); }} placeholder="0" className={inputCls} />
       <span className="text-[10px] text-muted-foreground font-medium">h</span>
-      <input type="number" inputMode="numeric" min="0" max="59" value={m} onChange={(e) => { setM(e.target.value); save(h, e.target.value, s); }} placeholder="0" className={inputCls} />
+      <input type="text" inputMode="numeric" min="0" max="59" value={m} onChange={(e) => { setM(e.target.value); save(h, e.target.value, s); }} placeholder="0" className={inputCls} />
       <span className="text-[10px] text-muted-foreground font-medium">m</span>
-      <input type="number" inputMode="numeric" min="0" max="59" value={s} onChange={(e) => { setS(e.target.value); save(h, m, e.target.value); }} placeholder="0" className={inputCls} />
+      <input type="text" inputMode="numeric" min="0" max="59" value={s} onChange={(e) => { setS(e.target.value); save(h, m, e.target.value); }} placeholder="0" className={inputCls} />
       <span className="text-[10px] text-muted-foreground font-medium">s</span>
     </div>
   );

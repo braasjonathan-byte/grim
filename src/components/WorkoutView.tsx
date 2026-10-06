@@ -1,4 +1,5 @@
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
+import { parseNum } from "@/lib/inputValidation";
 import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -597,7 +598,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         if (!(data as any).plan_start_calibrated) {
           setNeedsCalibration(true);
         }
-        if ((data as any).weight_kg) setProfileWeight(parseFloat((data as any).weight_kg));
+        if ((data as any).weight_kg) setProfileWeight(parseNum((data as any).weight_kg));
         if (data.gender) setProfileGender(data.gender);
         if (data.age) setProfileAge(data.age);
       }
@@ -3203,7 +3204,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     // Propagate to future weeks on same weekday
     if (propagate && mode === "plan" && plan.week > 0) {
       const futurePlans = plans.filter(p => p.day === plan.day && p.week > plan.week);
-      const baseWeight = w ? parseFloat(w) : 0;
+      const baseWeight = w ? parseNum(w) : 0;
       const repsNum = reps;
       const step = repsNum <= 3 ? 5 : repsNum <= 8 ? 2.5 : 1.25;
 
@@ -3953,7 +3954,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         const displayCondDist = condSavedInline?.dist || planCondDist;
                         let displayCondTempo = condSavedInline?.tempo || planCondTempo;
                         if (!displayCondTempo && displayCondTime && displayCondDist) {
-                          const t = parseFloat(displayCondTime);
+                          const t = parseNum(displayCondTime);
                           const d = parseFloat(String(displayCondDist).replace(",", "."));
                           if (t > 0 && d > 0) {
                             const tempoMin = t / d;
@@ -3975,7 +3976,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             }
                             const updated = { ...currentData, [field]: value };
                             if (field === "time" || field === "dist") {
-                              const t2 = parseFloat(field === "time" ? value : updated.time || "0");
+                              const t2 = parseNum(field === "time" ? value : updated.time || "0");
                               const d2 = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
                               if (t2 > 0 && d2 > 0) {
                                 const tm = t2 / d2;
@@ -4077,15 +4078,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
-                                    <input type="number" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                    <input type="text" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                                   </div>
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
-                                    <input type="number" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                    <input type="text" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                                   </div>
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
-                                    <input type="number" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                                    <input type="text" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -4152,9 +4153,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 const lastW = findLastWeight(name);
                                 const lastKg = lastW ? { kg: lastW.replace(/\s*kg.*/, '').replace(/.*@\s*/, '').trim(), reps: lastW.match(/\((\d+)\s*reps\)/)?.[1] || null } : null;
                                 if (!lastKg || !lastKg.kg) return null;
-                                const hasCurrentData = getSetData(key, name).some(s => s.kg && parseFloat(s.kg) !== 0);
+                                const hasCurrentData = getSetData(key, name).some(s => s.kg && parseNum(s.kg) !== 0);
                                 if (hasCurrentData) return null;
-                                const kgVal = parseFloat(lastKg.kg);
+                                const kgVal = parseNum(lastKg.kg);
                                 const isNegative = kgVal < 0;
                                 const effectiveKg = isNegative && profileWeight ? profileWeight + kgVal : null;
                                 return (
@@ -4201,7 +4202,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           </SwipeableSetRow>
 
                                           {(() => {
-                                            const currentKg = parseFloat(saved?.kg || defaultKg);
+                                            const currentKg = parseNum(saved?.kg || defaultKg);
                                             if (!isNaN(currentKg) && currentKg < 0) {
                                               if (profileWeight) {
                                                 return <p className="text-[9px] text-muted-foreground pl-8 -mt-0.5">= {Math.round((profileWeight + currentKg) * 10) / 10} kg effektiv</p>;
@@ -4348,9 +4349,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 let lineDist = 0;
                                 if (intervals.length > 0) {
                                   for (const iv of intervals) {
-                                    const d = parseFloat(iv.dist) || 0;
+                                    const d = parseNum(iv.dist) || 0;
                                     if (d > 0) { lineDist += d; continue; }
-                                    const t = parseFloat(iv.time) || 0;
+                                    const t = parseNum(iv.time) || 0;
                                     const tp = iv.tempo;
                                     if (t > 0 && tp) {
                                       const pair = String(tp).match(/^(\d+)[:\.](\d+)$/);
@@ -4362,10 +4363,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     }
                                   }
                                 } else {
-                                  const dd = parseFloat(data.dist) || 0;
+                                  const dd = parseNum(data.dist) || 0;
                                   if (dd > 0) { lineDist = dd; }
                                   else {
-                                    const tt = parseFloat(data.time) || 0;
+                                    const tt = parseNum(data.time) || 0;
                                     const tpd = data.tempo;
                                     if (tt > 0 && tpd) {
                                       const pair = String(tpd).match(/^(\d+)[:\.](\d+)$/);
@@ -4391,9 +4392,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 const intervals = Array.isArray(data.intervals) ? data.intervals : [];
                                 let lineDist = 0;
                                 for (const iv of intervals) {
-                                  const d = parseFloat(iv.dist) || 0;
+                                  const d = parseNum(iv.dist) || 0;
                                   if (d > 0) { lineDist += d; continue; }
-                                  const t = parseFloat(iv.time) || 0;
+                                  const t = parseNum(iv.time) || 0;
                                   const tp = iv.tempo;
                                   if (t > 0 && tp) {
                                     const pair = String(tp).match(/^(\d+)[:\.](\d+)$/);
@@ -4446,7 +4447,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Set</label>
                               <input
-                                type="number"
+                                type="text"
                                 inputMode="numeric"
                                 min="1"
                                 value={setsInput}
@@ -4456,7 +4457,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
                               <input
-                                type="number"
+                                type="text"
                                 inputMode="numeric"
                                 min="1"
                                 value={repsInput}
@@ -4538,11 +4539,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Antal intervaller</label>
-                              <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vila (min)</label>
-                              <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </div>
                         )}
@@ -4553,15 +4554,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
                             <div className="grid grid-cols-3 gap-2">
                               <div className="min-w-0">
-                                <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <input type="text" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className={condInputCls} />
                                 <span className={condUnitCls}>tim</span>
                               </div>
                               <div className="min-w-0">
-                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <input type="text" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className={condInputCls} />
                                 <span className={condUnitCls}>min</span>
                               </div>
                               <div className="min-w-0">
-                                <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className={condInputCls} />
+                                <input type="text" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className={condInputCls} />
                                 <span className={condUnitCls}>sek</span>
                               </div>
                             </div>
@@ -4569,7 +4570,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                               <div>
                                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
-                                <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                <input type="text" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               </div>
                             </div>
                             {(() => {
@@ -4587,7 +4588,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             })()}
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                              <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </>
                         ) : conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (parseInt(condIntervalsInput) || 0) > 0 ? (
@@ -5019,13 +5020,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
-                  <input type="number" inputMode="numeric" min="5" max="300" value={singleCircuitSeconds} onChange={(e) => setSingleCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <input type="text" inputMode="numeric" min="5" max="300" value={singleCircuitSeconds} onChange={(e) => setSingleCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                   <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
-                  <input type="number" inputMode="numeric" min="1" max="20" value={singleCircuitRounds} onChange={(e) => setSingleCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <input type="text" inputMode="numeric" min="1" max="20" value={singleCircuitRounds} onChange={(e) => setSingleCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
-                  <input type="number" inputMode="numeric" min="0" max="300" value={singleCircuitRest} onChange={(e) => setSingleCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                  <input type="text" inputMode="numeric" min="0" max="300" value={singleCircuitRest} onChange={(e) => setSingleCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                   <span className="text-xs text-muted-foreground">sek</span>
                 </div>
               </div>
@@ -6066,7 +6067,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       {Array.from({ length: activeCount }, (_, ii) => {
                                         const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
                                          const rowTempo = normalizeTempoInput(row.tempo || "");
-                                        const rowTime = parseFloat(row.time) || 0;
+                                        const rowTime = parseNum(row.time) || 0;
                                         let rowDist = '';
                                         if (rowTempo && rowTime > 0) {
                                           const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
@@ -6110,7 +6111,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                               onSave={(v) => {
                                                 const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
                                                 arr[ii] = { ...arr[ii], time: v };
-                                                const t = parseFloat(v) || 0;
+                                                const t = parseNum(v) || 0;
                                                 const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
                                                 const ts = arr[ii].tempo?.match(/^(\d+)$/);
                                                 let mpk = 0;
@@ -6138,7 +6139,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                 }
                                                 // Auto-calc dist for all rows with tempo + time
                                                 for (let j = 0; j < arr.length; j++) {
-                                                  const rt = parseFloat(arr[j].time) || 0;
+                                                  const rt = parseNum(arr[j].time) || 0;
                                                   const tm2 = arr[j].tempo?.match(/^(\d+)[:\.](\d+)$/);
                                                   const ts2 = arr[j].tempo?.match(/^(\d+)$/);
                                                   let mpk2 = 0;
@@ -6164,8 +6165,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         for (let ii = 0; ii < activeCount; ii++) {
                                           const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
                                           const rowTempo = row.tempo;
-                                          const rowTime = parseFloat(row.time) || 0;
-                                          let rd = parseFloat(row.dist) || 0;
+                                          const rowTime = parseNum(row.time) || 0;
+                                          let rd = parseNum(row.dist) || 0;
                                           if (!rd && rowTempo && rowTime > 0) {
                                             const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
                                             const tSingle = rowTempo.match(/^(\d+)$/);
@@ -6527,17 +6528,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         <div>
                                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
                             <div className="flex items-center gap-1">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               <span className="text-[10px] text-muted-foreground font-medium">h</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               <span className="text-[10px] text-muted-foreground font-medium">m</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               <span className="text-[10px] text-muted-foreground font-medium">s</span>
                             </div>
                                         </div>
                                         <div>
                                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
-                                          <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                          <input type="text" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                         </div>
                                       </div>
                                       {(() => {
@@ -6555,7 +6556,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       })()}
                                       <div>
                                         <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                                        <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                                        <input type="text" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                                       </div>
                                     </>
                                   ) : (
@@ -6733,7 +6734,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               try {
                                 const data = typeof val === 'string' ? JSON.parse(val) : val;
                                 if (data.tempo || data.dist) {
-                                  return { tempo: data.tempo || null, dist: data.dist ? parseFloat(data.dist) : null, time: data.time || null, week: p.week };
+                                  return { tempo: data.tempo || null, dist: data.dist ? parseNum(data.dist) : null, time: data.time || null, week: p.week };
                                 }
                               } catch {}
                             }
@@ -6877,7 +6878,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           
                           // Auto-calculate tempo if time and distance exist but no tempo
                           if (!displayTempo && displayTime && displayDist) {
-                            const t = parseFloat(displayTime);
+                            const t = parseNum(displayTime);
                             const d = parseFloat(String(displayDist).replace(',', '.'));
                             if (t > 0 && d > 0) {
                               const tempoMin = t / d;
@@ -6909,7 +6910,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                               // Auto-calculate tempo (only for non-interval fields)
                               if (field !== "intervals" && (field === "time" || field === "dist")) {
-                                const t = parseFloat(field === "time" ? value : updated.time || "0");
+                                const t = parseNum(field === "time" ? value : updated.time || "0");
                                 const d = parseFloat(String(field === "dist" ? value : updated.dist || "0").replace(",", "."));
                                 if (t > 0 && d > 0) {
                                   const tempoMin = t / d;
@@ -7122,7 +7123,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     return Array.from({ length: activeCount }, (_, ii) => {
                                     const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: planTempo || '', dist: '' };
                                     const rowTempo = normalizeTempoInput(row.tempo || "");
-                                    const rowTime = parseFloat(row.time) || 0;
+                                    const rowTime = parseNum(row.time) || 0;
                                     // Auto-calc distance
                                     let rowDist = '';
                                     if (rowTempo && rowTime > 0) {
@@ -7175,7 +7176,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], time: v };
-                                            const t = parseFloat(v) || 0;
+                                            const t = parseNum(v) || 0;
                                             const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
                                             const ts = arr[ii].tempo?.match(/^(\d+)$/);
                                             let mpk = 0;
@@ -7205,7 +7206,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                             }
                                             // Auto-calc dist for all rows
                                             for (let j = 0; j < arr.length; j++) {
-                                              const rt = parseFloat(arr[j].time) || 0;
+                                              const rt = parseNum(arr[j].time) || 0;
                                               const tm2 = arr[j].tempo?.match(/^(\d+)[:\.](\d+)$/);
                                               const ts2 = arr[j].tempo?.match(/^(\d+)$/);
                                               let mpk2 = 0;
@@ -7272,7 +7273,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           e.stopPropagation();
                                           const intervals = (condSaved?.intervals || []) as Array<{ time: string; tempo: string; dist: string }>;
                                           const valid = intervals.length > 0 && intervals.every((r) => {
-                                            const t = parseFloat(r.time) || 0;
+                                            const t = parseNum(r.time) || 0;
                                             const d = parseFloat((r.dist || '').replace(',', '.')) || 0;
                                             const hasTempo = !!(r.tempo && r.tempo.trim());
                                             return t > 0 && (hasTempo || d > 0);
@@ -7304,7 +7305,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     let totDist = 0;
                                     let totTime = 0;
                                     intervalsData.forEach((r) => {
-                                      const t = parseFloat(r.time) || 0;
+                                      const t = parseNum(r.time) || 0;
                                       totTime += t;
                                       if (r.tempo && t > 0) {
                                         const tMatch = r.tempo.match(/^(\d+)[:\.](\d+)$/);
@@ -7344,8 +7345,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     </div>
                                   </div>
                                   {(() => {
-                                    const t = parseFloat(condSaved?.time || displayTime || "0");
-                                    const s = parseFloat(condSaved?.spm || "0");
+                                    const t = parseNum(condSaved?.time || displayTime || "0");
+                                    const s = parseNum(condSaved?.spm || "0");
                                     if (t > 0 && s > 0) {
                                       return (
                                         <div className="bg-primary/10 rounded-md px-3 py-2 text-xs flex items-center gap-2">
@@ -7364,7 +7365,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
                                       <div className="flex items-center gap-1">
                                         {(() => {
-                                          const totalMin = parseFloat(displayTime) || 0;
+                                          const totalMin = parseNum(displayTime) || 0;
                                           const initH = Math.floor(totalMin / 60);
                                           const initM = Math.floor(totalMin % 60);
                                           const initS = Math.round((totalMin % 1) * 60);
@@ -7453,15 +7454,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
-                                    <input type="number" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                    <input type="text" inputMode="numeric" value={editingExercise.sets} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, sets: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                                   </div>
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
-                                    <input type="number" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                    <input type="text" inputMode="numeric" value={editingExercise.reps} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, reps: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                                   </div>
                                   <div className="space-y-0.5">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
-                                    <input type="number" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                                    <input type="text" inputMode="decimal" value={editingExercise.weight} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, weight: e.target.value } : null)} placeholder="—" className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -7626,7 +7627,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               {Array.from({ length: activeCount }, (_, ii) => {
                                 const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
                                 const rowTempo = normalizeTempoInput(row.tempo || "");
-                                const rowTime = parseFloat(row.time) || 0;
+                                const rowTime = parseNum(row.time) || 0;
                                 let rowDist = '';
                                 if (rowTempo && rowTime > 0) {
                                   const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
@@ -7668,7 +7669,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       onSave={(v) => {
                                         const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
                                         arr[ii] = { ...arr[ii], time: v };
-                                        const t = parseFloat(v) || 0;
+                                        const t = parseNum(v) || 0;
                                         const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
                                         const ts = arr[ii].tempo?.match(/^(\d+)$/);
                                         let mpk = 0;
@@ -7695,7 +7696,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           }
                                         }
                                         for (let j = 0; j < arr.length; j++) {
-                                          const rt = parseFloat(arr[j].time) || 0;
+                                          const rt = parseNum(arr[j].time) || 0;
                                           const tm2 = arr[j].tempo?.match(/^(\d+)[:\.](\d+)$/);
                                           const ts2 = arr[j].tempo?.match(/^(\d+)$/);
                                           let mpk2 = 0;
@@ -8021,7 +8022,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 const lastKg = findHeaviestSetFromLastSession(partName, plan.week);
                                 if (!lastKg) return null;
                                 // Don't show if user already has saved data for this session
-                                const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseFloat(s.kg) !== 0);
+                                const hasCurrentData = getSetData(key, partName).some(s => s.kg && parseNum(s.kg) !== 0);
                                 if (hasCurrentData) return null;
                                 const isNegative = lastKg.kg < 0;
                                 const effectiveKg = isNegative && profileWeight ? profileWeight + lastKg.kg : null;
@@ -8123,7 +8124,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           </div>
                                           </SwipeableSetRow>
                                           {!isBodyweight && (() => {
-                                            const currentKg = parseFloat(saved?.kg || defKg);
+                                            const currentKg = parseNum(saved?.kg || defKg);
                                             if (isWeightedBw && !isNaN(currentKg) && currentKg !== 0) {
                                               if (profileWeight) {
                                                 const effective = currentBwMode === "add" ? profileWeight + Math.abs(currentKg) : profileWeight - Math.abs(currentKg);
@@ -8223,15 +8224,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       <div className="grid grid-cols-3 gap-2">
                         <div className="space-y-1">
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
-                          <input type="number" inputMode="numeric" value={setsInput} onChange={(e) => setSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                          <input type="text" inputMode="numeric" value={setsInput} onChange={(e) => setSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-primary" onClick={() => setRepsUnit(u => u === "reps" ? "sek" : "reps")}>{repsUnit === "sek" ? "Sek ⇄" : "Reps ⇄"}</label>
-                          <input type="number" inputMode="numeric" value={repsInput} onChange={(e) => setRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                          <input type="text" inputMode="numeric" value={repsInput} onChange={(e) => setRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
-                          <input type="number" inputMode="decimal" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} placeholder="—" className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                          <input type="text" inputMode="decimal" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} placeholder="—" className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -8267,11 +8268,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Antal intervaller</label>
-                            <input type="number" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            <input type="text" inputMode="numeric" value={condIntervalsInput} onChange={(e) => setCondIntervalsInput(e.target.value)} placeholder="t.ex. 5" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Vila (min)</label>
-                            <input type="number" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            <input type="text" inputMode="numeric" value={condRestInput} onChange={(e) => setCondRestInput(e.target.value)} placeholder="t.ex. 2" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                         </div>
                       )}
@@ -8281,17 +8282,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid</label>
                             <div className="flex items-center gap-1">
-                              <input type="number" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" min="0" value={condTimeHours} onChange={(e) => handleCondTimeChange('h', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               <span className="text-[10px] text-muted-foreground font-medium">h</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" min="0" max="59" value={condTimeMinutes} onChange={(e) => handleCondTimeChange('m', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               <span className="text-[10px] text-muted-foreground font-medium">m</span>
-                              <input type="number" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" min="0" max="59" value={condTimeSeconds} onChange={(e) => handleCondTimeChange('s', e.target.value, false)} placeholder="0" className="w-14 bg-background text-foreground text-sm px-1 py-2 rounded-md border border-border outline-none focus:ring-1 focus:ring-primary text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                               <span className="text-[10px] text-muted-foreground font-medium">s</span>
                             </div>
                             </div>
                             <div>
                               <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">SPM (steg/min)</label>
-                              <input type="number" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                              <input type="text" inputMode="numeric" value={condSpmInput} onChange={(e) => setCondSpmInput(e.target.value)} placeholder="t.ex. 80" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                             </div>
                           </div>
                           {(() => {
@@ -8309,7 +8310,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           })()}
                           <div>
                             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Snittspuls (bpm)</label>
-                            <input type="number" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
+                            <input type="text" inputMode="numeric" value={condPulseInput} onChange={(e) => setCondPulseInput(e.target.value)} placeholder="t.ex. 155" className="w-full bg-muted/50 text-foreground text-sm px-3 py-2.5 rounded-xl border border-transparent outline-none focus:bg-background focus:border-primary/40 focus:ring-2 focus:ring-primary/20 transition-colors text-center font-bold placeholder:text-muted-foreground placeholder:font-normal" />
                           </div>
                         </>
                       ) : conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (parseInt(condIntervalsInput) || 0) > 0 ? (
@@ -8851,13 +8852,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-muted-foreground whitespace-nowrap">Sek/övning:</label>
-                        <input type="number" inputMode="numeric" min="5" max="300" value={extraCircuitSeconds} onChange={(e) => setExtraCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <input type="text" inputMode="numeric" min="5" max="300" value={extraCircuitSeconds} onChange={(e) => setExtraCircuitSeconds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         <label className="text-xs text-muted-foreground whitespace-nowrap ml-2">Rundor:</label>
-                        <input type="number" inputMode="numeric" min="1" max="20" value={extraCircuitRounds} onChange={(e) => setExtraCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <input type="text" inputMode="numeric" min="1" max="20" value={extraCircuitRounds} onChange={(e) => setExtraCircuitRounds(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-xs text-muted-foreground whitespace-nowrap">Vila mellan rundor:</label>
-                        <input type="number" inputMode="numeric" min="0" max="300" value={extraCircuitRest} onChange={(e) => setExtraCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                        <input type="text" inputMode="numeric" min="0" max="300" value={extraCircuitRest} onChange={(e) => setExtraCircuitRest(e.target.value)} className="w-16 bg-secondary text-foreground text-sm px-2 py-1 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                         <span className="text-xs text-muted-foreground">sek</span>
                       </div>
                     </div>
@@ -9289,7 +9290,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           </p>
           <div className="flex items-center gap-2">
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               value={weightPromptValue}
               onChange={(e) => setWeightPromptValue(e.target.value)}
@@ -9308,14 +9309,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             </button>
             <button
               onClick={async () => {
-                const w = parseFloat(weightPromptValue);
+                const w = parseNum(weightPromptValue);
                 if (isNaN(w) || w <= 0) return;
                 await supabase.from("profiles").update({ weight_kg: w }).eq("user_id", userId);
                 setProfileWeight(w);
                 setShowWeightPrompt(false);
                 setWeightPromptValue("");
               }}
-              disabled={!weightPromptValue || isNaN(parseFloat(weightPromptValue)) || parseFloat(weightPromptValue) <= 0}
+              disabled={!weightPromptValue || isNaN(parseNum(weightPromptValue)) || parseNum(weightPromptValue) <= 0}
               className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-lg disabled:opacity-40"
             >
               Spara
@@ -9484,7 +9485,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             <span className="font-semibold text-foreground">{toTitleCase(repsEditor.name)}</span>
           </p>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
             autoFocus={false}
             value={repsEditor.reps}

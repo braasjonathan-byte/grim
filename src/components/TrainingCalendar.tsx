@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import EmptyState from "./EmptyState";
@@ -103,10 +104,10 @@ const summarizeLoggedWeights = (lw: any): DayStats => {
       if (!Array.isArray(data)) continue;
       const done = setsStr
         ? data.filter((_: any, i: number) => setsStr[i] === "1")
-        : data.filter((s: any) => (parseFloat(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0);
+        : data.filter((s: any) => (parseNum(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0);
       if (!hadMarkers) stats.sets += done.length;
       for (const s of done) {
-        stats.volume += (parseFloat(s?.kg) || 0) * (parseInt(s?.reps) || 0);
+        stats.volume += (parseNum(s?.kg) || 0) * (parseInt(s?.reps) || 0);
       }
     } catch {
       // ignore malformed set data

@@ -1,4 +1,5 @@
 import NutritionTrendCard from "./NutritionTrendCard";
+import { parseNum } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -314,7 +315,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     ]).then(async ([{ data: profileData }, { data: compData }, { data: planData }, { data: challengeData }, { data: archiveData }, { data: achievementData }]) => {
       let profileStartDate: Date | null = null;
       if (profileData) {
-        if ((profileData as any).weight_kg) setUserWeightKg(parseFloat((profileData as any).weight_kg));
+        if ((profileData as any).weight_kg) setUserWeightKg(parseNum((profileData as any).weight_kg));
         if ((profileData as any).plan_start_date) {
           const psd = new Date((profileData as any).plan_start_date + "T00:00:00");
           if (!isNaN(psd.getTime())) profileStartDate = psd;

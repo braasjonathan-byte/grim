@@ -27,7 +27,7 @@ const RestTimerSettings = () => {
       </label>
       <div className="flex shrink-0 items-center gap-2">
         <input
-          type="number"
+          type="text"
           inputMode="numeric"
           min="1"
           value={seconds}

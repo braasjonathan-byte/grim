@@ -182,21 +182,21 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
             <div className="grid grid-cols-3 gap-2">
               <div className="min-w-0">
                 <input
-                  type="number" inputMode="numeric" min="0" value={r.h}
+                  type="text" inputMode="numeric" min="0" value={r.h}
                   onChange={(e) => update(i, { h: e.target.value }, "time")}
                   placeholder="0" className={inputCls} />
                 <span className={unitCls}>tim</span>
               </div>
               <div className="min-w-0">
                 <input
-                  type="number" inputMode="numeric" min="0" max="59" value={r.m}
+                  type="text" inputMode="numeric" min="0" max="59" value={r.m}
                   onChange={(e) => update(i, { m: e.target.value }, "time")}
                   placeholder="0" className={inputCls} />
                 <span className={unitCls}>min</span>
               </div>
               <div className="min-w-0">
                 <input
-                  type="number" inputMode="numeric" min="0" max="59" value={r.s}
+                  type="text" inputMode="numeric" min="0" max="59" value={r.s}
                   onChange={(e) => update(i, { s: e.target.value }, "time")}
                   placeholder="0" className={inputCls} />
                 <span className={unitCls}>sek</span>
@@ -231,7 +231,7 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
               <div className="min-w-0">
                 <label className={labelCls}>Distans</label>
                 <input
-                  type="number" inputMode="decimal" value={r.distance}
+                  type="text" inputMode="decimal" value={r.distance}
                   onChange={(e) => update(i, { distance: e.target.value }, "distance")}
                   placeholder={distUnit === "m" ? "400" : "1.0"} className={inputCls} />
                 <span className={unitCls}>{distUnit}</span>
@@ -240,7 +240,7 @@ export default function IntervalRowsEditor({ count, rows, onChange, paceUnit = "
             <div className="min-w-0">
               <label className={labelCls}>Puls</label>
               <input
-                type="number" inputMode="numeric" value={r.pulse}
+                type="text" inputMode="numeric" value={r.pulse}
                 onChange={(e) => update(i, { pulse: e.target.value })}
                 placeholder="155" className={inputCls} />
               <span className={unitCls}>bpm</span>

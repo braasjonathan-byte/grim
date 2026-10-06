@@ -120,3 +120,6 @@ export const isPlausibleMealLog = (row: { amount?: unknown; unit?: unknown; kcal
   }
   return true;
 };
+
+/** Som parseFloat men godkänner decimalkomma ("82,5" → 82.5). */
+export const parseNum = (v: unknown): number => parseFloat(String(v ?? "").trim().replace(",", "."));

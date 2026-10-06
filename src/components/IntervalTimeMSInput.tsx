@@ -49,7 +49,7 @@ export default function IntervalTimeMSInput({ valueMinDecimal, onSave, className
     <div className="grid grid-cols-2 gap-1 min-w-0">
       <div className="min-w-0 flex flex-col items-center">
         <input
-          type="number"
+          type="text"
           inputMode="numeric"
           min={0}
           value={mm}
@@ -62,7 +62,7 @@ export default function IntervalTimeMSInput({ valueMinDecimal, onSave, className
       </div>
       <div className="min-w-0 flex flex-col items-center">
         <input
-          type="number"
+          type="text"
           inputMode="numeric"
           min={0}
           max={59}

@@ -581,7 +581,7 @@ const RouteBuilderDialog = ({ open, onOpenChange }: { open: boolean; onOpenChang
                     <Label className="text-xs font-semibold text-muted-foreground">Distans</Label>
                     <div className="flex items-center gap-1">
                       <Input
-                        type="number"
+                        type="text"
                         inputMode="decimal"
                         value={distanceKm}
                         min={1}

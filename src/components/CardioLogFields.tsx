@@ -87,15 +87,15 @@ const CardioLogFields = ({
         <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
         <div className="grid grid-cols-3 gap-2">
           <div className="min-w-0">
-            <input type="number" inputMode="numeric" min="0" value={hours} onChange={(e) => onTimeChange("h", e.target.value)} placeholder="0" className={inputCls} />
+            <input type="text" inputMode="numeric" min="0" value={hours} onChange={(e) => onTimeChange("h", e.target.value)} placeholder="0" className={inputCls} />
             <span className={unitCls}>tim</span>
           </div>
           <div className="min-w-0">
-            <input type="number" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => onTimeChange("m", e.target.value)} placeholder="0" className={inputCls} />
+            <input type="text" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => onTimeChange("m", e.target.value)} placeholder="0" className={inputCls} />
             <span className={unitCls}>min</span>
           </div>
           <div className="min-w-0">
-            <input type="number" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => onTimeChange("s", e.target.value)} placeholder="0" className={inputCls} />
+            <input type="text" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => onTimeChange("s", e.target.value)} placeholder="0" className={inputCls} />
             <span className={unitCls}>sek</span>
           </div>
         </div>
@@ -127,7 +127,7 @@ const CardioLogFields = ({
               <Route className="w-3 h-3" /> Distans
             </label>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               value={distance}
               onChange={(e) => onDistanceChange(e.target.value)}
@@ -140,7 +140,7 @@ const CardioLogFields = ({
         {showPulse && (
           <div className="min-w-0">
             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Puls</label>
-            <input type="number" inputMode="numeric" value={pulse} onChange={(e) => onPulseChange(e.target.value)} placeholder="155" className={inputCls} />
+            <input type="text" inputMode="numeric" value={pulse} onChange={(e) => onPulseChange(e.target.value)} placeholder="155" className={inputCls} />
             <span className={unitCls}>bpm</span>
           </div>
         )}

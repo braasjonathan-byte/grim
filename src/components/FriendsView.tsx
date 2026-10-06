@@ -1,4 +1,5 @@
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
+import { parseNum } from "@/lib/inputValidation";
 import { useState, useEffect, useRef } from "react";
 import { applyTheme, getStoredThemeId, lockTheme, unlockTheme } from "@/lib/themes";
 import { supabase } from "@/integrations/supabase/client";
@@ -630,8 +631,8 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
   const parseTempo = (t: string): number | null => {
     const parts = t.split(":");
     if (parts.length === 2) {
-      const mins = parseFloat(parts[0]);
-      const secs = parseFloat(parts[1]);
+      const mins = parseNum(parts[0]);
+      const secs = parseNum(parts[1]);
       if (!isNaN(mins) && !isNaN(secs)) return mins + secs / 60;
     }
     const v = parseFloat(t.replace(",", "."));
@@ -1136,15 +1137,15 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                 <div className="grid grid-cols-3 gap-2">
                                   <div className="space-y-1">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Set</label>
-                                    <input type="number" inputMode="numeric" value={adminSetsInput} onChange={(e) => setAdminSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                    <input type="text" inputMode="numeric" value={adminSetsInput} onChange={(e) => setAdminSetsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                                   </div>
                                   <div className="space-y-1">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Reps</label>
-                                    <input type="number" inputMode="numeric" value={adminRepsInput} onChange={(e) => setAdminRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
+                                    <input type="text" inputMode="numeric" value={adminRepsInput} onChange={(e) => setAdminRepsInput(e.target.value)} className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono" />
                                   </div>
                                   <div className="space-y-1">
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Vikt (kg)</label>
-                                    <input type="number" inputMode="decimal" value={adminWeightInput} onChange={(e) => setAdminWeightInput(e.target.value)} placeholder="—" className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
+                                    <input type="text" inputMode="decimal" value={adminWeightInput} onChange={(e) => setAdminWeightInput(e.target.value)} placeholder="—" className="w-full bg-background text-foreground text-sm p-2 rounded-md border-none outline-none focus:ring-1 focus:ring-primary text-center font-mono placeholder:text-muted-foreground" />
                                   </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -1168,7 +1169,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
                                     <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Tid (min)</label>
-                                    <input type="number" inputMode="numeric" value={adminCondTimeInput} onChange={(e) => {
+                                    <input type="text" inputMode="numeric" value={adminCondTimeInput} onChange={(e) => {
                                       const newTime = e.target.value;
                                       setAdminCondTimeInput(newTime);
                                       autoCalcCond(newTime, adminCondTempoInput, adminCondDistanceInput, "time");
@@ -1185,7 +1186,7 @@ const FriendsView = ({ userId, isAdmin = false, friendActivities = [], onClearAc
                                 </div>
                                 <div>
                                   <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">Distans (km)</label>
-                                  <input type="number" inputMode="decimal" value={adminCondDistanceInput} onChange={(e) => {
+                                  <input type="text" inputMode="decimal" value={adminCondDistanceInput} onChange={(e) => {
                                     const newDist = e.target.value;
                                     setAdminCondDistanceInput(newDist);
                                     autoCalcCond(adminCondTimeInput, adminCondTempoInput, newDist, "distance");

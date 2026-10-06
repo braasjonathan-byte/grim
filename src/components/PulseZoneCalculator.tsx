@@ -38,7 +38,7 @@ const PulseZoneCalculator = () => {
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Ålder</label>
               <input
-                type="number"
+                type="text" inputMode="decimal"
                 value={age}
                 onChange={(e) => setAge(Number(e.target.value))}
                 min={10}
@@ -49,7 +49,7 @@ const PulseZoneCalculator = () => {
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Vilopuls (bpm)</label>
               <input
-                type="number"
+                type="text" inputMode="decimal"
                 value={restHR}
                 onChange={(e) => setRestHR(Number(e.target.value))}
                 min={30}

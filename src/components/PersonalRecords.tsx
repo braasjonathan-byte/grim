@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar, Pencil } from "lucide-react";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";
@@ -183,7 +184,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
 
   const saveOverride = async () => {
     if (!editDialog || !editWeight.trim()) return;
-    const w = parseFloat(editWeight);
+    const w = parseNum(editWeight);
     if (isNaN(w) || w <= 0) return;
 
     await supabase.from("pr_overrides").upsert(
@@ -211,7 +212,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
 
   const saveGoal = async () => {
     if (!goalDialog || !goalWeight.trim()) return;
-    const tw = parseFloat(goalWeight);
+    const tw = parseNum(goalWeight);
     if (isNaN(tw) || tw <= 0) return;
 
     const targetDate = goalDate || null;
@@ -410,7 +411,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Målvikt (kg)</label>
                 <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={goalWeight}
                 onChange={(e) => setGoalWeight(e.target.value)}
@@ -482,7 +483,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Ny vikt (kg)</label>
                 <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={editWeight}
                 onChange={(e) => setEditWeight(e.target.value)}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   }, [open, userId]);
 
   function computeMacros(silent = false) {
-    const a = parseInt(age) || 0, w = parseFloat(weight) || 0, h = parseFloat(height) || 0;
+    const a = parseInt(age) || 0, w = parseNum(weight) || 0, h = parseNum(height) || 0;
     if (!a || !w || !h) {
       if (!silent) toast({ title: "Fyll i ålder, vikt och längd", variant: "destructive" });
       return;
@@ -76,7 +77,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
 
   async function save() {
     setSaving(true);
-    const a = parseInt(age) || null, w = parseFloat(weight) || null, h = parseFloat(height) || null;
+    const a = parseInt(age) || null, w = parseNum(weight) || null, h = parseNum(height) || null;
     if (a || w || h) {
       await supabase.from("profiles").update({ age: a, weight_kg: w, height_cm: h, gender } as any).eq("user_id", userId);
     }

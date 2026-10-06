@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, ArrowRight, Footprints } from "lucide-react";
 import type { FitnessProfile } from "@/data/planTemplates";
@@ -25,8 +26,8 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
   const [saving, setSaving] = useState(false);
 
   const buildProfile = (): FitnessProfile => ({
-    max_distance_km: maxDistance ? parseFloat(maxDistance) : null,
-    time_10km_min: time10km ? parseFloat(time10km) : null,
+    max_distance_km: maxDistance ? parseNum(maxDistance) : null,
+    time_10km_min: time10km ? parseNum(time10km) : null,
     experience_level: experience || null,
     training_days_per_week: trainingDays ? parseInt(trainingDays) : null,
   });
@@ -79,7 +80,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
               Max långdistans du kan springa (km)
             </label>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               value={maxDistance}
               onChange={(e) => setMaxDistance(e.target.value)}
@@ -96,7 +97,7 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
               Tid på 10 km (minuter)
             </label>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
               value={time10km}
               onChange={(e) => setTime10km(e.target.value)}
