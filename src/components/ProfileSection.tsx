@@ -1,3 +1,5 @@
+import { validateNumber, formatDecimal } from "@/lib/inputValidation";
+import { FieldError } from "@/components/ConfirmValueDialog";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
 import { parseNum } from "@/lib/inputValidation";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -81,7 +83,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       if (data) {
         setAge(data.age?.toString() || "");
         setGender(data.gender || "");
-        setWeightKg((data as any).weight_kg?.toString() || "");
+        setWeightKg((data as any).weight_kg != null ? formatDecimal((data as any).weight_kg) : "");
         setAvatarUrl(data.avatar_url || null);
         setInstagram((data as any).instagram || "");
         setTiktok((data as any).tiktok || "");
@@ -97,13 +99,15 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
 
   // Auto-save profile with debounce
   const doSave = useCallback(async () => {
-    const ageNum = age.trim() ? parseInt(age) : null;
+    const ageRes = validateNumber(age, "ageYears");
+    const wRes = validateNumber(weightKg, "bodyWeightKg");
+    if (ageRes.error || wRes.error) return; // ogiltiga värden sparas aldrig
     await supabase
       .from("profiles")
       .update({
-        age: ageNum && ageNum > 0 && ageNum < 120 ? ageNum : null,
+        age: ageRes.value,
         gender: gender || null,
-        weight_kg: weightKg.trim() ? parseNum(weightKg) : null,
+        weight_kg: wRes.value,
         instagram: extractUsername(instagram, "instagram.com") || null,
         tiktok: extractUsername(tiktok, "tiktok.com") || null,
         snapchat: extractUsername(snapchat, "snapchat.com") || null,
@@ -275,6 +279,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
               max={120}
               className={inputClass}
             />
+            <FieldError error={validateNumber(age, "ageYears").error} />
           </div>
 
           <div className="space-y-1.5">
@@ -302,6 +307,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
               max={300}
               className={inputClass}
             />
+            <FieldError error={validateNumber(weightKg, "bodyWeightKg").error} />
             <p className="text-[10px] text-muted-foreground">Används för att beräkna kaloriförbrukning</p>
           </div>
         </div>
