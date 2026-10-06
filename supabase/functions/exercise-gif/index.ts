@@ -306,17 +306,25 @@ function getSearchTerms(cleanName: string): string[] {
     terms.push(cleanName);
   }
 
-  // Also try broader single-word searches as last resort
-  const english = exerciseTranslations[lower] || cleanName;
-  const mainWord = english.split(" ").pop();
-  if (mainWord && mainWord.length > 3 && !terms.includes(mainWord)) {
-    terms.push(mainWord);
-  }
+  // Inga breda enordssökningar: hellre ingen koppling än fel bild.
 
   return [...new Set(terms)];
 }
 
 let exerciseDbDisabled = false;
+
+const STOP = new Set(["the", "a", "an", "to", "on", "with", "of", "and", "med", "på", "och"]);
+function tokens(s: string): string[] {
+  return s.toLowerCase().replace(/[^a-z0-9åäö]+/g, " ").split(" ").filter((w) => w.length > 1 && !STOP.has(w));
+}
+/** Säker träff: varje ord i söktermen måste finnas i namnet (ordprefix/stam). */
+function isRelevantMatch(term: string, name: string): boolean {
+  const t = tokens(term);
+  const n = tokens(name);
+  if (!t.length || !n.length) return false;
+  const stem = (w: string) => w.replace(/(es|s)$/, "");
+  return t.every((w) => n.some((nw) => stem(nw) === stem(w) || (w.length >= 4 && (nw.startsWith(w) || w.startsWith(nw) && nw.length >= 4))));
+}
 
 async function searchExerciseDB(term: string): Promise<any | null> {
   if (exerciseDbDisabled) return null;
@@ -340,8 +348,10 @@ async function searchExerciseDB(term: string): Promise<any | null> {
     const data = await response.json();
 
     if (data.success && data.data && data.data.length > 0) {
-      const results = data.data.filter((e: any) => e.gifUrl);
-      if (results.length === 0) return data.data[0];
+      const relevant = data.data.filter((e: any) => isRelevantMatch(term, e.name || ""));
+      if (relevant.length === 0) return null;
+      const results = relevant.filter((e: any) => e.gifUrl);
+      if (results.length === 0) return relevant[0];
       // Prefer exact name match
       const exact = results.find((e: any) => e.name?.toLowerCase() === term.toLowerCase());
       if (exact) return exact;
@@ -395,7 +405,7 @@ async function searchFreeExerciseDB(term: string): Promise<any | null> {
   }
   
   // Reverse contains: search term contains exercise name
-  const reverseMatch = exercises.filter((e: any) => lower.includes(e.name?.toLowerCase()));
+  const reverseMatch = exercises.filter((e: any) => (e.name || "").length >= 6 && lower.includes(e.name?.toLowerCase()) && isRelevantMatch(e.name, term));
   if (reverseMatch.length > 0) {
     reverseMatch.sort((a: any, b: any) => (b.name || "").length - (a.name || "").length);
     return formatFreeExercise(reverseMatch[0]);
@@ -408,7 +418,7 @@ async function searchFreeExerciseDB(term: string): Promise<any | null> {
   for (const ex of exercises) {
     const nameWords = (ex.name || "").toLowerCase().split(/\s+/);
     const overlap = termWords.filter((w: string) => nameWords.some((nw: string) => nw.includes(w) || w.includes(nw))).length;
-    if (overlap > bestScore && overlap >= 2) {
+    if (overlap > bestScore && overlap >= 2 && isRelevantMatch(term, ex.name || "")) {
       bestScore = overlap;
       bestMatch = ex;
     }
