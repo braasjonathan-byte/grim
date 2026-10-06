@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { parseNum } from "@/lib/inputValidation";
+import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, TrendingUp, Equal, TrendingDown, Star, ChevronDown, Target, X, Calendar, Pencil } from "lucide-react";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";
@@ -100,7 +100,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
       for (const [ex, w] of Object.entries(c.logged_weights)) {
         // Handle legacy format: exerciseName: weight (number)
         if (!ex.startsWith("__")) {
-          if (typeof w !== "number" || w <= 0) continue;
+          if (typeof w !== "number" || w <= 0 || !isPlausibleSet(w, 0)) continue;
           const cleanEx = ex.replace(/( —)+$/, "");
           const normName = normalizeExerciseName(cleanEx);
           const existing = prMap.get(normName);
@@ -124,7 +124,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           } else if (Array.isArray(w)) {
             sets = w;
           } else { continue; }
-          const maxKg = Math.max(0, ...sets.map(s => Number(s.kg) || 0));
+          const maxKg = Math.max(0, ...sets.filter(s => isPlausibleSet(s.kg, s.reps)).map(s => parseNum(s.kg) || 0));
           if (maxKg <= 0) continue;
           const existing = prMap.get(exerciseName);
           if (!existing || maxKg > existing.weight) {

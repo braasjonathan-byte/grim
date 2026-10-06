@@ -1,3 +1,4 @@
+import { isPlausibleSet } from "@/lib/inputValidation";
 import { normalizeExerciseKey } from "@/lib/workoutDayUtils";
 
 export const parseExerciseWeight = (line: string | null | undefined): {name: string;weight: string | null;} => {
@@ -96,6 +97,7 @@ export const collectSetsForExercise = (
         const parsed = typeof value === "string" ? JSON.parse(value) : value;
         if (!Array.isArray(parsed)) continue;
         parsed.forEach((s: any, si: number) => {
+          if (!isPlausibleSet(s?.kg, s?.reps)) return;
           const rawKg = parseFloat(String(s?.kg ?? "").replace(",", "."));
           const mode =
             weights[`__bw_mode__${storedName}__${si}`] ??
@@ -110,7 +112,7 @@ export const collectSetsForExercise = (
     } else if (!key.startsWith("__") && normalizeExerciseKey(key) === wanted) {
       // Äldre format: logged_weights["Knäböj"] = "80"
       const kg = parseFloat(String(value ?? "").replace(",", "."));
-      if (!isNaN(kg) && kg !== 0) out.push({ kg, reps: 0 });
+      if (!isNaN(kg) && kg !== 0 && isPlausibleSet(kg, 0)) out.push({ kg, reps: 0 });
     }
   }
   return out;

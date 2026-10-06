@@ -1,3 +1,4 @@
+import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";
 
 export type PrIndex = Map<string, { best: number; secondBest: number }>;
@@ -36,12 +37,12 @@ export function buildPrIndex(completions: AnyCompletion[]): PrIndex {
           sets = value as Array<{ kg?: string | number }>;
         } else continue;
         if (!Array.isArray(sets)) continue;
-        for (const s of sets) push(name, Number(s?.kg));
+        for (const s of sets) if (isPlausibleSet(s?.kg, (s as any)?.reps)) push(name, parseNum(s?.kg));
         continue;
       }
       if (key.startsWith("__")) continue;
       // Legacy format: exerciseName -> weight
-      if (typeof value === "number") push(key, value);
+      if (typeof value === "number" && isPlausibleSet(value, 0)) push(key, value);
     }
   }
 

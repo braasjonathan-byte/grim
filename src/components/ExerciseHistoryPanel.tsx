@@ -1,3 +1,4 @@
+import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { useEffect, useState } from "react";
 import { Loader2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,7 @@ const safelyParseSets = (value: any): StrengthSet[] => {
     const parsed = typeof value === "string" ? JSON.parse(value) : value;
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((s: any) => ({ kg: Number(s?.kg) || 0, reps: Number(s?.reps) || 0 }))
+      .map((s: any) => ({ kg: parseNum(s?.kg) || 0, reps: parseNum(s?.reps) || 0, implausible: !isPlausibleSet(s?.kg, s?.reps) }))
       .filter((s) => s.reps > 0 || s.kg > 0);
   } catch {
     return [];

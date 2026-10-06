@@ -1,3 +1,4 @@
+import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { hasValidSessionFor } from "@/lib/sessionGuard";
 import { getWorkoutDistanceKm } from "@/lib/workoutDistance";
@@ -150,8 +151,9 @@ export const calculateAchievementMetrics = (
       if (!key.startsWith("__setdata__")) continue;
       const sets = typeof value === "string" ? safelyParseSets(value) : Array.isArray(value) ? value : [];
       for (const set of sets) {
-        const setReps = Number(set?.reps) || 0;
-        const kg = Math.max(0, Number(set?.kg) || 0);
+        if (!isPlausibleSet(set?.kg, set?.reps)) continue;
+        const setReps = parseNum(set?.reps) || 0;
+        const kg = Math.max(0, parseNum(set?.kg) || 0);
         reps += setReps;
         kgTotal += kg * setReps;
         sessionKg += kg * setReps;

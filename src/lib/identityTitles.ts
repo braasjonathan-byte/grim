@@ -1,3 +1,4 @@
+import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface IdentityTitle {
@@ -111,8 +112,9 @@ function computeStats(rows: any[]): IdentityStats {
         const sets = parseSets(value);
         const sport = detectSport(name);
         for (const s of sets) {
-          const kg = Number(s?.kg) || 0;
-          const reps = Number(s?.reps) || 0;
+          if (!isPlausibleSet(s?.kg, s?.reps)) continue;
+          const kg = parseNum(s?.kg) || 0;
+          const reps = parseNum(s?.reps) || 0;
           if (kg <= 0 && reps <= 0) continue;
           if (sport) sportsInSession.add(sport);
           else {
