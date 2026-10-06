@@ -21,6 +21,9 @@ import { parseDateKeyNoonUtc } from "@/lib/dateUtils";
 import { FeedSkeleton } from "@/components/LoadingSkeletons";
 import EmptyState from "@/components/EmptyState";
 import FriendChallenges from "@/components/FriendChallenges";
+import ReportDialog from "@/components/ReportDialog";
+import { blockUser, muteUser, loadMutedIds, loadPrivacySettings } from "@/lib/socialPrivacy";
+import { Flag, VolumeX, Ban, Eye } from "lucide-react";
 
 const FriendsView = lazyRetry(() => import("./FriendsView"));
 const ChatView = lazyRetry(() => import("./ChatView"));
@@ -109,7 +112,16 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFiles, setImageFiles] = useState<{ file: File; preview: string; caption: string }[]>([]);
-  const [postVisibility, setPostVisibility] = useState<string>("public");
+  const [defaultVisibility, setDefaultVisibility] = useState<"friends" | "public">("friends");
+  const [postVisibility, setPostVisibility] = useState<string>("friends");
+  const [mutedIds, setMutedIds] = useState<Set<string>>(new Set());
+  const [reportTarget, setReportTarget] = useState<{ postId: string; userId: string } | null>(null);
+  const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  useEffect(() => {
+    if (!userId) return;
+    loadMutedIds(userId).then(setMutedIds);
+    loadPrivacySettings(userId).then((s) => { setDefaultVisibility(s.default_post_visibility); setPostVisibility(s.default_post_visibility); });
+  }, [userId]);
   const [postGroupId, setPostGroupId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [feedFilter, setFeedFilter] = useState<"all" | "friends">("all");
@@ -468,7 +480,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
       setImageFile(null);
       setImagePreview(null);
       setImageFiles([]);
-      setPostVisibility("public");
+      setPostVisibility(defaultVisibility);
       setPostGroupId(null);
       loadFeed();
     } catch (err: any) {
@@ -586,10 +598,58 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     emitPostInteraction(postId);
   };
 
-  const deletePost = async (postId: string) => {
-    await supabase.from("social_posts").delete().eq("id", postId);
+  const deletePost = (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    const index = posts.findIndex(p => p.id === postId);
+    const parsedTitle = parseWorkoutCaption(post.caption).title;
+    const raw = (parsedTitle || post.caption || "").replace(/^🏋️\s*/, "").split("\n")[0].trim();
+    const label = parsedTitle ? raw : (raw.length > 30 ? raw.slice(0, 30) + "…" : raw) || "utan text";
     setPosts(prev => prev.filter(p => p.id !== postId));
-    toast.success("Inlägg borttaget");
+    const timer = setTimeout(async () => {
+      pendingDeletes.current.delete(postId);
+      const { error } = await supabase.from("social_posts").delete().eq("id", postId);
+      if (error) {
+        toast.error("Inlägget kunde inte tas bort.");
+        setPosts(prev => prev.some(p => p.id === postId) ? prev : [...prev.slice(0, index), post, ...prev.slice(index)]);
+      }
+    }, 8000);
+    pendingDeletes.current.set(postId, timer);
+    toast(`Inlägget "${label}" togs bort`, {
+      duration: 8000,
+      action: {
+        label: "Ångra",
+        onClick: () => {
+          const t = pendingDeletes.current.get(postId);
+          if (t) clearTimeout(t);
+          pendingDeletes.current.delete(postId);
+          setPosts(prev => prev.some(p => p.id === postId) ? prev : [...prev.slice(0, index), post, ...prev.slice(index)]);
+        },
+      },
+    });
+  };
+
+  const changeVisibility = async (postId: string, visibility: "friends" | "public") => {
+    const { error } = await supabase.from("social_posts").update({ visibility }).eq("id", postId);
+    if (error) { toast.error("Synligheten kunde inte ändras."); return; }
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, visibility } : p));
+    toast.success(visibility === "public" ? "Inlägget syns nu för alla" : "Inlägget syns nu bara för vänner");
+  };
+
+  const handleMute = async (otherId: string) => {
+    if (!(await muteUser(userId, otherId))) { toast.error("Kunde inte tysta användaren."); return; }
+    setMutedIds(prev => new Set(prev).add(otherId));
+    toast.success(`${nicknames[otherId] || "Användaren"} är tystad`);
+  };
+
+  const handleBlock = async (otherId: string) => {
+    const name = nicknames[otherId] || "användaren";
+    if (!confirm(`Blockera ${name}? Ni kommer inte längre se varandras inlägg.`)) return;
+    const err = await blockUser(userId, otherId);
+    if (err) { toast.error("Kunde inte blockera: " + err); return; }
+    setPosts(prev => prev.filter(p => p.user_id !== otherId));
+    setFriendIds(prev => { const n = new Set(prev); n.delete(otherId); return n; });
+    toast.success(`${name} är nu blockerad`);
   };
 
   const togglePin = async (postId: string, currentlyPinned: boolean) => {
@@ -838,9 +898,10 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
           {(() => {
             if (feedLoading && posts.length === 0) return <FeedSkeleton count={3} />;
 
+            const visiblePosts = posts.filter(p => !mutedIds.has(p.user_id));
             const filteredPosts = feedFilter === "friends"
-              ? posts.filter(p => friendIds.has(p.user_id) || p.user_id === userId)
-              : posts;
+              ? visiblePosts.filter(p => friendIds.has(p.user_id) || p.user_id === userId)
+              : visiblePosts;
             
             
             if (filteredPosts.length === 0) return (
@@ -910,24 +971,42 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
                         if (workoutDate) return format(workoutDate, "d MMM", { locale: sv });
                         return format(new Date(post.created_at), "d MMM HH:mm", { locale: sv });
                       })()}
-                      {post.visibility === "group" && " · 👥 Grupp"}
+                      {post.visibility === "group" ? " · 👥 Grupp" : post.visibility === "public" ? " · 🌍 Alla" : " · 👫 Vänner"}
                     </span>
                   </div>
                 </button>
-                {canManage && (
+                {(
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button aria-label="Fler alternativ" className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuContent align="end" className="w-56">
                       {isAdmin && (
                         <DropdownMenuItem onClick={() => togglePin(post.id, post.pinned)}>
                           <Pin className="mr-2 h-4 w-4" /> {post.pinned ? "Lossa" : "Nåla fast"}
                         </DropdownMenuItem>
                       )}
-                      {(post.user_id === userId || isAdmin) && (
+                      {post.user_id === userId && post.visibility !== "group" && (
+                        <DropdownMenuItem onClick={() => changeVisibility(post.id, post.visibility === "public" ? "friends" : "public")}>
+                          <Eye className="mr-2 h-4 w-4" /> Ändra synlighet ({post.visibility === "public" ? "till 👫 Vänner" : "till 🌍 Alla"})
+                        </DropdownMenuItem>
+                      )}
+                      {post.user_id !== userId && (
+                        <>
+                          <DropdownMenuItem onClick={() => setReportTarget({ postId: post.id, userId: post.user_id })}>
+                            <Flag className="mr-2 h-4 w-4" /> Rapportera inlägg
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleMute(post.user_id)}>
+                            <VolumeX className="mr-2 h-4 w-4" /> Tysta användare
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBlock(post.user_id)} className="text-destructive focus:text-destructive">
+                            <Ban className="mr-2 h-4 w-4" /> Blockera användare
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {canManage && (
                         <DropdownMenuItem onClick={() => deletePost(post.id)} className="text-destructive focus:text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" /> Ta bort inlägg
                         </DropdownMenuItem>
