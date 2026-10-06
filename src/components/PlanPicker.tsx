@@ -133,11 +133,13 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
   };
 
+  const rmErrors: Record<string, string | null> = {};
+  for (const l of selectedTemplate?.requiredLifts || []) {
+    rmErrors[l] = (rms[l] || "").trim() ? validateNumber(rms[l], "oneRm").error : null;
+  }
+  const rmInvalid = Object.values(rmErrors).some(Boolean);
   const allRmsFilled = selectedTemplate
-    ? selectedTemplate.requiredLifts.every((l) => {
-        const v = parseFloat(rms[l] || "");
-        return v > 0;
-      })
+    ? selectedTemplate.requiredLifts.every((l) => (rms[l] || "").trim() !== "")
     : false;
 
   const applyTemplate = async (template: TemplatePlan, rmValues?: Record<string, number>, profileOverride?: FitnessProfile) => {
