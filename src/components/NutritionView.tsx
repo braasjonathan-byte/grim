@@ -221,11 +221,25 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [quickMeal, setQuickMeal] = useState<string | null>(null);
   const [quick, setQuick] = useState({ name: "", kcal: "", protein: "", fat: "", carbs: "" });
 
+  const quickErrs = {
+    kcal: validateNumber(quick.kcal, "quickKcal").error,
+    protein: validateNumber(quick.protein, QUICK_MACRO).error,
+    fat: validateNumber(quick.fat, QUICK_MACRO).error,
+    carbs: validateNumber(quick.carbs, QUICK_MACRO).error,
+  };
+  const quickHasErrors = Object.values(quickErrs).some(Boolean);
+  const [valueConfirm, setValueConfirm] = useState<{ msg: string; run: () => void } | null>(null);
+  function requestQuickSave() {
+    if (quickHasErrors) return;
+    if (parseDecimal(quick.kcal) > UNUSUAL_QUICK_KCAL) { setValueConfirm({ msg: "Det är ovanligt mycket. Stämmer det?", run: () => void saveQuickLog() }); return; }
+    void saveQuickLog();
+  }
+
   async function saveQuickLog() {
     if (!quickMeal) return;
-    const num = (v: string) => { const n = parseFloat(v.replace(",", ".")); return isFinite(n) && n > 0 ? n : 0; };
-    const kcal = num(quick.kcal);
-    if (!kcal) { toast({ title: "Ange kalorier", variant: "destructive" }); return; }
+    if (quickHasErrors) return;
+    const num = (v: string) => validateNumber(v, QUICK_MACRO).value ?? 0;
+    const kcal = parseDecimal(quick.kcal);
     const { error } = await supabase.from("meal_logs").insert({
       user_id: userId, log_date: dateKey, meal_type: quickMeal,
       item_name: quick.name.trim() || "Snabbpost", amount: 1, unit: "portion",
@@ -281,10 +295,19 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     if (editingLog) setEditAmount(String(editingLog.amount));
   }, [editingLog]);
 
+  const editAmountError = editingLog
+    ? validateNumber(editAmount, editingLog.unit === "g" ? "foodGrams" : { min: 0.1, max: 1000, unit: editingLog.unit }).error
+    : null;
+  function requestEditSave() {
+    if (!editingLog || editAmountError) return;
+    if (editingLog.unit === "g" && parseDecimal(editAmount) > UNUSUAL_FOOD_GRAMS) { setValueConfirm({ msg: "Det är ovanligt mycket. Stämmer det?", run: () => void saveEditLog() }); return; }
+    void saveEditLog();
+  }
+
   async function saveEditLog() {
     if (!editingLog) return;
-    const newAmt = parseFloat(editAmount.replace(",", "."));
-    if (!isFinite(newAmt) || newAmt <= 0) { toast({ title: "Ogiltig mängd", variant: "destructive" }); return; }
+    if (editAmountError) return;
+    const newAmt = parseDecimal(editAmount);
     const oldAmt = Number(editingLog.amount) || 1;
     const f = newAmt / oldAmt;
     const { error } = await supabase.from("meal_logs").update({
@@ -385,7 +408,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   }, [slots, logs]);
 
   const totals = useMemo(() => ({
-    kcal: logs.reduce((s, l) => s + Number(l.kcal), 0),
+    kcal: plausibleLogs.reduce((s, l) => s + Number(l.kcal), 0),
     protein: logs.reduce((s, l) => s + Number(l.protein_g), 0),
     fat: logs.reduce((s, l) => s + Number(l.fat_g), 0),
     carbs: logs.reduce((s, l) => s + Number(l.carbs_g), 0),
@@ -698,12 +721,14 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                 type="text"
                 inputMode="decimal"
                 onFocus={(e) => e.currentTarget.select()}
-                onKeyDown={(e) => { if (e.key === "Enter") saveEditLog(); }}
+                onKeyDown={(e) => { if (e.key === "Enter") requestEditSave(); }}
                 value={editAmount}
                 onChange={(e) => setEditAmount(e.target.value)}
                 className="w-full input-soft"
+                aria-invalid={!!editAmountError || undefined}
                 autoFocus
               />
+              <FieldError error={editAmountError} />
               {(() => {
                 const n = parseFloat(editAmount.replace(",", "."));
                 const oldAmt = Number(editingLog.amount) || 1;
@@ -732,7 +757,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
               <button onClick={deleteEditLog} className="flex-1 py-2 rounded-full bg-destructive/10 text-destructive text-xs font-bold flex items-center justify-center gap-1">
                 <Trash2 className="w-3.5 h-3.5" /> Ta bort
               </button>
-              <button onClick={saveEditLog} className="flex-1 pill-btn-primary py-2 text-xs">
+              <button onClick={requestEditSave} disabled={!!editAmountError} className="flex-1 pill-btn-primary py-2 text-xs disabled:opacity-50">
                 Spara
               </button>
             </div>
@@ -749,10 +774,11 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
             </div>
             <input className="w-full input-soft" placeholder="Anteckning (t.ex. Lunch på stan)" value={quick.name} onChange={(e) => setQuick({ ...quick, name: e.target.value })} />
             <input className="w-full input-soft text-lg font-bold" inputMode="decimal" placeholder="Kalorier (kcal)" autoFocus value={quick.kcal}
-              onChange={(e) => setQuick({ ...quick, kcal: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") saveQuickLog(); }} />
+              onChange={(e) => setQuick({ ...quick, kcal: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") requestQuickSave(); }} />
+            <FieldError error={quick.kcal.trim() ? quickErrs.kcal : null} />
             <div className="grid grid-cols-3 gap-2">
               {([["protein", "Protein g"], ["fat", "Fett g"], ["carbs", "Kolh. g"]] as const).map(([k, l]) => (
-                <input key={k} className="input-soft w-full text-sm" inputMode="decimal" placeholder={l} value={quick[k]} onChange={(e) => setQuick({ ...quick, [k]: e.target.value })} />
+                <div key={k} className="min-w-0"><input className="input-soft w-full text-sm" inputMode="decimal" placeholder={l} value={quick[k]} onChange={(e) => setQuick({ ...quick, [k]: e.target.value })} /><FieldError error={quickErrs[k]} /></div>
               ))}
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -762,11 +788,12 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => setQuickMeal(null)} className="flex-1 pill-btn-ghost py-2 text-xs">Avbryt</button>
-              <button onClick={saveQuickLog} className="flex-1 pill-btn-primary py-2 text-xs">Spara</button>
+              <button onClick={requestQuickSave} disabled={quickHasErrors} className="flex-1 pill-btn-primary py-2 text-xs disabled:opacity-50">Spara</button>
             </div>
           </div>
         </div>
       )}
+      <ConfirmValueDialog message={valueConfirm?.msg ?? null} onConfirm={() => { const r = valueConfirm?.run; setValueConfirm(null); r?.(); }} onCancel={() => setValueConfirm(null)} />
     </div>
   );
 }
