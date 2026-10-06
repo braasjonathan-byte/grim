@@ -13,6 +13,8 @@ import MealNameDialog from "./MealNameDialog";
 import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import MealTemplatesDialog from "./MealTemplatesDialog";
 import WaterTracker from "./WaterTracker";
+import FastingWidget from "./FastingWidget";
+import { MICROS, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useToast } from "@/hooks/use-toast";
 import { showUndoToast } from "@/lib/undoToast";
@@ -198,6 +200,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [date, setDate] = useState(() => new Date());
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);
+  const [microTargets, setMicroTargets] = useState<Micros>({});
   const [slots, setSlots] = useState<string[]>(DEFAULT_SLOTS);
   const [picker, setPicker] = useState<string | null>(null);
   const [recipeOpen, setRecipeOpen] = useState(false);
@@ -291,7 +294,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       fat_g: Number(editingLog.fat_g) * f,
       carbs_g: Number(editingLog.carbs_g) * f,
       fiber_g: Number(editingLog.fiber_g || 0) * f,
-    }).eq("id", editingLog.id);
+      ...scaleMicros(pickMicros(editingLog), f),
+    } as any).eq("id", editingLog.id);
     if (error) { toast({ title: "Fel", description: error.message, variant: "destructive" }); return; }
     setEditingLog(null);
     load();
@@ -324,6 +328,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     setYesterdayLogs(yR.data || []);
     if (goalsR.data) {
       setTargets({ kcal: goalsR.data.daily_kcal, protein_g: goalsR.data.protein_g, fat_g: goalsR.data.fat_g, carbs_g: goalsR.data.carbs_g, fiber_g: goalsR.data.fiber_g ?? null });
+      setMicroTargets(pickMicros(goalsR.data));
       setWaterGoal(goalsR.data.water_goal_ml ?? 2000);
       const ms = (goalsR.data as any).meal_slots as string[] | null;
       if (ms && ms.length) setSlots(ms);
@@ -385,6 +390,15 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     carbs: logs.reduce((s, l) => s + Number(l.carbs_g), 0),
     fiber: logs.reduce((s, l) => s + Number(l.fiber_g || 0), 0),
   }), [logs]);
+
+  const microTotals = useMemo(() => {
+    const out: Micros = {};
+    for (const m of MICROS) {
+      const vals = logs.map((l: any) => l[m.key]).filter((v) => v != null);
+      if (vals.length) out[m.key] = vals.reduce((a: number, v: any) => a + Number(v), 0);
+    }
+    return out;
+  }, [logs]);
 
   /** Copy yesterday's logged items (optionally only one meal) to the shown day. */
   async function copyFromYesterday(meal?: string) {
@@ -468,6 +482,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       amount: item.amount, unit: item.unit,
       kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g,
       fiber_g: item.fiber_g || 0,
+      ...(item.micros || {}),
       food_id: item.source === "food" && isUuid ? item.id : null,
       custom_food_id: item.source === "custom_food" && isUuid ? item.id : null,
       recipe_id: item.source === "recipe" && isUuid ? item.id : null,
@@ -527,8 +542,10 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
-          <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} />
+          <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} microTargets={microTargets} />
         </div>
+
+        <FastingWidget userId={userId} />
 
         {logs.length === 0 && (
           <div className="rounded-2xl bg-primary/5 border border-primary/25 p-3 text-center space-y-2">

@@ -22,6 +22,7 @@ function saveLastAmount(key: string, amount: string, unit: string) {
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import RestaurantSearchDialog from "./RestaurantSearchDialog";
 import ManualFoodDialog from "./ManualFoodDialog";
+import { MICRO_SELECT, microsFromOFF, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
 import { rankFoods, usageKey, type UsageMap } from "@/lib/foodRanking";
 
 export interface PickedItem {
@@ -35,6 +36,7 @@ export interface PickedItem {
   fat_g: number;
   carbs_g: number;
   fiber_g?: number;
+  micros?: Micros;
 }
 
 interface FoodPickerDialogProps {
@@ -48,7 +50,7 @@ interface FoodPickerDialogProps {
   onEditRecipe?: (recipeId: string) => void;
 }
 
-type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null; piece_g?: number | null; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string; owner_id?: string | null };
+type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null; piece_g?: number | null; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string; owner_id?: string | null; [k: string]: any };
 
 function recipeRow(r: any): FoodRow {
   return {
@@ -103,8 +105,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       const picks = [...recent, ...frequent].filter((u) => !(hideRecipes && u.food_source === "recipe"));
       const ids = (s: string) => picks.filter((p) => p.food_source === s).map((p) => p.food_id);
       const [fR, cR, rR] = await Promise.all([
-        ids("food").length ? supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name").in("id", ids("food")) : Promise.resolve({ data: [] as any[] }),
-        ids("custom_food").length ? supabase.from("custom_foods").select("id,name,kcal,protein_g,fat_g,carbs_g,fiber_g").in("id", ids("custom_food")) : Promise.resolve({ data: [] as any[] }),
+        ids("food").length ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).in("id", ids("food")) : Promise.resolve({ data: [] as any[] }),
+        ids("custom_food").length ? supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).in("id", ids("custom_food")) : Promise.resolve({ data: [] as any[] }),
         ids("recipe").length ? supabase.from("recipes").select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,servings").in("id", ids("recipe")) : Promise.resolve({ data: [] as any[] }),
       ]);
       if (cancelled) return;
@@ -125,9 +127,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     setLoading(true);
     (async () => {
       const foodsQ = term
-        ? supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name").ilike("name", `%${term}%`).order("name").limit(40)
-        : supabase.from("foods").select("id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name").order("name").limit(40);
-      let customQ = supabase.from("custom_foods").select("id,name,kcal,protein_g,fat_g,carbs_g,fiber_g").eq("user_id", userId);
+        ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).ilike("name", `%${term}%`).order("name").limit(40)
+        : supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).order("name").limit(40);
+      let customQ = supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).eq("user_id", userId);
       if (term) customQ = customQ.ilike("name", `%${term}%`);
       const recipesQ = hideRecipes ? null : supabase
         .from("recipes")
@@ -194,6 +196,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             fat_g: Number(n.fat_100g) || 0,
             carbs_g: Number(n.carbohydrates_100g) || 0,
             fiber_g: Number(n.fiber_100g) || 0,
+            ...microsFromOFF(n),
           });
         }
         setOffResults(rows);
@@ -271,6 +274,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       fat_g: selected.fat_g * factor,
       carbs_g: selected.carbs_g * factor,
       fiber_g: (Number(selected.fiber_g) || 0) * factor,
+      micros: scaleMicros(pickMicros(selected), factor),
     };
   }, [selected, amount, unit]);
 
@@ -291,7 +295,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           fat_g: selected.fat_g,
           carbs_g: selected.carbs_g,
           fiber_g: Number(selected.fiber_g) || 0,
-        }).select("id").single();
+          ...pickMicros(selected),
+        } as any).select("id").single();
         if (error) throw error;
         outId = data!.id;
       } catch (e) {
@@ -311,6 +316,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       fat_g: computed.fat_g,
       carbs_g: computed.carbs_g,
       fiber_g: computed.fiber_g,
+      micros: computed.micros,
     }, { keepOpen });
     if (keepOpen) { setAddedCount((c) => c + 1); setLastAdded(selected.name); }
     // Track personal usage so ranking improves over time (fire-and-forget)

@@ -396,37 +396,61 @@ export type Database = {
       }
       custom_foods: {
         Row: {
+          calcium_mg: number | null
           carbs_g: number
           created_at: string
           fat_g: number
           fiber_g: number
           id: string
+          iron_mg: number | null
           kcal: number
+          magnesium_mg: number | null
           name: string
+          potassium_mg: number | null
           protein_g: number
+          sodium_mg: number | null
           user_id: string
+          vitamin_b12_ug: number | null
+          vitamin_c_mg: number | null
+          vitamin_d_ug: number | null
         }
         Insert: {
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           fat_g?: number
           fiber_g?: number
           id?: string
+          iron_mg?: number | null
           kcal?: number
+          magnesium_mg?: number | null
           name: string
+          potassium_mg?: number | null
           protein_g?: number
+          sodium_mg?: number | null
           user_id: string
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
         }
         Update: {
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           fat_g?: number
           fiber_g?: number
           id?: string
+          iron_mg?: number | null
           kcal?: number
+          magnesium_mg?: number | null
           name?: string
+          potassium_mg?: number | null
           protein_g?: number
+          sodium_mg?: number | null
           user_id?: string
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
         }
         Relationships: []
       }
@@ -686,6 +710,36 @@ export type Database = {
         }
         Relationships: []
       }
+      fasting_sessions: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          id: string
+          schedule_type: string
+          start_time: string
+          target_hours: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          schedule_type?: string
+          start_time?: string
+          target_hours?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          schedule_type?: string
+          start_time?: string
+          target_hours?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       food_usage_stats: {
         Row: {
           food_id: string
@@ -715,6 +769,7 @@ export type Database = {
       }
       foods: {
         Row: {
+          calcium_mg: number | null
           carbs_g: number
           created_at: string
           default_piece_weight_g: number | null
@@ -723,11 +778,19 @@ export type Database = {
           food_number: number | null
           group_name: string | null
           id: string
+          iron_mg: number | null
           kcal: number
+          magnesium_mg: number | null
           name: string
+          potassium_mg: number | null
           protein_g: number
+          sodium_mg: number | null
+          vitamin_b12_ug: number | null
+          vitamin_c_mg: number | null
+          vitamin_d_ug: number | null
         }
         Insert: {
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           default_piece_weight_g?: number | null
@@ -736,11 +799,19 @@ export type Database = {
           food_number?: number | null
           group_name?: string | null
           id?: string
+          iron_mg?: number | null
           kcal?: number
+          magnesium_mg?: number | null
           name: string
+          potassium_mg?: number | null
           protein_g?: number
+          sodium_mg?: number | null
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
         }
         Update: {
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           default_piece_weight_g?: number | null
@@ -749,9 +820,16 @@ export type Database = {
           food_number?: number | null
           group_name?: string | null
           id?: string
+          iron_mg?: number | null
           kcal?: number
+          magnesium_mg?: number | null
           name?: string
+          potassium_mg?: number | null
           protein_g?: number
+          sodium_mg?: number | null
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
         }
         Relationships: []
       }
@@ -937,6 +1015,7 @@ export type Database = {
       meal_logs: {
         Row: {
           amount: number
+          calcium_mg: number | null
           carbs_g: number
           created_at: string
           custom_food_id: string | null
@@ -944,17 +1023,25 @@ export type Database = {
           fiber_g: number
           food_id: string | null
           id: string
+          iron_mg: number | null
           item_name: string
           kcal: number
           log_date: string
+          magnesium_mg: number | null
           meal_type: string
+          potassium_mg: number | null
           protein_g: number
           recipe_id: string | null
+          sodium_mg: number | null
           unit: string
           user_id: string
+          vitamin_b12_ug: number | null
+          vitamin_c_mg: number | null
+          vitamin_d_ug: number | null
         }
         Insert: {
           amount?: number
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           custom_food_id?: string | null
@@ -962,17 +1049,25 @@ export type Database = {
           fiber_g?: number
           food_id?: string | null
           id?: string
+          iron_mg?: number | null
           item_name: string
           kcal?: number
           log_date: string
+          magnesium_mg?: number | null
           meal_type?: string
+          potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
+          sodium_mg?: number | null
           unit?: string
           user_id: string
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
         }
         Update: {
           amount?: number
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           custom_food_id?: string | null
@@ -980,14 +1075,21 @@ export type Database = {
           fiber_g?: number
           food_id?: string | null
           id?: string
+          iron_mg?: number | null
           item_name?: string
           kcal?: number
           log_date?: string
+          magnesium_mg?: number | null
           meal_type?: string
+          potassium_mg?: number | null
           protein_g?: number
           recipe_id?: string | null
+          sodium_mg?: number | null
           unit?: string
           user_id?: string
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
         }
         Relationships: []
       }
@@ -1048,6 +1150,7 @@ export type Database = {
       nutrition_goals: {
         Row: {
           activity_level: string
+          calcium_mg: number | null
           carbs_g: number
           created_at: string
           daily_kcal: number
@@ -1055,14 +1158,22 @@ export type Database = {
           fiber_g: number | null
           goal_type: string
           id: string
+          iron_mg: number | null
+          magnesium_mg: number | null
           meal_slots: string[]
+          potassium_mg: number | null
           protein_g: number
+          sodium_mg: number | null
           updated_at: string
           user_id: string
+          vitamin_b12_ug: number | null
+          vitamin_c_mg: number | null
+          vitamin_d_ug: number | null
           water_goal_ml: number
         }
         Insert: {
           activity_level?: string
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           daily_kcal?: number
@@ -1070,14 +1181,22 @@ export type Database = {
           fiber_g?: number | null
           goal_type?: string
           id?: string
+          iron_mg?: number | null
+          magnesium_mg?: number | null
           meal_slots?: string[]
+          potassium_mg?: number | null
           protein_g?: number
+          sodium_mg?: number | null
           updated_at?: string
           user_id: string
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
           water_goal_ml?: number
         }
         Update: {
           activity_level?: string
+          calcium_mg?: number | null
           carbs_g?: number
           created_at?: string
           daily_kcal?: number
@@ -1085,10 +1204,17 @@ export type Database = {
           fiber_g?: number | null
           goal_type?: string
           id?: string
+          iron_mg?: number | null
+          magnesium_mg?: number | null
           meal_slots?: string[]
+          potassium_mg?: number | null
           protein_g?: number
+          sodium_mg?: number | null
           updated_at?: string
           user_id?: string
+          vitamin_b12_ug?: number | null
+          vitamin_c_mg?: number | null
+          vitamin_d_ug?: number | null
           water_goal_ml?: number
         }
         Relationships: []
@@ -1233,6 +1359,7 @@ export type Database = {
           deletion_scheduled_at: string | null
           display_title: string | null
           experience_level: string | null
+          fasting_widget_hidden: boolean
           gender: string | null
           height_cm: number | null
           id: string
@@ -1265,6 +1392,7 @@ export type Database = {
           deletion_scheduled_at?: string | null
           display_title?: string | null
           experience_level?: string | null
+          fasting_widget_hidden?: boolean
           gender?: string | null
           height_cm?: number | null
           id?: string
@@ -1297,6 +1425,7 @@ export type Database = {
           deletion_scheduled_at?: string | null
           display_title?: string | null
           experience_level?: string | null
+          fasting_widget_hidden?: boolean
           gender?: string | null
           height_cm?: number | null
           id?: string

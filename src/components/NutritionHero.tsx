@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { MICROS, formatMicro, type Micros } from "@/lib/micronutrients";
+
 interface Props {
   kcal: number;
   burned: number;
@@ -5,6 +9,8 @@ interface Props {
   fat: number;
   carbs: number;
   fiber: number;
+  micros?: Micros;
+  microTargets?: Micros;
   targets: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null };
 }
 
@@ -25,7 +31,9 @@ function Ring({ size, stroke, pct, color, children }: { size: number; stroke: nu
 }
 
 /** Kalorihjälte: Kvar = Mål − Ätit (målet bygger redan på träningsvolymen; Förbränt visas bara som info), plus fyra makroringar. */
-export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets }: Props) {
+export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets, micros = {}, microTargets = {} }: Props) {
+  const [microOpen, setMicroOpen] = useState(false);
+  const microRows = MICROS.filter((m) => (microTargets[m.key] ?? 0) > 0 || micros[m.key] != null);
   const budget = targets.kcal;
   const left = Math.round(budget - kcal);
   const over = left < 0;
@@ -64,6 +72,39 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
           </div>
         ))}
       </div>
+      {microRows.length > 0 && (
+        <div className="rounded-2xl bg-muted/40">
+          <button onClick={() => setMicroOpen((v) => !v)} aria-expanded={microOpen}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold">
+            Mikronäringsämnen
+            <ChevronDown className={`w-4 h-4 transition-transform ${microOpen ? "rotate-180" : ""}`} />
+          </button>
+          {microOpen && (
+            <div className="px-3 pb-3 space-y-2">
+              {microRows.map((m) => {
+                const v = Number(micros[m.key] ?? 0);
+                const t = Number(microTargets[m.key] ?? 0);
+                const pct = t > 0 ? Math.min(100, (v / t) * 100) : 0;
+                return (
+                  <div key={m.key}>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="font-medium">{m.label}</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {formatMicro(v)}{t > 0 ? ` / ${formatMicro(t)}` : ""} {m.unit}
+                      </span>
+                    </div>
+                    {t > 0 && (
+                      <div className="h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
