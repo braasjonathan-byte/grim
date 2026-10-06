@@ -12,6 +12,7 @@ function readLastAmounts(): Record<string, { amount: string; unit: string }> {
   try { return JSON.parse(localStorage.getItem(LAST_AMOUNT_KEY) || "{}"); } catch { return {}; }
 }
 function saveLastAmount(key: string, amount: string, unit: string) {
+  if (!(parseDecimal(amount) > 0)) return; // kom aldrig ihåg ogiltiga mängder
   try {
     const all = readLastAmounts();
     all[key] = { amount, unit };
@@ -233,7 +234,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     if (row.source === "recipe") { setAmount("1"); setUnit("portion"); return; }
     // 1) Remember what the user logged last time for this food
     const last = readLastAmounts()[`${row.source}:${row.name.toLowerCase()}`];
-    if (last) { setAmount(last.amount); setUnit(last.unit); return; }
+    if (last && parseDecimal(last.amount) > 0) { setAmount(last.amount); setUnit(last.unit); return; }
     // 2) Foods normally eaten by the piece default to 1 st
     // 2b) Natural portions (bröd → skiva, nötter → näve, kyckling → filé)
     const nat = naturalUnitsFor(row.name);
@@ -285,9 +286,35 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     };
   }, [selected, amount, unit]);
 
+  const amountError = useMemo(() => {
+    if (!selected) return null;
+    if (selected.source === "recipe") return validateNumber(amount, { min: 0.1, max: 50, unit: "portioner" }).error;
+    const base = validateNumber(amount, { min: 0, max: 100000 });
+    if (base.error) return base.error;
+    if (!base.value) return validateNumber("0", "foodGrams").error;
+    const grams = unit === "g" ? base.value : gramsForFood(base.value, unit, selected.name, selected.piece_g);
+    return validateNumber(String(grams), "foodGrams").error;
+  }, [selected, amount, unit]);
+  const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
+  const pendingKeepOpen = useRef(false);
+
+  function requestConfirm(keepOpen = false) {
+    if (!selected || amountError) return;
+    if (selected.source !== "recipe") {
+      const a = parseDecimal(amount);
+      const grams = unit === "g" ? a : gramsForFood(a, unit, selected.name, selected.piece_g);
+      if (grams > UNUSUAL_FOOD_GRAMS) {
+        pendingKeepOpen.current = keepOpen;
+        setConfirmMsg("Det är ovanligt mycket. Stämmer det?");
+        return;
+      }
+    }
+    void confirm(keepOpen);
+  }
+
   async function confirm(keepOpen = false) {
-    if (!selected || !computed) return;
-    const a = parseFloat(amount.replace(",", ".")) || 0;
+    if (!selected || !computed || amountError) return;
+    const a = parseDecimal(amount);
 
     // If picked from Open Food Facts, save to custom_foods first
     let outSource: PickedItem["source"] = selected.source === "off" ? "custom_food" : selected.source;
@@ -435,10 +462,10 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                 <Input
                   value={amount}
                   onFocus={(e) => e.currentTarget.select()}
-                  onKeyDown={(e) => { if (e.key === "Enter") confirm(); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") requestConfirm(); }}
                   onChange={(e) => setAmount(e.target.value)}
                   inputMode="decimal"
-                  pattern="[0-9.,]*"
+                  aria-invalid={!!amountError || undefined}
                   className="rounded-xl bg-muted/50 border-transparent flex-1"
                 />
                 {selected.source !== "recipe" ? (
@@ -449,6 +476,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   <div className="px-3 flex items-center text-sm rounded-xl bg-muted">portion(er)</div>
                 )}
               </div>
+              <FieldError error={amountError} />
               {selected.source !== "recipe" && quickAmounts.length > 0 && (
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {quickAmounts.map((p) => (
@@ -497,14 +525,15 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             )}
             <div className="flex gap-2">
               <button onClick={() => setSelected(null)} className="flex-1 pill-btn-ghost py-2.5 text-sm">Tillbaka</button>
-              <button onClick={() => confirm()} className="flex-1 pill-btn-primary py-2.5 text-sm">Lägg till</button>
+              <button onClick={() => requestConfirm()} disabled={!!amountError} className="flex-1 pill-btn-primary py-2.5 text-sm disabled:opacity-50">Lägg till</button>
             </div>
-            <button onClick={() => confirm(true)} className="w-full pill-btn-soft py-2.5 text-sm">
+            <button onClick={() => requestConfirm(true)} disabled={!!amountError} className="w-full pill-btn-soft py-2.5 text-sm disabled:opacity-50">
               <Plus className="w-4 h-4" /> Lägg till & sök vidare
             </button>
           </div>
         )}
       </DialogContent>
+      <ConfirmValueDialog message={confirmMsg} onConfirm={() => { setConfirmMsg(null); void confirm(pendingKeepOpen.current); }} onCancel={() => setConfirmMsg(null)} />
 
       <BarcodeScannerDialog open={barcodeOpen} onOpenChange={setBarcodeOpen} onPick={(item, opts) => {
         if (opts?.keepScanning) { onPick(item, { keepOpen: true }); setAddedCount((c) => c + 1); setLastAdded(item.name); }
