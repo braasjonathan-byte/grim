@@ -65,7 +65,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     (async () => {
       const [{ count: activeCount }, { count: ndCount }, { data: profileRow }] = await Promise.all([
         supabase.from("workout_plans").select("id", { count: "exact", head: true }).eq("user_id", userId).gt("week", 0),
-        supabase.from("nd_plans").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        supabase.from("archived_plans").select("id", { count: "exact", head: true }).eq("user_id", userId),
         supabase.from("profiles").select("experience_level").eq("user_id", userId).maybeSingle(),
       ]);
       setHasActivePlan((activeCount || 0) > 0);
