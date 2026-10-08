@@ -1,4 +1,5 @@
-import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
+import { matchExercises } from "@/lib/exerciseMatcher";
+import { exerciseTranslations } from "@/data/exerciseLibrary";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
@@ -138,16 +139,28 @@ const ExercisePickerDialog = ({
     const merged = Array.from(nameMap.values());
     // Hide entries whose name still contains set/rep notation (e.g. "Axelpress 2×10")
     const setRepRe = /\s+\d+\s*[x×*]\s*\d+/i;
+    // Hide placeholder/empty entries and challenge entries that should never appear here
+    const isJunk = (name: string) => {
+      const t = name.trim();
+      return !t || t === "–" || t === "-" || t.startsWith("⚔️") || /utmaning\s*:/i.test(t);
+    };
     return dedupeExerciseList(merged)
-      .filter(e => !setRepRe.test(e.name))
+      .filter(e => !setRepRe.test(e.name) && !isJunk(e.name))
       .sort((a, b) => a.name.localeCompare(b.name, "sv"));
   })();
 
-  const filtered = fuzzyFilterSort(
-    allExercises.filter(e => !selectedMuscle || e.muscleGroup === selectedMuscle),
-    search,
-    (e) => [e.name, e.muscleGroup, e.category]
+  const filtered = matchExercises(
+    allExercises
+      .filter(e => !selectedMuscle || e.muscleGroup === selectedMuscle)
+      .map(e => ({ ...e, englishName: exerciseTranslations[e.name] ?? null })),
+    search
   );
+
+  const handleClose = () => {
+    setSearch("");
+    setSelectedMuscle(null);
+    onClose();
+  };
 
   const handleSelect = (name: string) => {
     pushRecent(name);
@@ -211,7 +224,7 @@ const ExercisePickerDialog = ({
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-stretch justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Dialog */}
       <div
@@ -231,7 +244,7 @@ const ExercisePickerDialog = ({
             <h3 className="font-bold text-sm">{title}</h3>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X className="w-4 h-4" />
@@ -252,6 +265,19 @@ const ExercisePickerDialog = ({
             />
           </div>
         </div>
+
+        {/* Active muscle filter indicator while searching */}
+        {search && selectedMuscle && (
+          <div className="px-4 pb-2">
+            <button
+              onClick={() => setSelectedMuscle(null)}
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              Söker i: {selectedMuscle}
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
         {/* Muscle group filters */}
         <div className="px-4 pb-2 flex flex-wrap gap-1.5">

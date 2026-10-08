@@ -157,6 +157,7 @@ export const GROUP_REGIONS: Record<string, MuscleRegion[]> = {
   "Armar": ["biceps", "triceps", "forearms"],
   "Underarmar": ["forearms"],
   "Core": ["abs", "obliques"],
+  "Kondition": [],
   "Helkropp": [],
 };
 

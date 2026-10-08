@@ -111,3 +111,52 @@ export const derivePlanCardioValues = (
     tempo: tempoStr,
   };
 };
+
+/**
+ * Bygger en parsningsbar etikett för ett intervallpass, t.ex.
+ * "4×2 min, vila 2 min @ 35 km/h". Enhets-suffixet avgör vilket cardioMode
+ * (kmh/watt/minkm) som ska återskapas vid parsning.
+ */
+export const buildConditioningIntervalLabel = (
+  count: number,
+  durationMin: string,
+  restMin?: string,
+  mode?: "kmh" | "watt" | "minkm" | string | null,
+  value?: string,
+): string => {
+  let out = durationMin && durationMin.trim() ? `${count}×${durationMin.trim()} min` : `${count} intervaller`;
+  if (restMin && restMin.trim()) out += `, vila ${restMin.trim()} min`;
+  if (value && value.trim() && mode) {
+    const suffix = mode === "kmh" ? " km/h" : mode === "watt" ? " W" : "/km";
+    out += ` @ ${value.trim()}${suffix}`;
+  }
+  return out;
+};
+
+export interface ParsedConditioningInterval {
+  count: number;
+  durationMin: number;
+  restMin: string;
+  mode: "kmh" | "watt" | "minkm" | null;
+  value: string;
+}
+
+/** Tolkar en etikett byggd av {@link buildConditioningIntervalLabel}. */
+export const parseConditioningIntervalLabel = (text: string): ParsedConditioningInterval | null => {
+  const m = String(text || "").match(
+    /(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min(?:\s*[,(]\s*(?:(\d+(?:[.,]\d+)?)\s*(?:min\s*)?(?:jogg)?vila|vila\s*(\d+(?:[.,]\d+)?)\s*min))?(?:.*?@\s*([\d:.,]+)\s*(km\/h|W\b|\/km))?/i
+  );
+  if (!m) return null;
+  const count = parseInt(m[1], 10);
+  const durationMin = parseFloat(m[2].replace(",", "."));
+  const restMin = m[3] || m[4] || "";
+  let mode: ParsedConditioningInterval["mode"] = null;
+  let value = "";
+  if (m[6]) {
+    value = m[5];
+    if (/km\/h/i.test(m[6])) mode = "kmh";
+    else if (/W/i.test(m[6])) mode = "watt";
+    else mode = "minkm";
+  }
+  return { count, durationMin, restMin, mode, value };
+};

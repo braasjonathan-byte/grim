@@ -31,6 +31,7 @@ import { toLocalDateKey } from "@/lib/dateUtils";
 import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
+import { getCardioModes } from "@/lib/cardioUnits";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
@@ -84,6 +85,17 @@ const summarizeDetails = (details: string | null): string[] => {
     .map((l) => l.replace(/^[-•*\s]+/, "").trim())
     .filter(Boolean)
     .slice(0, 4);
+};
+
+/**
+ * Loggade pass sparas som fritext (t.ex. "Cykling — 45 min, 30.0/km, 22.5 km").
+ * Sporter vars enhet är km/h (cykling m.fl.) ska aldrig visa farten som "/km".
+ */
+const fixCardioUnitSuffix = (line: string): string => {
+  const sep = line.indexOf("—");
+  const name = sep >= 0 ? line.slice(0, sep).trim() : line;
+  if (getCardioModes(name)[0] !== "kmh") return line;
+  return line.replace(/(\d+(?:[.,]\d+)?)\s*\/\s*km\b/g, "$1 km/h");
 };
 
 interface HomeViewProps {
@@ -393,7 +405,7 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
           </p>
         ) : (
           <ul className="space-y-1.5">
-            {todaysPlans.flatMap((p) => summarizeDetails(p.details)).slice(0, 5).map((line, i) => (
+            {todaysPlans.flatMap((p) => summarizeDetails(p.details).map(fixCardioUnitSuffix)).slice(0, 5).map((line, i) => (
               <li key={i} className="text-sm text-foreground/90 flex items-start gap-2">
                 <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
                 <span className="line-clamp-1">{line}</span>

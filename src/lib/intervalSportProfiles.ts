@@ -41,7 +41,7 @@ const PROFILES: Array<{ match: RegExp; profile: IntervalSportProfile }> = [
     profile: { sport: "löpning", defaultUnit: "distance_m", availableUnits: ["distance_m","distance_km","time"], defaultValue: 400, defaultRestSec: 90, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Tempo", paceUnit: "/km", paceSpoken: "per kilometer", supportsGps: true },
   },
   {
-    match: /cykling|cykel|spinning/i,
+    match: /cykling|cykel|spinning|zwift/i,
     profile: { sport: "cykling", defaultUnit: "distance_km", availableUnits: ["distance_km","distance_m","time"], defaultValue: 2, defaultRestSec: 120, defaultWarmupMin: 10, defaultCooldownMin: 5, paceLabel: "Fart", paceUnit: "km/h", paceSpoken: "kilometer i timmen", supportsGps: true },
   },
   {

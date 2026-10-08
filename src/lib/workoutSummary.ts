@@ -2,9 +2,11 @@ import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { isPrWeight, type PrIndex } from "@/lib/prBadges";
 import {
   getCardioDistUnit,
+  getCardioModes,
   getStoredCardioMode,
   computeTempoValue,
   modeDisplaySuffix,
+  isLinkedMode,
   type CardioMode,
 } from "@/lib/cardioUnits";
 
@@ -191,7 +193,12 @@ export function formatCardioDistance(km: number, sportName: string): string {
 
 /** Weighted average pace/speed across the session, in the sport's unit. */
 export function formatCardioPace(minutes: number, km: number, sportName: string): { value: string; label: string } {
-  const mode: CardioMode = getStoredCardioMode(sportName);
+  let mode: CardioMode = getStoredCardioMode(sportName);
+  // Watt/spm/kcal/nivå har ingen fart-/tempo-relation – falla tillbaka på sportens
+  // riktiga hastighetsenhet (km/h för cykling m.fl., annars min/km).
+  if (!isLinkedMode(mode)) {
+    mode = getCardioModes(sportName).find(isLinkedMode) || "minkm";
+  }
   const label = mode === "kmh" ? "Snittfart" : "Snittempo";
   if (!(minutes > 0) || !(km > 0)) return { value: "–", label };
   const value = computeTempoValue(mode, minutes, km);
