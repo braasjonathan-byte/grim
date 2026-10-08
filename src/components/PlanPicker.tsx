@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info, Waves } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
@@ -21,8 +21,16 @@ interface PlanPickerProps {
   onBack?: () => void;
 }
 
-type Step = "select" | "profile" | "flexible" | "1rm" | "preferred-days" | "start-date" | "loading" | "builder" | "triathlon";
+type Step = "select" | "profile" | "flexible" | "1rm" | "preferred-days" | "start-date" | "confirm-archive" | "loading" | "builder" | "triathlon";
 
+
+/** Conservative starting weights for users who don\'t know their 1RM yet: empty bar + light plates. */
+const SAFE_START_RM: Record<string, string> = {
+  "knäböj": "40",
+  "bänk": "20",
+  "marklyft": "50",
+  "press": "15",
+};
 
 const defaultProfile: FitnessProfile = {
   max_distance_km: null,
@@ -47,15 +55,39 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const [preferredDays, setPreferredDays] = useState<string[]>([]);
   const [flexSessions, setFlexSessions] = useState(3);
   const [flexWeeks, setFlexWeeks] = useState(8);
+  const [skipEvent, setSkipEvent] = useState(false);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [beginnerFilterOn, setBeginnerFilterOn] = useState(false);
+  const [pendingApply, setPendingApply] = useState<{ template: TemplatePlan; rmValues?: Record<string, number>; profile?: FitnessProfile } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const [{ count: activeCount }, { count: ndCount }, { data: profileRow }] = await Promise.all([
+        supabase.from("workout_plans").select("id", { count: "exact", head: true }).eq("user_id", userId).gt("week", 0),
+        supabase.from("nd_plans").select("id", { count: "exact", head: true }).eq("user_id", userId),
+        supabase.from("profiles").select("experience_level").eq("user_id", userId).maybeSingle(),
+      ]);
+      setHasActivePlan((activeCount || 0) > 0);
+      const experience = (profileRow as any)?.experience_level;
+      setIsNewUser((activeCount || 0) === 0 && (ndCount || 0) === 0 && !experience);
+    })();
+  }, [userId]);
 
 
   const categories = Array.from(new Set(planTemplates.map(t => t.category)));
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredTemplates = planTemplates.filter(t => {
-    if (activeFilter && t.category !== activeFilter) return false;
-    if (normalizedQuery && !t.name.toLowerCase().includes(normalizedQuery)) return false;
-    return true;
-  });
+  const filteredTemplates = planTemplates
+    .filter(t => {
+      if (beginnerFilterOn && !t.isBeginnerFriendly) return false;
+      if (activeFilter && t.category !== activeFilter) return false;
+      if (normalizedQuery && !t.name.toLowerCase().includes(normalizedQuery)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (!isNewUser) return 0;
+      return (b.isBeginnerFriendly ? 1 : 0) - (a.isBeginnerFriendly ? 1 : 0);
+    });
 
   const selectedTemplate = selected !== null && selected >= 0 ? planTemplates[selected] : null;
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
@@ -97,6 +129,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     const template = planTemplates[index];
     if (!template) return;
     setSelected(index);
+    setSkipEvent(false);
 
     const templateNeedsProfile = template.generateFromProfile !== undefined;
     const templateNeeds1RM = template.requiredLifts.length > 0;
@@ -191,12 +224,17 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       return;
     }
 
+    // Clear events that were auto-created for a previous plan (e.g. a competition
+    // tied to a program the user is now switching away from), so they don't
+    // linger as a stale countdown once the new plan starts.
+    await supabase.from("event_countdowns").delete().eq("user_id", userId).eq("linked_plan", true);
+
 
     // Save plan_start_date and mark as calibrated
     const startDateStr = toLocalDateKey(startDate);
     await supabase.from("profiles").update({ plan_start_calibrated: true, plan_start_date: startDateStr } as any).eq("user_id", userId);
 
-    // Auto-create event countdown for event-prep plans
+    // Auto-create event countdown for event-prep plans (skipped if the user opted out)
     if (template.isEventPrep && eventDate && eventName.trim()) {
       const evDateStr = toLocalDateKey(eventDate);
       await supabase.from("event_countdowns").insert({
@@ -204,6 +242,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
         event_name: eventName.trim(),
         event_date: evDateStr,
         event_type: template.defaultEventType || "annat",
+        linked_plan: true,
       });
     }
 
@@ -221,8 +260,29 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
 
   };
 
+  // 1RM is optional: start with conservative, safe weights (empty bar + light plates)
+  // instead of forcing the user to know or guess a number they don't have.
+  const handleSkipRm = () => {
+    if (!selectedTemplate) return;
+    const safeRms: Record<string, string> = {};
+    const rmValues: Record<string, number> = {};
+    for (const lift of selectedTemplate.requiredLifts) {
+      const safe = SAFE_START_RM[lift] || "20";
+      safeRms[lift] = safe;
+      rmValues[lift] = parseDecimal(safe);
+    }
+    setRms(safeRms);
+    setPendingRmValues(rmValues);
+    setStep("preferred-days");
+  };
+
   const handleStartDateConfirm = () => {
-    applyTemplate(selectedTemplate!, pendingRmValues, pendingProfile);
+    if (hasActivePlan) {
+      setPendingApply({ template: selectedTemplate!, rmValues: pendingRmValues, profile: pendingProfile });
+      setStep("confirm-archive");
+    } else {
+      applyTemplate(selectedTemplate!, pendingRmValues, pendingProfile);
+    }
   };
 
   if (step === "builder") {
@@ -436,7 +496,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   }
 
   if (step === "start-date") {
-    const isEvent = selectedTemplate?.isEventPrep;
+    const isEvent = selectedTemplate?.isEventPrep && !skipEvent;
 
 
     // For event-prep plans, calculate start date from event date
@@ -470,6 +530,15 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
               <p className="text-sm text-muted-foreground">
                 Planen räknas bakåt så att du är i toppform på eventdagen. Nedräkning skapas automatiskt.
               </p>
+            </div>
+
+            <div className="flex justify-center">
+              <button
+                onClick={() => { setSkipEvent(true); setEventDate(undefined); setEventName(""); setStartDate(new Date()); }}
+                className="text-xs font-semibold text-muted-foreground hover:text-foreground underline transition-colors"
+              >
+                Hoppa över tävling
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -601,6 +670,32 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
     );
   }
 
+  if (step === "confirm-archive") {
+    return (
+      <div className="space-y-6 animate-fade-in text-center py-10">
+        <Dumbbell className="w-10 h-10 text-primary mx-auto" />
+        <h2 className="text-xl font-black tracking-tight">Byta till {pendingApply?.template.name}?</h2>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          Dina nuvarande pass arkiveras under din profil (historik bevaras) och ersätts med {pendingApply?.template.name}.
+        </p>
+        <div className="flex gap-2 max-w-sm mx-auto">
+          <button
+            onClick={() => { setStep("start-date"); setPendingApply(null); }}
+            className="flex-1 py-3 bg-secondary text-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Avbryt
+          </button>
+          <button
+            onClick={() => { if (pendingApply) applyTemplate(pendingApply.template, pendingApply.rmValues, pendingApply.profile); }}
+            className="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Arkivera & starta
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (step === "loading") {
     return (
       <div className="text-center py-16 space-y-4 animate-fade-in">
@@ -627,6 +722,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
           <p className="text-sm text-muted-foreground">
             Programmet beräknar alla vikter baserat på dina maxlyft
           </p>
+          <p className="text-xs text-muted-foreground">1RM = det tyngsta du kan lyfta en gång</p>
         </div>
 
         <div className="bg-card border border-border rounded-lg p-4 space-y-1">
@@ -666,6 +762,14 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
           className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg disabled:opacity-40 hover:opacity-90 transition-opacity"
         >
           Skapa schema med beräknade vikter
+        </button>
+
+        <button
+          onClick={handleSkipRm}
+          disabled={loading}
+          className="w-full py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Jag vet inte – starta lätt
         </button>
       </div>
     );
@@ -720,6 +824,16 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
           }`}
         >
           Alla
+        </button>
+        <button
+          onClick={() => { setBeginnerFilterOn((v) => !v); setSelected(null); }}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+            beginnerFilterOn
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          🔰 Nybörjare
         </button>
         {categories.map((cat) => (
           <button
