@@ -335,6 +335,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     week: number;
     day: string;
     uncheckedCount: number;
+    doneCount: number;
+    totalCount: number;
   } | null>(null);
 
   // Ask for a session name when completing an unnamed workout (shown before all other dialogs)
