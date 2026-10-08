@@ -156,6 +156,12 @@ const ExercisePickerDialog = ({
     search
   );
 
+  const handleClose = () => {
+    setSearch("");
+    setSelectedMuscle(null);
+    onClose();
+  };
+
   const handleSelect = (name: string) => {
     pushRecent(name);
     onSelect(name);
@@ -218,7 +224,7 @@ const ExercisePickerDialog = ({
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-stretch justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Dialog */}
       <div
@@ -238,7 +244,7 @@ const ExercisePickerDialog = ({
             <h3 className="font-bold text-sm">{title}</h3>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X className="w-4 h-4" />
@@ -259,6 +265,19 @@ const ExercisePickerDialog = ({
             />
           </div>
         </div>
+
+        {/* Active muscle filter indicator while searching */}
+        {search && selectedMuscle && (
+          <div className="px-4 pb-2">
+            <button
+              onClick={() => setSelectedMuscle(null)}
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              Söker i: {selectedMuscle}
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
         {/* Muscle group filters */}
         <div className="px-4 pb-2 flex flex-wrap gap-1.5">
