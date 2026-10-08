@@ -43,6 +43,8 @@ export interface TemplatePlan {
   isFlexible?: boolean;
   /** Generator for flexible plans (frequency + length chosen by the user) */
   generateFlexible?: (profile: FitnessProfile, opts: FlexibleRunOptions) => TemplatePlanDay[];
+  /** Marks plans well suited for complete beginners (surfaced in the "Nybörjare" filter and sorted first for new users) */
+  isBeginnerFriendly?: boolean;
 }
 
 export interface TemplatePlanDay {
@@ -1542,6 +1544,7 @@ export const planTemplates: TemplatePlan[] = [
     category: "styrka",
     requiredLifts: ["knäböj", "bänk", "marklyft", "press"],
     generateDays: generateBeginner,
+    isBeginnerFriendly: true,
   },
   {
     name: "🔰 Kom igång – Maskiner & Fria vikter",
@@ -1550,6 +1553,7 @@ export const planTemplates: TemplatePlan[] = [
     category: "styrka",
     requiredLifts: ["knäböj", "bänk"],
     generateDays: generateMachineStrength,
+    isBeginnerFriendly: true,
   },
   {
     name: "💪 Bro Split – Kroppsbyggare",

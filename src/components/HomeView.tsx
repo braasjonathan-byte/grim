@@ -278,6 +278,31 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
     [completions, currentWeek, todayKey, todayAbbr],
   );
 
+  const noActivePlan = plans.length === 0;
+
+  const DAY_NAMES_FULL: Record<string, string> = {
+    mån: "Måndag", tis: "Tisdag", ons: "Onsdag", tors: "Torsdag", fre: "Fredag", lör: "Lördag", sön: "Söndag",
+  };
+
+  const nextSession = useMemo(() => {
+    for (let i = 1; i <= 8; i++) {
+      const idx = (todayIdx + i) % 7;
+      const abbr = DAYS[idx];
+      const wrapped = todayIdx + i >= 7;
+      const weekToCheck = wrapped ? currentWeek + 1 : currentWeek;
+      const match = plans.find(
+        (p) => p.week === weekToCheck && normalizeDay(p.day) === normalizeDay(abbr) && hasContent(p.details),
+      );
+      if (match) {
+        return {
+          dayLabel: DAY_NAMES_FULL[normalizeDay(abbr)] ?? abbr,
+          name: match.session_name?.trim() || "Pass",
+        };
+      }
+    }
+    return null;
+  }, [plans, currentWeek, todayIdx]);
+
   const weekPlanned = useMemo(() => {
     const dayKeys = new Set(
       plans.filter((p) => p.week === currentWeek && hasContent(p.details)).map((p) => normalizeDay(p.day)),
@@ -383,7 +408,9 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
             <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Dagens pass</p>
               <p className="text-sm font-semibold truncate">
-                {todaysPlans.length === 0
+                {noActivePlan
+                  ? "Ingen plan än"
+                  : todaysPlans.length === 0
                   ? "Vilodag"
                   : todaysPlans
                       .map((p) => p.session_name?.trim())
@@ -392,35 +419,68 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
               </p>
             </div>
           </div>
-          {todaysPlans.length > 0 && (
-            <span className={`shrink-0 whitespace-nowrap text-[10px] font-bold uppercase px-2 py-1 rounded-full ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
-              {todayDone ? "Klart" : "Ej klart"}
-            </span>
-          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {todaysPlans.length > 0 && (
+              <span className="whitespace-nowrap text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
+                Idag
+              </span>
+            )}
+            {todaysPlans.length > 0 && (
+              <span className={`whitespace-nowrap text-[10px] font-bold uppercase px-2 py-1 rounded-full ${todayDone ? "bg-success/15 text-success" : "bg-primary/15 text-primary"}`}>
+                {todayDone ? "Klart" : "Ej klart"}
+              </span>
+            )}
+          </div>
         </div>
 
-        {todaysPlans.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Inget pass inplanerat idag. Passa på att återhämta dig – eller lägg till ett pass.
-          </p>
+        {noActivePlan ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ingen plan än – börja med en plan eller ett enkelt pass.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button className="flex-1 min-w-[140px]" onClick={() => onNavigate("workout")}>
+                Välj en plan
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+              <Button variant="outline" className="flex-1 min-w-[140px]" onClick={() => openPickerForGroup(null)}>
+                <Plus className="w-4 h-4 mr-1" />
+                Enkelt pass
+              </Button>
+            </div>
+          </div>
         ) : (
-          <ul className="space-y-1.5">
-            {todaysPlans.flatMap((p) => summarizeDetails(p.details).map(fixCardioUnitSuffix)).slice(0, 5).map((line, i) => (
-              <li key={i} className="text-sm text-foreground/90 flex items-start gap-2">
-                <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
-                <span className="line-clamp-1">{line}</span>
-              </li>
-            ))}
-            {todaysPlans.every((p) => !p.details?.trim()) && (
-              <li className="text-sm text-muted-foreground">Passet saknar övningar – lägg till dem i Träning.</li>
+          <>
+            {todaysPlans.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Inget pass inplanerat idag. Passa på att återhämta dig – eller lägg till ett pass.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {todaysPlans.flatMap((p) => summarizeDetails(p.details).map(fixCardioUnitSuffix)).slice(0, 5).map((line, i) => (
+                  <li key={i} className="text-sm text-foreground/90 flex items-start gap-2">
+                    <span className="mt-1.5 h-1 w-1 rounded-full bg-primary shrink-0" />
+                    <span className="line-clamp-1">{line}</span>
+                  </li>
+                ))}
+                {todaysPlans.every((p) => !p.details?.trim()) && (
+                  <li className="text-sm text-muted-foreground">Passet saknar övningar – lägg till dem i Träning.</li>
+                )}
+              </ul>
             )}
-          </ul>
-        )}
 
-        <Button className="w-full" onClick={() => onNavigate("workout")}>
-          {todaysPlans.length === 0 ? "Öppna träning" : todayDone ? "Visa passet" : "Starta passet"}
-          <ChevronRight className="w-4 h-4 ml-1" />
-        </Button>
+            {todayDone && nextSession && (
+              <p className="text-xs text-muted-foreground">
+                Nästa pass: <span className="font-semibold text-foreground">{nextSession.dayLabel} – {nextSession.name}</span>
+              </p>
+            )}
+
+            <Button className="w-full" onClick={() => onNavigate("workout")}>
+              {todaysPlans.length === 0 ? "Öppna träning" : todayDone ? "Visa passet" : "Starta passet"}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </>
+        )}
       </section>
 
       {/* 1b. Suggestion when nothing is scheduled */}

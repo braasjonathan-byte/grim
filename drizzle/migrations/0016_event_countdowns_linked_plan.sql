@@ -1,0 +1,1 @@
+ALTER TABLE public.event_countdowns ADD COLUMN IF NOT EXISTS linked_plan boolean NOT NULL DEFAULT false;

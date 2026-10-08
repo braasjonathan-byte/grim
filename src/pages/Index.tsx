@@ -41,6 +41,7 @@ const SocialView = lazyRetry(() => import("@/components/SocialView"));
 const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
 const WorkoutStats = lazyRetry(() => import("@/components/WorkoutStats"));
 const ToolsTab = lazyRetry(() => import("@/components/ToolsTab"));
+const HelpSection = lazyRetry(() => import("@/components/HelpSection"));
 const ChatView = lazyRetry(() => import("@/components/ChatView"));
 const NutritionView = lazyRetry(() => import("@/components/NutritionView"));
 const HomeView = lazyRetry(() => import("@/components/HomeView"));
@@ -263,6 +264,7 @@ const Index = () => {
     return window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone === true;
   });
   const [showInstallDialog, setShowInstallDialog] = useState(false);
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
 
   // Detect if app is installed (standalone mode or native Capacitor app)
   useEffect(() => {
@@ -920,6 +922,35 @@ const Index = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Hjälp & tips-dialog, öppnas via "?"-knappen */}
+      <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>
+        <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-primary" />
+              Hjälp & tips
+            </DialogTitle>
+            <DialogDescription>Kom igång snabbare – här är svar på vanliga frågor.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-secondary/40 border border-border/40 p-4 space-y-2">
+              <h3 className="text-sm font-bold">Ordlista</h3>
+              <ul className="space-y-1.5 text-xs text-muted-foreground">
+                <li><span className="font-semibold text-foreground">1RM</span> – det tyngsta du kan lyfta en gång.</li>
+                <li><span className="font-semibold text-foreground">Set</span> – en omgång repetitioner av en övning.</li>
+                <li><span className="font-semibold text-foreground">Reps</span> – antal repetitioner i ett set.</li>
+                <li><span className="font-semibold text-foreground">PR</span> – personligt rekord.</li>
+              </ul>
+            </div>
+
+            <Suspense fallback={<TabSkeleton />}>
+              <HelpSection />
+            </Suspense>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background border-primary" style={{ paddingTop: "var(--grim-header-safe-top, env(safe-area-inset-top, 0px))" }}>
         <div className="max-w-lg mx-auto px-4 py-1 flex items-center justify-between text-primary-foreground">
@@ -931,20 +962,7 @@ const Index = () => {
           </button>
           <div className="flex items-center gap-2 mx-[2px] px-[15px]">
             <button
-              onClick={() => {
-                setTab("calc");
-                // Poll for the help section to appear (lazy-loaded), then scroll to it
-                let attempts = 0;
-                const tryScroll = () => {
-                  const el = document.getElementById("help-section");
-                  if (el) {
-                    el.scrollIntoView({ behavior: "smooth" });
-                    return;
-                  }
-                  if (attempts++ < 40) setTimeout(tryScroll, 100);
-                };
-                setTimeout(tryScroll, 50);
-              }}
+              onClick={() => setShowHelpDialog(true)}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-transparent hover:bg-primary/10 transition-colors"
               aria-label="Hjälp & tips"
               title="Hjälp & tips"
