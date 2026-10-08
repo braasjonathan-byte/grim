@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { isCompletedWorkout } from "@/lib/completionCounting";
-import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
+import { checkedSetsFor, setVolumeKg } from "@/lib/checkedSets";
 import { parseExerciseWeight } from "@/lib/workoutSetData";
 import { getPlanDayDateValue, toUtcDateKey } from "@/lib/workoutDayUtils";
 
@@ -51,13 +51,6 @@ const resolveDate = (week: number, day: string, planStart: string | null, update
   return updatedAt ? String(updatedAt).substring(0, 10) : null;
 };
 
-const parseSets = (raw: any): Array<{ kg: string; reps: string }> => {
-  try {
-    const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return Array.isArray(arr) ? arr.map((s: any) => ({ kg: String(s?.kg ?? ""), reps: String(s?.reps ?? "") })) : [];
-  } catch { return []; }
-};
-
 const buildExercises = (details: string, lw: Record<string, any>): HistoryExercise[] => {
   const out: HistoryExercise[] = [];
   const seen = new Set<string>();
@@ -66,9 +59,7 @@ const buildExercises = (details: string, lw: Record<string, any>): HistoryExerci
     const { name, weight } = parseExerciseWeight(line);
     if (!name) continue;
     seen.add(name);
-    const marks = String(lw[`__sets__${name}`] || "");
-    let sets = parseSets(lw[`__setdata__${name}`]);
-    if (marks) sets = sets.filter((_, i) => marks[i] === "1");
+    const sets = checkedSetsFor(lw, name);
     out.push({ name, sets, info: sets.length ? null : weight });
   }
   // Exercises that only exist in logged data (e.g. renamed lines)
@@ -76,9 +67,7 @@ const buildExercises = (details: string, lw: Record<string, any>): HistoryExerci
     if (!key.startsWith("__setdata__")) continue;
     const name = key.slice("__setdata__".length);
     if (seen.has(name)) continue;
-    const marks = String(lw[`__sets__${name}`] || "");
-    let sets = parseSets(lw[key]);
-    if (marks) sets = sets.filter((_, i) => marks[i] === "1");
+    const sets = checkedSetsFor(lw, name);
     if (sets.length) out.push({ name, sets, info: null });
   }
   return out;
@@ -92,7 +81,7 @@ const toSession = (id: string, source: SessionSource, c: any, plans: any[], plan
   let volume = 0;
   for (const e of exercises) for (const s of e.sets) {
     setCount++;
-    if (isPlausibleSet(s.kg, s.reps)) volume += (parseNum(s.kg) || 0) * (parseInt(s.reps) || 0);
+    volume += setVolumeKg(s);
   }
   return {
     id, source, week: c.week || 0, day: c.day || "",

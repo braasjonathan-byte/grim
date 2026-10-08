@@ -1,3 +1,4 @@
+import { sessionVolumeKg } from "@/lib/checkedSets";
 import { useState, useEffect, useMemo } from "react";
 import { parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,13 +109,12 @@ const summarizeLoggedWeights = (lw: any): DayStats => {
         ? data.filter((_: any, i: number) => setsStr[i] === "1")
         : data.filter((s: any) => (parseNum(s?.kg) || 0) > 0 || (parseInt(s?.reps) || 0) > 0);
       if (!hadMarkers) stats.sets += done.length;
-      for (const s of done) {
-        stats.volume += (parseNum(s?.kg) || 0) * (parseInt(s?.reps) || 0);
-      }
+      void done;
     } catch {
       // ignore malformed set data
     }
   }
+  stats.volume = sessionVolumeKg(lw);
   return stats;
 };
 

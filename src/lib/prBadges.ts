@@ -1,5 +1,6 @@
 import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { normalizeExerciseName } from "@/lib/exerciseNormalization";
+import { checkedSetsFor } from "@/lib/checkedSets";
 
 export type PrIndex = Map<string, { best: number; secondBest: number }>;
 
@@ -30,14 +31,7 @@ export function buildPrIndex(completions: AnyCompletion[]): PrIndex {
     for (const [key, value] of Object.entries(lw as Record<string, unknown>)) {
       if (key.startsWith("__setdata__")) {
         const name = key.substring("__setdata__".length);
-        let sets: Array<{ kg?: string | number }> = [];
-        if (typeof value === "string") {
-          try { sets = JSON.parse(value); } catch { continue; }
-        } else if (Array.isArray(value)) {
-          sets = value as Array<{ kg?: string | number }>;
-        } else continue;
-        if (!Array.isArray(sets)) continue;
-        for (const s of sets) if (isPlausibleSet(s?.kg, (s as any)?.reps)) push(name, parseNum(s?.kg));
+        for (const s of checkedSetsFor(lw as Record<string, any>, name)) push(name, parseNum(s.kg));
         continue;
       }
       if (key.startsWith("__")) continue;

@@ -1,3 +1,4 @@
+import { checkedSetsFor } from "@/lib/checkedSets";
 import { useState, useEffect, useMemo } from "react";
 import { parseNum, isPlausibleSet, formatDecimal } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,11 +58,16 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
     supabase.from("pr_stars").select("exercise").eq("user_id", userId),
     supabase.from("pr_goals").select("exercise, target_weight, target_date").eq("user_id", userId),
     supabase.from("pr_overrides").select("exercise, weight").eq("user_id", userId),
-    supabase.from("profiles").select("gender").eq("user_id", userId).single()]
-    ).then(([compRes, starsRes, goalsRes, overRes, profileRes]) => {
+    supabase.from("profiles").select("gender").eq("user_id", userId).single(),
+    supabase.from("archived_plans").select("completion_data, archived_at").eq("user_id", userId)]
+    ).then(([compRes, starsRes, goalsRes, overRes, profileRes, archRes]) => {
       if (compRes.data) {
+        const archived = ((archRes.data || []) as any[]).flatMap((a) =>
+          (Array.isArray(a.completion_data) ? a.completion_data : [])
+            .filter((c: any) => c?.done)
+            .map((c: any) => ({ week: c.week, day: c.day, done: true, updated_at: c.updated_at || a.archived_at, logged_weights: c.logged_weights })));
         setCompletions(
-          compRes.data.map((c) => ({
+          [...archived, ...compRes.data].sort((x: any, y: any) => String(x.updated_at).localeCompare(String(y.updated_at))).map((c: any) => ({
             ...c,
             logged_weights: c.logged_weights as Record<string, number> | null
           }))
@@ -114,26 +120,16 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           }
           continue;
         }
-        // Handle modern format: __setdata__exerciseName: [{kg, reps}, ...]
+        // Modern format: only checked-off sets count (same rule as history/PR badges)
         if (ex.startsWith("__setdata__")) {
-          const rawName = ex.replace("__setdata__", "").replace(/( —)+$/, "");
-          const exerciseName = normalizeExerciseName(rawName);
-          let sets: { kg?: string | number; reps?: string | number }[] = [];
-          if (typeof w === "string") {
-            try { sets = JSON.parse(w); } catch { continue; }
-          } else if (Array.isArray(w)) {
-            sets = w;
-          } else { continue; }
-          const maxKg = Math.max(0, ...sets.filter(s => isPlausibleSet(s.kg, s.reps)).map(s => parseNum(s.kg) || 0));
+          const rawName = ex.replace("__setdata__", "");
+          const exerciseName = normalizeExerciseName(rawName.replace(/( —)+$/, ""));
+          const sets = checkedSetsFor(c.logged_weights as Record<string, any>, rawName);
+          const maxKg = Math.max(0, ...sets.map((s) => parseNum(s.kg) || 0));
           if (maxKg <= 0) continue;
           const existing = prMap.get(exerciseName);
           if (!existing || maxKg > existing.weight) {
-            prMap.set(exerciseName, {
-              weight: maxKg,
-              date: c.updated_at,
-              week: c.week,
-              previousBest: existing?.weight ?? null
-            });
+            prMap.set(exerciseName, { weight: maxKg, date: c.updated_at, week: c.week, previousBest: existing?.weight ?? null });
           }
         }
       }
