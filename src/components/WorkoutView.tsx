@@ -733,7 +733,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           ? previous
           : reconciled;
       });
-      const wks = [...new Set(planData.map((p) => p.week))].sort((a, b) => a - b);
+      const wks = [...new Set(planData.filter((p) => p.week > 0).map((p) => p.week))].sort((a, b) => a - b);
       setWeeks(wks);
 
       // Calculate active plan week based on plan start date (timezone-safe)
@@ -8226,6 +8226,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     // Cache: senast loggad vikt för ett visst repsantal
                                     const kgByRepsCache = new Map<number, string>();
                                     const kgForReps = (repsVal: string | undefined): string => {
+                                      // Plan-specified weight always wins — "Senast" (history) is info only
+                                      // and must never override an explicit plan value.
+                                      if (partKg) return defKg;
                                       const r = parseInt(String(repsVal ?? ""), 10);
                                       if (isNaN(r) || r <= 0) return defKg;
                                       if (kgByRepsCache.has(r)) return kgByRepsCache.get(r)!;

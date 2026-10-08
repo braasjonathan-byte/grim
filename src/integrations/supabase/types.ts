@@ -519,6 +519,7 @@ export type Database = {
           event_name: string
           event_type: string
           id: string
+          linked_plan: boolean
           user_id: string
         }
         Insert: {
@@ -528,6 +529,7 @@ export type Database = {
           event_name: string
           event_type?: string
           id?: string
+          linked_plan?: boolean
           user_id: string
         }
         Update: {
@@ -537,6 +539,7 @@ export type Database = {
           event_name?: string
           event_type?: string
           id?: string
+          linked_plan?: boolean
           user_id?: string
         }
         Relationships: []
