@@ -977,6 +977,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   );
 
   // Helper: count unchecked sets for a workout
+  let totalSetsCounted = 0;
+  const countSetsProgress = (week: number, day: string) => {
+    totalSetsCounted = 0;
+    const unchecked = countUncheckedSets(week, day);
+    return { unchecked, total: totalSetsCounted, done: totalSetsCounted - unchecked };
+  };
   const countUncheckedSets = (week: number, day: string): number => {
     const k = `${week}-${day}`;
     // Check ALL plans for this week+day, not just the first one
@@ -1008,6 +1014,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         for (let i = 0; i < sc; i++) {
           if (setsVal[i] !== "1") unchecked++;
         }
+        totalSetsCounted += sc;
       }
     }
     return unchecked;
@@ -1151,9 +1158,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
     // If marking as done, check for unchecked sets first and show dialog
     if (newDone) {
-      const unchecked = countUncheckedSets(week, day);
-      if (unchecked > 0) {
-        setUncheckedSetsDialog({ week, day, uncheckedCount: unchecked });
+      const prog = countSetsProgress(week, day);
+      if (prog.unchecked > 0) {
+        setUncheckedSetsDialog({ week, day, uncheckedCount: prog.unchecked, doneCount: prog.done, totalCount: prog.total });
         return;
       }
     }
@@ -1199,16 +1206,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           return prev;
         });
       });
-      const filledWeights = buildAllSetsWeights(week, day, latestWeights);
-      if (JSON.stringify(filledWeights) !== JSON.stringify(latestWeights)) {
-        latestWeights = filledWeights;
-        setCompletions((prev: Record<string, any>) => ({
-          ...prev,
-          [key]: { ...prev[key], week, day, logged_weights: filledWeights },
-        }));
-        await safeUpsertCompletion(week, day, { logged_weights: filledWeights });
-      }
-
+      // Unchecked sets stay as "ej gjort" — completion never adds or removes sets.
 
       // Auto-mark all conditioning lines in this day as completed as well
       try {
@@ -5578,7 +5576,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
           <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
             <h3 className="font-bold text-base">Obockade set</h3>
             <p className="text-sm text-muted-foreground">
-              Du har {uncheckedSetsDialog.uncheckedCount} set som inte är avbockade. Vill du klarmarkera passet ändå?
+              Du har gjort {uncheckedSetsDialog.doneCount} av {uncheckedSetsDialog.totalCount} set. Obockade sparas som ej gjorda.
             </p>
             <div className="flex gap-2">
               <button
@@ -5591,21 +5589,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                 onClick={async () => {
                   const { week, day } = uncheckedSetsDialog;
                   setUncheckedSetsDialog(null);
-                  const trims: { planId: string; part: string; keep: number }[] = [];
-                  const k = `${week}-${day}`;
-                  const accumulated: Record<string, any> = await new Promise((resolve) => {
-                    setCompletions((prev) => {
-                      const prevComp = prev[k] || ({} as any);
-                      const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>, trims);
-                      resolve(acc);
-                      return {
-                        ...prev,
-                        [k]: { ...(prevComp as any), week, day, logged_weights: acc },
-                      };
-                    });
-                  });
-                  await safeUpsertCompletion(week, day, { logged_weights: accumulated });
-                  await trimEmptySets(trims);
                   await performToggleDone(week, day);
                 }}
                 className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
@@ -9558,7 +9541,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         <div className="relative bg-card border border-border rounded-2xl p-5 max-w-sm w-full mx-4 space-y-4 animate-fade-in">
           <h3 className="font-bold text-base">Obockade set</h3>
           <p className="text-sm text-muted-foreground">
-            Du har {uncheckedSetsDialog.uncheckedCount} set som inte är avbockade. Vill du klarmarkera passet ändå?
+            Du har gjort {uncheckedSetsDialog.doneCount} av {uncheckedSetsDialog.totalCount} set. Obockade sparas som ej gjorda.
           </p>
           <div className="flex gap-2">
             <button
@@ -9571,26 +9554,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               onClick={async () => {
                 const { week, day } = uncheckedSetsDialog;
                 setUncheckedSetsDialog(null);
-                const trims: { planId: string; part: string; keep: number }[] = [];
-                const k = `${week}-${day}`;
-
-                // Build accumulated logged_weights using fresh state via functional setState
-                const accumulated: Record<string, any> = await new Promise((resolve) => {
-                  setCompletions((prev) => {
-                    const prevComp = prev[k] || ({} as any);
-                    const acc = buildAllSetsWeights(week, day, (prevComp.logged_weights || {}) as Record<string, any>, trims);
-                    resolve(acc);
-                    // Optimistically update state immediately so checkboxes re-render as checked
-                    return {
-                      ...prev,
-                      [k]: { ...(prevComp as any), week, day, logged_weights: acc },
-                    };
-                  });
-                });
-
-
-                await safeUpsertCompletion(week, day, { logged_weights: accumulated });
-                await trimEmptySets(trims);
                 await performToggleDone(week, day);
               }}
               className="flex-1 py-2 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:opacity-80 transition-opacity"
