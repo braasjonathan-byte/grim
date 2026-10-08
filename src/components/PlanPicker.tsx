@@ -163,7 +163,11 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       return;
     }
 
-    const paddedDays = reorderDaysToPreferred(padWeeksTo7Days(days), preferredDays);
+    // Week 1 starts on the chosen start date: days before it are never created,
+    // so what the plan shows before a reload is exactly what is stored.
+    const startIdx = (startDate.getDay() + 6) % 7; // Mon = 0
+    const paddedDays = reorderDaysToPreferred(padWeeksTo7Days(days), preferredDays)
+      .filter((d) => d.week !== 1 || ALL_DAYS.indexOf(String(d.day).replace(/_[a-z0-9]+$/i, "") as any) < 0 || ALL_DAYS.indexOf(String(d.day).replace(/_[a-z0-9]+$/i, "") as any) >= startIdx);
 
     const startCreatedAt = toNoonUtcIso(startDate);
     const rows = paddedDays.map((d) => ({

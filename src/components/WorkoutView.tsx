@@ -3803,7 +3803,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         {adminBanner}
         {offlineBanner}
         {pastWorkoutsUi}
-        <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); setPlanStartDate(null); setActivePlanWeek(1); fetchData(); }} />
+        <PlanPicker userId={userId} onBack={() => setMode("choose")} onDone={() => { setNeedsCalibration(false); setInitialWeekSet(false); setCurrentWeek(1); setActivePlanWeek(1); supabase.from("profiles").select("plan_start_date").eq("user_id", userId).maybeSingle().then(({ data }) => { setPlanStartDate((data as any)?.plan_start_date ?? null); fetchData(); }); }} />
       </div>
     );
   }
