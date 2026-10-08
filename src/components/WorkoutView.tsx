@@ -7061,14 +7061,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           const { name: condName } = parseExerciseWeight(part);
                           const iMode = getStoredCardioMode(condName || part);
                           // Parse interval pattern like "3×10 min (2 min joggvila)" or "3×10 min, 2 min vila"
-                          const intervalMatch = part.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min(?:\s*[,(]\s*(\d+)\s*(?:min\s*)?(?:jogg)?vila)?/i);
-                          const intervalCount = intervalMatch ? parseInt(intervalMatch[1]) : 0;
-                          const intervalDuration = intervalMatch ? parseFloat(intervalMatch[2].replace(",", ".")) : 0;
-                          const intervalRest = intervalMatch && intervalMatch[3] ? intervalMatch[3] : "";
+                          const intervalMatch = parseConditioningIntervalLabel(part);
+                          const intervalCount = intervalMatch ? intervalMatch.count : 0;
+                          const intervalDuration = intervalMatch ? intervalMatch.durationMin : 0;
+                          const intervalRest = intervalMatch ? intervalMatch.restMin : "";
                           
                           const condTimeM = !intervalMatch ? part.match(/(\d+)\s*min/) : null;
-                          const condTempoM = part.match(/([\d:.]+)\s*\/km/);
-                          const condDistM = part.match(/([\d.,]+)\s*km(?!\/)/);
+                          const condTempoM = intervalMatch?.value ? [intervalMatch.value, intervalMatch.value] : part.match(/([\d:.]+)\s*\/km/);
+                          const condDistM = part.match(/([\d.,]+)\s*km(?![\/\w])/);
                           const planTime = condTimeM ? condTimeM[1] : "";
                           const planTempo = condTempoM ? condTempoM[1] : "";
                           const planDist = condDistM ? condDistM[1] : "";
