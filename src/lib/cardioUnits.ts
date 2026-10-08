@@ -22,7 +22,7 @@ const re = {
   swim: /simning|simma|sim\b/i,
   row: /roddmaskin|^rodd|ski\s*erg|skierg/i,
   paddle: /paddling|kajak|kanot/i,
-  bike: /cykling|cykel|cykla|spinning|motionscykel/i,
+  bike: /cykling|cykel|cykla|spinning|motionscykel|zwift/i,
   airbike: /airbike|air\s*bike|fanbike|assault\s*bike/i,
   cross: /crosstrainer|arc\s*trainer/i,
   stair: /trappmaskin|stair\s*machine|stairclimber|skillmill/i,

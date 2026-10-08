@@ -71,7 +71,7 @@ import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } f
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
-import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, buildConditioningIntervalLabel, parseConditioningIntervalLabel } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
@@ -6225,6 +6225,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                      const planTempoMatch = plan.tempo.match(/([\d:.]+)\s*(?:min\/km|\/km)/);
                                      if (planTempoMatch) iPlanTempo = planTempoMatch[1];
                                    }
+                                  const iMode = getStoredCardioMode(line);
                                   const iCondKey = `__cond__${line}`;
                                   const iComp = completions[key];
                                   const iRawSaved = (iComp?.logged_weights as Record<string, any>)?.[iCondKey];
@@ -6280,16 +6281,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       </div>
                                       {Array.from({ length: activeCount }, (_, ii) => {
                                         const row = savedIntervals[ii] || { time: String(iDuration), tempo: iPlanTempo, dist: '' };
-                                         const rowTempo = normalizeTempoInput(row.tempo || "");
+                                         const rowTempo = isPaceMode(iMode) ? normalizeTempoInput(row.tempo || "") : (row.tempo || "");
                                         const rowTime = parseNum(row.time) || 0;
                                         let rowDist = '';
                                         if (rowTempo && rowTime > 0) {
-                                          const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
-                                          const tSingle = rowTempo.match(/^(\d+)$/);
-                                          let minPerKm = 0;
-                                          if (tMatch) minPerKm = (parseInt(tMatch[1]) * 60 + parseInt(tMatch[2])) / 60;
-                                          else if (tSingle) minPerKm = parseInt(tSingle[1]);
-                                          if (minPerKm > 0) rowDist = String(Math.round((rowTime / minPerKm) * 100) / 100);
+                                          const d = computeDistanceKm(iMode, rowTime, rowTempo);
+                                          if (d && d > 0) rowDist = String(Math.round(d * 100) / 100);
                                         }
                                         if (row.dist && !rowDist) rowDist = row.dist;
 
@@ -6326,12 +6323,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                 const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
                                                 arr[ii] = { ...arr[ii], time: v };
                                                 const t = parseNum(v) || 0;
-                                                const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
-                                                const ts = arr[ii].tempo?.match(/^(\d+)$/);
-                                                let mpk = 0;
-                                                if (tm) mpk = (parseInt(tm[1]) * 60 + parseInt(tm[2])) / 60;
-                                                else if (ts) mpk = parseInt(ts[1]);
-                                                if (t > 0 && mpk > 0) arr[ii].dist = String(Math.round((t / mpk) * 100) / 100);
+                                                const d = computeDistanceKm(iMode, t, arr[ii].tempo || "");
+                                                if (d && d > 0) arr[ii].dist = String(Math.round(d * 100) / 100);
                                                 saveInlineIntervalField('intervals', arr);
                                               }}
                                             />
@@ -6339,11 +6332,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                type="text"
                                                inputMode="numeric"
                                                pattern="[0-9:]*"
-                                               sanitize={sanitizePaceInput}
+                                               sanitize={(v) => sanitizePaceInput(v, isPaceMode(iMode))}
                                                initialValue={rowTempo}
                                               onSave={(v) => {
                                                 const arr = [...(iCondSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(iDuration), tempo: iPlanTempo, dist: '' })))];
-                                                const normalizedTempo = normalizeTempoInput(v);
+                                                const normalizedTempo = isPaceMode(iMode) ? normalizeTempoInput(v) : v;
                                                 arr[ii] = { ...arr[ii], tempo: normalizedTempo };
                                                 if (ii === 0 && normalizedTempo.trim()) {
                                                   const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
@@ -6354,17 +6347,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                                 // Auto-calc dist for all rows with tempo + time
                                                 for (let j = 0; j < arr.length; j++) {
                                                   const rt = parseNum(arr[j].time) || 0;
-                                                  const tm2 = arr[j].tempo?.match(/^(\d+)[:\.](\d+)$/);
-                                                  const ts2 = arr[j].tempo?.match(/^(\d+)$/);
-                                                  let mpk2 = 0;
-                                                  if (tm2) mpk2 = (parseInt(tm2[1]) * 60 + parseInt(tm2[2])) / 60;
-                                                  else if (ts2) mpk2 = parseInt(ts2[1]);
-                                                  if (rt > 0 && mpk2 > 0) arr[j].dist = String(Math.round((rt / mpk2) * 100) / 100);
+                                                  const d2 = computeDistanceKm(iMode, rt, arr[j].tempo || "");
+                                                  if (d2 && d2 > 0) arr[j].dist = String(Math.round(d2 * 100) / 100);
                                                 }
                                                 saveInlineIntervalField('intervals', arr);
                                               }}
-                                              normalizeOnBlur={normalizeTempoInput}
-                                              placeholder="5:30"
+                                              normalizeOnBlur={(v) => isPaceMode(iMode) ? normalizeTempoInput(v) : v}
+                                              placeholder={modePlaceholder(iMode)}
                                               className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground"
                                             />
                                             <span className={`text-xs font-mono text-center px-2 py-1.5 rounded-md ${rowDist ? 'bg-primary/10 text-foreground ring-1 ring-primary/30' : 'text-muted-foreground'}`}>
