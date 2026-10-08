@@ -3058,25 +3058,25 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const infoParts: string[] = [];
     const isInterval = conditioningDialog.exerciseName.toLowerCase().includes("intervall");
     const isStair = isStairMachine(conditioningDialog.exerciseName);
-    
+    let intervalMeta: { count: number; restMin: string; mode: string | null; value: string } | null = null;
+
     if (isInterval && condIntervalsInput.trim()) {
       const n = parseInt(condIntervalsInput.trim()) || 0;
       const summary = summarizeIntervalRows(condIntervalRows.slice(0, n));
       if (summary.hasAny) {
         const timeStr = summary.totalTimeMin > 0
           ? String(Math.round(summary.totalTimeMin * 100) / 100)
-          : "?";
-        infoParts.push(`${n}×${timeStr} min`);
+          : "";
+        const speedValue = summary.avgTempoStr || "";
+        infoParts.push(buildConditioningIntervalLabel(n, timeStr, condRestInput.trim(), condMode, speedValue));
         if (summary.totalDistanceKm > 0) {
           infoParts.push(`${Math.round(summary.totalDistanceKm * 100) / 100} km`);
         }
-        if (summary.avgTempoStr) infoParts.push(`${summary.avgTempoStr}/km`);
         if (summary.avgPulse > 0) infoParts.push(`${summary.avgPulse} bpm`);
-        if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+        intervalMeta = { count: n, restMin: condRestInput.trim(), mode: condMode, value: speedValue };
       } else {
-        const intervalPart = `${condIntervalsInput.trim()}×${condTimeTotalMinStr || "?"} min`;
-        infoParts.push(intervalPart);
-        if (condRestInput.trim()) infoParts.push(`${condRestInput.trim()} min vila`);
+        infoParts.push(buildConditioningIntervalLabel(n, condTimeTotalMinStr || "", condRestInput.trim(), condMode, condTempoInput.trim()));
+        intervalMeta = { count: n, restMin: condRestInput.trim(), mode: condMode, value: condTempoInput.trim() };
       }
     } else {
       if (condTimeTotalMinStr) infoParts.push(`${condTimeTotalMinStr} min`);
@@ -3096,13 +3096,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const savedIntervalRows = isInterval && condIntervalsInput.trim()
       ? toSavedIntervalRows(condIntervalRows.slice(0, parseInt(condIntervalsInput.trim()) || 0))
       : [];
+    const intervalCondData: Record<string, any> | null = (savedIntervalRows.length > 0 || intervalMeta)
+      ? { ...(savedIntervalRows.length > 0 ? { intervals: savedIntervalRows } : {}), ...(intervalMeta || {}) }
+      : null;
 
     let newDetails: string;
     let wasReplace = false;
     let oldName = "";
     if (replaceExerciseTarget && replaceExerciseTarget.planId === plan.id) {
-      const weightsPatch = savedIntervalRows.length > 0
-        ? { [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify({ intervals: savedIntervalRows }) }
+      const weightsPatch = intervalCondData
+        ? { [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify(intervalCondData) }
         : undefined;
       startReplace({ planId: plan.id, lineIndex: replaceExerciseTarget.lineIndex, oldName: replaceExerciseTarget.name, entry, weightsPatch });
       setReplaceExerciseTarget(null);
@@ -3127,10 +3130,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
 
     await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
-    if (savedIntervalRows.length > 0) {
+    if (intervalCondData) {
       await updateCompletionWeights(plan.week, plan.day, (existing) => ({
         ...existing,
-        [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify({ intervals: savedIntervalRows }),
+        [`__cond__${conditioningDialog.exerciseName}`]: JSON.stringify(intervalCondData),
       }));
     }
     if (wasReplace) skipDayResetRef.current = true;
@@ -7056,6 +7059,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                           // Parse conditioning data from the part
                           const { name: condName } = parseExerciseWeight(part);
+                          const iMode = getStoredCardioMode(condName || part);
                           // Parse interval pattern like "3×10 min (2 min joggvila)" or "3×10 min, 2 min vila"
                           const intervalMatch = part.match(/(\d+)\s*[×x]\s*(\d+(?:[.,]\d+)?)\s*min(?:\s*[,(]\s*(\d+)\s*(?:min\s*)?(?:jogg)?vila)?/i);
                           const intervalCount = intervalMatch ? parseInt(intervalMatch[1]) : 0;
@@ -7325,17 +7329,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     });
                                     return Array.from({ length: activeCount }, (_, ii) => {
                                     const row = savedIntervals[ii] || { time: String(intervalDuration), tempo: planTempo || '', dist: '' };
-                                    const rowTempo = normalizeTempoInput(row.tempo || "");
+                                    const rowTempo = isPaceMode(iMode) ? normalizeTempoInput(row.tempo || "") : (row.tempo || "");
                                     const rowTime = parseNum(row.time) || 0;
                                     // Auto-calc distance
                                     let rowDist = '';
                                     if (rowTempo && rowTime > 0) {
-                                      const tMatch = rowTempo.match(/^(\d+)[:\.](\d+)$/);
-                                      const tSingle = rowTempo.match(/^(\d+)$/);
-                                      let minPerKm = 0;
-                                      if (tMatch) minPerKm = (parseInt(tMatch[1]) * 60 + parseInt(tMatch[2])) / 60;
-                                      else if (tSingle) minPerKm = parseInt(tSingle[1]);
-                                      if (minPerKm > 0) rowDist = String(Math.round((rowTime / minPerKm) * 100) / 100);
+                                      const d = computeDistanceKm(iMode, rowTime, rowTempo);
+                                      if (d && d > 0) rowDist = String(Math.round(d * 100) / 100);
                                     }
                                     if (row.dist && !rowDist) rowDist = row.dist;
                                     return (
@@ -7380,12 +7380,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
                                             arr[ii] = { ...arr[ii], time: v };
                                             const t = parseNum(v) || 0;
-                                            const tm = arr[ii].tempo?.match(/^(\d+)[:\.](\d+)$/);
-                                            const ts = arr[ii].tempo?.match(/^(\d+)$/);
-                                            let mpk = 0;
-                                            if (tm) mpk = (parseInt(tm[1]) * 60 + parseInt(tm[2])) / 60;
-                                            else if (ts) mpk = parseInt(ts[1]);
-                                            if (t > 0 && mpk > 0) arr[ii].dist = String(Math.round((t / mpk) * 100) / 100);
+                                            const d = computeDistanceKm(iMode, t, arr[ii].tempo || "");
+                                            if (d && d > 0) arr[ii].dist = String(Math.round(d * 100) / 100);
                                             saveCondField('intervals', arr as any);
                                           }}
                                         />
@@ -7393,34 +7389,30 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                           type="text"
                                           inputMode="numeric"
                                           pattern="[0-9:]*"
-                                          sanitize={sanitizePaceInput}
+                                          sanitize={(v) => sanitizePaceInput(v, isPaceMode(iMode))}
                                           initialValue={rowTempo}
                                           onSave={(v) => {
                                             const arr = [...(condSaved?.intervals || Array.from({ length: activeCount }, () => ({ time: String(intervalDuration), tempo: planTempo || '', dist: '' })))];
-                                              const normalizedTempo = normalizeTempoInput(v);
-                                              arr[ii] = { ...arr[ii], tempo: normalizedTempo };
-                                              if (ii === 0 && normalizedTempo.trim()) {
+                                            const normalizedTempo = isPaceMode(iMode) ? normalizeTempoInput(v) : v;
+                                            arr[ii] = { ...arr[ii], tempo: normalizedTempo };
+                                            if (ii === 0 && normalizedTempo.trim()) {
                                               const allEmpty = arr.slice(1).every(r => !r.tempo?.trim());
                                               if (allEmpty) {
                                                 for (let j = 1; j < arr.length; j++) {
-                                                    arr[j] = { ...arr[j], tempo: normalizedTempo };
+                                                  arr[j] = { ...arr[j], tempo: normalizedTempo };
                                                 }
                                               }
                                             }
                                             // Auto-calc dist for all rows
                                             for (let j = 0; j < arr.length; j++) {
                                               const rt = parseNum(arr[j].time) || 0;
-                                              const tm2 = arr[j].tempo?.match(/^(\d+)[:\.](\d+)$/);
-                                              const ts2 = arr[j].tempo?.match(/^(\d+)$/);
-                                              let mpk2 = 0;
-                                              if (tm2) mpk2 = (parseInt(tm2[1]) * 60 + parseInt(tm2[2])) / 60;
-                                              else if (ts2) mpk2 = parseInt(ts2[1]);
-                                              if (rt > 0 && mpk2 > 0) arr[j].dist = String(Math.round((rt / mpk2) * 100) / 100);
+                                              const d2 = computeDistanceKm(iMode, rt, arr[j].tempo || "");
+                                              if (d2 && d2 > 0) arr[j].dist = String(Math.round(d2 * 100) / 100);
                                             }
                                             saveCondField('intervals', arr as any);
                                           }}
-                                            normalizeOnBlur={normalizeTempoInput}
-                                          placeholder="5:30"
+                                          normalizeOnBlur={(v) => isPaceMode(iMode) ? normalizeTempoInput(v) : v}
+                                          placeholder={modePlaceholder(iMode)}
                                           className="w-full bg-primary/10 text-foreground text-xs px-2 py-1.5 rounded-md border border-primary/20 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground"
                                         />
                                         <span className={`text-xs font-mono text-center px-2 py-1.5 rounded-md ${rowDist ? 'bg-primary/10 text-foreground ring-1 ring-primary/30' : 'text-muted-foreground'}`}>
