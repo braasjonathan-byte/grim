@@ -120,6 +120,13 @@
       "when": 1791465507655,
       "tag": "0016_event_countdowns_linked_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791465630372,
+      "tag": "0017_allow_timed_distance_sets_over_100",
+      "breakpoints": true
     }
   ]
 }
