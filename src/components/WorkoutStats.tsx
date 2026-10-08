@@ -1,3 +1,4 @@
+import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
 import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
@@ -655,50 +656,11 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
 
   const totalLiftedTons = useMemo(() => {
+    // Same source as "Tidigare pass": only checked-off sets of completed workouts.
     let total = 0;
     for (const row of filteredCompletions) {
-      if (!isCompletedWorkout(row) || !row.logged_weights || typeof row.logged_weights !== "object") continue;
-      const weights = row.logged_weights as Record<string, any>;
-      // Group setdata entries by base exercise name (strip "— 3×10 @ -20 kg" style suffixes
-      // that the progression engine appends when renaming). Same lift can appear under
-      // multiple variant names within the same workout — keep only the variant with the
-      // highest tonnage so we don't double/triple-count.
-      const tonnageByBase = new Map<string, number>();
-      for (const [key, value] of Object.entries(weights)) {
-        if (!key.startsWith("__setdata__")) continue;
-        const exerciseName = key.replace("__setdata__", "");
-        let sets: { kg?: string | number; reps?: string | number }[] = [];
-        if (typeof value === "string") {
-          try { sets = JSON.parse(value); } catch { continue; }
-        } else if (Array.isArray(value)) {
-          sets = value;
-        }
-        const bwModeExercise = weights[`__bw_mode__${exerciseName}`];
-        let entryTotal = 0;
-        for (let si = 0; si < sets.length; si++) {
-          const s = sets[si];
-          if (!isPlausibleSet(s.kg, s.reps)) continue;
-          let kg = parseNum(s.kg) || 0;
-          const reps = parseNum(s.reps) || 0;
-          const bwMode = weights[`__bw_mode__${exerciseName}__${si}`] ?? bwModeExercise ?? (isAssistedBodyweightExercise(exerciseName) ? "sub" : undefined);
-          if (bwMode && userWeightKg) {
-            const absKg = Math.abs(kg);
-            kg = bwMode === "sub" ? Math.max(0, userWeightKg - absKg) : userWeightKg + absKg;
-          } else if (bwMode && !userWeightKg) {
-            // can't compute
-          } else if (kg < 0 && userWeightKg) {
-            kg = userWeightKg + kg;
-            if (kg < 0) kg = 0;
-          } else if (kg < 0) {
-            kg = 0;
-          }
-          entryTotal += kg * reps;
-        }
-        const baseKey = stripSetRepSuffix(exerciseName).toLowerCase();
-        const prev = tonnageByBase.get(baseKey) ?? 0;
-        if (entryTotal > prev) tonnageByBase.set(baseKey, entryTotal);
-      }
-      for (const v of tonnageByBase.values()) total += v;
+      if (!isCompletedWorkout(row)) continue;
+      total += sessionVolumeKg(row.logged_weights);
     }
     return Math.round(total / 1000 * 10) / 10;
   }, [filteredCompletions, userWeightKg, plansWithExercises]);
