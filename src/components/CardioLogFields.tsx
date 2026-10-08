@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Route } from "lucide-react";
 import {
   type CardioMode,
   getCardioModes,
   getCardioDistUnit,
   modeLabel,
+  modeFieldLabel,
   modePlaceholder,
   isPaceMode,
   showCardioPulse,
@@ -34,6 +36,9 @@ interface CardioLogFieldsProps {
   onHrResult?: (r: { avg: number; max: number; min: number }) => void;
   pulseMax?: string;
   pulseMin?: string;
+  /** Watt (t.ex. cykling) – visas parallellt med km/h, inte som ersättning. */
+  watt?: string;
+  onWattChange?: (value: string) => void;
 }
 
 /**
@@ -58,17 +63,27 @@ const CardioLogFields = ({
   onHrResult,
   pulseMax,
   pulseMin,
+  watt: wattProp,
+  onWattChange,
 }: CardioLogFieldsProps) => {
   const modes = getCardioModes(exerciseName);
   const distUnit = getCardioDistUnit(exerciseName) ?? "km";
   const showDistance = getCardioDistUnit(exerciseName) !== null;
   const showPulse = showCardioPulse(exerciseName);
+  // Cykling (och andra sporter med både km/h och watt) ska alltid visa farten –
+  // watt är ett tillägg, inte en ersättning för hastigheten.
+  const isBikeLike = modes.includes("kmh") && modes.includes("watt");
+  const pillModes = isBikeLike ? modes.filter((m) => m !== "watt") : modes;
+  const effectiveMode: CardioMode = isBikeLike && mode === "watt" ? "kmh" : mode;
+  const [wattInternal, setWattInternal] = useState("");
+  const watt = wattProp ?? wattInternal;
+  const setWatt = onWattChange ?? setWattInternal;
 
   return (
     <div className="space-y-3">
-      {modes.length > 1 && (
+      {pillModes.length > 1 && (
         <div className="flex items-center gap-1 bg-muted/50 rounded-full p-1 overflow-x-auto">
-          {modes.map((m) => (
+          {pillModes.map((m) => (
             <button
               key={m}
               type="button"
@@ -101,26 +116,40 @@ const CardioLogFields = ({
         </div>
       </div>
 
-      <div className={`grid gap-2 ${[true, showDistance, showPulse].filter(Boolean).length === 3 ? "grid-cols-3" : [true, showDistance, showPulse].filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid gap-2 ${[true, isBikeLike, showDistance, showPulse].filter(Boolean).length === 4 ? "grid-cols-2" : [true, isBikeLike, showDistance, showPulse].filter(Boolean).length === 3 ? "grid-cols-3" : [true, isBikeLike, showDistance, showPulse].filter(Boolean).length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
         <div className="min-w-0">
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">Tempo</label>
           <input
             type="text"
-            inputMode={isPaceMode(mode) ? "numeric" : "decimal"}
-            pattern={isPaceMode(mode) ? "[0-9:]*" : "[0-9.,]*"}
+            inputMode={isPaceMode(effectiveMode) ? "numeric" : "decimal"}
+            pattern={isPaceMode(effectiveMode) ? "[0-9:]*" : "[0-9.,]*"}
             value={tempo}
-            onChange={(e) => onTempoChange(isPaceMode(mode) ? sanitizePaceInput(e.target.value) : e.target.value)}
+            onChange={(e) => onTempoChange(isPaceMode(effectiveMode) ? sanitizePaceInput(e.target.value) : e.target.value)}
             onBlur={() => {
-              if (isPaceMode(mode)) {
-                const f = formatPaceDisplay(tempo, mode);
+              if (isPaceMode(effectiveMode)) {
+                const f = formatPaceDisplay(tempo, effectiveMode);
                 if (f && f !== tempo) onTempoChange(f);
               }
             }}
-            placeholder={modePlaceholder(mode).replace("t.ex. ", "")}
+            placeholder={modePlaceholder(effectiveMode).replace("t.ex. ", "")}
             className={inputCls}
           />
-          <span className={unitCls}>{modeLabel(mode)}</span>
+          <span className={unitCls}>{modeLabel(effectiveMode)}</span>
         </div>
+        {isBikeLike && (
+          <div className="min-w-0">
+            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block text-center">{modeFieldLabel("watt")}</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={watt}
+              onChange={(e) => setWatt(e.target.value)}
+              placeholder={modePlaceholder("watt").replace("t.ex. ", "")}
+              className={inputCls}
+            />
+            <span className={unitCls}>Watt</span>
+          </div>
+        )}
         {showDistance && (
           <div className="min-w-0">
             <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center justify-center gap-0.5">
