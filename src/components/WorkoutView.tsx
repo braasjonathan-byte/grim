@@ -660,6 +660,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
   }, [userId]);
 
+  const fetchDataRef = useRef<(() => void) | null>(null);
   const fetchData = useCallback(async () => {
     const [{ data: fetchedPlans }, { data: fetchedCompletions }] = await Promise.all([
       supabase.from("workout_plans").select("*").eq("user_id", userId).order("week").order("day"),
@@ -687,6 +688,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     }
     if (fetchedPlans) {
       writeOfflineWorkoutCache(userId, fetchedPlans, fetchedCompletions ?? []);
+    }
+
+    // An empty answer before the login session is restored is not "no plan":
+    // keep the spinner and retry instead of showing the empty choice screen.
+    if (fetchedPlans && fetchedPlans.length === 0) {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess?.session) {
+        setTimeout(() => fetchDataRef.current?.(), 800);
+        return;
+      }
     }
 
     if (planData) {
@@ -788,6 +799,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       if (!openUiRef.current) {
         // If the user just ended a plan, force the choice screen so they can
         // pick between following a new plan or registering individual workouts.
+        // An active plan always wins over the "show choice" flag left by an ended plan,
+        // so Träning shows the same plan as Hem.
+        if (forceWorkoutChoiceRef.current && planData.some((p) => p.week > 0)) {
+          localStorage.removeItem("grim_show_workout_choice");
+          forceWorkoutChoiceRef.current = false;
+        }
         if (forceWorkoutChoiceRef.current) {
           setMode("choose");
         } else if (planData.length === 0) {
@@ -856,6 +873,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!usingCache) await refreshSocialInteractions();
   }, [userId, initialWeekSet, planStartDate, profileLoaded, refreshSocialInteractions]);
 
+  useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
   useEffect(() => {
     fetchData();
     // Retry once after a short delay if auth session may not be ready yet
