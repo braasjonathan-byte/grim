@@ -15,6 +15,8 @@ export interface NumberRule {
 export const RULES = {
   setKg: { min: 0, max: 500, unit: "kg", optional: true },
   setReps: { min: 0, max: 100, integer: true, optional: true },
+  /** Sekunder (planka, cirkel) eller meter (farmers walk, sled) – lagras i reps-fältet. */
+  setTimeDist: { min: 0, max: 36000, integer: true, optional: true },
   oneRm: { min: 1, max: 500, unit: "kg", optional: true },
   cardioDistanceKm: { min: 0, max: 300, unit: "km", optional: true },
   cardioTimeMin: { min: 1, max: 1440, unit: "min", optional: true },
@@ -97,12 +99,12 @@ export const UNUSUAL_QUICK_KCAL = 2000;
 
 /* ---------- Befintlig data utanför gränserna ---------- */
 
-/** Ett loggat set räknas bara om vikt och reps ligger inom gränserna (negativ vikt = assisterad, tolereras om |kg| ≤ 500). */
+/** Ett loggat set räknas bara om vikt och reps ligger inom gränserna (negativ vikt = assisterad, tolereras om |kg| ≤ 500). Reps-fältet kan även hålla sekunder/meter, därför gäller den högre gränsen setTimeDist. */
 export const isPlausibleSet = (kg: unknown, reps: unknown): boolean => {
   const k = parseDecimal(kg === undefined || kg === null || kg === "" ? "0" : String(kg));
   const r = parseDecimal(reps === undefined || reps === null || reps === "" ? "0" : String(reps));
   if (isNaN(k) || isNaN(r)) return true; // icke-numeriskt (t.ex. tid) – hanteras ej här
-  return Math.abs(k) <= RULES.setKg.max && r >= 0 && r <= RULES.setReps.max;
+  return Math.abs(k) <= RULES.setKg.max && r >= 0 && r <= RULES.setTimeDist.max;
 };
 
 export const IMPLAUSIBLE_LABEL = "Orimligt värde – redigera";
