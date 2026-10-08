@@ -11,6 +11,7 @@ export function mapGroupToRegions(group: string): string[] {
     case "Axlar": return ["delts"];
     case "Armar": return ["biceps", "triceps", "forearms"];
     case "Core": return ["abs", "obliques"];
+    case "Kondition": return ["quads", "calves", "hamstrings"];
     case "Helkropp": return ["chest", "traps", "lats", "quads", "calves", "delts", "biceps", "abs"];
     default: return [];
   }

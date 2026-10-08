@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { parseNum } from "@/lib/inputValidation";
+import { parseNum, validateNumber } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, ArrowRight, Footprints } from "lucide-react";
+import { Dumbbell, ArrowRight, Footprints, Bike } from "lucide-react";
 import type { FitnessProfile } from "@/data/planTemplates";
+import { FieldError } from "@/components/ConfirmValueDialog";
 
 interface FitnessProfileFormProps {
   userId: string;
@@ -10,6 +11,7 @@ interface FitnessProfileFormProps {
   runningOnly?: boolean;
   strengthOnly?: boolean;
   bodyweightOnly?: boolean;
+  cyclingOnly?: boolean;
 }
 
 const experienceLevels = [
@@ -18,18 +20,28 @@ const experienceLevels = [
   { value: "avancerad", label: "Avancerad", description: "Tränat 3+ år regelbundet" },
 ];
 
-const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly = false, bodyweightOnly = false }: FitnessProfileFormProps) => {
+const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly = false, bodyweightOnly = false, cyclingOnly = false }: FitnessProfileFormProps) => {
   const [maxDistance, setMaxDistance] = useState("");
   const [time10km, setTime10km] = useState("");
   const [experience, setExperience] = useState("");
   const [trainingDays, setTrainingDays] = useState("");
+  const [ftpWatt, setFtpWatt] = useState("");
+  const [maxHeartRate, setMaxHeartRate] = useState("");
+  const [avgSpeed, setAvgSpeed] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const ftpError = ftpWatt.trim() ? validateNumber(ftpWatt, { min: 50, max: 600, unit: "watt", optional: true }).error : null;
+  const maxHrError = maxHeartRate.trim() ? validateNumber(maxHeartRate, { min: 80, max: 230, unit: "slag/min", integer: true, optional: true }).error : null;
+  const avgSpeedError = avgSpeed.trim() ? validateNumber(avgSpeed, { min: 5, max: 70, unit: "km/h", optional: true }).error : null;
 
   const buildProfile = (): FitnessProfile => ({
     max_distance_km: maxDistance ? parseNum(maxDistance) : null,
     time_10km_min: time10km ? parseNum(time10km) : null,
     experience_level: experience || null,
     training_days_per_week: trainingDays ? parseInt(trainingDays) : null,
+    ftp_watt: !ftpError && ftpWatt.trim() ? parseNum(ftpWatt) : null,
+    max_heart_rate: !maxHrError && maxHeartRate.trim() ? parseNum(maxHeartRate) : null,
+    avg_speed_kmh: !avgSpeedError && avgSpeed.trim() ? parseNum(avgSpeed) : null,
   });
 
   const handleSave = async () => {
@@ -57,15 +69,19 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
       <div className="text-center space-y-2">
         {runningOnly ? (
           <Footprints className="w-10 h-10 text-primary mx-auto" />
+        ) : cyclingOnly ? (
+          <Bike className="w-10 h-10 text-primary mx-auto" />
         ) : (
           <Dumbbell className="w-10 h-10 text-primary mx-auto" />
         )}
         <h2 className="text-xl font-black tracking-tight">
-          {runningOnly ? "Dina löpförutsättningar" : bodyweightOnly ? "Dina träningsförutsättningar" : "Dina förutsättningar"}
+          {runningOnly ? "Dina löpförutsättningar" : cyclingOnly ? "Dina cykelförutsättningar" : bodyweightOnly ? "Dina träningsförutsättningar" : "Dina förutsättningar"}
         </h2>
         <p className="text-sm text-muted-foreground">
           {runningOnly
             ? "Fyll i så anpassas tempo och distans efter din nivå."
+            : cyclingOnly
+            ? "Fyll i så anpassas intensiteten (watt, puls eller km/h) efter din nivå. Allt är valfritt."
             : bodyweightOnly
             ? "Fyll i så anpassas övningar och volym efter din nivå."
             : "Fyll i så anpassas planen efter dig. Du kan hoppa över om du vill."}
@@ -73,8 +89,8 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
       </div>
 
       <div className="space-y-4">
-        {/* Max distance - hide for strength-only and bodyweight-only */}
-        {!strengthOnly && !bodyweightOnly && (
+        {/* Max distance - hide for strength-only, bodyweight-only and cycling-only */}
+        {!strengthOnly && !bodyweightOnly && !cyclingOnly && (
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground block">
               Max långdistans du kan springa (km)
@@ -90,8 +106,8 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
           </div>
         )}
 
-        {/* 10km time - hide for strength-only and bodyweight-only */}
-        {!strengthOnly && !bodyweightOnly && (
+        {/* 10km time - only for running plans, used for running pace */}
+        {!strengthOnly && !bodyweightOnly && !cyclingOnly && (
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground block">
               Tid på 10 km (minuter)
@@ -105,6 +121,56 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
               className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
             />
           </div>
+        )}
+
+        {/* Cycling fields - FTP, pulszon/maxpuls, snitthastighet (all optional) */}
+        {cyclingOnly && (
+          <>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">
+                FTP – tröskeleffekt (watt, frivilligt)
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={ftpWatt}
+                onChange={(e) => setFtpWatt(e.target.value)}
+                placeholder="t.ex. 220"
+                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              />
+              <FieldError error={ftpError} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">
+                Maxpuls (slag/min, frivilligt)
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={maxHeartRate}
+                onChange={(e) => setMaxHeartRate(e.target.value)}
+                placeholder="t.ex. 185"
+                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              />
+              <FieldError error={maxHrError} />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">
+                Vanlig snitthastighet (km/h, frivilligt)
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={avgSpeed}
+                onChange={(e) => setAvgSpeed(e.target.value)}
+                placeholder="t.ex. 28"
+                className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
+              />
+              <FieldError error={avgSpeedError} />
+            </div>
+          </>
         )}
 
         {/* Experience level - always show */}
@@ -130,8 +196,8 @@ const FitnessProfileForm = ({ userId, onDone, runningOnly = false, strengthOnly 
           </div>
         </div>
 
-        {/* Training days per week - show for bodyweight and general, hide for running-only and strength-only */}
-        {!runningOnly && !strengthOnly && (
+        {/* Training days per week - show for bodyweight and general, hide for running-only, cycling-only and strength-only */}
+        {!runningOnly && !strengthOnly && !cyclingOnly && (
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground block">
               Tillgängliga träningsdagar per vecka

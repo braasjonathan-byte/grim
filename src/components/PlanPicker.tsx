@@ -61,12 +61,15 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   const needs1RM = selectedTemplate && selectedTemplate.requiredLifts.length > 0;
 
   // Determine if selected plan needs running profile data (only actual running plans)
-  const needsRunningProfile = selectedTemplate && (
+  const needsRunningProfile = selectedTemplate && selectedTemplate.category !== "cykling" && (
     selectedTemplate.name.toLowerCase().includes("löp") ||
     selectedTemplate.name.toLowerCase().includes("löpning") ||
     selectedTemplate.description.toLowerCase().includes("löppass") ||
     selectedTemplate.description.toLowerCase().includes("löpnivå")
   );
+
+  // Determine if selected plan needs cycling profile data (FTP / puls / snitthastighet)
+  const needsCyclingProfile = selectedTemplate && selectedTemplate.category === "cykling" && !!selectedTemplate.generateFromProfile;
 
   // Determine if selected plan is strength-only (no running fields, no training days selector)
   const isStrengthOnly = selectedTemplate && (
@@ -247,6 +250,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
         runningOnly={!!needsRunningProfile}
         strengthOnly={!!isStrengthOnly}
         bodyweightOnly={!!isBodyweightOnly}
+        cyclingOnly={!!needsCyclingProfile}
       />
     );
   }
@@ -353,6 +357,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
       else if (needsProfile) setStep("profile");
       else setStep("select");
     };
+    // Once days are chosen, only those days get sessions (extra sessions beyond the
+    // chosen day count are dropped), so the preview must reflect the actual outcome.
+    const effectivePerWeek = preferredDays.length > 0 ? Math.min(workoutsPerWeek, preferredDays.length) : workoutsPerWeek;
     const enough = preferredDays.length === 0 || preferredDays.length >= workoutsPerWeek;
     return (
       <div className="space-y-6 animate-fade-in">
@@ -369,9 +376,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
           <p className="text-sm text-muted-foreground">
             Välj dina föredragna veckodagar. Passen fördelas på dessa dagar.
           </p>
-          {workoutsPerWeek > 0 && (
+          {effectivePerWeek > 0 && (
             <p className="text-xs text-muted-foreground">
-              Planen innehåller cirka <span className="font-bold text-foreground">{workoutsPerWeek} pass/vecka</span>
+              Planen innehåller cirka <span className="font-bold text-foreground">{effectivePerWeek} pass/vecka</span>
             </p>
           )}
         </div>
@@ -398,7 +405,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
         {!enough && (
           <div className="bg-destructive/10 border border-destructive/40 rounded-lg p-3 text-center">
             <p className="text-xs text-destructive">
-              Du har valt {preferredDays.length} dag{preferredDays.length === 1 ? "" : "ar"} men planen behöver minst {workoutsPerWeek}. Extra pass läggs på andra dagar.
+              Du har valt {preferredDays.length} dag{preferredDays.length === 1 ? "" : "ar"} men planen är tänkt för {workoutsPerWeek} pass/vecka. De pass som inte får plats på dina valda dagar tas bort.
             </p>
           </div>
         )}

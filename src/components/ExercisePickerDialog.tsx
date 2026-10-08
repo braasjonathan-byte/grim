@@ -1,4 +1,5 @@
-import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
+import { matchExercises } from "@/lib/exerciseMatcher";
+import { exerciseTranslations } from "@/data/exerciseLibrary";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Search, X, Plus, Dumbbell, Info, Clock } from "lucide-react";
@@ -138,15 +139,21 @@ const ExercisePickerDialog = ({
     const merged = Array.from(nameMap.values());
     // Hide entries whose name still contains set/rep notation (e.g. "Axelpress 2×10")
     const setRepRe = /\s+\d+\s*[x×*]\s*\d+/i;
+    // Hide placeholder/empty entries and challenge entries that should never appear here
+    const isJunk = (name: string) => {
+      const t = name.trim();
+      return !t || t === "–" || t === "-" || t.startsWith("⚔️") || /utmaning\s*:/i.test(t);
+    };
     return dedupeExerciseList(merged)
-      .filter(e => !setRepRe.test(e.name))
+      .filter(e => !setRepRe.test(e.name) && !isJunk(e.name))
       .sort((a, b) => a.name.localeCompare(b.name, "sv"));
   })();
 
-  const filtered = fuzzyFilterSort(
-    allExercises.filter(e => !selectedMuscle || e.muscleGroup === selectedMuscle),
-    search,
-    (e) => [e.name, e.muscleGroup, e.category]
+  const filtered = matchExercises(
+    allExercises
+      .filter(e => !selectedMuscle || e.muscleGroup === selectedMuscle)
+      .map(e => ({ ...e, englishName: exerciseTranslations[e.name] ?? null })),
+    search
   );
 
   const handleSelect = (name: string) => {

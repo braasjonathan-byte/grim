@@ -3,6 +3,12 @@ export interface FitnessProfile {
   time_10km_min: number | null;
   experience_level: string | null;
   training_days_per_week: number | null;
+  /** Cykling: FTP i watt (valfritt) */
+  ftp_watt?: number | null;
+  /** Cykling: maxpuls i slag/min (valfritt) */
+  max_heart_rate?: number | null;
+  /** Cykling: vanlig snitthastighet i km/h (valfritt) */
+  avg_speed_kmh?: number | null;
 }
 
 export type PlanCategory = "styrka" | "löpning" | "cykling" | "simning" | "kampsport" | "kroppsvikt" | "kombination";
@@ -90,23 +96,16 @@ export const reorderDaysToPreferred = (days: TemplatePlanDay[], preferred: strin
   }
   const result: TemplatePlanDay[] = [];
   const sortedWeeks = Array.from(byWeek.keys()).sort((a, b) => a - b);
+  const preferredSorted = [...preferred].sort((a, b) => ALL_DAYS.indexOf(a) - ALL_DAYS.indexOf(b));
   for (const w of sortedWeeks) {
     const list = byWeek.get(w)!;
     const workouts = list.filter(
       d => d.session_name && !d.session_name.toLowerCase().includes("vila")
     );
-    // Pick target weekdays: start with preferred (sorted), then fill with remaining weekdays
-    const target: string[] = [];
-    const preferredSorted = [...preferred].sort((a, b) => ALL_DAYS.indexOf(a) - ALL_DAYS.indexOf(b));
-    for (const d of preferredSorted) {
-      if (target.length < workouts.length) target.push(d);
-    }
-    if (target.length < workouts.length) {
-      for (const d of ALL_DAYS) {
-        if (!target.includes(d) && target.length < workouts.length) target.push(d);
-      }
-    }
-    target.sort((a, b) => ALL_DAYS.indexOf(a) - ALL_DAYS.indexOf(b));
+    // Only the chosen (preferred) weekdays may receive sessions. If there are more
+    // workouts than preferred days, the extra ones are dropped instead of spilling
+    // onto days the user didn't pick.
+    const target = preferredSorted;
     for (const dayName of ALL_DAYS) {
       const idx = target.indexOf(dayName);
       if (idx >= 0 && workouts[idx]) {
@@ -487,6 +486,35 @@ function generateHomeWorkout(profile: FitnessProfile): TemplatePlanDay[] {
 }
 
 // ─── Cykling – Uthållighet & Intervaller (8v) ────────────────────────────────
+// Intensiteten styrs av vad användaren fyllt i: FTP (watt) > maxpuls (puls) > snitthastighet (km/h) > generiska zoner.
+const cyclingIntensity = (profile: FitnessProfile, zone: 2 | 3 | 4): string => {
+  const ftp = profile.ftp_watt;
+  const maxHr = profile.max_heart_rate;
+  const speed = profile.avg_speed_kmh;
+  const ranges = {
+    2: { ftp: [0.56, 0.75], hr: [0.6, 0.7], speedDelta: [-2, 0] },
+    3: { ftp: [0.76, 0.9], hr: [0.7, 0.8], speedDelta: [1, 3] },
+    4: { ftp: [0.91, 1.05], hr: [0.8, 0.9], speedDelta: [4, 7] },
+  } as const;
+  const r = ranges[zone];
+  if (ftp) {
+    const lo = Math.round(ftp * r.ftp[0]);
+    const hi = Math.round(ftp * r.ftp[1]);
+    return `${lo}–${hi} W (zon ${zone})`;
+  }
+  if (maxHr) {
+    const lo = Math.round(maxHr * r.hr[0]);
+    const hi = Math.round(maxHr * r.hr[1]);
+    return `${lo}–${hi} slag/min (zon ${zone})`;
+  }
+  if (speed) {
+    const lo = Math.max(5, Math.round((speed + r.speedDelta[0]) * 10) / 10);
+    const hi = Math.round((speed + r.speedDelta[1]) * 10) / 10;
+    return `${lo}–${hi} km/h`;
+  }
+  return `Zon ${zone}`;
+};
+
 function generateCyclingPlan(profile: FitnessProfile): TemplatePlanDay[] {
   const exp = profile.experience_level;
   const days: TemplatePlanDay[] = [];
@@ -495,14 +523,17 @@ function generateCyclingPlan(profile: FitnessProfile): TemplatePlanDay[] {
     const baseMin = exp === "nybörjare" ? 30 : exp === "avancerad" ? 50 : 40;
     const longMin = baseMin + w * 5;
     const intervalMin = isDeload ? 10 : 12 + Math.floor(w / 2) * 2;
+    const z2 = cyclingIntensity(profile, 2);
+    const z3 = cyclingIntensity(profile, 3);
+    const z4 = cyclingIntensity(profile, 4);
 
     days.push(
-      { week: w, day: "Mån", session_name: "Cykling – Lugnt", details: `${baseMin + w * 2} min i lugnt tempo. Fokus på kadens 80–90 rpm.`, tempo: "Zon 2" },
+      { week: w, day: "Mån", session_name: "Cykling – Lugnt", details: `${baseMin + w * 2} min i lugnt tempo (${z2}). Fokus på kadens 80–90 rpm.`, tempo: z2 },
       { week: w, day: "Tis", session_name: "Styrka – Ben & Core", details: `Knäböj 3×${8 + Math.floor(w / 3)}; Utfallssteg 3×10/ben; Bencurl 3×12; Hip thrust 3×12; Planka 3×${30 + w * 5}s`, tempo: "" },
-      { week: w, day: "Ons", session_name: isDeload ? "Vila" : "Cykling – Intervaller", details: isDeload ? "Vilodag – deload-vecka" : `15 min uppvärmning; ${Math.floor(intervalMin / 3)}×${3 + Math.floor(w / 3)} min i zon 4 (2 min vila); 10 min nedvarvning`, tempo: isDeload ? "" : "Zon 4" },
+      { week: w, day: "Ons", session_name: isDeload ? "Vila" : "Cykling – Intervaller", details: isDeload ? "Vilodag – deload-vecka" : `15 min uppvärmning; ${Math.floor(intervalMin / 3)}×${3 + Math.floor(w / 3)} min i ${z4} (2 min vila); 10 min nedvarvning`, tempo: isDeload ? "" : z4 },
       { week: w, day: "Tors", session_name: "Vila / Stretching", details: "Vilodag. 20 min stretching eller yoga.", tempo: "" },
-      { week: w, day: "Fre", session_name: "Cykling – Tempokörning", details: `${20 + w * 2} min tempokörning i zon 3. Jämnt och fokuserat.`, tempo: "Zon 3" },
-      { week: w, day: "Lör", session_name: "Cykling – Långpass", details: `${isDeload ? Math.round(longMin * 0.7) : longMin} min. Lugnt tempo, bygg uthållighet.`, tempo: "Zon 2" },
+      { week: w, day: "Fre", session_name: "Cykling – Tempokörning", details: `${20 + w * 2} min tempokörning i ${z3}. Jämnt och fokuserat.`, tempo: z3 },
+      { week: w, day: "Lör", session_name: "Cykling – Långpass", details: `${isDeload ? Math.round(longMin * 0.7) : longMin} min. Lugnt tempo (${z2}), bygg uthållighet.`, tempo: z2 },
     );
   }
   return days;
