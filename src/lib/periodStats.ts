@@ -1,3 +1,4 @@
+import { sessionVolumeKg } from "@/lib/checkedSets";
 import { summarizeCompletion } from "@/lib/workoutSummary";
 import { getWorkoutDistanceByCategory, type CardioCategoryKey } from "@/lib/workoutDistance";
 
@@ -74,7 +75,7 @@ export function computePeriodStats(
 
     stats.passCount += 1;
     stats.sets += summary.sets;
-    stats.volumeKg += summary.volumeKg;
+    stats.volumeKg += sessionVolumeKg(row.logged_weights);
     stats.minutes += summary.cardio?.minutes ?? 0;
 
     const planDetails = planDetailsByKey[`${row.week}-${row.day}`] ?? null;
