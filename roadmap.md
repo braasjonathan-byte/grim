@@ -20,3 +20,12 @@
 - [x] Isolera Health Connect-dialogens launcher/callback i en egen Android-aktivitet och återställ patchen automatiskt efter npm-installation.
 - [x] Deklarera proxy-aktiviteten även när pluginmanifestet saknar application-nod och låt native-felet hinna före UI-timeouten.
 - [x] Uppgradera Health Connect-klienten från 1.2.0-alpha01 till 1.2.0-alpha06 för Android 16 och verifiera versionen i varje bygge.
+
+## Passloggning (okt 2026)
+- [ ] Vilotimer på som standard vid avbockning, Hoppa över/+30 s
+- [ ] Passlängd från första avbockade set
+- [ ] Set/volym/ton från samma avbockade set
+- [ ] Synkbanner flyttar inte layout
+- [ ] Knapp "Nytt enskilt pass" med aktiv plan
+- [ ] Varning vid tom vikt
+- [ ] Avslutade pass publiceras korrekt igen
