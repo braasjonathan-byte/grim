@@ -3699,7 +3699,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     />
   );
   const offlineBanner = (!offlineStatus.online || offlineStatus.pending > 0) ? (
-    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${offlineStatus.online ? "bg-primary/10 text-primary" : "bg-warning/15 text-warning"}`}>
+    // Flytande märke – tar ingen plats i layouten så inga knappar flyttas.
+    <div
+      role="status"
+      className={`pointer-events-none fixed left-1/2 z-40 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 text-xs shadow-soft backdrop-blur ${offlineStatus.online ? "bg-card/95 text-primary" : "bg-card/95 text-warning"}`}
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}
+    >
       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${offlineStatus.online ? "animate-spin" : ""}`} />
       <span>
         {offlineStatus.online
