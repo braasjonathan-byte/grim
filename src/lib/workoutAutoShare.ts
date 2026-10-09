@@ -165,6 +165,10 @@ export function buildWorkoutSummaryCaption(
     }
   }
 
+  // Set och volym från samma avbockade set som sammanfattningen.
+  const strength = summarizeCompletion(lw);
+  completedSets = strength.sets;
+  totalVolume = strength.volumeKg;
   if (completedSets > 0) stats.push(`💪 ${completedSets} set`);
   if (totalVolume > 0) {
     const v = totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : String(Math.round(totalVolume));

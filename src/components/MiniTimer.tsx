@@ -136,9 +136,11 @@ const MiniTimer = () => {
     }
   }, [mode]);
 
+  const restExerciseRef = useRef<{ name: string; seconds: number } | null>(null);
   useEffect(() => {
     const startRestTimer = (event: Event) => {
-      const detail = (event as CustomEvent<{ seconds?: number; label?: string }>).detail;
+      const detail = (event as CustomEvent<{ seconds?: number; label?: string; exercise?: string }>).detail;
+      restExerciseRef.current = detail?.exercise ? { name: detail.exercise.toLowerCase(), seconds: Math.max(1, Math.round(Number(detail?.seconds) || 90)) } : null;
       const configuredSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || localStorage.getItem(COUNTDOWN_KEY) || "90";
       const startSeconds = Math.max(1, Math.round(Number(detail?.seconds ?? configuredSeconds) || 0));
       if (!startSeconds) return;
@@ -439,7 +441,20 @@ const MiniTimer = () => {
           {mode === "countdown" && label === "Vila" && (running || seconds !== countdownDefault) && (
             <>
               <button
-                onClick={(e) => { e.stopPropagation(); setSeconds((s) => s + 30); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSeconds((s) => s + 30);
+                  // Kom ihåg längre vila för just den här övningen
+                  const ex = restExerciseRef.current;
+                  if (ex) {
+                    ex.seconds += 30;
+                    try {
+                      const map = JSON.parse(localStorage.getItem("grim_rest_seconds_by_exercise") || "{}");
+                      map[ex.name] = String(ex.seconds);
+                      localStorage.setItem("grim_rest_seconds_by_exercise", JSON.stringify(map));
+                    } catch {}
+                  }
+                }}
                 className="h-7 shrink-0 rounded-full bg-muted px-2.5 text-[11px] font-semibold text-foreground"
               >
                 +30 s

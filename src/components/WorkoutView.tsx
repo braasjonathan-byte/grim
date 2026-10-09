@@ -362,7 +362,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const offerShare = async (week: number, day: string, viaCelebration: boolean) => {
     const settings = userId ? await loadPrivacySettings(userId) : DEFAULT_PRIVACY;
     setPrivacy(settings);
-    if (settings.auto_share_workouts === "off") return;
+    // "Av" = aldrig automatisk publicering; användaren får fortfarande frågan "Dela passet?".
     if (settings.auto_share_workouts === "always") {
       autoShareCompletion(userId, week, day, undefined, settings.default_post_visibility);
       return;
@@ -414,13 +414,17 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Circuit timer state
   const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[][]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
 
-  const triggerSetRestTimer = useCallback((wasChecked: boolean) => {
-    const setRestTimerEnabled = localStorage.getItem("grim_set_rest_timer_enabled") === "true";
-    const setRestTimerSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || localStorage.getItem("grim_mini_timer_countdown_seconds") || "90";
+  const triggerSetRestTimer = useCallback((wasChecked: boolean, exerciseName?: string) => {
+    const setRestTimerEnabled = localStorage.getItem("grim_set_rest_timer_enabled") !== "false";
+    let perExercise: string | undefined;
+    if (exerciseName) {
+      try { perExercise = JSON.parse(localStorage.getItem("grim_rest_seconds_by_exercise") || "{}")[exerciseName.toLowerCase()]; } catch {}
+    }
+    const setRestTimerSeconds = perExercise || localStorage.getItem("grim_set_rest_timer_seconds") || "90";
     if (!wasChecked || !setRestTimerEnabled) return;
     const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
     if (!seconds) return;
-    window.dispatchEvent(new CustomEvent("grim:start-rest-timer", { detail: { seconds, label: "Vila" } }));
+    window.dispatchEvent(new CustomEvent("grim:start-rest-timer", { detail: { seconds, label: "Vila", exercise: exerciseName } }));
   }, []);
 
   // Ready workout circuit config from DB
@@ -1227,6 +1231,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         });
       });
       // Unchecked sets stay as "ej gjort" — completion never adds or removes sets.
+      // Passlängd: tidigaste "första avbockade set" från appens tillstånd eller sparad rad.
+      try {
+        const { data: savedRow } = await supabase
+          .from("workout_completions")
+          .select("logged_weights")
+          .eq("user_id", userId).eq("week", week).eq("day", day)
+          .maybeSingle();
+        const savedStart = (savedRow?.logged_weights as any)?.__first_set_at__;
+        const localStart = latestWeights["__first_set_at__"];
+        const starts = [savedStart, localStart].filter((v) => typeof v === "string" && isFinite(new Date(v).getTime())) as string[];
+        if (starts.length) {
+          const earliest = starts.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+          if (earliest !== localStart) {
+            latestWeights = { ...latestWeights, __first_set_at__: earliest };
+            await updateCompletionWeights(week, day, (existing) => ({ ...existing, __first_set_at__: earliest }));
+          }
+        }
+      } catch {}
 
       // Auto-mark all conditioning lines in this day as completed as well
       try {
@@ -1561,14 +1583,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (arr[setIndex]) {
       playSetDone();
       hapticLight();
-      triggerSetRestTimer(true);
+      triggerSetRestTimer(true, exerciseName);
     }
     const setsStr = arr.map(b => b ? "1" : "0").join("");
 
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
     const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
     // Timestamp of the first checked set — used to measure session length
-    if (arr[setIndex] && !updated["__first_set_at__"]) {
+    if (arr[setIndex] && !updated["__first_set_at__"] && !(completions[k]?.logged_weights as any)?.__first_set_at__) {
       updated["__first_set_at__"] = new Date().toISOString();
     }
 
@@ -1642,6 +1664,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       const repsVal = (cur.reps && String(cur.reps).trim()) ? cur.reps : dreps;
       const kgVal = (cur.kg && String(cur.kg).trim()) ? cur.kg : dkg;
       parsedSetData[setIndex] = { ...cur, reps: repsVal, kg: kgVal };
+      if (!String(kgVal || "").trim() && !isAssistedBodyweightExercise(exerciseName) && !/box jump|burpee|pull.?ups?|chins?|armhävning|push.?ups?|plank|dead bug|bird dog|sit.?ups?|mountain climber|jumping jack|jump squat|pistol|handstand|muscle.?ups?|ring row|v-ups?|toes to bar|knees to elbow|dips|vila|walk|sled|släd|crawl|löp|cykel|rodd|kroppsvikt/i.test(exerciseName)) {
+        toast.warning(`Ingen vikt ifylld för ${exerciseName}, set ${setIndex + 1}. Fyll i vikten så räknas volymen rätt.`);
+      }
     }
     updated[setDataKey] = JSON.stringify(parsedSetData);
     if (arr[setIndex] && isAssistedBodyweightExercise(exerciseName) && !updated[`__bw_mode__${exerciseName}`]) {
@@ -3692,7 +3717,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     />
   );
   const offlineBanner = (!offlineStatus.online || offlineStatus.pending > 0) ? (
-    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs ${offlineStatus.online ? "bg-primary/10 text-primary" : "bg-warning/15 text-warning"}`}>
+    // Flytande märke – tar ingen plats i layouten så inga knappar flyttas.
+    <div
+      role="status"
+      className={`pointer-events-none fixed left-1/2 z-40 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-full px-3 py-1.5 text-xs shadow-soft backdrop-blur ${offlineStatus.online ? "bg-card/95 text-primary" : "bg-card/95 text-warning"}`}
+      style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}
+    >
       <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${offlineStatus.online ? "animate-spin" : ""}`} />
       <span>
         {offlineStatus.online
@@ -3916,6 +3946,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <>
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
+        {weeks.some((w) => w > 0) && (
+          <button
+            type="button"
+            onClick={() => { setShowAddSingle(false); setMode("plan"); }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-primary"
+          >
+            <ArrowLeft className="w-4 h-4" /> Tillbaka till planen
+          </button>
+        )}
         {offlineBanner}
         {pastWorkoutsUi}
         {startPlanDialog}
@@ -5658,6 +5697,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     <div className="space-y-4">
       {adminBanner}
         {offlineBanner}
+        <button
+          type="button"
+          onClick={() => { setMode("single"); setShowAddSingle(true); window.scrollTo({ top: 0 }); }}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 py-3 text-sm font-semibold text-primary active:scale-[0.98] transition-transform"
+        >
+          <Plus className="w-4 h-4" /> Nytt enskilt pass
+        </button>
         {pastWorkoutsUi}
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />

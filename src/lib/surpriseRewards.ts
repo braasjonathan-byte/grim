@@ -142,11 +142,12 @@ function buildCandidates(ctx: RewardContext): SurpriseReward[] {
   }
 
   // 9. Total volym i ton
-  if (ctx.metrics.tons >= 1) {
+  const exactTons = (ctx.metrics.kgTotal ?? ctx.metrics.tons * 1000) / 1000;
+  if (exactTons >= 1) {
     out.push({
       emoji: "🏋️",
       title: "Totalt lyft",
-      text: `Sammanlagt har du flyttat ${ctx.metrics.tons.toFixed(1).replace(".", ",")} ton järn sedan du började.`,
+      text: `Sammanlagt har du flyttat ${exactTons.toFixed(1).replace(".", ",")} ton järn sedan du började.`,
     });
   }
 

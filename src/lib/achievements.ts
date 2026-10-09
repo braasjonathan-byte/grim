@@ -1,3 +1,4 @@
+import { allCheckedSets } from "@/lib/checkedSets";
 import { isPlausibleSet, parseNum } from "@/lib/inputValidation";
 import { supabase } from "@/integrations/supabase/client";
 import { hasValidSessionFor } from "@/lib/sessionGuard";
@@ -28,6 +29,8 @@ export interface AchievementMetrics {
   workouts: number;
   reps: number;
   tons: number;
+  /** Exakt total volym i kg (avbockade set). */
+  kgTotal?: number;
   distanceKm: number;
   challenges: number;
   firesGiven: number;
@@ -147,11 +150,9 @@ export const calculateAchievementMetrics = (
     const weights = completion.logged_weights;
     if (!weights || typeof weights !== "object") continue;
     let sessionKg = 0;
-    for (const [key, value] of Object.entries(weights)) {
-      if (!key.startsWith("__setdata__")) continue;
-      const sets = typeof value === "string" ? safelyParseSets(value) : Array.isArray(value) ? value : [];
+    // Samma regel som sammanfattningen: bara avbockade set räknas.
+    for (const sets of allCheckedSets(weights).values()) {
       for (const set of sets) {
-        if (!isPlausibleSet(set?.kg, set?.reps)) continue;
         const setReps = parseNum(set?.reps) || 0;
         const kg = Math.max(0, parseNum(set?.kg) || 0);
         reps += setReps;
@@ -182,6 +183,7 @@ export const calculateAchievementMetrics = (
     workouts,
     reps,
     tons: Math.floor(kgTotal / 1000),
+    kgTotal: Math.round(kgTotal),
     distanceKm: Math.floor(distanceKm),
     challenges: challengeCount,
     firesGiven: interaction.firesGiven ?? 0,
