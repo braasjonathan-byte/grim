@@ -134,6 +134,13 @@
       "when": 1791573056739,
       "tag": "0018_profile_sport_ftp_display_name",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791573367459,
+      "tag": "0019_auto_share_default_ask",
+      "breakpoints": true
     }
   ]
 }
