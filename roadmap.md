@@ -22,10 +22,10 @@
 - [x] Uppgradera Health Connect-klienten från 1.2.0-alpha01 till 1.2.0-alpha06 för Android 16 och verifiera versionen i varje bygge.
 
 ## Passloggning (okt 2026)
-- [ ] Vilotimer på som standard vid avbockning, Hoppa över/+30 s
-- [ ] Passlängd från första avbockade set
-- [ ] Set/volym/ton från samma avbockade set
-- [ ] Synkbanner flyttar inte layout
-- [ ] Knapp "Nytt enskilt pass" med aktiv plan
-- [ ] Varning vid tom vikt
-- [ ] Avslutade pass publiceras korrekt igen
+- [x] Vilotimer på som standard vid avbockning, Hoppa över/+30 s
+- [x] Passlängd från första avbockade set
+- [x] Set/volym/ton från samma avbockade set
+- [x] Synkbanner flyttar inte layout
+- [x] Knapp "Nytt enskilt pass" med aktiv plan
+- [x] Varning vid tom vikt
+- [x] Avslutade pass publiceras korrekt igen
