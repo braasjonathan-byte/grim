@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useProfileBasics } from "@/lib/profileBasics";
 import { parseNum } from "@/lib/inputValidation";
 import { Flame } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,17 @@ const CalorieCalculator = () => {
   const [activity, setActivity] = useState("1.375");
   const [training, setTraining] = useState("350");
   const [goal, setGoal] = useState("0");
+  const profile = useProfileBasics();
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !profile) return;
+    prefilled.current = true;
+    if (profile.gender === "kvinna") setGender("female");
+    else if (profile.gender === "man") setGender("male");
+    if (profile.age) setAge(String(profile.age));
+    if (profile.weightKg) setWeight(String(profile.weightKg));
+    if (profile.heightCm) setHeight(String(profile.heightCm));
+  }, [profile]);
   const [result, setResult] = useState<{ bmr: number; tdee: number; target: number; macroType: string } | null>(null);
 
   const calculate = () => {

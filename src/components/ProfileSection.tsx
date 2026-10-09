@@ -1,3 +1,4 @@
+import { notifyProfileUpdated } from "@/lib/profileBasics";
 import { validateNumber, formatDecimal } from "@/lib/inputValidation";
 import { FieldError } from "@/components/ConfirmValueDialog";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
@@ -56,6 +57,10 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [weightKg, setWeightKg] = useState<string>("");
+  const [displayName, setDisplayName] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [mainSport, setMainSport] = useState("");
+  const [ftp, setFtp] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,7 +83,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     const fetchProfile = async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, weight_kg")
+        .select("age, gender, avatar_url, instagram, tiktok, snapchat, spotify_anthem_url, spotify_anthem_name, weight_kg, height_cm, main_sport, ftp_watt, display_name")
         .eq("user_id", userId)
         .single();
 
@@ -89,6 +94,10 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         savedWeight.current = w;
         setWeightKg(w);
         setAvatarUrl(data.avatar_url || null);
+        setDisplayName((data as any).display_name || "");
+        setHeightCm((data as any).height_cm != null ? formatDecimal((data as any).height_cm) : "");
+        setMainSport((data as any).main_sport || "");
+        setFtp((data as any).ftp_watt != null ? String((data as any).ftp_watt) : "");
         setInstagram((data as any).instagram || "");
         setTiktok((data as any).tiktok || "");
         setSnapchat((data as any).snapchat || "");
@@ -121,6 +130,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     if (error) { toast.error("Vikten kunde inte sparas."); return; }
     savedWeight.current = value;
     toast.success("Vikt sparad");
+    notifyProfileUpdated();
   }, [userId]);
   // Lämnar användaren sidan med osparad vikt: skicka ändringen så att den överlever omladdningen.
   useEffect(() => {
@@ -157,12 +167,20 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
   const doSave = useCallback(async () => {
     const ageRes = validateNumber(age, "ageYears");
     if (ageRes.error) return; // ogiltiga värden sparas aldrig
+    const hRes = validateNumber(heightCm, "heightCm");
+    if (hRes.error) return;
+    const ftpNum = ftp.trim() ? parseInt(ftp, 10) : null;
+    if (ftpNum != null && !(ftpNum >= 30 && ftpNum <= 700)) return;
     const url = spotifyUrl.trim();
     const name = spotifyName.trim();
     await supabase
       .from("profiles")
       .update({
         age: ageRes.value,
+        height_cm: hRes.value,
+        main_sport: mainSport || null,
+        ftp_watt: ftpNum,
+        display_name: displayName.trim().slice(0, 40) || null,
         gender: gender || null,
         instagram: extractUsername(instagram, "instagram.com") || null,
         tiktok: extractUsername(tiktok, "tiktok.com") || null,
@@ -172,7 +190,9 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
         spotify_anthem_name: url ? (name || null) : null,
       } as any)
       .eq("user_id", userId);
-  }, [age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
+    dirty.current = false;
+    notifyProfileUpdated();
+  }, [heightCm, mainSport, ftp, displayName, age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, userId]);
 
   // Trigger auto-save when any field changes (after initial load AND user interaction)
   useEffect(() => {
@@ -182,7 +202,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       doSave();
     }, 1000);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
+  }, [heightCm, mainSport, ftp, displayName, age, gender, instagram, tiktok, snapchat, spotifyUrl, spotifyName, loaded, doSave]);
 
   // Save on unmount/visibility change (only if user changed something)
   useEffect(() => {
@@ -328,6 +348,12 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
       <SettingsSection title="Kroppsdata" icon={Ruler}>
         <div className="space-y-3">
           <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">Visningsnamn (valfritt)</label>
+            <input type="text" value={displayName} maxLength={40} onChange={(e) => { dirty.current = true; setDisplayName(e.target.value); }} placeholder="T.ex. Jonathan" className={inputClass} />
+            <p className="text-[10px] text-muted-foreground">Används i hälsningen på Hem</p>
+          </div>
+
+          <div className="space-y-1.5">
             <label className="text-xs text-muted-foreground block">Ålder</label>
             <input
               type="text"
@@ -371,6 +397,26 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
             />
             <FieldError error={validateNumber(weightKg, "bodyWeightKg").error} />
             <p className="text-[10px] text-muted-foreground">Används för att beräkna kaloriförbrukning</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">Längd (cm)</label>
+            <input type="text" inputMode="numeric" value={heightCm} onChange={(e) => { dirty.current = true; setHeightCm(e.target.value); }} placeholder="Ange din längd" className={inputClass} />
+            <FieldError error={validateNumber(heightCm, "heightCm").error} />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">Huvudsport</label>
+            <select value={mainSport} onChange={(e) => { dirty.current = true; setMainSport(e.target.value); }} className={inputClass}>
+              {(["", "Styrketräning", "Löpning", "Cykling", "Simning", "Triathlon", "Kraftlyft", "CrossFit", "Promenad", "Annat"]).map((s) => <option key={s} value={s}>{s || "Ej angivet"}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground block">FTP i watt (valfritt)</label>
+            <input type="text" inputMode="numeric" value={ftp} onChange={(e) => { dirty.current = true; setFtp(e.target.value.replace(/\D/g, "")); }} placeholder="T.ex. 220" className={inputClass} />
+            {ftp && !(parseInt(ftp, 10) >= 30 && parseInt(ftp, 10) <= 700) && <p className="text-[10px] text-destructive">Ange ett värde mellan 30 och 700 W</p>}
+            <p className="text-[10px] text-muted-foreground">Din funktionella tröskeleffekt på cykel</p>
           </div>
         </div>
       </SettingsSection>

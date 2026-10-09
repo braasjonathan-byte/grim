@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { PROFILE_UPDATED_EVENT } from "@/lib/profileBasics";
 import { Sparkles, X } from "lucide-react";
 
 const DISMISS_KEY = "grim_profile_banner_dismissed_v1";
@@ -20,7 +21,7 @@ const ProfileCompletenessBanner = ({ userId, onOpenProfile }: Props) => {
   useEffect(() => {
     if (dismissed || !userId) return;
     let cancelled = false;
-    (async () => {
+    const load = async () => {
       const { data } = await supabase
         .from("profiles")
         .select("age, gender, weight_kg")
@@ -32,8 +33,10 @@ const ProfileCompletenessBanner = ({ userId, onOpenProfile }: Props) => {
       if (!data.gender) m.push("kön");
       if (!(data as any).weight_kg) m.push("vikt");
       setMissing(m);
-    })();
-    return () => { cancelled = true; };
+    };
+    load();
+    window.addEventListener(PROFILE_UPDATED_EVENT, load);
+    return () => { cancelled = true; window.removeEventListener(PROFILE_UPDATED_EVENT, load); };
   }, [userId, dismissed]);
 
   if (dismissed || missing.length === 0) return null;

@@ -193,15 +193,16 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      supabase.from("profiles").select("nickname, plan_start_date").eq("user_id", userId).maybeSingle(),
+      supabase.from("profiles").select("display_name, plan_start_date").eq("user_id", userId).maybeSingle(),
       supabase.from("workout_plans").select("week, day, details, session_name, created_at").eq("user_id", userId),
       supabase.from("workout_completions").select("week, day, done, skipped, updated_at, logged_distance_km, logged_weights").eq("user_id", userId),
       syncAchievements(userId).catch(() => null),
     ])
       .then(([{ data: profile }, { data: planData }, { data: compData }, achSync]) => {
         if (cancelled) return;
-        const p = profile as { nickname?: string | null; plan_start_date?: string | null } | null;
-        if (p?.nickname) setNickname(p.nickname);
+        const p = profile as { display_name?: string | null; plan_start_date?: string | null } | null;
+        // Hälsningen använder visningsnamn – aldrig användarnamnet.
+        setNickname(p?.display_name?.trim() || "");
         if (p?.plan_start_date) setPlanStartDate(p.plan_start_date);
         setPlans((planData as PlanRow[]) ?? []);
         setCompletions((compData as CompletionRow[]) ?? []);
