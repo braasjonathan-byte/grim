@@ -362,7 +362,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const offerShare = async (week: number, day: string, viaCelebration: boolean) => {
     const settings = userId ? await loadPrivacySettings(userId) : DEFAULT_PRIVACY;
     setPrivacy(settings);
-    if (settings.auto_share_workouts === "off") return;
+    // "Av" = aldrig automatisk publicering; användaren får fortfarande frågan "Dela passet?".
     if (settings.auto_share_workouts === "always") {
       autoShareCompletion(userId, week, day, undefined, settings.default_post_visibility);
       return;
@@ -1231,6 +1231,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
         });
       });
       // Unchecked sets stay as "ej gjort" — completion never adds or removes sets.
+      // Passlängd: tidigaste "första avbockade set" från appens tillstånd eller sparad rad.
+      try {
+        const { data: savedRow } = await supabase
+          .from("workout_completions")
+          .select("logged_weights")
+          .eq("user_id", userId).eq("week", week).eq("day", day)
+          .maybeSingle();
+        const savedStart = (savedRow?.logged_weights as any)?.__first_set_at__;
+        const localStart = latestWeights["__first_set_at__"];
+        const starts = [savedStart, localStart].filter((v) => typeof v === "string" && isFinite(new Date(v).getTime())) as string[];
+        if (starts.length) {
+          const earliest = starts.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+          if (earliest !== localStart) {
+            latestWeights = { ...latestWeights, __first_set_at__: earliest };
+            await updateCompletionWeights(week, day, (existing) => ({ ...existing, __first_set_at__: earliest }));
+          }
+        }
+      } catch {}
 
       // Auto-mark all conditioning lines in this day as completed as well
       try {
@@ -1572,7 +1590,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const existing = (completions[k]?.logged_weights || {}) as Record<string, any>;
     const updated = { ...existing, [`__sets__${exerciseName}`]: setsStr };
     // Timestamp of the first checked set — used to measure session length
-    if (arr[setIndex] && !updated["__first_set_at__"]) {
+    if (arr[setIndex] && !updated["__first_set_at__"] && !(completions[k]?.logged_weights as any)?.__first_set_at__) {
       updated["__first_set_at__"] = new Date().toISOString();
     }
 
