@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Timer } from "lucide-react";
 
 const RestTimerSettings = () => {
-  const [enabled, setEnabled] = useState(() => localStorage.getItem("grim_set_rest_timer_enabled") === "true");
+  const [enabled, setEnabled] = useState(() => localStorage.getItem("grim_set_rest_timer_enabled") !== "false");
   const [seconds, setSeconds] = useState(() => localStorage.getItem("grim_set_rest_timer_seconds") || "90");
 
   const updateEnabled = () => {
