@@ -43,7 +43,7 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
   const macros = [
     { label: "Fett", v: fat, t: targets.fat_g, color: "hsl(45 93% 47%)" },
     { label: "Protein", v: protein, t: targets.protein_g, color: "hsl(var(--destructive))" },
-    { label: "Kolhydr.", v: carbs, t: targets.carbs_g, color: "hsl(199 89% 48%)" },
+    { label: "Kolhydrater", v: carbs, t: targets.carbs_g, color: "hsl(199 89% 48%)" },
     { label: "Fiber", v: fiber, t: fiberTarget, color: "hsl(25 60% 50%)" },
   ];
   return (
