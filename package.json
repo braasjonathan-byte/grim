@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "postinstall": "node scripts/patch-send-intent-gradle.cjs && node scripts/patch-capacitor-health.cjs",
+    "postinstall": "node scripts/patch-send-intent-gradle.cjs && node scripts/patch-capacitor-health.cjs && node scripts/patch-health-proxy-race.cjs",
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
