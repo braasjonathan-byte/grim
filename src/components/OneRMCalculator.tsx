@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { Calculator } from "lucide-react";
+import { epley1RM, epleyWeightForReps } from "@/lib/strengthStats";
 
-const PERCENTAGES = [
-  [1, 100], [2, 97], [3, 94], [4, 92], [5, 89],
-  [6, 86], [7, 83], [8, 81], [9, 78], [10, 75],
-  [12, 71], [15, 67], [20, 60],
-];
+const REP_ROWS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20];
 
 const OneRMCalculator = () => {
   const [weight, setWeight] = useState(100);
@@ -13,7 +10,8 @@ const OneRMCalculator = () => {
   const [open, setOpen] = useState(false);
 
   // Epley formula
-  const oneRM = reps === 1 ? weight : Math.round(weight * (1 + reps / 30));
+  const exact1RM = epley1RM(weight, reps);
+  const oneRM = Math.round(exact1RM);
 
   return (
     <div className="border border-border rounded-lg bg-secondary overflow-hidden">
@@ -67,8 +65,12 @@ const OneRMCalculator = () => {
             <p className="text-3xl font-black text-primary">{oneRM} kg</p>
           </div>
 
+          <div className="space-y-0.5">
+            <p className="text-xs font-semibold">Uppskattad vikt för X reps</p>
+            <p className="text-[10px] text-muted-foreground">Räknat baklänges från din 1RM med samma formel. Din rad ({reps} rep) visar vikten du skrev in.</p>
+          </div>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            {PERCENTAGES.map(([r, pct]) => (
+            {[...new Set([...REP_ROWS, reps])].sort((a, b) => a - b).map((r) => (
               <div
                 key={r}
                 className={`flex justify-between p-2 rounded-md ${
@@ -77,7 +79,7 @@ const OneRMCalculator = () => {
               >
                 <span>{r} rep</span>
                 <span className="font-mono font-semibold">
-                  {Math.round((oneRM * pct) / 100)} kg
+                  {r === reps ? weight : Math.round(epleyWeightForReps(exact1RM, r))} kg
                 </span>
               </div>
             ))}

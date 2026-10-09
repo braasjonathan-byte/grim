@@ -1,3 +1,4 @@
+import StrengthSection from "@/components/StrengthSection";
 import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
@@ -844,6 +845,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       <Leaderboard userId={userId} />
 
       {/* Personal records */}
+      <StrengthSection
+        userId={userId}
+        completions={completions
+          .filter((c) => c.done)
+          .map((c) => ({ logged_weights: c.logged_weights, date: getCompletionStatsDate(c, planStartDate) || new Date(c.updated_at) }))}
+      />
       <PersonalRecords userId={userId} />
 
       {/* Training calendar */}

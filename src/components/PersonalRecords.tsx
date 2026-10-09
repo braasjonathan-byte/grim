@@ -21,6 +21,7 @@ interface CompletionRow {
 interface PRRecord {
   exercise: string;
   weight: number;
+  reps?: number;
   date: string;
   week: number;
   trend: "up" | "same" | "down" | "first";
@@ -99,7 +100,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   }, [userId]);
 
   const records = useMemo(() => {
-    const prMap = new Map<string, {weight: number;date: string;week: number;previousBest: number | null;}>();
+    const prMap = new Map<string, {weight: number;reps?: number;date: string;week: number;previousBest: number | null;}>();
 
     for (const c of completions) {
       if (!c.logged_weights) continue;
@@ -129,7 +130,8 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
           if (maxKg <= 0) continue;
           const existing = prMap.get(exerciseName);
           if (!existing || maxKg > existing.weight) {
-            prMap.set(exerciseName, { weight: maxKg, date: c.updated_at, week: c.week, previousBest: existing?.weight ?? null });
+            const repsAtMax = Math.max(0, ...sets.filter((s) => (parseNum(s.kg) || 0) === maxKg).map((s) => Math.round(parseNum(s.reps) || 0)));
+            prMap.set(exerciseName, { weight: maxKg, reps: repsAtMax || undefined, date: c.updated_at, week: c.week, previousBest: existing?.weight ?? null });
           }
         }
       }
@@ -147,7 +149,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         if (finalWeight === data.previousBest) trend = "same";else
         trend = "down";
       }
-      result.push({ exercise, weight: finalWeight, date: data.date, week: data.week, trend });
+      result.push({ exercise, weight: finalWeight, reps: finalWeight === data.weight ? data.reps : undefined, date: data.date, week: data.week, trend });
     }
 
     // Also add overrides for exercises not in completions
@@ -326,7 +328,7 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
                 className="text-left group/weight"
               >
                 <p className="text-xl font-black group-hover/weight:text-primary transition-colors">
-                  {formatDecimal(pr.weight)} <span className="text-xs font-normal text-muted-foreground">kg</span>
+                  {formatDecimal(pr.weight)} <span className="text-xs font-normal text-muted-foreground">kg{pr.reps ? ` × ${pr.reps}` : ""}</span>
                 </p>
               </button>
 
