@@ -25,6 +25,8 @@ interface Props {
   initialActivity?: ParsedActivity | null;
 }
 
+const ACTIVITY_TYPES = ["Löpning", "Cykling", "Simning", "Promenad"] as const;
+
 const fieldCls =
   "w-full bg-secondary text-foreground text-sm p-2 rounded-lg border-none outline-none focus:ring-1 focus:ring-primary";
 
@@ -56,18 +58,22 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
   const inputRef = useRef<HTMLInputElement>(null);
   const [parsing, setParsing] = useState(false);
   const [activity, setActivity] = useState<ParsedActivity | null>(null);
-  const [exercise, setExercise] = useState("Löpning");
+  const [exercise, setExercise] = useState("");
   const [name, setName] = useState("");
   const [distance, setDistance] = useState("");
   const [duration, setDuration] = useState("");
   const [pulse, setPulse] = useState("");
   const [elevation, setElevation] = useState("");
   const [watt, setWatt] = useState("");
+  const [typeChosen, setTypeChosen] = useState(false);
 
   const applyActivity = (a: ParsedActivity) => {
     setActivity(a);
-    setExercise(a.exerciseName);
-    setName(a.title?.trim() || a.exerciseName);
+    // Typ från filen förväljs bara om filen faktiskt anger en; annars måste användaren välja.
+    const known = !!a.rawType?.trim() && (ACTIVITY_TYPES as readonly string[]).includes(a.exerciseName);
+    setExercise(known ? a.exerciseName : "");
+    setTypeChosen(known);
+    setName(a.title?.trim() || (known ? a.exerciseName : ""));
     setDistance(a.distanceKm ? (Math.round(a.distanceKm * 100) / 100).toString() : "");
     setDuration(a.durationSec ? secToHms(a.durationSec) : "");
     setPulse(a.avgHeartRate ? String(Math.round(a.avgHeartRate)) : "");
@@ -91,6 +97,8 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
     setPulse("");
     setElevation("");
     setWatt("");
+    setTypeChosen(false);
+    setExercise("");
   };
 
   const close = () => {
@@ -192,9 +200,28 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
             </div>
 
             <div>
+              <label className="text-[10px] uppercase tracking-wide text-muted-foreground">Aktivitetstyp</label>
+              <div className="mt-1 grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Aktivitetstyp">
+                {ACTIVITY_TYPES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="radio"
+                    aria-checked={exercise === t}
+                    onClick={() => { setExercise(t); setTypeChosen(true); if (!name.trim() || (ACTIVITY_TYPES as readonly string[]).includes(name.trim())) setName(t); }}
+                    className={`rounded-lg border px-1 py-2 text-xs font-semibold ${exercise === t ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {!typeChosen && <p className="mt-1 text-[10px] text-warning">Filen anger ingen typ – välj vad passet var.</p>}
+            </div>
+
+            <div>
               <label className="text-[10px] uppercase tracking-wide text-muted-foreground">Övning</label>
-              <select value={exercise} onChange={(e) => setExercise(e.target.value)} className={fieldCls}>
-                {Array.from(new Set([exercise, ...IMPORT_EXERCISE_OPTIONS])).map((o) => (
+              <select value={exercise} onChange={(e) => { setExercise(e.target.value); setTypeChosen(true); }} className={fieldCls}>
+                {Array.from(new Set([exercise, ...IMPORT_EXERCISE_OPTIONS].filter(Boolean))).map((o) => (
                   <option key={o} value={o}>
                     {o}
                   </option>
@@ -277,6 +304,10 @@ export default function ActivityFileImportDialog({ open, onClose, onConfirm, ini
             <div className="flex gap-2">
               <button
                 onClick={() => {
+                  if (!typeChosen || !exercise) {
+                    toast({ title: "Välj aktivitetstyp", variant: "destructive" });
+                    return;
+                  }
                   const result = buildResult();
                   if (!result) {
                     toast({ title: "Fyll i minst tid eller distans", variant: "destructive" });
