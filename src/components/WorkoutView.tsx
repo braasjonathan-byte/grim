@@ -424,7 +424,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (!wasChecked || !setRestTimerEnabled) return;
     const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
     if (!seconds) return;
-    window.dispatchEvent(new CustomEvent("grim:start-rest-timer", { detail: { seconds, label: "Vila" } }));
+    window.dispatchEvent(new CustomEvent("grim:start-rest-timer", { detail: { seconds, label: "Vila", exercise: exerciseName } }));
   }, []);
 
   // Ready workout circuit config from DB
