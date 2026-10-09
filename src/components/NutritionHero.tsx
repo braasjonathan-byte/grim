@@ -1,3 +1,4 @@
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { MICROS, formatMicro, qualityTone, type Micros } from "@/lib/micronutrients";
@@ -49,7 +50,12 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
     <div className="space-y-4">
       {quality != null && (
         <div className="flex justify-end -mb-2">
-          <span title="Matkvalitet: andel hela livsmedel vs. processad mat" className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${qualityTone(quality)}`}>Matkvalitet {quality}/100</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold tabular-nums ${qualityTone(quality)}`}>Matkvalitet {quality}/100 ⓘ</button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 text-xs">0–100 för dagens mat. Högre poäng när du äter mer hela, lite processade livsmedel med fiber och mindre socker.</PopoverContent>
+          </Popover>
         </div>
       )}
       <div className="rounded-2xl bg-primary/10 p-4 flex items-center justify-between">
@@ -64,7 +70,12 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
         </Ring>
         <div className="text-center w-16">
           <p className="text-xl font-bold tabular-nums">{Math.round(burned)}</p>
-          <p className="text-[10px] text-muted-foreground font-medium">Förbränt</p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="text-[10px] text-muted-foreground font-medium">Förbränt ⓘ</button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 text-xs">Kalorier från dagens loggade träningspass. Bara som info – ditt mål tar redan hänsyn till träningen, så "kvar" ändras inte.</PopoverContent>
+          </Popover>
         </div>
       </div>
       <div className="grid grid-cols-4 gap-2">
