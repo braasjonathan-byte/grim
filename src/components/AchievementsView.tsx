@@ -22,7 +22,7 @@ type Filter = "all" | "unlocked" | "locked" | AchievementDifficulty;
 
 const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Achievements", onClose }: AchievementsViewProps) => {
+const AchievementsView = ({ unlockedIds, unlockedAt = {}, title = "Utmärkelser", onClose }: AchievementsViewProps) => {
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<AchievementDefinition | null>(null);
 

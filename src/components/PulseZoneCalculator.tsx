@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useProfileBasics } from "@/lib/profileBasics";
 import { Heart } from "lucide-react";
 
 const ZONES = [
@@ -13,6 +14,13 @@ const PulseZoneCalculator = () => {
   const [age, setAge] = useState(25);
   const [restHR, setRestHR] = useState(60);
   const [open, setOpen] = useState(false);
+  const profile = useProfileBasics();
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !profile?.age) return;
+    prefilled.current = true;
+    setAge(profile.age);
+  }, [profile]);
 
   const maxHR = 220 - age;
 

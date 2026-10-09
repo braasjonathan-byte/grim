@@ -186,7 +186,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
               <div className="min-w-0">
                 <p className="text-sm truncate">{l.item_name}</p>
                 <p className="text-[10px] text-muted-foreground tabular-nums">
-                  {!isPlausibleMealLog(l) && <span className="text-destructive font-semibold">{IMPLAUSIBLE_LABEL} · </span>}{formatDecimal(l.amount)} {l.unit} · {Math.round(Number(l.kcal))} kcal · P{Number(l.protein_g).toFixed(0)} F{Number(l.fat_g).toFixed(0)} K{Number(l.carbs_g).toFixed(0)}
+                  {!isPlausibleMealLog(l) && <span className="text-destructive font-semibold">{IMPLAUSIBLE_LABEL} · </span>}{formatDecimal(l.amount)} {l.unit} · {Math.round(Number(l.kcal))} kcal · Protein {Number(l.protein_g).toFixed(0)} g · Fett {Number(l.fat_g).toFixed(0)} g · Kolhydrater {Number(l.carbs_g).toFixed(0)} g
                 </p>
               </div>
               <button onClick={() => onEditLog(l)} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
@@ -741,7 +741,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                 const f = isFinite(n) && n > 0 ? n / oldAmt : 1;
                 return (
                   <p className="text-[10px] text-muted-foreground tabular-nums pt-1">
-                    {Math.round(Number(editingLog.kcal) * f)} kcal · P{(Number(editingLog.protein_g) * f).toFixed(0)} F{(Number(editingLog.fat_g) * f).toFixed(0)} K{(Number(editingLog.carbs_g) * f).toFixed(0)}
+                    {Math.round(Number(editingLog.kcal) * f)} kcal · Protein {(Number(editingLog.protein_g) * f).toFixed(0)} g · Fett {(Number(editingLog.fat_g) * f).toFixed(0)} g · Kolhydrater {(Number(editingLog.carbs_g) * f).toFixed(0)} g
                   </p>
                 );
               })()}

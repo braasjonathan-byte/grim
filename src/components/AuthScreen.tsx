@@ -461,7 +461,7 @@ const AuthScreen = ({ onAuth }: AuthScreenProps) => {
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Användarnamn</label>
             <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)}
-            placeholder="Ditt namn"
+            placeholder="Användarnamn"
             maxLength={20}
             className="w-full bg-secondary text-foreground text-lg p-3 rounded-lg border-none outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground"
             autoFocus />

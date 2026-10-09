@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { startTour, type TourVariant } from "@/lib/tour";
+import { countTourSteps, startTour, type TourVariant } from "@/lib/tour";
 import { Sparkles, X, Apple } from "lucide-react";
 
 interface TourPromptProps {
@@ -94,7 +94,7 @@ const TourPrompt = ({ userId }: TourPromptProps) => {
                 disabled={busy}
                 className="w-full bg-primary text-primary-foreground font-bold text-sm px-4 py-2.5 active:scale-95 transition-transform"
               >
-                Kort rundtur (~6 steg)
+                Kort rundtur ({countTourSteps("short")} steg)
               </button>
               <button
                 onClick={() => run("long")}

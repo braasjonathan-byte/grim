@@ -27,12 +27,12 @@ const AchievementsPanel = ({ unlockedIds, unlockedAt = {}, compact = false, onOp
       type="button"
       onClick={onOpen}
       disabled={!onOpen}
-      aria-label={`Achievements: ${unlockedCount} av ${total} upplåsta`}
+      aria-label={`Utmärkelser: ${unlockedCount} av ${total} upplåsta`}
       className="w-full text-left border border-border bg-secondary p-3 space-y-2 transition-colors enabled:hover:bg-accent disabled:cursor-default"
     >
       <div className="flex items-center gap-2">
         <Trophy className="w-5 h-5 text-warning shrink-0" />
-        <h3 className="text-sm font-black flex-1">Achievements</h3>
+        <h3 className="text-sm font-black flex-1">Utmärkelser</h3>
         <span className="text-xs text-muted-foreground font-mono">{unlockedCount}/{total}</span>
       </div>
 

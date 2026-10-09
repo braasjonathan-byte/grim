@@ -1442,14 +1442,17 @@ export type Database = {
           created_at: string
           default_post_visibility: string
           deletion_scheduled_at: string | null
+          display_name: string | null
           display_title: string | null
           experience_level: string | null
           fasting_widget_hidden: boolean
+          ftp_watt: number | null
           gender: string | null
           height_cm: number | null
           id: string
           instagram: string | null
           is_honorary: boolean
+          main_sport: string | null
           max_distance_km: number | null
           must_change_password: boolean
           nickname: string
@@ -1479,14 +1482,17 @@ export type Database = {
           created_at?: string
           default_post_visibility?: string
           deletion_scheduled_at?: string | null
+          display_name?: string | null
           display_title?: string | null
           experience_level?: string | null
           fasting_widget_hidden?: boolean
+          ftp_watt?: number | null
           gender?: string | null
           height_cm?: number | null
           id?: string
           instagram?: string | null
           is_honorary?: boolean
+          main_sport?: string | null
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname: string
@@ -1516,14 +1522,17 @@ export type Database = {
           created_at?: string
           default_post_visibility?: string
           deletion_scheduled_at?: string | null
+          display_name?: string | null
           display_title?: string | null
           experience_level?: string | null
           fasting_widget_hidden?: boolean
+          ftp_watt?: number | null
           gender?: string | null
           height_cm?: number | null
           id?: string
           instagram?: string | null
           is_honorary?: boolean
+          main_sport?: string | null
           max_distance_km?: number | null
           must_change_password?: boolean
           nickname?: string
