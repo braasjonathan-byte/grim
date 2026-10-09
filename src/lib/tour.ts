@@ -568,6 +568,14 @@ export function resumeTourIfNeeded(onDone?: () => void) {
   } catch { /* ignore */ }
 }
 
+/** Antal steg som faktiskt visas för en rundtur (samma filter som startTour). */
+export function countTourSteps(variant: TourVariant): number {
+  return getStepsFor(variant).filter(({ step, meta }) => {
+    const sel = step.element as string | undefined;
+    return !sel || !!meta?.tab || document.querySelector(sel) !== null;
+  }).length;
+}
+
 function getStepsFor(variant: TourVariant): TourStep[] {
   if (variant === "short") return SHORT;
   if (variant === "long") return LONG;
