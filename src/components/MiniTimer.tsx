@@ -436,6 +436,22 @@ const MiniTimer = () => {
           <span className={`font-sans text-sm font-semibold tabular-nums ${running ? "text-primary" : "text-foreground"}`}>
             {fmt(seconds)}
           </span>
+          {mode === "countdown" && label === "Vila" && (running || seconds !== countdownDefault) && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); setSeconds((s) => s + 30); }}
+                className="h-7 shrink-0 rounded-full bg-muted px-2.5 text-[11px] font-semibold text-foreground"
+              >
+                +30 s
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setRunning(false); finishedRef.current = false; setSeconds(countdownDefault); setLabel("Timer"); }}
+                className="h-7 shrink-0 rounded-full bg-primary/15 px-2.5 text-[11px] font-semibold text-primary"
+              >
+                Hoppa över
+              </button>
+            </>
+          )}
           {!running && (
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70 truncate">
               {mode === "countdown" ? label : "Stoppur"}
