@@ -3928,6 +3928,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       <>
       <div className="space-y-4 animate-fade-in">
         {adminBanner}
+        {weeks.some((w) => w > 0) && (
+          <button
+            type="button"
+            onClick={() => { setShowAddSingle(false); setMode("plan"); }}
+            className="flex items-center gap-1.5 text-sm font-semibold text-primary"
+          >
+            <ArrowLeft className="w-4 h-4" /> Tillbaka till planen
+          </button>
+        )}
         {offlineBanner}
         {pastWorkoutsUi}
         {startPlanDialog}
@@ -5670,6 +5679,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     <div className="space-y-4">
       {adminBanner}
         {offlineBanner}
+        <button
+          type="button"
+          onClick={() => { setMode("single"); setShowAddSingle(true); window.scrollTo({ top: 0 }); }}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 py-3 text-sm font-semibold text-primary active:scale-[0.98] transition-transform"
+        >
+          <Plus className="w-4 h-4" /> Nytt enskilt pass
+        </button>
         {pastWorkoutsUi}
       {/* Event countdown progress bar */}
       <EventProgressBar userId={userId} />
