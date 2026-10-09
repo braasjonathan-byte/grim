@@ -9,7 +9,7 @@ const gpx = `<?xml version="1.0"?><gpx version="1.1"><trk><name>Tur</name><trkse
 
 describe("gpx-import", () => {
   it("fyller distans och tid", async () => {
-    const a = await parseActivityFile(new File([gpx], "tur.gpx"));
+    const a = await parseActivityFile({ name: "tur.gpx", text: async () => gpx, arrayBuffer: async () => new TextEncoder().encode(gpx).buffer } as unknown as File);
     expect(a.distanceKm).toBeGreaterThan(2);
     expect(a.durationSec).toBe(600);
   });
