@@ -11,7 +11,7 @@ export interface PrivacySettings {
 }
 
 export const DEFAULT_PRIVACY: PrivacySettings = {
-  auto_share_workouts: "off",
+  auto_share_workouts: "ask",
   default_post_visibility: "friends",
   show_on_leaderboard: false,
   share_plan_with_friends: false,
@@ -26,7 +26,7 @@ export async function loadPrivacySettings(userId: string): Promise<PrivacySettin
   if (!data) return DEFAULT_PRIVACY;
   return {
     auto_share_workouts: (["off", "ask", "always"].includes((data as any).auto_share_workouts)
-      ? (data as any).auto_share_workouts : "off") as AutoShareMode,
+      ? (data as any).auto_share_workouts : "ask") as AutoShareMode,
     default_post_visibility: (data as any).default_post_visibility === "public" ? "public" : "friends",
     show_on_leaderboard: !!(data as any).show_on_leaderboard,
     share_plan_with_friends: !!(data as any).share_plan_with_friends,

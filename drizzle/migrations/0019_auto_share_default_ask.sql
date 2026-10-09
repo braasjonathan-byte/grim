@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN auto_share_workouts SET DEFAULT 'ask';
