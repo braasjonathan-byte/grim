@@ -414,9 +414,13 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   // Circuit timer state
   const [circuitTimer, setCircuitTimer] = useState<{ exercises: string[]; workSeconds: number; exerciseSeconds?: number[][]; roundCount: number; restSeconds?: number; weekDayKey: string; headerIndex: number } | null>(null);
 
-  const triggerSetRestTimer = useCallback((wasChecked: boolean) => {
-    const setRestTimerEnabled = localStorage.getItem("grim_set_rest_timer_enabled") === "true";
-    const setRestTimerSeconds = localStorage.getItem("grim_set_rest_timer_seconds") || localStorage.getItem("grim_mini_timer_countdown_seconds") || "90";
+  const triggerSetRestTimer = useCallback((wasChecked: boolean, exerciseName?: string) => {
+    const setRestTimerEnabled = localStorage.getItem("grim_set_rest_timer_enabled") !== "false";
+    let perExercise: string | undefined;
+    if (exerciseName) {
+      try { perExercise = JSON.parse(localStorage.getItem("grim_rest_seconds_by_exercise") || "{}")[exerciseName.toLowerCase()]; } catch {}
+    }
+    const setRestTimerSeconds = perExercise || localStorage.getItem("grim_set_rest_timer_seconds") || "90";
     if (!wasChecked || !setRestTimerEnabled) return;
     const seconds = Math.max(1, Math.round(Number(setRestTimerSeconds) || 0));
     if (!seconds) return;
@@ -1561,7 +1565,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     if (arr[setIndex]) {
       playSetDone();
       hapticLight();
-      triggerSetRestTimer(true);
+      triggerSetRestTimer(true, exerciseName);
     }
     const setsStr = arr.map(b => b ? "1" : "0").join("");
 
@@ -1642,6 +1646,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       const repsVal = (cur.reps && String(cur.reps).trim()) ? cur.reps : dreps;
       const kgVal = (cur.kg && String(cur.kg).trim()) ? cur.kg : dkg;
       parsedSetData[setIndex] = { ...cur, reps: repsVal, kg: kgVal };
+      if (!String(kgVal || "").trim() && !isBodyweightExercise(exerciseName) && !isAssistedBodyweightExercise(exerciseName)) {
+        toast.warning(`Ingen vikt ifylld för ${exerciseName}, set ${setIndex + 1}. Fyll i vikten så räknas volymen rätt.`);
+      }
     }
     updated[setDataKey] = JSON.stringify(parsedSetData);
     if (arr[setIndex] && isAssistedBodyweightExercise(exerciseName) && !updated[`__bw_mode__${exerciseName}`]) {
