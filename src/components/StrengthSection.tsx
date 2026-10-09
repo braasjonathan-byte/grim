@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Dumbbell } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,10 +87,10 @@ const StrengthSection = ({ userId, completions }: { userId: string; completions:
               <span className="text-muted-foreground">Vecka</span>
               {LIFTS.map((l) => <span key={l} className="text-muted-foreground text-right">{LIFT_LABELS[l]}</span>)}
               {tonnageWeeks.map((w) => (
-                <>
-                  <span key={w.weekStart}>{w.weekStart.slice(5).replace("-", "/")}</span>
+                <Fragment key={w.weekStart}>
+                  <span>{w.weekStart.slice(5).replace("-", "/")}</span>
                   {LIFTS.map((l) => <span key={w.weekStart + l} className="text-right font-mono">{w.tonnage[l] ? ton(w.tonnage[l]!) : "–"}</span>)}
-                </>
+                </Fragment>
               ))}
             </div>
           </div>
