@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { startTour, type TourVariant } from "@/lib/tour";
+import { countTourSteps, startTour, type TourVariant } from "@/lib/tour";
 import { Sparkles, X, Apple } from "lucide-react";
 
 interface TourPromptProps {
