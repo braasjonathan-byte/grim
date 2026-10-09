@@ -154,7 +154,7 @@ export default function PeriodRecapView({ userId, onClose }: Props) {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h2 className="font-bold text-base flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-primary" /> Veckorapport
+          <Sparkles className="w-4 h-4 text-primary" /> Krönika
         </h2>
         <button
           onClick={share}
