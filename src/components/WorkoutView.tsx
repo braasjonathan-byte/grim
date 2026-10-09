@@ -1646,7 +1646,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       const repsVal = (cur.reps && String(cur.reps).trim()) ? cur.reps : dreps;
       const kgVal = (cur.kg && String(cur.kg).trim()) ? cur.kg : dkg;
       parsedSetData[setIndex] = { ...cur, reps: repsVal, kg: kgVal };
-      if (!String(kgVal || "").trim() && !isBodyweightExercise(exerciseName) && !isAssistedBodyweightExercise(exerciseName)) {
+      if (!String(kgVal || "").trim() && !isAssistedBodyweightExercise(exerciseName) && !/box jump|burpee|pull.?ups?|chins?|armhävning|push.?ups?|plank|dead bug|bird dog|sit.?ups?|mountain climber|jumping jack|jump squat|pistol|handstand|muscle.?ups?|ring row|v-ups?|toes to bar|knees to elbow|dips|vila|walk|sled|släd|crawl|löp|cykel|rodd|kroppsvikt/i.test(exerciseName)) {
         toast.warning(`Ingen vikt ifylld för ${exerciseName}, set ${setIndex + 1}. Fyll i vikten så räknas volymen rätt.`);
       }
     }
