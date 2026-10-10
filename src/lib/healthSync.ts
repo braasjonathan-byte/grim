@@ -82,7 +82,7 @@ export const STEP_TIMEOUT_MS = 20000;
  * Behörighetsdialogen styrs av användaren och måste få ta längre tid än ett
  * vanligt native-anrop, utan att någonsin kunna vänta för evigt.
  */
-export const DIALOG_TIMEOUT_MS = 120000;
+export const DIALOG_TIMEOUT_MS = 12000;
 
 
 /**
@@ -433,7 +433,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
     healthLog("pre-check failed – fortsätter till dialogen", { code: preError.code });
     if (preError.code === "launcher-setup") throw preError;
   }
-  if (existing.activity && existing.workouts && existing.heartRate && existing.sleep) return existing;
+  if (existing.activity) return existing;
 
   const req = { permissions: [...PERMISSIONS] };
   const coreReq = { permissions: [...CORE_PERMISSIONS] };
