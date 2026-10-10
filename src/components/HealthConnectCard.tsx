@@ -18,7 +18,6 @@ import {
   openHealthSettings,
   readHealthDays,
   readHealthWorkouts,
-  requestHealthPermissions,
   saveHealthDays,
   setLastHealthSync,
   syncWindowDays,
@@ -133,8 +132,9 @@ const HealthConnectCard = () => {
     try {
       await withTimeout((async () => {
         healthLog("manual sync entry point started");
-        const granted = await requestHealthPermissions();
+        const granted = await checkHealthAccess();
         setAccess(granted);
+        if (!granted.activity) throw new HealthError("denied", "Grim saknar behörighet. Öppna Behörigheter och tillåt Steg och Aktiva kalorier.");
         const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
         healthLog("permissions ok, reading days", { granted, windowDays });
         const days = await readHealthDays(windowDays);
@@ -174,8 +174,11 @@ const HealthConnectCard = () => {
     setLoadingWorkouts(true);
     try {
       healthLog("workout fetch started");
-      const granted = await requestHealthPermissions();
+      const granted = await checkHealthAccess();
       setAccess(granted);
+      if (!granted.activity) {
+        throw new HealthError("denied", "Grim saknar behörighet. Öppna Behörigheter och tillåt Steg och Aktiva kalorier.");
+      }
       if (!granted.workouts) {
         throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
       }
