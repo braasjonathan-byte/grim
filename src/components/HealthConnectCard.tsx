@@ -18,7 +18,6 @@ import {
   openHealthSettings,
   readHealthDays,
   readHealthWorkouts,
-  requestHealthPermissions,
   saveHealthDays,
   setLastHealthSync,
   syncWindowDays,
