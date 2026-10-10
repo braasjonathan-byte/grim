@@ -10,11 +10,11 @@ import { defineTool } from "npm:@lovable.dev/mcp-js@2.0.4";
 
 // src/lib/mcp/supabase.ts
 import { createClient } from "npm:@supabase/supabase-js@^2.95.3";
-function runtimeEnv(name) {
-  const runtime = globalThis;
+function runtimeEnv(name: string) {
+  const runtime = globalThis as any;
   return runtime.Deno?.env?.get?.(name) ?? runtime.process?.env?.[name];
 }
-function configuredEnv(names) {
+function configuredEnv(names: string[]) {
   for (const name of names) {
     const value = runtimeEnv(name)?.trim();
     if (value) return value;
@@ -48,7 +48,7 @@ function supabasePublishableKey() {
   if (legacy) return legacy;
   throw new Error("SUPABASE_PUBLISHABLE_KEY, SUPABASE_PUBLISHABLE_KEYS, or SUPABASE_ANON_KEY is required");
 }
-function supabaseForUser(ctx) {
+function supabaseForUser(ctx: { getToken(): string | null }) {
   const token = ctx.getToken();
   if (!token) throw new Error("supabaseForUser requires a verified OAuth token");
   return createClient(supabaseProjectUrl(), supabasePublishableKey(), {
