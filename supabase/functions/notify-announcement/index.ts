@@ -216,9 +216,9 @@ async function sendWebPush(
     if (!response.ok && response.status !== 201) {
       const text = await response.text();
       console.error(`Push failed for ${subscription.endpoint}: ${response.status} ${text}`);
-      return false;
+      return "stale";
     }
-    return true;
+    return "sent";
   } catch (e) {
     console.error("Push send error:", e);
     return "error";
