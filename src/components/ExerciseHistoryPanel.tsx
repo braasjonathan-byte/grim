@@ -1,4 +1,5 @@
 import { isPlausibleSet, parseNum, formatDecimal, IMPLAUSIBLE_LABEL } from "@/lib/inputValidation";
+import { getCardioDistUnit, getStoredCardioMode, resolveTempoDisplay } from "@/lib/cardioUnits";
 import { useEffect, useState } from "react";
 import { Loader2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -348,11 +349,20 @@ const ExerciseHistoryPanel = ({
                   {formatMinutes(s.cardio?.time)}
                 </span>
               )}
-              {s.cardio?.tempo && (
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-card border border-border">
-                  {s.cardio.tempo} tempo
-                </span>
-              )}
+              {(() => {
+                const mode = getStoredCardioMode(exerciseName);
+                const rawDist = parseFloat(String(s.cardio?.dist ?? "").replace(",", "."));
+                const distKm = isFinite(rawDist) && rawDist > 0
+                  ? (getCardioDistUnit(exerciseName) === "m" ? rawDist / 1000 : rawDist)
+                  : NaN;
+                const pace = resolveTempoDisplay(mode, s.cardio?.time, distKm, s.cardio?.tempo);
+                if (!pace) return null;
+                return (
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-card border border-border">
+                    {pace} tempo
+                  </span>
+                );
+              })()}
               {s.cardio?.pulse && (
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-card border border-border">
                   {s.cardio.pulse} bpm

@@ -6,7 +6,7 @@ import RouteMap from "@/components/RouteMap";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import { toTitleCase, sanitizePaceInput } from "@/lib/workoutIntervalUtils";
-import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, kmPerTempoUnit, showCardioElevation } from "@/lib/cardioUnits";
+import { type CardioMode, getCardioModes, getCardioDistUnit, modeLabel, modeFieldLabel, modeDisplaySuffix, modePlaceholder, isPaceMode, isLinkedMode, formatPaceDisplay, computeTempoValue, resolveTempoDisplay, kmPerTempoUnit, showCardioElevation } from "@/lib/cardioUnits";
 
 // Enhetlig fältstil för alla konditionsvyer (samma känsla som styrkeövningarna)
 export const condInputCls = "w-full min-w-0 bg-background text-foreground text-sm px-3 py-2.5 rounded-xl border border-border outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-center font-bold tabular-nums placeholder:text-muted-foreground/60 placeholder:font-normal placeholder:italic";
@@ -50,8 +50,16 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const [isEditing, setIsEditing] = useState(!hasSavedData);
   const initTime = savedData?.time || planCondTime || "";
   const initDist = savedData?.dist || planCondDist || "";
-  const initTempo = savedData?.tempo || planCondTempo || "";
   const initPulse = savedData?.pulse || planCondPulse || "";
+  // Tempo är härlett från tid + distans. Fältet och kortet visar alltid
+  // snittfarten för temposport, annars kan ett sparat km/h-värde hamna under
+  // etiketten min/km.
+  const initDistKm = (() => {
+    const d = parseFloat(String(initDist).replace(",", "."));
+    if (!isFinite(d) || d <= 0) return NaN;
+    return distUnitRaw === "m" ? d / 1000 : d;
+  })();
+  const initTempo = resolveTempoDisplay(bikeMode, initTime, initDistKm, savedData?.tempo || planCondTempo || "");
 
   const totalMin = parseNum(initTime) || 0;
   const [hours, setHours] = useState(() => { const h = Math.floor(totalMin / 60); return h > 0 ? String(h) : ""; });
@@ -193,8 +201,11 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     if (pulse.trim()) data.pulse = pulse.trim();
     if (showElevation && String(elevation).trim()) data.elev = String(elevation).trim();
     if (route.length > 1) data.route = route;
-    // Auto-calc tempo if time + dist (only for linked modes)
-    if (tempoIsLinked && data.time && data.dist && !data.tempo) {
+    // Tempo är härlett: för temposport sparas snittfarten från tid + distans
+    // om fältet inte redan är ett giltigt klockslag ("9.7" under etiketten
+    // min/km är en hastighet, inte ett tempo).
+    const tempoIsClock = /^\d+:[0-5]\d$/.test(String(data.tempo ?? "").trim());
+    if (tempoIsLinked && data.time && data.dist && (!data.tempo || (isPaceMode(bikeMode) && !tempoIsClock))) {
       const tVal = parseNum(data.time);
       const dVal = parseFloat(String(data.dist).replace(",", "."));
       if (tVal > 0 && dVal > 0) {
@@ -218,7 +229,12 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     // Compact read-only summary
     const displayTime = savedData?.time || initTime;
     const displayDist = savedData?.dist || initDist;
-    const displayTempo = savedData?.tempo || initTempo;
+    const displayDistKm = (() => {
+      const d = parseFloat(String(displayDist).replace(",", "."));
+      if (!isFinite(d) || d <= 0) return NaN;
+      return distIsMeters ? d / 1000 : d;
+    })();
+    const displayTempo = resolveTempoDisplay(bikeMode, displayTime, displayDistKm, savedData?.tempo || initTempo);
     const displayPulse = savedData?.pulse || initPulse;
     return (
       <div className="bg-primary/10 border border-primary/20 rounded-2xl shadow-soft p-3 space-y-1">

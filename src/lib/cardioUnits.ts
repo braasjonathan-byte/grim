@@ -192,6 +192,8 @@ export function isLinkedMode(mode: CardioMode): boolean {
 
 /**
  * Visar tempo i korrekt tidsformat: "5.47" och "5,47" → "5:47".
+ * Värden som inte kan vara klockslag ("9.7" = 9,7 min, "9:70") tolkas som
+ * decimalminuter och räknas om, så ett ogiltigt "9:70" aldrig visas.
  * Övriga enheter (km/h, watt …) lämnas orörda.
  */
 export function formatPaceDisplay(value: string | number | null | undefined, mode: CardioMode = "minkm"): string {
@@ -201,12 +203,54 @@ export function formatPaceDisplay(value: string | number | null | undefined, mod
   if (!isPaceMode(mode)) return raw;
   if (/^\d+:\d{1,2}$/.test(raw)) {
     const [m, s] = raw.split(":");
-    return `${parseInt(m, 10)}:${s.padStart(2, "0")}`;
+    const mins = parseInt(m, 10);
+    const secs = parseInt(s.padStart(2, "0"), 10);
+    if (secs >= 60) return formatMinutesAsClock(mins + secs / 60);
+    return `${mins}:${String(secs).padStart(2, "0")}`;
   }
   const m = raw.match(/^(\d+)[.,](\d{1,2})$/);
-  if (m) return `${parseInt(m[1], 10)}:${m[2].padEnd(2, "0")}`;
+  if (m) {
+    const mins = parseInt(m[1], 10);
+    const secs = parseInt(m[2].padEnd(2, "0"), 10);
+    if (secs >= 60) return formatMinutesAsClock(parseFloat(`${mins}.${m[2]}`));
+    return `${mins}:${String(secs).padStart(2, "0")}`;
+  }
   if (/^\d+$/.test(raw)) return `${raw}:00`;
   return raw;
+}
+
+/** Tolkar ett värde som tal, med komma som decimaltecken. */
+function toNumber(value: string | number | null | undefined): number {
+  if (typeof value === "number") return isFinite(value) ? value : NaN;
+  const n = parseFloat(String(value ?? "").trim().replace(",", "."));
+  return isFinite(n) ? n : NaN;
+}
+
+/**
+ * Tempo som ska visas för en konditionsövning.
+ *
+ * För temposport (min/km, min/100m, min/500m) är tempot en härledd storhet:
+ * värdet räknas alltid om från tid + distans så att vyn visar den verkliga
+ * snittfarten, även om det sparade värdet av misstag är en hastighet (9,7 km/h
+ * har hamnat under etiketten min/km). Saknas tid eller distans visas det
+ * sparade värdet, alltid i giltigt klockformat. För km/h, watt m.m. lämnas
+ * värdet som det är.
+ */
+export function resolveTempoDisplay(
+  mode: CardioMode,
+  timeMin: string | number | null | undefined,
+  distKm: string | number | null | undefined,
+  storedTempo: string | null | undefined,
+): string {
+  const stored = String(storedTempo ?? "").trim();
+  if (!isPaceMode(mode)) return stored;
+  const t = toNumber(timeMin);
+  const d = toNumber(distKm);
+  if (t > 0 && d > 0) {
+    const pace = computeTempoValue(mode, t, d);
+    if (pace) return pace;
+  }
+  return formatPaceDisplay(stored, mode);
 }
 
 /** Formaterar decimalminuter till mm:ss (används för tempovisning). */
