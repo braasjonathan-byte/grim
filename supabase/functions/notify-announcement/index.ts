@@ -216,7 +216,13 @@ async function sendWebPush(
     if (!response.ok && response.status !== 201) {
       const text = await response.text();
       console.error(`Push failed for ${subscription.endpoint}: ${response.status} ${text}`);
-      return "stale";
+      // 404/410 = subscription gone. 403 with an invalid-JWT/VAPID body means this
+      // subscription was created with a different application server key and can
+      // never receive our pushes; drop it so the client re-subscribes with the
+      // current key. Any other error is transient and must keep the subscription.
+      if (response.status === 404 || response.status === 410) return "stale";
+      if (response.status === 403 && /invalid jwt|badjwttoken|vapid|unauthorizedregistration/i.test(text)) return "stale";
+      return "error";
     }
     return "sent";
   } catch (e) {
