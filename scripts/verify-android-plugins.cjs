@@ -158,6 +158,9 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_APP_HEALTH_PERMISSIONS") || !source.includes("ACTION_MANAGE_HEALTH_PERMISSIONS")) {
     failures.push("capacitor-health: app-specific Health Connect permission settings intent is missing");
   }
+  if (!source.includes("GRIM_SETTINGS_CANDIDATES") || !source.includes("HC_NATIVE_SETTINGS: could not open Health Connect")) {
+    failures.push("capacitor-health: Health Connect settings fallback chain is missing");
+  }
   if (!source.includes("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED") || !source.includes('"update-required"')) {
     failures.push("capacitor-health: installed versus update-required availability diagnostics are missing");
   }
@@ -188,7 +191,10 @@ if (fs.existsSync(healthPlugin)) {
       failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
     }
   }
-  if (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")')) {
+  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !source.includes("HC_NATIVE_04: no permission result in 8s") || !source.includes("HC_NATIVE_03: launcher not registered")) {
+    failures.push("capacitor-health: UI-thread permission request with 8s watchdog is missing — run patch-health-permission-request.cjs");
+  }
+  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")'))) {
     failures.push("capacitor-health: Health Connect permission flow is not isolated from MainActivity");
   }
   if (!fs.existsSync(healthPermissionProxy)) {

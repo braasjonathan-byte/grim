@@ -72,6 +72,10 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(patch).toContain("HC_NATIVE_03");
     expect(patch).toContain("GRIM_APP_HEALTH_PERMISSIONS");
     expect(patch).toContain("ACTION_MANAGE_HEALTH_PERMISSIONS");
+    const settingsPatch = read("scripts/patch-open-health-settings.cjs");
+    expect(settingsPatch).toContain("GRIM_SETTINGS_CANDIDATES");
+    expect(settingsPatch).toContain("HC_NATIVE_SETTINGS: could not open Health Connect");
+    expect(settingsPatch).toContain("activity.startActivity(intent)");
     expect(patch).toContain("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED");
   });
 
@@ -129,6 +133,9 @@ describe("Android-konfiguration för Health Connect", () => {
   it("isolerar Health Connect-dialogen från MainActivity och återställer patchen efter npm install", () => {
     const pkg = JSON.parse(read("package.json"));
     expect(pkg.scripts.postinstall).toContain("patch-capacitor-health.cjs");
+    expect(pkg.scripts.postinstall).toContain("patch-open-health-settings.cjs");
+    expect(pkg.scripts.postinstall).toContain("patch-health-permission-request.cjs");
+    expect(read("scripts/patch-health-permission-request.cjs")).toContain("HC_NATIVE_04: no permission result in 8s");
 
     const patch = read("scripts/patch-capacitor-health.cjs");
     expect(patch).toContain("GRIM_PERMISSION_PROXY_ACTIVITY");

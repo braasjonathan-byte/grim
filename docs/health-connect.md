@@ -75,8 +75,10 @@ resultCode, om data finns, extras-nycklar), och watchdoggen väljer kod utifrån
 som faktiskt hänt: `HC_NATIVE_06` om callbacken kom men var oanvändbar,
 `HC_NATIVE_05` om intenten aldrig kunde bekräftas, annars `HC_NATIVE_04`.
 
-Knappen **Behörigheter** öppnar den appspecifika Health Connect-vyn för Grims
-paket, inte bara Health Connects allmänna startsida.
+Knappen **Behörigheter** provar flera intents i ordning: appspecifika
+`MANAGE_HEALTH_PERMISSIONS` (systemet och Health Connect-appen), den allmänna
+Health Connect-sidan, och till sist själva Health Connect-appen. Misslyckas alla
+svarar native med `HC_NATIVE_SETTINGS`.
 
 ## Livscykel
 
