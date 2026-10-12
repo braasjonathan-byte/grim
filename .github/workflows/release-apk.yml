@@ -183,9 +183,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      # -------------------------
-      # Build APK
-      # -------------------------
+      - name: Bump version
+        run: node scripts/bump-android-version.cjs
+
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon --build-cache --parallel

@@ -70,6 +70,9 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
+    - name: Bump version
+      run: node scripts/bump-android-version.cjs
+
     - name: Build Release APK
       run: |
         cd android

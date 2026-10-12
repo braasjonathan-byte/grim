@@ -86,17 +86,11 @@ jobs:
           cat android/app/src/main/assets/adi-registration.properties
 
       # -------------------------
-      # Bump versionCode/versionName from the GitHub run number so each
-      # upload to Google Play has a unique, monotonically increasing code.
-      # Google Play rejects re-uploads of the same versionCode.
+      # versionCode måste vara strikt högre än den som redan finns i Play.
+      # Unix-tid slår både 1000+run och en omkörning av samma workflow.
       # -------------------------
       - name: Bump version
-        run: |
-          VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))
-          VERSION_NAME="1.0.${GITHUB_RUN_NUMBER}"
-          echo "Using versionCode=$VERSION_CODE versionName=$VERSION_NAME"
-          sed -i "s/versionCode [0-9]\+/versionCode $VERSION_CODE/" android/app/build.gradle
-          sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION_NAME\"/" android/app/build.gradle
+        run: node scripts/bump-android-version.cjs
 
       - name: Decode keystore
         env:

@@ -147,6 +147,10 @@ jobs:
         if: always()
         run: chmod +x android/gradlew || true
 
+      - name: Bump version
+        if: always()
+        run: node scripts/bump-android-version.cjs
+
       - name: Build debug APK (continue on error to surface all failures)
         id: apk
         if: always()
