@@ -988,8 +988,10 @@ export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_
   const plugin = await loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
   const permissions = [...HEALTH_TEST_SETS[set]];
+  const pending = plugin.requestHealthPermissions({ permissions });
+  healthLog("native call dispatched", { permissions });
   try {
-    const res = await withDialogTimeout(plugin.requestHealthPermissions({ permissions }), "Testet fick inget svar inom 60 s.", 60000);
+    const res = await withDialogTimeout(pending, "Testet fick inget svar inom 15 s.", 15000);
     healthLog("native test result", res);
     return permissionMap(res);
   } catch (err) {

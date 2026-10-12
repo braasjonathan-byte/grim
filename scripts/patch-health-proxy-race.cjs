@@ -75,7 +75,12 @@ if (!kt.includes("GRIM_SHEET_WATCHDOG") && kt.includes("launcher.launch(requeste
                 if (!resultDelivered && !sawPauseAfterLaunch && !isFinishing) {
                     finishWithError("HC_NATIVE_04: Health Connect permission sheet did not appear")
                 }
-            }, 4000)`
+            }, 4000)
+            mainHandler.postDelayed({
+                if (!resultDelivered && !isFinishing) {
+                    finishWithError("HC_NATIVE_04: Health Connect permission sheet did not return")
+                }
+            }, 8000)`
   );
 }
 

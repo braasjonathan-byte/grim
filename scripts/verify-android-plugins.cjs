@@ -191,7 +191,7 @@ if (fs.existsSync(healthPlugin)) {
       failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
     }
   }
-  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")') || !source.includes("HC_NATIVE_04: no permission result in 120s")) {
+  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")') || !source.includes('healthTrace("dialog-launch-attempt", "route=already-granted")') || !source.includes("HC_NATIVE_04: no permission result in 8s")) {
     failures.push("capacitor-health: permission request must launch the proxy activity and time out — run patch-health-permission-request.cjs");
   }
   if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")'))) {

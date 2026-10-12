@@ -45,40 +45,54 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
         // GRIM_SAVED_PERMISSION_CALL
         call.setKeepAlive(true)
         bridge.saveCall(call)
-        activity.runOnUiThread {
-            try {
-                requestPermissionContext.set(RequestPermissionContext(permissions, call))
-                if (healthConnectPermissions.isEmpty()) {
+        // Redan beviljat: öppna ingen aktivitet. En osynlig ruta pausar WebView
+        // och då varken syns dialogen eller kan JavaScript-klockan avbryta.
+        CoroutineScope(Dispatchers.IO).launch {
+            val grantedNow = try {
+                if (ensureClient()) healthConnectClient.permissionController.getGrantedPermissions() else emptySet()
+            } catch (_: Exception) {
+                emptySet()
+            }
+            activity.runOnUiThread {
+                try {
+                    if (healthConnectPermissions.isNotEmpty() && healthConnectPermissions.all { grantedNow.contains(it) }) {
+                        requestPermissionContext.set(null)
+                        // GRIM_LAUNCH_GUARD
+                        healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
+                        healthTrace("dialog-launch-attempt", "route=already-granted")
+                        call.resolve(grantedPermissionResult(permissions, grantedNow))
+                        bridge.releaseCall(call)
+                        return@runOnUiThread
+                    }
+                    requestPermissionContext.set(RequestPermissionContext(permissions, call))
+                    if (healthConnectPermissions.isEmpty()) {
+                        requestPermissionContext.set(null)
+                        call.reject("HC_NATIVE_05: no Health Connect permission strings matched the request")
+                        bridge.releaseCall(call)
+                        return@runOnUiThread
+                    }
+                    val proxyIntent = Intent(activity, HealthPermissionProxyActivity::class.java).apply {
+                        putStringArrayListExtra(
+                            HealthPermissionProxyActivity.EXTRA_PERMISSIONS,
+                            ArrayList(healthConnectPermissions)
+                        )
+                    }
+                    healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
+                    healthTrace("dialog-launch-attempt", "route=proxy")
+                    startActivityForResult(call, proxyIntent, "handleHealthPermissionResult")
+                    healthTrace("dialog-launch-returned", "route=proxy")
+                } catch (e: Exception) {
                     requestPermissionContext.set(null)
-                    call.reject("HC_NATIVE_05: no Health Connect permission strings matched the request")
+                    call.reject("HC_NATIVE_05: \${e.message}")
                     bridge.releaseCall(call)
-                    return@runOnUiThread
                 }
-                // GRIM_LAUNCH_GUARD
-                // Dialogen får inte startas i MainActivity. Den aktiviteten täcker
-                // WebView utan att visa rutan, och då fryser JavaScript-klockan.
-                val proxyIntent = Intent(activity, HealthPermissionProxyActivity::class.java).apply {
-                    putStringArrayListExtra(
-                        HealthPermissionProxyActivity.EXTRA_PERMISSIONS,
-                        ArrayList(healthConnectPermissions)
-                    )
-                }
-                healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
-                healthTrace("dialog-launch-attempt", "route=proxy")
-                startActivityForResult(call, proxyIntent, "handleHealthPermissionResult")
-                healthTrace("dialog-launch-returned", "route=proxy")
-            } catch (e: Exception) {
-                requestPermissionContext.set(null)
-                call.reject("HC_NATIVE_05: \${e.message}")
-                bridge.releaseCall(call)
             }
         }
-        // Om dialogen aldrig kommer tillbaka: släpp anropet.
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             val pending = requestPermissionContext.getAndSet(null) ?: return@postDelayed
-            pending.pluginCal.reject("HC_NATIVE_04: no permission result in 120s")
+            pending.pluginCal.reject("HC_NATIVE_04: no permission result in 8s")
             bridge.releaseCall(pending.pluginCal)
-        }, 120000)
+        }, 8000)
     }
 
 `;
