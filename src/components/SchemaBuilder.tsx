@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Copy, Trash2, ArrowLeft, Save, ChevronDown, ChevronUp, Search, X, Dumbbell } from "lucide-react";
 import { exerciseLibrary, muscleGroups } from "@/data/exerciseLibrary";
 import ExercisePickerDialog from "@/components/ExercisePickerDialog";
+import { matchExercises } from "@/lib/exerciseMatcher";
 import { startsWithTimeNotation } from "@/lib/exerciseNormalization";
 import { replacePlanRows } from "@/lib/planRows";
 import { toast } from "sonner";
@@ -72,11 +73,9 @@ const SchemaBuilder = ({ userId, onDone, onBack }: SchemaBuilderProps) => {
     ...customExercises.map(e => ({ name: e.name, muscleGroup: e.muscle_group, isCustom: true })),
   ];
 
-  const filteredExercises = allExercises.filter(e => {
-    const matchSearch = !exerciseSearch || e.name.toLowerCase().includes(exerciseSearch.toLowerCase());
-    const matchMuscle = !selectedMuscle || e.muscleGroup === selectedMuscle;
-    return !startsWithTimeNotation(e.name) && matchSearch && matchMuscle;
-  });
+  const baseExercises = allExercises.filter(e =>
+    !startsWithTimeNotation(e.name) && (!selectedMuscle || e.muscleGroup === selectedMuscle));
+  const filteredExercises = exerciseSearch.trim() ? matchExercises(baseExercises, exerciseSearch) : baseExercises;
 
   // Build details string from exercises
   const buildDetails = (exercises: ExerciseEntry[], extraDetails: string) => {

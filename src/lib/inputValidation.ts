@@ -125,3 +125,71 @@ export const isPlausibleMealLog = (row: { amount?: unknown; unit?: unknown; kcal
 
 /** Som parseFloat men godkänner decimalkomma ("82,5" → 82.5). */
 export const parseNum = (v: unknown): number => parseFloat(String(v ?? "").trim().replace(",", "."));
+
+/* ---------- Kondition: rimlighetskontroll ---------- */
+
+export type CardioSportKind = "running" | "cycling" | "swimming" | "other";
+
+const CARDIO_SPORT_PATTERNS: { key: CardioSportKind; re: RegExp }[] = [
+  { key: "cycling", re: /cykl|cykel|spinning|motionscykel|zwift|mtb|mountainbike|gravel|\bbike\b|cycling|\bride\b/i },
+  { key: "swimming", re: /simning|simma|\bsim\b/i },
+  { key: "running", re: /löpning|löpband|löp|jogg|spring|intervall|sprint|tröskel|maraton|milen/i },
+];
+
+export const detectCardioSportKind = (sportName: string): CardioSportKind => {
+  const n = String(sportName || "");
+  for (const p of CARDIO_SPORT_PATTERNS) if (p.re.test(n)) return p.key;
+  return "other";
+};
+
+export interface CardioEntryInput {
+  sport: string;
+  /** Total tid i minuter. */
+  timeMin?: number | string | null;
+  /** Total distans i km. */
+  distanceKm?: number | string | null;
+}
+
+export interface CardioValidationResult {
+  valid: boolean;
+  error: string | null;
+}
+
+/**
+ * Enkel rimlighetskontroll av ett konditionspass innan det sparas.
+ * Kräver minst tid eller distans, och om båda finns kontrolleras att
+ * farten/tempot är rimligt för sporten (stoppar t.ex. 99 km på 10 min).
+ */
+export const validateCardioEntry = ({ sport, timeMin, distanceKm }: CardioEntryInput): CardioValidationResult => {
+  const t = parseDecimal(timeMin === null || timeMin === undefined ? "" : String(timeMin));
+  const d = parseDecimal(distanceKm === null || distanceKm === undefined ? "" : String(distanceKm));
+  const hasTime = isFinite(t) && t > 0;
+  const hasDist = isFinite(d) && d > 0;
+
+  if (!hasTime && !hasDist) {
+    return { valid: false, error: "Ange minst tid eller distans för passet." };
+  }
+
+  if (!hasTime || !hasDist) return { valid: true, error: null };
+
+  const speedKmh = d / (t / 60);
+  const paceMinPerKm = t / d;
+  const kind = detectCardioSportKind(sport);
+
+  if (kind === "running") {
+    if (speedKmh > 25) return { valid: false, error: "Orimlig fart för löpning (över 25 km/h) – kontrollera tid och distans." };
+    if (paceMinPerKm < 2.5 || paceMinPerKm > 20) {
+      return { valid: false, error: "Orimligt löptempo – kontrollera tid och distans (rimligt tempo är ca 2:30–20:00 min/km)." };
+    }
+  } else if (kind === "cycling") {
+    if (speedKmh > 80) return { valid: false, error: "Orimlig fart för cykling (över 80 km/h) – kontrollera tid och distans." };
+  } else if (kind === "swimming") {
+    if (paceMinPerKm < 8 || paceMinPerKm > 60) {
+      return { valid: false, error: "Orimligt simtempo – kontrollera tid och distans." };
+    }
+  } else {
+    if (speedKmh > 60) return { valid: false, error: "Orimlig fart – kontrollera tid och distans." };
+  }
+
+  return { valid: true, error: null };
+};

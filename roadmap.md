@@ -29,3 +29,10 @@
 - [x] Knapp "Nytt enskilt pass" med aktiv plan
 - [x] Varning vid tom vikt
 - [x] Avslutade pass publiceras korrekt igen
+
+## Kondition & statistik (okt 2026)
+- [ ] Intervallpass sparar total tid (arbete+vila), varje intervall och vila
+- [ ] Validera konditionsinmatning (tomt pass, orimlig fart/tempo)
+- [ ] Planens löppass: förifyllt tempo räknas inte som resultat; kräver loggning; fråga innan arkivering vid planstart
+- [ ] Sökning "Löpning" ger träffar
+- [ ] Hem "Veckan x/y" och Statistik räknar samma; topplista ej bara antal pass
