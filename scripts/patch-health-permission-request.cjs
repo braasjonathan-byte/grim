@@ -42,6 +42,7 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
             .mapNotNull { CapHealthPermission.from(it) }.toSet()
         val healthConnectPermissions = permissions.mapNotNull { permissionMapping[it] }.toSet()
 
+        // GRIM_SAVED_PERMISSION_CALL
         call.setKeepAlive(true)
         bridge.saveCall(call)
         activity.runOnUiThread {
@@ -54,7 +55,11 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                     bridge.releaseCall(call)
                     return@runOnUiThread
                 }
+                // GRIM_LAUNCH_GUARD
+                healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
+                healthTrace("dialog-launch-attempt", "route=launcher")
                 launcher.launch(healthConnectPermissions)
+                healthTrace("dialog-launch-returned", "route=launcher")
             } catch (e: Exception) {
                 requestPermissionContext.set(null)
                 call.reject("HC_NATIVE_05: \${e.message}")

@@ -1058,7 +1058,13 @@ const requiredMarkers = [
   'healthTrace("dialog-launch-attempt", "route=proxy")',
   "GRIM_HC_DIAGNOSTICS_METHOD",
 ];
-const missingMarkers = requiredMarkers.filter((m) => !kt.includes(m));
+const missingMarkers = requiredMarkers.filter((m) => {
+  if (kt.includes(m)) return false;
+  // requestHealthPermissions ersatts av UI-tradsstarten. route=proxy finns da inte kvar,
+  // och ett andra korpass (postinstall + workflow) far inte falla pa den gamla vagen.
+  if (kt.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && m.includes("route=proxy")) return false;
+  return true;
+});
 if (missingMarkers.length > 0) {
   console.error(`[patch-capacitor-health] kunde inte installera bryggans activity-result-hantering: ${missingMarkers.join(", ")}`);
   process.exit(1);

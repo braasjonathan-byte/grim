@@ -91,6 +91,7 @@ jobs:
           node scripts/patch-capacitor-health.cjs
           node scripts/patch-health-permission-request.cjs
           node scripts/patch-open-health-settings.cjs
+          node scripts/patch-health-proxy-race.cjs
           npx cap sync android
 
       - name: Verify patched native sources

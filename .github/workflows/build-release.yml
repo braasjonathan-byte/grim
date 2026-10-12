@@ -35,7 +35,7 @@ jobs:
       run: node scripts/patch-send-intent-gradle.cjs
 
     - name: Patch capacitor-health (sleep support)
-      run: node scripts/patch-capacitor-health.cjs && node scripts/patch-health-permission-request.cjs && node scripts/patch-open-health-settings.cjs
+      run: node scripts/patch-capacitor-health.cjs && node scripts/patch-health-permission-request.cjs && node scripts/patch-open-health-settings.cjs && node scripts/patch-health-proxy-race.cjs
 
     - name: Sync Capacitor
       run: npx cap sync android
