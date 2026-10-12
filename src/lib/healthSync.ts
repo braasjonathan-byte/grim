@@ -1,4 +1,4 @@
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 
 export type HealthDay = {
@@ -73,7 +73,7 @@ export type RawHealthWorkout = {
   heartRate?: { timestamp: string; bpm: number }[];
 };
 
-let pluginPromise: Promise<HealthPluginLike | null> | null = null;
+const Health = registerPlugin<HealthPluginLike>("HealthPlugin");
 
 /** Varje automatiskt anrop mot hälsoappen får ta max så här lång tid. */
 export const STEP_TIMEOUT_MS = 20000;
@@ -284,19 +284,9 @@ export async function healthAvailability(): Promise<HealthAvailability> {
 
 async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!Capacitor.isNativePlatform()) return null;
-  if (!pluginPromise) {
-    pluginPromise = withTimeout(
-      import("capacitor-health").then((mod) => (mod.Health as unknown as HealthPluginLike) ?? null),
-      5000,
-      "Hälsomodulen laddades inte.",
-      "launcher-setup",
-    ).catch((err) => {
-      healthLog("plugin import failed", err);
-      pluginPromise = null;
-      return null;
-    });
-  }
-  return pluginPromise;
+  // Paketets egen import() fastnar i WebView. Bryggan är redan registrerad
+  // som HealthPlugin, så anropet görs direkt utan att ladda JS-modulen.
+  return Health;
 }
 
 export function isHealthSupported() {
