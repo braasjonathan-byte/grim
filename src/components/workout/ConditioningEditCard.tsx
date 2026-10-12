@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { parseNum } from "@/lib/inputValidation";
+import { parseNum, validateCardioEntry } from "@/lib/inputValidation";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { Check, ChevronDown, ChevronUp, Footprints, Info, Pencil, Play, X } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
@@ -48,9 +49,13 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const distUnit = distUnitRaw ?? "km";
 
   const [isEditing, setIsEditing] = useState(!hasSavedData);
-  const initTime = savedData?.time || planCondTime || "";
-  const initDist = savedData?.dist || planCondDist || "";
-  const initPulse = savedData?.pulse || planCondPulse || "";
+  // Planerade värden (planCondTime/Dist/Tempo) är endast mål/placeholders.
+  // De ska ALDRIG räknas som ett loggat resultat förrän användaren själv
+  // skrivit in dem eller uttryckligen bekräftat att de ska användas.
+  const initTime = savedData?.time || "";
+  const initDist = savedData?.dist || "";
+  const initPulse = savedData?.pulse || "";
+  const [showEmptyWarning, setShowEmptyWarning] = useState(false);
   // Tempo är härlett från tid + distans. Fältet och kortet visar alltid
   // snittfarten för temposport, annars kan ett sparat km/h-värde hamna under
   // etiketten min/km.
@@ -59,7 +64,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     if (!isFinite(d) || d <= 0) return NaN;
     return distUnitRaw === "m" ? d / 1000 : d;
   })();
-  const initTempo = resolveTempoDisplay(bikeMode, initTime, initDistKm, savedData?.tempo || planCondTempo || "");
+  const initTempo = resolveTempoDisplay(bikeMode, initTime, initDistKm, savedData?.tempo || "");
 
   const totalMin = parseNum(initTime) || 0;
   const [hours, setHours] = useState(() => { const h = Math.floor(totalMin / 60); return h > 0 ? String(h) : ""; });
@@ -191,7 +196,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
 
 
 
-  const handleSave = async () => {
+  const handleSave = async (useplanned = false) => {
     const t = getTotalMin();
     const timeStr = t > 0 ? String(Math.round(t * 100) / 100) : "";
     const data: Record<string, any> = {};
@@ -201,6 +206,20 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     if (pulse.trim()) data.pulse = pulse.trim();
     if (showElevation && String(elevation).trim()) data.elev = String(elevation).trim();
     if (route.length > 1) data.route = route;
+
+    // Inget tid/distans/tempo manuellt loggat ännu — varna i stället för att
+    // tyst spara de planerade (placeholder) värdena som ett riktigt resultat.
+    const hasAnyLogged = !!(data.time || data.dist || data.tempo);
+    if (!hasAnyLogged && !useplanned) {
+      setShowEmptyWarning(true);
+      return;
+    }
+    if (!hasAnyLogged && useplanned) {
+      if (planCondTime) data.time = planCondTime;
+      if (planCondDist) data.dist = planCondDist;
+      if (planCondTempo) data.tempo = planCondTempo;
+    }
+
     // Tempo är härlett: för temposport sparas snittfarten från tid + distans
     // om fältet inte redan är ett giltigt klockslag ("9.7" under etiketten
     // min/km är en hastighet, inte ett tempo).
@@ -221,8 +240,14 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
         }
       }
     }
+    if (data.time || data.dist) {
+      const dRaw = parseFloat(String(data.dist ?? "").replace(",", "."));
+      const v = validateCardioEntry({ sport: name, timeMin: data.time ?? null, distanceKm: isFinite(dRaw) ? distToKm(dRaw) : null });
+      if (!v.valid) { toast.error(v.error || "Orimligt värde"); return; }
+    }
     await onSave(data);
     setIsEditing(false);
+    setShowEmptyWarning(false);
   };
 
   if (!isEditing) {
@@ -423,8 +448,18 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           )}
         </div>
       </div>
+      {showEmptyWarning && (
+        <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 space-y-2">
+          <p className="text-xs font-semibold text-foreground">Logga tid eller distans först</p>
+          <p className="text-[11px] text-muted-foreground">Du har inte loggat något resultat än. Planens värden är bara ett mål, inte ett resultat.</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setShowEmptyWarning(false)} className="flex-1 h-9 text-xs font-semibold bg-secondary text-foreground rounded-full">Logga själv</button>
+            <button type="button" onClick={() => handleSave(true)} className="flex-1 h-9 text-xs font-semibold bg-primary text-primary-foreground rounded-full">Använd planens värden</button>
+          </div>
+        </div>
+      )}
       <div className="flex gap-2 pt-1">
-        <button onClick={handleSave} className="flex-1 h-11 bg-primary text-primary-foreground rounded-full text-sm font-semibold shadow-soft hover:bg-primary/90 active:scale-[0.98] transition-all">Spara</button>
+        <button onClick={() => handleSave(false)} className="flex-1 h-11 bg-primary text-primary-foreground rounded-full text-sm font-semibold shadow-soft hover:bg-primary/90 active:scale-[0.98] transition-all">Spara</button>
         {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-full transition-colors">Avbryt</button>}
       </div>
 

@@ -1,4 +1,5 @@
 import { formatDecimal, isPlausibleSet } from "@/lib/inputValidation";
+import { validateCardioEntry } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { parseNum } from "@/lib/inputValidation";
 import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react";
@@ -71,7 +72,7 @@ import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } f
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
-import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, buildConditioningIntervalLabel, parseConditioningIntervalLabel } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, buildConditioningIntervalLabel, parseConditioningIntervalLabel, computeIntervalSessionTotals, formatMinutesAsClock } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
@@ -1433,9 +1434,71 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return weights?.[`__cond_done__${condName}`] === "1";
   };
 
+  const getPlannedCondValues = (week: number, day: string, condName: string) => {
+    const plan = plans.find(p => p.week === week && p.day === day);
+    if (!plan) return null;
+    const lines = (plan.details || "").split(/[;\n]/).map(ln => ln.trim()).filter(Boolean);
+    for (const line of lines) {
+      const { name, weight } = parseExerciseWeight(line);
+      if (name.trim().toLowerCase() !== condName.trim().toLowerCase()) continue;
+      const weightStr = weight || "";
+      const condTimeM = weightStr.match(/(\d+)\s*min/);
+      const condTempoM = weightStr.match(/([\d:.]+)\/km/);
+      const condDistM = weightStr.match(/([\d.,]+)\s*km(?!\/)/);
+      return derivePlanCardioValues(
+        condTimeM ? condTimeM[1] : "",
+        condDistM ? condDistM[1] : "",
+        condTempoM ? condTempoM[1] : "",
+        plan.tempo,
+      );
+    }
+    return null;
+  };
+
+  // Använd planens (förifyllda) värden som ett uttryckligen bekräftat resultat
+  // — görs bara när användaren klickar på "Använd planens värden" i varningen.
+  const applyPlannedConditioningValues = async (week: number, day: string, condName: string) => {
+    const planned = getPlannedCondValues(week, day, condName);
+    if (!planned || !(planned.time || planned.dist || planned.tempo)) {
+      toast.error("Inga planerade värden att använda");
+      return;
+    }
+    const condKey = `__cond__${condName}`;
+    await updateCompletionWeights(week, day, (existing) => ({
+      ...existing,
+      [condKey]: JSON.stringify({ time: planned.time, dist: planned.dist, tempo: planned.tempo }),
+      [`__cond_done__${condName}`]: "1",
+    }));
+    hapticLight();
+    playSetDone();
+    toast.success("Planens värden sparade och passet klarmarkerat");
+  };
+
+  const hasLoggedConditioningData = (week: number, day: string, condName: string): boolean => {
+    const weights = completions[`${week}-${day}`]?.logged_weights as Record<string, any> | null;
+    const raw = weights?.[`__cond__${condName}`];
+    if (!raw) return false;
+    try {
+      const p = typeof raw === "string" ? JSON.parse(raw) : raw;
+      return !!(p && (p.time || p.dist || p.tempo));
+    } catch {
+      return false;
+    }
+  };
+
   const toggleConditioningDone = async (week: number, day: string, condName: string) => {
     const key = `${week}-${day}`;
     const currentlyDone = isConditioningDone(key, condName);
+    if (!currentlyDone && !hasLoggedConditioningData(week, day, condName)) {
+      toast.error("Logga tid eller distans först", {
+        description: "Passet kan inte klarmarkeras utan ett loggat resultat.",
+        action: {
+          label: "Använd planens värden",
+          onClick: () => applyPlannedConditioningValues(week, day, condName),
+        },
+      });
+      return;
+    }
     hapticLight();
     if (!currentlyDone) { playSetDone(); }
     await updateCompletionWeights(week, day, (existing) => ({
@@ -3085,18 +3148,24 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     const isStair = isStairMachine(conditioningDialog.exerciseName);
     let intervalMeta: { count: number; restMin: string; mode: string | null; value: string } | null = null;
 
+    let totalElapsedMin = 0;
     if (isInterval && condIntervalsInput.trim()) {
       const n = parseInt(condIntervalsInput.trim()) || 0;
-      const summary = summarizeIntervalRows(condIntervalRows.slice(0, n));
+      const rowsSlice = condIntervalRows.slice(0, n);
+      const summary = summarizeIntervalRows(rowsSlice);
+      const totals = computeIntervalSessionTotals(rowsSlice, condRestInput.trim());
+      totalElapsedMin = totals.totalTimeMin;
       if (summary.hasAny) {
-        const timeStr = summary.totalTimeMin > 0
-          ? String(Math.round(summary.totalTimeMin * 100) / 100)
+        const perIntervalMin = n > 0 && totals.workTimeMin > 0 ? totals.workTimeMin / n : 0;
+        const timeStr = perIntervalMin > 0
+          ? String(Math.round(perIntervalMin * 100) / 100)
           : "";
         const speedValue = summary.avgTempoStr || "";
         infoParts.push(buildConditioningIntervalLabel(n, timeStr, condRestInput.trim(), condMode, speedValue));
-        if (summary.totalDistanceKm > 0) {
-          infoParts.push(`${Math.round(summary.totalDistanceKm * 100) / 100} km`);
+        if (totals.totalDistanceKm > 0) {
+          infoParts.push(`${Math.round(totals.totalDistanceKm * 100) / 100} km`);
         }
+        if (totalElapsedMin > 0) infoParts.push(`totalt ${formatMinutesAsClock(totalElapsedMin)}`);
         if (summary.avgPulse > 0) infoParts.push(`${summary.avgPulse} bpm`);
         intervalMeta = { count: n, restMin: condRestInput.trim(), mode: condMode, value: speedValue };
       } else {
@@ -3122,8 +3191,29 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       ? toSavedIntervalRows(condIntervalRows.slice(0, parseInt(condIntervalsInput.trim()) || 0))
       : [];
     const intervalCondData: Record<string, any> | null = (savedIntervalRows.length > 0 || intervalMeta)
-      ? { ...(savedIntervalRows.length > 0 ? { intervals: savedIntervalRows } : {}), ...(intervalMeta || {}) }
+      ? {
+          ...(savedIntervalRows.length > 0 ? { intervals: savedIntervalRows } : {}),
+          ...(intervalMeta || {}),
+          ...(totalElapsedMin > 0 ? { time: String(Math.round(totalElapsedMin * 100) / 100) } : {}),
+        }
       : null;
+
+    // Rimlighetskontroll innan vi sparar – stoppa orimliga/tomma pass.
+    {
+      const checkDistKm = isInterval && totalElapsedMin > 0
+        ? (intervalCondData?.intervals || []).reduce((sum: number, iv: any) => sum + (parseFloat(String(iv?.dist ?? "").replace(",", ".")) || 0), 0)
+        : parseFloat(condDistanceInput.replace(",", ".")) || 0;
+      const checkTimeMin = isInterval && totalElapsedMin > 0 ? totalElapsedMin : condTimeTotalMin;
+      const result = validateCardioEntry({
+        sport: conditioningDialog.exerciseName,
+        timeMin: checkTimeMin,
+        distanceKm: checkDistKm,
+      });
+      if (!result.valid) {
+        toast.error(result.error || "Orimligt värde – kontrollera och försök igen.");
+        return;
+      }
+    }
 
     let newDetails: string;
     let wasReplace = false;

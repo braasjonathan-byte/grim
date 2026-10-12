@@ -1,3 +1,4 @@
+import { isCompletedWorkout } from "@/lib/completionCounting";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -312,16 +313,24 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
   }, [plans, currentWeek]);
 
   const weekCompleted = useMemo(() => {
-    const plannedDays = new Set(
-      plans.filter((p) => p.week === currentWeek && hasContent(p.details)).map((p) => normalizeDay(p.day)),
-    );
-    const dayKeys = new Set(
+    // Samma definition som Statistik: genomförda pass (med belägg) denna kalendervecka (UTC, måndag),
+    // inklusive enskilda pass och extrapass.
+    const now = new Date();
+    const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    const start = monday.getTime();
+    const end = start + 7 * 86400000;
+    const keys = new Set(
       completions
-        .filter((c) => c.week === currentWeek && c.done && plannedDays.has(normalizeDay(c.day)))
-        .map((c) => normalizeDay(c.day)),
+        .filter((c) => {
+          if (!isCompletedWorkout(c as any)) return false;
+          const t = c.updated_at ? new Date(c.updated_at).getTime() : NaN;
+          return t >= start && t < end;
+        })
+        .map((c) => `${c.week}-${normalizeDay(c.day)}`),
     );
-    return dayKeys.size;
-  }, [completions, plans, currentWeek]);
+    return keys.size;
+  }, [completions]);
 
   const goal = weekPlanned > 0 ? weekPlanned : 3;
   const progressPct = goal > 0 ? Math.min(100, Math.round((weekCompleted / goal) * 100)) : 0;

@@ -26,14 +26,86 @@ export const formatIntervalMinutes = (minutes: number): string => {
   return String(rounded);
 };
 
+const parseIntervalTempoMinPerKm = (tempo: string): number => {
+  const trimmed = String(tempo || "").trim();
+  if (!trimmed) return NaN;
+  const colon = trimmed.match(/^(\d+):(\d{1,2})$/);
+  if (colon) return parseInt(colon[1]) + parseInt(colon[2]) / 60;
+  const n = parseFloat(trimmed.replace(",", "."));
+  return isFinite(n) ? n : NaN;
+};
+
+/**
+ * Räknar fram tid (minuter) för en intervallrad som saknar tid men har
+ * distans + tempo ifyllt (tid = distans × tempo). Rör inte rader som redan
+ * har en tid, och rör inte rader som saknar både distans och tempo.
+ */
+export const deriveIntervalRowTime = (row: IntervalRow): IntervalRow => {
+  if (intervalRowTimeMinutes(row) > 0) return row;
+  const dist = parseFloat(String(row.distance || "").replace(",", "."));
+  const tempo = parseIntervalTempoMinPerKm(row.tempo);
+  if (!isFinite(dist) || dist <= 0 || !isFinite(tempo) || tempo <= 0) return row;
+  const totalMin = dist * tempo;
+  const totalSec = Math.round(totalMin * 60);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return {
+    ...row,
+    h: h > 0 ? String(h) : "",
+    m: String(m),
+    s: s > 0 ? String(s) : "",
+  };
+};
+
+/** Formaterar minuter (kan vara decimaltal) som "mm:ss", t.ex. 30.5 → "30:30". */
+export const formatMinutesAsClock = (minutes: number): string => {
+  if (!isFinite(minutes) || minutes <= 0) return "0:00";
+  const totalSec = Math.round(minutes * 60);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
+
 export const toSavedIntervalRows = (rows: IntervalRow[]) => rows.map((row) => {
-  const time = intervalRowTimeMinutes(row);
+  const derived = deriveIntervalRowTime(row);
+  const time = intervalRowTimeMinutes(derived);
   return {
     time: time > 0 ? formatIntervalMinutes(time) : "",
-    tempo: row.tempo,
-    dist: row.distance,
+    tempo: derived.tempo,
+    dist: derived.distance,
   };
 });
+
+/**
+ * Totalsummerar ett intervallpass: arbetstid (summan av radernas tid),
+ * total tid inklusive vila mellan intervallerna ((antal-1) × vila), samt
+ * total distans. Vilan läggs INTE in i tempot/pace, bara i totaltiden.
+ */
+export const computeIntervalSessionTotals = (
+  rows: IntervalRow[],
+  restMin: string | number,
+): { workTimeMin: number; totalTimeMin: number; totalDistanceKm: number } => {
+  const derivedRows = rows.map(deriveIntervalRowTime);
+  let workTimeMin = 0;
+  let totalDistanceKm = 0;
+  for (const row of derivedRows) {
+    const t = intervalRowTimeMinutes(row);
+    if (t > 0) workTimeMin += t;
+    const d = parseFloat(String(row.distance || "").replace(",", "."));
+    if (isFinite(d) && d > 0) totalDistanceKm += d;
+  }
+  const rest = parseFloat(String(restMin || "").replace(",", "."));
+  const restTotal = isFinite(rest) && rest > 0 ? rest * Math.max(derivedRows.length - 1, 0) : 0;
+  return {
+    workTimeMin,
+    totalTimeMin: workTimeMin > 0 ? workTimeMin + restTotal : 0,
+    totalDistanceKm,
+  };
+};
 
 /**
  * Rensar tempo-/farts-inmatning medan användaren skriver.

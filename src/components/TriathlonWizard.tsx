@@ -9,6 +9,8 @@ import { Slider } from "@/components/ui/slider";
 import { generateSessions, computeDurationWeeks, computeWeeklySessionCount, bikeTypeLabel, type TriathlonPlanInput, type Level, type BikeType, type GeneratedSession } from "@/lib/triathlonPlanner";
 import { padWeeksTo7Days, type TemplatePlanDay } from "@/data/planTemplates";
 import { toLocalDateKey } from "@/lib/dateUtils";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
 
 
 interface Props {
@@ -176,6 +178,7 @@ const triathlonSessionsToPlanDays = (sessions: GeneratedSession[]): TemplatePlan
 const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
   const [goalType, setGoalType] = useState<"duration" | "race_date">("duration");
   const [durationWeeks, setDurationWeeks] = useState(12);
@@ -198,7 +201,16 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
     setLongDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (confirmed = false) => {
+    const { count: activeCount } = await supabase
+      .from("workout_plans")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gt("week", 0);
+    if ((activeCount || 0) > 0 && !confirmed) {
+      setConfirmArchiveOpen(true);
+      return;
+    }
     setSaving(true);
     try {
       const startDateObj = new Date();
@@ -227,8 +239,10 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
       const planDays = triathlonSessionsToPlanDays(sessions);
       const padded = padWeeksTo7Days(planDays);
 
-      // Clear any existing plan rows (week > 0) so the new plan starts fresh
-      await supabase.from("workout_plans").delete().eq("user_id", userId).gt("week", 0);
+      // Arkivera eventuella befintliga pass (vecka > 0) innan den nya planen skapas,
+      // så historiken finns kvar under Arkiv i stället för att raderas tyst.
+      const { error: archiveErr } = await (supabase as any).rpc("archive_current_workouts", { p_include_singles: false });
+      if (archiveErr) throw archiveErr;
 
       const startCreatedAt = toNoonUtcIsoLocal(startDateObj);
       const rows = padded.map(d => ({
@@ -435,7 +449,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
             Nästa <ChevronRight className="w-4 h-4"/>
           </Button>
         ) : (
-          <Button onClick={handleCreate} disabled={saving} className="flex-1">
+          <Button onClick={() => handleCreate()} disabled={saving} className="flex-1">
             {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : "Skapa plan"}
           </Button>
         )}
