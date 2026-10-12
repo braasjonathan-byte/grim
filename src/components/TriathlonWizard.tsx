@@ -449,7 +449,7 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
             Nästa <ChevronRight className="w-4 h-4"/>
           </Button>
         ) : (
-          <Button onClick={handleCreate} disabled={saving} className="flex-1">
+          <Button onClick={() => handleCreate()} disabled={saving} className="flex-1">
             {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : "Skapa plan"}
           </Button>
         )}
