@@ -135,7 +135,7 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(pkg.scripts.postinstall).toContain("patch-capacitor-health.cjs");
     expect(pkg.scripts.postinstall).toContain("patch-open-health-settings.cjs");
     expect(pkg.scripts.postinstall).toContain("patch-health-permission-request.cjs");
-    expect(read("scripts/patch-health-permission-request.cjs")).toContain("HC_NATIVE_04: no permission result in 8s");
+    expect(read("scripts/patch-health-permission-request.cjs")).toContain('healthTrace("dialog-launch-attempt", "route=proxy")');
 
     const patch = read("scripts/patch-capacitor-health.cjs");
     expect(patch).toContain("GRIM_PERMISSION_PROXY_ACTIVITY");

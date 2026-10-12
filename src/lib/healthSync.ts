@@ -285,12 +285,16 @@ export async function healthAvailability(): Promise<HealthAvailability> {
 async function loadPlugin(): Promise<HealthPluginLike | null> {
   if (!Capacitor.isNativePlatform()) return null;
   if (!pluginPromise) {
-    pluginPromise = import("capacitor-health")
-      .then((mod) => (mod.Health as unknown as HealthPluginLike) ?? null)
-      .catch((err) => {
-        healthLog("plugin import failed", err);
-        return null;
-      });
+    pluginPromise = withTimeout(
+      import("capacitor-health").then((mod) => (mod.Health as unknown as HealthPluginLike) ?? null),
+      5000,
+      "Hälsomodulen laddades inte.",
+      "launcher-setup",
+    ).catch((err) => {
+      healthLog("plugin import failed", err);
+      pluginPromise = null;
+      return null;
+    });
   }
   return pluginPromise;
 }
@@ -969,7 +973,7 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
 export type HealthDiagnostics = Record<string, unknown>;
 
 export async function runHealthDiagnostics(): Promise<HealthDiagnostics> {
-  healthLog("diagnostics start", { pluginAvailable: Capacitor.isPluginAvailable("Health"), platform: Capacitor.getPlatform() });
+  healthLog("diagnostics start", { pluginAvailable: Capacitor.isPluginAvailable("HealthPlugin"), platform: Capacitor.getPlatform() });
   const plugin = await loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsomodulen kunde inte laddas i appen.");
   if (typeof plugin.grimHealthDiagnostics !== "function") throw new HealthError("unknown", "Appens Android-del saknar diagnostik – installerad APK är troligen gammal.");
@@ -990,10 +994,10 @@ export const HEALTH_TEST_SETS = {
  * reservförsök eller datahämtning. Används för att isolera var flödet bryts.
  */
 export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_SETS) {
+  healthLog("native test request", { set, permissions: [...HEALTH_TEST_SETS[set]] });
   const plugin = await loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
   const permissions = [...HEALTH_TEST_SETS[set]];
-  healthLog("native test request", { set, permissions });
   try {
     const res = await withDialogTimeout(plugin.requestHealthPermissions({ permissions }), "Testet fick inget svar inom 60 s.", 60000);
     healthLog("native test result", res);
