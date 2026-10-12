@@ -45,8 +45,9 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
         // GRIM_SAVED_PERMISSION_CALL
         call.setKeepAlive(true)
         bridge.saveCall(call)
-        // Redan beviljat: öppna ingen aktivitet. En osynlig ruta pausar WebView
-        // och då varken syns dialogen eller kan JavaScript-klockan avbryta.
+        // Sätts före kontrollen så 8-sekundersvakten kan släppa anropet även
+        // om Health Connect aldrig svarar på getGrantedPermissions.
+        requestPermissionContext.set(RequestPermissionContext(permissions, call))
         CoroutineScope(Dispatchers.IO).launch {
             val grantedNow = try {
                 if (ensureClient()) healthConnectClient.permissionController.getGrantedPermissions() else emptySet()
@@ -54,23 +55,22 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                 emptySet()
             }
             activity.runOnUiThread {
+                val pending = requestPermissionContext.getAndSet(null) ?: return@runOnUiThread
                 try {
                     if (healthConnectPermissions.isNotEmpty() && healthConnectPermissions.all { grantedNow.contains(it) }) {
-                        requestPermissionContext.set(null)
                         // GRIM_LAUNCH_GUARD
                         healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
                         healthTrace("dialog-launch-attempt", "route=already-granted")
-                        call.resolve(grantedPermissionResult(permissions, grantedNow))
-                        bridge.releaseCall(call)
+                        pending.pluginCal.resolve(grantedPermissionResult(permissions, grantedNow))
+                        bridge.releaseCall(pending.pluginCal)
                         return@runOnUiThread
                     }
-                    requestPermissionContext.set(RequestPermissionContext(permissions, call))
                     if (healthConnectPermissions.isEmpty()) {
-                        requestPermissionContext.set(null)
-                        call.reject("HC_NATIVE_05: no Health Connect permission strings matched the request")
-                        bridge.releaseCall(call)
+                        pending.pluginCal.reject("HC_NATIVE_05: no Health Connect permission strings matched the request")
+                        bridge.releaseCall(pending.pluginCal)
                         return@runOnUiThread
                     }
+                    requestPermissionContext.set(pending)
                     val proxyIntent = Intent(activity, HealthPermissionProxyActivity::class.java).apply {
                         putStringArrayListExtra(
                             HealthPermissionProxyActivity.EXTRA_PERMISSIONS,
@@ -79,12 +79,12 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                     }
                     healthTrace("dialog-start", "permissions=\${healthConnectPermissions.size}")
                     healthTrace("dialog-launch-attempt", "route=proxy")
-                    startActivityForResult(call, proxyIntent, "handleHealthPermissionResult")
+                    startActivityForResult(pending.pluginCal, proxyIntent, "handleHealthPermissionResult")
                     healthTrace("dialog-launch-returned", "route=proxy")
                 } catch (e: Exception) {
                     requestPermissionContext.set(null)
-                    call.reject("HC_NATIVE_05: \${e.message}")
-                    bridge.releaseCall(call)
+                    pending.pluginCal.reject("HC_NATIVE_05: \${e.message}")
+                    bridge.releaseCall(pending.pluginCal)
                 }
             }
         }
