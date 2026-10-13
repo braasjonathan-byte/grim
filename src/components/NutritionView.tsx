@@ -16,6 +16,7 @@ import MealNameDialog from "./MealNameDialog";
 import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import MealTemplatesDialog from "./MealTemplatesDialog";
 import WaterTracker from "./WaterTracker";
+import NutritionInsights from "./NutritionInsights";
 import DayFoodDialog from "./DayFoodDialog";
 import FastingWidget from "./FastingWidget";
 import { foodQualityScore, MICROS, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
@@ -683,6 +684,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       )}
 
       <WaterTracker userId={userId} dateKey={dateKey} goalMl={waterGoal} />
+
+      <NutritionInsights userId={userId} dateKey={dateKey} targets={targets} refreshKey={logs.length + Math.round(totals.kcal)} />
 
       <FoodPickerDialog
         open={!!picker}

@@ -105,7 +105,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
 
   const saveWeight = async () => {
     const v = validateNumber(weightInput, "bodyWeightKg");
-    if (!v.ok || v.value == null) { toast({ title: "Ogiltig vikt", description: v.ok ? "Ange en vikt" : v.error, variant: "destructive" }); return; }
+    if (v.error || v.value == null) { toast({ title: "Ogiltig vikt", description: v.error || "Ange en vikt", variant: "destructive" }); return; }
     setSaving(true);
     const { error } = await supabase.from("body_weight_logs").upsert({ user_id: userId, log_date: dateKey, weight_kg: parseDecimal(weightInput) }, { onConflict: "user_id,log_date" });
     setSaving(false);
