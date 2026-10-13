@@ -25,7 +25,8 @@ const fmt = (n: number) => Math.round(n).toLocaleString("sv-SE");
 
 export default function NutritionInsights({ userId, dateKey, targets, refreshKey }: { userId: string; dateKey: string; targets: Targets; refreshKey?: number }) {
   const { toast } = useToast();
-  const [tab, setTab] = useState<Tab>("week");
+  const [tab, setTabState] = useState<Tab>(() => { try { return (sessionStorage.getItem("grim_nutrition_insights_tab") as Tab) || "week"; } catch { return "week"; } });
+  const setTab = (t: Tab) => { setTabState(t); try { sessionStorage.setItem("grim_nutrition_insights_tab", t); } catch { /* ignore */ } };
   const [logs, setLogs] = useState<Log[]>([]);
   const [weights, setWeights] = useState<{ log_date: string; weight_kg: number }[]>([]);
   const [weightInput, setWeightInput] = useState("");
