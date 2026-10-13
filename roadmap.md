@@ -52,4 +52,16 @@
 - [x] L2 standardmakron = 2000 kcal; L4 förhandsvisning vid ogiltig mängd; L5 versaler/kamerafel/förkortningar; L7 streckkodsvalidering; L8 varning framtida dag; L17 förklaring Igår
 - [x] M4 prognos räknar ologgade dagar med snittet, L1 avrundning, L9 fiber "rek.", L12 namngräns, L16 fliken stannar, M17 recepttext
 - [x] M2 cykelkcal från watt, M3 watt-enhet på Hem och i delning, M19 måltidsnamn på knappen
-- [ ] Kvar: H6 ordlista/intro, H7 restaurangsökning, H8 datum löppass, M5, M9–M16, M18, L3, L6, L10, L11, L13–L15, L18–L20
+- [x] H6 ordlista: kcal, makros P/F/K och TDEE förklaras i Hjälp & tips
+- [x] M9 "Söker…" visas i stället för "Inga träffar" medan sökningen pågår
+- [x] M10 gamla märkesprodukter rensas direkt vid ny sökning
+- [x] M13 målet räknas automatiskt om när vikt/profil ändras i Mål (verifierat i koden)
+- [x] M15 viktprognos kräver minst 5 vägningar över 7 dagar, annars förklaring
+- [x] L6 svensk sortering (Å/Ä/Ö sist) i livsmedelslistan
+- [x] L12 egna måltider får 15 % av dagsmålet i stället för 0 kcal
+- [x] L13 viktgrafens högeraxel döljs utan vägningar; "kg på N dagar" visar faktiskt spann
+- [x] L15 varning vid stängning av Mål med osparade ändringar
+- [x] L18 Förbränt ⓘ har tryckbar förklaring (fanns redan)
+- [x] L19 sportdryck/gel/sportbar räknas inte in i matkvaliteten
+- [x] L20 topplistan visar bara "Du syns inte" när du faktiskt är dold
+- [ ] Kvar: H2 omtest långa namn, H6 nybörjarintro, H7 restaurangsökning, H8 datum löppass (behöver återskapas), M5 tomma grafer, M11 sökordning/portioner, M12 mikrovärden, M14 målhistorik, M16 bakåtknapp/omladdning, M18 fiber vid byte, L3 gränser, L10 enheter, L11 Esc/tillgänglighet, L14 vatten över 8 glas
