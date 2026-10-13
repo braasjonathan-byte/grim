@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart, Line, CartesianGrid } from "recharts";
 import { BarChart3, TrendingUp, Scale, ListOrdered } from "lucide-react";
 import { toLocalDateKey } from "@/lib/dateUtils";
+import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 import { isPlausibleMealLog, validateNumber, parseDecimal } from "@/lib/inputValidation";
 import { useToast } from "@/hooks/use-toast";
 

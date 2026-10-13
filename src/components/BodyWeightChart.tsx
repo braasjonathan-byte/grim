@@ -4,6 +4,7 @@ import { ComposedChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Toolti
 import { Scale } from "lucide-react";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { useStatsSettings, WEIGHT_RANGES } from "@/lib/statsSettings";
+import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 
 const parseKey = (k: string) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };

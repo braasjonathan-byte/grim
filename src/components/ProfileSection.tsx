@@ -1,4 +1,5 @@
 import { notifyProfileUpdated } from "@/lib/profileBasics";
+import { logBodyWeight } from "@/lib/bodyWeight";
 import { validateNumber, formatDecimal } from "@/lib/inputValidation";
 import { FieldError } from "@/components/ConfirmValueDialog";
 import { useAccessLevel } from "@/hooks/useAccessLevel";
