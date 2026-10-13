@@ -89,8 +89,11 @@ const Leaderboard = ({ userId }: LeaderboardProps) => {
         <Medal className="w-5 h-5 text-warning" />
         <h3 className="text-lg font-bold tracking-tight">Topplista</h3>
       </div>
-      {hiddenFromOthers && (
+      {hiddenFromOthers && !entries.some((e) => e.user_id === userId) && (
         <p className="text-xs text-muted-foreground">Du syns inte för andra – ändra i Inställningar</p>
+      )}
+      {hiddenFromOthers && entries.some((e) => e.user_id === userId) && (
+        <p className="text-xs text-muted-foreground">Du syns i listan trots att du valt att vara dold – ändra i Inställningar om du vill synas</p>
       )}
 
       {/* Filter controls */}
