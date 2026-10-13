@@ -272,8 +272,8 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
                     {Math.abs(goalPlan.diff).toFixed(1).replace(".", ",")} kg kvar till {String(goalWeight).replace(".", ",")} kg.{" "}
                     {goalPlan.eta
                       ? <>Med nuvarande takt når du målet ungefär <span className="font-bold">{goalPlan.eta.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })}</span>.</>
-                      : weights.length < 2
-                        ? "Väg dig några gånger till så räknas ett datum ut."
+                      : weightTrend == null
+                        ? "Väg dig minst fem gånger över en vecka så räknas ett datum ut."
                         : goalPlan.onTrack ? "Med nuvarande takt dröjer det mer än två år." : "Vikten rör sig just nu åt fel håll eller står still."}
                   </>}
                 </p>
@@ -300,7 +300,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={6} stroke="hsl(var(--muted-foreground))" />
                 <YAxis yAxisId="k" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis yAxisId="w" orientation="right" domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" width={30} />
+                {ws.length > 0 && <YAxis yAxisId="w" orientation="right" domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" width={30} />}
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
                   formatter={(v: number, n: string) => n === "weight" ? [`${String(v).replace(".", ",")} kg`, "Vikt"] : [`${fmt(v)} kcal`, "Intag"]} />
                 <Bar yAxisId="k" dataKey="kcal" fill="hsl(var(--primary) / 0.35)" radius={[3, 3, 0, 0]} />
