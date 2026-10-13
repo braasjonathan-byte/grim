@@ -132,6 +132,15 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   }, [goalWeight, weights, weightTrend]);
   const todayWeight = weights.find((w) => w.log_date === dateKey)?.weight_kg;
   const ws = weightChart.map((d) => d.weight).filter((v): v is number => v != null);
+  // Faktiskt antal dagar mellan första och sista vägningen i perioden
+  const weightSpanDays = useMemo(() => {
+    const withW = weightChart.filter((d) => d.weight != null);
+    if (withW.length < 2) return 0;
+    const first = weights.find((w) => w.weight_kg === withW[0].weight);
+    const lastW = weights.find((w) => w.weight_kg === withW[withW.length - 1].weight);
+    if (!first || !lastW) return 30;
+    return Math.max(1, Math.round((parseKey(lastW.log_date).getTime() - parseKey(first.log_date).getTime()) / 864e5));
+  }, [weightChart, weights]);
 
   const saveWeight = async () => {
     const v = validateNumber(weightInput, "bodyWeightKg");
@@ -250,11 +259,6 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
           ) : (
             <p className="text-xs text-muted-foreground">
               Senast <span className="font-bold text-foreground">{String(ws[ws.length - 1]).replace(".", ",")} kg</span>
-              {ws.length > 1 && (() => {
-                const withW = weightChart.filter((d) => d.weight != null);
-                const span = Math.max(1, Math.round((parseKey(withW[withW.length - 1].label ? "" : "") as unknown as number) || 0));
-                return null;
-              })()}
               {ws.length > 1 && <> · {ws[ws.length - 1] - ws[0] > 0 ? "+" : ""}{(ws[ws.length - 1] - ws[0]).toFixed(1).replace(".", ",")} kg på {weightSpanDays} {weightSpanDays === 1 ? "dag" : "dagar"}</>}
             </p>
           )}
