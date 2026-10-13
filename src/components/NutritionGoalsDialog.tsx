@@ -160,6 +160,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader><DialogTitle className="font-serif">Mina kostmål</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <p className="text-[11px] text-muted-foreground">Fyll i ålder, vikt och längd så räknas ditt dagliga behov (TDEE = vad kroppen gör av med en vanlig dag, inkl. aktivitet) ut automatiskt. kcal = energi. Makron: P = protein, F = fett, K = kolhydrater.</p>
           <div className="grid grid-cols-3 gap-2">
             <div><label className="text-xs font-medium">Ålder</label><Input value={age} onChange={(e) => setAge(e.target.value)} inputMode="numeric" aria-invalid={!!errs.age} className={inp} /><FieldError error={errs.age} /></div>
             <div><label className="text-xs font-medium">Vikt (kg)</label><Input value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="decimal" aria-invalid={!!errs.weight} className={inp} /><FieldError error={errs.weight} /></div>
@@ -178,6 +179,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
           </div>
           <div>
             <label className="text-xs font-medium">Kön</label>
+            {!gender && <p className="text-[11px] text-muted-foreground">Inget valt – vi räknar med ett medelvärde. Välj för exaktare mål.</p>}
             <div className="flex gap-1">
               <button onClick={() => setGender("male")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "male" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>Man</button>
               <button onClick={() => setGender("female")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "female" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>Kvinna</button>
@@ -215,7 +217,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
               ))}
             </div>
           </div>
-          <button disabled={saving || hasErrors} onClick={requestSave} className="w-full pill-btn-primary py-3 disabled:opacity-50">{saving ? "Sparar…" : "Spara"}</button>
+          <button disabled={saving || hasErrors || !loaded} onClick={requestSave} className="w-full pill-btn-primary py-3 disabled:opacity-50">{!loaded ? "Laddar…" : saving ? "Sparar…" : "Spara"}</button>
         </div>
       </DialogContent>
       <ConfirmValueDialog message={confirmMsg} onConfirm={() => { setConfirmMsg(null); void save(); }} onCancel={() => setConfirmMsg(null)} />
