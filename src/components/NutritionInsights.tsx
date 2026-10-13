@@ -304,7 +304,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
                   formatter={(v: number, n: string) => n === "weight" ? [`${String(v).replace(".", ",")} kg`, "Vikt"] : [`${fmt(v)} kcal`, "Intag"]} />
                 <Bar yAxisId="k" dataKey="kcal" fill="hsl(var(--primary) / 0.35)" radius={[3, 3, 0, 0]} />
-                <Line yAxisId="w" dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                {ws.length > 0 && <Line yAxisId="w" dataKey="weight" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 2 }} connectNulls />}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
