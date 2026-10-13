@@ -81,7 +81,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
     const p = Math.max(0.1, parseFloat(portions.replace(",", ".")) || 1);
     onPick({
       source: "recipe",
-      id: `curated:${selected.id}`,
+      id: cat === "mina" || myRecipes.some((r) => r.id === selected.id) ? selected.id : `curated:${selected.id}`,
       name: selected.name,
       amount: p,
       unit: "portion",
