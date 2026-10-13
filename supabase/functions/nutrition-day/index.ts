@@ -36,10 +36,13 @@ async function matchFood(sb: any, query: string) {
   let best: any = null, bestScore = Infinity;
   for (const f of data || []) {
     const n = norm(f.name);
-    const tokens = n.split(" ");
+    const tokens = n.split(" ").filter(Boolean);
     if (!words.every((w) => n.includes(w))) continue;
-    const starts = words.filter((w) => tokens.some((t) => t.startsWith(w))).length;
-    const score = (words.length - starts) * 50 + n.length + (norm(f.name).startsWith(words[0]) ? 0 : 20);
+    let score = 0;
+    if (tokens[0] !== words[0]) score += tokens[0]?.startsWith(words[0]) ? 30 : 200;
+    words.forEach((w, i) => { if (tokens[i] !== w) score += tokens.includes(w) ? 5 : 25; });
+    score += (tokens.length - words.length) * 8;
+    if (/eko\.?$|glutenfri/.test(n)) score += 15;
     if (score < bestScore) { best = f; bestScore = score; }
   }
   return best;
@@ -147,7 +150,7 @@ Deno.serve(async (req) => {
         `Tider: "klockan tre/på eftermiddagen" → mellanmål om det finns, "på morgonen" → frukost, "sent i kväll" → middag/kvällsmål. day_offset=0 för idag, -1 om användaren säger att det åts i går ("i går kväll åt jag..."), -2 för i förrgår. Annars 0.`,
         `Förstå vardagsspråk och slang: käk/käkade=åt, macka/smörgås=bröd med pålägg, bira=öl, fika=kaffe + bakverk, "en näve"≈30 g nötter/40 g bär, "en tallrik"≈300 g, "ett glas"≈200 ml, "en kopp"≈150 ml, "en skopa" proteinpulver≈30 g, "en burk"=33 cl om dryck.`,
         `Varje livsmedel: välj i första hand användarens EGNA RECEPT (ref_type=recipe, ange servings, grams=0) eller EGNA LIVSMEDEL (ref_type=custom) om namnet passar, sedan MEST ANVÄNDA LIVSMEDEL (ref_type=food) om det tydligt är samma sak (t.ex. "kaffe" → användarens vanliga kaffe). Ange ref_id exakt. Annars ref_type=none, ref_id="".`,
-        `lv_query: 1–3 svenska sökord som matchar Livsmedelsverkets namngivning (t.ex. "ägg kokt", "banan", "lax odlad", "potatis kokt", "mjölk 1,5%"). Tom sträng för restaurang-/märkesprodukter och när ref_type≠none.`,
+        `lv_query: 1–3 svenska sökord som matchar Livsmedelsverkets namngivning med huvudordet först (t.ex. "ägg kokt", "banan", "lax odlad", "potatis kokt", "mjölk fett 1,5%", vanligt matbröd = "bröd vitt fibrer 5% formfranska", grovt bröd = "bröd fullkorn råg", "smör fett 80%"). Tom sträng för restaurang-/märkesprodukter och när ref_type≠none.`,
         `Mängd: använd INLÄRDA PORTIONER om livsmedlet finns där. Annars realistisk svensk portion (1 skiva bröd≈35 g, smör på macka≈5 g, 1 ägg≈55 g). Ange alltid näringsvärden per 100 g som reserv.`,
         `Osäker mängd ("lite pasta", "en del", "ett mellanmål", ingen mängd för en rätt): sätt certain=false, question (kort, t.ex. "Hur stor portion pasta?") och 3 options med label (Liten/Normal/Stor eller liknande) och grams. Annars certain=true, question="", options=[].`,
         `Hänvisningar till tidigare dagar ("samma frukost som igår", "som i förrgår", "som i måndags", "det jag brukar äta till frukost" = vanligast i historiken) eller en MALL vid namn: kopiera exakt livsmedel, gram och näringsvärden därifrån.`,
