@@ -752,6 +752,33 @@ export type Database = {
         }
         Relationships: []
       }
+      food_portion_memory: {
+        Row: {
+          grams: number
+          id: string
+          name_lower: string
+          times: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          grams: number
+          id?: string
+          name_lower: string
+          times?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          grams?: number
+          id?: string
+          name_lower?: string
+          times?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       food_usage_stats: {
         Row: {
           food_id: string
