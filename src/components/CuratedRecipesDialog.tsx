@@ -216,7 +216,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
                   setSelected(null);
                   onOpenChange(false);
                 }}
-                className="w-full pill-btn-secondary py-2.5 text-sm"
+                className="w-full pill-btn-soft py-2.5 text-sm"
               >
                 {myRecipes.some((r) => r.id === selected.id) ? "Redigera recept" : "Redigera och spara som eget"}
               </button>

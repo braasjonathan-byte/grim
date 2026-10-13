@@ -300,7 +300,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
             {saving ? "Sparar…" : isEditing ? "Spara ändringar" : templateRecipe ? "Spara som eget recept" : "Spara recept"}
           </button>
           {isEditing && (
-            <button disabled={saving || (imported && !reviewed)} onClick={() => save(true)} className="w-full pill-btn-secondary py-3 disabled:opacity-50">
+            <button disabled={saving || (imported && !reviewed)} onClick={() => save(true)} className="w-full pill-btn-soft py-3 disabled:opacity-50">
               Spara som kopia…
             </button>
           )}
