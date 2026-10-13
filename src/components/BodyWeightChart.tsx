@@ -23,9 +23,12 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, weightDays]);
 
-  // kg/vecka enligt minstakvadratregression över vägningarna
+  // kg/vecka enligt minstakvadratregression över vägningarna.
+  // Kräver minst 5 vägningar över minst 7 dagar – färre ger en missvisande prognos.
   const weightTrend = useMemo(() => {
-    if (weights.length < 2) return null;
+    if (weights.length < 5) return null;
+    const spanDays = (parseKey(weights[weights.length - 1].log_date).getTime() - parseKey(weights[0].log_date).getTime()) / 864e5;
+    if (spanDays < 7) return null;
     const t0 = parseKey(weights[0].log_date).getTime();
     const xs = weights.map((w) => (parseKey(w.log_date).getTime() - t0) / 864e5);
     const ys = weights.map((w) => w.weight_kg);
@@ -73,6 +76,7 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
         {change != null && <>{change > 0 ? "+" : ""}{change.toFixed(1).replace(".", ",")} kg på {WEIGHT_RANGES.find((x) => x.days === weightDays)?.label} · </>}
         {weightTrend != null && <>{weightTrend > 0 ? "+" : ""}{weightTrend.toFixed(2).replace(".", ",")} kg/vecka · </>}
         {goalWeight != null && <>Målvikt {String(goalWeight).replace(".", ",")} kg{chart.eta ? ` – ungefär ${chart.eta.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })}` : ""}</>}
+        {goalWeight != null && weightTrend == null && weights.length > 1 && <> · Logga vikten några dagar till för en säkrare prognos</>}
       </p>
       <div className="flex gap-1 rounded-full bg-muted/60 p-1">
         {WEIGHT_RANGES.map((x) => (
