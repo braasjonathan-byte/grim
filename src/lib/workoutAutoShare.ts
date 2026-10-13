@@ -1,3 +1,4 @@
+import { getCardioModes, getStoredCardioMode } from "@/lib/cardioUnits";
 import { supabase } from "@/integrations/supabase/client";
 import { parseNum } from "@/lib/inputValidation";
 import {
@@ -66,7 +67,9 @@ export function buildWorkoutSummaryCaption(
   if (distanceKm) stats.push(`📏 ${formatCardioDistance(distanceKm, cardioSport)}`);
   if (cardio && cardio.minutes > 0) stats.push(`⏱ ${formatDurationMin(Math.round(cardio.minutes))}`);
   if (completion.logged_tempo) {
-    stats.push(`🚀 ${completion.logged_tempo}/km`);
+    const m = getStoredCardioMode(cardioSport);
+    const kmhSport = getCardioModes(cardioSport)[0] === "kmh";
+    stats.push(m === "watt" ? `⚡ ${completion.logged_tempo} W` : kmhSport ? `🚀 ${completion.logged_tempo} km/h` : `🚀 ${completion.logged_tempo}/km`);
   } else if (cardio && cardio.minutes > 0 && cardio.distanceKm > 0) {
     const pace = formatCardioPace(cardio.minutes, cardio.distanceKm, cardioSport);
     if (pace.value !== "–") stats.push(`🚀 ${pace.value}`);
