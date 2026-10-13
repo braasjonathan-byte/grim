@@ -20,7 +20,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
-  const [gender, setGender] = useState<"male" | "female">("male");
+  const [gender, setGender] = useState<"male" | "female" | null>(null);
   const [activity, setActivity] = useState<ActivityLevel>("moderate");
   const [goal, setGoal] = useState<GoalType>("maintain");
   const [kcal, setKcal] = useState("2000");
@@ -34,6 +34,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [initialWeight, setInitialWeight] = useState<number | null>(null);
   const [micro, setMicro] = useState<Partial<Record<MicroKey, string>>>({});
   const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -56,13 +57,15 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const hasErrors = Object.values(errs).some(Boolean) || Object.values(microErrs).some(Boolean);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) { setLoaded(false); return; }
     (async () => {
+      const { data: lastW } = await supabase.from("body_weight_logs").select("weight_kg").eq("user_id", userId).order("log_date", { ascending: false }).limit(1).maybeSingle();
       const { data: prof } = await supabase.from("profiles").select("age,weight_kg,height_cm,gender").eq("user_id", userId).maybeSingle();
       if (prof) {
         if (prof.age) setAge(String(prof.age));
-        if (prof.weight_kg) setWeight(formatDecimal(prof.weight_kg));
-        setInitialWeight(prof.weight_kg != null ? Number(prof.weight_kg) : null);
+        const cw = lastW?.weight_kg ?? prof.weight_kg;
+        if (cw) setWeight(formatDecimal(cw));
+        setInitialWeight(cw != null ? Number(cw) : null);
         if ((prof as any).height_cm) setHeight(formatDecimal((prof as any).height_cm));
         if (prof.gender === "female" || prof.gender === "male") setGender(prof.gender);
       }
@@ -78,6 +81,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         setMicro(mv);
         setActivity(g.activity_level as ActivityLevel); setGoal(g.goal_type as GoalType);
       }
+      setLoaded(true);
     })();
   }, [open, userId]);
 
@@ -87,7 +91,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       if (!silent) toast({ title: "Fyll i ålder, vikt och längd", variant: "destructive" });
       return;
     }
-    const bmr = calcBMR(w.value, h.value, a.value, gender);
+    // Okänt kön: medelvärdet av Mifflin-St Jeor för man (+5) och kvinna (−161).
+    const bmr = gender ? calcBMR(w.value, h.value, a.value, gender) : calcBMR(w.value, h.value, a.value, "male") - 83;
     const tdee = calcTDEE(bmr, activity);
     const wl = validateNumber(weeklyLoss, { min: 0, max: 1.5, unit: "kg/vecka", optional: true }).value;
     const m = wl && wl > 0 ? macrosForWeeklyLoss(tdee, w.value, wl) : distributeMacros(tdee, w.value, goal);
@@ -97,14 +102,14 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
 
   // Auto-räkna makros när mål, aktivitet, kön, kroppsdata eller veckomål ändras
   useEffect(() => {
-    if (!open) return;
+    if (!open || !loaded) return;
     if (goal === "custom" && !parseDecimal(weeklyLoss)) return;
     computeMacros(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goal, activity, gender, age, weight, height, weeklyLoss]);
+  }, [loaded, goal, activity, gender, age, weight, height, weeklyLoss]);
 
   function requestSave() {
-    if (hasErrors) return;
+    if (hasErrors || !loaded) return;
     const k = parseDecimal(kcal), p = parseDecimal(protein), f = parseDecimal(fat), c = parseDecimal(carbs);
     if (kcalDeviation(k, p, c, f) > 0.1) {
       setConfirmMsg(`Makrona motsvarar ${Math.round(macroKcal(p, c, f))} kcal men målet är ${formatDecimal(k)} kcal.`);
@@ -114,17 +119,17 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   }
 
   async function save() {
-    if (hasErrors) return;
+    if (hasErrors || !loaded || saving) return;
     setSaving(true);
     const a = validateNumber(age, "ageYears").value;
     const w = validateNumber(weight, "bodyWeightKg").value;
     const h = validateNumber(height, "heightCm").value;
     if (a || w || h) {
-      const { error: pErr } = await supabase.from("profiles").update({ age: a, weight_kg: w, height_cm: h, gender } as any).eq("user_id", userId);
+      const { error: pErr } = await supabase.from("profiles").update({ age: a, weight_kg: w, height_cm: h, ...(gender ? { gender } : {}) } as any).eq("user_id", userId);
       if (pErr) { setSaving(false); toast({ title: "Kunde inte spara", description: pErr.message, variant: "destructive" }); return; }
     }
     // Varje ändrad vikt sparas som dagens vägning så att målviktsgrafen följer den.
-    if (w && w !== initialWeight) {
+    if (w && initialWeight != null && Math.abs(w - initialWeight) > 0.01 || (w && initialWeight == null)) {
       await supabase.from("body_weight_logs").upsert({ user_id: userId, log_date: toLocalDateKey(new Date()), weight_kg: w }, { onConflict: "user_id,log_date" });
       setInitialWeight(w);
     }
