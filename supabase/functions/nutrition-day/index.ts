@@ -51,10 +51,38 @@ async function matchFood(sb: any, query: string) {
   return best;
 }
 
+/** Branded product lookup in Open Food Facts (Swedish products first). */
+async function matchBrand(query: string) {
+  try {
+    const url = `https://se.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&json=1&page_size=8&fields=product_name,brands,nutriments`;
+    const res = await fetch(url, { headers: { "User-Agent": "GrimApp/1.0", Accept: "application/json" } });
+    if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) return null;
+    const d = await res.json();
+    const words = norm(query).split(" ").filter((w) => w.length >= 2);
+    for (const p of d.products || []) {
+      const n = p.nutriments || {};
+      const label = `${p.brands || ""} ${p.product_name || ""}`.trim();
+      if (n["energy-kcal_100g"] == null || !p.product_name) continue;
+      const hay = norm(label);
+      if (!words.every((w) => hay.includes(w))) continue;
+      return {
+        name: label, kcal: Number(n["energy-kcal_100g"]) || 0, protein_g: Number(n.proteins_100g) || 0,
+        fat_g: Number(n.fat_100g) || 0, carbs_g: Number(n.carbohydrates_100g) || 0, fiber_g: Number(n.fiber_100g) || 0,
+        sugar_g: n.sugars_100g != null ? Number(n.sugars_100g) : null, sodium_mg: n.sodium_100g != null ? Number(n.sodium_100g) * 1000 : null,
+      };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 const ITEM_SCHEMA = {
   type: "object", additionalProperties: false,
-  required: ["name", "grams", "servings", "ref_type", "ref_id", "lv_query", "kcal_100g", "protein_100g", "fat_100g", "carbs_100g", "fiber_100g", "certain", "question", "options"],
+  required: ["name", "grams", "servings", "ref_type", "ref_id", "lv_query", "kcal_100g", "protein_100g", "fat_100g", "carbs_100g", "fiber_100g", "certain", "question", "options", "pieces", "piece_label", "brand_query", "chain"],
   properties: {
+    pieces: { type: "number" },
+    piece_label: { type: "string" },
+    brand_query: { type: "string" },
+    chain: { type: "string" },
     name: { type: "string" },
     grams: { type: "number" },
     servings: { type: "number" },
@@ -159,6 +187,9 @@ Deno.serve(async (req) => {
         `Hänvisningar till tidigare dagar ("samma frukost som igår", "som i förrgår", "som i måndags", "det jag brukar äta till frukost" = vanligast i historiken) eller en MALL vid namn: kopiera exakt livsmedel, gram och näringsvärden därifrån.`,
         `Restauranger/kedjor (McDonald's, Max, Burger King, Sibylla, Subway, Espresso House m.fl.): kedjans officiella svenska värden. "X och company"/"meny" = huvudrätt + mellan pommes + mellan läsk. Namnge t.ex. "Big Mac (McDonald's)".`,
         `Om NUVARANDE FÖRSLAG finns: användaren ger en ändring ("ta bort smöret", "dubbla laxen", "flytta bananen till mellanmål", "lägg till en kaffe"). Returnera HELA den uppdaterade listan, behåll oförändrade rader exakt (samma ref, gram).`,
+        `pieces/piece_label: om livsmedlet naturligt räknas i styck ange antal och enhet (t.ex. pieces=2, piece_label="ägg"; 1 "skiva"; 1 "banan"); annars pieces=0, piece_label="".`,
+        `brand_query: för märkesprodukter i butik (Oatly, Arla, Fazer, Marabou, Barebells, Risenta m.fl.) ange "märke + produkt" (t.ex. "oatly havredryck", "barebells cookies cream"); annars "".`,
+        `chain: kedjans namn för restaurangmat (t.ex. "McDonald's"), annars "". Officiella svenska värden (per portion → räkna om per 100 g): Big Mac 219 g 503 kcal P27 F25 K41; Cheeseburgare 119 g 301 kcal; McFeast 230 g 539 kcal; Pommes mellan 114 g 330 kcal; Pommes stor 150 g 434 kcal; Coca-Cola mellan 40 cl 168 kcal; Max Originalburgare 228 g 600 kcal; Whopper 270 g 640 kcal; Sibylla tunnbrödsrulle ~400 g 900 kcal; Espresso House kanelbulle 100 g 380 kcal; Pressbyrån korv med bröd 120 g 300 kcal. Använd annars din bästa kunskap om kedjans värden.`,
         `Namn på svenska, korta. Utelämna tomma måltider.`,
       ].join("\n"),
       input: `${context}\n\nANVÄNDAREN SÄGER:\n${transcript}`,
@@ -184,7 +215,7 @@ Deno.serve(async (req) => {
 
     const resolveItem = async (it: any) => {
       const grams = Math.max(0, Math.min(5000, Number(it.grams) || 0));
-      const base = { certain: !!it.certain, question: it.certain ? "" : String(it.question || ""), options: it.certain ? [] : (it.options || []).slice(0, 4) };
+      const base = { pieces: Number(it.pieces) > 0 ? Number(it.pieces) : 0, piece_label: String(it.piece_label || ""), chain: String(it.chain || ""), certain: !!it.certain, question: it.certain ? "" : String(it.question || ""), options: it.certain ? [] : (it.options || []).slice(0, 4) };
       const fromPer100 = (src: any, sourceLabel: string, ids: Record<string, string | null>, matched?: string) => {
         const f = grams / 100;
         const micros: Record<string, number | null> = {};
@@ -213,11 +244,15 @@ Deno.serve(async (req) => {
         const { data: f } = await sb.from("foods").select(FOOD_COLS).eq("id", it.ref_id).maybeSingle();
         if (f) return fromPer100(f, "livsmedelsverket", { food_id: f.id }, f.name);
       }
+      if (it.brand_query) {
+        const b = await matchBrand(it.brand_query);
+        if (b) return fromPer100(b, "openfoodfacts", {}, b.name);
+      }
       if (it.lv_query) {
         const f = await matchFood(sb, it.lv_query);
         if (f) return fromPer100(f, "livsmedelsverket", { food_id: f.id }, f.name);
       }
-      return fromPer100({ kcal: it.kcal_100g, protein_g: it.protein_100g, fat_g: it.fat_100g, carbs_g: it.carbs_100g, fiber_g: it.fiber_100g }, "ai", {});
+      return fromPer100({ kcal: it.kcal_100g, protein_g: it.protein_100g, fat_g: it.fat_100g, carbs_g: it.carbs_100g, fiber_g: it.fiber_100g }, it.chain ? "restaurang" : "ai", {});
     };
 
     const meals = await Promise.all((out.meals || []).map(async (m) => ({
