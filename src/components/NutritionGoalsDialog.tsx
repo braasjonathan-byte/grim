@@ -38,6 +38,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [loaded, setLoaded] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   const [savedSnap, setSavedSnap] = useState<string | null>(null);
+  const [origMacros, setOrigMacros] = useState<{ kcal: string; protein: string; fat: string; carbs: string } | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const { toast } = useToast();
 
@@ -68,7 +69,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const macroOk = isFinite(kcalNum) && Math.abs(macroDiff) <= Math.max(20, kcalNum * 0.02);
 
   useEffect(() => {
-    if (!open) { setLoaded(false); setSavedSnap(null); return; }
+    if (!open) { setLoaded(false); setSavedSnap(null); setOrigMacros(null); return; }
     (async () => {
       const { data: lastW } = await supabase.from("body_weight_logs").select("weight_kg").eq("user_id", userId).order("log_date", { ascending: false }).limit(1).maybeSingle();
       const { data: prof } = await supabase.from("profiles").select("age,weight_kg,height_cm,gender").eq("user_id", userId).maybeSingle();
@@ -100,7 +101,10 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   // så vi kan varna för osparade ändringar
   useEffect(() => {
     if (!loaded || savedSnap !== null) return;
-    const t = setTimeout(() => setSavedSnap(snapshot()), 50);
+    const t = setTimeout(() => {
+      setSavedSnap(snapshot());
+      setOrigMacros({ kcal, protein, fat, carbs });
+    }, 50);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, savedSnap]);
@@ -167,6 +171,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Mål sparade" });
     setSavedSnap(snapshot());
+    setOrigMacros({ kcal, protein, fat, carbs });
     onSaved(); onOpenChange(false);
   }
 
@@ -232,6 +237,18 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
             Makrona ger {macroSum} av {Math.round(kcalNum || 0)} kcal
             {macroOk ? " ✓" : macroDiff > 0 ? ` – ${macroDiff} kcal kvar att fördela.` : ` – ${-macroDiff} kcal för mycket.`}
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (!origMacros) return;
+              setKcal(origMacros.kcal); setProtein(origMacros.protein);
+              setFat(origMacros.fat); setCarbs(origMacros.carbs);
+            }}
+            disabled={!origMacros || (origMacros.kcal === kcal && origMacros.protein === protein && origMacros.fat === fat && origMacros.carbs === carbs)}
+            className="w-full py-2 pill-btn-soft text-xs font-bold disabled:opacity-40"
+          >
+            Återställ makron till ursprungliga värden
+          </button>
           <div className="grid grid-cols-2 gap-2">
             <div><label className="text-[10px] font-medium">Fiber g (valfritt)</label><Input value={fiber} onChange={(e) => setFiber(e.target.value)} inputMode="decimal" placeholder="t.ex. 30" aria-invalid={!!errs.fiber} className={`${inp} text-sm`} /><FieldError error={errs.fiber} /></div>
             <div><label className="text-[10px] font-medium">Vattenmål ml</label><Input value={water} onChange={(e) => setWater(e.target.value)} inputMode="decimal" aria-invalid={!!errs.water} className={`${inp} text-sm`} /><FieldError error={errs.water} /></div>
