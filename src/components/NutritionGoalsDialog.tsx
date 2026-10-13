@@ -1,3 +1,4 @@
+import { toLocalDateKey } from "@/lib/dateUtils";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +29,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [carbs, setCarbs] = useState("250");
   const [fiber, setFiber] = useState("");
   const [water, setWater] = useState("2000");
+  const [targetWeight, setTargetWeight] = useState("");
+  const [initialWeight, setInitialWeight] = useState<number | null>(null);
   const [micro, setMicro] = useState<Partial<Record<MicroKey, string>>>({});
   const [saving, setSaving] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
@@ -43,6 +46,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     carbs: validateNumber(carbs, "goalCarbs").error,
     fiber: validateNumber(fiber, "goalFiber").error,
     water: validateNumber(water, { min: 0, max: 10000, unit: "ml" }).error,
+    targetWeight: validateNumber(targetWeight, "bodyWeightKg").error,
   };
   const microErrs = Object.fromEntries(
     MICROS.map((m) => [m.key, validateNumber(micro[m.key] ?? "", { min: 0, max: 100000, unit: m.unit, optional: true }).error]),
@@ -56,6 +60,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       if (prof) {
         if (prof.age) setAge(String(prof.age));
         if (prof.weight_kg) setWeight(formatDecimal(prof.weight_kg));
+        setInitialWeight(prof.weight_kg != null ? Number(prof.weight_kg) : null);
         if ((prof as any).height_cm) setHeight(formatDecimal((prof as any).height_cm));
         if (prof.gender === "female" || prof.gender === "male") setGender(prof.gender);
       }
@@ -64,6 +69,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         setKcal(String(g.daily_kcal)); setProtein(String(g.protein_g));
         setFat(String(g.fat_g)); setCarbs(String(g.carbs_g));
         setFiber(g.fiber_g != null ? String(g.fiber_g) : ""); setWater(String(g.water_goal_ml ?? 2000));
+        setTargetWeight(g.target_weight_kg != null ? formatDecimal(g.target_weight_kg) : "");
         const mv: Partial<Record<MicroKey, string>> = {};
         for (const m of MICROS) { const v = (g as any)[m.key]; if (v != null) mv[m.key] = formatDecimal(v); }
         setMicro(mv);
@@ -113,6 +119,11 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       const { error: pErr } = await supabase.from("profiles").update({ age: a, weight_kg: w, height_cm: h, gender } as any).eq("user_id", userId);
       if (pErr) { setSaving(false); toast({ title: "Kunde inte spara", description: pErr.message, variant: "destructive" }); return; }
     }
+    // Varje ändrad vikt sparas som dagens vägning så att målviktsgrafen följer den.
+    if (w && w !== initialWeight) {
+      await supabase.from("body_weight_logs").upsert({ user_id: userId, log_date: toLocalDateKey(new Date()), weight_kg: w }, { onConflict: "user_id,log_date" });
+      setInitialWeight(w);
+    }
     const fib = validateNumber(fiber, "goalFiber").value;
     const { error } = await supabase.from("nutrition_goals").upsert({
       user_id: userId,
@@ -124,6 +135,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       goal_type: goal,
       fiber_g: fib === null ? null : Math.round(fib),
       water_goal_ml: Math.round(parseDecimal(water)),
+      target_weight_kg: validateNumber(targetWeight, "bodyWeightKg").value,
       ...Object.fromEntries(MICROS.map((m) => { const v = parseDecimal(micro[m.key] || ""); return [m.key, v > 0 ? v : null]; })),
     } as any, { onConflict: "user_id" });
     setSaving(false);
@@ -143,6 +155,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
             <div><label className="text-xs font-medium">Vikt (kg)</label><Input value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="decimal" aria-invalid={!!errs.weight} className={inp} /><FieldError error={errs.weight} /></div>
             <div><label className="text-xs font-medium">Längd (cm)</label><Input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="decimal" aria-invalid={!!errs.height} className={inp} /><FieldError error={errs.height} /></div>
           </div>
+          <div><label className="text-xs font-medium">Målvikt (kg, valfritt)</label><Input value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} inputMode="decimal" placeholder="t.ex. 75" aria-invalid={!!errs.targetWeight} className={inp} /><FieldError error={errs.targetWeight} /></div>
           <div>
             <label className="text-xs font-medium">Kön</label>
             <div className="flex gap-1">

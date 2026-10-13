@@ -1260,6 +1260,7 @@ export type Database = {
           potassium_mg: number | null
           protein_g: number
           sodium_mg: number | null
+          target_weight_kg: number | null
           updated_at: string
           user_id: string
           vitamin_b12_ug: number | null
@@ -1283,6 +1284,7 @@ export type Database = {
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
+          target_weight_kg?: number | null
           updated_at?: string
           user_id: string
           vitamin_b12_ug?: number | null
@@ -1306,6 +1308,7 @@ export type Database = {
           potassium_mg?: number | null
           protein_g?: number
           sodium_mg?: number | null
+          target_weight_kg?: number | null
           updated_at?: string
           user_id?: string
           vitamin_b12_ug?: number | null
