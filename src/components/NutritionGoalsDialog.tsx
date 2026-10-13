@@ -36,7 +36,12 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
+  const [savedSnap, setSavedSnap] = useState<string | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const { toast } = useToast();
+
+  const snapshot = () => JSON.stringify([age, weight, height, gender, activity, goal, kcal, protein, fat, carbs, fiber, water, targetWeight, weeklyLoss, micro]);
+  const dirty = loaded && savedSnap !== null && snapshot() !== savedSnap;
 
   const errs = {
     age: validateNumber(age, "ageYears").error,
@@ -57,7 +62,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const hasErrors = Object.values(errs).some(Boolean) || Object.values(microErrs).some(Boolean);
 
   useEffect(() => {
-    if (!open) { setLoaded(false); return; }
+    if (!open) { setLoaded(false); setSavedSnap(null); return; }
     (async () => {
       const { data: lastW } = await supabase.from("body_weight_logs").select("weight_kg").eq("user_id", userId).order("log_date", { ascending: false }).limit(1).maybeSingle();
       const { data: prof } = await supabase.from("profiles").select("age,weight_kg,height_cm,gender").eq("user_id", userId).maybeSingle();
