@@ -36,9 +36,9 @@ function Ring({ size, stroke, pct, color, children }: { size: number; stroke: nu
 export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets, micros = {}, microTargets = {}, quality = null }: Props) {
   const [microOpen, setMicroOpen] = useState(false);
   const microRows = MICROS.filter((m) => (microTargets[m.key] ?? 0) > 0 || micros[m.key] != null);
-  // Dagens träning läggs på målet: kalorierna, och 60 % av dem som extra kolhydrater.
-  const budget = targets.kcal + Math.round(burned);
-  const carbTarget = targets.carbs_g + Math.round((burned * 0.6) / 4);
+  // Målet bygger redan på vald aktivitetsnivå, så dagens träning läggs INTE på målet — "Förbränt" visas bara som info.
+  const budget = targets.kcal;
+  const carbTarget = targets.carbs_g;
   const left = Math.round(budget - kcal);
   const over = left < 0;
   const fiberTarget = targets.fiber_g && targets.fiber_g > 0 ? targets.fiber_g : 30;
@@ -76,7 +76,7 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
             <PopoverTrigger asChild>
               <button type="button" className="text-[10px] text-muted-foreground font-medium">Förbränt ⓘ</button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 text-xs">Uppskattade kalorier från dagens genomförda träningspass. De läggs på ditt dagsmål, så "kvar" och kolhydratmålet ökar på träningsdagar.</PopoverContent>
+            <PopoverContent className="w-64 text-xs">Uppskattade kalorier från dagens genomförda träningspass. De visas bara som information — ditt dagsmål bygger redan på den aktivitetsnivå du valt under Mål, så träningen räknas inte dubbelt.</PopoverContent>
           </Popover>
         </div>
       </div>
