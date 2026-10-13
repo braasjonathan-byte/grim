@@ -17,7 +17,7 @@ interface Props {
 
 export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn }: Props) {
   const [query, setQuery] = useState("");
-  const [cat, setCat] = useState<string>("alla");
+  const [cat, setCat] = useState<string>(isHonorary ? "alla" : "mina");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [portions, setPortions] = useState("1");
@@ -146,9 +146,17 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
                 </button>
               ))}
             </div>
+            {curatedLocked && cat !== "mina" ? (
+              <div className="flex-1 border border-border rounded-2xl p-4 text-center space-y-2 flex flex-col items-center justify-center">
+                <p className="text-xs font-bold flex items-center justify-center gap-1"><Lock className="w-3 h-3" /> Färdiga recept – hedersmedlemmar</p>
+                <p className="text-xs text-muted-foreground">
+                  Lås upp 100+ träningsanpassade recept med svenska livsmedel som hedersmedlem. Dina egna recept hittar du under Mina recept.
+                </p>
+              </div>
+            ) : (
             <ul className="flex-1 overflow-y-auto divide-y divide-border border border-border">
               {filtered.length === 0 ? (
-                <li className="p-3 text-xs text-muted-foreground text-center">Inga recept</li>
+                <li className="p-3 text-xs text-muted-foreground text-center">{cat === "mina" ? "Du har inga egna recept än – skapa ett ovan!" : "Inga recept"}</li>
               ) : filtered.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => pick(r)} className="w-full text-left p-3 hover:bg-accent flex justify-between gap-2 items-center">
