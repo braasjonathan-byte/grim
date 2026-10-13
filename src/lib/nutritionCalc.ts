@@ -41,6 +41,23 @@ export function calcTDEE(bmr: number, activity: ActivityLevel): number {
   return Math.round(bmr * ACTIVITY_FACTOR[activity]);
 }
 
+/** Energy per kg body fat (kcal). */
+export const KCAL_PER_KG_FAT = 7700;
+
+/** Daily kcal target for a weekly weight change in kg (positive = loss, negative = gain). */
+export function kcalForWeeklyChange(tdee: number, kgPerWeek: number): number {
+  return Math.round(tdee - (kgPerWeek * KCAL_PER_KG_FAT) / 7);
+}
+
+/** Macro targets for a chosen weekly weight loss (kg/week): high protein to keep muscle. */
+export function macrosForWeeklyLoss(tdee: number, weightKg: number, kgPerWeek: number): MacroTargets {
+  const kcal = Math.max(0, kcalForWeeklyChange(tdee, kgPerWeek));
+  const protein_g = Math.round(2.2 * weightKg);
+  const fat_g = Math.round((kcal * 0.28) / 9);
+  const carbs_g = Math.max(0, Math.round((kcal - protein_g * 4 - fat_g * 9) / 4));
+  return { kcal, protein_g, fat_g, carbs_g };
+}
+
 export interface MacroTargets { kcal: number; protein_g: number; fat_g: number; carbs_g: number; }
 
 const GOAL_PARAMS: Record<Exclude<GoalType, "custom" | "keto">, { kcalMult: number; proteinPerKg: number; fatPct: number }> = {
