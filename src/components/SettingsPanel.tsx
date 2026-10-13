@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiometric } from "@/lib/biometric";
 import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
+import { STATS_SECTIONS, WEIGHT_RANGES, useStatsSettings } from "@/lib/statsSettings";
 import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWakeLock } from "@/lib/wakeLock";
 
 
@@ -89,6 +90,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
     return localStorage.getItem("gymberget_spotify_widget") !== "false";
   });
   const [fastingOn, setFastingOn] = useState(() => isFastingEnabled());
+  const statsSettings = useStatsSettings();
   const [soundEnabled, setSoundEnabled] = useState(() => {
     return localStorage.getItem("gymberget_sound_enabled") !== "false";
   });
@@ -370,6 +372,32 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
         >
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${spotifyWidget ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
         </button>
+      </div>
+
+      {/* Statistik sections */}
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Visa i Statistik</p>
+        {STATS_SECTIONS.map((sec) => {
+          const on = statsSettings.isVisible(sec.key);
+          return (
+            <div key={sec.key} className="flex items-center justify-between">
+              <span className="text-sm">{sec.label}</span>
+              <button onClick={() => statsSettings.toggle(sec.key)} aria-label={`Visa ${sec.label}`}
+                className={`relative w-11 h-6 rounded-full transition-colors ${on ? "bg-primary" : "bg-secondary border border-border"}`}>
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${on ? "translate-x-5 bg-primary-foreground" : "translate-x-0 bg-muted-foreground"}`} />
+              </button>
+            </div>
+          );
+        })}
+        <p className="text-xs text-muted-foreground pt-1">Viktkurvans tidsperiod</p>
+        <div className="flex gap-1 rounded-full bg-muted/60 p-1">
+          {WEIGHT_RANGES.map((x) => (
+            <button key={x.days} onClick={() => statsSettings.setWeightDays(x.days)}
+              className={`flex-1 py-1 text-[11px] font-semibold rounded-full ${statsSettings.weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              {x.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Fasting widget toggle */}
