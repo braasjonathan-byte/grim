@@ -646,6 +646,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           open={dayAiOpen}
           onOpenChange={setDayAiOpen}
           slots={allSlots}
+          dateKey={dateKey}
           onConfirm={async (rows) => {
             const insert = rows.map(({ meal, item }) => ({
               user_id: userId, log_date: dateKey, meal_type: meal, item_name: item.name.trim() || "Livsmedel",
