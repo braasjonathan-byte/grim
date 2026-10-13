@@ -87,6 +87,8 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         setActivity(g.activity_level as ActivityLevel); setGoal(g.goal_type as GoalType);
       }
       setLoaded(true);
+      // Kom ihåg läget som det såg ut när rutan öppnades, så vi kan varna för osparade ändringar
+      setTimeout(() => setSavedSnap(JSON.stringify([age, weight, height, gender, activity, goal, kcal, protein, fat, carbs, fiber, water, targetWeight, weeklyLoss, micro])), 0);
     })();
   }, [open, userId]);
 
