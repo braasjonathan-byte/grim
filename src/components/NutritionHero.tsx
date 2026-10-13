@@ -36,14 +36,16 @@ function Ring({ size, stroke, pct, color, children }: { size: number; stroke: nu
 export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber, targets, micros = {}, microTargets = {}, quality = null }: Props) {
   const [microOpen, setMicroOpen] = useState(false);
   const microRows = MICROS.filter((m) => (microTargets[m.key] ?? 0) > 0 || micros[m.key] != null);
-  const budget = targets.kcal;
+  // Dagens träning läggs på målet: kalorierna, och 60 % av dem som extra kolhydrater.
+  const budget = targets.kcal + Math.round(burned);
+  const carbTarget = targets.carbs_g + Math.round((burned * 0.6) / 4);
   const left = Math.round(budget - kcal);
   const over = left < 0;
   const fiberTarget = targets.fiber_g && targets.fiber_g > 0 ? targets.fiber_g : 30;
   const macros = [
     { label: "Fett", v: fat, t: targets.fat_g, color: "hsl(45 93% 47%)" },
     { label: "Protein", v: protein, t: targets.protein_g, color: "hsl(var(--destructive))" },
-    { label: "Kolhydrater", v: carbs, t: targets.carbs_g, color: "hsl(199 89% 48%)" },
+    { label: "Kolhydrater", v: carbs, t: carbTarget, color: "hsl(199 89% 48%)" },
     { label: "Fiber", v: fiber, t: fiberTarget, color: "hsl(25 60% 50%)" },
   ];
   return (
@@ -74,7 +76,7 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
             <PopoverTrigger asChild>
               <button type="button" className="text-[10px] text-muted-foreground font-medium">Förbränt ⓘ</button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 text-xs">Kalorier från dagens loggade träningspass. Bara som info – ditt mål tar redan hänsyn till träningen, så "kvar" ändras inte.</PopoverContent>
+            <PopoverContent className="w-64 text-xs">Uppskattade kalorier från dagens genomförda träningspass. De läggs på ditt dagsmål, så "kvar" och kolhydratmålet ökar på träningsdagar.</PopoverContent>
           </Popover>
         </div>
       </div>

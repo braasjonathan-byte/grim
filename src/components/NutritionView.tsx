@@ -3,6 +3,7 @@ import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog"
 const QUICK_MACRO: NumberRule = { min: 0, max: 1000, unit: "g", optional: true };
 import { hapticLight } from "@/lib/haptics";
 import { loadWorkoutBurned } from "@/lib/workoutBurned";
+import { firstClick, exclusive } from "@/lib/clickGuard";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles } from "lucide-react";
@@ -585,12 +586,13 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
         <div data-tour="nutrition-rings">
-          <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />
+          {!loaded ? <div className="h-64 rounded-2xl bg-muted/40 animate-pulse" aria-label="Laddar kostdata" /> : <NutritionHero kcal={totals.kcal} burned={burned} protein={totals.protein} fat={totals.fat} carbs={totals.carbs} fiber={totals.fiber} targets={targets} micros={microTotals} quality={foodQualityScore(logs)} microTargets={microTargets} />}
+          {loaded && !hasGoals && <p className="text-[11px] text-muted-foreground text-center mt-2">Standardmål 2000 kcal – tryck på <b>Mål</b> och fyll i ålder, vikt och längd så räknar vi ut ditt eget behov.</p>}
         </div>
 
         <FastingWidget userId={userId} />
 
-        {logs.length === 0 && (
+        {loaded && logs.length === 0 && (
           <div className="rounded-2xl bg-primary/5 border border-primary/25 p-3 text-center space-y-2">
             <p className="text-sm font-semibold">Inget loggat {isToday ? "idag" : "denna dag"} än</p>
             <p className="text-xs text-muted-foreground">
