@@ -64,7 +64,7 @@ async function matchBrand(query: string) {
       const label = `${p.brands || ""} ${p.product_name || ""}`.trim();
       if (n["energy-kcal_100g"] == null || !p.product_name) continue;
       const hay = norm(label);
-      if (words.filter((w) => hay.includes(w)).length < Math.ceil(words.length / 2)) continue;
+      if (!words.every((w) => hay.includes(w))) continue;
       return {
         name: label, kcal: Number(n["energy-kcal_100g"]) || 0, protein_g: Number(n.proteins_100g) || 0,
         fat_g: Number(n.fat_100g) || 0, carbs_g: Number(n.carbohydrates_100g) || 0, fiber_g: Number(n.fiber_100g) || 0,
