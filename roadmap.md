@@ -64,4 +64,5 @@
 - [x] L18 Förbränt ⓘ har tryckbar förklaring (fanns redan)
 - [x] L19 sportdryck/gel/sportbar räknas inte in i matkvaliteten
 - [x] L20 topplistan visar bara "Du syns inte" när du faktiskt är dold
+- [x] Mål: protein/fett/kolhydrater som reglage som bara sparar när de summerar till kalorierna, med knapp som återställer till ursprungliga värden (verifierad i appen)
 - [ ] Kvar: H2 omtest långa namn, H6 nybörjarintro, H7 restaurangsökning, H8 datum löppass (behöver återskapas), M5 tomma grafer, M11 sökordning/portioner, M12 mikrovärden, M14 målhistorik, M16 bakåtknapp/omladdning, M18 fiber vid byte, L3 gränser, L10 enheter, L11 Esc/tillgänglighet, L14 vatten över 8 glas
