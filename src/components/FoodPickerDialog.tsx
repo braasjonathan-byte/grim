@@ -5,7 +5,8 @@ import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog"
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic } from "lucide-react";
+import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic, Trash2 } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
 import VoiceFoodDialog from "./VoiceFoodDialog";
 import { UNITS, gramsForFood, unitHint, pieceWeightFor, DEFAULT_PIECE_G, naturalUnitsFor } from "@/lib/nutritionCalc";
 
@@ -406,9 +407,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   async function deleteCustomFood(r: FoodRow) {
     if (!window.confirm(`Radera "${r.name}" från dina egna livsmedel? Redan loggade måltider ligger kvar.`)) return;
     const { error } = await supabase.from("custom_foods").delete().eq("id", r.id).eq("user_id", userId);
-    if (error) { toast({ title: "Kunde inte radera", description: error.message, variant: "destructive" }); return; }
+    if (error) { sonnerToast.error("Kunde inte radera"); return; }
     setDeletedIds((prev) => new Set(prev).add(r.id));
-    toast({ title: "Livsmedlet raderat" });
+    sonnerToast.success("Livsmedlet raderat");
   }
 
   const renderRow = (r: FoodRow) => deletedIds.has(r.id) ? null : (
