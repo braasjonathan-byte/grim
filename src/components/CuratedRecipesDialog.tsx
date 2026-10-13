@@ -1,29 +1,61 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Lock, Search, ChefHat, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CURATED_RECIPES, RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
 import { PickedItem } from "./FoodPickerDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   isHonorary: boolean;
+  userId?: string;
   onPick?: (item: PickedItem) => void;
   onCreateOwn?: () => void;
 }
 
-export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick, onCreateOwn }: Props) {
+export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn }: Props) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>("alla");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [portions, setPortions] = useState("1");
+  const [myRecipes, setMyRecipes] = useState<CuratedRecipe[]>([]);
+
+  // Hämta användarens egna recept så de syns under "Mina recept".
+  useEffect(() => {
+    if (!open || !userId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("recipes")
+        .select("id,name,servings,instructions,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,ingredients,category")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (error) { console.error("my recipes error", error); return; }
+      setMyRecipes(((data || []) as any[]).map((r) => ({
+        id: r.id,
+        name: r.name,
+        category: r.category || "Övrigt",
+        servings: Number(r.servings) || 1,
+        kcal_per_serving: Math.round(Number(r.kcal_per_serving) || 0),
+        protein_g_per_serving: Math.round(Number(r.protein_g_per_serving) || 0),
+        fat_g_per_serving: Math.round(Number(r.fat_g_per_serving) || 0),
+        carbs_g_per_serving: Math.round(Number(r.carbs_g_per_serving) || 0),
+        ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+        instructions: r.instructions || "",
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, [open, userId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CURATED_RECIPES.filter((r) => (cat === "alla" || r.category === cat) && (q === "" || r.name.toLowerCase().includes(q)));
-  }, [query, cat]);
+    const source = cat === "mina" ? myRecipes : CURATED_RECIPES;
+    return source.filter((r) => (cat === "alla" || cat === "mina" || r.category === cat) && (q === "" || r.name.toLowerCase().includes(q)));
+  }, [query, cat, myRecipes]);
 
   function pick(r: CuratedRecipe) {
     const idx = filtered.findIndex((x) => x.id === r.id);
