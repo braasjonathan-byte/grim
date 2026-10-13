@@ -151,6 +151,14 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
               >
                 Alla
               </button>
+              {userId && (
+                <button
+                  onClick={() => setCat("mina")}
+                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === "mina" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                >
+                  Mina recept{myRecipes.length > 0 ? ` (${myRecipes.length})` : ""}
+                </button>
+              )}
               {RECIPE_CATEGORIES.map((c) => (
                 <button
                   key={c}
