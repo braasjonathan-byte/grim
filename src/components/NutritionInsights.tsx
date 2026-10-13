@@ -94,7 +94,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     const wMap = new Map(weights.map((w) => [w.log_date, w.weight_kg]));
     return Array.from({ length: 30 }, (_, i) => {
       const d = addDays(selected, i - 29); const k = toLocalDateKey(d);
-      return { label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), kcal: byDay.get(k) ? Math.round(byDay.get(k)!.kcal) : null, weight: wMap.get(k) ?? null };
+      return { key: k, label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), kcal: byDay.get(k) ? Math.round(byDay.get(k)!.kcal) : null, weight: wMap.get(k) ?? null };
     });
   }, [weights, byDay, dateKey]);
   const weightTrend = useMemo(() => {
@@ -136,11 +136,8 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   const weightSpanDays = useMemo(() => {
     const withW = weightChart.filter((d) => d.weight != null);
     if (withW.length < 2) return 0;
-    const first = weights.find((w) => w.weight_kg === withW[0].weight);
-    const lastW = weights.find((w) => w.weight_kg === withW[withW.length - 1].weight);
-    if (!first || !lastW) return 30;
-    return Math.max(1, Math.round((parseKey(lastW.log_date).getTime() - parseKey(first.log_date).getTime()) / 864e5));
-  }, [weightChart, weights]);
+    return Math.max(1, Math.round((parseKey(withW[withW.length - 1].key).getTime() - parseKey(withW[0].key).getTime()) / 864e5));
+  }, [weightChart]);
 
   const saveWeight = async () => {
     const v = validateNumber(weightInput, "bodyWeightKg");
