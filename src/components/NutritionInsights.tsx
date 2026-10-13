@@ -49,6 +49,8 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     loadWeights();
     supabase.from("nutrition_goals").select("target_weight_kg").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setGoalWeight(data?.target_weight_kg != null ? Number(data.target_weight_kg) : null));
+    window.addEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
+    return () => window.removeEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, from, to, refreshKey]);
 

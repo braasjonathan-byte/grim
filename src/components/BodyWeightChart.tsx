@@ -14,12 +14,17 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
   const { weightDays, setWeightDays } = useStatsSettings();
 
   useEffect(() => {
-    const from = toLocalDateKey(addDays(new Date(), -(weightDays - 1)));
-    supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId)
-      .gte("log_date", from).order("log_date")
-      .then(({ data }) => setWeights((data || []).map((w) => ({ log_date: w.log_date, weight_kg: Number(w.weight_kg) }))));
-    supabase.from("nutrition_goals").select("target_weight_kg").eq("user_id", userId).maybeSingle()
-      .then(({ data }) => setGoalWeight(data?.target_weight_kg != null ? Number(data.target_weight_kg) : null));
+    const load = () => {
+      const from = toLocalDateKey(addDays(new Date(), -(weightDays - 1)));
+      supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId)
+        .gte("log_date", from).order("log_date")
+        .then(({ data }) => setWeights((data || []).map((w) => ({ log_date: w.log_date, weight_kg: Number(w.weight_kg) }))));
+      supabase.from("nutrition_goals").select("target_weight_kg").eq("user_id", userId).maybeSingle()
+        .then(({ data }) => setGoalWeight(data?.target_weight_kg != null ? Number(data.target_weight_kg) : null));
+    };
+    load();
+    window.addEventListener(WEIGHT_CHANGED_EVENT, load);
+    return () => window.removeEventListener(WEIGHT_CHANGED_EVENT, load);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, weightDays]);
 
