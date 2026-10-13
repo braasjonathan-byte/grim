@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -162,6 +162,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
               </div>
             </div>
             <FieldError error={errs.sum} />
+            <FieldError error={kcal.trim() ? errs.macros : null} />
             <div>
               <label className="text-xs font-medium text-muted-foreground">Mängd att lägga till (g)</label>
               <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className={inp} />
@@ -171,7 +172,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
 
           <div className="flex gap-2 pt-2">
             <button onClick={() => onOpenChange(false)} className="flex-1 pill-btn-ghost py-2.5 text-sm">Avbryt</button>
-            <button onClick={requestSave} disabled={saving || hasErrors} className="flex-1 pill-btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+            <button onClick={requestSave} disabled={saving || (showErrors && hasErrors)} className="flex-1 pill-btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />} Spara & lägg till
             </button>
           </div>
