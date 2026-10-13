@@ -51,4 +51,5 @@
 - [x] M6 recept: radera, portioner 1–50; M7 radera egna livsmedel; M8 ångra vid borttag i Redigera, bekräfta mallradering
 - [x] L2 standardmakron = 2000 kcal; L4 förhandsvisning vid ogiltig mängd; L5 versaler/kamerafel/förkortningar; L7 streckkodsvalidering; L8 varning framtida dag; L17 förklaring Igår
 - [x] M4 prognos räknar ologgade dagar med snittet, L1 avrundning, L9 fiber "rek.", L12 namngräns, L16 fliken stannar, M17 recepttext
-- [ ] Kvar: H6 ordlista/intro, H7 restaurangsökning, H8 datum löppass, M2, M3, M5, M9–M16, M18, M19, L3, L6, L10, L11, L13–L15, L18–L20
+- [x] M2 cykelkcal från watt, M3 watt-enhet på Hem och i delning, M19 måltidsnamn på knappen
+- [ ] Kvar: H6 ordlista/intro, H7 restaurangsökning, H8 datum löppass, M5, M9–M16, M18, L3, L6, L10, L11, L13–L15, L18–L20

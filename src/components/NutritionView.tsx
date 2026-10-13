@@ -604,7 +604,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
               onClick={() => setPicker(allSlots[0] || slots[0] || "frukost")}
               className="pill-btn bg-primary text-primary-foreground px-4 py-2 text-xs font-semibold"
             >
-              <Plus className="w-3.5 h-3.5" /> Logga din första måltid
+              <Plus className="w-3.5 h-3.5" /> Logga {allSlots[0] || slots[0] || "frukost"}
             </button>
           </div>
         )}
