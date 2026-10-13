@@ -193,3 +193,16 @@ export const validateCardioEntry = ({ sport, timeMin, distanceKm }: CardioEntryI
 
   return { valid: true, error: null };
 };
+
+/**
+ * Rimlighetskontroll kcal ↔ makron (4/9/4 kcal per g). Returnerar fel när
+ * makronas energi tydligt överstiger angivna kalorier (20 % + 15 kcal marginal).
+ */
+export function macroKcalMismatch(kcal: number, protein: number, fat: number, carbs: number): string | null {
+  if (!(kcal > 0)) return null;
+  const fromMacros = 4 * (protein || 0) + 9 * (fat || 0) + 4 * (carbs || 0);
+  if (fromMacros > kcal * 1.2 + 15) {
+    return `Makronas energi blir ${Math.round(fromMacros)} kcal, mer än ${Math.round(kcal)} kcal – kontrollera värdena.`;
+  }
+  return null;
+}

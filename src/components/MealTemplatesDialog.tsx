@@ -240,7 +240,7 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
                   <button
                     key={s}
                     onClick={() => applyTemplate(applyingTemplate, s)}
-                    className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold capitalize hover:bg-muted transition-colors"
+                    className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold first-letter:uppercase hover:bg-muted transition-colors"
                   >
                     {s}
                   </button>

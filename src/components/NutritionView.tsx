@@ -76,7 +76,7 @@ const FEELINGS = [
   { key: "full", emoji: "😮‍💨", label: "Mätt" },
 ];
 
-const DEFAULT_TARGETS: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number | null } = { kcal: 2000, protein_g: 100, fat_g: 70, carbs_g: 250, fiber_g: null };
+const DEFAULT_TARGETS: { kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number | null } = { kcal: 2000, protein_g: 100, fat_g: 60, carbs_g: 265, fiber_g: null };
 
 interface SortableMealProps {
   meal: string;
@@ -113,7 +113,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold capitalize font-serif truncate">{meal}</p>
+          <p className="text-sm font-bold first-letter:uppercase font-serif truncate">{meal}</p>
           <p className={`text-[10px] tabular-nums ${budget && mealKcal > budget * 1.1 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
             {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
           </p>
@@ -236,6 +236,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
     protein: validateNumber(quick.protein, QUICK_MACRO).error,
     fat: validateNumber(quick.fat, QUICK_MACRO).error,
     carbs: validateNumber(quick.carbs, QUICK_MACRO).error,
+    macros: quick.kcal.trim() ? macroKcalMismatch(parseDecimal(quick.kcal), validateNumber(quick.protein, QUICK_MACRO).value ?? 0, validateNumber(quick.fat, QUICK_MACRO).value ?? 0, validateNumber(quick.carbs, QUICK_MACRO).value ?? 0) : null,
   };
   const quickHasErrors = Object.values(quickErrs).some(Boolean);
   const [valueConfirm, setValueConfirm] = useState<{ msg: string; run: () => void } | null>(null);
@@ -337,9 +338,9 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
 
   async function deleteEditLog() {
     if (!editingLog) return;
-    await supabase.from("meal_logs").delete().eq("id", editingLog.id);
+    const id = editingLog.id;
     setEditingLog(null);
-    load();
+    await removeLog(id);
   }
   const { toast } = useToast();
 
@@ -561,8 +562,9 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       <div className="flex items-center justify-between">
         <button onClick={() => shiftDay(-1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronLeft className="w-5 h-5" /></button>
         <div className="text-center">
-          <p className="font-serif text-lg capitalize">{dateLabel}</p>
+          <p className="font-serif text-lg first-letter:uppercase">{dateLabel}</p>
           {!isToday && <button onClick={() => setDate(new Date())} className="text-[10px] text-primary font-bold">Gå till idag</button>}
+          {dateKey > toLocalDateKey(new Date()) && <p className="text-[10px] text-destructive font-semibold">Framtida dag – det du loggar här räknas inte förrän dagen kommit</p>}
         </div>
         <button onClick={() => shiftDay(1)} className="w-9 h-9 icon-round hover:bg-muted/60 transition-colors"><ChevronRight className="w-5 h-5" /></button>
       </div>
@@ -578,7 +580,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
           <Bookmark className="w-3 h-3" /> Mallar
         </button>
-        <button onClick={() => { hapticLight(); copyFromYesterday(); }} disabled={yesterdayLogs.length === 0} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
+        <button onClick={() => { hapticLight(); copyFromYesterday(); }} disabled={yesterdayLogs.length === 0} title={yesterdayLogs.length === 0 ? "Inget loggat dagen innan att kopiera" : "Kopiera dagen innan"} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
           <CopyPlus className="w-3 h-3" /> Igår
         </button>
       </div>
@@ -745,7 +747,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                 <button
                   key={meal}
                   onClick={() => { const it = pendingRecipe; setPendingRecipe(null); addLog(meal, it); }}
-                  className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold capitalize hover:bg-muted transition-colors"
+                  className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold first-letter:uppercase hover:bg-muted transition-colors"
                 >
                   {meal}
                 </button>
@@ -806,7 +808,8 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
               {(() => {
                 const n = parseFloat(editAmount.replace(",", "."));
                 const oldAmt = Number(editingLog.amount) || 1;
-                const f = isFinite(n) && n > 0 ? n / oldAmt : 1;
+                const f = isFinite(n) && n > 0 ? n / oldAmt : 0;
+                if (!f || editAmountError) return null;
                 return (
                   <p className="text-[10px] text-muted-foreground tabular-nums pt-1">
                     {Math.round(Number(editingLog.kcal) * f)} kcal · Protein {(Number(editingLog.protein_g) * f).toFixed(0)} g · Fett {(Number(editingLog.fat_g) * f).toFixed(0)} g · Kolhydrater {(Number(editingLog.carbs_g) * f).toFixed(0)} g
@@ -818,7 +821,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
               <p className="text-xs font-bold flex items-center gap-1"><ArrowRightLeft className="w-3 h-3" /> Flytta till</p>
               <div className="flex flex-wrap gap-1.5">
                 {allSlots.filter((m) => m !== editingLog.meal_type).map((m) => (
-                  <button key={m} onClick={() => moveLog(m)} className="px-3 py-1.5 rounded-full bg-secondary text-xs font-semibold capitalize hover:bg-muted">{m}</button>
+                  <button key={m} onClick={() => moveLog(m)} className="px-3 py-1.5 rounded-full bg-secondary text-xs font-semibold first-letter:uppercase hover:bg-muted">{m}</button>
                 ))}
               </div>
               <p className="text-xs font-bold flex items-center gap-1 pt-1"><Copy className="w-3 h-3" /> Kopiera till</p>
@@ -844,7 +847,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           <div className="bg-card rounded-2xl shadow-soft border border-border/40 w-full sm:max-w-sm p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div>
               <p className="font-serif text-lg flex items-center gap-1.5"><Zap className="w-4 h-4 text-primary" /> Snabbpost</p>
-              <p className="text-xs text-muted-foreground capitalize">{quickMeal} · ange bara kalorier om du inte vet mer</p>
+              <p className="text-xs text-muted-foreground first-letter:uppercase">{quickMeal} · Ange bara kalorier om du inte vet mer</p>
             </div>
             <input className="w-full input-soft" placeholder="Anteckning (t.ex. Lunch på stan)" value={quick.name} onChange={(e) => setQuick({ ...quick, name: e.target.value })} />
             <input className="w-full input-soft text-lg font-bold" inputMode="decimal" placeholder="Kalorier (kcal)" autoFocus value={quick.kcal}
@@ -855,6 +858,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                 <div key={k} className="min-w-0"><input className="input-soft w-full text-sm" inputMode="decimal" placeholder={l} value={quick[k]} onChange={(e) => setQuick({ ...quick, [k]: e.target.value })} /><FieldError error={quickErrs[k]} /></div>
               ))}
             </div>
+            <FieldError error={quickErrs.macros} />
             <div className="flex flex-wrap gap-1.5">
               {["100", "250", "400", "600", "800"].map((k) => (
                 <button key={k} onClick={() => setQuick({ ...quick, kcal: k })} className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${quick.kcal === k ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>{k} kcal</button>

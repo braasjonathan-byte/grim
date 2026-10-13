@@ -176,7 +176,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
               const [off, meal] = [Number(g.split("|")[0]), g.slice(g.indexOf("|") + 1)];
               return (
                 <div key={g} className="space-y-1">
-                  <p className="text-xs font-semibold capitalize">{meal}{dayLabel(off)}</p>
+                  <p className="text-xs font-semibold first-letter:uppercase">{meal}{dayLabel(off)}</p>
                   <ul className="rounded-2xl bg-muted/30 divide-y divide-border/40">
                     {rows.map((r, i) => (r.meal !== meal || r.offset !== off) ? null : (
                       <li key={i} className={`p-2 space-y-1 ${r.on ? "" : "opacity-50"} ${isOdd(r.item) ? "bg-destructive/10" : !VERIFIED.has(r.item.source) || !r.item.certain ? "bg-warning/10" : ""}`}>
@@ -192,7 +192,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
                             </div>
                             <div className="flex items-center gap-1 px-1 flex-wrap">
                               <select value={r.meal} onChange={(e) => update(i, { meal: e.target.value })} aria-label="Måltid"
-                                className="text-[10px] bg-transparent text-muted-foreground capitalize">
+                                className="text-[10px] bg-transparent text-muted-foreground first-letter:uppercase">
                                 {slots.map((s) => <option key={s} value={s}>{s}</option>)}
                               </select>
                               <span className="text-[10px] text-muted-foreground tabular-nums">· {Math.round(r.item.kcal)} kcal · P{r.item.protein_g.toFixed(1)} F{r.item.fat_g.toFixed(1)} K{r.item.carbs_g.toFixed(1)}</span>
