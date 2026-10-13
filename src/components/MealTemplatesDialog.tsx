@@ -108,6 +108,8 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
   }
 
   async function deleteTemplate(id: string) {
+    const tpl = templates.find((t) => t.id === id);
+    if (!window.confirm(`Radera mallen "${tpl?.name ?? ""}"?`)) return;
     await supabase.from("meal_templates" as any).delete().eq("id", id);
     setTemplates((prev) => prev.filter((t) => t.id !== id));
   }
@@ -240,7 +242,7 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
                   <button
                     key={s}
                     onClick={() => applyTemplate(applyingTemplate, s)}
-                    className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold capitalize hover:bg-muted transition-colors"
+                    className="w-full text-left px-4 py-3 rounded-2xl bg-secondary text-sm font-semibold first-letter:uppercase hover:bg-muted transition-colors"
                   >
                     {s}
                   </button>

@@ -5,7 +5,8 @@ import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog"
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic } from "lucide-react";
+import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic, Trash2 } from "lucide-react";
+import { toast as sonnerToast } from "sonner";
 import VoiceFoodDialog from "./VoiceFoodDialog";
 import { UNITS, gramsForFood, unitHint, pieceWeightFor, DEFAULT_PIECE_G, naturalUnitsFor } from "@/lib/nutritionCalc";
 
@@ -99,6 +100,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState<string>("g");
   const [barcodeOpen, setBarcodeOpen] = useState(false);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [restaurantOpen, setRestaurantOpen] = useState(false);
@@ -402,7 +404,15 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     setQuery("");
   }
 
-  const renderRow = (r: FoodRow) => (
+  async function deleteCustomFood(r: FoodRow) {
+    if (!window.confirm(`Radera "${r.name}" från dina egna livsmedel? Redan loggade måltider ligger kvar.`)) return;
+    const { error } = await supabase.from("custom_foods").delete().eq("id", r.id).eq("user_id", userId);
+    if (error) { sonnerToast.error("Kunde inte radera"); return; }
+    setDeletedIds((prev) => new Set(prev).add(r.id));
+    sonnerToast.success("Livsmedlet raderat");
+  }
+
+  const renderRow = (r: FoodRow) => deletedIds.has(r.id) ? null : (
     <li key={`${r.source}-${r.id}`} className="flex items-stretch">
       <button onClick={() => pick(r)} className="flex-1 text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2 min-w-0">
         <div className="min-w-0">
@@ -420,6 +430,15 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           aria-label="Redigera recept"
         >
           <Pencil className="w-4 h-4" />
+        </button>
+      )}
+      {r.source === "custom_food" && (
+        <button
+          onClick={(e) => { e.stopPropagation(); void deleteCustomFood(r); }}
+          className="px-2 text-muted-foreground hover:text-destructive"
+          aria-label={`Radera ${r.name}`}
+        >
+          <Trash2 className="w-4 h-4" />
         </button>
       )}
     </li>

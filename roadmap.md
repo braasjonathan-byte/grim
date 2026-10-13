@@ -46,4 +46,8 @@
 - [x] H3 sökning: mjolk, kycklingfilé, engelska ord, energigel/whey
 - [x] H5 kön ej angivet → medelvärde; H6 (delvis) förklaringar i Mål
 - [ ] H2 omtest långa namn, H6 ordlista/intro, H7 restaurangsökning, H8 datumförskjutning löppass
-- [ ] M1–M19, L1–L20 (se rapporten)
+- [x] H2 egna livsmedel: namngräns 120 tecken, dubbelklicksskydd
+- [x] M1 kcal/makro-kontroll i Snabbpost och Eget livsmedel
+- [x] M6 recept: radera, portioner 1–50; M7 radera egna livsmedel; M8 ångra vid borttag i Redigera, bekräfta mallradering
+- [x] L2 standardmakron = 2000 kcal; L4 förhandsvisning vid ogiltig mängd; L5 versaler/kamerafel/förkortningar; L7 streckkodsvalidering; L8 varning framtida dag; L17 förklaring Igår
+- [ ] Kvar: H6 ordlista/intro, H7 restaurangsökning, H8 datum löppass, M2–M5, M9–M19, L1, L3, L6, L9–L16, L18–L20

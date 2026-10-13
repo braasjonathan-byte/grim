@@ -47,7 +47,7 @@ export default function MealNameDialog({ open, onOpenChange, initial, title, exi
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Förslag</p>
             <div className="flex flex-wrap gap-1.5">
               {SUGGESTIONS.filter((s) => !existing.includes(s)).map((s) => (
-                <button key={s} onClick={() => setName(s)} className="px-3 py-1 rounded-full bg-secondary text-xs capitalize">{s}</button>
+                <button key={s} onClick={() => setName(s)} className="px-3 py-1 rounded-full bg-secondary text-xs first-letter:uppercase">{s}</button>
               ))}
             </div>
           </div>
