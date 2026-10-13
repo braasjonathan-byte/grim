@@ -31,6 +31,9 @@ export async function loadWorkoutBurned(userId: string, dateKey: string): Promis
       const f = /cykl|cykel|bike/i.test(det) ? 0.3 : /sim|swim/i.test(det) ? 2.5 : /promenad|gång|walk/i.test(det) ? 0.6 : 1.0;
       kcal = km * weight * f;
     }
+    // Cykling med watt: mekaniskt arbete i kJ ≈ förbrända kcal (verkningsgrad ~24 %).
+    const w = det.match(/(\d{2,4})\s*W\b/); const mins = det.match(/(\d{1,3})\s*min\b/);
+    if (w && mins && /cykl|cykel|bike|watt/i.test(det)) kcal = Math.max(kcal, Number(w[1]) * Number(mins[1]) * 60 / 1000);
     total += kcal;
   }
   return Math.round(total);
