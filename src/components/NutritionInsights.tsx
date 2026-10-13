@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart, Line, CartesianGrid } from "recharts";
 import { BarChart3, TrendingUp, Scale, ListOrdered } from "lucide-react";
 import { toLocalDateKey } from "@/lib/dateUtils";
+import { WEIGHT_CHANGED_EVENT } from "@/lib/bodyWeight";
 import { isPlausibleMealLog, validateNumber, parseDecimal } from "@/lib/inputValidation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,6 +50,8 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     loadWeights();
     supabase.from("nutrition_goals").select("target_weight_kg").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setGoalWeight(data?.target_weight_kg != null ? Number(data.target_weight_kg) : null));
+    window.addEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
+    return () => window.removeEventListener(WEIGHT_CHANGED_EVENT, loadWeights);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, from, to, refreshKey]);
 
@@ -147,6 +150,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara vikten", description: error.message, variant: "destructive" }); return; }
     if (dateKey === toLocalDateKey(new Date())) await supabase.from("profiles").update({ weight_kg: parseDecimal(weightInput) } as any).eq("user_id", userId);
+    window.dispatchEvent(new Event(WEIGHT_CHANGED_EVENT));
     setWeightInput(""); loadWeights();
     toast({ title: "Vikt sparad" });
   };
