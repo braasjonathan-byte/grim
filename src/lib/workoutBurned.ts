@@ -6,7 +6,7 @@ import { isCompletedWorkout } from "@/lib/completionCounting";
 /** Summerar uppskattade förbrända kalorier från alla genomförda pass ett visst datum (YYYY-MM-DD). */
 export async function loadWorkoutBurned(userId: string, dateKey: string): Promise<number> {
   const [{ data: comps }, { data: plans }, { data: profile }] = await Promise.all([
-    supabase.from("workout_completions").select("week, day, done, skipped, logged_weights, logged_pulse").eq("user_id", userId).eq("done", true),
+    supabase.from("workout_completions").select("week, day, done, skipped, logged_weights, logged_pulse, logged_distance_km").eq("user_id", userId).eq("done", true),
     supabase.from("workout_plans").select("week, day, details").eq("user_id", userId),
     supabase.from("profiles").select("plan_start_date, weight_kg, gender, age").eq("user_id", userId).maybeSingle(),
   ]);
@@ -23,7 +23,15 @@ export async function loadWorkoutBurned(userId: string, dateKey: string): Promis
       key = d ? toUtcDateKey(d) : null;
     }
     if (key !== dateKey) continue;
-    total += estimateCalories(details.get(`${c.week}-${c.day}`) || "", c.logged_weights as any, c.logged_pulse ?? null, weight, profile?.gender ?? null, profile?.age ?? null);
+    const det = details.get(`${c.week}-${c.day}`) || "";
+    let kcal = estimateCalories(det, c.logged_weights as any, c.logged_pulse ?? null, weight, profile?.gender ?? null, profile?.age ?? null);
+    const km = Number((c as any).logged_distance_km) || 0;
+    if (kcal <= 0 && km > 0) {
+      // Reservberäkning från distans: löpning ≈ 1 kcal/kg/km, cykling ≈ 0,3, simning ≈ 2,5.
+      const f = /cykl|cykel|bike/i.test(det) ? 0.3 : /sim|swim/i.test(det) ? 2.5 : /promenad|gång|walk/i.test(det) ? 0.6 : 1.0;
+      kcal = km * weight * f;
+    }
+    total += kcal;
   }
   return Math.round(total);
 }
