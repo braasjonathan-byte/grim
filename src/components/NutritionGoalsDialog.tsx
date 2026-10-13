@@ -8,6 +8,7 @@ import { MICROS, type MicroKey } from "@/lib/micronutrients";
 import { useToast } from "@/hooks/use-toast";
 import { validateNumber, parseDecimal, macroKcal, kcalDeviation, formatDecimal } from "@/lib/inputValidation";
 import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
+import { Slider } from "@/components/ui/slider";
 
 interface Props {
   open: boolean;
@@ -123,12 +124,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   }, [loaded, goal, activity, gender, age, weight, height, weeklyLoss]);
 
   function requestSave() {
-    if (hasErrors || !loaded) return;
-    const k = parseDecimal(kcal), p = parseDecimal(protein), f = parseDecimal(fat), c = parseDecimal(carbs);
-    if (kcalDeviation(k, p, c, f) > 0.1) {
-      setConfirmMsg(`Makrona motsvarar ${Math.round(macroKcal(p, c, f))} kcal men målet är ${formatDecimal(k)} kcal.`);
-      return;
-    }
+    if (hasErrors || !loaded || !macroOk) return;
     void save();
   }
 
@@ -213,12 +209,24 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
             </select>
           </div>
           <button onClick={() => computeMacros(false)} className="w-full py-2 pill-btn-soft text-sm font-bold">Räkna ut mina makros</button>
-          <div className="grid grid-cols-4 gap-2">
-            <div><label className="text-[10px] font-medium">Kcal</label><Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="decimal" aria-invalid={!!errs.kcal} className={`${inp} text-sm`} /><FieldError error={errs.kcal} /></div>
-            <div><label className="text-[10px] font-medium">Protein g</label><Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="decimal" aria-invalid={!!errs.protein} className={`${inp} text-sm`} /><FieldError error={errs.protein} /></div>
-            <div><label className="text-[10px] font-medium">Fett g</label><Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="decimal" aria-invalid={!!errs.fat} className={`${inp} text-sm`} /><FieldError error={errs.fat} /></div>
-            <div><label className="text-[10px] font-medium">Kolhydrat g</label><Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="decimal" aria-invalid={!!errs.carbs} className={`${inp} text-sm`} /><FieldError error={errs.carbs} /></div>
-          </div>
+          <div><label className="text-[10px] font-medium">Kcal</label><Input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="decimal" aria-invalid={!!errs.kcal} className={`${inp} text-sm`} /><FieldError error={errs.kcal} /></div>
+          {([
+            { label: "Protein", val: protein, set: setProtein, max: 400, per: 4 },
+            { label: "Fett", val: fat, set: setFat, max: 300, per: 9 },
+            { label: "Kolhydrater", val: carbs, set: setCarbs, max: 1000, per: 4 },
+          ] as const).map((m) => {
+            const g = Math.round(parseDecimal(m.val) || 0);
+            return (
+              <div key={m.label} className="space-y-1">
+                <div className="flex justify-between text-xs"><span className="font-medium">{m.label}</span><span className="tabular-nums">{g} g · {g * m.per} kcal</span></div>
+                <Slider value={[g]} min={0} max={m.max} step={1} onValueChange={([v]) => m.set(String(v))} aria-label={`${m.label} gram`} />
+              </div>
+            );
+          })}
+          <p role="status" className={`text-xs ${macroOk ? "text-muted-foreground" : "text-destructive font-medium"}`}>
+            Makrona ger {macroSum} av {Math.round(kcalNum || 0)} kcal
+            {macroOk ? " ✓" : macroDiff > 0 ? ` – ${macroDiff} kcal kvar att fördela.` : ` – ${-macroDiff} kcal för mycket.`}
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <div><label className="text-[10px] font-medium">Fiber g (valfritt)</label><Input value={fiber} onChange={(e) => setFiber(e.target.value)} inputMode="decimal" placeholder="t.ex. 30" aria-invalid={!!errs.fiber} className={`${inp} text-sm`} /><FieldError error={errs.fiber} /></div>
             <div><label className="text-[10px] font-medium">Vattenmål ml</label><Input value={water} onChange={(e) => setWater(e.target.value)} inputMode="decimal" aria-invalid={!!errs.water} className={`${inp} text-sm`} /><FieldError error={errs.water} /></div>
