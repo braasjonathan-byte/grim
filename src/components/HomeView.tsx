@@ -32,7 +32,7 @@ import { toLocalDateKey } from "@/lib/dateUtils";
 import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
-import { getCardioModes } from "@/lib/cardioUnits";
+import { getCardioModes, getStoredCardioMode } from "@/lib/cardioUnits";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
 
@@ -95,6 +95,7 @@ const summarizeDetails = (details: string | null): string[] => {
 const fixCardioUnitSuffix = (line: string): string => {
   const sep = line.indexOf("—");
   const name = sep >= 0 ? line.slice(0, sep).trim() : line;
+  if (getStoredCardioMode(name) === "watt") return line.replace(/(\d+(?:[.,]\d+)?)\s*(?:\/\s*km|km\/h)\b/g, "$1 W");
   if (getCardioModes(name)[0] !== "kmh") return line;
   return line.replace(/(\d+(?:[.,]\d+)?)\s*\/\s*km\b/g, "$1 km/h");
 };
