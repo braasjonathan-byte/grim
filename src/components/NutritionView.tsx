@@ -648,13 +648,28 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           slots={allSlots}
           dateKey={dateKey}
           onConfirm={async (rows) => {
-            const insert = rows.map(({ meal, item }) => ({
-              user_id: userId, log_date: dateKey, meal_type: meal, item_name: item.name.trim() || "Livsmedel",
-              amount: item.amount, unit: item.unit || "g",
-              kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g, fiber_g: item.fiber_g || 0,
-            }));
-            const { data, error } = await supabase.from("meal_logs").insert(insert).select("id");
+            const insert = rows.map(({ meal, offset, item }) => {
+              const d = new Date(dateKey + "T00:00:00"); d.setDate(d.getDate() + offset);
+              return {
+                user_id: userId, log_date: toLocalDateKey(d), meal_type: meal, item_name: item.name.trim() || "Livsmedel",
+                amount: item.amount, unit: item.unit || "g",
+                kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g, fiber_g: item.fiber_g || 0,
+                food_id: item.food_id, custom_food_id: item.custom_food_id, recipe_id: item.recipe_id,
+                nova_group: item.nova_group ?? null, ...(item.micros || {}),
+              };
+            });
+            const { data, error } = await supabase.from("meal_logs").insert(insert as any).select("id");
             if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
+            // Lär appen användarens portioner och vanligaste livsmedel.
+            for (const r of rows) {
+              if (r.item.unit === "g" && r.item.amount > 0 && r.item.amount <= 5000 && Math.abs(r.item.amount - r.aiAmount) >= 1) {
+                const name_lower = r.item.name.trim().toLowerCase().slice(0, 120);
+                void (supabase as any).from("food_portion_memory").upsert({ user_id: userId, name_lower, grams: r.item.amount }, { onConflict: "user_id,name_lower" });
+              }
+              const src = r.item.food_id ? "food" : r.item.custom_food_id ? "custom_food" : r.item.recipe_id ? "recipe" : null;
+              const id = r.item.food_id || r.item.custom_food_id || r.item.recipe_id;
+              if (src && id) void supabase.rpc("bump_food_usage", { p_source: src, p_food_id: id });
+            }
             setDayAiOpen(false);
             load();
             const ids = (data || []).map((d) => d.id);
