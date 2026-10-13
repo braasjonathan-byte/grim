@@ -90,9 +90,12 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     })();
   }, [open, userId]);
 
-  // Kom ihåg läget som det såg ut när datan laddats, så vi kan varna för osparade ändringar
+  // Kom ihåg läget som det såg ut när datan laddats (efter automatisk omräkning),
+  // så vi kan varna för osparade ändringar
   useEffect(() => {
-    if (loaded && savedSnap === null) setSavedSnap(snapshot());
+    if (!loaded || savedSnap !== null) return;
+    const t = setTimeout(() => setSavedSnap(snapshot()), 50);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, savedSnap]);
 
