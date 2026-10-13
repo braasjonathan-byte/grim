@@ -162,6 +162,16 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
           </div>
           <div><label className="text-xs font-medium">Målvikt (kg, valfritt)</label><Input value={targetWeight} onChange={(e) => setTargetWeight(e.target.value)} inputMode="decimal" placeholder="t.ex. 75" aria-invalid={!!errs.targetWeight} className={inp} /><FieldError error={errs.targetWeight} /></div>
           <div>
+            <label className="text-xs font-medium">Gå ner (kg/vecka, valfritt)</label>
+            <Input value={weeklyLoss} onChange={(e) => setWeeklyLoss(e.target.value)} inputMode="decimal" placeholder="t.ex. 0,5" aria-invalid={!!errs.weeklyLoss} className={inp} />
+            <FieldError error={errs.weeklyLoss} />
+            {parseDecimal(weeklyLoss) > 0 && !errs.weeklyLoss && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Det ger ett underskott på ca {formatDecimal(Math.round((parseDecimal(weeklyLoss) * 7700) / 7))} kcal/dag → dagsmål {kcal || "–"} kcal.
+              </p>
+            )}
+          </div>
+          <div>
             <label className="text-xs font-medium">Kön</label>
             <div className="flex gap-1">
               <button onClick={() => setGender("male")} className={`flex-1 py-2 text-xs font-medium rounded-full transition-colors ${gender === "male" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}>Man</button>
