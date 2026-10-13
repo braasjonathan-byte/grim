@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ACTIVITY_LABEL, ActivityLevel, GOAL_LABEL, GoalType, calcBMR, calcTDEE, distributeMacros } from "@/lib/nutritionCalc";
+import { ACTIVITY_LABEL, ActivityLevel, GOAL_LABEL, GoalType, calcBMR, calcTDEE, distributeMacros, kcalForWeeklyChange, macrosForWeeklyLoss } from "@/lib/nutritionCalc";
 import { MICROS, type MicroKey } from "@/lib/micronutrients";
 import { useToast } from "@/hooks/use-toast";
 import { validateNumber, parseDecimal, macroKcal, kcalDeviation, formatDecimal } from "@/lib/inputValidation";
@@ -30,6 +30,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [fiber, setFiber] = useState("");
   const [water, setWater] = useState("2000");
   const [targetWeight, setTargetWeight] = useState("");
+  const [weeklyLoss, setWeeklyLoss] = useState("");
   const [initialWeight, setInitialWeight] = useState<number | null>(null);
   const [micro, setMicro] = useState<Partial<Record<MicroKey, string>>>({});
   const [saving, setSaving] = useState(false);
@@ -47,6 +48,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     fiber: validateNumber(fiber, "goalFiber").error,
     water: validateNumber(water, { min: 0, max: 10000, unit: "ml" }).error,
     targetWeight: validateNumber(targetWeight, "bodyWeightKg").error,
+    weeklyLoss: validateNumber(weeklyLoss, { min: 0, max: 1.5, unit: "kg/vecka", optional: true }).error,
   };
   const microErrs = Object.fromEntries(
     MICROS.map((m) => [m.key, validateNumber(micro[m.key] ?? "", { min: 0, max: 100000, unit: m.unit, optional: true }).error]),
@@ -70,6 +72,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         setFat(String(g.fat_g)); setCarbs(String(g.carbs_g));
         setFiber(g.fiber_g != null ? String(g.fiber_g) : ""); setWater(String(g.water_goal_ml ?? 2000));
         setTargetWeight(g.target_weight_kg != null ? formatDecimal(g.target_weight_kg) : "");
+        setWeeklyLoss((g as any).weekly_loss_kg != null ? formatDecimal((g as any).weekly_loss_kg) : "");
         const mv: Partial<Record<MicroKey, string>> = {};
         for (const m of MICROS) { const v = (g as any)[m.key]; if (v != null) mv[m.key] = formatDecimal(v); }
         setMicro(mv);
