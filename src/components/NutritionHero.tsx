@@ -39,7 +39,7 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
   // Målet bygger redan på vald aktivitetsnivå, så dagens träning läggs INTE på målet — "Förbränt" visas bara som info.
   const budget = targets.kcal;
   const carbTarget = targets.carbs_g;
-  const left = Math.round(budget - kcal);
+  const left = Math.round(budget) - Math.round(kcal);
   const over = left < 0;
   const fiberTarget = targets.fiber_g && targets.fiber_g > 0 ? targets.fiber_g : 30;
   const macros = [
@@ -85,7 +85,7 @@ export default function NutritionHero({ kcal, burned, protein, fat, carbs, fiber
           <div key={m.label} className="flex flex-col items-center gap-1">
             <Ring size={62} stroke={6} pct={m.t > 0 ? (m.v / m.t) * 100 : 0} color={m.color}>
               <span className="text-sm font-bold tabular-nums">{Math.round(m.v)}</span>
-              <span className="text-[9px] text-muted-foreground tabular-nums">/{Math.round(m.t)}g</span>
+              <span className="text-[9px] text-muted-foreground tabular-nums">/{m.label === "Fiber" && !(targets.fiber_g && targets.fiber_g > 0) ? "rek. " : ""}{Math.round(m.t)}g</span>
             </Ring>
             <span className="text-[11px] font-medium">{m.label}</span>
           </div>

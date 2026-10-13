@@ -34,7 +34,7 @@ export default function MealNameDialog({ open, onOpenChange, initial, title, exi
           <DialogTitle className="font-serif">{title || "Namn på måltid"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <Input
+          <Input maxLength={40}
             autoFocus
             value={name}
             onChange={(e) => { setName(e.target.value); setErr(""); }}

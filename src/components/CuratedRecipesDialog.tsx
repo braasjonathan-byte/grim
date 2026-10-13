@@ -152,7 +152,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
               <div className="flex-1 border border-border rounded-2xl p-4 text-center space-y-2 flex flex-col items-center justify-center">
                 <p className="text-xs font-bold flex items-center justify-center gap-1"><Lock className="w-3 h-3" /> Färdiga recept – hedersmedlemmar</p>
                 <p className="text-xs text-muted-foreground">
-                  Lås upp 100+ träningsanpassade recept med svenska livsmedel som hedersmedlem. Dina egna recept hittar du under Mina recept.
+                  Lås upp 200+ träningsanpassade recept med svenska livsmedel som hedersmedlem. Dina egna recept hittar du under Mina recept.
                 </p>
               </div>
             ) : (
