@@ -89,18 +89,19 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     }
     const bmr = calcBMR(w.value, h.value, a.value, gender);
     const tdee = calcTDEE(bmr, activity);
-    const m = distributeMacros(tdee, w.value, goal);
+    const wl = validateNumber(weeklyLoss, { min: 0, max: 1.5, unit: "kg/vecka", optional: true }).value;
+    const m = wl && wl > 0 ? macrosForWeeklyLoss(tdee, w.value, wl) : distributeMacros(tdee, w.value, goal);
     setKcal(String(m.kcal)); setProtein(String(m.protein_g));
     setFat(String(m.fat_g)); setCarbs(String(m.carbs_g));
   }
 
-  // Auto-räkna makros när mål, aktivitet, kön eller kroppsdata ändras
+  // Auto-räkna makros när mål, aktivitet, kön, kroppsdata eller veckomål ändras
   useEffect(() => {
     if (!open) return;
-    if (goal === "custom") return;
+    if (goal === "custom" && !parseDecimal(weeklyLoss)) return;
     computeMacros(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goal, activity, gender, age, weight, height]);
+  }, [goal, activity, gender, age, weight, height, weeklyLoss]);
 
   function requestSave() {
     if (hasErrors) return;
@@ -139,6 +140,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       fiber_g: fib === null ? null : Math.round(fib),
       water_goal_ml: Math.round(parseDecimal(water)),
       target_weight_kg: validateNumber(targetWeight, "bodyWeightKg").value,
+      weekly_loss_kg: validateNumber(weeklyLoss, { min: 0, max: 1.5, unit: "kg/vecka", optional: true }).value,
       ...Object.fromEntries(MICROS.map((m) => { const v = parseDecimal(micro[m.key] || ""); return [m.key, v > 0 ? v : null]; })),
     } as any, { onConflict: "user_id" });
     setSaving(false);
