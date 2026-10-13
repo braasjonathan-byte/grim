@@ -31,8 +31,11 @@ const norm = (s: string) => (s || "").toLowerCase()
 async function matchFood(sb: any, query: string) {
   const words = norm(query).split(" ").filter((w) => w.length >= 2).slice(0, 4);
   if (!words.length) return null;
-  const longest = [...words].sort((a, b) => b.length - a.length)[0];
-  const { data } = await sb.from("foods").select(FOOD_COLS).ilike("name", `%${longest}%`).limit(80);
+  const [a, b] = await Promise.all([
+    sb.from("foods").select(FOOD_COLS).ilike("name", `${words[0]}%`).limit(150),
+    sb.from("foods").select(FOOD_COLS).ilike("name", `%${words[0]}%`).limit(150),
+  ]);
+  const data = [...(a.data || []), ...(b.data || [])];
   let best: any = null, bestScore = Infinity;
   for (const f of data || []) {
     const n = norm(f.name);
