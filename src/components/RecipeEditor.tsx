@@ -90,7 +90,9 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
   const totalProtein = ingredients.reduce((s, i) => s + i.protein_g, 0);
   const totalFat = ingredients.reduce((s, i) => s + i.fat_g, 0);
   const totalCarbs = ingredients.reduce((s, i) => s + i.carbs_g, 0);
-  const portions = Math.max(1, parseFloat(servings.replace(",", ".")) || 1);
+  const servingsNum = parseFloat(servings.replace(",", "."));
+  const servingsError = !isFinite(servingsNum) || servingsNum < 1 || servingsNum > 50 ? "Portioner måste vara mellan 1 och 50" : null;
+  const portions = Math.max(1, servingsNum || 1);
 
   /** Scale an ingredient's nutrition values when its amount changes. */
   function updateIngredientAmount(idx: number, raw: string) {
@@ -142,6 +144,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
       toast({ title: "Namn och minst en ingrediens krävs", variant: "destructive" });
       return;
     }
+    if (servingsError) { toast({ title: servingsError, variant: "destructive" }); return; }
     let finalName = name.trim();
     if (asCopy) {
       const chosen = window.prompt("Namn på kopian", `${finalName} (kopia)`);
@@ -169,6 +172,19 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
     toast({ title: asCopy ? "Kopia sparad under Mina recept" : isEditing ? "Recept uppdaterat" : templateRecipe ? "Sparat som eget recept under Mina recept" : "Recept sparat" });
+    reset();
+    onSaved();
+    onOpenChange(false);
+  }
+
+  async function deleteRecipe() {
+    if (!initialRecipeId) return;
+    if (!window.confirm(`Radera receptet "${name.trim() || "utan namn"}"? Det går inte att ångra. Redan loggade måltider ligger kvar.`)) return;
+    setSaving(true);
+    const { error } = await supabase.from("recipes").delete().eq("id", initialRecipeId).eq("user_id", userId);
+    setSaving(false);
+    if (error) { toast({ title: "Kunde inte radera receptet", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Receptet raderat" });
     reset();
     onSaved();
     onOpenChange(false);
@@ -212,7 +228,8 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-medium">Portioner</label>
-              <Input value={servings} onChange={(e) => setServings(e.target.value)} inputMode="numeric" pattern="[0-9]*" className="rounded-xl bg-muted/50 border-transparent" />
+              <Input value={servings} onChange={(e) => setServings(e.target.value)} inputMode="numeric" pattern="[0-9]*" aria-invalid={!!servingsError || undefined} className="rounded-xl bg-muted/50 border-transparent" />
+              {servingsError && <p className="text-[11px] text-destructive mt-0.5">{servingsError}</p>}
             </div>
             <div>
               <label className="text-xs font-medium">Synlighet</label>
@@ -282,10 +299,10 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
           </div>
 
           <div className="bg-muted/40 rounded-2xl p-2 grid grid-cols-4 gap-1 text-center">
-            <div><p className="text-[9px] text-muted-foreground">Kcal/p</p><p className="text-sm font-bold tabular-nums">{Math.round(totalKcal / portions)}</p></div>
-            <div><p className="text-[9px] text-muted-foreground">Pro/p</p><p className="text-sm font-bold tabular-nums">{(totalProtein / portions).toFixed(1)}g</p></div>
-            <div><p className="text-[9px] text-muted-foreground">Fett/p</p><p className="text-sm font-bold tabular-nums">{(totalFat / portions).toFixed(1)}g</p></div>
-            <div><p className="text-[9px] text-muted-foreground">Kh/p</p><p className="text-sm font-bold tabular-nums">{(totalCarbs / portions).toFixed(1)}g</p></div>
+            <div><p className="text-[9px] text-muted-foreground">Kcal/port.</p><p className="text-sm font-bold tabular-nums">{Math.round(totalKcal / portions)}</p></div>
+            <div><p className="text-[9px] text-muted-foreground">Protein/port.</p><p className="text-sm font-bold tabular-nums">{(totalProtein / portions).toFixed(1)}g</p></div>
+            <div><p className="text-[9px] text-muted-foreground">Fett/port.</p><p className="text-sm font-bold tabular-nums">{(totalFat / portions).toFixed(1)}g</p></div>
+            <div><p className="text-[9px] text-muted-foreground">Kolh./port.</p><p className="text-sm font-bold tabular-nums">{(totalCarbs / portions).toFixed(1)}g</p></div>
           </div>
 
           <div>
@@ -302,6 +319,11 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
           {isEditing && (
             <button disabled={saving || (imported && !reviewed)} onClick={() => save(true)} className="w-full pill-btn-soft py-3 disabled:opacity-50">
               Spara som kopia…
+            </button>
+          )}
+          {isEditing && (
+            <button disabled={saving} onClick={deleteRecipe} className="w-full py-2 text-xs font-bold text-destructive">
+              Radera recept
             </button>
           )}
         </div>

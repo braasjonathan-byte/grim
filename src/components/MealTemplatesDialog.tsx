@@ -108,6 +108,8 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
   }
 
   async function deleteTemplate(id: string) {
+    const tpl = templates.find((t) => t.id === id);
+    if (!window.confirm(`Radera mallen "${tpl?.name ?? ""}"?`)) return;
     await supabase.from("meal_templates" as any).delete().eq("id", id);
     setTemplates((prev) => prev.filter((t) => t.id !== id));
   }

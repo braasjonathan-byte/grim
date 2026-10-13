@@ -106,7 +106,12 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
       controlsRef.current = controls;
     } catch (e: any) {
       setScanning(false);
-      toast({ title: "Kunde inte starta kameran", description: e?.message || "Kontrollera behörigheter", variant: "destructive" });
+      const name = e?.name || "";
+      const desc = name === "NotFoundError" || /device not found/i.test(e?.message || "") ? "Ingen kamera hittades. Skriv in streckkoden för hand i stället."
+        : name === "NotAllowedError" ? "Appen fick inte använda kameran. Tillåt kameran i inställningarna."
+        : name === "NotReadableError" ? "Kameran används av en annan app."
+        : "Kontrollera att kameran är tillåten.";
+      toast({ title: "Kunde inte starta kameran", description: desc, variant: "destructive" });
     }
   }
 
@@ -157,6 +162,11 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
   }
 
   async function lookupBarcode(barcode: string) {
+    barcode = barcode.trim();
+    if (!/^\d{6,14}$/.test(barcode)) {
+      toast({ title: "Ogiltig streckkod", description: "En streckkod består av 6–14 siffror.", variant: "destructive" });
+      return;
+    }
     setLookup(true);
     try {
       const { data, error } = await supabase.functions.invoke("nutrition-barcode", { body: { barcode } });
