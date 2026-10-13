@@ -149,7 +149,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     }
     // Varje ändrad vikt sparas som dagens vägning så att målviktsgrafen följer den.
     if (w && initialWeight != null && Math.abs(w - initialWeight) > 0.01 || (w && initialWeight == null)) {
-      await supabase.from("body_weight_logs").upsert({ user_id: userId, log_date: toLocalDateKey(new Date()), weight_kg: w }, { onConflict: "user_id,log_date" });
+      await logBodyWeight(userId, w);
       setInitialWeight(w);
     }
     const fib = validateNumber(fiber, "goalFiber").value;

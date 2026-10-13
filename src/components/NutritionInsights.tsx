@@ -147,6 +147,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara vikten", description: error.message, variant: "destructive" }); return; }
     if (dateKey === toLocalDateKey(new Date())) await supabase.from("profiles").update({ weight_kg: parseDecimal(weightInput) } as any).eq("user_id", userId);
+    window.dispatchEvent(new Event(WEIGHT_CHANGED_EVENT));
     setWeightInput(""); loadWeights();
     toast({ title: "Vikt sparad" });
   };

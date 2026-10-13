@@ -129,6 +129,7 @@ const ProfileSection = ({ userId }: ProfileSectionProps) => {
     const { error } = await supabase.from("profiles").update({ weight_kg: wRes.value } as any).eq("user_id", userId);
     if (error) { toast.error("Vikten kunde inte sparas."); return; }
     savedWeight.current = value;
+    await logBodyWeight(userId, wRes.value!);
     toast.success("Vikt sparad");
     notifyProfileUpdated();
   }, [userId]);
