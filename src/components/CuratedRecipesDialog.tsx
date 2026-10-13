@@ -167,8 +167,9 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
                     <span className="text-[10px] text-muted-foreground">›</span>
                   </button>
                 </li>
-              ))}
+               ))}
             </ul>
+            )}
           </>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
