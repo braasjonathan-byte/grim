@@ -1,29 +1,61 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Lock, Search, ChefHat, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { CURATED_RECIPES, RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
 import { PickedItem } from "./FoodPickerDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   isHonorary: boolean;
+  userId?: string;
   onPick?: (item: PickedItem) => void;
   onCreateOwn?: () => void;
 }
 
-export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, onPick, onCreateOwn }: Props) {
+export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn }: Props) {
   const [query, setQuery] = useState("");
-  const [cat, setCat] = useState<string>("alla");
+  const [cat, setCat] = useState<string>(isHonorary ? "alla" : "mina");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [portions, setPortions] = useState("1");
+  const [myRecipes, setMyRecipes] = useState<CuratedRecipe[]>([]);
+
+  // Hämta användarens egna recept så de syns under "Mina recept".
+  useEffect(() => {
+    if (!open || !userId) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("recipes")
+        .select("id,name,servings,instructions,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,ingredients,category")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (error) { console.error("my recipes error", error); return; }
+      setMyRecipes(((data || []) as any[]).map((r) => ({
+        id: r.id,
+        name: r.name,
+        category: r.category || "Övrigt",
+        servings: Number(r.servings) || 1,
+        kcal_per_serving: Math.round(Number(r.kcal_per_serving) || 0),
+        protein_g_per_serving: Math.round(Number(r.protein_g_per_serving) || 0),
+        fat_g_per_serving: Math.round(Number(r.fat_g_per_serving) || 0),
+        carbs_g_per_serving: Math.round(Number(r.carbs_g_per_serving) || 0),
+        ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
+        instructions: r.instructions || "",
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, [open, userId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CURATED_RECIPES.filter((r) => (cat === "alla" || r.category === cat) && (q === "" || r.name.toLowerCase().includes(q)));
-  }, [query, cat]);
+    const source = cat === "mina" ? myRecipes : CURATED_RECIPES;
+    return source.filter((r) => (cat === "alla" || cat === "mina" || r.category === cat) && (q === "" || r.name.toLowerCase().includes(q)));
+  }, [query, cat, myRecipes]);
 
   function pick(r: CuratedRecipe) {
     const idx = filtered.findIndex((x) => x.id === r.id);
@@ -49,7 +81,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
     const p = Math.max(0.1, parseFloat(portions.replace(",", ".")) || 1);
     onPick({
       source: "recipe",
-      id: `curated:${selected.id}`,
+      id: cat === "mina" || myRecipes.some((r) => r.id === selected.id) ? selected.id : `curated:${selected.id}`,
       name: selected.name,
       amount: p,
       unit: "portion",
@@ -62,31 +94,8 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
     setQuery("");
   }
 
-  if (!isHonorary) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md p-6 text-center space-y-4">
-          <DialogHeader>
-            <DialogTitle className="font-serif flex items-center justify-center gap-2"><ChefHat className="w-5 h-5" /> Recept</DialogTitle>
-          </DialogHeader>
-          {onCreateOwn && (
-            <button
-              onClick={() => { onOpenChange(false); onCreateOwn(); }}
-              className="w-full flex items-center justify-center gap-2 pill-btn-primary py-3"
-            >
-              <Plus className="w-4 h-4" /> Skapa eget recept
-            </button>
-          )}
-          <div className="border-t border-border pt-4 space-y-2">
-            <p className="text-xs font-bold flex items-center justify-center gap-1"><Lock className="w-3 h-3" /> Färdiga recept – hedersmedlemmar</p>
-            <p className="text-xs text-muted-foreground">
-              Lås upp 100+ träningsanpassade recept med svenska livsmedel som hedersmedlem.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  // Egna recept är öppna för alla; de färdiga recepten är låsta till hedersmedlemmar.
+  const curatedLocked = !isHonorary;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setSelected(null); setQuery(""); } onOpenChange(v); }}>
@@ -119,6 +128,14 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
               >
                 Alla
               </button>
+              {userId && (
+                <button
+                  onClick={() => setCat("mina")}
+                  className={`px-3 py-1.5 text-xs font-bold whitespace-nowrap rounded-full transition-colors ${cat === "mina" ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-muted"}`}
+                >
+                  Mina recept{myRecipes.length > 0 ? ` (${myRecipes.length})` : ""}
+                </button>
+              )}
               {RECIPE_CATEGORIES.map((c) => (
                 <button
                   key={c}
@@ -129,9 +146,17 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
                 </button>
               ))}
             </div>
+            {curatedLocked && cat !== "mina" ? (
+              <div className="flex-1 border border-border rounded-2xl p-4 text-center space-y-2 flex flex-col items-center justify-center">
+                <p className="text-xs font-bold flex items-center justify-center gap-1"><Lock className="w-3 h-3" /> Färdiga recept – hedersmedlemmar</p>
+                <p className="text-xs text-muted-foreground">
+                  Lås upp 100+ träningsanpassade recept med svenska livsmedel som hedersmedlem. Dina egna recept hittar du under Mina recept.
+                </p>
+              </div>
+            ) : (
             <ul className="flex-1 overflow-y-auto divide-y divide-border border border-border">
               {filtered.length === 0 ? (
-                <li className="p-3 text-xs text-muted-foreground text-center">Inga recept</li>
+                <li className="p-3 text-xs text-muted-foreground text-center">{cat === "mina" ? "Du har inga egna recept än – skapa ett ovan!" : "Inga recept"}</li>
               ) : filtered.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => pick(r)} className="w-full text-left p-3 hover:bg-accent flex justify-between gap-2 items-center">
@@ -142,8 +167,9 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, o
                     <span className="text-[10px] text-muted-foreground">›</span>
                   </button>
                 </li>
-              ))}
+               ))}
             </ul>
+            )}
           </>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
