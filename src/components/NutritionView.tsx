@@ -209,6 +209,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [picker, setPicker] = useState<string | null>(null);
   const [recipeOpen, setRecipeOpen] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
+  const [templateRecipe, setTemplateRecipe] = useState<import("@/data/curatedRecipes").CuratedRecipe | null>(null);
   const [curatedOpen, setCuratedOpen] = useState(false);
   const [curatedTargetMeal, setCuratedTargetMeal] = useState<string | null>(null);
   const [pendingRecipe, setPendingRecipe] = useState<PickedItem | null>(null);
@@ -692,10 +693,11 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       />
       <RecipeEditor
         open={recipeOpen}
-        onOpenChange={(v) => { setRecipeOpen(v); if (!v) setEditingRecipeId(null); }}
+        onOpenChange={(v) => { setRecipeOpen(v); if (!v) { setEditingRecipeId(null); setTemplateRecipe(null); } }}
         userId={userId}
         onSaved={load}
         initialRecipeId={editingRecipeId}
+        templateRecipe={templateRecipe}
       />
       <CuratedRecipesDialog
         open={curatedOpen}
@@ -703,6 +705,11 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         isHonorary={isHonorary}
         userId={userId}
         onCreateOwn={() => setRecipeOpen(true)}
+        onEdit={(t) => {
+          if ("ownId" in t) { setTemplateRecipe(null); setEditingRecipeId(t.ownId); }
+          else { setEditingRecipeId(null); setTemplateRecipe(t.template); }
+          setRecipeOpen(true);
+        }}
         onPick={(item) => {
           if (curatedTargetMeal) {
             addLog(curatedTargetMeal, item);

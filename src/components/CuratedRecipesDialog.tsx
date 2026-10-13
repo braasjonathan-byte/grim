@@ -13,9 +13,11 @@ interface Props {
   userId?: string;
   onPick?: (item: PickedItem) => void;
   onCreateOwn?: () => void;
+  /** Redigera eget recept (id) eller ett färdigt recept som kopia (recipe). */
+  onEdit?: (target: { ownId: string } | { template: CuratedRecipe }) => void;
 }
 
-export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn }: Props) {
+export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn, onEdit }: Props) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>(isHonorary ? "alla" : "mina");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
@@ -206,6 +208,19 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
               <p className="text-xs font-bold mb-1">Instruktioner</p>
               <p className="text-xs whitespace-pre-wrap leading-relaxed">{selected.instructions}</p>
             </div>
+            {onEdit && (
+              <button
+                onClick={() => {
+                  const own = myRecipes.some((r) => r.id === selected.id);
+                  onEdit(own ? { ownId: selected.id } : { template: selected });
+                  setSelected(null);
+                  onOpenChange(false);
+                }}
+                className="w-full pill-btn-soft py-2.5 text-sm"
+              >
+                {myRecipes.some((r) => r.id === selected.id) ? "Redigera recept" : "Redigera och spara som eget"}
+              </button>
+            )}
             {onPick && (
               <div className="space-y-2 pt-2 border-t border-border">
                 <label className="text-xs font-medium">Antal portioner</label>

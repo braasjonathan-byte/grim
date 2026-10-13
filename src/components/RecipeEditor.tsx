@@ -7,7 +7,7 @@ import { Trash2, Plus, Globe, Lock, Loader2, Link2, AlertTriangle } from "lucide
 import { aiItemToPicked, type AiFoodItem } from "@/lib/aiFood";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
-import { RECIPE_CATEGORIES } from "@/data/curatedRecipes";
+import { RECIPE_CATEGORIES, type CuratedRecipe } from "@/data/curatedRecipes";
 
 interface RecipeEditorProps {
   open: boolean;
@@ -15,13 +15,15 @@ interface RecipeEditorProps {
   userId: string;
   onSaved: () => void;
   initialRecipeId?: string | null;
+  /** Färdigt recept att utgå från — sparas alltid som en egen kopia. */
+  templateRecipe?: CuratedRecipe | null;
 }
 
 type Ingredient = PickedItem;
 
 const EMPTY = { name: "", servings: "4", instructions: "", ingredients: [] as Ingredient[], visibility: "private" as "private" | "public", category: "middag" };
 
-export default function RecipeEditor({ open, onOpenChange, userId, onSaved, initialRecipeId }: RecipeEditorProps) {
+export default function RecipeEditor({ open, onOpenChange, userId, onSaved, initialRecipeId, templateRecipe }: RecipeEditorProps) {
   const [name, setName] = useState(EMPTY.name);
   const [servings, setServings] = useState(EMPTY.servings);
   const [instructions, setInstructions] = useState(EMPTY.instructions);
@@ -48,6 +50,17 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
   // Load existing recipe when editing
   useEffect(() => {
     if (!open) return;
+    if (templateRecipe) {
+      setName(`${templateRecipe.name} (egen)`);
+      setServings(String(templateRecipe.servings || 1));
+      setInstructions(templateRecipe.instructions || "");
+      setVisibility("private");
+      const c = (templateRecipe.category || "").toLowerCase();
+      setCategory((RECIPE_CATEGORIES as readonly string[]).includes(c) ? c : "middag");
+      setIngredients(templateRecipe.ingredients.map((i) => ({ ...(i as any), source: (i as any).source || "egen" })) as Ingredient[]);
+      setImported(false); setReviewed(false);
+      return;
+    }
     if (!initialRecipeId) { reset(); return; }
     let cancelled = false;
     setLoading(true);
@@ -71,7 +84,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
         setIngredients(Array.isArray((data as any).ingredients) ? ((data as any).ingredients as Ingredient[]) : []);
       });
     return () => { cancelled = true; };
-  }, [open, initialRecipeId]);
+  }, [open, initialRecipeId, templateRecipe]);
 
   const totalKcal = ingredients.reduce((s, i) => s + i.kcal, 0);
   const totalProtein = ingredients.reduce((s, i) => s + i.protein_g, 0);
@@ -120,7 +133,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
     setImported(true); setReviewed(false);
   }
 
-  async function save() {
+  async function save(asCopy = false) {
     if (imported && !reviewed) {
       toast({ title: "Granska receptet först", description: "Bekräfta att ingredienser och mängder stämmer.", variant: "destructive" });
       return;
@@ -129,10 +142,17 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
       toast({ title: "Namn och minst en ingrediens krävs", variant: "destructive" });
       return;
     }
+    let finalName = name.trim();
+    if (asCopy) {
+      const chosen = window.prompt("Namn på kopian", `${finalName} (kopia)`);
+      if (chosen === null) return;
+      finalName = chosen.trim();
+      if (!finalName) { toast({ title: "Ange ett namn", variant: "destructive" }); return; }
+    }
     setSaving(true);
     const payload = {
       user_id: userId,
-      name: name.trim(),
+      name: finalName.slice(0, 120),
       servings: portions,
       instructions: instructions.trim() || null,
       visibility,
@@ -143,12 +163,12 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
       carbs_g_per_serving: totalCarbs / portions,
       ingredients: ingredients as any,
     } as any;
-    const { error } = isEditing
+    const { error } = isEditing && !asCopy
       ? await supabase.from("recipes").update(payload).eq("id", initialRecipeId!).eq("user_id", userId)
       : await supabase.from("recipes").insert(payload);
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
-    toast({ title: isEditing ? "Recept uppdaterat" : "Recept sparat" });
+    toast({ title: asCopy ? "Kopia sparad under Mina recept" : isEditing ? "Recept uppdaterat" : templateRecipe ? "Sparat som eget recept under Mina recept" : "Recept sparat" });
     reset();
     onSaved();
     onOpenChange(false);
@@ -158,7 +178,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader>
-          <DialogTitle className="font-serif">{isEditing ? "Redigera recept" : "Nytt recept"}</DialogTitle>
+          <DialogTitle className="font-serif">{isEditing ? "Redigera recept" : templateRecipe ? "Redigera som eget recept" : "Nytt recept"}</DialogTitle>
         </DialogHeader>
         {loading ? (
           <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
@@ -273,9 +293,17 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
             <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} className="rounded-xl bg-muted/50 border-transparent" rows={3} />
           </div>
 
-          <button disabled={saving || (imported && !reviewed)} onClick={save} className="w-full pill-btn-primary py-3 disabled:opacity-50">
-            {saving ? "Sparar…" : isEditing ? "Spara ändringar" : "Spara recept"}
+          {templateRecipe && (
+            <p className="text-[11px] text-muted-foreground">Det färdiga receptet ändras inte — dina ändringar sparas som en kopia med namnet ovan under Mina recept.</p>
+          )}
+          <button disabled={saving || (imported && !reviewed)} onClick={() => save(false)} className="w-full pill-btn-primary py-3 disabled:opacity-50">
+            {saving ? "Sparar…" : isEditing ? "Spara ändringar" : templateRecipe ? "Spara som eget recept" : "Spara recept"}
           </button>
+          {isEditing && (
+            <button disabled={saving || (imported && !reviewed)} onClick={() => save(true)} className="w-full pill-btn-soft py-3 disabled:opacity-50">
+              Spara som kopia…
+            </button>
+          )}
         </div>
         )}
 
