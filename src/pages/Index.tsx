@@ -941,6 +941,12 @@ const Index = () => {
                 <li><span className="font-semibold text-foreground">Set</span> – en omgång repetitioner av en övning.</li>
                 <li><span className="font-semibold text-foreground">Reps</span> – antal repetitioner i ett set.</li>
                 <li><span className="font-semibold text-foreground">PR</span> – personligt rekord.</li>
+                <li><span className="font-semibold text-foreground">Kcal</span> – kilokalorier, energin i maten du äter.</li>
+                <li><span className="font-semibold text-foreground">Makros (P/F/K)</span> – protein, fett och kolhydrater, de tre energikällorna i mat.</li>
+                <li><span className="font-semibold text-foreground">Protein (P)</span> – bygger och reparerar muskler, 4 kcal per gram.</li>
+                <li><span className="font-semibold text-foreground">Fett (F)</span> – viktigt för hormoner och upptag av vitaminer, 9 kcal per gram.</li>
+                <li><span className="font-semibold text-foreground">Kolhydrater (K)</span> – kroppens snabba bränsle, särskilt vid träning, 4 kcal per gram.</li>
+                <li><span className="font-semibold text-foreground">TDEE</span> – ditt totala dagliga energibehov: vad kroppen förbränner en hel dag inklusive aktivitet. Knappen "Räkna ut" i Mål uppskattar ditt TDEE utifrån kön, ålder, längd, vikt och aktivitetsnivå.</li>
               </ul>
             </div>
 

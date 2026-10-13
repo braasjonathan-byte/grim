@@ -94,11 +94,14 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     const wMap = new Map(weights.map((w) => [w.log_date, w.weight_kg]));
     return Array.from({ length: 30 }, (_, i) => {
       const d = addDays(selected, i - 29); const k = toLocalDateKey(d);
-      return { label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), kcal: byDay.get(k) ? Math.round(byDay.get(k)!.kcal) : null, weight: wMap.get(k) ?? null };
+      return { key: k, label: d.toLocaleDateString("sv-SE", { day: "numeric", month: "numeric" }), kcal: byDay.get(k) ? Math.round(byDay.get(k)!.kcal) : null, weight: wMap.get(k) ?? null };
     });
   }, [weights, byDay, dateKey]);
   const weightTrend = useMemo(() => {
-    if (weights.length < 2) return null;
+    // Kräver minst 5 vägningar över minst 7 dagar – färre ger en missvisande prognos.
+    if (weights.length < 5) return null;
+    const spanDays = (parseKey(weights[weights.length - 1].log_date).getTime() - parseKey(weights[0].log_date).getTime()) / 864e5;
+    if (spanDays < 7) return null;
     const t0 = parseKey(weights[0].log_date).getTime();
     const xs = weights.map((w) => (parseKey(w.log_date).getTime() - t0) / 864e5); const ys = weights.map((w) => w.weight_kg);
     const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
@@ -129,6 +132,12 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
   }, [goalWeight, weights, weightTrend]);
   const todayWeight = weights.find((w) => w.log_date === dateKey)?.weight_kg;
   const ws = weightChart.map((d) => d.weight).filter((v): v is number => v != null);
+  // Faktiskt antal dagar mellan första och sista vägningen i perioden
+  const weightSpanDays = useMemo(() => {
+    const withW = weightChart.filter((d) => d.weight != null);
+    if (withW.length < 2) return 0;
+    return Math.max(1, Math.round((parseKey(withW[withW.length - 1].key).getTime() - parseKey(withW[0].key).getTime()) / 864e5));
+  }, [weightChart]);
 
   const saveWeight = async () => {
     const v = validateNumber(weightInput, "bodyWeightKg");
@@ -247,7 +256,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
           ) : (
             <p className="text-xs text-muted-foreground">
               Senast <span className="font-bold text-foreground">{String(ws[ws.length - 1]).replace(".", ",")} kg</span>
-              {ws.length > 1 && <> · {ws[ws.length - 1] - ws[0] > 0 ? "+" : ""}{(ws[ws.length - 1] - ws[0]).toFixed(1).replace(".", ",")} kg på 30 dagar</>}
+              {ws.length > 1 && <> · {ws[ws.length - 1] - ws[0] > 0 ? "+" : ""}{(ws[ws.length - 1] - ws[0]).toFixed(1).replace(".", ",")} kg på {weightSpanDays} {weightSpanDays === 1 ? "dag" : "dagar"}</>}
             </p>
           )}
           <div className="rounded-xl bg-muted/50 p-3 space-y-2">
@@ -263,8 +272,8 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
                     {Math.abs(goalPlan.diff).toFixed(1).replace(".", ",")} kg kvar till {String(goalWeight).replace(".", ",")} kg.{" "}
                     {goalPlan.eta
                       ? <>Med nuvarande takt når du målet ungefär <span className="font-bold">{goalPlan.eta.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })}</span>.</>
-                      : weights.length < 2
-                        ? "Väg dig några gånger till så räknas ett datum ut."
+                      : weightTrend == null
+                        ? "Väg dig minst fem gånger över en vecka så räknas ett datum ut."
                         : goalPlan.onTrack ? "Med nuvarande takt dröjer det mer än två år." : "Vikten rör sig just nu åt fel håll eller står still."}
                   </>}
                 </p>
@@ -291,7 +300,7 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={6} stroke="hsl(var(--muted-foreground))" />
                 <YAxis yAxisId="k" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />
-                <YAxis yAxisId="w" orientation="right" domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" width={30} />
+                {ws.length > 0 && <YAxis yAxisId="w" orientation="right" domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" width={30} />}
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
                   formatter={(v: number, n: string) => n === "weight" ? [`${String(v).replace(".", ",")} kg`, "Vikt"] : [`${fmt(v)} kcal`, "Intag"]} />
                 <Bar yAxisId="k" dataKey="kcal" fill="hsl(var(--primary) / 0.35)" radius={[3, 3, 0, 0]} />

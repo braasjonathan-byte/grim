@@ -50,12 +50,16 @@ export function formatMicro(v: number) {
   return v >= 100 ? String(Math.round(v)) : v >= 10 ? v.toFixed(0) : v.toFixed(1);
 }
 
+/** Sportnutrition (sportdryck, gel, sportbar) är träningsbränsle och räknas inte in i matkvaliteten. */
+const SPORT_NUTRITION = /sportdryck|sportgel|energigel|sportbar|energibar|återhämtningsdryck|recovery drink|elektrolyt/i;
+
 /** Daily food-quality score 0–100. NOVA (1–4) when known, else fiber/sugar heuristic per 1000 kcal. */
 export function foodQualityScore(logs: any[]): number | null {
   let wSum = 0, sSum = 0;
   for (const l of logs) {
     const kcal = Number(l.kcal) || 0;
     if (kcal <= 0) continue;
+    if (l.item_name && SPORT_NUTRITION.test(String(l.item_name))) continue;
     let s: number;
     const nova = Number(l.nova_group);
     if (nova >= 1 && nova <= 4) s = ({ 1: 100, 2: 80, 3: 55, 4: 15 } as Record<number, number>)[nova];

@@ -633,7 +633,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
                     onEditLog={(l) => setEditingLog(l)}
                     onQuickLog={() => { hapticLight(); setQuickMeal(meal); }}
                     onSaveTemplate={ml.length > 0 ? () => saveMealAsTemplate(meal) : undefined}
-                    budget={MEAL_SHARE[meal.toLowerCase()] ? MEAL_SHARE[meal.toLowerCase()] * targets.kcal : undefined}
+                    budget={(MEAL_SHARE[meal.toLowerCase()] ?? 0.15) * targets.kcal}
                     feeling={feelings[meal]}
                     onFeeling={(k) => setFeeling(meal, k)}
                     onCopyYesterday={yesterdayLogs.some((r) => r.meal_type === meal) ? () => copyFromYesterday(meal) : undefined}

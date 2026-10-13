@@ -45,6 +45,8 @@ function loadAllFoods(): Promise<any[]> {
         all.push(...(data || []));
         if (!data || data.length < 1000) break;
       }
+      // Svensk sortering: databasens sortering placerar Å/Ä/Ö fel
+      all.sort((a, b) => a.name.localeCompare(b.name, "sv"));
       return all;
     })();
   }
@@ -187,6 +189,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     if (term.length < 2) { setOffResults([]); return; }
     let cancelled = false;
     setOffLoading(true);
+    setOffResults([]); // rensa gamla träffar direkt så de inte ligger kvar under ny sökning
     const t = setTimeout(async () => {
       try {
         const fields = "code,product_name,product_name_sv,brands,nutriments,nova_group";
@@ -491,7 +494,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                 </>
               )}
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && combinedResults.length === 0 && !showPersonal && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
+              {!loading && !offLoading && combinedResults.length === 0 && !showPersonal && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
+              {!loading && offLoading && combinedResults.length === 0 && !showPersonal && (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Söker…
+                </div>
+              )}
               <ul className="divide-y divide-border">
                 {combinedResults.map(renderRow)}
               </ul>

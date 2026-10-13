@@ -36,7 +36,12 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
+  const [savedSnap, setSavedSnap] = useState<string | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const { toast } = useToast();
+
+  const snapshot = () => JSON.stringify([age, weight, height, gender, activity, goal, kcal, protein, fat, carbs, fiber, water, targetWeight, weeklyLoss, micro]);
+  const dirty = loaded && savedSnap !== null && snapshot() !== savedSnap;
 
   const errs = {
     age: validateNumber(age, "ageYears").error,
@@ -57,7 +62,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
   const hasErrors = Object.values(errs).some(Boolean) || Object.values(microErrs).some(Boolean);
 
   useEffect(() => {
-    if (!open) { setLoaded(false); return; }
+    if (!open) { setLoaded(false); setSavedSnap(null); return; }
     (async () => {
       const { data: lastW } = await supabase.from("body_weight_logs").select("weight_kg").eq("user_id", userId).order("log_date", { ascending: false }).limit(1).maybeSingle();
       const { data: prof } = await supabase.from("profiles").select("age,weight_kg,height_cm,gender").eq("user_id", userId).maybeSingle();
@@ -84,6 +89,15 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
       setLoaded(true);
     })();
   }, [open, userId]);
+
+  // Kom ihåg läget som det såg ut när datan laddats (efter automatisk omräkning),
+  // så vi kan varna för osparade ändringar
+  useEffect(() => {
+    if (!loaded || savedSnap !== null) return;
+    const t = setTimeout(() => setSavedSnap(snapshot()), 50);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, savedSnap]);
 
   function computeMacros(silent = false) {
     const a = validateNumber(age, "ageYears"), w = validateNumber(weight, "bodyWeightKg"), h = validateNumber(height, "heightCm");
@@ -151,12 +165,13 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Mål sparade" });
+    setSavedSnap(snapshot());
     onSaved(); onOpenChange(false);
   }
 
   const inp = "rounded-xl bg-muted/50 border-transparent";
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v && dirty) { setConfirmClose(true); return; } onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader><DialogTitle className="font-serif">Mina kostmål</DialogTitle></DialogHeader>
         <div className="space-y-3">
@@ -221,6 +236,14 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         </div>
       </DialogContent>
       <ConfirmValueDialog message={confirmMsg} onConfirm={() => { setConfirmMsg(null); void save(); }} onCancel={() => setConfirmMsg(null)} />
+      <ConfirmValueDialog
+        message={confirmClose ? "Du har ändrat värden utan att spara. Vill du stänga ändå?" : null}
+        title="Osparade ändringar"
+        confirmLabel="Stäng utan att spara"
+        cancelLabel="Fortsätt redigera"
+        onConfirm={() => { setConfirmClose(false); onOpenChange(false); }}
+        onCancel={() => setConfirmClose(false)}
+      />
     </Dialog>
   );
 }
