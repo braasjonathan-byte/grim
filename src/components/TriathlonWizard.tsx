@@ -438,6 +438,21 @@ const TriathlonWizard = ({ userId, onCreated, onCancel }: Props) => {
         </div>
       )}
 
+      <AlertDialog open={confirmArchiveOpen} onOpenChange={(o) => { if (!o) setConfirmArchiveOpen(false); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Arkivera nuvarande pass?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Du har redan en plan. Om du skapar en triathlonplan arkiveras dina befintliga planpass — historiken finns kvar under Arkiv.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmArchiveOpen(false)}>Avbryt</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleCreate(true)}>Skapa plan</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex gap-2 pt-2">
         {step > 1 && (
           <Button variant="secondary" onClick={() => setStep(s => s - 1)} className="flex-1">
