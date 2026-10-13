@@ -1,4 +1,4 @@
-import { validateNumber, parseDecimal, formatDecimal, isPlausibleMealLog, IMPLAUSIBLE_LABEL, UNUSUAL_FOOD_GRAMS, UNUSUAL_QUICK_KCAL, type NumberRule } from "@/lib/inputValidation";
+import { validateNumber, parseDecimal, formatDecimal, isPlausibleMealLog, IMPLAUSIBLE_LABEL, UNUSUAL_FOOD_GRAMS, UNUSUAL_QUICK_KCAL, macroKcalMismatch, type NumberRule } from "@/lib/inputValidation";
 import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
 const QUICK_MACRO: NumberRule = { min: 0, max: 1000, unit: "g", optional: true };
 import { hapticLight } from "@/lib/haptics";
