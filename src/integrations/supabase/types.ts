@@ -1267,6 +1267,7 @@ export type Database = {
           vitamin_c_mg: number | null
           vitamin_d_ug: number | null
           water_goal_ml: number
+          weekly_loss_kg: number | null
         }
         Insert: {
           activity_level?: string
@@ -1291,6 +1292,7 @@ export type Database = {
           vitamin_c_mg?: number | null
           vitamin_d_ug?: number | null
           water_goal_ml?: number
+          weekly_loss_kg?: number | null
         }
         Update: {
           activity_level?: string
@@ -1315,6 +1317,7 @@ export type Database = {
           vitamin_c_mg?: number | null
           vitamin_d_ug?: number | null
           water_goal_ml?: number
+          weekly_loss_kg?: number | null
         }
         Relationships: []
       }
