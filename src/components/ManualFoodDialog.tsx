@@ -6,7 +6,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import AIFoodScanDialog from "./AIFoodScanDialog";
 import type { PickedItem } from "./FoodPickerDialog";
-import { validateNumber, parseDecimal, macroKcal, kcalDeviation, UNUSUAL_FOOD_GRAMS } from "@/lib/inputValidation";
+import { validateNumber, parseDecimal, macroKcal, kcalDeviation, UNUSUAL_FOOD_GRAMS, macroKcalMismatch } from "@/lib/inputValidation";
 import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
 
 interface Props {
@@ -41,7 +41,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
   const c = validateNumber(carbs, "customMacro");
   const macroSum = (p.value ?? 0) + (f.value ?? 0) + (c.value ?? 0);
   const errs = {
-    name: name.trim() ? null : "Namn måste fyllas i.",
+    name: !name.trim() ? "Namn måste fyllas i." : name.trim().length > 120 ? `Namnet får vara högst 120 tecken (nu ${name.trim().length}).` : null,
     kcal: validateNumber(kcal, "customKcal").error,
     protein: p.error,
     fat: f.error,
@@ -49,12 +49,15 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
     fiber: validateNumber(fiber, "customMacro").error,
     amount: validateNumber(amount, "foodGrams").error,
     sum: !p.error && !f.error && !c.error && macroSum > 100 ? "Protein, fett och kolhydrater kan tillsammans vara högst 100 g per 100 g." : null,
+    macros: !p.error && !f.error && !c.error ? macroKcalMismatch(parseDecimal(kcal), p.value ?? 0, f.value ?? 0, c.value ?? 0) : null,
   };
   const hasErrors = Object.values(errs).some(Boolean);
   const [showErrors, setShowErrors] = useState(false);
+  const savingRef = useRef(false);
   const show = (e: string | null, filled: string) => (showErrors || filled.trim() ? e : null);
 
   function requestSave() {
+    if (saving) return;
     if (hasErrors) { setShowErrors(true); return; }
     const k = parseDecimal(kcal);
     const msgs: string[] = [];
@@ -67,7 +70,8 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
   }
 
   async function save() {
-    if (hasErrors) return;
+    if (hasErrors || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const payload = {
@@ -100,6 +104,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
     } catch (e: any) {
       toast.error(e?.message || "Kunde inte spara");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -166,7 +171,7 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
 
           <div className="flex gap-2 pt-2">
             <button onClick={() => onOpenChange(false)} className="flex-1 pill-btn-ghost py-2.5 text-sm">Avbryt</button>
-            <button onClick={requestSave} disabled={saving || (showErrors && hasErrors)} className="flex-1 pill-btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50">
+            <button onClick={requestSave} disabled={saving || hasErrors} className="flex-1 pill-btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-50">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />} Spara & lägg till
             </button>
           </div>
