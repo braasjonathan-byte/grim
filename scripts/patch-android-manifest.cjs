@@ -39,6 +39,7 @@ const PERMS = [
   "android.permission.BLUETOOTH",
   "android.permission.BLUETOOTH_ADMIN",
   "android.permission.CAMERA",
+  "android.permission.RECORD_AUDIO",
 ];
 
 // Features (non-required so the app can still install on devices without them)
