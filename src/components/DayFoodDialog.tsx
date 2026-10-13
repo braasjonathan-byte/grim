@@ -6,6 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Mic, Square, Loader2, Check, Sparkles, BadgeCheck, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { recordWav } from "@/lib/aiFood";
+import { isPlausibleMealLog, UNUSUAL_FOOD_GRAMS } from "@/lib/inputValidation";
+
+const VERIFIED = new Set(["livsmedelsverket", "egen", "recept", "openfoodfacts"]);
+const isOdd = (it: DayFoodItem) => !isPlausibleMealLog(it) || (it.unit === "g" && it.amount > UNUSUAL_FOOD_GRAMS) || it.kcal > 1500;
 
 /** One food as resolved by the nutrition-day function. */
 export interface DayFoodItem {
@@ -13,7 +17,8 @@ export interface DayFoodItem {
   kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number;
   nova_group: number | null; micros: Record<string, number | null>;
   food_id: string | null; custom_food_id: string | null; recipe_id: string | null;
-  source: "livsmedelsverket" | "egen" | "recept" | "ai"; matched_name: string | null;
+  source: "livsmedelsverket" | "egen" | "recept" | "openfoodfacts" | "restaurang" | "ai"; matched_name: string | null;
+  pieces: number; piece_label: string; chain: string;
   certain: boolean; question: string; options: { label: string; grams: number }[];
 }
 export type DayFoodRow = { meal: string; offset: number; item: DayFoodItem; aiAmount: number };
@@ -29,7 +34,7 @@ interface Props {
 type Row = DayFoodRow & { on: boolean; amountText: string };
 
 const SOURCE_LABEL: Record<DayFoodItem["source"], string> = {
-  livsmedelsverket: "Livsmedelsverket", egen: "Eget livsmedel", recept: "Eget recept", ai: "Uppskattat",
+  livsmedelsverket: "Livsmedelsverket", egen: "Eget livsmedel", recept: "Eget recept", openfoodfacts: "Produktdatabas", restaurang: "Kedjans värden", ai: "Uppskattat",
 };
 
 function rescale(it: DayFoodItem, amount: number): DayFoodItem {
@@ -38,7 +43,7 @@ function rescale(it: DayFoodItem, amount: number): DayFoodItem {
   const f = amount / old;
   const micros: Record<string, number | null> = {};
   for (const [k, v] of Object.entries(it.micros || {})) micros[k] = v == null ? null : v * f;
-  return { ...it, amount, kcal: it.kcal * f, protein_g: it.protein_g * f, fat_g: it.fat_g * f, carbs_g: it.carbs_g * f, fiber_g: it.fiber_g * f, micros };
+  return { ...it, amount, pieces: it.pieces ? Math.round(it.pieces * f * 10) / 10 : 0, kcal: it.kcal * f, protein_g: it.protein_g * f, fat_g: it.fat_g * f, carbs_g: it.carbs_g * f, fiber_g: it.fiber_g * f, micros };
 }
 
 const dayLabel = (o: number) => (o === 0 ? "" : o === -1 ? " (igår)" : o === -2 ? " (i förrgår)" : ` (${-o} dagar sedan)`);
@@ -123,6 +128,8 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
   const openQuestions = chosen.filter((r) => !r.item.certain && r.item.options.length).length;
 
   async function confirm() {
+    const odd = chosen.filter((r) => isOdd(r.item));
+    if (odd.length && !window.confirm(`${odd.map((r) => r.item.name).join(", ")} har ovanligt höga värden. Logga ändå?`)) return;
     setSaving(true);
     try { await onConfirm(chosen.map(({ meal, offset, item, aiAmount }) => ({ meal, offset, item, aiAmount }))); }
     finally { setSaving(false); }
@@ -164,7 +171,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
 
         {rows.length > 0 && (
           <>
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><BadgeCheck className="w-3 h-3 text-primary" /> = värden från Livsmedelsverket eller dina egna. Övriga är uppskattade.</p>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1"><BadgeCheck className="w-3 h-3 text-primary" /> = verifierade värden. Gula rader är uppskattade eller osäkra – kolla dem.</p>
             {groups.map((g) => {
               const [off, meal] = [Number(g.split("|")[0]), g.slice(g.indexOf("|") + 1)];
               return (
@@ -172,7 +179,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
                   <p className="text-xs font-semibold capitalize">{meal}{dayLabel(off)}</p>
                   <ul className="rounded-2xl bg-muted/30 divide-y divide-border/40">
                     {rows.map((r, i) => (r.meal !== meal || r.offset !== off) ? null : (
-                      <li key={i} className={`p-2 space-y-1 ${r.on ? "" : "opacity-50"}`}>
+                      <li key={i} className={`p-2 space-y-1 ${r.on ? "" : "opacity-50"} ${isOdd(r.item) ? "bg-destructive/10" : !VERIFIED.has(r.item.source) || !r.item.certain ? "bg-warning/10" : ""}`}>
                         <div className="flex items-center gap-2">
                           <button onClick={() => update(i, { on: !r.on })} aria-label={r.on ? "Avmarkera" : "Markera"}
                             className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${r.on ? "bg-primary border-primary text-primary-foreground" : "border-border"}`}>
@@ -181,7 +188,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1">
                               <Input value={r.item.name} onChange={(e) => update(i, { item: { ...r.item, name: e.target.value } })} className="h-7 text-sm rounded-lg bg-transparent border-transparent px-1" />
-                              {r.item.source !== "ai" && <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" aria-label={SOURCE_LABEL[r.item.source]} />}
+                              {VERIFIED.has(r.item.source) && <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" aria-label={SOURCE_LABEL[r.item.source]} />}
                             </div>
                             <div className="flex items-center gap-1 px-1 flex-wrap">
                               <select value={r.meal} onChange={(e) => update(i, { meal: e.target.value })} aria-label="Måltid"
@@ -190,7 +197,14 @@ export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onCo
                               </select>
                               <span className="text-[10px] text-muted-foreground tabular-nums">· {Math.round(r.item.kcal)} kcal · P{r.item.protein_g.toFixed(1)} F{r.item.fat_g.toFixed(1)} K{r.item.carbs_g.toFixed(1)}</span>
                             </div>
-                            {r.item.matched_name && r.item.matched_name !== r.item.name && (
+                            {(r.item.pieces > 0 || r.item.chain || !VERIFIED.has(r.item.source)) && (
+                              <p className="text-[10px] text-muted-foreground px-1">
+                                {r.item.pieces > 0 && <span className="font-semibold text-foreground">{r.item.pieces} {r.item.piece_label || "st"} · </span>}
+                                {SOURCE_LABEL[r.item.source]}{r.item.chain ? ` (${r.item.chain})` : ""}
+                              </p>
+                            )}
+                            {isOdd(r.item) && <p className="text-[10px] text-destructive px-1">Ovanligt mycket – kontrollera mängden.</p>}
+                            {r.item.matched_name && r.item.matched_name !== r.item.name && VERIFIED.has(r.item.source) && (
                               <p className="text-[10px] text-muted-foreground px-1 truncate">{SOURCE_LABEL[r.item.source]}: {r.item.matched_name}</p>
                             )}
                           </div>
