@@ -12,12 +12,13 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   slots: string[];
+  dateKey: string;
   onConfirm: (rows: { meal: string; item: PickedItem }[]) => Promise<void> | void;
 }
 
 type Row = { meal: string; item: PickedItem; on: boolean; amountText: string };
 
-export default function DayFoodDialog({ open, onOpenChange, slots, onConfirm }: Props) {
+export default function DayFoodDialog({ open, onOpenChange, slots, dateKey, onConfirm }: Props) {
   const [state, setState] = useState<"idle" | "rec" | "busy">("idle");
   const [text, setText] = useState("");
   const [transcript, setTranscript] = useState("");
@@ -33,6 +34,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, onConfirm }: 
     setState("busy");
     try {
       fd.append("slots", JSON.stringify(slots));
+      fd.append("date", dateKey);
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/nutrition-day`, {
         method: "POST",
@@ -92,7 +94,7 @@ export default function DayFoodDialog({ open, onOpenChange, slots, onConfirm }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85dvh] overflow-y-auto p-4">
         <DialogHeader><DialogTitle className="font-serif flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Beskriv dagens kost</DialogTitle></DialogHeader>
-        <p className="text-xs text-muted-foreground">Säg eller skriv t.ex. "Till frukost äter jag gröt med blåbär. Till lunch kycklingsallad. Till middag lax med potatis."</p>
+        <p className="text-xs text-muted-foreground">Säg eller skriv t.ex. "Till frukost äter jag gröt med blåbär. Till lunch kycklingsallad. Till middag lax med potatis." Du kan också säga "samma lunch som igår" eller "en Big Mac-meny på McDonald's".</p>
 
         <div className="flex flex-col items-center gap-2 py-1">
           {state === "rec" ? (
