@@ -98,7 +98,10 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
     });
   }, [weights, byDay, dateKey]);
   const weightTrend = useMemo(() => {
-    if (weights.length < 2) return null;
+    // Kräver minst 5 vägningar över minst 7 dagar – färre ger en missvisande prognos.
+    if (weights.length < 5) return null;
+    const spanDays = (parseKey(weights[weights.length - 1].log_date).getTime() - parseKey(weights[0].log_date).getTime()) / 864e5;
+    if (spanDays < 7) return null;
     const t0 = parseKey(weights[0].log_date).getTime();
     const xs = weights.map((w) => (parseKey(w.log_date).getTime() - t0) / 864e5); const ys = weights.map((w) => w.weight_kg);
     const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
@@ -247,7 +250,12 @@ export default function NutritionInsights({ userId, dateKey, targets, refreshKey
           ) : (
             <p className="text-xs text-muted-foreground">
               Senast <span className="font-bold text-foreground">{String(ws[ws.length - 1]).replace(".", ",")} kg</span>
-              {ws.length > 1 && <> · {ws[ws.length - 1] - ws[0] > 0 ? "+" : ""}{(ws[ws.length - 1] - ws[0]).toFixed(1).replace(".", ",")} kg på 30 dagar</>}
+              {ws.length > 1 && (() => {
+                const withW = weightChart.filter((d) => d.weight != null);
+                const span = Math.max(1, Math.round((parseKey(withW[withW.length - 1].label ? "" : "") as unknown as number) || 0));
+                return null;
+              })()}
+              {ws.length > 1 && <> · {ws[ws.length - 1] - ws[0] > 0 ? "+" : ""}{(ws[ws.length - 1] - ws[0]).toFixed(1).replace(".", ",")} kg på {weightSpanDays} {weightSpanDays === 1 ? "dag" : "dagar"}</>}
             </p>
           )}
           <div className="rounded-xl bg-muted/50 p-3 space-y-2">
