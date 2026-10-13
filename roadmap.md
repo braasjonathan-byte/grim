@@ -37,3 +37,13 @@
 - [x] Sökning "Löpning" ger träffar
 - [x] Hem "Veckan x/y" och Statistik räknar samma
 - [ ] Topplista med fler mått än antal pass
+
+## Kost-testrapport 2026-10-13 (50 fynd)
+- [x] K1 träning höjer dagsmål/kolhydrater, löppass räknas via distans
+- [x] K2/H4 Mål och kostvy väntar på data innan värden visas/sparas
+- [x] K3 Mål skriver bara vikt när den faktiskt ändrats (utgår från senaste vägning)
+- [x] H1 dubbelklick-skydd: Lägg till, Igår, Mallar
+- [x] H3 sökning: mjolk, kycklingfilé, engelska ord, energigel/whey
+- [x] H5 kön ej angivet → medelvärde; H6 (delvis) förklaringar i Mål
+- [ ] H2 omtest långa namn, H6 ordlista/intro, H7 restaurangsökning, H8 datumförskjutning löppass
+- [ ] M1–M19, L1–L20 (se rapporten)

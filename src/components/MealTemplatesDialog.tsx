@@ -1,3 +1,4 @@
+import { firstClick } from "@/lib/clickGuard";
 import { useEffect, useState } from "react";
 import { X, Loader2, BookmarkPlus, Trash2, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +73,7 @@ const MealTemplatesDialog = ({ open, onClose, userId, currentMealSlots, currentD
   }
 
   async function saveTemplate() {
+    if (!firstClick(`tpl:${saveFromSlot}:${saveName}`, 3000)) return;
     const items = (currentDayItemsBySlot[saveFromSlot] || []).map((i) => ({
       item_name: i.item_name,
       amount: Number(i.amount) || 0,
