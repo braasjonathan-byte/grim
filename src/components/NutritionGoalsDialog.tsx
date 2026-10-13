@@ -165,12 +165,13 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     setSaving(false);
     if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Mål sparade" });
+    setSavedSnap(snapshot());
     onSaved(); onOpenChange(false);
   }
 
   const inp = "rounded-xl bg-muted/50 border-transparent";
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v && dirty) { setConfirmClose(true); return; } onOpenChange(v); }}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4">
         <DialogHeader><DialogTitle className="font-serif">Mina kostmål</DialogTitle></DialogHeader>
         <div className="space-y-3">
@@ -235,6 +236,14 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
         </div>
       </DialogContent>
       <ConfirmValueDialog message={confirmMsg} onConfirm={() => { setConfirmMsg(null); void save(); }} onCancel={() => setConfirmMsg(null)} />
+      <ConfirmValueDialog
+        message={confirmClose ? "Du har ändrat värden utan att spara. Vill du stänga ändå?" : null}
+        title="Osparade ändringar"
+        confirmLabel="Stäng utan att spara"
+        cancelLabel="Fortsätt redigera"
+        onConfirm={() => { setConfirmClose(false); onOpenChange(false); }}
+        onCancel={() => setConfirmClose(false)}
+      />
     </Dialog>
   );
 }
