@@ -5,7 +5,7 @@ import { hapticLight } from "@/lib/haptics";
 import { loadWorkoutBurned } from "@/lib/workoutBurned";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Target, Trash2, Pencil, GripVertical, ChefHat, Bookmark, MoreHorizontal, CopyPlus, Zap, BookmarkPlus, ArrowRightLeft, Copy, Sparkles } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import NutritionHero from "./NutritionHero";
@@ -16,6 +16,7 @@ import MealNameDialog from "./MealNameDialog";
 import CuratedRecipesDialog from "./CuratedRecipesDialog";
 import MealTemplatesDialog from "./MealTemplatesDialog";
 import WaterTracker from "./WaterTracker";
+import DayFoodDialog from "./DayFoodDialog";
 import FastingWidget from "./FastingWidget";
 import { foodQualityScore, MICROS, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
 import { toLocalDateKey } from "@/lib/dateUtils";
@@ -217,6 +218,7 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
   const [editingLog, setEditingLog] = useState<MealLog | null>(null);
   const [editAmount, setEditAmount] = useState<string>("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [dayAiOpen, setDayAiOpen] = useState(false);
   const [waterGoal, setWaterGoal] = useState(2000);
   const [burned, setBurned] = useState(0);
   const [feelings, setFeelings] = useState<Record<string, string>>({});
@@ -628,11 +630,40 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
           </SortableContext>
         </DndContext>
 
+        {isHonorary && (
+          <button onClick={() => setDayAiOpen(true)} className="w-full pill-btn bg-primary text-primary-foreground py-2.5 text-xs">
+            <Sparkles className="w-3 h-3" /> Beskriv dagens kost med AI
+          </button>
+        )}
         <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full pill-btn bg-primary/10 text-primary py-2.5 text-xs hover:bg-primary/20">
           <Plus className="w-3 h-3" /> Lägg till måltid
         </button>
 
       </div>
+
+      {isHonorary && (
+        <DayFoodDialog
+          open={dayAiOpen}
+          onOpenChange={setDayAiOpen}
+          slots={allSlots}
+          onConfirm={async (rows) => {
+            const insert = rows.map(({ meal, item }) => ({
+              user_id: userId, log_date: dateKey, meal_type: meal, item_name: item.name.trim() || "Livsmedel",
+              amount: item.amount, unit: item.unit || "g",
+              kcal: item.kcal, protein_g: item.protein_g, fat_g: item.fat_g, carbs_g: item.carbs_g, fiber_g: item.fiber_g || 0,
+            }));
+            const { data, error } = await supabase.from("meal_logs").insert(insert).select("id");
+            if (error) { toast({ title: "Kunde inte spara", description: error.message, variant: "destructive" }); return; }
+            setDayAiOpen(false);
+            load();
+            const ids = (data || []).map((d) => d.id);
+            showUndoToast(`Loggade ${ids.length} livsmedel`, async () => {
+              if (ids.length) await supabase.from("meal_logs").delete().in("id", ids);
+              load();
+            });
+          }}
+        />
+      )}
 
       <WaterTracker userId={userId} dateKey={dateKey} goalMl={waterGoal} />
 
