@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import PeriodRecapView from "@/components/PeriodRecapView";
+import BodyWeightChart from "@/components/BodyWeightChart";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
 import PersonalRecords from "@/components/PersonalRecords";
 import EmptyState from "@/components/EmptyState";
@@ -855,6 +856,9 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
       {/* Training calendar */}
       <TrainingCalendar userId={userId} />
+
+      {/* Body weight chart */}
+      <BodyWeightChart userId={userId} />
 
       {/* Weight progression chart */}
       <WeightProgressionChart userId={userId} />
