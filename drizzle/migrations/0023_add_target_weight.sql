@@ -1,0 +1,2 @@
+ALTER TABLE public.nutrition_goals ADD COLUMN target_weight_kg numeric;
+ALTER TABLE public.nutrition_goals ADD CONSTRAINT nutrition_goals_target_weight_range CHECK (target_weight_kg IS NULL OR (target_weight_kg >= 30 AND target_weight_kg <= 300));
