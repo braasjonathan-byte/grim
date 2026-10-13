@@ -561,19 +561,14 @@ export async function hasHealthPermissions(): Promise<boolean> {
 export async function openHealthSettings(): Promise<void> {
   const plugin = await loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är inte tillgängligt i den här appen.");
-  const availability = await healthAvailability();
-  if (availability === "not-installed") throw new HealthError("not-installed", "Health Connect är inte installerat.");
-  if (availability === "update-required") throw new HealthError("update-required", "Health Connect behöver uppdateras.");
+  healthLog("opening app health permissions");
   try {
-    if (Capacitor.getPlatform() === "android") {
-      healthLog("opening app health permissions");
-      await withTimeout(
-        plugin.openHealthConnectSettings(),
-        STEP_TIMEOUT_MS,
-        "Android svarade inte när Grims Health Connect-behörigheter skulle öppnas.",
-      );
-      healthLog("app health permissions opened");
-    }
+    await withTimeout(
+      plugin.openHealthConnectSettings(),
+      8000,
+      "Android svarade inte när Grims Health Connect-behörigheter skulle öppnas.",
+    );
+    healthLog("app health permissions opened");
   } catch (err) {
     healthLog("app health permissions failed", err);
     throw new HealthError("launcher-setup", "Kunde inte öppna Grims behörighetssida i Health Connect.");
@@ -988,13 +983,12 @@ export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_
   const plugin = await loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
   const permissions = [...HEALTH_TEST_SETS[set]];
-  const pending = plugin.requestHealthPermissions({ permissions });
-  healthLog("native call dispatched", { permissions });
-  try {
-    const res = await withDialogTimeout(pending, "Testet fick inget svar inom 15 s.", 15000);
-    healthLog("native test result", res);
-    return permissionMap(res);
-  } catch (err) {
-    throw classifyNativeHealthError(err);
-  }
+  healthLog("native check dispatched", { permissions });
+  const res = await withTimeout(
+    plugin.checkHealthPermissions({ permissions }),
+    8000,
+    "Behörighetskontrollen svarade inte inom 8 s.",
+  );
+  healthLog("native test result", res);
+  return permissionMap(res);
 }

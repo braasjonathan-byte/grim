@@ -27,7 +27,66 @@ if (!fs.existsSync(PLUGIN_KT)) {
 }
 
 let kt = fs.readFileSync(PLUGIN_KT, "utf8");
+
+if (!kt.includes("GRIM_CHECK_DEADLINE") && kt.includes("fun checkHealthPermissions(call: PluginCall)")) {
+  const before = kt;
+  kt = kt.replace(
+    `        CoroutineScope(Dispatchers.Main).launch {
+            try {
+
+                val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
+                val result = grantedPermissionResult(permissions, grantedPermissions)
+
+                call.resolve(result)
+            } catch (e: Exception) {
+                call.reject("Checking permissions failed: \${e.message}")
+            }
+        }`,
+    `        // GRIM_CHECK_DEADLINE
+        val checkDone = java.util.concurrent.atomic.AtomicBoolean(false)
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            if (checkDone.compareAndSet(false, true)) {
+                call.reject("HC_NATIVE_04: permission check did not return in 8s")
+            }
+        }, 8000)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
+                val result = grantedPermissionResult(permissions, grantedPermissions)
+                if (checkDone.compareAndSet(false, true)) call.resolve(result)
+            } catch (e: Exception) {
+                if (checkDone.compareAndSet(false, true)) call.reject("Checking permissions failed: \${e.message}")
+            }
+        }`
+  );
+  if (kt === before) {
+    console.error("[patch-open-health-settings] kunde inte sätta tidsgräns på behörighetskontrollen.");
+    process.exit(1);
+  }
+}
+
+if (!kt.includes("GRIM_READ_DEADLINE")) {
+  const before = kt;
+  kt = kt.replace(
+    "val r = queryAggregatedMetric(metricAndMapper, TimeRangeFilter.between(startDateTime, endDateTime), period, dataOrigins)",
+    "val r = kotlinx.coroutines.withTimeout(15000) {\n                        queryAggregatedMetric(metricAndMapper, TimeRangeFilter.between(startDateTime, endDateTime), period, dataOrigins)\n                    }"
+  );
+  kt = kt.replace(
+    "val response = healthConnectClient.readRecords(request)",
+    "val response = kotlinx.coroutines.withTimeout(15000) {\n                    healthConnectClient.readRecords(request)\n                }"
+  );
+  if (kt === before || !kt.includes("kotlinx.coroutines.withTimeout(15000)")) {
+    console.error("[patch-open-health-settings] kunde inte sätta tidsgräns på läsning.");
+    process.exit(1);
+  }
+  kt = kt.replace(
+    "val response = kotlinx.coroutines.withTimeout(15000) {\n                    healthConnectClient.readRecords(request)\n                }",
+    "// GRIM_READ_DEADLINE\n                val response = kotlinx.coroutines.withTimeout(15000) {\n                    healthConnectClient.readRecords(request)\n                }"
+  );
+}
+
 if (kt.includes("GRIM_SETTINGS_CANDIDATES")) {
+  fs.writeFileSync(PLUGIN_KT, kt, "utf8");
   console.log("[patch-open-health-settings] redan patchad.");
   process.exit(0);
 }
@@ -38,28 +97,33 @@ const settingsMethod = `    // Open Google Health Connect app settings
     @PluginMethod
     fun openHealthConnectSettings(call: PluginCall) {
         val pkg = context.packageName
-        val candidates = listOf(
-            Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS").apply {
-                putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
-            },
-            Intent("androidx.health.ACTION_MANAGE_HEALTH_PERMISSIONS").apply {
-                putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
-                setPackage("com.google.android.apps.healthdata")
-            },
-            Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS),
-            context.packageManager.getLaunchIntentForPackage("com.google.android.apps.healthdata")
-        )
-        for (intent in candidates.filterNotNull()) {
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            if (intent.resolveActivity(context.packageManager) == null) continue
-            try {
-                activity.startActivity(intent)
-                call.resolve()
-                return
-            } catch (_: Exception) {
+        activity.runOnUiThread {
+            val candidates = listOf(
+                Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS").apply {
+                    putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
+                },
+                Intent("androidx.health.ACTION_MANAGE_HEALTH_PERMISSIONS").apply {
+                    putExtra(Intent.EXTRA_PACKAGE_NAME, pkg)
+                },
+                Intent("android.health.connect.action.HEALTH_HOME_SETTINGS"),
+                Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS),
+                context.packageManager.getLaunchIntentForPackage("com.google.android.apps.healthdata"),
+                Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = android.net.Uri.fromParts("package", pkg, null)
+                }
+            )
+            for (intent in candidates.filterNotNull()) {
+                try {
+                    healthTrace("settings-try", intent.action ?: "launch")
+                    activity.startActivity(intent)
+                    healthTrace("settings-open", intent.action ?: "launch")
+                    call.resolve()
+                    return@runOnUiThread
+                } catch (_: Exception) {
+                }
             }
+            call.reject("HC_NATIVE_SETTINGS: could not open Health Connect")
         }
-        call.reject("HC_NATIVE_SETTINGS: could not open Health Connect")
     }
 
 `;

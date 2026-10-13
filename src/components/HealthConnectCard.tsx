@@ -134,7 +134,10 @@ const HealthConnectCard = () => {
         healthLog("manual sync entry point started");
         const granted = await checkHealthAccess();
         setAccess(granted);
-        if (!granted.activity) throw new HealthError("denied", "Grim saknar behörighet. Öppna Behörigheter och tillåt Steg och Aktiva kalorier.");
+        if (!granted.activity) {
+          await openHealthSettings().catch((settingsError) => healthLog("settings from sync failed", settingsError));
+          throw new HealthError("denied", "Grim saknar behörighet. Tillåt Steg och Aktiva kalorier i Health Connect och tryck på Synka igen.");
+        }
         const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
         healthLog("permissions ok, reading days", { granted, windowDays });
         const days = await readHealthDays(windowDays);
@@ -177,10 +180,12 @@ const HealthConnectCard = () => {
       const granted = await checkHealthAccess();
       setAccess(granted);
       if (!granted.activity) {
-        throw new HealthError("denied", "Grim saknar behörighet. Öppna Behörigheter och tillåt Steg och Aktiva kalorier.");
+        await openHealthSettings().catch((settingsError) => healthLog("settings from workouts failed", settingsError));
+        throw new HealthError("denied", "Grim saknar behörighet. Tillåt Steg och Aktiva kalorier i Health Connect och försök igen.");
       }
       if (!granted.workouts) {
-        throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect.");
+        await openHealthSettings().catch((settingsError) => healthLog("settings from workouts failed", settingsError));
+        throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect och försök igen.");
       }
       const list = await readHealthWorkouts(30);
       setWorkouts(list);
@@ -253,7 +258,7 @@ const HealthConnectCard = () => {
 
   const runTest = useCallback(async (set: keyof typeof HEALTH_TEST_SETS) => {
     const t = () => new Date().toLocaleTimeString("sv-SE");
-    setTestLog((l) => [`${t()} Test ${set}: startar – väntar på Health Connect (max 60 s)…`, ...l]);
+    setTestLog((l) => [`${t()} Test ${set}: läser behörigheter…`, ...l]);
     try {
       const granted = await testHealthPermissionRequest(set);
       setTestLog((l) => [`${t()} Test ${set}: svar ${JSON.stringify(granted)}`, ...l]);
@@ -325,7 +330,12 @@ const HealthConnectCard = () => {
               size="sm"
               variant="outline"
               className="rounded-full"
-              onClick={() => void openHealthSettings().catch((err) => reportError(err, "Kunde inte öppna behörigheterna"))}
+              onClick={() => {
+                toast.message("Öppnar Health Connect…");
+                void openHealthSettings()
+                  .then(() => toast.success("Health Connect öppnades. Tillåt Grim och gå tillbaka till appen."))
+                  .catch((err) => reportError(err, "Kunde inte öppna behörigheterna"));
+              }}
             >
               <Settings className="mr-2 h-3.5 w-3.5" />
               Tillåt {missing.map((f) => FEATURE_LABELS[f].toLowerCase()).join(", ")}
@@ -394,7 +404,16 @@ const HealthConnectCard = () => {
           </Button>
         )}
         {isHealthSupported() && available !== false && (
-          <Button variant="outline" className="rounded-full" onClick={() => void openHealthSettings().catch((err) => reportError(err, "Kunde inte öppna behörigheterna"))}>
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={() => {
+              toast.message("Öppnar Health Connect…");
+              void openHealthSettings()
+                .then(() => toast.success("Health Connect öppnades. Tillåt Grim och gå tillbaka till appen."))
+                .catch((err) => reportError(err, "Kunde inte öppna behörigheterna"));
+            }}
+          >
             <Settings className="mr-2 h-4 w-4" />
             Behörigheter
           </Button>
