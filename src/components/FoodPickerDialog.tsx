@@ -45,6 +45,8 @@ function loadAllFoods(): Promise<any[]> {
         all.push(...(data || []));
         if (!data || data.length < 1000) break;
       }
+      // Svensk sortering: databasens sortering placerar Å/Ä/Ö fel
+      all.sort((a, b) => a.name.localeCompare(b.name, "sv"));
       return all;
     })();
   }
