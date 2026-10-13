@@ -35,12 +35,30 @@ export const FOOD_SYNONYMS: Record<string, string[]> = {
   mandel: ["sötmandel"],
   "creme fraiche": ["creme fraiche"],
   cremefraiche: ["creme fraiche"],
+  mjolk: ["mjölk"], ost: ["ost"], agg: ["ägg"], farsk: ["färsk"], kottfars: ["nöt färs", "köttfärs"],
+  kycklingfile: ["kyckling filé", "kyckling bröstfilé", "kyckling"], kycklingbrost: ["kyckling bröst", "kyckling"],
+  whey: ["proteinpulver", "vassle"], protein: ["proteinpulver"],
+  energigel: ["sportgel", "energigel", "druvsocker"], gel: ["sportgel", "energigel"], sportdryck: ["sportdryck"],
+  // Engelska vardagsord
+  rice: ["ris"], oatmeal: ["havregryn", "gröt havre"], oats: ["havregryn"], chicken: ["kyckling"], milk: ["mjölk"],
+  egg: ["ägg"], eggs: ["ägg"], bread: ["bröd"], cheese: ["ost"], banana: ["banan"], apple: ["äpple"], potato: ["potatis"],
+  pasta: ["pasta", "makaroner", "spagetti"], salmon: ["lax"], beef: ["nöt"], pork: ["fläsk"], butter: ["smör"],
+  yoghurt: ["yoghurt"], yogurt: ["yoghurt"], tuna: ["tonfisk"], coffee: ["kaffe"], tea: ["te"],
 };
 
 export function expandQueries(query: string): string[] {
   const q = normalizeFoodText(query);
   if (!q) return [];
-  const out = [q, ...(FOOD_SYNONYMS[q] || []).map(normalizeFoodText)];
+  // "mjolk" → "mjölk": prova även med å/ä/ö återställda för vanliga stavningar utan prickar.
+  const deAccented = q.replace(/[åä]/g, "a").replace(/ö/g, "o");
+  const syn = [...(FOOD_SYNONYMS[q] || []), ...(FOOD_SYNONYMS[deAccented] || [])];
+  // Ord-för-ord-synonymer (t.ex. "chicken breast" → "kyckling breast")
+  const words = q.split(" ");
+  if (words.length > 1) {
+    const mapped = words.map((w) => FOOD_SYNONYMS[w]?.[0] ?? w).join(" ");
+    if (mapped !== q) syn.push(mapped);
+  }
+  const out = [q, ...syn.map(normalizeFoodText)];
   return Array.from(new Set(out));
 }
 
