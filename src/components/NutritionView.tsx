@@ -692,10 +692,11 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
       />
       <RecipeEditor
         open={recipeOpen}
-        onOpenChange={(v) => { setRecipeOpen(v); if (!v) setEditingRecipeId(null); }}
+        onOpenChange={(v) => { setRecipeOpen(v); if (!v) { setEditingRecipeId(null); setTemplateRecipe(null); } }}
         userId={userId}
         onSaved={load}
         initialRecipeId={editingRecipeId}
+        templateRecipe={templateRecipe}
       />
       <CuratedRecipesDialog
         open={curatedOpen}
@@ -703,6 +704,11 @@ export default function NutritionView({ userId, isHonorary = false }: Props) {
         isHonorary={isHonorary}
         userId={userId}
         onCreateOwn={() => setRecipeOpen(true)}
+        onEdit={(t) => {
+          if ("ownId" in t) { setTemplateRecipe(null); setEditingRecipeId(t.ownId); }
+          else { setEditingRecipeId(null); setTemplateRecipe(t.template); }
+          setRecipeOpen(true);
+        }}
         onPick={(item) => {
           if (curatedTargetMeal) {
             addLog(curatedTargetMeal, item);
