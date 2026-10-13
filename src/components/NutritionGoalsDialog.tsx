@@ -61,6 +61,11 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
     MICROS.map((m) => [m.key, validateNumber(micro[m.key] ?? "", { min: 0, max: 100000, unit: m.unit, optional: true }).error]),
   ) as Record<MicroKey, string | null>;
   const hasErrors = Object.values(errs).some(Boolean) || Object.values(microErrs).some(Boolean);
+  const kcalNum = parseDecimal(kcal);
+  const macroSum = Math.round(4 * (Math.round(parseDecimal(protein)) || 0) + 9 * (Math.round(parseDecimal(fat)) || 0) + 4 * (Math.round(parseDecimal(carbs)) || 0));
+  const macroDiff = Math.round((kcalNum || 0) - macroSum);
+  // Tolerans ±2 % (minst 20 kcal) eftersom gram avrundas.
+  const macroOk = isFinite(kcalNum) && Math.abs(macroDiff) <= Math.max(20, kcalNum * 0.02);
 
   useEffect(() => {
     if (!open) { setLoaded(false); setSavedSnap(null); return; }
@@ -240,7 +245,7 @@ export default function NutritionGoalsDialog({ open, onOpenChange, userId, onSav
               ))}
             </div>
           </div>
-          <button disabled={saving || hasErrors || !loaded} onClick={requestSave} className="w-full pill-btn-primary py-3 disabled:opacity-50">{!loaded ? "Laddar…" : saving ? "Sparar…" : "Spara"}</button>
+          <button disabled={saving || hasErrors || !loaded || !macroOk} onClick={requestSave} className="w-full pill-btn-primary py-3 disabled:opacity-50">{!loaded ? "Laddar…" : saving ? "Sparar…" : "Spara"}</button>
         </div>
       </DialogContent>
       <ConfirmValueDialog message={confirmMsg} onConfirm={() => { setConfirmMsg(null); void save(); }} onCancel={() => setConfirmMsg(null)} />
