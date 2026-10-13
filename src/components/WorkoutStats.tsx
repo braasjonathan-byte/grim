@@ -2,6 +2,7 @@ import StrengthSection from "@/components/StrengthSection";
 import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
+import { useStatsSettings } from "@/lib/statsSettings";
 import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
 import { useState, useEffect, useMemo } from "react";
@@ -266,6 +267,7 @@ const getCompletionStatsDate = (
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const { state: cardioVis } = useCardioVisibility();
+  const { isVisible: show } = useStatsSettings();
   const [userWeightKg, setUserWeightKg] = useState<number | null>(null);
   const [showRecap, setShowRecap] = useState(false);
 
@@ -692,11 +694,12 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
       </div>
 
 
-      <NutritionTrendCard userId={userId} />
+      {show("nutrition") && <NutritionTrendCard userId={userId} />}
 
       {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
 
 
+      {show("summary") && <>
       {/* Period toggle */}
       <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
         {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
@@ -767,13 +770,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
 
 
 
-      <MuscleBalanceWarning userId={userId} />
-      <DailyQuoteCard />
-      <AchievementsPanel
+      </>}
+      {show("muscleBalance") && <MuscleBalanceWarning userId={userId} />}
+      {show("quote") && <DailyQuoteCard />}
+      {show("achievements") && <AchievementsPanel
         unlockedIds={achievementIds}
         unlockedAt={achievementUnlockedAt}
         onOpen={() => setShowAchievements(true)}
-      />
+      />}
       {showAchievements && (
         <AchievementsView
           unlockedIds={achievementIds}
@@ -782,6 +786,7 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         />
       )}
 
+      {show("periodList") && <>
       {/* View toggle */}
       <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
         {([["week", "Vecka"], ["month", "Månad"], ["year", "År"]] as const).map(([v, label]) =>
@@ -839,13 +844,14 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         })}
         </div>
       }
-      {/* Untrained muscles with exercise suggestions */}
-      <UntrainedMuscles userId={userId} />
+      </>}
+      {show("untrained") && <UntrainedMuscles userId={userId} />}
 
       {/* Leaderboard */}
-      <Leaderboard userId={userId} />
+      {show("leaderboard") && <Leaderboard userId={userId} />}
 
       {/* Personal records */}
+      {show("strength") && <>
       <StrengthSection
         userId={userId}
         completions={completions
@@ -853,15 +859,16 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           .map((c) => ({ logged_weights: c.logged_weights, date: getCompletionStatsDate(c, planStartDate) || new Date(c.updated_at) }))}
       />
       <PersonalRecords userId={userId} />
+      </>}
 
       {/* Training calendar */}
-      <TrainingCalendar userId={userId} />
+      {show("calendar") && <TrainingCalendar userId={userId} />}
 
       {/* Body weight chart */}
-      <BodyWeightChart userId={userId} />
+      {show("bodyWeight") && <BodyWeightChart userId={userId} />}
 
       {/* Weight progression chart */}
-      <WeightProgressionChart userId={userId} />
+      {show("weightProgression") && <WeightProgressionChart userId={userId} />}
 
       {/* Challenge list dialog */}
       <Dialog open={showChallengeList} onOpenChange={setShowChallengeList}>

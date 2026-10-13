@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ComposedChart, Line, ReferenceLine, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Scale } from "lucide-react";
 import { toLocalDateKey } from "@/lib/dateUtils";
+import { useStatsSettings, WEIGHT_RANGES } from "@/lib/statsSettings";
 
 const parseKey = (k: string) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -10,16 +11,17 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 export default function BodyWeightChart({ userId }: { userId: string }) {
   const [weights, setWeights] = useState<{ log_date: string; weight_kg: number }[]>([]);
   const [goalWeight, setGoalWeight] = useState<number | null>(null);
+  const { weightDays, setWeightDays } = useStatsSettings();
 
   useEffect(() => {
-    const from = toLocalDateKey(addDays(new Date(), -89));
+    const from = toLocalDateKey(addDays(new Date(), -(weightDays - 1)));
     supabase.from("body_weight_logs").select("log_date,weight_kg").eq("user_id", userId)
       .gte("log_date", from).order("log_date")
       .then(({ data }) => setWeights((data || []).map((w) => ({ log_date: w.log_date, weight_kg: Number(w.weight_kg) }))));
     supabase.from("nutrition_goals").select("target_weight_kg").eq("user_id", userId).maybeSingle()
       .then(({ data }) => setGoalWeight(data?.target_weight_kg != null ? Number(data.target_weight_kg) : null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, weightDays]);
 
   // kg/vecka enligt minstakvadratregression över vägningarna
   const weightTrend = useMemo(() => {
@@ -68,10 +70,18 @@ export default function BodyWeightChart({ userId }: { userId: string }) {
         <span className="ml-auto text-sm font-bold tabular-nums">{String(last.weight_kg).replace(".", ",")} kg</span>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        {change != null && <>{change > 0 ? "+" : ""}{change.toFixed(1).replace(".", ",")} kg på 90 dagar · </>}
+        {change != null && <>{change > 0 ? "+" : ""}{change.toFixed(1).replace(".", ",")} kg på {WEIGHT_RANGES.find((x) => x.days === weightDays)?.label} · </>}
         {weightTrend != null && <>{weightTrend > 0 ? "+" : ""}{weightTrend.toFixed(2).replace(".", ",")} kg/vecka · </>}
         {goalWeight != null && <>Målvikt {String(goalWeight).replace(".", ",")} kg{chart.eta ? ` – ungefär ${chart.eta.toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })}` : ""}</>}
       </p>
+      <div className="flex gap-1 rounded-full bg-muted/60 p-1">
+        {WEIGHT_RANGES.map((x) => (
+          <button key={x.days} onClick={() => setWeightDays(x.days)}
+            className={`flex-1 py-1 text-[11px] font-semibold rounded-full ${weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            {x.label}
+          </button>
+        ))}
+      </div>
       <div className="h-44">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chart.pts} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
