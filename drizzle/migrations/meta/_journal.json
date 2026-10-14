@@ -176,6 +176,13 @@
       "when": 1791900147139,
       "tag": "0024_add_weekly_loss_kg_to_nutrition_goals",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791998327245,
+      "tag": "0025_admin_tools",
+      "breakpoints": true
     }
   ]
 }
