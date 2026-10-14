@@ -4,6 +4,13 @@ const config: CapacitorConfig = {
   appId: 'se.grim.app',
   appName: 'Grim',
   webDir: 'dist',
+  // Load the published web app live so recipes, texts and fixes update on
+  // every publish without a new AAB. The bundled dist is only a fallback.
+  server: {
+    url: 'https://grim.lovable.app',
+    androidScheme: 'https',
+    allowNavigation: ['grim.lovable.app'],
+  },
   android: {
     includePlugins: [
       '@capacitor/haptics',
