@@ -44,11 +44,11 @@ if (!kt.includes("GRIM_CHECK_DEADLINE") && kt.includes("fun checkHealthPermissio
         }`,
     `        // GRIM_CHECK_DEADLINE
         val checkDone = java.util.concurrent.atomic.AtomicBoolean(false)
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+        java.util.concurrent.Executors.newSingleThreadScheduledExecutor().schedule({
             if (checkDone.compareAndSet(false, true)) {
                 call.reject("HC_NATIVE_04: permission check did not return in 8s")
             }
-        }, 8000)
+        }, 8, java.util.concurrent.TimeUnit.SECONDS)
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
@@ -83,6 +83,23 @@ if (!kt.includes("GRIM_READ_DEADLINE")) {
     "val response = kotlinx.coroutines.withTimeout(15000) {\n                    healthConnectClient.readRecords(request)\n                }",
     "// GRIM_READ_DEADLINE\n                val response = kotlinx.coroutines.withTimeout(15000) {\n                    healthConnectClient.readRecords(request)\n                }"
   );
+}
+
+if (!kt.includes("GRIM_READ_WITHOUT_CHECK")) {
+  const before = kt;
+  kt = kt.replace(
+    `        if (!hasPermission(metricAndMapper.permission)) {
+            return emptyList()
+        }
+
+        val response: List<AggregationResultGroupedByPeriod>`,
+    `        // GRIM_READ_WITHOUT_CHECK: getGrantedPermissions kan hänga utan att någon läsning syns.
+        val response: List<AggregationResultGroupedByPeriod>`
+  );
+  if (kt === before) {
+    console.error("[patch-open-health-settings] kunde inte hoppa över behörighetskontrollen före läsning.");
+    process.exit(1);
+  }
 }
 
 if (kt.includes("GRIM_SETTINGS_CANDIDATES")) {

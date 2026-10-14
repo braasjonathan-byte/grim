@@ -639,18 +639,6 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   const plugin = await loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
-  let sleepAllowed = true;
-  if (Capacitor.getPlatform() === "android") {
-    const access = await checkHealthAccess();
-    if (!access.activity) {
-      throw new HealthError(
-        "denied",
-        "Grim saknar åtkomst till Steg och Aktiva kalorier i Health Connect. Öppna Behörigheter och tillåt minst en av dem.",
-      );
-    }
-    sleepAllowed = access.sleep;
-  }
-
   const end = new Date();
   const start = new Date(end.getTime() - (days - 1) * 86400000);
   start.setHours(0, 0, 0, 0);
@@ -662,7 +650,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     bucket: "day",
   };
 
-  healthLog("data request started", { days, sleepAllowed });
+  healthLog("data request started", { days });
   const empty = { aggregatedData: [] as { startDate: string; value: number }[] };
   const errors: unknown[] = [];
   const [steps, calories, sleep] = await Promise.all([
@@ -687,16 +675,14 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
     }),
     // Sömn är frivilligt – saknad behörighet eller ett opatchat plugin får inte
     // stoppa steg och kalorier, men felet ska synas i loggen.
-    sleepAllowed
-      ? withTimeout(
-          plugin.queryAggregated({ ...request, dataType: "sleep" }),
-          STEP_TIMEOUT_MS,
-          "Health Connect svarade inte när sömn hämtades.",
-        ).catch((err) => {
-          healthLog("sleep query failed", err);
-          return { aggregatedData: [] };
-        })
-      : Promise.resolve({ aggregatedData: [] as { startDate: string; value: number }[] }),
+    withTimeout(
+      plugin.queryAggregated({ ...request, dataType: "sleep" }),
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte när sömn hämtades.",
+    ).catch((err) => {
+      healthLog("sleep query failed", err);
+      return { aggregatedData: [] };
+    }),
   ]);
 
   // Båda misslyckades – då är det ett riktigt fel som ska nå användaren.

@@ -132,14 +132,8 @@ const HealthConnectCard = () => {
     try {
       await withTimeout((async () => {
         healthLog("manual sync entry point started");
-        const granted = await checkHealthAccess();
-        setAccess(granted);
-        if (!granted.activity) {
-          await openHealthSettings().catch((settingsError) => healthLog("settings from sync failed", settingsError));
-          throw new HealthError("denied", "Grim saknar behörighet. Tillåt Steg och Aktiva kalorier i Health Connect och tryck på Synka igen.");
-        }
+        healthLog("reading health connect");
         const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
-        healthLog("permissions ok, reading days", { granted, windowDays });
         const days = await readHealthDays(windowDays);
         healthLog("days read", days.length);
         setLastError(null);
@@ -151,13 +145,8 @@ const HealthConnectCard = () => {
           healthLog("save failed", err);
           throw err;
         }
-        if (!granted.workouts || !granted.heartRate || !granted.sleep) {
-          const partial = formatHealthError(new HealthError("partial", "Hälsodata hämtades, men vissa datatyper saknar behörighet."));
-          setLastError({ ref: partial.ref, message: partial.message });
-          toast.warning(partial.message, { description: partial.label });
-        } else {
-          toast.success("Hälsodata hämtad");
-        }
+        void checkHealthAccess().then(setAccess).catch((statusErr) => healthLog("status refresh failed", statusErr));
+        toast.success("Hälsodata hämtad");
       })(), SYNC_HARD_TIMEOUT_MS, "Hälsosynken svarade inte inom den maximala tidsgränsen.", "sync-timeout");
     } catch (err: any) {
       healthLog("sync failed", err?.message);
@@ -177,16 +166,6 @@ const HealthConnectCard = () => {
     setLoadingWorkouts(true);
     try {
       healthLog("workout fetch started");
-      const granted = await checkHealthAccess();
-      setAccess(granted);
-      if (!granted.activity) {
-        await openHealthSettings().catch((settingsError) => healthLog("settings from workouts failed", settingsError));
-        throw new HealthError("denied", "Grim saknar behörighet. Tillåt Steg och Aktiva kalorier i Health Connect och försök igen.");
-      }
-      if (!granted.workouts) {
-        await openHealthSettings().catch((settingsError) => healthLog("settings from workouts failed", settingsError));
-        throw new Error("Grim saknar åtkomst till Genomförda pass. Tillåt det i Health Connect och försök igen.");
-      }
       const list = await readHealthWorkouts(30);
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
