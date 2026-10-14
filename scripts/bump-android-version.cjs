@@ -26,12 +26,15 @@ const next = gradle
   .replace(/versionName\s+"[^"]*"/, `versionName "${versionName}"`);
 
 if (
-  next === gradle ||
   !next.includes(`versionCode ${versionCode}`) ||
   !next.includes(`versionName "${versionName}"`)
 ) {
   console.error("[bump-android-version] kunde inte uppdatera versionCode/versionName.");
   process.exit(1);
+}
+if (next === gradle) {
+  console.log(`[bump-android-version] versionCode=${versionCode} versionName=${versionName} (redan satt)`);
+  process.exit(0);
 }
 
 fs.writeFileSync(gradlePath, next);
