@@ -1,3 +1,4 @@
+import { useUnitOverrides } from "@/lib/exerciseUnits";
 import { formatDecimal, isPlausibleSet } from "@/lib/inputValidation";
 import { validateCardioEntry } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
@@ -188,6 +189,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+  const unitOv = useUnitOverrides();
+  const unitRuleOv = (n: string): "setTimeDist" | "setReps" | undefined => {
+    const u = unitOv.get(n.trim().toLowerCase())?.unit;
+    return u ? (u === "reps" ? "setReps" : "setTimeDist") : undefined;
+  };
+  const unitLabelOv = (n: string): string | undefined => {
+    const u = unitOv.get(n.trim().toLowerCase())?.unit;
+    return u === "seconds" ? "sek" : u === "meters" ? "m" : u === "reps" ? "reps" : undefined;
+  };
   const [showAddCustomExercise, setShowAddCustomExercise] = useState(false);
   const [newExName, setNewExName] = useState("");
   const [newExCategory, setNewExCategory] = useState("styrka");
@@ -3055,8 +3065,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     // Determine default unit: circuit → sek, bodyweight exercises → check context
     const bodyweightNames = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow", "dips"];
     const exLower = exerciseName.toLowerCase();
-    const isBodyweightEx = bodyweightNames.some(bw => exLower.includes(bw)) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_bodyweight_exercise;
-    const isTimeBased = /^(sido)?planka$|^vila$/i.test(exerciseName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_time_based;
+    const ovEx = unitOv.get(exLower.trim());
+    const isBodyweightEx = ovEx?.bodyweight ?? (bodyweightNames.some(bw => exLower.includes(bw)) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_bodyweight_exercise);
+    const isTimeBased = ovEx?.unit ? ovEx.unit === "seconds" : (/^(sido)?planka$|^vila$/i.test(exerciseName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === exLower)?.is_time_based);
     if (targetPlan?.is_circuit) {
       setRepsUnit("sek");
       setRepsInput(circuitSecsMatch ? circuitSecsMatch[1] : "40");
@@ -4551,8 +4562,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(0, plan.day, name, si, setsCountSingle, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                           <AutoSaveInput rule={/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) || plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps"} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(name, si) || inheritedReps || circuitDefaultSec) : (findLastReps(name, si) || inheritedReps || defaultReps)} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
-                                           <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
+                                           <AutoSaveInput rule={unitRuleOv(name) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) || plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === reps) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(name, si) || inheritedReps || circuitDefaultSec) : (findLastReps(name, si) || inheritedReps || defaultReps)} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'reps', v, setsCountSingle, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
+                                           <span className="text-[10px] text-muted-foreground">{unitLabelOv(name) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(name) ? "m" : (plan.is_circuit || /^(sido)?planka$|^vila$/i.test(name.trim()) || customExercises.find(ce => ce.name.toLowerCase() === name.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")}</span>
                                            <AutoSaveInput rule="setKg" confirmValue={(kg) => prDoubleWarning(prIndex, name, kg)} type="number" inputMode="decimal" initialValue={saved?.kg || ""} onSave={(v) => saveSetFieldData(0, plan.day, name, si, 'kg', v, setsCountSingle, inheritedKg, inheritedReps)} placeholder={inheritedKg || "—"} className="w-14 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
                                           <span className="text-[10px] text-muted-foreground">kg</span>
                                           </div>
@@ -8380,7 +8391,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     const defReps = circuitDefaultSec || partReps || repsStr || "10";
                                      // Detect bodyweight exercises that don't need kg input
                                     const bodyweightExercises = ["box jumps", "burpees", "pull-ups", "pull ups", "armhävningar", "push-ups", "push ups", "planka", "dead bug", "bird dog", "sit-ups", "sit ups", "mountain climbers", "jumping jacks", "jump squats", "pistol squats", "handstand", "muscle-ups", "muscle ups", "ring rows", "v-ups", "toes to bar", "knees to elbow"];
-                                    const isBodyweight = bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps);
+                                    const isBodyweight = unitOv.get(partName.trim().toLowerCase())?.bodyweight ?? (bodyweightExercises.some(bw => partName.toLowerCase().includes(bw)) || /max$/i.test(defReps));
                                     // Weighted bodyweight exercises: user lifts bodyweight +/- additional weight
                                     const weightedBwExercises = ["dips"];
                                     const matchedExForBw = allExercises.find(e => e.name.toLowerCase() === partName.toLowerCase());
@@ -8406,8 +8417,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                            <div className={`flex items-center gap-1.5 py-0.5 rounded px-1 ${isSetDone ? "opacity-60" : ""}`}>
                                            <Checkbox checked={isSetDone} onCheckedChange={() => toggleSetDone(plan.week, plan.day, partName, si, setsCountPlan, inheritedKg, inheritedReps)} className="h-5 w-5" />
                                            <span className="text-[10px] text-muted-foreground w-7 flex-shrink-0">S{si + 1}</span>
-                                           <AutoSaveInput rule={/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) || plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps"} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : (findLastReps(partName, si) || inheritedReps || defReps)} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
-                                           <span className="text-[10px] text-muted-foreground">{/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps"}</span>
+                                           <AutoSaveInput rule={unitRuleOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) || plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based ? "setTimeDist" : "setReps")} type="number" inputMode="numeric" initialValue={circuitDefaultSec ? ((!saved?.reps || saved.reps === partReps || saved.reps === repsStr) ? "" : saved.reps) : (saved?.reps || "")} placeholder={circuitDefaultSec ? (findLastReps(partName, si) || inheritedReps || circuitDefaultSec) : (findLastReps(partName, si) || inheritedReps || defReps)} onSave={(v) => saveSetFieldData(plan.week, plan.day, partName, si, 'reps', v, setsCountPlan, inheritedKg, inheritedReps)} className="w-11 bg-primary/10 text-foreground text-xs px-1 py-0.5 rounded border border-primary/30 text-center font-mono focus:ring-1 focus:ring-primary outline-none placeholder:text-muted-foreground placeholder:opacity-60" />
+                                           <span className="text-[10px] text-muted-foreground">{unitLabelOv(partName) ?? (/farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(partName) ? "m" : (plan.is_circuit || partIsTimeBased || /^(sido)?planka$|^vila$/i.test(partName.trim()) || customExercises.find(ce => ce.name.toLowerCase() === partName.trim().toLowerCase())?.is_time_based) ? "sek" : "reps")}</span>
                                           {!isBodyweight && (
                                             <>
                                               {isWeightedBw && (
