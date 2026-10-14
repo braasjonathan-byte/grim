@@ -20,6 +20,7 @@ interface Props {
 
 export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn, onEdit }: Props) {
   const [query, setQuery] = useState("");
+  const curated = useCuratedRecipes();
   const [cat, setCat] = useState<string>(isHonorary ? "alla" : "mina");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
