@@ -1,3 +1,5 @@
+import { useAppSettings } from "@/lib/appSettings";
+import AppBanner from "@/components/admin/AppBanner";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +93,9 @@ const isGrimAliasUser = (currentUser: User | null | undefined, profileNickname?:
 const GrimInfoDialog = () => {
   const [open, setOpen] = useState(() => !localStorage.getItem(GRIM_INFO_KEY));
   const handleClose = () => { localStorage.setItem(GRIM_INFO_KEY, "1"); setOpen(false); };
+  const appSettings = useAppSettings();
   if (isPreviewEnvironment()) return null;
+  if (!appSettings.supporter_promo) return null;
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
@@ -861,6 +865,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20" style={{ paddingTop: "calc(44px + var(--grim-header-safe-top, env(safe-area-inset-top, 0px)))" }}>
+      <AppBanner />
       {biometricLocked && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 px-6">
           <img src={grimIcon} alt="Grim app icon" className="w-16 h-16" />

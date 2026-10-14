@@ -16,6 +16,7 @@ import { STATS_SECTIONS, WEIGHT_RANGES, useStatsSettings } from "@/lib/statsSett
 import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWakeLock } from "@/lib/wakeLock";
 
 
+const AdminPanel = lazyRetry(() => import("@/components/admin/AdminPanel"));
 const ChangePassword = lazyRetry(() => import("@/components/ChangePassword"));
 import ReceiptsList from "@/components/ReceiptsList";
 import PrivacySocialSettings from "@/components/PrivacySocialSettings";
@@ -909,6 +910,9 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {isAdmin && userId && (
+        <Suspense fallback={null}><AdminPanel userId={userId} /></Suspense>
+      )}
     </div>
   );
 };

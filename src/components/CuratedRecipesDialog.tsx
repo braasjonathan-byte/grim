@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Lock, Search, ChefHat, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { CURATED_RECIPES, RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
+import { RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
+import { useCuratedRecipes } from "@/lib/curatedRecipesLive";
 import { PickedItem } from "./FoodPickerDialog";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,6 +20,7 @@ interface Props {
 
 export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, userId, onPick, onCreateOwn, onEdit }: Props) {
   const [query, setQuery] = useState("");
+  const curated = useCuratedRecipes();
   const [cat, setCat] = useState<string>(isHonorary ? "alla" : "mina");
   const [selected, setSelected] = useState<CuratedRecipe | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -55,9 +57,9 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const source = cat === "mina" ? myRecipes : CURATED_RECIPES;
+    const source = cat === "mina" ? myRecipes : curated;
     return source.filter((r) => (cat === "alla" || cat === "mina" || r.category === cat) && (q === "" || r.name.toLowerCase().includes(q)));
-  }, [query, cat, myRecipes]);
+  }, [query, cat, myRecipes, curated]);
 
   function pick(r: CuratedRecipe) {
     const idx = filtered.findIndex((x) => x.id === r.id);

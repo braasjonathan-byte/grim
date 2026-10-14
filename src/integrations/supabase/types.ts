@@ -38,6 +38,27 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       archived_plans: {
         Row: {
           archived_at: string
@@ -364,6 +385,30 @@ export type Database = {
           created_at?: string
           name?: string
           secret?: string
+        }
+        Relationships: []
+      }
+      curated_recipe_overrides: {
+        Row: {
+          data: Json | null
+          hidden: boolean
+          recipe_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          data?: Json | null
+          hidden?: boolean
+          recipe_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          data?: Json | null
+          hidden?: boolean
+          recipe_id?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -741,6 +786,33 @@ export type Database = {
           muscle_group?: string | null
           secondary_muscles?: Json
           submuscles?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      exercise_unit_overrides: {
+        Row: {
+          bodyweight: boolean | null
+          exercise_name: string
+          exercise_name_lower: string
+          unit: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          bodyweight?: boolean | null
+          exercise_name: string
+          exercise_name_lower: string
+          unit?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          bodyweight?: boolean | null
+          exercise_name?: string
+          exercise_name_lower?: string
+          unit?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1387,6 +1459,7 @@ export type Database = {
           reason: string
           reported_user_id: string
           reporter_id: string
+          resolved: boolean
         }
         Insert: {
           created_at?: string
@@ -1396,6 +1469,7 @@ export type Database = {
           reason: string
           reported_user_id: string
           reporter_id: string
+          resolved?: boolean
         }
         Update: {
           created_at?: string
@@ -1405,6 +1479,7 @@ export type Database = {
           reason?: string
           reported_user_id?: string
           reporter_id?: string
+          resolved?: boolean
         }
         Relationships: [
           {

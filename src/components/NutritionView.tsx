@@ -1,3 +1,4 @@
+import { useAppSettings } from "@/lib/appSettings";
 import { validateNumber, parseDecimal, formatDecimal, isPlausibleMealLog, IMPLAUSIBLE_LABEL, UNUSUAL_FOOD_GRAMS, UNUSUAL_QUICK_KCAL, macroKcalMismatch, type NumberRule } from "@/lib/inputValidation";
 import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
 const QUICK_MACRO: NumberRule = { min: 0, max: 1000, unit: "g", optional: true };
@@ -202,7 +203,9 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
   );
 }
 
-export default function NutritionView({ userId, isHonorary = false }: Props) {
+export default function NutritionView({ userId, isHonorary: isHonoraryProp = false }: Props) {
+  const appSettings = useAppSettings();
+  const isHonorary = isHonoraryProp || appSettings.ai_food_for_all;
   const [date, setDate] = useState(() => new Date());
   const [logs, setLogs] = useState<MealLog[]>([]);
   const [targets, setTargets] = useState(DEFAULT_TARGETS);

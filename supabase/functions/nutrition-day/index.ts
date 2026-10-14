@@ -111,7 +111,10 @@ Deno.serve(async (req) => {
       sb.from("profiles").select("is_honorary").eq("user_id", user.id).maybeSingle(),
       sb.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle(),
     ]);
-    if (!prof?.is_honorary && !role) return json({ error: "Endast för hedersmedlemmar" }, 403);
+    if (!prof?.is_honorary && !role) {
+      const { data: flag } = await sb.from("app_settings").select("value").eq("key", "ai_food_for_all").maybeSingle();
+      if (flag?.value !== true) return json({ error: "Endast för hedersmedlemmar" }, 403);
+    }
 
     const key = Deno.env.get("LOVABLE_API_KEY");
     if (!key) return json({ error: "AI ej konfigurerad" }, 500);
