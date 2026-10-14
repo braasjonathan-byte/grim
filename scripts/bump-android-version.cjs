@@ -1,22 +1,31 @@
 #!/usr/bin/env node
 /**
- * Sätter versionskoden som användaren angett.
- * Byt inte versionCode utan att fråga först. Play Console kräver att nästa
- * uppladdning är strikt högre än den som redan finns där.
+ * Höjer versionskoden automatiskt inför varje bygge.
+ *
+ * Play Console kräver att varje uppladdning har strikt högre versionCode än
+ * den som redan finns där, så koden räknas upp av sig själv i stället för att
+ * skrivas för hand:
+ *
+ *   versionCode = AUTO_BASE + GitHub-runnummer
+ *
+ * GitHub-runnumret ökar aldrig och återanvänds inte, så koden kan aldrig gå
+ * baklänges eller krocka med en tidigare uppladdning. versionName följer med
+ * som "1.0.<runnummer>", vilket är samma nummer som bygg-taggen build-<runnummer>.
+ *
+ * Vill du låsa en specifik kod den här gången, sätt miljövariablerna
+ * ANDROID_VERSION_CODE (och valfritt ANDROID_VERSION_NAME) innan bygget.
  */
 const fs = require("fs");
 const path = require("path");
 
-const versionCode = 1095;
-const versionName = "1.0.95";
+// Alltid högre än vad som redan finns i Play Console, även vid runnummer 1.
+const AUTO_BASE = 10000;
+// Högsta kod som redan ligger uppe i Play Console — aldrig lägre än så här.
+const MIN_VERSION_CODE = 1095;
 
 const gradlePath = path.join(__dirname, "..", "android", "app", "build.gradle");
 if (!fs.existsSync(gradlePath)) {
   console.error("[bump-android-version] android/app/build.gradle saknas.");
-  process.exit(1);
-}
-if (!Number.isInteger(versionCode) || versionCode <= 1094 || versionCode > 2100000000) {
-  console.error(`[bump-android-version] versionCode ${versionCode} kan inte laddas upp till Play Console.`);
   process.exit(1);
 }
 
@@ -26,6 +35,41 @@ const gradle = fs.readFileSync(gradlePath, "utf8");
 // enkla/dubbla citattecken och värden från variabler (t.ex. rootProject.ext).
 const CODE_RE = /^([ \t]*)versionCode\b[^\n]*$/m;
 const NAME_RE = /^([ \t]*)versionName\b[^\n]*$/m;
+
+const readCurrentCode = () => {
+  const m = /^\s*versionCode\s*[=(]?\s*"?\s*(\d+)/m.exec(gradle);
+  return m ? Number(m[1]) : 0;
+};
+
+const currentCode = readCurrentCode();
+const runNumber = Number(process.env.GITHUB_RUN_NUMBER) || 0;
+const explicitCode = Number(process.env.ANDROID_VERSION_CODE);
+
+let versionCode;
+if (Number.isInteger(explicitCode) && explicitCode > 0) {
+  versionCode = explicitCode;
+} else {
+  // Lokalt bygge utan runnummer: lägg bara ett på dencommittede koden.
+  const auto = runNumber ? AUTO_BASE + runNumber : currentCode + 1;
+  versionCode = Math.max(auto, currentCode + 1, MIN_VERSION_CODE + 1);
+}
+
+const explicitName = (process.env.ANDROID_VERSION_NAME || "").trim();
+const versionName =
+  explicitName || (runNumber ? `1.0.${runNumber}` : `1.0.${versionCode - 1000}`);
+
+if (
+  !Number.isInteger(versionCode) ||
+  versionCode <= MIN_VERSION_CODE ||
+  versionCode <= currentCode ||
+  versionCode > 2100000000
+) {
+  console.error(
+    `[bump-android-version] versionCode ${versionCode} kan inte laddas upp till Play Console ` +
+      `(nuvarande ${currentCode}, minsta tillåtna ${MIN_VERSION_CODE + 1}).`
+  );
+  process.exit(1);
+}
 
 let next = gradle;
 if (CODE_RE.test(next)) {
@@ -62,4 +106,7 @@ if (next === gradle) {
 }
 
 fs.writeFileSync(gradlePath, next);
-console.log(`[bump-android-version] versionCode=${versionCode} versionName=${versionName}`);
+console.log(
+  `[bump-android-version] versionCode=${versionCode} versionName=${versionName}` +
+    (runNumber ? ` (run ${runNumber})` : "")
+);
