@@ -7,15 +7,15 @@
 const fs = require("fs");
 const path = require("path");
 
-const versionCode = 1094;
-const versionName = "1.0.94";
+const versionCode = 1095;
+const versionName = "1.0.95";
 
 const gradlePath = path.join(__dirname, "..", "android", "app", "build.gradle");
 if (!fs.existsSync(gradlePath)) {
   console.error("[bump-android-version] android/app/build.gradle saknas.");
   process.exit(1);
 }
-if (!Number.isInteger(versionCode) || versionCode <= 1093 || versionCode > 2100000000) {
+if (!Number.isInteger(versionCode) || versionCode <= 1094 || versionCode > 2100000000) {
   console.error(`[bump-android-version] versionCode ${versionCode} kan inte laddas upp till Play Console.`);
   process.exit(1);
 }
