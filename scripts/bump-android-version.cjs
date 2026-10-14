@@ -49,7 +49,9 @@ let versionCode;
 if (Number.isInteger(explicitCode) && explicitCode > 0) {
   versionCode = explicitCode;
 } else {
-  versionCode = Math.max(AUTO_BASE + runNumber, currentCode + 1, MIN_VERSION_CODE + 1);
+  // Lokalt bygge utan runnummer: lägg bara ett på dencommittede koden.
+  const auto = runNumber ? AUTO_BASE + runNumber : currentCode + 1;
+  versionCode = Math.max(auto, currentCode + 1, MIN_VERSION_CODE + 1);
 }
 
 const explicitName = (process.env.ANDROID_VERSION_NAME || "").trim();
