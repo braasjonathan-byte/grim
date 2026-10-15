@@ -15,9 +15,10 @@ interface Props {
   onPick: (item: PickedItem) => void;
   userId: string;
   isHonorary: boolean;
+  initialName?: string;
 }
 
-export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, isHonorary }: Props) {
+export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, isHonorary, initialName }: Props) {
   const [name, setName] = useState("");
   const [kcal, setKcal] = useState("");
   const [protein, setProtein] = useState("");
