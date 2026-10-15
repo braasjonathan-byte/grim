@@ -197,6 +197,13 @@
       "when": 1792045831577,
       "tag": "0027_foods_suitable_units",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792052272866,
+      "tag": "0028_foods_density_g_per_dl",
+      "breakpoints": true
     }
   ]
 }
