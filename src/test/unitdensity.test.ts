@@ -19,6 +19,10 @@ describe("volume units use food density", () => {
     ["Ost hårdost fett 26%", "dl", 1, 45],
     ["Kanel malen", "tsk", 1, 2.5],
     ["Nudlar äggnudlar okokta", "dl", 1, 35],
+    ["Protein vassle Cortado (tyngre)", "dl", 1, 40],
+    ["Proteinpulver vassle whey", "dl", 1, 40],
+    ["Casein vanilj", "dl", 1, 40],
+    ["Kreatin monohydrat", "tsk", 1, 2],
   ];
   it.each(cases)("%s %s", (name, unit, amt, expected) => {
     expect(gramsForFood(amt, unit, name)).toBeCloseTo(expected, 1);
