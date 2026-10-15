@@ -183,6 +183,13 @@
       "when": 1791998327245,
       "tag": "0025_admin_tools",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792045715180,
+      "tag": "0026_custom_foods_readable_by_all",
+      "breakpoints": true
     }
   ]
 }
