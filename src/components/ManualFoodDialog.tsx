@@ -32,10 +32,12 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
   const [confirmQueue, setConfirmQueue] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      if (initialName) setName(initialName);
+    } else {
       setName(""); setKcal(""); setProtein(""); setFat(""); setCarbs(""); setFiber(""); setAmount("100");
     }
-  }, [open]);
+  }, [open, initialName]);
 
   const p = validateNumber(protein, "customMacro");
   const f = validateNumber(fat, "customMacro");
