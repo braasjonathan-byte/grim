@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
-type Food = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number; sugar_g: number | null; suitable_units: string[] | null };
+type Food = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number; sugar_g: number | null; suitable_units: string[] | null; density_g_per_dl: number | null; default_piece_weight_g: number | null };
 const ALL_UNITS = ["g", "kg", "dl", "ml", "msk", "tsk", "st", "portion", "skiva", "näve", "filé"];
 type Fix = Omit<Food, "name"> & { confidence: string; comment: string };
 const FIELDS: [keyof Food, string][] = [["kcal", "kcal"], ["protein_g", "Prot."], ["fat_g", "Fett"], ["carbs_g", "Kolh."], ["fiber_g", "Fiber"]];
@@ -26,7 +26,7 @@ export default function AdminFoods() {
   const [aiBusy, setAiBusy] = useState(false);
   const [edits, setEdits] = useState<Record<string, Partial<Food>>>({});
 
-  const cols = "id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,sugar_g,suitable_units";
+  const cols = "id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,sugar_g,suitable_units,density_g_per_dl,default_piece_weight_g";
   const search = async () => {
     setLoading(true); setFixes({});
     const { data, error } = await supabase.from("foods").select(cols).ilike("name", `%${q.trim()}%`).order("name").limit(50);
@@ -104,6 +104,29 @@ export default function AdminFoods() {
                       onChange={(ev) => setEdits((m) => ({ ...m, [f.id]: { ...m[f.id], [k]: Number(ev.target.value.replace(",", ".")) || 0 } }))} />
                   </label>
                 ))}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
+                <label className="text-[10px] text-muted-foreground">g per dl
+                  <Input className="h-7 px-1 text-xs w-20 inline-block ml-1" inputMode="decimal" placeholder="auto"
+                    value={cur.density_g_per_dl != null ? String(cur.density_g_per_dl) : ""}
+                    onChange={(ev) => {
+                      const raw = ev.target.value.trim().replace(",", ".");
+                      const v = raw === "" ? null : Number(raw);
+                      if (raw !== "" && (!Number.isFinite(v) || v! <= 0 || v! > 2000)) return toast.error("Ange gram per dl, t.ex. 40 för proteinpulver");
+                      setEdits((m) => ({ ...m, [f.id]: { ...m[f.id], density_g_per_dl: v } }));
+                    }} />
+                </label>
+                <label className="text-[10px] text-muted-foreground">g per st
+                  <Input className="h-7 px-1 text-xs w-20 inline-block ml-1" inputMode="decimal" placeholder="auto"
+                    value={cur.default_piece_weight_g != null ? String(cur.default_piece_weight_g) : ""}
+                    onChange={(ev) => {
+                      const raw = ev.target.value.trim().replace(",", ".");
+                      const v = raw === "" ? null : Number(raw);
+                      if (raw !== "" && (!Number.isFinite(v) || v! <= 0 || v! > 5000)) return toast.error("Ange gram per styck, t.ex. 55 för ett ägg");
+                      setEdits((m) => ({ ...m, [f.id]: { ...m[f.id], default_piece_weight_g: v } }));
+                    }} />
+                </label>
+                {(cur.density_g_per_dl == null || cur.default_piece_weight_g == null) && <span className="text-[9px] text-muted-foreground">(tomt = auto från namnet)</span>}
               </div>
               <div className="flex flex-wrap gap-x-2 gap-y-1 items-center">
                 <span className="text-[10px] text-muted-foreground">Enheter:</span>

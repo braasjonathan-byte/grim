@@ -39,7 +39,7 @@ function loadAllFoods(): Promise<any[]> {
       const all: any[] = [];
       for (let from = 0; ; from += 1000) {
         const { data, error } = await supabase.from("foods")
-          .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,${MICRO_SELECT}`)
+          .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,density_g_per_dl,${MICRO_SELECT}`)
 
           .order("name").range(from, from + 999);
         if (error) { foodsCache = null; throw error; }
@@ -138,7 +138,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       const picks = [...recent, ...frequent].filter((u) => !(hideRecipes && u.food_source === "recipe"));
       const ids = (s: string) => picks.filter((p) => p.food_source === s).map((p) => p.food_id);
       const [fR, cR, rR] = await Promise.all([
-        ids("food").length ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,${MICRO_SELECT}`).in("id", ids("food")) : Promise.resolve({ data: [] as any[] }),
+        ids("food").length ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,density_g_per_dl,${MICRO_SELECT}`).in("id", ids("food")) : Promise.resolve({ data: [] as any[] }),
         ids("custom_food").length ? supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).in("id", ids("custom_food")) : Promise.resolve({ data: [] as any[] }),
         ids("recipe").length ? supabase.from("recipes").select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,servings").in("id", ids("recipe")) : Promise.resolve({ data: [] as any[] }),
       ]);
@@ -295,8 +295,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   function onUnitChange(newUnit: string) {
     if (!selected || newUnit === unit) { setUnit(newUnit); return; }
     const a = parseFloat(amount.replace(",", ".")) || 0;
-    const grams = gramsForFood(a, unit, selected.name, selected.piece_g);
-    const perNew = gramsForFood(1, newUnit, selected.name, selected.piece_g);
+    const grams = gramsForFood(a, unit, selected.name, selected.piece_g, selected.density_g_per_dl);
+    const perNew = gramsForFood(1, newUnit, selected.name, selected.piece_g, selected.density_g_per_dl);
     let v = perNew > 0 ? grams / perNew : a;
     // Rimlig avrundning: volym/st → max 1 decimal, gram → heltal
     v = newUnit === "g" ? Math.round(v) : Math.round(v * 10) / 10;
@@ -313,7 +313,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       factor = a;
     } else {
       // per 100g
-      const grams = gramsForFood(a, unit, selected.name, selected.piece_g);
+      const grams = gramsForFood(a, unit, selected.name, selected.piece_g, selected.density_g_per_dl);
       factor = grams / 100;
     }
     return {
@@ -333,7 +333,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     const base = validateNumber(amount, { min: 0, max: 100000 });
     if (base.error) return base.error;
     if (!base.value) return validateNumber("0", "foodGrams").error;
-    const grams = unit === "g" ? base.value : gramsForFood(base.value, unit, selected.name, selected.piece_g);
+    const grams = unit === "g" ? base.value : gramsForFood(base.value, unit, selected.name, selected.piece_g, selected.density_g_per_dl);
     return validateNumber(String(grams), "foodGrams").error;
   }, [selected, amount, unit]);
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
@@ -343,7 +343,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     if (!selected || amountError) return;
     if (selected.source !== "recipe") {
       const a = parseDecimal(amount);
-      const grams = unit === "g" ? a : gramsForFood(a, unit, selected.name, selected.piece_g);
+      const grams = unit === "g" ? a : gramsForFood(a, unit, selected.name, selected.piece_g, selected.density_g_per_dl);
       if (grams > UNUSUAL_FOOD_GRAMS) {
         pendingKeepOpen.current = keepOpen;
         setConfirmMsg("Det är ovanligt mycket. Stämmer det?");
@@ -568,8 +568,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                   ))}
                 </div>
               )}
-              {selected.source !== "recipe" && unitHint(unit, selected.name, selected.piece_g) && (
-                <p className="text-[10px] text-muted-foreground mt-1">{unitHint(unit, selected.name, selected.piece_g)}</p>
+              {selected.source !== "recipe" && unitHint(unit, selected.name, selected.piece_g, selected.density_g_per_dl) && (
+                <p className="text-[10px] text-muted-foreground mt-1">{unitHint(unit, selected.name, selected.piece_g, selected.density_g_per_dl)}</p>
               )}
               {selected.source === "recipe" && (
                 <>

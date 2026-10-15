@@ -245,10 +245,11 @@ function naturalGrams(unit: string, name?: string | null): number | null {
 }
 
 /** Grams for a named food – uses piece weight and density lookups. Use this everywhere food is logged. */
-export function gramsForFood(amount: number, unit: string, name?: string | null, dbPieceG?: number | null): number {
+export function gramsForFood(amount: number, unit: string, name?: string | null, dbPieceG?: number | null, dbDensityGPerDl?: number | null): number {
   const nat = naturalGrams(unit.toLowerCase(), name);
   if (nat !== null) return amount * nat;
-  return toGrams(amount, unit, pieceWeightFor(name, dbPieceG), densityFor(name));
+  const density = dbDensityGPerDl != null && dbDensityGPerDl > 0 ? dbDensityGPerDl / 100 : densityFor(name);
+  return toGrams(amount, unit, pieceWeightFor(name, dbPieceG), density);
 }
 
 /** Natural units relevant for a given food (shown in the unit picker). */
@@ -260,10 +261,10 @@ export function naturalUnitsFor(name?: string | null): string[] {
 }
 
 /** Short hint like "1 dl ≈ 35 g" for non-gram units, or null. */
-export function unitHint(unit: string, name?: string | null, dbPieceG?: number | null): string | null {
+export function unitHint(unit: string, name?: string | null, dbPieceG?: number | null, dbDensityGPerDl?: number | null): string | null {
   const u = unit.toLowerCase();
   if (u === "g" || u === "kg" || u === "portion") return null;
-  const g = gramsForFood(1, u, name, dbPieceG);
+  const g = gramsForFood(1, u, name, dbPieceG, dbDensityGPerDl);
   return `1 ${u} ≈ ${g < 10 ? g.toFixed(1).replace(".", ",") : Math.round(g)} g`;
 }
 

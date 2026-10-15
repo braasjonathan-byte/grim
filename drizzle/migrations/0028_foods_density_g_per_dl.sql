@@ -1,0 +1,1 @@
+ALTER TABLE public.foods ADD COLUMN density_g_per_dl numeric; COMMENT ON COLUMN public.foods.density_g_per_dl IS 'Gram per dl for volume conversion; NULL = derive from name heuristics';

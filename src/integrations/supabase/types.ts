@@ -908,6 +908,7 @@ export type Database = {
           carbs_g: number
           created_at: string
           default_piece_weight_g: number | null
+          density_g_per_dl: number | null
           fat_g: number
           fiber_g: number
           food_number: number | null
@@ -932,6 +933,7 @@ export type Database = {
           carbs_g?: number
           created_at?: string
           default_piece_weight_g?: number | null
+          density_g_per_dl?: number | null
           fat_g?: number
           fiber_g?: number
           food_number?: number | null
@@ -956,6 +958,7 @@ export type Database = {
           carbs_g?: number
           created_at?: string
           default_piece_weight_g?: number | null
+          density_g_per_dl?: number | null
           fat_g?: number
           fiber_g?: number
           food_number?: number | null
