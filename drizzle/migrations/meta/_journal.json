@@ -204,6 +204,13 @@
       "when": 1792052272866,
       "tag": "0028_foods_density_g_per_dl",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792052699606,
+      "tag": "0029_sync_recipes_on_food_update",
+      "breakpoints": true
     }
   ]
 }
