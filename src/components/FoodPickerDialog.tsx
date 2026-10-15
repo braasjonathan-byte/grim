@@ -494,7 +494,15 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                 </>
               )}
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && !offLoading && combinedResults.length === 0 && !showPersonal && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar</p>}
+              {!loading && !offLoading && combinedResults.length === 0 && !showPersonal && (
+                <div className="py-6 text-center space-y-3">
+                  <p className="text-sm text-muted-foreground">Inga träffar</p>
+                  <button onClick={() => setManualOpen(true)} className="pill-btn-soft px-4 py-2.5 text-sm font-semibold inline-flex items-center gap-2">
+                    <Plus className="w-4 h-4" /> Lägg till eget livsmedel
+                  </button>
+                  <p className="text-[11px] text-muted-foreground">Skapa livsmedlet själv med näringsvärden från förpackningen – det sparas i din livsmedelsbank.</p>
+                </div>
+              )}
               {!loading && offLoading && combinedResults.length === 0 && !showPersonal && (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" /> Söker…
@@ -601,7 +609,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         if (opts?.keepScanning) { onPick(item, { keepOpen: true }); setAddedCount((c) => c + 1); setLastAdded(item.name); }
         else { setBarcodeOpen(false); onPick(item); }
       }} />
-      <ManualFoodDialog open={manualOpen} onOpenChange={setManualOpen} userId={userId} isHonorary={isHonorary} onPick={(item) => { setManualOpen(false); onPick(item); }} />
+      <ManualFoodDialog open={manualOpen} onOpenChange={setManualOpen} userId={userId} isHonorary={isHonorary} initialName={query.trim()} onPick={(item) => { setManualOpen(false); onPick(item); }} />
       <VoiceFoodDialog open={voiceOpen} onOpenChange={setVoiceOpen} onConfirm={(items) => {
         items.forEach((it) => onPick(it, { keepOpen: true }));
         setVoiceOpen(false);
