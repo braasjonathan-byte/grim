@@ -15,9 +15,10 @@ interface Props {
   onPick: (item: PickedItem) => void;
   userId: string;
   isHonorary: boolean;
+  initialName?: string;
 }
 
-export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, isHonorary }: Props) {
+export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, isHonorary, initialName }: Props) {
   const [name, setName] = useState("");
   const [kcal, setKcal] = useState("");
   const [protein, setProtein] = useState("");
@@ -31,10 +32,12 @@ export default function ManualFoodDialog({ open, onOpenChange, onPick, userId, i
   const [confirmQueue, setConfirmQueue] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      if (initialName) setName(initialName);
+    } else {
       setName(""); setKcal(""); setProtein(""); setFat(""); setCarbs(""); setFiber(""); setAmount("100");
     }
-  }, [open]);
+  }, [open, initialName]);
 
   const p = validateNumber(protein, "customMacro");
   const f = validateNumber(fat, "customMacro");
