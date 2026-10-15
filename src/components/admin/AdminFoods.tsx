@@ -72,7 +72,7 @@ export default function AdminFoods() {
     setFoods((fs) => fs.map((f) => (f.id === id ? { ...f, ...patch } : f)));
     setFixes((m) => { const n = { ...m }; delete n[id]; return n; });
     setEdits((m) => { const n = { ...m }; delete n[id]; return n; });
-    toast.success("Sparat för alla");
+    toast.success("Sparat för alla – recept med livsmedlet är uppdaterade");
   };
 
   return (
