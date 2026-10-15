@@ -29,7 +29,7 @@ export default function AdminFoods() {
   const cols = "id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,sugar_g,suitable_units,density_g_per_dl,default_piece_weight_g";
   const search = async () => {
     setLoading(true); setFixes({});
-    const { data, error } = await supabase.from("foods").select(cols).ilike("name", `%${q.trim()}%`).order("name").limit(50);
+    const { data, error } = await supabase.from("foods").select(cols).ilike("name", `%${q.trim()}%`).or("group_name.is.null,group_name.neq.Rätter").order("name").limit(50);
     setLoading(false);
     if (error) return toast.error(error.message);
     setFoods((data || []) as Food[]);
@@ -38,7 +38,7 @@ export default function AdminFoods() {
     setLoading(true); setFixes({});
     const all: Food[] = [];
     for (let from = 0; from < 6000; from += 1000) {
-      const { data } = await supabase.from("foods").select(cols).range(from, from + 999);
+      const { data } = await supabase.from("foods").select(cols).or("group_name.is.null,group_name.neq.Rätter").range(from, from + 999);
       if (!data?.length) break;
       all.push(...(data as Food[]));
       if (data.length < 1000) break;
@@ -72,7 +72,7 @@ export default function AdminFoods() {
     setFoods((fs) => fs.map((f) => (f.id === id ? { ...f, ...patch } : f)));
     setFixes((m) => { const n = { ...m }; delete n[id]; return n; });
     setEdits((m) => { const n = { ...m }; delete n[id]; return n; });
-    toast.success("Sparat för alla");
+    toast.success("Sparat för alla – recept med livsmedlet är uppdaterade");
   };
 
   return (
