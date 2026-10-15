@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 
-type Food = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number; sugar_g: number | null };
+type Food = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number; sugar_g: number | null; suitable_units: string[] | null };
+const ALL_UNITS = ["g", "kg", "dl", "ml", "msk", "tsk", "st", "portion", "skiva", "näve", "filé"];
 type Fix = Omit<Food, "name"> & { confidence: string; comment: string };
 const FIELDS: [keyof Food, string][] = [["kcal", "kcal"], ["protein_g", "Prot."], ["fat_g", "Fett"], ["carbs_g", "Kolh."], ["fiber_g", "Fiber"]];
 
@@ -25,7 +26,7 @@ export default function AdminFoods() {
   const [aiBusy, setAiBusy] = useState(false);
   const [edits, setEdits] = useState<Record<string, Partial<Food>>>({});
 
-  const cols = "id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,sugar_g";
+  const cols = "id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,sugar_g,suitable_units";
   const search = async () => {
     setLoading(true); setFixes({});
     const { data, error } = await supabase.from("foods").select(cols).ilike("name", `%${q.trim()}%`).order("name").limit(50);
@@ -103,6 +104,25 @@ export default function AdminFoods() {
                       onChange={(ev) => setEdits((m) => ({ ...m, [f.id]: { ...m[f.id], [k]: Number(ev.target.value.replace(",", ".")) || 0 } }))} />
                   </label>
                 ))}
+              </div>
+              <div className="flex flex-wrap gap-x-2 gap-y-1 items-center">
+                <span className="text-[10px] text-muted-foreground">Enheter:</span>
+                {ALL_UNITS.map((u) => {
+                  const active = cur.suitable_units ? cur.suitable_units.includes(u) : ["g", "kg", "dl", "ml", "msk", "tsk", "st", "portion"].includes(u);
+                  return (
+                    <button key={u} type="button"
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full border ${active ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}
+                      onClick={() => {
+                        const base = cur.suitable_units ?? ["g", "kg", "dl", "ml", "msk", "tsk", "st", "portion"];
+                        const next = active ? base.filter((x) => x !== u) : [...base, u];
+                        if (!next.length) return toast.error("Minst en enhet måste vara kvar");
+                        setEdits((m) => ({ ...m, [f.id]: { ...m[f.id], suitable_units: next } }));
+                      }}>
+                      {u}
+                    </button>
+                  );
+                })}
+                {!cur.suitable_units && <span className="text-[9px] text-muted-foreground">(auto från namnet)</span>}
               </div>
               {Object.keys(e).length > 0 && <Button size="sm" onClick={() => save(f.id, e)}>Spara ändring</Button>}
               {fix && (
