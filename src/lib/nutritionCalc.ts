@@ -154,6 +154,8 @@ const DENSITIES: [RegExp, number][] = [
   [/socker|strösocker|farin/i, 0.85],
   [/kakao|o'boy|oboy/i, 0.45],
   [/proteinpulver|whey|kaseinpulver|pulver/i, 0.4],
+  // Protein/supplement powders sold under brand names ("Protein vassle Cortado", "Casein", "Gainer")
+  [/^protein\b|protein vassle|vassleprotein|vassle|kasein|casein|isolat|isolate|gainer|kreatin|creatine|kollagen|collagen|pre.?workout|bcaa|eaa\b|sojaprotein pulver|ärtprotein|risprotein/i, 0.4],
   [/ris basmati|basmatiris|jasminris|ris\b|basmati|jasmin/i, 0.85],
   [/bulgur|matvete|quinoa|couscous/i, 0.75],
   [/pasta|makaroner|spaghetti|penne|fusilli/i, 0.4],
