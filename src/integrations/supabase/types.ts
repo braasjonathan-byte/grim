@@ -922,6 +922,7 @@ export type Database = {
           protein_g: number
           sodium_mg: number | null
           sugar_g: number | null
+          suitable_units: string[] | null
           vitamin_b12_ug: number | null
           vitamin_c_mg: number | null
           vitamin_d_ug: number | null
@@ -945,6 +946,7 @@ export type Database = {
           protein_g?: number
           sodium_mg?: number | null
           sugar_g?: number | null
+          suitable_units?: string[] | null
           vitamin_b12_ug?: number | null
           vitamin_c_mg?: number | null
           vitamin_d_ug?: number | null
@@ -968,6 +970,7 @@ export type Database = {
           protein_g?: number
           sodium_mg?: number | null
           sugar_g?: number | null
+          suitable_units?: string[] | null
           vitamin_b12_ug?: number | null
           vitamin_c_mg?: number | null
           vitamin_d_ug?: number | null

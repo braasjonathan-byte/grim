@@ -1,0 +1,2 @@
+ALTER TABLE public.foods ADD COLUMN suitable_units text[];
+COMMENT ON COLUMN public.foods.suitable_units IS 'Units offered in the food picker for this food (g, kg, dl, ml, msk, tsk, st, portion, skiva, näve, filé). NULL = derive from name heuristics.';
