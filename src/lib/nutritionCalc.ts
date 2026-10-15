@@ -193,6 +193,11 @@ const DENSITIES: [RegExp, number][] = [
   [/(^|\s)rå($|[\s,])|\bkokt\b|\bstekt\b|filé/i, 0.8],
   [/glass/i, 0.55],
   [/äppelmos|mos\b/i, 1.05],
+  // Bread, fruit pieces, baked goods, cheese/sausage/meat – previously water fallback
+  [/fröbröd|fullkornsbröd|bröd|limpa|toast|levain|surdeg|fralla|bulle|baguette|ciabatta/i, 0.28],
+  [/banan|avokado|\bägg\b|ägg\s/i, 0.6],
+  [/äppelkaka|kaka\b|paj\b|bakelse|kladdkaka|muffin|kanelbulle|semla|tårta|cheesecake|brownie/i, 0.65],
+  [/ostbit|ostskiv|korv|falukorv|kött\b|köttbit|stek\b|skinka|bacon|kalkon|salami|rostbiff|pålägg|leverpastej/i, 0.85],
 ];
 export const DEFAULT_DENSITY = 1.0;
 
