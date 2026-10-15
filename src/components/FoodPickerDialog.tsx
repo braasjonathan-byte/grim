@@ -286,6 +286,10 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const unitOptions = selected
     ? (selected.suitable_units?.length ? selected.suitable_units : [...UNITS, ...naturalUnitsFor(selected.name)])
     : [...UNITS];
+  useEffect(() => {
+    if (selected && unitOptions.length && !unitOptions.includes(unit)) setUnit(unitOptions[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id]);
 
   // När enheten byts: räkna om mängden så samma gramvikt behålls (100 g havregryn → ~3 dl)
   function onUnitChange(newUnit: string) {
