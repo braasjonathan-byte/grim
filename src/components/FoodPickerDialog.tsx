@@ -158,7 +158,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     setLoading(true);
     (async () => {
       const foodsP = loadAllFoods();
-      const customQ = supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).eq("user_id", userId);
+      const customQ = supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`);
       const recipesQ = hideRecipes ? null : supabase
         .from("recipes")
         .select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,visibility,servings")
