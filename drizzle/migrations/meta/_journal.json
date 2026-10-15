@@ -190,6 +190,13 @@
       "when": 1792045715180,
       "tag": "0026_custom_foods_readable_by_all",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792045831577,
+      "tag": "0027_foods_suitable_units",
+      "breakpoints": true
     }
   ]
 }
