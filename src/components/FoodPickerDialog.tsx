@@ -39,7 +39,8 @@ function loadAllFoods(): Promise<any[]> {
       const all: any[] = [];
       for (let from = 0; ; from += 1000) {
         const { data, error } = await supabase.from("foods")
-          .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`)
+          .select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,${MICRO_SELECT}`)
+
           .order("name").range(from, from + 999);
         if (error) { foodsCache = null; throw error; }
         all.push(...(data || []));
@@ -137,7 +138,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
       const picks = [...recent, ...frequent].filter((u) => !(hideRecipes && u.food_source === "recipe"));
       const ids = (s: string) => picks.filter((p) => p.food_source === s).map((p) => p.food_id);
       const [fR, cR, rR] = await Promise.all([
-        ids("food").length ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,${MICRO_SELECT}`).in("id", ids("food")) : Promise.resolve({ data: [] as any[] }),
+        ids("food").length ? supabase.from("foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,default_piece_weight_g,group_name,suitable_units,${MICRO_SELECT}`).in("id", ids("food")) : Promise.resolve({ data: [] as any[] }),
         ids("custom_food").length ? supabase.from("custom_foods").select(`id,name,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`).in("id", ids("custom_food")) : Promise.resolve({ data: [] as any[] }),
         ids("recipe").length ? supabase.from("recipes").select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,servings").in("id", ids("recipe")) : Promise.resolve({ data: [] as any[] }),
       ]);
@@ -282,7 +283,9 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     : unit === "st" ? ["1", "2", "3", "4"]
     : ["dl", "msk", "tsk"].includes(unit) ? ["0.5", "1", "2", "3"]
     : ["skiva", "näve", "filé"].includes(unit) ? ["1", "2", "3"] : [];
-  const unitOptions = selected ? [...UNITS, ...naturalUnitsFor(selected.name)] : [...UNITS];
+  const unitOptions = selected
+    ? (selected.suitable_units?.length ? selected.suitable_units : [...UNITS, ...naturalUnitsFor(selected.name)])
+    : [...UNITS];
 
   // När enheten byts: räkna om mängden så samma gramvikt behålls (100 g havregryn → ~3 dl)
   function onUnitChange(newUnit: string) {
