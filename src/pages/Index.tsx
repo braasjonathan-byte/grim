@@ -24,6 +24,7 @@ import HonoraryBadge from "@/components/HonoraryBadge";
 import MiniTimer from "@/components/MiniTimer";
 import WorkoutCheerListener from "@/components/WorkoutCheerListener";
 import WhatsNewDialog from "@/components/WhatsNewDialog";
+import NewsPopup from "@/components/admin/NewsPopup";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import TourPrompt from "@/components/TourPrompt";
 import PageTransition from "@/components/PageTransition";
@@ -886,6 +887,7 @@ const Index = () => {
         </div>
       )}
       <WhatsNewDialog />
+      <NewsPopup />
       {/* Install prompt dialog */}
       <Dialog open={showInstallDialog && !isPreviewEnvironment()} onOpenChange={(v) => {
         if (!v) {

@@ -1,16 +1,19 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Apple,
+  BookOpen,
   CalendarDays,
   Dumbbell,
   EyeOff,
   Flag,
   Image as ImageIcon,
+  ListChecks,
   Megaphone,
   MessageSquarePlus,
   Newspaper,
   Ruler,
   Send,
+  Sparkles,
   ShieldCheck,
   Users,
   UtensilsCrossed,
@@ -32,6 +35,10 @@ const AdminReports = lazyRetry(() => import("@/components/admin/AdminReports"));
 const AdminPopularEvents = lazyRetry(() => import("@/components/admin/AdminPopularEvents"));
 const AdminHiddenExercises = lazyRetry(() => import("@/components/admin/AdminHiddenExercises"));
 const AdminPosts = lazyRetry(() => import("@/components/admin/AdminPosts"));
+const AdminDailyChallenge = lazyRetry(() => import("@/components/admin/AdminDailyChallenge"));
+const AdminReadyContent = lazyRetry(() => import("@/components/admin/AdminReadyContent"));
+const AdminHelpTips = lazyRetry(() => import("@/components/admin/AdminHelpTips"));
+const AdminNews = lazyRetry(() => import("@/components/admin/AdminNews"));
 
 export type AdminToolContext = {
   userId: string;
@@ -57,6 +64,45 @@ export type AdminGroup = {
 /** Verktyg som skriver till samma databas som PWA:n läser. Inget här kräver en ny app. */
 export function getAdminGroups(): AdminGroup[] {
   return [
+    {
+      id: "admin-edit",
+      title: "Ändra appen",
+      hint: "Det här bytte du tidigare bara via en ny version",
+      items: [
+        {
+          id: "admin-challenge",
+          title: "Dagens utmaning",
+          subtitle: "Listan som visas, en ny varje dag",
+          keywords: "utmaning daglig challenge",
+          icon: ListChecks,
+          content: ({ userId }) => <AdminDailyChallenge userId={userId} />,
+        },
+        {
+          id: "admin-ready-content",
+          title: "Innehåll i färdiga pass",
+          subtitle: "Övningar, set och nya pass i biblioteket",
+          keywords: "färdiga pass övningar innehåll bibliotek",
+          icon: Dumbbell,
+          content: ({ userId }) => <AdminReadyContent userId={userId} />,
+        },
+        {
+          id: "admin-help",
+          title: "Hjälptexter",
+          subtitle: "Tipsen under Hjälp",
+          keywords: "hjälp tips text",
+          icon: BookOpen,
+          content: ({ userId }) => <AdminHelpTips userId={userId} />,
+        },
+        {
+          id: "admin-news",
+          title: "Nyhet till alla",
+          subtitle: "En ruta som öppnas en gång",
+          keywords: "nyhet popup meddelande changelog",
+          icon: Sparkles,
+          content: ({ userId }) => <AdminNews userId={userId} />,
+        },
+      ],
+    },
     {
       id: "admin-live",
       title: "Det alla ser",

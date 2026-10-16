@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { readyWorkoutCategories } from "@/data/readyWorkouts";
+import { useReadyWorkouts } from "@/lib/liveContent";
 import { ChevronDown, Flame, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,6 +11,7 @@ interface WorkoutConfig {
 }
 
 const ReadyWorkoutManager = ({ embedded = false }: { embedded?: boolean }) => {
+  const readyWorkoutCategories = useReadyWorkouts();
   const [open, setOpen] = useState(embedded);
   const [configs, setConfigs] = useState<WorkoutConfig[]>([]);
   const [loading, setLoading] = useState(true);

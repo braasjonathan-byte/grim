@@ -70,7 +70,7 @@ import AiWorkoutScanDialog from "@/components/AiWorkoutScanDialog";
 import ActivityFileImportDialog from "@/components/ActivityFileImportDialog";
 import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } from "@/lib/sharedActivityBus";
 
-import { readyWorkoutCategories } from "@/data/readyWorkouts";
+import { useReadyWorkouts } from "@/lib/liveContent";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
 import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, buildConditioningIntervalLabel, parseConditioningIntervalLabel, computeIntervalSessionTotals, formatMinutesAsClock } from "@/lib/workoutIntervalUtils";
@@ -88,6 +88,7 @@ const SHOW_STRAVA_INTEGRATION = false;
 
 
 const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
+  const readyWorkoutCategories = useReadyWorkouts();
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
   const offlineStatus = useOfflineStatus();

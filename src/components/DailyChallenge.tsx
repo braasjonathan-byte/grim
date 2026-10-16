@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useDailyChallenges } from "@/lib/liveContent";
 import { Swords, Check, X, AlertTriangle } from "lucide-react";
 import {
   AlertDialog,
@@ -12,48 +13,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const challenges = [
-  "20 armhävningar 💪",
-  "30 squats 🦵",
-  "1 minut planka 🧘",
-  "40 situps 🔥",
-  "50 jumping jacks ⭐",
-  "15 burpees 🥵",
-  "20 lunges per ben 🏃",
-  "25 tricep dips 💎",
-  "30 sekunders väggstol 🧱",
-  "10 pike push-ups 🤸",
-  "20 mountain climbers 🏔️",
-  "15 jump squats 🚀",
-  "40 höga knän 🦿",
-  "1 minut hälspark 🔄",
-  "20 diamant-armhävningar 💠",
-  "30 calf raises 🦶",
-  "15 superman holds (3 sek) 🦸",
-  "25 ryska twists 🌀",
-  "20 glute bridges 🍑",
-  "10 handstående mot vägg (5 sek) 🤚",
-  "3×10 bakåtfällning 🔙",
-  "50 steg lungewalk 🚶",
-  "20 decline push-ups 📐",
-  "30 flutter kicks 🦋",
-  "45 sekunders sidoplanka per sida ⚖️",
-  "15 box jumps (eller trappsteg) 📦",
-  "20 commando planks 🎖️",
-  "30 bicycle crunches 🚲",
-  "2 minuter skipping (utan rep) 🤾",
-  "10 pistol squats per ben 🔫",
-  "25 push-up shoulder taps 👋",
-];
-
-const getDailyChallenge = (): string => {
-  const now = new Date();
-  const dayOfYear = Math.floor(
-    (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000
-  );
-  return challenges[dayOfYear % challenges.length];
-};
-
 const getTodayStr = () => new Date().toISOString().slice(0, 10);
 
 interface DailyChallengeProps {
@@ -64,7 +23,12 @@ interface DailyChallengeProps {
 const DailyChallenge = ({ userId, onComplete }: DailyChallengeProps) => {
   const [status, setStatus] = useState<"loading" | "show" | "completed" | "declined">("loading");
   const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
-  const challenge = useMemo(() => getDailyChallenge(), []);
+  const list = useDailyChallenges();
+  const challenge = useMemo(() => {
+    const now = new Date();
+    const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
+    return list[dayOfYear % list.length] || list[0];
+  }, [list]);
   const today = useMemo(() => getTodayStr(), []);
 
   useEffect(() => {

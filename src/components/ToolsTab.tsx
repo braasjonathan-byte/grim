@@ -30,7 +30,8 @@ import type { LucideIcon } from "lucide-react";
 import { updateApp } from "@/lib/appUpdate";
 import { APP_VERSION } from "@/lib/version";
 import HonoraryBadge from "@/components/HonoraryBadge";
-import { helpCategories } from "@/data/helpTopics";
+import { type HelpCategory } from "@/data/helpTopics";
+import { useHelpCategories } from "@/lib/liveContent";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,15 +101,14 @@ const STORAGE_KEY = "grim:tools-collapsed-groups";
 const normalize = (s: string) =>
   (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-const topic = (title: string) => helpCategories.find((c) => c.title === title);
-
 const topicItem = (
+  categories: HelpCategory[],
   title: string,
   subtitle: string,
   icon: LucideIcon,
   id?: string
 ): ToolItem => {
-  const cat = topic(title);
+  const cat = categories.find((c) => c.title === title);
   return {
     id: id ?? `topic-${normalize(title).replace(/\s+/g, "-")}`,
     title,
@@ -129,6 +129,7 @@ const topicItem = (
 };
 
 const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
+  const help = useHelpCategories();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
   const [query, setQuery] = useState("");
@@ -247,8 +248,8 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             keywords: "puls pulsband bluetooth hjärtfrekvens bpm",
             content: () => <HeartRateConnectCard />,
           },
-          topicItem("Verktyg", "Så fungerar kalkylatorerna", Sparkles, "topic-verktyg"),
-          topicItem("Event & nedräkning", "Tävlingar, lopp och eventgrupper", Calendar, "topic-event"),
+          topicItem(help, "Verktyg", "Så fungerar kalkylatorerna", Sparkles, "topic-verktyg"),
+          topicItem(help, "Event & nedräkning", "Tävlingar, lopp och eventgrupper", Calendar, "topic-event"),
         ],
       },
       {
@@ -288,7 +289,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             keywords: "förslag feedback idé synpunkter",
             content: () => <SuggestionBox userId={userId} isAdmin={isAdmin} />,
           },
-          topicItem("Inställningar & profil", "Tips om profil och inställningar", UserCog),
+          topicItem(help, "Inställningar & profil", "Tips om profil och inställningar", UserCog),
         ],
       },
     ];
@@ -311,7 +312,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     }
 
     return list;
-  }, [isAdmin, userId, onViewUserPlan]);
+  }, [isAdmin, userId, onViewUserPlan, help]);
 
   /** Gruppordning, flyttade kort och kortordning enligt den delade layouten (satt av admin) */
   const orderedGroups: ToolGroup[] = useMemo(() => {

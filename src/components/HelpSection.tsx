@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
-import { helpCategories } from "@/data/helpTopics";
+import { useHelpCategories } from "@/lib/liveContent";
 import GuidedTourCard from "@/components/GuidedTourCard";
 
 const HelpSection = () => {
+  const helpCategories = useHelpCategories();
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   return (
