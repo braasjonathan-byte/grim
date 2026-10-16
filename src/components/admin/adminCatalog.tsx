@@ -1,11 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Apple,
+  CalendarDays,
   Dumbbell,
+  EyeOff,
   Flag,
   Image as ImageIcon,
   Megaphone,
   MessageSquarePlus,
+  Newspaper,
   Ruler,
   Send,
   ShieldCheck,
@@ -26,6 +29,9 @@ const AdminRecipes = lazyRetry(() => import("@/components/admin/AdminRecipes"));
 const AdminFoods = lazyRetry(() => import("@/components/admin/AdminFoods"));
 const AdminExerciseUnits = lazyRetry(() => import("@/components/admin/AdminExerciseUnits"));
 const AdminReports = lazyRetry(() => import("@/components/admin/AdminReports"));
+const AdminPopularEvents = lazyRetry(() => import("@/components/admin/AdminPopularEvents"));
+const AdminHiddenExercises = lazyRetry(() => import("@/components/admin/AdminHiddenExercises"));
+const AdminPosts = lazyRetry(() => import("@/components/admin/AdminPosts"));
 
 export type AdminToolContext = {
   userId: string;
@@ -112,6 +118,22 @@ export function getAdminGroups(): AdminGroup[] {
           icon: Dumbbell,
           content: () => <ReadyWorkoutManager embedded />,
         },
+        {
+          id: "admin-events",
+          title: "Lopp och tävlingar",
+          subtitle: "Det som föreslås när någon söker en nedräkning",
+          keywords: "lopp tävling event nedräkning varvet marathon",
+          icon: CalendarDays,
+          content: () => <AdminPopularEvents />,
+        },
+        {
+          id: "admin-hidden-exercises",
+          title: "Dolda konditionsövningar",
+          subtitle: "Visa en övning igen i väljaren",
+          keywords: "dold övning kondition lista",
+          icon: EyeOff,
+          content: () => <AdminHiddenExercises />,
+        },
       ],
     },
     {
@@ -149,6 +171,14 @@ export function getAdminGroups(): AdminGroup[] {
           keywords: "rapport inlägg moderera ta bort",
           icon: Flag,
           content: () => <AdminReports />,
+        },
+        {
+          id: "admin-posts",
+          title: "Inlägg i flödet",
+          subtitle: "Senaste inläggen. Ta bort det alla ser",
+          keywords: "inlägg flöde social ta bort moderera",
+          icon: Newspaper,
+          content: () => <AdminPosts />,
         },
         {
           id: "admin-suggestions",
