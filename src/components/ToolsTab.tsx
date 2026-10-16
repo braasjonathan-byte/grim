@@ -9,16 +9,11 @@ import {
   SlidersHorizontal,
   Wrench,
   RefreshCw,
-  
   Search,
-  Users,
-  Dumbbell,
   Calendar,
   Sparkles,
   Heart,
   UserCog,
-  ShieldCheck,
-  Image as ImageIcon,
   X,
   ArrowUp,
   ArrowDown,
@@ -53,13 +48,11 @@ import FormCheckCard from "@/components/FormCheckCard";
 import HealthConnectCard from "@/components/HealthConnectCard";
 import { isHealthSupported } from "@/lib/healthSync";
 import { toast } from "sonner";
+import { getAdminGroups } from "@/components/admin/adminCatalog";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
 const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
-const AdminUserList = lazyRetry(() => import("@/components/AdminUserList"));
-const ExerciseGifManager = lazyRetry(() => import("@/components/ExerciseGifManager"));
-const AdminCompletionsList = lazyRetry(() => import("@/components/AdminCompletionsList"));
-const ReadyWorkoutManager = lazyRetry(() => import("@/components/ReadyWorkoutManager"));
+
 const SettingsPanel = lazyRetry(() => import("@/components/SettingsPanel"));
 const NotificationSettings = lazyRetry(() => import("@/components/NotificationSettings"));
 const EventCountdown = lazyRetry(() => import("@/components/EventCountdown"));
@@ -301,44 +294,20 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     ];
 
     if (isAdmin) {
-      list.push({
-        id: "admin",
-        title: "Admin",
-        items: [
-          {
-            id: "admin-users",
-            title: "Alla användare",
-            subtitle: "Sök medlemmar och visa deras planer",
-            icon: Users,
-            keywords: "användare medlemmar admin",
-            content: () => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} />,
-          },
-          {
-            id: "admin-exercises",
-            title: "Övningsbibliotek",
-            subtitle: "Redigera övningar, GIF:ar och kategorier",
-            icon: ImageIcon,
-            keywords: "övningar gif bibliotek admin",
-            content: () => <ExerciseGifManager />,
-          },
-          {
-            id: "admin-workout-types",
-            title: "Passtyper",
-            subtitle: "Hantera färdiga pass",
-            icon: Dumbbell,
-            keywords: "passtyper färdiga pass admin",
-            content: () => <ReadyWorkoutManager />,
-          },
-          {
-            id: "admin-completions",
-            title: "Senaste klarmarkerade",
-            subtitle: "De senaste registrerade passen",
-            icon: ShieldCheck,
-            keywords: "klarmarkerade pass logg admin",
-            content: () => <AdminCompletionsList />,
-          },
-        ],
-      });
+      for (const group of getAdminGroups()) {
+        list.push({
+          id: group.id,
+          title: group.title,
+          items: group.items.map((tool) => ({
+            id: tool.id,
+            title: tool.title,
+            subtitle: tool.subtitle,
+            icon: tool.icon,
+            keywords: tool.keywords,
+            content: () => tool.content({ userId, onViewUserPlan }),
+          })),
+        });
+      }
     }
 
     return list;
@@ -553,7 +522,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
           {subView === "settings" ? (
             <div className="space-y-3">
               <ProfileTab userId={userId} isAdmin={isAdmin} />
-              <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} />
+              <SettingsPanel userId={userId} isAdmin={isAdmin} isHonorary={isHonorary} onStartPlan={onStartPlan} onViewUserPlan={onViewUserPlan} />
               <NotificationSettings userId={userId} />
             </div>
           ) : (

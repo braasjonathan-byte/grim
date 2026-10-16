@@ -51,9 +51,10 @@ interface SettingsPanelProps {
   isAdmin?: boolean;
   isHonorary?: boolean;
   onStartPlan?: () => void;
+  onViewUserPlan?: (targetUserId: string) => void;
 }
 
-const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: SettingsPanelProps) => {
+const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onViewUserPlan }: SettingsPanelProps) => {
   const navigate = useNavigate();
   const [colorTheme, setColorTheme] = useState(getStoredThemeId());
   const { state: cardioVis, set: setCardioVis } = useCardioVisibility();
@@ -911,7 +912,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan }: Set
         </AlertDialogContent>
       </AlertDialog>
       {isAdmin && userId && (
-        <Suspense fallback={null}><AdminPanel userId={userId} /></Suspense>
+        <Suspense fallback={null}><AdminPanel userId={userId} onViewUserPlan={onViewUserPlan} /></Suspense>
       )}
     </div>
   );

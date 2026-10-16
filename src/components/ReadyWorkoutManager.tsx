@@ -10,14 +10,14 @@ interface WorkoutConfig {
   is_circuit: boolean;
 }
 
-const ReadyWorkoutManager = () => {
-  const [open, setOpen] = useState(false);
+const ReadyWorkoutManager = ({ embedded = false }: { embedded?: boolean }) => {
+  const [open, setOpen] = useState(embedded);
   const [configs, setConfigs] = useState<WorkoutConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!embedded && !open) return;
     supabase
       .from("ready_workout_config")
       .select("category_label, workout_name, is_circuit")
@@ -25,7 +25,7 @@ const ReadyWorkoutManager = () => {
         if (data) setConfigs(data as WorkoutConfig[]);
         setLoading(false);
       });
-  }, [open]);
+  }, [open, embedded]);
 
   const isCircuit = (cat: string, name: string) =>
     configs.find(c => c.category_label === cat && c.workout_name === name)?.is_circuit ?? false;
@@ -57,6 +57,7 @@ const ReadyWorkoutManager = () => {
 
   return (
     <div className="rounded-lg border border-border bg-secondary">
+      {!embedded && (
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-3 text-sm font-bold"
@@ -67,8 +68,9 @@ const ReadyWorkoutManager = () => {
         </span>
         <ChevronDown className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
+      )}
 
-      {open && (
+      {(embedded || open) && (
         <div className="px-3 pb-3 space-y-3">
           {loading ? (
             <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>

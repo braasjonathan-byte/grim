@@ -42,12 +42,12 @@ interface CustomExercise {
   secondary_muscles?: SecondaryMuscle[];
 }
 
-const ExerciseGifManager = () => {
+const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [overrides, setOverrides] = useState<MuscleOverride[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(embedded);
   const [filter, setFilter] = useState("");
   const [showOnlyMapped, setShowOnlyMapped] = useState(false);
   const [showOnlyUnmapped, setShowOnlyUnmapped] = useState(false);
@@ -625,6 +625,7 @@ const ExerciseGifManager = () => {
 
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-secondary">
+      {!embedded && (
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-4"
@@ -638,8 +639,9 @@ const ExerciseGifManager = () => {
         </div>
         <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
+      )}
 
-      {open && (
+      {(embedded || open) && (
         <div className="border-t border-border p-4 space-y-3">
           {/* Search bar */}
           <div className="flex gap-2">

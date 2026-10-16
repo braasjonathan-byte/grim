@@ -1,0 +1,164 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Apple,
+  Dumbbell,
+  Flag,
+  Image as ImageIcon,
+  Megaphone,
+  MessageSquarePlus,
+  Ruler,
+  Send,
+  ShieldCheck,
+  Users,
+  UtensilsCrossed,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import { lazyRetry } from "@/lib/lazyRetry";
+
+const AdminUserList = lazyRetry(() => import("@/components/AdminUserList"));
+const ExerciseGifManager = lazyRetry(() => import("@/components/ExerciseGifManager"));
+const ReadyWorkoutManager = lazyRetry(() => import("@/components/ReadyWorkoutManager"));
+const AdminCompletionsList = lazyRetry(() => import("@/components/AdminCompletionsList"));
+const SuggestionBox = lazyRetry(() => import("@/components/SuggestionBox"));
+const AnnouncementInbox = lazyRetry(() => import("@/components/AnnouncementInbox"));
+const AdminAppSettings = lazyRetry(() => import("@/components/admin/AdminAppSettings"));
+const AdminRecipes = lazyRetry(() => import("@/components/admin/AdminRecipes"));
+const AdminFoods = lazyRetry(() => import("@/components/admin/AdminFoods"));
+const AdminExerciseUnits = lazyRetry(() => import("@/components/admin/AdminExerciseUnits"));
+const AdminReports = lazyRetry(() => import("@/components/admin/AdminReports"));
+
+export type AdminToolContext = {
+  userId: string;
+  onViewUserPlan?: (targetUserId: string) => void;
+};
+
+export type AdminTool = {
+  id: string;
+  title: string;
+  subtitle: string;
+  keywords: string;
+  icon: LucideIcon;
+  content: (ctx: AdminToolContext) => ReactNode;
+};
+
+export type AdminGroup = {
+  id: string;
+  title: string;
+  hint: string;
+  items: AdminTool[];
+};
+
+/** Verktyg som skriver till samma databas som PWA:n läser. Inget här kräver en ny app. */
+export function getAdminGroups(): AdminGroup[] {
+  return [
+    {
+      id: "admin-live",
+      title: "Det alla ser",
+      hint: "Syns direkt för alla, även i webbappen",
+      items: [
+        {
+          id: "admin-app",
+          title: "Appen just nu",
+          subtitle: "Meddelande överst, AI-kost och Supporter-rutan",
+          keywords: "banner meddelande ai kost supporter inställningar",
+          icon: Megaphone,
+          content: ({ userId }) => <AdminAppSettings userId={userId} />,
+        },
+        {
+          id: "admin-announcements",
+          title: "Utskick",
+          subtitle: "Meddelande från Grim till alla, med avisering",
+          keywords: "utskick meddelande notis announcement inkorg",
+          icon: Send,
+          content: ({ userId }) => <AnnouncementInbox userId={userId} isAdmin />,
+        },
+        {
+          id: "admin-recipes",
+          title: "Färdiga recept",
+          subtitle: "Ändra, dölj eller lägg till recept alla kan laga",
+          keywords: "recept mat kost kurerade",
+          icon: UtensilsCrossed,
+          content: ({ userId }) => <AdminRecipes userId={userId} />,
+        },
+        {
+          id: "admin-foods",
+          title: "Livsmedel",
+          subtitle: "Rätta kcal och makron. Gäller sök och loggning",
+          keywords: "livsmedel mat kcal protein kolhydrater",
+          icon: Apple,
+          content: () => <AdminFoods />,
+        },
+        {
+          id: "admin-units",
+          title: "Övningarnas enheter",
+          subtitle: "Reps, sekunder, meter eller kroppsvikt i passen",
+          keywords: "enhet reps sekunder meter kroppsvikt övning",
+          icon: Ruler,
+          content: ({ userId }) => <AdminExerciseUnits userId={userId} />,
+        },
+        {
+          id: "admin-exercises",
+          title: "Övningsbibliotek",
+          subtitle: "Bild, instruktion och muskler på övningarna",
+          keywords: "övningar gif bibliotek muskler instruktion",
+          icon: ImageIcon,
+          content: () => <ExerciseGifManager embedded />,
+        },
+        {
+          id: "admin-workout-types",
+          title: "Färdiga pass",
+          subtitle: "Vilka färdiga pass som är cirkelpass",
+          keywords: "passtyper färdiga pass cirkel",
+          icon: Dumbbell,
+          content: () => <ReadyWorkoutManager embedded />,
+        },
+      ],
+    },
+    {
+      id: "admin-people",
+      title: "Användare",
+      hint: "Åtkomst och vad medlemmarna har tränat",
+      items: [
+        {
+          id: "admin-users",
+          title: "Medlemmar och behörighet",
+          subtitle: "Sök, ge hedersmedlemskap eller admin, öppna en plan",
+          keywords: "användare medlemmar admin heder behörighet",
+          icon: Users,
+          content: ({ userId, onViewUserPlan }) => <AdminUserList userId={userId} onViewUserPlan={onViewUserPlan} />,
+        },
+        {
+          id: "admin-completions",
+          title: "Senaste passen",
+          subtitle: "Pass som just klarmarkerats",
+          keywords: "klarmarkerade pass logg träning",
+          icon: ShieldCheck,
+          content: () => <AdminCompletionsList />,
+        },
+      ],
+    },
+    {
+      id: "admin-moderation",
+      title: "Moderering",
+      hint: "Sånt användarna skickat in",
+      items: [
+        {
+          id: "admin-reports",
+          title: "Rapporterade inlägg",
+          subtitle: "Läs, avfärda eller ta bort inlägget",
+          keywords: "rapport inlägg moderera ta bort",
+          icon: Flag,
+          content: () => <AdminReports />,
+        },
+        {
+          id: "admin-suggestions",
+          title: "Förslag",
+          subtitle: "Läs, svara och arkivera",
+          keywords: "förslag feedback idé synpunkter",
+          icon: MessageSquarePlus,
+          content: ({ userId }) => <SuggestionBox userId={userId} isAdmin />,
+        },
+      ],
+    },
+  ];
+}
