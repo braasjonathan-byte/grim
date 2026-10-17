@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseDecimal, validateNumber, isPlausibleSet, toStorageString, formatDecimal, kcalDeviation } from "@/lib/inputValidation";
+import { parseDecimal, validateNumber, isPlausibleSet, toStorageString, formatDecimal, kcalDeviation, validateCardioEntry } from "@/lib/inputValidation";
 
 describe("inputValidation", () => {
   it("tolkar decimalkomma och punkt", () => {
@@ -25,5 +25,19 @@ describe("inputValidation", () => {
   });
   it("kcal mot makron", () => {
     expect(kcalDeviation(50, 50, 0, 10)).toBeGreaterThan(0.2);
+  });
+  it("nekar negativa och orimliga konditionsvärden i stället för att tolka dem som tomma", () => {
+    expect(validateCardioEntry({ sport: "Löpning", timeMin: 30, distanceKm: -500 }).valid).toBe(false);
+    expect(validateCardioEntry({ sport: "Löpning", timeMin: -10, distanceKm: 5 }).valid).toBe(false);
+    expect(validateCardioEntry({ sport: "Löpning", timeMin: 30, distanceKm: 500 }).valid).toBe(false);
+    expect(validateCardioEntry({ sport: "Löpning", timeMin: 2000, distanceKm: null }).valid).toBe(false);
+    expect(validateCardioEntry({ sport: "Löpning", timeMin: 30, distanceKm: 5 }).valid).toBe(true);
+  });
+  it("validerar puls 30–220 bpm", () => {
+    expect(validateNumber("300", "pulseBpm").error).not.toBeNull();
+    expect(validateNumber("10", "pulseBpm").error).not.toBeNull();
+    expect(validateNumber("-40", "pulseBpm").error).not.toBeNull();
+    expect(validateNumber("155", "pulseBpm").error).toBeNull();
+    expect(validateNumber("", "pulseBpm").error).toBeNull();
   });
 });
