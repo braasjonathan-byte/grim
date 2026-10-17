@@ -150,12 +150,16 @@ async function isSafeToReplay(item: PendingUpsert): Promise<boolean> {
   return true;
 }
 
+/** Dispatched after queued workout_completions rows have been replayed, so open views can refetch instead of showing a pre-flush snapshot. */
+export const OFFLINE_FLUSHED_EVENT = "grim:offline-queue-flushed";
+
 async function flushQueue() {
   const queue = getQueue();
   if (queue.length === 0) return;
 
   const now = Date.now();
   const remaining: PendingUpsert[] = [];
+  let replayedWorkoutRows = 0;
 
   for (const item of queue) {
     if (!item.timestamp || now - item.timestamp > MAX_AGE_MS) {
