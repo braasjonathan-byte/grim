@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Enhetsval för ingredienser i receptvyn, med oförändrade näringsvärden; 30 tester godkända och 140 g havregryn → 4 dl → 140 g verifierat inloggad.
+
 - [x] Rätta skillnaden mellan streckkod och textsökning: gemensam produktdata, spara skannade produkter i livsmedelsbanken; sökning verifierad inloggad och sparandet täckt av tester. Extern märkessökning kan tillfälligt fallera och visar då fel i stället för noll träffar.
 
 - [x] Gemensam inmatningsvalidering: decimalkomma, gränser, felmeddelanden, bekräftelser, databasskydd och uteslutning av orimliga gamla värden.
