@@ -211,6 +211,13 @@
       "when": 1792052699606,
       "tag": "0029_sync_recipes_on_food_update",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792216683612,
+      "tag": "0030_admin_rescale_recipe_food_units",
+      "breakpoints": true
     }
   ]
 }
