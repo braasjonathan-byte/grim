@@ -29,7 +29,8 @@ import RestaurantSearchDialog from "./RestaurantSearchDialog";
 import ManualFoodDialog from "./ManualFoodDialog";
 import { MICRO_SELECT, microsFromOFF, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
 import { usageKey, type UsageMap } from "@/lib/foodRanking";
-import { searchFoods, normalizeFoodText } from "@/lib/foodSearch";
+import { searchFoods } from "@/lib/foodSearch";
+import { saveProductFood } from "@/lib/saveProductFood";
 
 // Livsmedelsbanken (~2,5k rader) laddas en gång och söks lokalt med ordbaserad matchning.
 let foodsCache: Promise<any[]> | null = null;
@@ -98,6 +99,12 @@ function recipeRow(r: any): FoodRow {
 export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes, onEditRecipe }: FoodPickerDialogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodRow[]>([]);
+  const [foodRevision, setFoodRevision] = useState(0);
+  useEffect(() => {
+    const refresh = () => setFoodRevision((v) => v + 1);
+    window.addEventListener("grim:foods-changed", refresh);
+    return () => window.removeEventListener("grim:foods-changed", refresh);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<FoodRow | null>(null);
   const [amount, setAmount] = useState("100");
@@ -159,7 +166,17 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     setLoading(true);
     (async () => {
       const foodsP = loadAllFoods();
-      const customQ = supabase.from("custom_foods").select(`id,name,user_id,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`);
+      const customP = (async () => {
+        const all: any[] = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await supabase.from("custom_foods")
+            .select(`id,name,user_id,kcal,protein_g,fat_g,carbs_g,fiber_g,${MICRO_SELECT}`)
+            .order("id").range(from, from + 999);
+          if (error) throw error;
+          all.push(...(data || []));
+          if (!data || data.length < 1000) return all;
+        }
+      })();
       const recipesQ = hideRecipes ? null : supabase
         .from("recipes")
         .select("id,name,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,user_id,visibility,servings")
@@ -167,76 +184,49 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         .order("created_at", { ascending: false })
         .limit(200);
 
-      const [foods, customR, recipesR] = await Promise.all([foodsP, customQ.order("created_at", { ascending: false }).limit(500), recipesQ as any]);
+      const [foods, customFoods, recipesR] = await Promise.all([foodsP, customP, recipesQ as any]);
       if (cancelled) return;
       if ((recipesR as any)?.error) console.error("recipes query error", (recipesR as any).error);
 
       const list: FoodRow[] = [];
       for (const r of (recipesR?.data || []) as any[]) list.push(recipeRow(r));
-      for (const c of customR.data || []) list.push({ ...(c as any), source: "custom_food" });
+      for (const c of customFoods) list.push({ ...(c as any), source: "custom_food" });
       for (const f of foods) list.push({ ...(f as any), piece_g: (f as any).default_piece_weight_g, source: "food" });
       setResults(list);
-      setLoading(false);
-    })();
+    })().catch(() => {
+      if (!cancelled) sonnerToast.error("Livsmedelslistan kunde inte hämtas. Försök igen.");
+    }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open, userId, hideRecipes]);
+  }, [open, userId, hideRecipes, foodRevision]);
 
   // Open Food Facts search (debounced)
   const [offResults, setOffResults] = useState<FoodRow[]>([]);
   const [offLoading, setOffLoading] = useState(false);
+  const [offError, setOffError] = useState<string | null>(null);
   useEffect(() => {
     if (!open) return;
     const term = query.trim();
-    if (term.length < 2) { setOffResults([]); return; }
+    setOffError(null);
+    if (term.length < 2) { setOffResults([]); setOffLoading(false); return; }
     let cancelled = false;
     setOffLoading(true);
-    setOffResults([]); // rensa gamla träffar direkt så de inte ligger kvar under ny sökning
+    setOffResults([]);
     const t = setTimeout(async () => {
       try {
-        const fields = "code,product_name,product_name_sv,brands,nutriments,nova_group";
-        // Two parallel queries: free text + brand tag (so svenska varumärken som "Tyngre" hittas)
-        const url1 = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(term)}&search_simple=1&action=process&json=1&page_size=50&sort_by=popularity_key&fields=${fields}`;
-        const url2 = `https://world.openfoodfacts.org/cgi/search.pl?action=process&json=1&page_size=50&sort_by=popularity_key&tagtype_0=brands&tag_contains_0=contains&tag_0=${encodeURIComponent(term)}&fields=${fields}`;
-        const [r1, r2] = await Promise.all([
-          fetch(url1).then(r => r.json()).catch(() => ({})),
-          fetch(url2).then(r => r.json()).catch(() => ({})),
-        ]);
+        const { data, error } = await supabase.functions.invoke("nutrition-search", { body: { query: term } });
         if (cancelled) return;
-        const seenCodes = new Set<string>();
-        const seenNames = new Set<string>();
-        const rows: FoodRow[] = [];
-        for (const p of [...(r1?.products || []), ...(r2?.products || [])]) {
-          if (!p?.code || seenCodes.has(p.code)) continue;
-          seenCodes.add(p.code);
-          const name = p.product_name_sv || p.product_name;
-          if (!name) continue;
-          const n = p.nutriments || {};
-          const kcal = Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0);
-          if (!kcal) continue;
-          // Dölj produkter som saknar makron
-          if ([n.proteins_100g, n.fat_100g, n.carbohydrates_100g].some((v) => v == null || v === "" || !Number.isFinite(Number(v)))) continue;
-          const brand = (p.brands || "").split(",")[0]?.trim() || "";
-          const dupKey = `${normalizeFoodText(name)}|${normalizeFoodText(brand)}`;
-          if (seenNames.has(dupKey)) continue;
-          seenNames.add(dupKey);
-          rows.push({
-            id: `off-${p.code}`,
-            name: brand ? `${name} (${brand})` : name,
-            brand,
-            source: "off",
-            kcal,
-            protein_g: Number(n.proteins_100g) || 0,
-            fat_g: Number(n.fat_100g) || 0,
-            carbs_g: Number(n.carbohydrates_100g) || 0,
-            fiber_g: Number(n.fiber_100g) || 0,
-            ...microsFromOFF(n),
-            nova_group: Number(p.nova_group) || null,
-            sugar_g: n.sugars_100g != null ? Number(n.sugars_100g) : null,
-          });
-        }
+        if (error || data?.error) throw new Error(data?.error || "Märkesprodukterna kunde inte hämtas. Försök igen eller skanna streckkoden.");
+        const rows: FoodRow[] = (data?.products || []).map((p: any) => ({
+          ...p,
+          ...microsFromOFF(p.nutriments || {}),
+          sugar_g: p.nutriments?.sugars_100g != null ? Number(p.nutriments.sugars_100g) : null,
+        }));
         setOffResults(rows);
-      } catch {
-        if (!cancelled) setOffResults([]);
+      } catch (error) {
+        if (!cancelled) {
+          setOffResults([]);
+          setOffError(error instanceof Error ? error.message : "Märkesprodukterna kunde inte hämtas.");
+        }
       } finally {
         if (!cancelled) setOffLoading(false);
       }
@@ -362,22 +352,15 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
     let outId = selected.id;
     if (selected.source === "off") {
       try {
-        const { data, error } = await supabase.from("custom_foods").insert({
-          user_id: userId,
-          name: selected.name,
-          kcal: selected.kcal,
-          protein_g: selected.protein_g,
-          fat_g: selected.fat_g,
-          carbs_g: selected.carbs_g,
-          fiber_g: Number(selected.fiber_g) || 0,
+        outId = await saveProductFood(userId, selected, {
           ...pickMicros(selected),
           nova_group: selected.nova_group ?? null,
           sugar_g: selected.sugar_g ?? null,
-        } as any).select("id").single();
-        if (error) throw error;
-        outId = data!.id;
+        });
       } catch (e) {
         console.error("Failed to save OFF item to bank", e);
+        sonnerToast.error("Livsmedlet kunde inte sparas. Försök igen.");
+        return;
       }
     }
 
@@ -501,7 +484,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                 </>
               )}
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && !offLoading && combinedResults.length === 0 && !showPersonal && (
+              {!loading && !offLoading && !offError && combinedResults.length === 0 && brandResults.length === 0 && !showPersonal && (
                 <div className="py-6 text-center space-y-3">
                   <p className="text-sm text-muted-foreground">Inga träffar</p>
                   <button onClick={() => setManualOpen(true)} className="pill-btn-soft px-4 py-2.5 text-sm font-semibold inline-flex items-center gap-2">
@@ -518,6 +501,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
               <ul className="divide-y divide-border">
                 {combinedResults.map(renderRow)}
               </ul>
+              {offError && <p role="alert" className="py-3 text-sm text-destructive">{offError}</p>}
               {brandResults.length > 0 && (
                 <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-3 pb-1">Märkesprodukter</p>
               )}

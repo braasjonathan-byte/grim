@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { offFood as parseOFFFood } from "../_shared/offProduct.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,19 +46,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ found: false, message: "Produkt hittades inte" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const p = off.product;
-    const name: string = p.product_name_sv || p.product_name || p.generic_name_sv || p.generic_name || "Okänd produkt";
-    const brand: string = (p.brands || "").split(",")[0]?.trim() || "";
-    const n = p.nutriments || {};
-
-    const offFood = {
-      name: brand ? `${name} (${brand})` : name,
-      kcal: Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0),
-      protein_g: Number(n.proteins_100g) || 0,
-      fat_g: Number(n.fat_100g) || 0,
-      carbs_g: Number(n.carbohydrates_100g) || 0,
-      fiber_g: Number(n.fiber_100g) || 0,
-    };
+    const offFood = parseOFFFood(off.product);
+    if (!offFood) {
+      return new Response(JSON.stringify({ found: false, message: "Produktnamn saknas" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const brand = offFood.brand;
 
     // Use Open Food Facts data directly — it's keyed to the actual barcode.
     // Fuzzy-matching against Livsmedelsverket by a single token gave wildly
