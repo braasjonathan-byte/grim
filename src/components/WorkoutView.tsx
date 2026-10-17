@@ -703,7 +703,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       }
     }
     if (fetchedPlans) {
-      writeOfflineWorkoutCache(userId, fetchedPlans, fetchedCompletions ?? []);
+      // Cache the merged view (server + still-queued rows) so an offline
+      // reload before the queue has replayed still shows the latest logging.
+      writeOfflineWorkoutCache(userId, fetchedPlans, compData ?? []);
     }
 
     // An empty answer before the login session is restored is not "no plan":
