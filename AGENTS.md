@@ -1,6 +1,6 @@
 # Architecture rules
 
-- Recipe ingredient unit switching is display-only: convert from the original amount using shared nutrition helpers and linked food measure overrides, never mutate saved quantities or macros.
+- Recipe ingredient unit switching in the recipe view is display-only: convert from the original amount using shared nutrition helpers and linked food measure overrides, never mutate saved quantities or macros. In the recipe editor the unit choice is an explicit edit: convert with `convertedIngredient` so total grams and macros stay constant while amount+unit are saved.
 
 - Use the shared OFF product parser for barcode and server-side text searches, and persist products through `saveProductFood` only on explicit addition; identical acceptance rules and real food IDs keep scanned products searchable.
 
