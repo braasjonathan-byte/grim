@@ -90,6 +90,28 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
     return () => { cancelled = true; };
   }, [open, initialRecipeId, templateRecipe]);
 
+  // Hämta måttuppgifter (styckvikt, densitet, lämpliga enheter) för ingrediensernas livsmedel.
+  const ingredientKey = useMemo(
+    () => ingredients.map((i) => ((i as any).source === "food" && (i as any).id) ? String((i as any).id) : i.name).join("|"),
+    [ingredients]
+  );
+  useEffect(() => {
+    if (!open) { setMeasureFoods([]); return; }
+    const parts = ingredientKey.split("|").filter(Boolean);
+    const ids = parts.filter((p) => /^[0-9a-f-]{36}$/i.test(p));
+    const names = parts.filter((p) => !/^[0-9a-f-]{36}$/i.test(p));
+    let cancelled = false;
+    const columns = "id,name,default_piece_weight_g,density_g_per_dl,suitable_units";
+    Promise.all([
+      ids.length ? supabase.from("foods").select(columns).in("id", ids) : Promise.resolve({ data: [] as any[], error: null }),
+      names.length ? supabase.from("foods").select(columns).in("name", names) : Promise.resolve({ data: [] as any[], error: null }),
+    ]).then((results) => {
+      if (cancelled) return;
+      setMeasureFoods(results.flatMap((r) => (r as any).data || []));
+    });
+    return () => { cancelled = true; };
+  }, [open, ingredientKey]);
+
   const totalKcal = ingredients.reduce((s, i) => s + i.kcal, 0);
   const totalProtein = ingredients.reduce((s, i) => s + i.protein_g, 0);
   const totalFat = ingredients.reduce((s, i) => s + i.fat_g, 0);
@@ -117,6 +139,16 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
         fat_g: ing.fat_g * f,
         carbs_g: ing.carbs_g * f,
       };
+    }));
+  }
+
+  /** Byt enhet på en ingrediens: mängden räknas om så totala grammen (och näringen) är oförändrade. */
+  function changeIngredientUnit(idx: number, newUnit: string) {
+    setIngredients((arr) => arr.map((ing, i) => {
+      if (i !== idx) return ing;
+      const linked = ing as any;
+      const food = measureFoods.find((f) => linked.id ? f.id === linked.id : f.name === ing.name);
+      return convertedIngredient(ing, newUnit, food);
     }));
   }
 
