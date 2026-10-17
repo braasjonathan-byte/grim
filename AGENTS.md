@@ -1,5 +1,7 @@
 # Architecture rules
 
+- Recipe ingredient unit switching is display-only: convert from the original amount using shared nutrition helpers and linked food measure overrides, never mutate saved quantities or macros.
+
 - Use the shared OFF product parser for barcode and server-side text searches, and persist products through `saveProductFood` only on explicit addition; identical acceptance rules and real food IDs keep scanned products searchable.
 
 - Mark Android Capacitor documents with `native-android` and keep the Android navigation-bar clearance in the shared CSS token; Android 16 may report a zero CSS safe-area inset while drawing behind three-button navigation.

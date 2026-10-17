@@ -6,6 +6,8 @@ import { RECIPE_CATEGORIES, CuratedRecipe } from "@/data/curatedRecipes";
 import { useCuratedRecipes } from "@/lib/curatedRecipesLive";
 import { PickedItem } from "./FoodPickerDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ingredientAmountIn, ingredientUnitOptions, type FoodMeasure } from "@/lib/recipeIngredientUnits";
 
 interface Props {
   open: boolean;
@@ -26,6 +28,27 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [portions, setPortions] = useState("1");
   const [myRecipes, setMyRecipes] = useState<CuratedRecipe[]>([]);
+  const [ingredientUnits, setIngredientUnits] = useState<Record<number, string>>({});
+  const [measureFoods, setMeasureFoods] = useState<Array<FoodMeasure & { id: string; name: string }>>([]);
+
+  useEffect(() => {
+    setIngredientUnits({});
+    setMeasureFoods([]);
+    if (!selected) return;
+    let cancelled = false;
+    const ingredients = selected.ingredients as Array<CuratedRecipe["ingredients"][number] & { id?: string; source?: string }>;
+    const ids = ingredients.filter((i) => i.source === "food" && i.id).map((i) => i.id as string);
+    const names = ingredients.filter((i) => !i.id).map((i) => i.name);
+    const columns = "id,name,default_piece_weight_g,density_g_per_dl,suitable_units";
+    Promise.all([
+      ids.length ? supabase.from("foods").select(columns).in("id", ids) : Promise.resolve({ data: [], error: null }),
+      names.length ? supabase.from("foods").select(columns).in("name", names) : Promise.resolve({ data: [], error: null }),
+    ]).then((results) => {
+      if (cancelled) return;
+      setMeasureFoods(results.flatMap((result) => result.data || []));
+    });
+    return () => { cancelled = true; };
+  }, [selected]);
 
   // Hämta användarens egna recept så de syns under "Mina recept".
   useEffect(() => {
@@ -198,12 +221,29 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
             <div>
               <p className="text-xs font-bold mb-1">Ingredienser ({selected.servings} port)</p>
               <ul className="rounded-2xl bg-muted/30 overflow-hidden divide-y divide-border/40 text-xs">
-                {selected.ingredients.map((i, idx) => (
-                  <li key={idx} className="p-2 flex justify-between">
-                    <span>{i.name}</span>
-                    <span className="text-muted-foreground">{i.amount} {i.unit}</span>
-                  </li>
-                ))}
+                {selected.ingredients.map((i, idx) => {
+                  const linked = i as typeof i & { id?: string };
+                  const food = measureFoods.find((f) => linked.id ? f.id === linked.id : f.name === i.name);
+                  const unit = ingredientUnits[idx] || i.unit;
+                  const options = ingredientUnitOptions(i, food);
+                  const amount = ingredientAmountIn(i, unit, food);
+                  return (
+                    <li key={idx} className="p-2 flex justify-between items-center gap-2">
+                      <span className="min-w-0 break-words">{i.name}</span>
+                      <div className="flex shrink-0 items-center gap-1 text-muted-foreground tabular-nums">
+                        <span>{unit !== i.unit ? "≈ " : ""}{amount.toLocaleString("sv-SE", { maximumSignificantDigits: 4 })}</span>
+                        {options.length > 1 ? (
+                          <Select value={unit} onValueChange={(value) => setIngredientUnits((prev) => ({ ...prev, [idx]: value }))}>
+                            <SelectTrigger aria-label={`Enhet för ${i.name}`} className="h-8 w-20 rounded-xl px-2 text-xs bg-muted/50 border-transparent">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>{options.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                          </Select>
+                        ) : <span>{unit}</span>}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
             <div>
