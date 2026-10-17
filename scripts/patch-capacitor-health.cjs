@@ -740,10 +740,16 @@ object GrimHealthRequestState {
 
 // 5o. Behörighetskontrollen körs i samma trådmönster som dialogstarten. Health
 // Connect-anropen är suspend-funktioner och blockerar inte UI-tråden.
-kt = kt.replace(
-  /(fun checkHealthPermissions\(call: PluginCall\) \{[\s\S]*?)CoroutineScope\(Dispatchers\.IO\)\.launch \{/,
-  "$1CoroutineScope(Dispatchers.Main).launch {",
-);
+// Bara en gång och bara inom checkHealthPermissions: utan skyddet letade det lata
+// mönstret sig vid varje ny körning (postinstall + workflow) förbi funktionen och
+// flyttade nästa metods IO-korutin (requestHealthPermissions, queryAggregated ...) till UI-tråden.
+// patch-open-health-settings.cjs (GRIM_CHECK_DEADLINE) har sista ordet om tråden här.
+if (!kt.includes("GRIM_CHECK_DEADLINE")) {
+  kt = kt.replace(
+    /(fun checkHealthPermissions\(call: PluginCall\) \{(?:(?!@PluginMethod)[\s\S])*?)CoroutineScope\(Dispatchers\.IO\)\.launch \{/,
+    "$1CoroutineScope(Dispatchers.Main).launch {",
+  );
+}
 
 // 5p. Lägg Health Connect-kontraktet i en egen, överliggande Activity. Då är
 // dialogens launcher och callback bundna till samma Activity även om Grims
