@@ -29,3 +29,16 @@ export function ingredientAmountIn(ingredient: IngredientMeasure, unit: string, 
   const perUnit = gramsForFood(1, unit, ingredient.name, food?.default_piece_weight_g, food?.density_g_per_dl);
   return perUnit > 0 ? grams / perUnit : ingredient.amount;
 }
+
+/**
+ * Convert an ingredient to a new unit for editing (recipe editor): the amount is
+ * recalculated so the total grams — and therefore the nutrition — stay the same.
+ * Non-convertible units keep their amount.
+ */
+export function convertedIngredient(ingredient: IngredientMeasure, unit: string, food?: FoodMeasure): IngredientMeasure {
+  if (unit === ingredient.unit || !convertible.has(ingredient.unit) || !convertible.has(unit)) return { ...ingredient, unit };
+  const grams = gramsForFood(ingredient.amount, ingredient.unit, ingredient.name, food?.default_piece_weight_g, food?.density_g_per_dl);
+  const perUnit = gramsForFood(1, unit, ingredient.name, food?.default_piece_weight_g, food?.density_g_per_dl);
+  const amount = perUnit > 0 ? Math.round((grams / perUnit) * 100) / 100 : ingredient.amount;
+  return { ...ingredient, amount, unit };
+}

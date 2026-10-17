@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ingredientAmountIn, ingredientUnitOptions } from "@/lib/recipeIngredientUnits";
+import { convertedIngredient, ingredientAmountIn, ingredientUnitOptions } from "@/lib/recipeIngredientUnits";
 
 describe("recipe ingredient display units", () => {
   it("converts oats using their density, not water", () => {
