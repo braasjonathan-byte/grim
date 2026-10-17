@@ -20,6 +20,7 @@ export const RULES = {
   oneRm: { min: 1, max: 500, unit: "kg", optional: true },
   cardioDistanceKm: { min: 0, max: 300, unit: "km", optional: true },
   cardioTimeMin: { min: 1, max: 1440, unit: "min", optional: true },
+  pulseBpm: { min: 30, max: 220, unit: "bpm", integer: true, optional: true },
   bodyWeightKg: { min: 30, max: 300, unit: "kg", optional: true },
   heightCm: { min: 100, max: 250, unit: "cm", optional: true },
   ageYears: { min: 13, max: 100, unit: "år", integer: true, optional: true },
