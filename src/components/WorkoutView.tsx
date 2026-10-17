@@ -12,7 +12,7 @@ import { PastWorkoutsDialog, DeleteWorkoutConfirm } from "@/components/workout/W
 import { WORKOUTS_CHANGED_EVENT, notifyWorkoutsChanged } from "@/lib/workoutHistory";
 import SetRowsEditor, { validateSetRows, type SetRow } from "@/components/workout/SetRowsEditor";
 import { supabase } from "@/integrations/supabase/client";
-import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus } from "@/hooks/useOfflineSync";
+import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus, OFFLINE_FLUSHED_EVENT } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles } from "lucide-react";
