@@ -183,6 +183,8 @@ async function flushQueue() {
         .upsert(item.data as any, { onConflict: item.onConflict });
       if (error) {
         remaining.push(item);
+      } else if (item.table === "workout_completions") {
+        replayedWorkoutRows++;
       }
     } catch {
       remaining.push(item);
@@ -190,6 +192,16 @@ async function flushQueue() {
   }
 
   saveQueue(remaining);
+
+  // Tell open views that queued rows reached the backend, so they refetch
+  // instead of keeping a snapshot that was fetched before the replay landed.
+  if (replayedWorkoutRows > 0) {
+    try {
+      window.dispatchEvent(new CustomEvent(OFFLINE_FLUSHED_EVENT));
+    } catch {
+      // non-browser environment
+    }
+  }
 }
 
 export function useOfflineSync() {
@@ -200,8 +212,19 @@ export function useOfflineSync() {
     const handleOnline = () => {
       flushQueue();
     };
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") flushQueue();
+    };
 
     window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisible);
+    // Retry regularly: the "online" event can fire before the connection
+    // actually works, and a failed replay must not wait for the next reload.
+    const timer = setInterval(flushQueue, 15000);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisible);
+      clearInterval(timer);
+    };
   }, []);
 }
