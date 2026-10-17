@@ -4,8 +4,9 @@
  * Körs efter scripts/patch-capacitor-health.cjs.
  *
  * Dialogen startas på UI-tråden via den launcher som registrerades i load().
- * Kommer inget Activity Result inom 8 sekunder släpps anropet med HC_NATIVE_04,
- * så JavaScript-löftet aldrig kan hänga.
+ * Kommer inget Activity Result inom 8 sekunder och behörighetsrutan har inte
+ * synts släpps anropet med HC_NATIVE_04. Syns rutan förlängs gränsen till 125 s,
+ * så JavaScript-löftet aldrig kan hänga men användaren hinner bocka i.
  */
 const fs = require("fs");
 const path = require("path");
@@ -25,7 +26,7 @@ if (!fs.existsSync(PLUGIN_KT)) {
 }
 
 let kt = fs.readFileSync(PLUGIN_KT, "utf8");
-if (kt.includes("GRIM_SIMPLE_PERMISSION_REQUEST")) {
+if (kt.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && kt.includes("GRIM_REQUEST_DEADLINE_V2")) {
   console.log("[patch-health-permission-request] redan patchad.");
   process.exit(0);
 }
@@ -88,11 +89,31 @@ const requestMethod = `    // GRIM_SIMPLE_PERMISSION_REQUEST
                 }
             }
         }
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            val pending = requestPermissionContext.getAndSet(null) ?: return@postDelayed
-            pending.pluginCal.reject("HC_NATIVE_04: no permission result in 8s")
-            bridge.releaseCall(pending.pluginCal)
-        }, 8000)
+        // GRIM_REQUEST_DEADLINE_V2: 8 s gäller bara tills behörighetsrutan syns.
+        // När proxyn sett rutan (GrimHcDiag.sheetVisibleAt) får användaren upp till
+        // 125 s – strax efter proxyns eget skyddsnät på 120 s – så anropet aldrig
+        // kan hänga men inte heller avbryts medan användaren bockar i.
+        val deadlineHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        val requestStartedAt = System.currentTimeMillis()
+        val deadline = object : Runnable {
+            override fun run() {
+                val current = requestPermissionContext.get() ?: return
+                if (current.pluginCal.callbackId != call.callbackId) return
+                val elapsed = System.currentTimeMillis() - requestStartedAt
+                val sheetShown = GrimHcDiag.sheetVisibleAt >= requestStartedAt
+                if (sheetShown && elapsed < 125_000) {
+                    deadlineHandler.postDelayed(this, 125_000 - elapsed)
+                    return
+                }
+                val pending = requestPermissionContext.getAndSet(null) ?: return
+                pending.pluginCal.reject(
+                    if (sheetShown) "HC_NATIVE_04: no permission result in 125s"
+                    else "HC_NATIVE_04: no permission result in 8s"
+                )
+                bridge.releaseCall(pending.pluginCal)
+            }
+        }
+        deadlineHandler.postDelayed(deadline, 8000)
     }
 
 `;
@@ -124,8 +145,10 @@ function replacePluginMethod(source, name, replacement) {
   return null;
 }
 
-const next = replacePluginMethod(kt, "requestHealthPermissions", requestMethod);
-if (!next || !next.includes("GRIM_SIMPLE_PERMISSION_REQUEST")) {
+let next = replacePluginMethod(kt, "requestHealthPermissions", requestMethod);
+// Uppgradering från en tidigare version: markörkommentaren ligger ovanför @PluginMethod.
+if (next) next = next.replace(/(    \/\/ GRIM_SIMPLE_PERMISSION_REQUEST\n)+/, "    // GRIM_SIMPLE_PERMISSION_REQUEST\n").replace(/\n\n\n(    \/\/ GRIM_SIMPLE_PERMISSION_REQUEST)/, "\n\n$1");
+if (!next || !next.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !next.includes("GRIM_REQUEST_DEADLINE_V2")) {
   console.error("[patch-health-permission-request] kunde inte ersätta requestHealthPermissions.");
   process.exit(1);
 }

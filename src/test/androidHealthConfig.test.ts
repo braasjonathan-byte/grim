@@ -91,6 +91,24 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(verify).toContain("HealthPermissionProxyActivity");
   });
 
+  it("avbryter inte medan behörighetsrutan syns och ger inga falska HC_NATIVE_08", () => {
+    const race = read("scripts/patch-health-proxy-race.cjs");
+    expect(race).toContain("GRIM_RESUME_GRACE");
+    expect(race).toContain("mainHandler.postDelayed(resumeCheck, 2000)");
+    expect(race).toContain("getGrantedPermissions()");
+    expect(race).toContain("RESUME_WITHOUT_RESULT_BUT_GRANTED");
+    expect(race).toContain("GRIM_SHEET_SAFETY_TIMEOUT");
+    expect(race).toContain("}, 120_000)");
+    expect(race).not.toContain("}, 400)");
+    const request = read("scripts/patch-health-permission-request.cjs");
+    expect(request).toContain("GRIM_REQUEST_DEADLINE_V2");
+    expect(request).toContain("GrimHcDiag.sheetVisibleAt >= requestStartedAt");
+    expect(request).toContain("125_000");
+    const proxy = read("node_modules/capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt");
+    expect(proxy).toContain("GRIM_RESUME_GRACE");
+    expect(proxy).toContain("var sheetVisibleAt: Long = 0L");
+  });
+
   it("deklarerar den separata behörighetsskärmen i pluginets manifest", () => {
     expect(read("node_modules/capacitor-health/android/src/main/AndroidManifest.xml")).toContain(
       'android:name=".HealthPermissionProxyActivity"',

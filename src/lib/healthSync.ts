@@ -84,6 +84,13 @@ export const STEP_TIMEOUT_MS = 20000;
  */
 export const DIALOG_TIMEOUT_MS = 12000;
 
+/**
+ * När appen döljs har behörighetsrutan i Health Connect tagit över skärmen.
+ * Då styr användaren tiden; gränsen förlängs till detta skyddsnät, strax efter
+ * native-lagrets egna gränser (proxy 120 s, plugin 125 s).
+ */
+export const DIALOG_VISIBLE_TIMEOUT_MS = 130000;
+
 
 /**
  * Health Connect kan lämna löften ohanterade. Timern är helt fristående från
@@ -133,19 +140,42 @@ export function withDialogTimeout<T>(
   promise: Promise<T>,
   message: string,
   timeoutMs = STEP_TIMEOUT_MS,
+  /**
+   * Valfritt: blir appen dold innan timeoutMs (rutan syns) förlängs gränsen till
+   * totalt visibleTimeoutMs räknat från start. Gränsen är fortfarande hård och
+   * kan aldrig bli oändlig.
+   */
+  visibleTimeoutMs?: number,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      healthLog("permission dialog hard timeout", { timeoutMs });
+    const startedAt = Date.now();
+    let limit = timeoutMs;
+    const fire = () => {
+      healthLog("permission dialog hard timeout", { timeoutMs: limit });
+      cleanup();
       reject(new HealthError("dialog-timeout", message));
-    }, timeoutMs);
+    };
+    let timer = setTimeout(fire, timeoutMs);
+    const target = visibleTimeoutMs && visibleTimeoutMs > timeoutMs ? visibilityTarget() : null;
+    const onChange = () => {
+      if (!target?.hidden || limit !== timeoutMs) return;
+      limit = visibleTimeoutMs!;
+      clearTimeout(timer);
+      timer = setTimeout(fire, Math.max(0, limit - (Date.now() - startedAt)));
+      healthLog("permission dialog visible – extending timeout", { timeoutMs: limit });
+    };
+    const cleanup = () => {
+      clearTimeout(timer);
+      target?.removeEventListener("visibilitychange", onChange);
+    };
+    target?.addEventListener("visibilitychange", onChange);
     promise.then(
       (value) => {
-        clearTimeout(timer);
+        cleanup();
         resolve(value);
       },
       (err) => {
-        clearTimeout(timer);
+        cleanup();
         reject(err);
       },
     );
@@ -472,6 +502,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
         plugin.requestHealthPermissions(request),
         "Health Connect svarade inte i tid, och vi kan inte bekräfta att godkännanderutan visades.",
         DIALOG_TIMEOUT_MS,
+        DIALOG_VISIBLE_TIMEOUT_MS,
       ).then((r) => ({ kind: "plugin" as const, res: r })),
       resumed.then((access) => (access ? { kind: "access" as const, access } : new Promise<never>(() => {}))),
     ]);

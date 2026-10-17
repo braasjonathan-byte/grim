@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { healthErrorRef, STEP_TIMEOUT_MS, withDialogTimeout, withTimeout } from "@/lib/healthSync";
+import { DIALOG_TIMEOUT_MS, DIALOG_VISIBLE_TIMEOUT_MS, healthErrorRef, STEP_TIMEOUT_MS, withDialogTimeout, withTimeout } from "@/lib/healthSync";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -50,6 +50,37 @@ describe("withDialogTimeout", () => {
     await vi.advanceTimersByTimeAsync(501);
     await assertion;
     hidden.mockRestore();
+  });
+
+  it("förlänger gränsen när behörighetsrutan döljer appen, men aldrig oändligt", async () => {
+    vi.useFakeTimers();
+    let hiddenNow = false;
+    const hidden = vi.spyOn(document, "hidden", "get").mockImplementation(() => hiddenNow);
+    let settled = false;
+    const pending = withDialogTimeout(new Promise(() => {}), "Kunde inte ansluta", 500, 3000);
+    pending.catch(() => { settled = true; });
+    await vi.advanceTimersByTimeAsync(200);
+    hiddenNow = true;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(1000); // förbi 500 ms – rutan syns, ska inte avbryta
+    expect(settled).toBe(false);
+    const assertion = expect(pending).rejects.toThrow("Kunde inte ansluta");
+    await vi.advanceTimersByTimeAsync(1900); // totalt > 3000 ms
+    await assertion;
+    hidden.mockRestore();
+  });
+
+  it("avbryter efter grundgränsen om appen aldrig döljs, även med förlängning", async () => {
+    vi.useFakeTimers();
+    const pending = withDialogTimeout(new Promise(() => {}), "Kunde inte ansluta", 500, 3000);
+    const assertion = expect(pending).rejects.toThrow("Kunde inte ansluta");
+    await vi.advanceTimersByTimeAsync(501);
+    await assertion;
+  });
+
+  it("ger rutan längre tid än native-lagrets skyddsnät", () => {
+    expect(DIALOG_TIMEOUT_MS).toBe(12000);
+    expect(DIALOG_VISIBLE_TIMEOUT_MS).toBeGreaterThan(125000);
   });
 
   it("använder 20 sekunder som standard", () => {

@@ -123,7 +123,7 @@ if (!fs.existsSync(healthPluginGradle)) {
   }
   const proxy = path.join(nodeModules, "capacitor-health/android/src/main/java/com/fit_up/health/capacitor/HealthPermissionProxyActivity.kt");
   const proxySrc = fs.existsSync(proxy) ? fs.readFileSync(proxy, "utf8") : "";
-  for (const marker of ["GRIM_HC: BEFORE_PERMISSION_LAUNCH", "GRIM_HC: AFTER_PERMISSION_LAUNCH", "GRIM_HC: PERMISSION_RESULT", "GRIM_HC: permission intent resolvers", "no resolvers found, attempting launch anyway", "HC_NATIVE_08"]) {
+  for (const marker of ["GRIM_HC: BEFORE_PERMISSION_LAUNCH", "GRIM_HC: AFTER_PERMISSION_LAUNCH", "GRIM_HC: PERMISSION_RESULT", "GRIM_HC: permission intent resolvers", "no resolvers found, attempting launch anyway", "HC_NATIVE_08", "GRIM_RESUME_GRACE", "GRIM_SHEET_SAFETY_TIMEOUT", "RESUME_WITHOUT_RESULT_BUT_GRANTED"]) {
     if (!proxySrc.includes(marker)) failures.push(`capacitor-health: proxy diagnostics marker missing: ${marker}`);
   }
 }
@@ -191,7 +191,7 @@ if (fs.existsSync(healthPlugin)) {
       failures.push("capacitor-health: raw permission result logging / HC_NATIVE_06 separation is missing");
     }
   }
-  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")') || !source.includes('healthTrace("dialog-launch-attempt", "route=already-granted")') || !source.includes("HC_NATIVE_04: no permission result in 8s")) {
+  if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")') || !source.includes('healthTrace("dialog-launch-attempt", "route=already-granted")') || !source.includes("HC_NATIVE_04: no permission result in 8s") || !source.includes("GRIM_REQUEST_DEADLINE_V2")) {
     failures.push("capacitor-health: permission request must launch the proxy activity and time out — run patch-health-permission-request.cjs");
   }
   if (!source.includes("GRIM_SIMPLE_PERMISSION_REQUEST") && (!source.includes("GRIM_PERMISSION_PROXY_ACTIVITY") || !source.includes('healthTrace("dialog-launch-attempt", "route=proxy")'))) {
