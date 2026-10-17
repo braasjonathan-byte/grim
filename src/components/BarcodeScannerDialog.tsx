@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UNITS, gramsForFood, naturalUnitsFor } from "@/lib/nutritionCalc";
 import type { PickedItem } from "./FoodPickerDialog";
+import { saveProductFood } from "@/lib/saveProductFood";
+import { parseDecimal, validateNumber } from "@/lib/inputValidation";
 
 interface Props {
   open: boolean;
@@ -17,7 +19,7 @@ interface Props {
 
 interface FoundFood {
   source: "livsmedelsverket" | "openfoodfacts";
-  food: { id: string | null; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number };
+  food: { id: string | null; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number };
   product_name: string;
 }
 
@@ -33,6 +35,8 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
   const [manual, setManual] = useState("");
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -93,7 +97,8 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
 
       const reader = new BrowserMultiFormatReader();
       readerRef.current = reader;
-      const controls = await reader.decodeFromStream(stream, video!, (result) => {
+      if (!video) { stream.getTracks().forEach((track) => track.stop()); return; }
+      const controls = await reader.decodeFromStream(stream, video, (result) => {
         if (result) {
           const text = result.getText();
           if (/^\d{6,14}$/.test(text)) {
@@ -187,20 +192,35 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     }
   }
 
-  function confirm(next = false) {
-    if (!found) return;
-    const a = parseFloat(amount.replace(",", ".")) || 0;
+  async function confirm(next = false) {
+    if (!found || savingRef.current) return;
+    const a = parseDecimal(amount);
     const grams = gramsForFood(a, unit, found.food.name);
+    const validation = validateNumber(grams, "foodGrams");
+    if (!validation.ok) {
+      toast({ title: "Ogiltig mängd", description: validation.error, variant: "destructive" });
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    try {
+    let id = found.food.id;
+    if (!id) {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) throw new Error("Logga in igen och försök på nytt.");
+      id = await saveProductFood(data.user.id, found.food);
+    }
     const factor = grams / 100;
     onPick({
       source: found.food.id ? "food" : "custom_food",
-      id: found.food.id || "barcode-" + Date.now(),
+      id,
       name: found.food.name,
       amount: a, unit,
       kcal: found.food.kcal * factor,
       protein_g: found.food.protein_g * factor,
       fat_g: found.food.fat_g * factor,
       carbs_g: found.food.carbs_g * factor,
+      fiber_g: (found.food.fiber_g || 0) * factor,
     }, next ? { keepScanning: true } : undefined);
     if (next) {
       toast({ title: `${found.food.name} tillagd`, description: "Skanna nästa vara" });
@@ -210,6 +230,12 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
       return;
     }
     onOpenChange(false);
+    } catch {
+      toast({ title: "Livsmedlet kunde inte sparas", description: "Försök igen. Ingen mat har lagts till.", variant: "destructive" });
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   return (
@@ -282,10 +308,10 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
                 ))}
               </div>
             </div>
-            <button onClick={() => confirm(false)} className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground text-base font-bold">Lägg till</button>
+            <button disabled={saving} onClick={() => void confirm(false)} className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground text-base font-bold disabled:opacity-50">{saving ? "Sparar…" : "Lägg till"}</button>
             <div className="flex gap-2">
               <button onClick={() => { setFound(null); start(); }} className="flex-1 py-2.5 rounded-xl border border-input text-sm font-medium">Skanna igen</button>
-              <button onClick={() => confirm(true)} className="flex-1 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold">Lägg till & skanna nästa</button>
+              <button disabled={saving} onClick={() => void confirm(true)} className="flex-1 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-bold disabled:opacity-50">Lägg till & skanna nästa</button>
             </div>
           </div>
         )}
