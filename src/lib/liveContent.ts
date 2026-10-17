@@ -127,7 +127,7 @@ function subscribe(listener: () => void) {
     started = true;
     refreshLiveContent().catch(() => { loaded = true; emit(); });
   }
-  return () => listeners.delete(listener);
+  return () => { listeners.delete(listener); };
 }
 
 async function writeSetting(key: string, value: unknown, userId?: string) {

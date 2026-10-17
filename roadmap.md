@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Rätta skillnaden mellan streckkod och textsökning: gemensam produktdata, spara skannade produkter i livsmedelsbanken och verifiera sökflödet.
+
 - [x] Gemensam inmatningsvalidering: decimalkomma, gränser, felmeddelanden, bekräftelser, databasskydd och uteslutning av orimliga gamla värden.
 - [x] Lägg till 100 passanpassade peppformuleringar och verifiera att jämförelserna gäller rätt övning och träningsform (13 tester godkända).
 
