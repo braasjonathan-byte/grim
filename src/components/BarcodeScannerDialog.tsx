@@ -197,7 +197,7 @@ export default function BarcodeScannerDialog({ open, onOpenChange, onPick }: Pro
     const a = parseDecimal(amount);
     const grams = gramsForFood(a, unit, found.food.name);
     const validation = validateNumber(grams, "foodGrams");
-    if (!validation.ok) {
+    if (validation.error) {
       toast({ title: "Ogiltig mängd", description: validation.error, variant: "destructive" });
       return;
     }
