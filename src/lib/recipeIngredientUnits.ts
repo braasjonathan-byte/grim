@@ -35,7 +35,7 @@ export function ingredientAmountIn(ingredient: IngredientMeasure, unit: string, 
  * recalculated so the total grams — and therefore the nutrition — stay the same.
  * Non-convertible units keep their amount.
  */
-export function convertedIngredient(ingredient: IngredientMeasure, unit: string, food?: FoodMeasure): IngredientMeasure {
+export function convertedIngredient<T extends IngredientMeasure>(ingredient: T, unit: string, food?: FoodMeasure): T {
   if (unit === ingredient.unit || !convertible.has(ingredient.unit) || !convertible.has(unit)) return { ...ingredient, unit };
   const grams = gramsForFood(ingredient.amount, ingredient.unit, ingredient.name, food?.default_piece_weight_g, food?.density_g_per_dl);
   const perUnit = gramsForFood(1, unit, ingredient.name, food?.default_piece_weight_g, food?.density_g_per_dl);
