@@ -72,7 +72,7 @@ export const FOOD_SYNONYMS: Record<string, string[]> = {
   makaroner: ["makaroner", "pasta"],
   basmatiris: ["ris basmati"], pannkakor: ["pannkaka"], pannkaka: ["pannkaka"],
   solroskarnor: ["solrosfrö"], solroskärnor: ["solrosfrö"], solrosfron: ["solrosfrö"], solrosfrön: ["solrosfrö"],
-  "coca-cola": ["läsk cola", "läsk"], cola: ["läsk cola", "läsk"], lask: ["läsk"], läsk: ["läsk"],
+  "coca-cola": ["läsk cola", "läsk"], "coca cola": ["läsk cola", "läsk"], cola: ["läsk cola", "läsk"], lask: ["läsk"], läsk: ["läsk"],
   quorn: ["mykoprotein"],
   prastost: ["ost hård", "ost präst"], prästost: ["ost hård", "ost präst"],
   "krossade tomater": ["tomat krossad", "krossade tomater"], krossadetomater: ["tomat krossad"],
