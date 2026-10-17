@@ -2864,6 +2864,10 @@ export type Database = {
         Args: { p_from: string[]; p_to: string }
         Returns: Json
       }
+      admin_rescale_recipe_food_units: {
+        Args: { p_food_id: string; p_piece_ratio: number; p_vol_ratio: number }
+        Returns: number
+      }
       admin_set_user_access: {
         Args: {
           _honorary: boolean

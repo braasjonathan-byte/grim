@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { FunctionsHttpError } from "@supabase/supabase-js";
+import { gramsForFood } from "@/lib/nutritionCalc";
 
 type Food = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g: number; sugar_g: number | null; suitable_units: string[] | null; density_g_per_dl: number | null; default_piece_weight_g: number | null };
 const ALL_UNITS = ["g", "kg", "dl", "ml", "msk", "tsk", "st", "portion", "skiva", "näve", "filé"];
@@ -67,8 +68,20 @@ export default function AdminFoods() {
   };
 
   const save = async (id: string, patch: Partial<Food>) => {
+    const old = foods.find((f) => f.id === id);
     const { error } = await supabase.from("foods").update(patch).eq("id", id);
     if (error) return toast.error(error.message);
+    if (old) {
+      const next = { ...old, ...patch };
+      const dl = (f: Food) => gramsForFood(1, "dl", f.name, f.default_piece_weight_g, f.density_g_per_dl);
+      const st = (f: Food) => gramsForFood(1, "st", f.name, f.default_piece_weight_g, f.density_g_per_dl);
+      const volRatio = dl(old) > 0 ? dl(next) / dl(old) : 1;
+      const pieceRatio = st(old) > 0 ? st(next) / st(old) : 1;
+      if (Math.abs(volRatio - 1) > 1e-6 || Math.abs(pieceRatio - 1) > 1e-6) {
+        const { error: rErr } = await supabase.rpc("admin_rescale_recipe_food_units", { p_food_id: id, p_vol_ratio: volRatio, p_piece_ratio: pieceRatio });
+        if (rErr) toast.error("Livsmedlet sparades, men recepten kunde inte räknas om: " + rErr.message);
+      }
+    }
     setFoods((fs) => fs.map((f) => (f.id === id ? { ...f, ...patch } : f)));
     setFixes((m) => { const n = { ...m }; delete n[id]; return n; });
     setEdits((m) => { const n = { ...m }; delete n[id]; return n; });
