@@ -1,5 +1,5 @@
 import { useUnitOverrides } from "@/lib/exerciseUnits";
-import { formatDecimal, isPlausibleSet } from "@/lib/inputValidation";
+import { formatDecimal, isPlausibleSet, validateNumber } from "@/lib/inputValidation";
 import { validateCardioEntry } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { parseNum } from "@/lib/inputValidation";
@@ -1881,7 +1881,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     // får inte tyst bli 0 i loggen. Reps-fältet kan hålla sekunder/meter för
     // tids-/distansövningar, därför gäller den högre gränsen där.
     if (value.trim() !== "") {
-      const isTimeDist = isTimeOrDistanceExercise(exerciseName);
+      // Samma uppsättning tids-/distansövningar som set-fältens enhetsregler.
+      const isTimeDist = /farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(exerciseName)
+        || /^(sido)?planka$|^vila$/i.test(exerciseName.trim())
+        || !!customExercises.find(ce => ce.name.toLowerCase() === exerciseName.trim().toLowerCase())?.is_time_based;
       const rule = field === 'kg' ? "setKg" : (isTimeDist ? "setTimeDist" : "setReps");
       const res = validateNumber(value, rule);
       if (res.error) {
