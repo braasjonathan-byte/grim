@@ -325,7 +325,19 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
                         className="rounded-xl bg-muted/50 border-transparent h-7 w-20 text-xs"
                         aria-label="Mängd"
                       />
-                      <span className="text-[11px] text-muted-foreground">{ing.unit}</span>
+                      {(() => {
+                        const linked = ing as any;
+                        const food = measureFoods.find((f) => linked.id ? f.id === linked.id : f.name === ing.name);
+                        const options = ingredientUnitOptions(ing, food);
+                        return options.length > 1 ? (
+                          <Select value={ing.unit} onValueChange={(v) => changeIngredientUnit(idx, v)}>
+                            <SelectTrigger aria-label={`Enhet för ${ing.name}`} className="h-7 w-16 rounded-lg px-2 text-xs bg-muted/50 border-transparent">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>{options.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                          </Select>
+                        ) : <span className="text-[11px] text-muted-foreground">{ing.unit}</span>;
+                      })()}
                       <span className="text-[10px] text-muted-foreground ml-auto tabular-nums">{Math.round(ing.kcal)} kcal · P{ing.protein_g.toFixed(1)} F{ing.fat_g.toFixed(1)} K{ing.carbs_g.toFixed(1)}</span>
                     </div>
                   </li>
