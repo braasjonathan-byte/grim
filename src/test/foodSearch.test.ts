@@ -58,4 +58,30 @@ describe("searchFoods", () => {
     expect(f("kycklingfärs")).toMatch(/^Kyckling färs/);
     expect(f("makaroner")).toBe("Makaroner");
   });
+  it("råvaror före rätter och inälvsmat, efterled och böjningar", () => {
+    const real = [
+      "Kyckling mage rå", "Kyckling lever rå", "Kyckling hjärta rå", "Kyckling bröstfilé rå u. skinn",
+      "Gräddersättning pulver fett 35%", "Löksås m. grädde", "Vispgrädde fett 40%",
+      "Syltlök inlagd", "Rismål m. sylt", "Hallonsylt",
+      "Soja- och veteprotein färs stekt", "Sojasås",
+      "Chips majs tortilla", "Taco tortilla m. köttfärs grönsaker ost", "Bröd vitt vetetortilla",
+      "Pizza Funghi m. champinjoner restaurang", "Champinjon", "Rödbeta", "Pannkaka tunn hemlagad",
+      "Köttfärssås Vivaldi nöt m. squash majs paprika rödlök ost", "Lök röd",
+      "Gröna bönor", "Vaxbönor", "Tomat krossad konserv. m. lag", "Bröd fullkorn råg fibrer ca 7%",
+    ].map((name, i) => ({ id: `r${i}`, name, source: "food" }));
+    const f = (q: string) => searchFoods(real, q)[0]?.name;
+    expect(f("kycklingfilé")).toBe("Kyckling bröstfilé rå u. skinn");
+    expect(f("grädde")).toBe("Vispgrädde fett 40%");
+    expect(f("sylt")).toBe("Hallonsylt");
+    expect(f("soja")).toBe("Sojasås");
+    expect(f("tortilla")).toBe("Bröd vitt vetetortilla");
+    expect(f("champinjoner")).toBe("Champinjon");
+    expect(f("rödbetor")).toBe("Rödbeta");
+    expect(f("pannkakor")).toMatch(/^Pannkaka/);
+    expect(f("rödlök")).toBe("Lök röd");
+    expect(f("bönor")).toBe("Gröna bönor");
+    expect(f("krossade tomater")).toMatch(/^Tomat krossad/);
+    expect(f("rågbröd")).toMatch(/^Bröd fullkorn råg/);
+    expect(f("kycklinglever")).toBe("Kyckling lever rå"); // inälvsmat när man ber om den
+  });
 });
