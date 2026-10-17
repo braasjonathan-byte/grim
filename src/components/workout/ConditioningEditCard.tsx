@@ -245,6 +245,10 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
       const v = validateCardioEntry({ sport: name, timeMin: data.time ?? null, distanceKm: isFinite(dRaw) ? distToKm(dRaw) : null });
       if (!v.valid) { toast.error(v.error || "Orimligt värde"); return; }
     }
+    if (data.pulse) {
+      const p = validateNumber(data.pulse, "pulseBpm");
+      if (p.error) { toast.error(`Puls: ${p.error}`); return; }
+    }
     await onSave(data);
     setIsEditing(false);
     setShowEmptyWarning(false);
