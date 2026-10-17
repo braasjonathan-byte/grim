@@ -1877,6 +1877,18 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   const saveSetFieldData = async (week: number, day: string, exerciseName: string, setIndex: number, field: 'kg' | 'reps', value: string, totalSets: number, defaultKg: string, defaultReps: string) => {
+    // Validera innan något sparas – ogiltiga värden (t.ex. "abc" eller -20)
+    // får inte tyst bli 0 i loggen. Reps-fältet kan hålla sekunder/meter för
+    // tids-/distansövningar, därför gäller den högre gränsen där.
+    if (value.trim() !== "") {
+      const isTimeDist = isTimeOrDistanceExercise(exerciseName);
+      const rule = field === 'kg' ? "setKg" : (isTimeDist ? "setTimeDist" : "setReps");
+      const res = validateNumber(value, rule);
+      if (res.error) {
+        toast.error(`${field === 'kg' ? "Vikt" : isTimeDist ? "Värde" : "Reps"}: ${res.error}`);
+        return;
+      }
+    }
     const k = `${week}-${day}`;
     const currentData = getSetData(k, exerciseName);
     // Andra set får inte fyllas i automatiskt – då skulle tomma set räknas som ifyllda.
