@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Plus, Globe, Lock, Loader2, Link2, AlertTriangle } from "lucide-react";
 import { aiItemToPicked, type AiFoodItem } from "@/lib/aiFood";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
 import { RECIPE_CATEGORIES, type CuratedRecipe } from "@/data/curatedRecipes";
+import { gramsForFood } from "@/lib/nutritionCalc";
+import { convertedIngredient, ingredientUnitOptions, type FoodMeasure } from "@/lib/recipeIngredientUnits";
 
 interface RecipeEditorProps {
   open: boolean;
@@ -37,6 +40,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(false);
   const [reviewed, setReviewed] = useState(false);
+  const [measureFoods, setMeasureFoods] = useState<Array<FoodMeasure & { id: string; name: string }>>([]);
   const { toast } = useToast();
 
   const isEditing = !!initialRecipeId;
