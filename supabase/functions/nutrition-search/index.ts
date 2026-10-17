@@ -23,7 +23,9 @@ Deno.serve(async (req) => {
     const fields = "code,product_name,product_name_sv,generic_name,generic_name_sv,brands,nutriments,nova_group";
     const base = "https://world.openfoodfacts.org/cgi/search.pl";
     const common = `action=process&json=1&page_size=50&sort_by=popularity_key&fields=${fields}`;
+    const sal = `https://search.openfoodfacts.org/search?q=${encodeURIComponent(term)}&page_size=50&langs=sv,en&fields=${fields}`;
     const urls = [
+      sal,
       `${base}?${common}&search_terms=${encodeURIComponent(term)}&search_simple=1`,
       `${base}?${common}&tagtype_0=brands&tag_contains_0=contains&tag_0=${encodeURIComponent(term)}`,
     ];
@@ -33,7 +35,11 @@ Deno.serve(async (req) => {
         signal: AbortSignal.timeout(12000),
       });
       if (!response.ok) throw new Error("Product search unavailable");
-      return await response.json() as { products?: OFFProduct[] };
+      const json = await response.json() as { products?: OFFProduct[]; hits?: Array<OFFProduct & { brands?: string | string[] }> };
+      if (Array.isArray(json.hits)) {
+        return { products: json.hits.map((h) => ({ ...h, brands: Array.isArray(h.brands) ? h.brands.join(",") : h.brands })) as OFFProduct[] };
+      }
+      return json;
     }));
     const products = new Map<string, OFFProduct>();
     let succeeded = false;
