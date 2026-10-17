@@ -13,12 +13,26 @@ export interface AchievementSyncResult {
 }
 
 /**
- * Märken för ton/reps som inte längre uppfylls (t.ex. upplåsta av ett orimligt
- * 99999 kg-set som nu inte räknas) låses igen.
+ * Märken som inte längre uppfylls (t.ex. upplåsta av ett orimligt 99999 kg-set
+ * eller en felaktig distans som nu inte räknas) låses igen. Gäller alla
+ * prestationsmått – tonnage, reps, distans, pass, streak och utmaningar.
+ * Sociala mått (eldar/kommentarer) rörs inte: de tas aldrig tillbaka.
  */
+const RELOCKABLE_METRICS = new Set([
+  "tons",
+  "bestSessionTons",
+  "kgTotal",
+  "reps",
+  "distanceKm",
+  "workouts",
+  "currentStreak",
+  "longestStreak",
+  "challenges",
+]);
+
 const relockUnearnedVolumeAchievements = async (metrics: ReturnType<typeof calculateAchievementMetrics>) => {
   const unearned = ACHIEVEMENTS.filter(
-    (a) => (a.metric === "tons" || a.metric === "bestSessionTons" || a.metric === "reps") && metrics[a.metric] < a.threshold,
+    (a) => RELOCKABLE_METRICS.has(a.metric) && (metrics[a.metric] ?? 0) < a.threshold,
   ).map((a) => a.id);
   if (unearned.length === 0) return;
   const { error } = await supabase.rpc("relock_achievements" as any, { p_ids: unearned } as any);

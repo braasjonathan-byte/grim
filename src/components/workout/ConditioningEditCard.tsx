@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { parseNum, validateCardioEntry } from "@/lib/inputValidation";
+import { parseNum, validateCardioEntry, validateNumber } from "@/lib/inputValidation";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Check, ChevronDown, ChevronUp, Footprints, Info, Pencil, Play, X } from "lucide-react";
@@ -244,6 +244,10 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
       const dRaw = parseFloat(String(data.dist ?? "").replace(",", "."));
       const v = validateCardioEntry({ sport: name, timeMin: data.time ?? null, distanceKm: isFinite(dRaw) ? distToKm(dRaw) : null });
       if (!v.valid) { toast.error(v.error || "Orimligt värde"); return; }
+    }
+    if (data.pulse) {
+      const p = validateNumber(data.pulse, "pulseBpm");
+      if (p.error) { toast.error(`Puls: ${p.error}`); return; }
     }
     await onSave(data);
     setIsEditing(false);

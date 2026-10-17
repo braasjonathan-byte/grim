@@ -1,5 +1,5 @@
 import { useUnitOverrides } from "@/lib/exerciseUnits";
-import { formatDecimal, isPlausibleSet } from "@/lib/inputValidation";
+import { formatDecimal, isPlausibleSet, validateNumber } from "@/lib/inputValidation";
 import { validateCardioEntry } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { parseNum } from "@/lib/inputValidation";
@@ -12,7 +12,7 @@ import { PastWorkoutsDialog, DeleteWorkoutConfirm } from "@/components/workout/W
 import { WORKOUTS_CHANGED_EVENT, notifyWorkoutsChanged } from "@/lib/workoutHistory";
 import SetRowsEditor, { validateSetRows, type SetRow } from "@/components/workout/SetRowsEditor";
 import { supabase } from "@/integrations/supabase/client";
-import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus } from "@/hooks/useOfflineSync";
+import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus, OFFLINE_FLUSHED_EVENT } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
 import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles } from "lucide-react";
@@ -703,7 +703,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
       }
     }
     if (fetchedPlans) {
-      writeOfflineWorkoutCache(userId, fetchedPlans, fetchedCompletions ?? []);
+      // Cache the merged view (server + still-queued rows) so an offline
+      // reload before the queue has replayed still shows the latest logging.
+      writeOfflineWorkoutCache(userId, fetchedPlans, compData ?? []);
     }
 
     // An empty answer before the login session is restored is not "no plan":
@@ -890,6 +892,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }, [userId, initialWeekSet, planStartDate, profileLoaded, refreshSocialInteractions]);
 
   useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
+
+  // When the offline queue finishes replaying, refetch so the view shows the
+  // server state instead of a snapshot fetched before the replay landed.
+  useEffect(() => {
+    const onFlushed = () => { fetchDataRef.current?.(); };
+    window.addEventListener(OFFLINE_FLUSHED_EVENT, onFlushed);
+    return () => window.removeEventListener(OFFLINE_FLUSHED_EVENT, onFlushed);
+  }, []);
   useEffect(() => {
     fetchData();
     // Retry once after a short delay if auth session may not be ready yet
@@ -1867,6 +1877,21 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   };
 
   const saveSetFieldData = async (week: number, day: string, exerciseName: string, setIndex: number, field: 'kg' | 'reps', value: string, totalSets: number, defaultKg: string, defaultReps: string) => {
+    // Validera innan något sparas – ogiltiga värden (t.ex. "abc" eller -20)
+    // får inte tyst bli 0 i loggen. Reps-fältet kan hålla sekunder/meter för
+    // tids-/distansövningar, därför gäller den högre gränsen där.
+    if (value.trim() !== "") {
+      // Samma uppsättning tids-/distansövningar som set-fältens enhetsregler.
+      const isTimeDist = /farmers?\s*walk|yoke\s*walk|sled|bear\s*crawl/i.test(exerciseName)
+        || /^(sido)?planka$|^vila$/i.test(exerciseName.trim())
+        || !!customExercises.find(ce => ce.name.toLowerCase() === exerciseName.trim().toLowerCase())?.is_time_based;
+      const rule = field === 'kg' ? "setKg" : (isTimeDist ? "setTimeDist" : "setReps");
+      const res = validateNumber(value, rule);
+      if (res.error) {
+        toast.error(`${field === 'kg' ? "Vikt" : isTimeDist ? "Värde" : "Reps"}: ${res.error}`);
+        return;
+      }
+    }
     const k = `${week}-${day}`;
     const currentData = getSetData(k, exerciseName);
     // Andra set får inte fyllas i automatiskt – då skulle tomma set räknas som ifyllda.

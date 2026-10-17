@@ -150,12 +150,16 @@ async function isSafeToReplay(item: PendingUpsert): Promise<boolean> {
   return true;
 }
 
+/** Dispatched after queued workout_completions rows have been replayed, so open views can refetch instead of showing a pre-flush snapshot. */
+export const OFFLINE_FLUSHED_EVENT = "grim:offline-queue-flushed";
+
 async function flushQueue() {
   const queue = getQueue();
   if (queue.length === 0) return;
 
   const now = Date.now();
   const remaining: PendingUpsert[] = [];
+  let replayedWorkoutRows = 0;
 
   for (const item of queue) {
     if (!item.timestamp || now - item.timestamp > MAX_AGE_MS) {
@@ -179,6 +183,8 @@ async function flushQueue() {
         .upsert(item.data as any, { onConflict: item.onConflict });
       if (error) {
         remaining.push(item);
+      } else if (item.table === "workout_completions") {
+        replayedWorkoutRows++;
       }
     } catch {
       remaining.push(item);
@@ -186,6 +192,16 @@ async function flushQueue() {
   }
 
   saveQueue(remaining);
+
+  // Tell open views that queued rows reached the backend, so they refetch
+  // instead of keeping a snapshot that was fetched before the replay landed.
+  if (replayedWorkoutRows > 0) {
+    try {
+      window.dispatchEvent(new CustomEvent(OFFLINE_FLUSHED_EVENT));
+    } catch {
+      // non-browser environment
+    }
+  }
 }
 
 export function useOfflineSync() {
@@ -196,8 +212,19 @@ export function useOfflineSync() {
     const handleOnline = () => {
       flushQueue();
     };
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") flushQueue();
+    };
 
     window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisible);
+    // Retry regularly: the "online" event can fire before the connection
+    // actually works, and a failed replay must not wait for the next reload.
+    const timer = setInterval(flushQueue, 15000);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisible);
+      clearInterval(timer);
+    };
   }, []);
 }
