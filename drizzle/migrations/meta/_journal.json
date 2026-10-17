@@ -225,6 +225,13 @@
       "when": 1792228342057,
       "tag": "0031_validate_completion_values",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792228356389,
+      "tag": "0032_fix_validate_completion_pulse_type",
+      "breakpoints": true
     }
   ]
 }
