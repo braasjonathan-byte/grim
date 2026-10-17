@@ -890,6 +890,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
   }, [userId, initialWeekSet, planStartDate, profileLoaded, refreshSocialInteractions]);
 
   useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
+
+  // When the offline queue finishes replaying, refetch so the view shows the
+  // server state instead of a snapshot fetched before the replay landed.
+  useEffect(() => {
+    const onFlushed = () => { fetchDataRef.current?.(); };
+    window.addEventListener(OFFLINE_FLUSHED_EVENT, onFlushed);
+    return () => window.removeEventListener(OFFLINE_FLUSHED_EVENT, onFlushed);
+  }, []);
   useEffect(() => {
     fetchData();
     // Retry once after a short delay if auth session may not be ready yet
