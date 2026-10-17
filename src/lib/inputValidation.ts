@@ -163,6 +163,13 @@ export interface CardioValidationResult {
 export const validateCardioEntry = ({ sport, timeMin, distanceKm }: CardioEntryInput): CardioValidationResult => {
   const t = parseDecimal(timeMin === null || timeMin === undefined ? "" : String(timeMin));
   const d = parseDecimal(distanceKm === null || distanceKm === undefined ? "" : String(distanceKm));
+
+  // Negativa värden är alltid fel – de får inte tyst tolkas som "saknas".
+  if (isFinite(t) && t < 0) return { valid: false, error: "Tiden kan inte vara negativ." };
+  if (isFinite(d) && d < 0) return { valid: false, error: "Distansen kan inte vara negativ." };
+  if (isFinite(t) && t > RULES.cardioTimeMin.max) return { valid: false, error: `Tiden kan vara högst ${RULES.cardioTimeMin.max} min.` };
+  if (isFinite(d) && d > RULES.cardioDistanceKm.max) return { valid: false, error: `Distansen kan vara högst ${RULES.cardioDistanceKm.max} km.` };
+
   const hasTime = isFinite(t) && t > 0;
   const hasDist = isFinite(d) && d > 0;
 
