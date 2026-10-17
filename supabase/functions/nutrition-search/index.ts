@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     }));
     const products = new Map<string, OFFProduct>();
     let succeeded = false;
-    for (const response of responses) {
+    for (const [index, response] of responses.entries()) {
       if (response.status !== "fulfilled") continue;
       if (!Array.isArray(response.value.products)) continue;
       succeeded = true;
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
         const food = product.code ? offFood(product) : null;
         if (!food) continue;
         const hay = food.name.toLowerCase();
-        if (words.length && !words.every((w) => hay.includes(w))) continue;
+        if (index >= 1 && index <= 3 && words.length && !words.every((w) => hay.includes(w))) continue;
         products.set(product.code!, product);
       }
     }
