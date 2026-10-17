@@ -1,5 +1,11 @@
 # Roadmap
 
+## Testrapport 17 okt 2026 (punkt 1–4)
+- [x] 1. Offlinesynk: omspelning körs nu var 15:e sekund, vid "online" och när appen blir synlig; vyn laddar om när kön spelats upp (grim:offline-queue-flushed) och cachen sparar server+köade rader så inget försvinner vid omladdning.
+- [x] 2. Livsmedels-RLS verifierad: alla inloggade läser, bara skaparen ändrar/raderar (avsiktligt).
+- [x] 3. Validering: negativa/orimliga konditionsvärden nekas (tid, distans, puls 30–220), set-fält nekar ogiltiga värden med felmeddelande i stället för tyst 0, DB-trigger speglar gränserna (distans 0–300 km, puls 30–220), 6 tester godkända.
+- [x] 4. Utmärkelser räknas om vid passändring/borttagning och låses om för alla prestationsmått (tonnage, reps, distans, pass, streak, utmaningar) – inte bara volym.
+
 - [x] Enhetsval för ingredienser i receptvyn, med oförändrade näringsvärden; 30 tester godkända och 140 g havregryn → 4 dl → 140 g verifierat inloggad.
 
 - [x] Rätta skillnaden mellan streckkod och textsökning: gemensam produktdata, spara skannade produkter i livsmedelsbanken; sökning verifierad inloggad och sparandet täckt av tester. Extern märkessökning kan tillfälligt fallera och visar då fel i stället för noll träffar.
