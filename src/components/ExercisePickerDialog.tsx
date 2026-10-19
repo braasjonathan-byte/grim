@@ -62,6 +62,7 @@ const ExercisePickerDialog = ({
   const [search, setSearch] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(initialMuscleGroup);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
+  const [hiddenNames, setHiddenNames] = useState<Set<string>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState("styrka");
@@ -92,6 +93,9 @@ const ExercisePickerDialog = ({
       supabase.from("custom_exercises").select("*").order("name").then(({ data }) => {
         registerCustomCardioConfigs(data as any);
         if (data) setCustomExercises(data);
+      });
+      (supabase.from("hidden_exercises" as any).select("exercise_name") as any).then(({ data }: any) => {
+        if (data) setHiddenNames(new Set(data.map((r: any) => String(r.exercise_name).toLowerCase())));
       });
       // No auto-focus: keyboard should not open automatically
     }
@@ -146,6 +150,7 @@ const ExercisePickerDialog = ({
     };
     return dedupeExerciseList(merged)
       .filter(e => !setRepRe.test(e.name) && !isJunk(e.name))
+      .filter(e => !hiddenNames.has(e.name.toLowerCase()))
       .sort((a, b) => a.name.localeCompare(b.name, "sv"));
   })();
 
