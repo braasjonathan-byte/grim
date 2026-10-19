@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { parseNum } from "@/lib/inputValidation";
+import { parseNum, validateNumber } from "@/lib/inputValidation";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizePaceInput } from "@/lib/workoutIntervalUtils";
 import { X, Footprints, Heart, Timer, Route, Save, Calculator, Clock } from "lucide-react";
@@ -217,11 +218,21 @@ const WorkoutLogDialog = ({
   const avgTempo = totalDistance > 0 ? formatTempo(totalTime / totalDistance) : "";
 
   const handleSave = async () => {
-    setSaving(true);
-
     const saveTempo = isInterval ? avgTempo : (isPaceMode(mode) ? formatPaceDisplay(tempo.trim(), mode) : tempo.trim());
     const saveDist = isInterval ? totalDistance : parseNum(distance) || null;
 
+    const pulseCheck = validateNumber(pulse, "pulseBpm");
+    if (pulseCheck.error) {
+      toast({ title: "Ogiltig puls", description: pulseCheck.error, variant: "destructive" });
+      return;
+    }
+    const distCheck = validateNumber(saveDist ?? "", "cardioDistanceKm");
+    if (distCheck.error) {
+      toast({ title: "Ogiltig distans", description: distCheck.error, variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
     // First read existing record to preserve logged_weights
     const { data: existing } = await supabase
       .from("workout_completions")
@@ -231,7 +242,7 @@ const WorkoutLogDialog = ({
       .eq("day", day)
       .maybeSingle();
 
-    await supabase.from("workout_completions").upsert(
+    const { error } = await supabase.from("workout_completions").upsert(
       {
         user_id: userId,
         week,
@@ -239,7 +250,7 @@ const WorkoutLogDialog = ({
         done: true,
         skipped: false,
         logged_tempo: saveTempo || null,
-        logged_pulse: pulse ? parseInt(pulse) || null : null,
+        logged_pulse: pulseCheck.value,
         logged_distance_km: saveDist || null,
         logged_weights: existing?.logged_weights ?? existingLog?.logged_weights ?? null,
       } as any,
@@ -247,6 +258,10 @@ const WorkoutLogDialog = ({
     );
 
     setSaving(false);
+    if (error) {
+      toast({ title: "Passet kunde inte sparas", description: error.message, variant: "destructive" });
+      return;
+    }
     onSaved();
   };
 
