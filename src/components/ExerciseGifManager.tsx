@@ -46,6 +46,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [overrides, setOverrides] = useState<MuscleOverride[]>([]);
+  const [hiddenNames, setHiddenNames] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(embedded);
   const [filter, setFilter] = useState("");
@@ -128,9 +129,16 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
     setOverrides((data as any) || []);
   };
 
+  const fetchHidden = async () => {
+    const { data } = await supabase
+      .from("hidden_exercises" as any)
+      .select("exercise_name");
+    setHiddenNames(new Set(((data as any) || []).map((r: any) => String(r.exercise_name).toLowerCase())));
+  };
+
   useEffect(() => {
     if (open) {
-      Promise.all([fetchMappings(), fetchCustomExercises(), fetchOverrides()]).then(() => setLoading(false));
+      Promise.all([fetchMappings(), fetchCustomExercises(), fetchOverrides(), fetchHidden()]).then(() => setLoading(false));
     }
   }, [open]);
 
@@ -364,8 +372,9 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
     const setRepRe = /\s+\d+\s*[x×*]\s*\d+/i;
     return Array.from(nameSet.values())
       .filter(e => !setRepRe.test(e.name))
+      .filter(e => !hiddenNames.has(e.name.toLowerCase()))
       .sort((a, b) => a.name.localeCompare(b.name, "sv"));
-  }, [customExercises, overrides]);
+  }, [customExercises, overrides, hiddenNames]);
 
   const toggleSelected = (name: string) => {
     setSelectedExercises(prev => {
