@@ -131,38 +131,36 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
               <CopyPlus className="w-4 h-4" />
             </button>
           )}
-          <button onClick={onQuickLog} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label={`Snabbpost i ${meal}`} title="Snabbpost (bara kcal)">
-            <Zap className="w-4 h-4" />
-          </button>
           <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5">
             <Plus className="w-3.5 h-3.5" /> Lägg till
           </button>
-          {(isCustom || onSaveTemplate) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Fler val">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl">
-                {onSaveTemplate && (
-                  <DropdownMenuItem onClick={onSaveTemplate}>
-                    <BookmarkPlus className="w-3.5 h-3.5 mr-2" /> Spara som måltidsmall
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Fler val">
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl">
+              <DropdownMenuItem onClick={onQuickLog}>
+                <Zap className="w-3.5 h-3.5 mr-2" /> Snabbpost (bara kcal)
+              </DropdownMenuItem>
+              {onSaveTemplate && (
+                <DropdownMenuItem onClick={onSaveTemplate}>
+                  <BookmarkPlus className="w-3.5 h-3.5 mr-2" /> Spara som måltidsmall
+                </DropdownMenuItem>
+              )}
+              {isCustom && (
+                <>
+                  <DropdownMenuItem onClick={onRename}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Byt namn
                   </DropdownMenuItem>
-                )}
-                {isCustom && (
-                  <>
-                    <DropdownMenuItem onClick={onRename}>
-                      <Pencil className="w-3.5 h-3.5 mr-2" /> Byt namn
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Ta bort
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Ta bort
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       {logs.length > 0 && (
