@@ -20,6 +20,7 @@ import MealTemplatesDialog from "./MealTemplatesDialog";
 import WaterTracker from "./WaterTracker";
 import NutritionInsights from "./NutritionInsights";
 import DayFoodDialog from "./DayFoodDialog";
+import CopyFromPastDialog from "./CopyFromPastDialog";
 import FastingWidget from "./FastingWidget";
 import { foodQualityScore, MICROS, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
 import { toLocalDateKey } from "@/lib/dateUtils";
@@ -243,6 +244,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
   };
   const quickHasErrors = Object.values(quickErrs).some(Boolean);
   const [valueConfirm, setValueConfirm] = useState<{ msg: string; run: () => void } | null>(null);
+  const [pastOpen, setPastOpen] = useState(false);
   function requestQuickSave() {
     if (quickHasErrors) return;
     if (parseDecimal(quick.kcal) > UNUSUAL_QUICK_KCAL) { setValueConfirm({ msg: "Det är ovanligt mycket. Stämmer det?", run: () => void saveQuickLog() }); return; }
@@ -583,10 +585,11 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
         <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
           <Bookmark className="w-3 h-3" /> Mallar
         </button>
-        <button onClick={() => { hapticLight(); copyFromYesterday(); }} disabled={yesterdayLogs.length === 0} title={yesterdayLogs.length === 0 ? "Inget loggat dagen innan att kopiera" : "Kopiera dagen innan"} className="pill-btn-ghost shadow-soft py-2 text-xs disabled:opacity-40">
-          <CopyPlus className="w-3 h-3" /> Igår
+        <button onClick={() => { hapticLight(); setPastOpen(true); }} title="Kopiera från senaste veckan" className="pill-btn-ghost shadow-soft py-2 text-xs">
+          <CopyPlus className="w-3 h-3" /> Kopiera
         </button>
       </div>
+      <CopyFromPastDialog open={pastOpen} onOpenChange={setPastOpen} userId={userId} dateKey={dateKey} onCopied={load} />
 
 
       <div className="rounded-2xl bg-card shadow-soft border border-border/40 p-4 space-y-4">
