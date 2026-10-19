@@ -3,7 +3,7 @@ import { formatDecimal, isPlausibleSet, validateNumber } from "@/lib/inputValida
 import { validateCardioEntry } from "@/lib/inputValidation";
 import { fuzzyFilterSort, fuzzyScoreMulti } from "@/lib/fuzzySearch";
 import { parseNum } from "@/lib/inputValidation";
-import { useState, useEffect, useCallback, useRef, useMemo, useId } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, useId, type ReactNode, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -15,7 +15,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { queueOfflineUpsert, dequeueOfflineUpsert, getPendingRows, useOfflineStatus, OFFLINE_FLUSHED_EVENT } from "@/hooks/useOfflineSync";
 import { readOfflineWorkoutCache, writeOfflineWorkoutCache, patchOfflineWorkoutCache } from "@/lib/offlineWorkoutCache";
 import { countCheckmarks, detectDestructiveWrite, getKnownCheckmarkCount, rememberCheckmarkCount, seedCheckmarkCounts, logDestructiveWrite } from "@/lib/completionGuard";
-import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles } from "lucide-react";
+import { Check, MessageSquare, ChevronDown, ChevronUp, Dumbbell, Footprints, Moon, Bike, Waves, ChevronLeft, ChevronRight, LogOut, Plus, Trash2, Search, CalendarIcon, X, TrendingUp, Equal, Weight, MessageCircle, XCircle, Timer, Route, Info, Pencil, Share2, Swords, ArrowLeftRight, Send, Settings, ArrowLeft, Flame, Download, Play, Save, Lock, RefreshCw, MapPin, Square, Maximize2, Minimize2, Pause, Heart, HeartOff, Sparkles, GripVertical } from "lucide-react";
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { GPS_FIX_MAX_ACCURACY_M, useGpsTracker } from "@/hooks/useGpsTracker";
 import { useHeartRate } from "@/hooks/useHeartRate";
 import { openAppSettings } from "@/lib/openSettings";
@@ -82,6 +85,56 @@ import { estimateCalories, getPlanDayDate } from "@/lib/workoutCalories";
 import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, collectSetsForExercise, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
 
 const SHOW_STRAVA_INTEGRATION = false;
+
+// Drag & drop för att ändra ordning på övningar i ett pass (ersätter upp/ner-pilarna).
+function ExerciseDndContext({ count, onReorder, children }: { count: number; onReorder: (from: number, to: number) => void; children: React.ReactNode }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
+  const ids = useMemo(() => Array.from({ length: count }, (_, i) => String(i)), [count]);
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    onReorder(Number(active.id), Number(over.id));
+  };
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>{children}</SortableContext>
+    </DndContext>
+  );
+}
+
+interface SortableLineRenderProps {
+  setNodeRef: (node: HTMLElement | null) => void;
+  style: React.CSSProperties;
+  handle: React.ReactNode;
+}
+
+function SortableLine({ id, children }: { id: string; children: (props: SortableLineRenderProps) => React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+    position: "relative",
+  };
+  const handle = (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      onClick={(e) => e.stopPropagation()}
+      className="p-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-primary transition-colors"
+      aria-label="Dra för att flytta"
+      title="Dra för att flytta"
+    >
+      <GripVertical className="w-4 h-4" />
+    </button>
+  );
+  return <>{children({ setNodeRef, style, handle })}</>;
+}
 
 
 
@@ -3819,17 +3872,19 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return () => window.removeEventListener("grim:open-exercise-picker", handler as EventListener);
   }, [plans, currentWeek, planStartDate]);
 
-  const moveExercise = async (planId: string, lineIndex: number, direction: "up" | "down") => {
+  // Drag & drop: flytta en övningsrad från ett index till ett annat.
+  const reorderExercise = async (planId: string, fromIndex: number, toIndex: number) => {
     const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
+    if (!plan || fromIndex === toIndex) return;
     const separator = plan.details.includes("\n") ? "\n" : "; ";
     const lines = plan.details.split(/[;\n]/).map(s => s.trim()).filter(Boolean);
-    const targetIndex = direction === "up" ? lineIndex - 1 : lineIndex + 1;
-    if (targetIndex < 0 || targetIndex >= lines.length) return;
-    [lines[lineIndex], lines[targetIndex]] = [lines[targetIndex], lines[lineIndex]];
+    if (fromIndex < 0 || fromIndex >= lines.length || toIndex < 0 || toIndex >= lines.length) return;
+    const [moved] = lines.splice(fromIndex, 1);
+    lines.splice(toIndex, 0, moved);
     const newDetails = lines.join(separator);
-    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
+    // Uppdatera lokalt direkt så listan inte hoppar tillbaka medan databasen sparas.
     setPlans(prev => prev.map(p => p.id === planId ? { ...p, details: newDetails } : p));
+    await supabase.from("workout_plans").update({ details: newDetails }).eq("id", plan.id);
     triggerSave();
   };
 
@@ -4324,6 +4379,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     {/* Exercises / details */}
                     {plan.details &&
                   (() => { const exerciseLines = plan.details.split("\n").filter(Boolean); return <div className="space-y-2">
+                        <ExerciseDndContext count={exerciseLines.length} onReorder={(a, b) => reorderExercise(plan.id, a, b)}>
                         {exerciseLines.map((line, i) => {
                       const { name, weight } = parseExerciseWeight(line);
                       
@@ -4412,8 +4468,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                         // Always show inline card; green "Loggat resultat" box is suppressed
                         return (
+                          <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                          <div ref={setNodeRef} style={style}>
                           <ConditioningEditCard
                             key={i}
+                            dragHandle={handle}
                             name={name}
                             lineIndex={i}
                             planId={plan.id}
@@ -4426,8 +4485,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             exerciseLinesCount={exerciseLines.length}
                             isCompleted={isConditioningDone(key, name)}
                             onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, name)}
-                            onMoveUp={() => moveExercise(plan.id, i, "up")}
-                            onMoveDown={() => moveExercise(plan.id, i, "down")}
                             onShowInfo={() => setExerciseInfoState({ name })}
                             onDelete={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(name) })}
                             onSave={async (data) => {
@@ -4452,7 +4509,9 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, details: newDetails } : p));
                               triggerSave();
                             }}
-                          />);
+                          />
+                          </div>
+                          )}</SortableLine>);
                       }
                       
                       // Parse structured format: "3×10 @ 80 kg" or "3×10"
@@ -4469,7 +4528,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       if (/^vila$/i.test(name.trim())) {
                         const vilaSec = reps || "60";
                         return (
-                          <div key={i} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
+                          <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                          <div key={i} ref={setNodeRef} style={style} className="bg-warning/10 rounded-lg p-3 border border-warning/30 flex items-center justify-between">
                             <span
                               className="font-semibold text-sm text-warning cursor-pointer hover:underline"
                               onClick={() => editVilaSeconds(plan.id, i, vilaSec)}
@@ -4477,10 +4537,12 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                               🛏️ Vila {vilaSec}s mellan rundor
                             </span>
                             <div className="flex items-center gap-1">
+                              {handle}
                               <button onClick={() => editVilaSeconds(plan.id, i, vilaSec)} className="p-1 text-muted-foreground hover:text-primary transition-colors" title="Redigera vila"><Pencil className="w-3.5 h-3.5" /></button>
                               <button onClick={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: "Vila" })} className="p-1 text-muted-foreground hover:text-destructive transition-colors" title="Ta bort vila"><X className="w-3.5 h-3.5" /></button>
                             </div>
                           </div>
+                          )}</SortableLine>
                         );
                       }
 
@@ -4488,14 +4550,16 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                       if (isEditing) {
                         return (
-                          <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
+                          <SortableLine id={String(i)}>{({ setNodeRef, style }) => (
+                          <div key={i} ref={setNodeRef} style={style} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
                                 <span className="font-semibold text-sm text-foreground">{editingExercise.name}</span>
                                 {editingExercise.perSet ? <SetRowsEditor rows={editingExercise.perSet} onChange={(rows) => setEditingExercise((prev) => prev ? { ...prev, perSet: rows } : null)} /> : null}
                                 <div className="flex gap-2">
                                   <button onClick={() => saveEditedExercise()} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
                                   <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
                                 </div>
-                              </div>);
+                              </div>
+                          )}</SortableLine>);
 
                       }
 
@@ -4503,17 +4567,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       const setsStrSingle = getSetsDone(key, name);
 
                       return (
-                        <div key={i} className="bg-secondary/60 rounded-none p-3 border-y border-border/50 -mx-4">
+                        <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                        <div key={i} ref={setNodeRef} style={style} className="bg-secondary/60 rounded-none p-3 border-y border-border/50 -mx-4">
                               <div className="flex items-center justify-between mb-1.5">
                                 <span className="font-semibold text-sm text-foreground">
                                   {toTitleCase(name)}
                                   {singleRpe && <span className="text-xs font-normal text-muted-foreground ml-1.5">{singleRpe}</span>}
                                 </span>
                                 <div className="flex items-center gap-0.5">
-                                  <div className="flex flex-col">
-                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
-                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === exerciseLines.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
-                                  </div>
+                                  {handle}
                                   <button
                                 onClick={(e) => {e.stopPropagation();setExerciseInfoState({ name: name });}}
                                 className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
@@ -4626,10 +4688,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     + Set
                                   </button>
                                 </div>
-                            </div>);
+                            </div>
+                        )}</SortableLine>);
 
                     })}
-                      </div>; })()
+                      </ExerciseDndContext></div>; })()
                   }
 
                     {/* Circuit start button for single mode */}
@@ -6373,6 +6436,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           })()}
                           {((!cardioInstructionsText && detailParts.length > 1) || (cardioInstructionsText && detailParts.some((line) => !cardioInstructionLines.includes(line)))) ? (
                             <ul className="space-y-1.5">
+                              <ExerciseDndContext count={detailParts.length} onReorder={(a, b) => reorderExercise(plan.id, a, b)}>
                               {detailParts.map((line, i) => {
                                 if (cardioInstructionsText && cardioInstructionLines.includes(line)) return null;
                                 const cleanName = line.replace(/\s*[—\-]\s*\d+[×x].*$/i, "").replace(/\s*@\s*\d+.*$/i, "").trim();
@@ -6431,17 +6495,15 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   const activeCount = savedIntervals.length > 0 ? savedIntervals.length : iCount;
 
                                   return (
-                                    <li key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2 list-none">
+                                    <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                                    <li key={i} ref={setNodeRef} style={style} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2 list-none">
                                       <div className="flex items-center justify-between">
                                         <span className="font-semibold text-sm text-foreground flex items-center gap-1.5">
                                           <Timer className="w-3.5 h-3.5 text-primary" />
                                           {line}
                                         </span>
                                         <div className="flex items-center gap-0.5">
-                                          <div className="flex flex-col">
-                                            <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3 h-3" /></button>
-                                            <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === detailParts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3 h-3" /></button>
-                                          </div>
+                                          {handle}
                                           <button onClick={(e) => {e.stopPropagation();e.preventDefault();setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: line });}} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors touch-manipulation">
                                             <X className="w-4 h-4" />
                                           </button>
@@ -6571,6 +6633,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         return null;
                                       })()}
                                     </li>
+                                    )}</SortableLine>
                                   );
                                 }
 
@@ -6603,8 +6666,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   if (cRaw) { try { const p = typeof cRaw === "string" ? JSON.parse(cRaw) : cRaw; if (p && typeof p === "object") cSaved = p; } catch {} }
                                   const cHasSaved = !!(cSaved && (cSaved.time || cSaved.dist || cSaved.tempo || cSaved.pulse));
                                   return (
-                                    <li key={i} className="list-none">
+                                    <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                                    <li key={i} ref={setNodeRef} style={style} className="list-none">
                                       <ConditioningEditCard
+                                        dragHandle={handle}
                                         name={condLineName}
                                         lineIndex={i}
                                         planId={plan.id}
@@ -6616,8 +6681,6 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         exerciseLinesCount={detailParts.length}
                                         isCompleted={isConditioningDone(key, condLineName)}
                                         onToggleCompleted={() => toggleConditioningDone(plan.week, plan.day, condLineName)}
-                                        onMoveUp={() => moveExercise(plan.id, i, "up")}
-                                        onMoveDown={() => moveExercise(plan.id, i, "down")}
                                         onShowInfo={() => setExerciseInfoState({ name: condLineName })}
                                         onDelete={() => setDeleteExerciseConfirm({ planId: plan.id, lineIndex: i, name: toTitleCase(condLineName) })}
                                         onSave={async (data) => {
@@ -6640,6 +6703,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                         }}
                                       />
                                     </li>
+                                    )}</SortableLine>
                                   );
                                 }
 
@@ -6663,7 +6727,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 }
 
                                 return (
-                                  <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                                  <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                                  <li key={i} ref={setNodeRef} style={style} className="flex items-center gap-2 text-sm text-foreground">
                                     <span className="text-muted-foreground">•</span>
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setExerciseInfoState({ name: cleanName }); }}
@@ -6672,10 +6737,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       <Info className="w-3.5 h-3.5" />
                                     </button>
                                     <span className="flex-1">{line}</span>
-                                    <div className="flex flex-col flex-shrink-0">
-                                      <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3 h-3" /></button>
-                                      <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === detailParts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3 h-3" /></button>
-                                    </div>
+                                    {handle}
                                     <button
                                        onClick={(e) => {
                                          e.stopPropagation();
@@ -6686,8 +6748,10 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                       <X className="w-4 h-4" />
                                     </button>
                                   </li>
+                                  )}</SortableLine>
                                 );
                               })}
+                              </ExerciseDndContext>
                             </ul>
                           ) : (() => {
                             // Hide the default single-line render when cardio instructions block has already rendered the entry.
@@ -7208,6 +7272,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                   return (
                     <div className="space-y-2">
+                        <ExerciseDndContext count={parts.length} onReorder={(a, b) => reorderExercise(plan.id, a, b)}>
                         {parts.map((part, i) => {
                         // Check if this is a conditioning exercise
                         const { name: partCondCheckName } = parseExerciseWeight(part);
@@ -7326,7 +7391,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           };
                           
                           return (
-                            <div key={i} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
+                            <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                            <div key={i} ref={setNodeRef} style={style} className="bg-primary/5 rounded-lg p-3 border border-primary/20 space-y-2">
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
                                   {/intervall/i.test(condName || part) && (
@@ -7344,10 +7410,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-0.5 shrink-0">
-                                  <div className="flex flex-col">
-                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
-                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
-                                  </div>
+                                  {handle}
                                   <button onClick={(e) => { e.stopPropagation(); setExerciseInfoState({ name: condName || part }); }} className="p-0.5 text-muted-foreground hover:text-warning transition-colors">
                                     <Info className="w-3.5 h-3.5" />
                                   </button>
@@ -7774,6 +7837,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 </div>
                               )}
                             </div>
+                            )}</SortableLine>
                           );
                         }
 
@@ -7814,7 +7878,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
 
                         if (isEditing) {
                           return (
-                            <div key={i} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
+                            <SortableLine id={String(i)}>{({ setNodeRef, style }) => (
+                            <div key={i} ref={setNodeRef} style={style} className="bg-secondary/60 rounded-lg p-3 border border-primary/30 space-y-2 animate-fade-in">
                                 <div className="space-y-0.5">
                                   <label className="text-[10px] text-muted-foreground uppercase tracking-wider">Övning</label>
                                   <input type="text" value={editingExercise.name} onChange={(e) => setEditingExercise((prev) => prev ? { ...prev, name: e.target.value } : null)} className="w-full bg-background text-foreground text-sm p-1.5 rounded-md border-none outline-none focus:ring-1 focus:ring-primary font-semibold" />
@@ -7824,7 +7889,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   <button onClick={() => saveEditedExercise()} className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-semibold">Spara</button>
                                   <button onClick={() => setEditingExercise(null)} className="px-3 py-1.5 bg-secondary text-muted-foreground rounded-md text-xs">Avbryt</button>
                                 </div>
-                              </div>);
+                              </div>
+                            )}</SortableLine>);
 
                         }
 
@@ -8284,7 +8350,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         }
 
                         return (
-                          <div key={i} className="bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1">
+                          <SortableLine id={String(i)}>{({ setNodeRef, style, handle }) => (
+                          <div key={i} ref={setNodeRef} style={style} className="bg-secondary/40 rounded-lg p-2.5 border border-border/30 space-y-1">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
                                   <button
@@ -8301,10 +8368,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-0.5">
-                                  <div className="flex flex-col">
-                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "up");}} disabled={i === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta upp"><ChevronUp className="w-3.5 h-3.5" /></button>
-                                    <button onClick={(e) => {e.stopPropagation();moveExercise(plan.id, i, "down");}} disabled={i === parts.length - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20" title="Flytta ner"><ChevronDown className="w-3.5 h-3.5" /></button>
-                                  </div>
+                                  {handle}
                                    <DropdownMenu modal={false} open={openExerciseMenuId === `${plan.id}-${i}`} onOpenChange={(open) => setOpenExerciseMenuId(open ? `${plan.id}-${i}` : null)}>
                                       <DropdownMenuTrigger asChild>
                                         <button
@@ -8512,9 +8576,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                     + Set
                                   </button>
                                 </div>
-                            </div>);
+                            </div>
+                          )}</SortableLine>);
 
                       })}
+                      </ExerciseDndContext>
                       </div>);
 
                 })()}

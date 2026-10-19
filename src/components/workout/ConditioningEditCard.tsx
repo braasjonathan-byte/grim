@@ -14,15 +14,17 @@ export const condInputCls = "w-full min-w-0 bg-background text-foreground text-s
 export const condUnitCls = "text-[9px] text-muted-foreground uppercase tracking-wider mt-1 block text-center";
 
 
-export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave }: {
+export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, planCondDist, planCondTempo, planCondPulse, savedData, hasSavedData, exerciseLinesCount, isCompleted = false, onToggleCompleted, onMoveUp, onMoveDown, onShowInfo, onDelete, onSave, dragHandle }: {
   name: string; lineIndex: number; planId: string;
   planCondTime: string; planCondDist: string; planCondTempo: string;
   planCondPulse?: string;
   savedData: Record<string, any> | null; hasSavedData: boolean;
   exerciseLinesCount: number;
   isCompleted?: boolean; onToggleCompleted?: () => void;
-  onMoveUp: () => void; onMoveDown: () => void; onShowInfo: () => void; onDelete: () => void;
+  onMoveUp?: () => void; onMoveDown?: () => void; onShowInfo: () => void; onDelete: () => void;
   onSave: (data: Record<string, any>) => Promise<void>;
+  // Drag & drop-handtag som ersätter upp/ner-pilarna när det skickas in.
+  dragHandle?: React.ReactNode;
 }) => {
   const isSwim = /simning|simma|sim\b/i.test(name);
 
@@ -311,10 +313,12 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           <span className="text-xs font-bold text-primary flex items-center gap-1 min-w-0"><span className="shrink-0">✏️</span> <span className="truncate">{toTitleCase(name)}</span></span>
         </div>
         <div className="flex items-center gap-0.5">
-          <div className="flex flex-col">
-            <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} disabled={lineIndex === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3.5 h-3.5" /></button>
-            <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={lineIndex === exerciseLinesCount - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3.5 h-3.5" /></button>
-          </div>
+          {dragHandle ?? (
+            <div className="flex flex-col">
+              <button onClick={(e) => { e.stopPropagation(); onMoveUp?.(); }} disabled={lineIndex === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3.5 h-3.5" /></button>
+              <button onClick={(e) => { e.stopPropagation(); onMoveDown?.(); }} disabled={lineIndex === exerciseLinesCount - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3.5 h-3.5" /></button>
+            </div>
+          )}
           <button onClick={(e) => { e.stopPropagation(); onShowInfo(); }} className="p-0.5 text-muted-foreground hover:text-primary transition-colors"><Info className="w-3.5 h-3.5" /></button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
         </div>
