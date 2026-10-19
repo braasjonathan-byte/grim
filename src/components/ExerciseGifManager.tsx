@@ -544,7 +544,15 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
         p_to: target,
       });
       if (error) throw error;
-      toast.success(`Sammanslagna: ${JSON.stringify(data)}`);
+      const c = (data || {}) as Record<string, number>;
+      const parts: string[] = [];
+      if (c.completions_updated) parts.push(`${c.completions_updated} loggade pass`);
+      if (c.workout_plans_updated) parts.push(`${c.workout_plans_updated} planer`);
+      if (c.saved_workouts_updated) parts.push(`${c.saved_workouts_updated} sparade pass`);
+      if (c.archived_plans_updated) parts.push(`${c.archived_plans_updated} arkiverade planer`);
+      if (c.custom_exercises_deleted) parts.push(`${c.custom_exercises_deleted} egna övningar borttagna`);
+      if (c.sources_hidden) parts.push(`${c.sources_hidden} källor dolda`);
+      toast.success(parts.length > 0 ? `Sammanslagna till «${target}»: ${parts.join(", ")}` : `Sammanslagna till «${target}» — ingen loggad data hittades, källorna är nu dolda`);
       setSelectedExercises(new Set());
       setShowBulkMerge(false);
       setMergeTarget("");
@@ -552,6 +560,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
       await fetchCustomExercises();
       await fetchMappings();
       await fetchOverrides();
+      await fetchHidden();
     } catch (e: any) {
       console.error("Bulk merge failed:", e);
       toast.error(e?.message || "Kunde inte slå ihop");
@@ -777,7 +786,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                   Sätt muskelgrupp…
                 </button>
                 <button
-                  onClick={() => { setShowBulkMerge(v => !v); setMergeTarget(Array.from(selectedExercises)[0] || ""); setMergeCustomTarget(""); }}
+                  onClick={() => { setShowBulkMerge(v => !v); setMergeTarget(""); setMergeCustomTarget(""); }}
                   disabled={savingBulk || selectedExercises.size < 2}
                   className="text-[11px] px-2.5 py-1.5 bg-accent text-accent-foreground rounded-lg font-semibold disabled:opacity-40"
                   title={selectedExercises.size < 2 ? "Markera minst två" : "Slå ihop dubbletter"}
@@ -796,7 +805,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
               {showBulkMerge && selectedExercises.size >= 2 && (
                 <div className="mt-2 bg-card border border-border rounded-lg p-2 space-y-2">
                   <p className="text-[11px] font-semibold">Slå ihop {selectedExercises.size} övningar → ett namn</p>
-                  <p className="text-[10px] text-muted-foreground">All loggad data flyttas och summeras. Går inte att ångra.</p>
+                  <p className="text-[10px] text-muted-foreground">Välj vilken övning som ska behållas (eller skriv ett nytt namn). All loggad data flyttas och summeras, källorna döljs. Går inte att ångra.</p>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {Array.from(selectedExercises).map(n => (
                       <label key={n} className="flex items-center gap-2 text-[11px] cursor-pointer">
@@ -819,7 +828,7 @@ const ExerciseGifManager = ({ embedded = false }: { embedded?: boolean }) => {
                   />
                   <button
                     onClick={bulkMerge}
-                    disabled={savingBulk}
+                    disabled={savingBulk || !(mergeCustomTarget.trim() || mergeTarget)}
                     className="w-full text-[11px] px-2.5 py-1.5 bg-primary text-primary-foreground rounded-lg font-semibold disabled:opacity-40"
                   >
                     {savingBulk ? "Slår ihop…" : `Slå ihop till «${(mergeCustomTarget.trim() || mergeTarget) || "—"}»`}
