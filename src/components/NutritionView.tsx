@@ -127,7 +127,7 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
         </div>
         <div className="flex items-center gap-1.5">
           {onCopyYesterday && (
-            <button onClick={onCopyYesterday} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label={`Kopiera ${meal} från igår`} title="Kopiera från igår">
+            <button onClick={onCopyYesterday} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label={`Kopiera till ${meal} från senaste veckan`} title="Kopiera från senaste veckan">
               <CopyPlus className="w-4 h-4" />
             </button>
           )}
@@ -642,7 +642,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
                     budget={(MEAL_SHARE[meal.toLowerCase()] ?? 0.15) * targets.kcal}
                     feeling={feelings[meal]}
                     onFeeling={(k) => setFeeling(meal, k)}
-                    onCopyYesterday={yesterdayLogs.some((r) => r.meal_type === meal) ? () => copyFromYesterday(meal) : undefined}
+                    onCopyYesterday={() => { hapticLight(); setPastOpen(true); }}
                   />
                 );
               })}
