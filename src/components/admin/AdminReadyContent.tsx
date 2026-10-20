@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ReadyWorkoutCategory } from "@/data/readyWorkouts";
 import { readyWorkoutCategories } from "@/data/readyWorkouts";
 import { resetReadyWorkouts, saveReadyWorkouts, useLiveContentReady, useReadyWorkouts } from "@/lib/liveContent";
+import UndoContentButton from "@/components/admin/UndoContentButton";
 
 const clone = (list: ReadyWorkoutCategory[]): ReadyWorkoutCategory[] =>
   list.map((c) => ({ ...c, workouts: c.workouts.map((w) => ({ ...w })) }));
@@ -64,6 +65,7 @@ export default function AdminReadyContent({ userId }: { userId: string }) {
         <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => save()}>Spara för alla</Button>
           <Button size="sm" variant="outline" onClick={remove}>Ta bort passet</Button>
+          <UndoContentButton contentKey="ready_workouts" userId={userId} onDone={() => setDraft(null)} />
         </div>
       </div>
     );
@@ -100,6 +102,7 @@ export default function AdminReadyContent({ userId }: { userId: string }) {
           toast.success("Återställt till originalet");
         } catch (e: any) { toast.error(e?.message || "Kunde inte återställa"); }
       }}>Återställ alla original</Button>
+      <UndoContentButton contentKey="ready_workouts" userId={userId} onDone={() => setDraft(null)} />
     </div>
   );
 }

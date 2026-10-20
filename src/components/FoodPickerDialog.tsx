@@ -1,4 +1,6 @@
 import { useAccessLevel } from "@/hooks/useAccessLevel";
+import { useAppSettings } from "@/lib/appSettings";
+import { canUseFeature } from "@/lib/featureFlags";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { validateNumber, parseDecimal, UNUSUAL_FOOD_GRAMS } from "@/lib/inputValidation";
 import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog";
@@ -114,7 +116,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [restaurantOpen, setRestaurantOpen] = useState(false);
-  const { isHonorary } = useAccessLevel();
+  const { isHonorary, isAdmin } = useAccessLevel();
+  const appSettings = useAppSettings();
+  const who = { isHonorary, isAdmin };
+  const showBarcode = canUseFeature(appSettings, "barcode", who);
+  const showVoice = canUseFeature(appSettings, "voice_food", who);
+  const showAi = canUseFeature(appSettings, "ai_food", who);
   const [addedCount, setAddedCount] = useState(0);
   const [lastAdded, setLastAdded] = useState<string | null>(null);
   useEffect(() => { if (!open) { setAddedCount(0); setLastAdded(null); } }, [open]);
@@ -452,17 +459,19 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         )}
         {!selected && (
           <>
-            <div className={`grid ${isHonorary ? "grid-cols-4" : "grid-cols-3"} gap-2`}>
+            <div className={`grid ${showAi ? "grid-cols-4" : "grid-cols-3"} gap-2`}>
               <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <PencilLine className="w-4 h-4" /> Eget
               </button>
+              {showBarcode && (
               <button onClick={() => setBarcodeOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <ScanBarcode className="w-4 h-4" /> Streckkod
               </button>
+              )}
               <button onClick={() => setRestaurantOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <Utensils className="w-4 h-4" /> Restaurang
               </button>
-              {isHonorary && (
+              {showAi && (
                 <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-primary/10 text-primary shadow-soft text-[11px] font-semibold transition-colors hover:bg-primary/20">
                   <Sparkles className="w-4 h-4" /> AI-skanna
                 </button>
@@ -471,9 +480,11 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 pr-11 rounded-xl bg-muted/50 border-transparent" autoFocus />
+              {showVoice && (
               <button onClick={() => setVoiceOpen(true)} aria-label="Logga med rösten" className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20">
                 <Mic className="w-4 h-4" />
               </button>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
               {showPersonal && (
@@ -600,7 +611,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         if (opts?.keepScanning) { onPick(item, { keepOpen: true }); setAddedCount((c) => c + 1); setLastAdded(item.name); }
         else { setBarcodeOpen(false); onPick(item); }
       }} />
-      <ManualFoodDialog open={manualOpen} onOpenChange={setManualOpen} userId={userId} isHonorary={isHonorary} initialName={query.trim()} onPick={(item) => { setManualOpen(false); onPick(item); }} />
+      <ManualFoodDialog open={manualOpen} onOpenChange={setManualOpen} userId={userId} isHonorary={showAi} initialName={query.trim()} onPick={(item) => { setManualOpen(false); onPick(item); }} />
       <VoiceFoodDialog open={voiceOpen} onOpenChange={setVoiceOpen} onConfirm={(items) => {
         items.forEach((it) => onPick(it, { keepOpen: true }));
         setVoiceOpen(false);

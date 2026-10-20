@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { helpCategories } from "@/data/helpTopics";
 import { resetHelpTips, saveHelpTips, useHelpCategories, useLiveContentReady } from "@/lib/liveContent";
+import UndoContentButton from "@/components/admin/UndoContentButton";
 
 export default function AdminHelpTips({ userId }: { userId: string }) {
   const live = useHelpCategories();
@@ -40,9 +41,10 @@ export default function AdminHelpTips({ userId }: { userId: string }) {
         {helpCategories.map((c) => <option key={c.title} value={c.title}>{c.title}</option>)}
       </select>
       <Textarea rows={10} value={text} onChange={(e) => setText(e.target.value)} />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={save}>Spara ämnet</Button>
         <Button size="sm" variant="outline" onClick={reset}>Återställ alla</Button>
+        <UndoContentButton contentKey="help_tips" userId={userId} />
       </div>
     </div>
   );

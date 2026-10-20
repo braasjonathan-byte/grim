@@ -50,6 +50,8 @@ import HealthConnectCard from "@/components/HealthConnectCard";
 import { isHealthSupported } from "@/lib/healthSync";
 import { toast } from "sonner";
 import { getAdminGroups } from "@/components/admin/adminCatalog";
+import { useAppSettings } from "@/lib/appSettings";
+import { canUseFeature } from "@/lib/featureFlags";
 
 const SupporterButton = lazyRetry(() => import("@/components/SupporterButton"));
 const ProfileTab = lazyRetry(() => import("@/components/ProfileTab"));
@@ -130,6 +132,8 @@ const topicItem = (
 
 const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLogout, onStartPlan }: ToolsTabProps) => {
   const help = useHelpCategories();
+  const appSettings = useAppSettings();
+  const formOn = canUseFeature(appSettings, "form_check", { isHonorary, isAdmin });
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [subView, setSubView] = useState<"home" | "helpers" | "settings">("home");
   const [query, setQuery] = useState("");
@@ -220,14 +224,14 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
             featured: true,
             onSelect: () => setSubView("helpers"),
           },
-          {
+          ...(formOn ? [{
             id: "form-check",
             title: "Formkoll",
             subtitle: "Filma ett set och få feedback på djup, tempo och symmetri",
             icon: Camera,
             keywords: "teknik form video kamera djup tempo symmetri",
             content: () => <FormCheckCard />,
-          },
+          }] : []),
           ...(isHealthSupported()
             ? [
                 {
@@ -312,7 +316,7 @@ const ToolsTab = ({ userId, isAdmin, isHonorary, userRole, onViewUserPlan, onLog
     }
 
     return list;
-  }, [isAdmin, userId, onViewUserPlan, help]);
+  }, [isAdmin, isHonorary, userId, onViewUserPlan, help, formOn]);
 
   /** Gruppordning, flyttade kort och kortordning enligt den delade layouten (satt av admin) */
   const orderedGroups: ToolGroup[] = useMemo(() => {

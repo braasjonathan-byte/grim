@@ -24,13 +24,7 @@ export default function AdminAppSettings({ userId }: { userId: string }) {
           <Button size="sm" variant="outline" onClick={() => { setBanner(""); save(() => saveAppSetting("banner_message", "", userId)); }}>Ta bort</Button>
         </div>
       </div>
-      <label className="flex items-center justify-between gap-3">
-        <span>
-          <span className="font-medium block">AI-kost för alla medlemmar</span>
-          <span className="text-[11px] text-muted-foreground">"Beskriv dagens kost med AI" även för vanliga medlemmar</span>
-        </span>
-        <Switch checked={s.ai_food_for_all} onCheckedChange={(v) => save(() => saveAppSetting("ai_food_for_all", v, userId))} />
-      </label>
+      <p className="text-[11px] text-muted-foreground">Vem som får använda AI-kost, GPS, socialt och resten styrs under Funktioner och drift.</p>
       <label className="flex items-center justify-between gap-3">
         <span>
           <span className="font-medium block">Visa Supporter-rutan</span>

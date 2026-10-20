@@ -78,13 +78,13 @@ import { calculateAchievementMetrics, unlockEarnedAchievements, type Achievement
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
 import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, buildConditioningIntervalLabel, parseConditioningIntervalLabel, computeIntervalSessionTotals, formatMinutesAsClock } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
+import { useAppSettings } from "@/lib/appSettings";
+import { canUseFeature } from "@/lib/featureFlags";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
 import { DAYS, addUtcDays, daysBetweenCalendarDates, formatDayDisplay, getBaseDay, getDayIndex, getMonday, getPlanDayDateValue, getSessionColor, getSessionIcon, getTodayInfo, getWeekdayFromDayKey, isAssistedBodyweightExercise, isDailyChallengeLabel, normalizeExerciseKey, parseDateKey, planHasAnyExercise, resolveTodayDayIndex, sameWorkoutDay, sanitizeCopiedLoggedWeights, suggestSessionName, toLocalDateKey, toUtcDateKey } from "@/lib/workoutDayUtils";
 import { estimateCalories, getPlanDayDate } from "@/lib/workoutCalories";
 import { type LoggedSetInfo, parseExerciseWeight, getExerciseSetDataFromWeights, collectSetsForExercise, parseCondTempo, formatCondTempo, isStairMachine } from "@/lib/workoutSetData";
-
-const SHOW_STRAVA_INTEGRATION = false;
 
 // Drag & drop för att ändra ordning på övningar i ett pass (ersätter upp/ner-pilarna).
 function ExerciseDndContext({ count, onReorder, children }: { count: number; onReorder: (from: number, to: number) => void; children: React.ReactNode }) {
@@ -141,6 +141,11 @@ function SortableLine({ id, children }: { id: string; children: (props: Sortable
 
 
 const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: WorkoutViewProps) => {
+  const appSettings = useAppSettings();
+  const who = { isHonorary, isAdmin };
+  const aiWorkoutOn = canUseFeature(appSettings, "ai_workout", who);
+  const stravaOn = canUseFeature(appSettings, "strava", who);
+  const gpsOn = canUseFeature(appSettings, "gps", who);
   const readyWorkoutCategories = useReadyWorkouts();
   const { triggerSave } = useSaveIndicator();
   const isMobile = useIsMobile();
@@ -4965,7 +4970,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           <Footprints className="w-4 h-4 text-warning" />
                           {conditioningDialog.exerciseName}
                         </h4>
-                        {!isStairMachine(conditioningDialog.exerciseName) && !conditioningDialog.exerciseName.toLowerCase().includes("intervall") && (
+                        {!isStairMachine(conditioningDialog.exerciseName) && !conditioningDialog.exerciseName.toLowerCase().includes("intervall") && gpsOn && (
                           <GpsTrackerControl
                             onStop={(km, sec) => {
                               const totMin = sec / 60;
@@ -5130,7 +5135,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     {/* Add warmup & exercise buttons */}
                     {!weightDialog && !conditioningDialog &&
                   <div className="space-y-1.5">
-                    {SHOW_STRAVA_INTEGRATION && (
+                    {stravaOn && (
                       <button
                         onClick={() => syncStravaNow(plan)}
                         disabled={stravaSyncing}
@@ -5314,7 +5319,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       const n = e.name.toLowerCase();
                       return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
                     });
-                    return (
+                    return gpsOn ? (
                       <DayGpsRecorder
                         storageKey={String(plan.id)}
                         isAdmin={isAdmin}
@@ -5350,7 +5355,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                           triggerSave();
                         }}
                       />
-                    );
+                    ) : null;
                   })()}
                   <button
                     onClick={(e) => {e.stopPropagation();deleteSingleWorkout(plan);}}
@@ -5555,7 +5560,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
               <h3 className="font-bold text-sm">Importera färdigt pass</h3>
               <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
             </div>
-            {(isHonorary || isAdmin) && (
+            {aiWorkoutOn && (
               <button
                 onClick={() => setShowAiScan(true)}
                 className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"
@@ -8806,7 +8811,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     }
                     return null;
                   })()}
-                  {SHOW_STRAVA_INTEGRATION && (
+                  {stravaOn && (
                     <button onClick={() => syncStravaNow(plan)} disabled={stravaSyncing} className="w-full py-2 border border-dashed border-primary/40 rounded-md text-xs text-muted-foreground hover:text-primary hover:border-primary transition-colors flex items-center justify-center gap-1 disabled:opacity-50">
                         <RefreshCw className={`w-3 h-3 ${stravaSyncing ? "animate-spin" : ""}`} /> Synka från Strava
                       </button>
@@ -9130,7 +9135,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                     const n = e.name.toLowerCase();
                     return !/(motioncykel|motionscykel|löpband|lopband|trappmaskin|crosstrainer|cross-trainer|arc trainer|arctrainer)/.test(n);
                   });
-                  return (
+                  return gpsOn ? (
                     <DayGpsRecorder
                       isAdmin={isAdmin}
                       konditionExercises={konditionExercises}
@@ -9164,7 +9169,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                         triggerSave();
                       }}
                     />
-                  );
+                  ) : null;
                 })()}
               </div>
                 </div>
@@ -9526,7 +9531,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
             <h3 className="font-bold text-sm">Importera färdigt pass</h3>
             <button onClick={() => setImportWorkoutTarget(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
-          {(isHonorary || isAdmin) && (
+          {aiWorkoutOn && (
             <button
               onClick={() => setShowAiScan(true)}
               className="w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"

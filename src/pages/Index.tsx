@@ -1,5 +1,7 @@
 import { useAppSettings } from "@/lib/appSettings";
 import AppBanner from "@/components/admin/AppBanner";
+import RuntimeGates from "@/components/admin/RuntimeGates";
+import { canUseFeature } from "@/lib/featureFlags";
 import { lazyRetry } from "@/lib/lazyRetry";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -258,6 +260,11 @@ const Index = () => {
   const [forceChangePassword, setForceChangePassword] = useState(false);
   const [userRole, setUserRole] = useState<string>("member");
   const [isHonorary, setIsHonorary] = useState(false);
+  const appSettings = useAppSettings();
+  const socialOn = canUseFeature(appSettings, "social", { isHonorary, isAdmin: userRole === "admin" });
+  useEffect(() => {
+    if (!socialOn && tab === "social") setTab("home");
+  }, [socialOn, tab, setTab]);
   const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
   
   const [unreadChats, setUnreadChats] = useState(0);
@@ -860,13 +867,14 @@ const Index = () => {
   { key: "workout", icon: Dumbbell, label: "Träning" },
   { key: "nutrition", icon: Apple, label: "Kost" },
   { key: "stats", icon: BarChart3, label: "Statistik" },
-  { key: "social", icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined },
+  ...(socialOn ? [{ key: "social" as Tab, icon: Users, label: "Social", badge: socialBadge > 0 ? socialBadge : undefined }] : []),
   { key: "calc", icon: Calculator, label: "Verktyg" }];
 
 
   return (
     <div className="min-h-screen bg-background pb-20" style={{ paddingTop: "calc(44px + var(--grim-header-safe-top, env(safe-area-inset-top, 0px)))" }}>
       <AppBanner />
+      <RuntimeGates isAdmin={userRole === "admin"} />
       {biometricLocked && (
         <div className="fixed inset-0 z-[200] bg-background flex flex-col items-center justify-center gap-6 px-6">
           <img src={grimIcon} alt="Grim app icon" className="w-16 h-16" />

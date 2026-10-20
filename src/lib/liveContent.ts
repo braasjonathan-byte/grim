@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { rememberPrevious } from "@/lib/contentHistory";
 import { helpCategories, type HelpCategory } from "@/data/helpTopics";
 import { readyWorkoutCategories, type ReadyWorkoutCategory } from "@/data/readyWorkouts";
 
@@ -131,6 +132,7 @@ function subscribe(listener: () => void) {
 }
 
 async function writeSetting(key: string, value: unknown, userId?: string) {
+  const { data: previous } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
   const { error } = await supabase.from("app_settings").upsert({
     key,
     value: value as never,
@@ -138,12 +140,15 @@ async function writeSetting(key: string, value: unknown, userId?: string) {
     updated_by: userId ?? null,
   });
   if (error) throw error;
+  await rememberPrevious(key, previous?.value ?? null, userId);
   await refreshLiveContent();
 }
 
 async function clearSetting(key: string) {
+  const { data: previous } = await supabase.from("app_settings").select("value").eq("key", key).maybeSingle();
   const { error } = await supabase.from("app_settings").delete().eq("key", key);
   if (error) throw error;
+  await rememberPrevious(key, previous?.value ?? null);
   await refreshLiveContent();
 }
 

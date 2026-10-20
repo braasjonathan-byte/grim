@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { clearNewsPopup, saveNewsPopup, useNewsPopup } from "@/lib/liveContent";
+import UndoContentButton from "@/components/admin/UndoContentButton";
 
 export default function AdminNews({ userId }: { userId: string }) {
   const current = useNewsPopup();
@@ -31,9 +32,10 @@ export default function AdminNews({ userId }: { userId: string }) {
       {current && <p className="rounded-xl bg-muted px-3 py-2 text-xs">Aktiv nu: {current.title}</p>}
       <Input value={title} maxLength={80} placeholder="Rubrik" onChange={(e) => setTitle(e.target.value)} />
       <Textarea rows={6} value={text} placeholder={"Första nyheten\nAndra nyheten"} onChange={(e) => setText(e.target.value)} />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={publish}>Visa för alla</Button>
         {current && <Button size="sm" variant="outline" onClick={clear}>Ta bort</Button>}
+        <UndoContentButton contentKey="news_popup" userId={userId} />
       </div>
     </div>
   );

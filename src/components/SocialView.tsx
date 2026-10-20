@@ -23,6 +23,8 @@ import EmptyState from "@/components/EmptyState";
 import FriendChallenges from "@/components/FriendChallenges";
 import ReportDialog from "@/components/ReportDialog";
 import { blockUser, muteUser, loadMutedIds, loadPrivacySettings } from "@/lib/socialPrivacy";
+import { useAppSettings } from "@/lib/appSettings";
+import { canUseFeature } from "@/lib/featureFlags";
 import { Flag, VolumeX, Ban, Eye } from "lucide-react";
 
 const FriendsView = lazyRetry(() => import("./FriendsView"));
@@ -89,6 +91,7 @@ const resolveWorkoutPostDate = (post: SocialPost, planStartDate?: string | null)
 type SubTab = "feed" | "friends" | "chat" | "groups";
 
 const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unreadChats = 0, onClearActivitiesForFriend, initialFriendId }: SocialViewProps) => {
+  const chatOn = canUseFeature(useAppSettings(), "chat", { isHonorary, isAdmin });
   const [subTab, setSubTabState] = useState<SubTab>(() => {
     if (initialFriendId) return "friends";
     const saved = localStorage.getItem("grim_social_subtab");
@@ -98,6 +101,9 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
     setSubTabState(t);
     try { localStorage.setItem("grim_social_subtab", t); } catch {}
   };
+  useEffect(() => {
+    if (!chatOn && subTab === "chat") setSubTab("feed");
+  }, [chatOn, subTab]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [groups, setGroups] = useState<EventGroup[]>([]);
@@ -695,7 +701,7 @@ const SocialView = ({ userId, isAdmin, isHonorary = false, friendActivities, unr
         const tabs = [
           { key: "feed" as SubTab, label: "Flöde", icon: Globe },
           { key: "friends" as SubTab, label: "Vänner", icon: Users },
-          { key: "chat" as SubTab, label: "Chatt", icon: MessageCircle, badge: unreadChats },
+          ...(chatOn ? [{ key: "chat" as SubTab, label: "Chatt", icon: MessageCircle, badge: unreadChats }] : []),
           { key: "groups" as SubTab, label: "Grupper", icon: UsersRound },
         ];
         const activeIndex = Math.max(0, tabs.findIndex(t => t.key === subTab));

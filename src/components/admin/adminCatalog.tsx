@@ -7,10 +7,12 @@ import {
   EyeOff,
   Flag,
   Image as ImageIcon,
+  Library,
   ListChecks,
   Megaphone,
   MessageSquarePlus,
   Newspaper,
+  Power,
   Ruler,
   Send,
   Sparkles,
@@ -39,6 +41,8 @@ const AdminDailyChallenge = lazyRetry(() => import("@/components/admin/AdminDail
 const AdminReadyContent = lazyRetry(() => import("@/components/admin/AdminReadyContent"));
 const AdminHelpTips = lazyRetry(() => import("@/components/admin/AdminHelpTips"));
 const AdminNews = lazyRetry(() => import("@/components/admin/AdminNews"));
+const AdminRuntime = lazyRetry(() => import("@/components/admin/AdminRuntime"));
+const AdminPlanCatalog = lazyRetry(() => import("@/components/admin/AdminPlanCatalog"));
 
 export type AdminToolContext = {
   userId: string;
@@ -69,6 +73,22 @@ export function getAdminGroups(): AdminGroup[] {
       title: "Ändra appen",
       hint: "Det här bytte du tidigare bara via en ny version",
       items: [
+        {
+          id: "admin-runtime",
+          title: "Funktioner och drift",
+          subtitle: "Underhåll, omladdning och vem som ser vad",
+          keywords: "underhåll flagga stäng av ai gps strava social chatt triathlon uppdatering",
+          icon: Power,
+          content: ({ userId }) => <AdminRuntime userId={userId} />,
+        },
+        {
+          id: "admin-plan-catalog",
+          title: "Programkatalog",
+          subtitle: "Dölj, sortera och lyft fram färdiga program",
+          keywords: "program mall plan katalog nybörjare beskrivning",
+          icon: Library,
+          content: ({ userId }) => <AdminPlanCatalog userId={userId} />,
+        },
         {
           id: "admin-challenge",
           title: "Dagens utmaning",

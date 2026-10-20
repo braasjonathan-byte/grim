@@ -14,6 +14,8 @@ import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiome
 import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
 import { STATS_SECTIONS, WEIGHT_RANGES, useStatsSettings } from "@/lib/statsSettings";
 import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWakeLock } from "@/lib/wakeLock";
+import { useAppSettings } from "@/lib/appSettings";
+import { canUseFeature } from "@/lib/featureFlags";
 
 
 const AdminPanel = lazyRetry(() => import("@/components/admin/AdminPanel"));
@@ -65,6 +67,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
   // Admin/Skapare räknas alltid som hedersmedlem.
   const access = useAccessLevel();
   const honorary = isHonorary || access.isHonorary;
+  const stravaOn = canUseFeature(useAppSettings(), "strava", { isHonorary: honorary, isAdmin: isAdmin || access.isAdmin });
 
 
 
@@ -171,11 +174,11 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
           setHasEmail(true);
         }
       });
-    if (SHOW_STRAVA_INTEGRATION) refreshStravaConnection();
-  }, [userId, refreshStravaConnection]);
+    if (stravaOn) refreshStravaConnection();
+  }, [userId, refreshStravaConnection, stravaOn]);
 
   useEffect(() => {
-    if (!userId || !SHOW_STRAVA_INTEGRATION) return;
+    if (!userId || !stravaOn) return;
     const handleFocus = () => refreshStravaConnection();
     const handleVisibility = () => {
       if (document.visibilityState === "visible") refreshStravaConnection();
@@ -186,7 +189,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [userId, refreshStravaConnection]);
+  }, [userId, refreshStravaConnection, stravaOn]);
 
   const handleSaveSecurityQuestions = async () => {
     if (!userId) return;
@@ -692,7 +695,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
         </div>
       )}
 
-      {userId && SHOW_STRAVA_INTEGRATION && (
+      {userId && stravaOn && (
         <div className="border-t border-border pt-2">
           <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex min-w-0 items-start gap-2">

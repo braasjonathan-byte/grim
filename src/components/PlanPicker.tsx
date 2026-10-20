@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, Sparkles, Wrench, ChevronRight, ArrowLeft, CalendarIcon, Trophy, Search, X, CalendarDays, Info, Waves } from "lucide-react";
 import { planTemplates, liftLabels, planCategoryLabels, padWeeksTo7Days, reorderDaysToPreferred, ALL_DAYS, type TemplatePlan, type FitnessProfile, type PlanCategory } from "@/data/planTemplates";
@@ -13,6 +13,10 @@ import { sv } from "date-fns/locale";
 import { toNoonUtcIso, toLocalDateKey } from "@/lib/dateUtils";
 import { replacePlanRows } from "@/lib/planRows";
 import { toast } from "sonner";
+import { useAppSettings } from "@/lib/appSettings";
+import { canUseFeature } from "@/lib/featureFlags";
+import { applyPlanCatalog } from "@/lib/planCatalog";
+import { useAccessLevel } from "@/hooks/useAccessLevel";
 
 
 interface PlanPickerProps {
@@ -40,6 +44,14 @@ const defaultProfile: FitnessProfile = {
 };
 
 const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
+  const appSettings = useAppSettings();
+  const planCatalog = appSettings.plan_catalog;
+  const { isHonorary, isAdmin } = useAccessLevel();
+  const triathlonOn = canUseFeature(appSettings, "triathlon", { isHonorary, isAdmin });
+  const visibleTemplates = useMemo(
+    () => applyPlanCatalog(planTemplates, planCatalog),
+    [planCatalog],
+  );
   const [step, setStep] = useState<Step>("select");
   const [selected, setSelected] = useState<number | null>(null);
   const [rms, setRms] = useState<Record<string, string>>({});
@@ -75,9 +87,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
   }, [userId]);
 
 
-  const categories = Array.from(new Set(planTemplates.map(t => t.category)));
+  const categories = Array.from(new Set(visibleTemplates.map(t => t.category)));
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredTemplates = planTemplates
+  const filteredTemplates = visibleTemplates
     .filter(t => {
       if (beginnerFilterOn && !t.isBeginnerFriendly) return false;
       if (activeFilter && t.category !== activeFilter) return false;
@@ -857,7 +869,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
           </div>
         )}
         {filteredTemplates.map((template) => {
-          const realIdx = planTemplates.indexOf(template);
+          const realIdx = planTemplates.findIndex((item) => item.name === template.name);
           return (
             <button
               key={realIdx}
@@ -872,6 +884,9 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
               <div className="flex items-start gap-3">
                 <div className="flex-1">
                   <h3 className="font-bold text-sm">{template.name}</h3>
+                  {planCatalog.featured === template.name && (
+                    <p className="text-[11px] font-semibold text-primary">Utvalt</p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
                     {template.description.replace(/(\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka").replace(/(\d+–\d+)\s*pass\/vecka/g, "rek. $1 pass/vecka")}
                   </p>
@@ -897,6 +912,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
           );
         })}
 
+        {triathlonOn && (
         <button
           onClick={() => handleSelect(-2)}
           disabled={loading}
@@ -917,6 +933,7 @@ const PlanPicker = ({ userId, onDone, onBack }: PlanPickerProps) => {
             <ChevronRight className="w-4 h-4 text-muted-foreground mt-1 flex-shrink-0" />
           </div>
         </button>
+        )}
 
         <button
           onClick={() => handleSelect(-1)}
