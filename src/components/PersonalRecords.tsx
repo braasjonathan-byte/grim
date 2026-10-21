@@ -8,6 +8,7 @@ import { getStrengthPercentile, type StrengthPercentile } from "@/lib/strengthPe
 
 interface PersonalRecordsProps {
   userId: string;
+  embedded?: boolean;
 }
 
 interface CompletionRow {
@@ -33,7 +34,7 @@ interface PRGoal {
   target_date: string | null;
 }
 
-const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
+const PersonalRecords = ({ userId, embedded = false }: PersonalRecordsProps) => {
   const [completions, setCompletions] = useState<CompletionRow[]>([]);
   const [stars, setStars] = useState<Set<string>>(new Set());
   const [goals, setGoals] = useState<Map<string, PRGoal>>(new Map());
@@ -247,10 +248,12 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
   if (records.length === 0) {
     return (
       <div className="space-y-3">
+        {!embedded && (
         <div className="flex items-center gap-2">
           <span className="w-8 h-8 icon-round bg-warning/15"><Trophy className="w-4 h-4 text-warning" /></span>
           <h3 className="text-lg font-bold tracking-tight">Personliga rekord</h3>
         </div>
+        )}
         <div className="rounded-2xl p-4 bg-card shadow-soft border border-border/40 text-sm text-muted-foreground">
           Inga rekord än – logga ett pass så dyker de upp här.
         </div>
@@ -274,10 +277,10 @@ const PersonalRecords = ({ userId }: PersonalRecordsProps) => {
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 group w-full text-left">
 
-        <span className="w-8 h-8 icon-round bg-warning/15"><Trophy className="w-4 h-4 text-warning" /></span>
+        {!embedded && <span className="w-8 h-8 icon-round bg-warning/15"><Trophy className="w-4 h-4 text-warning" /></span>}
 
-        <h3 className="text-lg font-bold tracking-tight group-hover:text-primary transition-colors">
-          Personliga rekord
+        <h3 className={`font-bold tracking-tight group-hover:text-primary transition-colors ${embedded ? "text-sm" : "text-lg"}`}>
+          {embedded ? "Alla rekord" : "Personliga rekord"}
         </h3>
         <span className="text-xs text-muted-foreground ml-1">({records.length})</span>
         <ChevronDown

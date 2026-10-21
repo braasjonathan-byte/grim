@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { isBiometricSupported, isBiometricEnabled, enableBiometric, disableBiometric } from "@/lib/biometric";
 import { CARDIO_CATEGORIES, useCardioVisibility } from "@/lib/cardioVisibility";
-import { STATS_SECTIONS, WEIGHT_RANGES, useStatsSettings } from "@/lib/statsSettings";
+import { STATS_SECTIONS, useStatsSettings } from "@/lib/statsSettings";
 import { isWakeLockEnabled, isWakeLockSupported, setWakeLockEnabled, subscribeWakeLock } from "@/lib/wakeLock";
 
 
@@ -379,6 +379,7 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
       {/* Statistik sections */}
       <div className="space-y-2">
         <p className="text-sm font-semibold">Visa i Statistik</p>
+        <p className="text-[11px] text-muted-foreground">Ordningen ändrar du på Statistik, under Anpassa. Viktkurvans period sitter på själva kurvan.</p>
         {STATS_SECTIONS.map((sec) => {
           const on = statsSettings.isVisible(sec.key);
           return (
@@ -391,15 +392,6 @@ const SettingsPanel = ({ userId, isAdmin, isHonorary = false, onStartPlan, onVie
             </div>
           );
         })}
-        <p className="text-xs text-muted-foreground pt-1">Viktkurvans tidsperiod</p>
-        <div className="flex gap-1 rounded-full bg-muted/60 p-1">
-          {WEIGHT_RANGES.map((x) => (
-            <button key={x.days} onClick={() => statsSettings.setWeightDays(x.days)}
-              className={`flex-1 py-1 text-[11px] font-semibold rounded-full ${statsSettings.weightDays === x.days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-              {x.label}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Fasting widget toggle */}

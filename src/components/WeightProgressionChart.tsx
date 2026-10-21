@@ -6,6 +6,7 @@ import { normalizeExerciseName } from "@/lib/exerciseNormalization";
 
 interface WeightProgressionChartProps {
   userId: string;
+  embedded?: boolean;
 }
 
 interface CompletionRow {
@@ -27,7 +28,7 @@ const COLORS = [
   "#fb923c",
 ];
 
-const WeightProgressionChart = ({ userId }: WeightProgressionChartProps) => {
+const WeightProgressionChart = ({ userId, embedded = false }: WeightProgressionChartProps) => {
   const [completions, setCompletions] = useState<CompletionRow[]>([]);
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
 
@@ -104,10 +105,12 @@ const WeightProgressionChart = ({ userId }: WeightProgressionChartProps) => {
 
   return (
     <div className="space-y-3">
+      {!embedded && (
       <div className="flex items-center gap-2">
         <TrendingUp className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-bold tracking-tight">Viktutveckling</h3>
       </div>
+      )}
 
       {/* Exercise filter */}
       <div className="flex flex-wrap gap-1.5">

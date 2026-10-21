@@ -10,7 +10,7 @@ const COLORS: Record<MainLift, string> = { squat: "hsl(var(--primary))", bench: 
 const kg = (v: number) => `${Math.round(v)} kg`;
 const ton = (v: number) => (v >= 1000 ? `${(v / 1000).toFixed(1).replace(".", ",")} t` : `${Math.round(v)} kg`);
 
-const StrengthSection = ({ userId, completions }: { userId: string; completions: StrengthCompletion[] }) => {
+const StrengthSection = ({ userId, completions, embedded = false }: { userId: string; completions: StrengthCompletion[]; embedded?: boolean }) => {
   const [body, setBody] = useState<{ weight: number; gender: string }>({ weight: 0, gender: "" });
   useEffect(() => {
     supabase.from("profiles").select("weight_kg, gender").eq("user_id", userId).maybeSingle().then(({ data }) => {
@@ -29,10 +29,12 @@ const StrengthSection = ({ userId, completions }: { userId: string; completions:
 
   return (
     <div className="space-y-3">
+      {!embedded && (
       <div className="flex items-center gap-2">
         <span className="w-8 h-8 icon-round bg-primary/15"><Dumbbell className="w-4 h-4 text-primary" /></span>
         <h3 className="text-lg font-bold tracking-tight">Styrka</h3>
       </div>
+      )}
       {!hasAny ? (
         <div className="rounded-2xl p-4 bg-card shadow-soft border border-border/40 text-sm text-muted-foreground">
           Logga knäböj, bänkpress eller marklyft så visas din styrka här.

@@ -2,12 +2,13 @@ import StrengthSection from "@/components/StrengthSection";
 import { sessionVolumeKg } from "@/lib/checkedSets";
 import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import NutritionTrendCard from "./NutritionTrendCard";
-import { useStatsSettings } from "@/lib/statsSettings";
+import { useStatsSettings, type StatsSection } from "@/lib/statsSettings";
+import StatsLayoutSheet from "@/components/StatsLayoutSheet";
 import { parseNum, isPlausibleSet } from "@/lib/inputValidation";
 import { StatsSkeleton } from "@/components/LoadingSkeletons";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { BarChart3, CheckCircle, Flame, Footprints, Weight, Star, Swords, ChevronLeft, ChevronRight, Sparkles, SlidersHorizontal } from "lucide-react";
 import PeriodRecapView from "@/components/PeriodRecapView";
 import BodyWeightChart from "@/components/BodyWeightChart";
 import WeightProgressionChart from "@/components/WeightProgressionChart";
@@ -153,9 +154,9 @@ const DailyQuoteCard = () => {
 
 type SummaryPeriod = "week" | "month" | "year" | "all";
 const summaryPeriodLabels: Record<SummaryPeriod, string> = {
-  week: "Denna vecka",
-  month: "Denna månaden",
-  year: "Detta året",
+  week: "Vecka",
+  month: "Månad",
+  year: "År",
   all: "Totalt",
 };
 
@@ -267,13 +268,15 @@ const getCompletionStatsDate = (
 
 const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
   const { state: cardioVis } = useCardioVisibility();
-  const { isVisible: show } = useStatsSettings();
+  const { isVisible: show, order } = useStatsSettings();
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [strengthTab, setStrengthTab] = useState<"sbd" | "records" | "progress">("sbd");
   const [userWeightKg, setUserWeightKg] = useState<number | null>(null);
   const [showRecap, setShowRecap] = useState(false);
 
   const [completions, setCompletions] = useState<CompletionRecord[]>([]);
-  const [view, setView] = useState<View>("week");
   const [summaryPeriod, setSummaryPeriod] = useState<SummaryPeriod>("week");
+  const view: View = summaryPeriod === "year" ? "month" : summaryPeriod === "all" ? "year" : summaryPeriod;
   const [periodOffset, setPeriodOffset] = useState(0);
   const [planStartCalendarWeek, setPlanStartCalendarWeek] = useState<{week: number;year: number;} | null>(null);
   const [planStartDate, setPlanStartDate] = useState<Date | null>(null);
@@ -676,6 +679,123 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
     setSummaryPeriod(order[(idx + 1) % order.length]);
   };
 
+  const blocks: Record<StatsSection, ReactNode> = {
+    overview: statsLoading && completions.length === 0 ? <StatsSkeleton /> : (
+      <div className="space-y-3">
+        <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
+          {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
+            <button
+              key={p}
+              onClick={() => { setSummaryPeriod(p); setPeriodOffset(0); }}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                summaryPeriod === p ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {summaryPeriodLabels[p]}
+            </button>
+          )}
+        </div>
+        {summaryPeriod !== "all" &&
+          <div className="flex items-center justify-between gap-2">
+            <button onClick={() => setPeriodOffset((o) => o - 1)} aria-label="Föregående period" className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <p className="text-sm font-bold capitalize">{periodLabel}</p>
+            <button onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))} disabled={periodOffset >= 0} aria-label="Nästa period" className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        }
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
+            <CheckCircle className="w-5 h-5 text-success mx-auto mb-1" />
+            <p className="text-2xl font-black">{totalDone}</p>
+            <p className="text-[10px] text-muted-foreground">Genomförda</p>
+          </div>
+          <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
+            <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
+            <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
+            <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
+            {totalLiftedTons > 0 && <p className="text-[9px] text-muted-foreground mt-0.5">≈ {getWeightComparison(totalLiftedTons)}</p>}
+          </div>
+          <button onClick={() => setShowChallengeList(true)} className="rounded-2xl p-3 text-center transition-colors cursor-pointer bg-card shadow-soft">
+            <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
+            <p className="text-2xl font-black">{periodChallengeCount}</p>
+            <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
+          </button>
+          {perCategoryStats.map(({ meta, km, passes }) => (
+            <div key={meta.key} className="rounded-2xl p-3 text-center bg-card shadow-soft">
+              <div className="text-2xl leading-none mb-1">{meta.icon}</div>
+              <p className="text-2xl font-black">{Math.round(km * 10) / 10} <span className="text-xs font-normal text-muted-foreground">km</span></p>
+              <p className="text-[10px] text-muted-foreground">{meta.label} · {passes} pass</p>
+            </div>
+          ))}
+        </div>
+        {stats.length === 0 ? (
+          <EmptyState icon={BarChart3} title="Ingen statistik ännu" description="Genomför ditt första pass så dyker din data upp här!" emoji="📊" />
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground">{summaryPeriod === "week" ? "Senaste veckorna" : summaryPeriod === "all" ? "Per år" : "Per månad"}</p>
+            {stats.map((b) => {
+              const scheduled = b.totalWithExercise;
+              const pctDone = scheduled > 0 ? Math.round(b.doneWithExercise / scheduled * 100) : 0;
+              const pctSkipped = scheduled > 0 ? Math.round(b.skipped / scheduled * 100) : 0;
+              return (
+                <div key={b.label} className="rounded-2xl p-3 bg-card shadow-soft">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold">{b.label}</span>
+                    <div className="flex items-center gap-2">
+                      {b.distanceKm > 0 && <span className="text-xs text-warning font-mono flex items-center gap-0.5"><Footprints className="w-3 h-3" />{Math.round(b.distanceKm * 10) / 10} km</span>}
+                      <span className="text-xs text-muted-foreground">{b.doneWithExercise} ✓ · {b.skipped} ✗</span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-muted/60 rounded-full h-2.5 overflow-hidden flex gap-0.5">
+                    <div className="h-full bg-success rounded-full" style={{ width: `${pctDone}%` }} />
+                    <div className="h-full bg-destructive rounded-full" style={{ width: `${pctSkipped}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    ),
+    nutrition: <NutritionTrendCard userId={userId} />,
+    quote: <DailyQuoteCard />,
+    achievements: (
+      <AchievementsPanel unlockedIds={achievementIds} unlockedAt={achievementUnlockedAt} onOpen={() => setShowAchievements(true)} />
+    ),
+    muscles: (
+      <div className="rounded-2xl bg-card shadow-soft p-4 space-y-3">
+        <h3 className="text-lg font-bold tracking-tight">Muskler</h3>
+        <p className="text-[11px] text-muted-foreground">Obalans de senaste 4 veckorna och muskler du inte rört på 7 dagar. Visas bara när något behöver justeras.</p>
+        <MuscleBalanceWarning userId={userId} />
+        <UntrainedMuscles userId={userId} />
+      </div>
+    ),
+    leaderboard: <Leaderboard userId={userId} />,
+    strength: (
+      <div className="space-y-3">
+        <h3 className="text-lg font-bold tracking-tight">Styrka</h3>
+        <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1">
+          {([["sbd", "SBD"], ["records", "Rekord"], ["progress", "Utveckling"]] as const).map(([id, label]) => (
+            <button key={id} onClick={() => setStrengthTab(id)} className={`flex-1 py-1.5 text-xs font-semibold rounded-full ${strengthTab === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{label}</button>
+          ))}
+        </div>
+        {strengthTab === "sbd" && (
+          <StrengthSection
+            embedded
+            userId={userId}
+            completions={completions.filter((c) => c.done).map((c) => ({ logged_weights: c.logged_weights, date: getCompletionStatsDate(c, planStartDate) || new Date(c.updated_at) }))}
+          />
+        )}
+        {strengthTab === "records" && <PersonalRecords embedded userId={userId} />}
+        {strengthTab === "progress" && <WeightProgressionChart embedded userId={userId} />}
+      </div>
+    ),
+    calendar: <TrainingCalendar userId={userId} />,
+    bodyWeight: <BodyWeightChart userId={userId} />,
+  };
+
   if (showRecap) {
     return <PeriodRecapView userId={userId} onClose={() => setShowRecap(false)} />;
   }
@@ -686,98 +806,25 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         <BarChart3 className="w-5 h-5 text-primary" />
         <h2 className="text-xl font-black tracking-tight">Statistik</h2>
         <button
-          onClick={() => setShowRecap(true)}
+          onClick={() => setCustomizeOpen(true)}
           className="ml-auto flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5 text-primary" /> Anpassa
+        </button>
+        <button
+          onClick={() => setShowRecap(true)}
+          className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold"
         >
           <Sparkles className="w-3.5 h-3.5 text-primary" /> Krönika
         </button>
       </div>
+      <StatsLayoutSheet open={customizeOpen} onOpenChange={setCustomizeOpen} />
+
+      {order.filter((key) => show(key)).map((key) => (
+        <div key={key}>{blocks[key]}</div>
+      ))}
 
 
-      {show("nutrition") && <NutritionTrendCard userId={userId} />}
-
-      {statsLoading && completions.length === 0 ? <StatsSkeleton /> : <>
-
-
-      {show("summary") && <>
-      {/* Period toggle */}
-      <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
-        {(["week", "month", "year", "all"] as SummaryPeriod[]).map((p) =>
-        <button
-          key={p}
-          onClick={() => { setSummaryPeriod(p); setPeriodOffset(0); }}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
-          summaryPeriod === p ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
-          }>
-            {summaryPeriodLabels[p]}
-          </button>
-        )}
-      </div>
-
-
-      {summaryPeriod !== "all" &&
-      <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={() => setPeriodOffset((o) => o - 1)}
-          aria-label="Föregående period"
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <p className="text-sm font-bold capitalize">{periodLabel}</p>
-        <button
-          onClick={() => setPeriodOffset((o) => Math.min(0, o + 1))}
-          disabled={periodOffset >= 0}
-          aria-label="Nästa period"
-          className="w-8 h-8 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-muted transition-colors disabled:opacity-30">
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-      }
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
-          <CheckCircle className="w-5 h-5 text-success mx-auto mb-1" />
-          <p className="text-2xl font-black">{totalDone}</p>
-          <p className="text-[10px] text-muted-foreground">Genomförda</p>
-        </div>
-        <div className="rounded-2xl p-3 text-center bg-card shadow-soft">
-          <Weight className="w-5 h-5 text-primary mx-auto mb-1" />
-          <p className="text-2xl font-black">{totalLiftedTons} <span className="text-xs font-normal text-muted-foreground">ton</span></p>
-          <p className="text-[10px] text-muted-foreground">Lyft totalt</p>
-          {totalLiftedTons > 0 &&
-          <p className="text-[9px] text-muted-foreground mt-0.5">≈ {getWeightComparison(totalLiftedTons)}</p>
-          }
-        </div>
-        <button
-          onClick={() => setShowChallengeList(true)}
-          className="rounded-2xl p-3 text-center transition-colors cursor-pointer bg-card shadow-soft"
-        >
-          <Swords className="w-5 h-5 text-warning mx-auto mb-1" />
-          <p className="text-2xl font-black">{periodChallengeCount}</p>
-          <p className="text-[10px] text-muted-foreground">Utmaningar klarade</p>
-        </button>
-        {perCategoryStats.map(({ meta, km, passes }) => (
-          <div key={meta.key} className="rounded-2xl p-3 text-center bg-card shadow-soft">
-            <div className="text-2xl leading-none mb-1">{meta.icon}</div>
-            <p className="text-2xl font-black">
-              {Math.round(km * 10) / 10} <span className="text-xs font-normal text-muted-foreground">km</span>
-            </p>
-            <p className="text-[10px] text-muted-foreground">{meta.label} · {passes} pass</p>
-          </div>
-        ))}
-      </div>
-
-
-
-      </>}
-      {show("muscleBalance") && <MuscleBalanceWarning userId={userId} />}
-      {show("quote") && <DailyQuoteCard />}
-      {show("achievements") && <AchievementsPanel
-        unlockedIds={achievementIds}
-        unlockedAt={achievementUnlockedAt}
-        onOpen={() => setShowAchievements(true)}
-      />}
       {showAchievements && (
         <AchievementsView
           unlockedIds={achievementIds}
@@ -786,89 +833,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
         />
       )}
 
-      {show("periodList") && <>
-      {/* View toggle */}
-      <div className="relative flex items-center gap-1 rounded-full bg-muted/60 p-1">
-        {([["week", "Vecka"], ["month", "Månad"], ["year", "År"]] as const).map(([v, label]) =>
-        <button
-          key={v}
-          onClick={() => setView(v)}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
-          view === v ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`
-          }>
-
-            {label}
-          </button>
-        )}
-      </div>
-
-
-      {/* Stats list */}
-      {stats.length === 0 ?
-      <EmptyState icon={BarChart3} title="Ingen statistik ännu" description="Genomför ditt första pass så dyker din data upp här!" emoji="📊" /> :
-
-      <div className="space-y-2">
-          {stats.map((b) => {
-          const scheduled = b.totalWithExercise;
-          const pctDone = scheduled > 0 ? Math.round(b.doneWithExercise / scheduled * 100) : 0;
-          const pctSkipped = scheduled > 0 ? Math.round(b.skipped / scheduled * 100) : 0;
-          return (
-            <div key={b.label} className="rounded-2xl p-3 bg-card shadow-soft">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold">{b.label}</span>
-                  <div className="flex items-center gap-2">
-                    {b.distanceKm > 0 &&
-                  <span className="text-xs text-warning font-mono flex items-center gap-0.5">
-                        <Footprints className="w-3 h-3" />
-                        {Math.round(b.distanceKm * 10) / 10} km
-                      </span>
-                  }
-                    <span className="text-xs text-muted-foreground">
-                      {b.doneWithExercise} ✓ · {b.skipped} ✗
-                    </span>
-                  </div>
-                </div>
-                <div className="w-full bg-muted/60 rounded-full h-2.5 overflow-hidden flex gap-0.5 p-0">
-                  <div
-                  className="h-full bg-success rounded-full transition-all duration-300"
-                  style={{ width: `${pctDone}%` }} />
-
-                  <div
-                  className="h-full bg-destructive rounded-full transition-all duration-300"
-                  style={{ width: `${pctSkipped}%` }} />
-
-                </div>
-
-              </div>);
-
-        })}
-        </div>
-      }
-      </>}
-      {show("untrained") && <UntrainedMuscles userId={userId} />}
-
-      {/* Leaderboard */}
-      {show("leaderboard") && <Leaderboard userId={userId} />}
-
-      {/* Personal records */}
-      {show("strength") && <>
-      <StrengthSection
-        userId={userId}
-        completions={completions
-          .filter((c) => c.done)
-          .map((c) => ({ logged_weights: c.logged_weights, date: getCompletionStatsDate(c, planStartDate) || new Date(c.updated_at) }))}
-      />
-      <PersonalRecords userId={userId} />
-      </>}
-
-      {/* Training calendar */}
-      {show("calendar") && <TrainingCalendar userId={userId} />}
-
-      {/* Body weight chart */}
-      {show("bodyWeight") && <BodyWeightChart userId={userId} />}
-
-      {/* Weight progression chart */}
-      {show("weightProgression") && <WeightProgressionChart userId={userId} />}
 
       {/* Challenge list dialog */}
       <Dialog open={showChallengeList} onOpenChange={setShowChallengeList}>
@@ -900,7 +864,6 @@ const WorkoutStats = ({ userId }: WorkoutStatsProps) => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-      </>}
     </div>);
 
 };
