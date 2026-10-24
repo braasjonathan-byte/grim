@@ -34,8 +34,7 @@ describe("HealthConnectCard", () => {
       activity: true,
       workouts: true,
       heartRate: false,
-      sleep: false,
-    });
+      sleep: false, weight: false });
 
     render(<HealthConnectCard />);
 
@@ -52,8 +51,7 @@ describe("HealthConnectCard", () => {
       activity: true,
       workouts: true,
       heartRate: true,
-      sleep: true,
-    });
+      sleep: true, weight: true });
 
     render(<HealthConnectCard />);
 
@@ -70,8 +68,7 @@ describe("HealthConnectCard", () => {
       activity: false,
       workouts: false,
       heartRate: false,
-      sleep: false,
-    });
+      sleep: false, weight: false });
 
     render(<HealthConnectCard />);
 

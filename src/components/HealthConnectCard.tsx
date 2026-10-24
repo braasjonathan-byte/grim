@@ -33,11 +33,23 @@ import {
   type HealthFeature,
   healthLog,
   type HealthWorkout,
+  checkHealthWriteAccess,
+  clearHealthSyncError,
+  getLastHealthSyncError,
+  isHealthWriteSupported,
+  requestHealthWriteAccess,
+  type HealthWriteAccess,
+  disableBackgroundSync,
+  enableBackgroundSync,
+  getBackgroundSyncState,
+  isBackgroundSyncEnabled,
+  type BackgroundSyncState,
 } from "@/lib/healthSync";
+import { isHealthWriteEnabled, setHealthWriteEnabled, syncGrimWorkoutsToHealth } from "@/lib/healthWriteSync";
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
-const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep"];
+const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep", "weight"];
 // Sista skyddsnätet måste ligga efter native-dialogens egen diagnostik så att
 // användaren får den verkliga HC-koden i stället för ett för tidigt HC-04.
 const SYNC_HARD_TIMEOUT_MS = 180000;
@@ -56,6 +68,14 @@ const HealthConnectCard = () => {
   const [diagOpen, setDiagOpen] = useState(false);
   const [diagBusy, setDiagBusy] = useState(false);
   const [testLog, setTestLog] = useState<string[]>([]);
+  const [writeSupported, setWriteSupported] = useState(false);
+  const [writeAccess, setWriteAccess] = useState<HealthWriteAccess | null>(null);
+  const [writeEnabled, setWriteEnabledState] = useState(isHealthWriteEnabled());
+  const [writeBusy, setWriteBusy] = useState(false);
+  const [bgError] = useState(getLastHealthSyncError);
+  const [bgState, setBgState] = useState<BackgroundSyncState | null>(null);
+  const [bgEnabled, setBgEnabled] = useState(isBackgroundSyncEnabled());
+  const [bgBusy, setBgBusy] = useState(false);
   const connected = !!access?.activity;
   const available = availability === null ? null : availability === "available";
 
@@ -74,7 +94,13 @@ const HealthConnectCard = () => {
         }
       }
       setAvailability(isHealthSupported() ? await healthAvailability() : "not-supported");
-      if (isHealthSupported()) setAccess(await checkHealthAccess());
+      if (isHealthSupported()) {
+        setAccess(await checkHealthAccess());
+        const ws = await isHealthWriteSupported();
+        setWriteSupported(ws);
+        if (ws) setWriteAccess(await checkHealthWriteAccess());
+        setBgState(await getBackgroundSyncState());
+      }
     })();
     return () => {
       active = false;
@@ -92,6 +118,7 @@ const HealthConnectCard = () => {
       void (async () => {
         try {
           setAccess(await checkHealthAccess());
+          if (await isHealthWriteSupported()) setWriteAccess(await checkHealthWriteAccess());
         } catch (err) {
           healthLog("status refresh on resume failed", err);
         }
@@ -141,12 +168,22 @@ const HealthConnectCard = () => {
         try {
           await saveHealthDays(userId, days);
           setLastHealthSync();
+          clearHealthSyncError();
         } catch (err) {
           healthLog("save failed", err);
           throw err;
         }
         void checkHealthAccess().then(setAccess).catch((statusErr) => healthLog("status refresh failed", statusErr));
         toast.success("Hälsodata hämtad");
+        if (isHealthWriteEnabled()) {
+          void syncGrimWorkoutsToHealth(userId)
+            .then((r) => {
+              healthLog("write sync done", r);
+              if (r.failed > 0) toast.error(`${r.failed} pass kunde inte sparas i Health Connect`);
+              else if (r.written + r.deleted > 0) toast.success(`${r.written} pass sparade i Health Connect`);
+            })
+            .catch((err) => reportError(err, "Kunde inte spara pass i Health Connect"));
+        }
       })(), SYNC_HARD_TIMEOUT_MS, "Hälsosynken svarade inte inom den maximala tidsgränsen.", "sync-timeout");
     } catch (err: any) {
       healthLog("sync failed", err?.message);
@@ -250,6 +287,56 @@ const HealthConnectCard = () => {
     }
   }, [refreshDiag]);
 
+  const toggleWrite = useCallback(async () => {
+    if (!userId) return;
+    setWriteBusy(true);
+    try {
+      if (writeEnabled) {
+        setHealthWriteEnabled(false);
+        setWriteEnabledState(false);
+        toast.message("Grim slutar spara nya pass i Health Connect. Redan sparade pass ligger kvar.");
+        return;
+      }
+      const granted = writeAccess?.workouts ? writeAccess : await requestHealthWriteAccess();
+      setWriteAccess(granted);
+      setHealthWriteEnabled(true);
+      setWriteEnabledState(true);
+      const r = await syncGrimWorkoutsToHealth(userId);
+      toast.success(
+        r.written > 0 ? `${r.written} pass sparade i Health Connect` : "Nya pass sparas nu i Health Connect",
+        r.skippedOverlap > 0 ? { description: `${r.skippedOverlap} pass fanns redan från klocka/annan app och hoppades över.` } : undefined,
+      );
+    } catch (err) {
+      reportError(err, "Kunde inte slå på sparande till Health Connect");
+    } finally {
+      setWriteBusy(false);
+    }
+  }, [userId, writeEnabled, writeAccess, reportError]);
+
+  const toggleBackground = useCallback(async () => {
+    setBgBusy(true);
+    try {
+      if (bgEnabled) {
+        await disableBackgroundSync();
+        setBgEnabled(false);
+        toast.message("Bakgrundssynken är avstängd.");
+      } else {
+        const state = await enableBackgroundSync();
+        setBgEnabled(true);
+        setBgState(state);
+        toast.success(
+          state?.featureAvailable && state.permissionGranted
+            ? "Grim hämtar hälsodata i bakgrunden ungefär varannan timme."
+            : "Bakgrundsjobbet är på. Den här telefonens Health Connect tillåter inte läsning i bakgrunden, så data hämtas när du öppnar appen.",
+        );
+      }
+    } catch (err) {
+      reportError(err, "Kunde inte ändra bakgrundssynken");
+    } finally {
+      setBgBusy(false);
+    }
+  }, [bgEnabled, reportError]);
+
   const maxSteps = Math.max(1, ...rows.map((r) => r.steps));
   const today = rows[rows.length - 1];
   const trend = activityTrend(rows);
@@ -320,6 +407,42 @@ const HealthConnectCard = () => {
               Tillåt {missing.map((f) => FEATURE_LABELS[f].toLowerCase()).join(", ")}
             </Button>
           )}
+          {writeSupported && (
+            <div className="flex items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs">
+              <span className={writeEnabled && writeAccess?.workouts ? "" : "text-muted-foreground"}>
+                {writeEnabled && writeAccess?.workouts
+                  ? `Grim-pass sparas i Health Connect${writeAccess.calories ? " (med kalorier" + (writeAccess.distance ? " och distans)" : ")") : ""}.`
+                  : writeEnabled
+                    ? "Spara pass är på, men behörigheten saknas i Health Connect."
+                    : "Spara dina Grim-pass i Health Connect (frivilligt)."}
+              </span>
+              <Button size="sm" variant="outline" className="shrink-0 rounded-full" disabled={writeBusy || !userId} onClick={() => void toggleWrite()}>
+                {writeBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : writeEnabled ? "Stäng av" : "Slå på"}
+              </Button>
+            </div>
+          )}
+          {bgState && (
+            <div className="flex items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs">
+              <span className={bgEnabled ? "" : "text-muted-foreground"}>
+                {!bgEnabled
+                  ? "Synka i bakgrunden ungefär varannan timme (frivilligt)."
+                  : !bgState.featureAvailable
+                    ? "Bakgrundsjobbet är på, men telefonens Health Connect stöder inte läsning i bakgrunden. Data hämtas när appen öppnas."
+                    : !bgState.permissionGranted
+                      ? "Bakgrundsjobbet är på, men läsning i bakgrunden är inte tillåten i Health Connect."
+                      : `Synkar i bakgrunden${bgState.cache?.lastRun?.ranAt ? `, senast ${new Date(bgState.cache.lastRun.ranAt).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}` : ""}.`}
+                {bgState.pendingWrites > 0 && ` ${bgState.pendingWrites} pass väntar på att sparas.`}
+              </span>
+              <Button size="sm" variant="outline" className="shrink-0 rounded-full" disabled={bgBusy} onClick={() => void toggleBackground()}>
+                {bgBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : bgEnabled ? "Stäng av" : "Slå på"}
+              </Button>
+            </div>
+          )}
+          {!lastError && bgError && (
+            <p className="rounded-xl bg-destructive/10 p-2 text-xs text-destructive">
+              Senaste automatiska synk misslyckades {new Date(bgError.at).toLocaleString("sv-SE", { dateStyle: "short", timeStyle: "short" })}: {bgError.message} (Felkod {bgError.ref})
+            </p>
+          )}
           {lastError && (
             <p className="rounded-xl bg-destructive/10 p-2 text-xs text-destructive">
               {lastError.message} (Felkod {lastError.ref})
@@ -355,6 +478,19 @@ const HealthConnectCard = () => {
               {today.sleepMinutes > 0 && ` · ${formatSleep(today.sleepMinutes)} sömn`}
             </p>
           )}
+          {today && (today.totalCalories || today.distanceM || today.avgHeartRate || today.restingHeartRate || today.weightKg) ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {[
+                today.totalCalories ? `${today.totalCalories.toLocaleString("sv-SE")} kcal totalt` : null,
+                today.distanceM ? `${(today.distanceM / 1000).toLocaleString("sv-SE", { maximumFractionDigits: 1 })} km` : null,
+                today.avgHeartRate ? `puls snitt ${today.avgHeartRate}${today.minHeartRate && today.maxHeartRate ? ` (${today.minHeartRate}–${today.maxHeartRate})` : ""}` : null,
+                today.restingHeartRate ? `vilopuls ${today.restingHeartRate}` : null,
+                today.weightKg ? `${today.weightKg.toLocaleString("sv-SE")} kg` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
 
           {trend && <p className="mt-1 text-xs text-muted-foreground">{trend}</p>}
         </div>

@@ -1078,6 +1078,13 @@ export type Database = {
       health_daily: {
         Row: {
           active_calories: number
+          avg_heart_rate: number | null
+          distance_m: number | null
+          max_heart_rate: number | null
+          min_heart_rate: number | null
+          resting_heart_rate: number | null
+          total_calories: number | null
+          weight_kg: number | null
           day: string
           id: string
           sleep_minutes: number
@@ -1088,6 +1095,13 @@ export type Database = {
         }
         Insert: {
           active_calories?: number
+          avg_heart_rate?: number | null
+          distance_m?: number | null
+          max_heart_rate?: number | null
+          min_heart_rate?: number | null
+          resting_heart_rate?: number | null
+          total_calories?: number | null
+          weight_kg?: number | null
           day: string
           id?: string
           sleep_minutes?: number
@@ -1098,6 +1112,13 @@ export type Database = {
         }
         Update: {
           active_calories?: number
+          avg_heart_rate?: number | null
+          distance_m?: number | null
+          max_heart_rate?: number | null
+          min_heart_rate?: number | null
+          resting_heart_rate?: number | null
+          total_calories?: number | null
+          weight_kg?: number | null
           day?: string
           id?: string
           sleep_minutes?: number

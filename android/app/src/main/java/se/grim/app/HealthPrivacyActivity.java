@@ -50,9 +50,11 @@ public class HealthPrivacyActivity extends Activity {
 
     TextView body = new TextView(this);
     body.setText(
-        "Grim läser steg, kalorier, distans, genomförda pass, puls och sömn från Health Connect "
-            + "för att visa din träning och statistik i appen. Data lagras kopplat till ditt "
-            + "Grim-konto och delas inte vidare. Du kan när som helst ta bort åtkomsten i "
+        "Grim läser steg, kalorier, distans, genomförda pass, puls, vilopuls, vikt och sömn från "
+            + "Health Connect för att visa din träning och statistik i appen. Om du slår på det "
+            + "sparar Grim dina genomförda pass (typ, tid, kalorier och distans) i Health Connect, "
+            + "och kan läsa data i bakgrunden ungefär varannan timme. Data lagras kopplat till "
+            + "ditt Grim-konto och delas inte vidare. Du kan när som helst ta bort åtkomsten i "
             + "Health Connect.\n\nHela integritetspolicyn finns på grim.lovable.app/privacy.");
     body.setTextColor(Color.DKGRAY);
     body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);

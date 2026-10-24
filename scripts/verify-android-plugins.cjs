@@ -134,6 +134,27 @@ if (!fs.existsSync(healthPluginManifest)) {
 }
 if (fs.existsSync(healthPlugin)) {
   const source = fs.readFileSync(healthPlugin, "utf8");
+  // GRIM_HC_WRITE: skrivstöd (scripts/patch-health-write.cjs).
+  for (const marker of ["GRIM_HC_WRITE_ENUM", "GRIM_HC_WRITE_MAPPING", "GRIM_HC_WRITE_METHODS", "fun writeWorkout(call: PluginCall)", "fun deleteWorkouts(call: PluginCall)", "GRIM_ENSURE_CLIENT queryAggregated", "GRIM_HC_BACKGROUND_ENUM", "GRIM_HC_BACKGROUND_MAPPING", "GRIM_HC_BACKGROUND_METHODS", "fun readDailySummary(call: PluginCall)", "fun scheduleBackgroundSync(call: PluginCall)"]) {
+    if (!source.includes(marker)) failures.push(`capacitor-health: ${marker} missing — run \`npm install\``);
+  }
+  const writer = path.join(path.dirname(healthPlugin), "GrimHealthWriter.kt");
+  if (!fs.existsSync(writer) || !fs.readFileSync(writer, "utf8").includes("GRIM_HC_WRITE")) {
+    failures.push("capacitor-health: GrimHealthWriter.kt missing — run `node scripts/patch-health-write.cjs`");
+  }
+  const bg = path.join(path.dirname(healthPlugin), "GrimHealthBackground.kt");
+  if (!fs.existsSync(bg) || !fs.readFileSync(bg, "utf8").includes("class GrimHealthSyncWorker")) {
+    failures.push("capacitor-health: GrimHealthBackground.kt missing — run `node scripts/patch-health-background.cjs`");
+  }
+  if (fs.existsSync(healthPluginGradle) && !fs.readFileSync(healthPluginGradle, "utf8").includes("androidx.work:work-runtime-ktx")) {
+    failures.push("capacitor-health: WorkManager dependency (GRIM_HC_WORKMANAGER) missing");
+  }
+  if (fs.existsSync(healthPluginManifest)) {
+    const pm = fs.readFileSync(healthPluginManifest, "utf8");
+    for (const p of ["WRITE_EXERCISE", "WRITE_ACTIVE_CALORIES_BURNED", "WRITE_DISTANCE", "READ_RESTING_HEART_RATE", "READ_HEALTH_DATA_IN_BACKGROUND"]) {
+      if (!pm.includes(`android.permission.health.${p}`)) failures.push(`capacitor-health: plugin manifest lacks ${p}`);
+    }
+  }
   if (!source.includes("READ_SLEEP") || !source.includes('"sleep" -> metricAndMapper')) {
     failures.push("capacitor-health: sleep support missing — run `node scripts/patch-capacitor-health.cjs`");
   }

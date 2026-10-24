@@ -15,6 +15,7 @@ import {
   hasHealthPermissions,
   isHealthSupported,
   readHealthWorkouts,
+  recordHealthSyncError,
   type HealthWorkout,
 } from "@/lib/healthSync";
 import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
@@ -80,8 +81,9 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
         if (cancelled || fresh.length === 0) return;
         setPending(fresh);
         setOpen(true);
-      } catch {
-        /* tyst – hälsodata är frivilligt */
+      } catch (err) {
+        // Hälsodata är frivilligt – ingen dialog, men felet ska synas i Health Connect-kortet.
+        recordHealthSyncError("workout prompt read", err);
       }
     })();
     return () => {

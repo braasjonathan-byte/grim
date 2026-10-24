@@ -148,6 +148,14 @@ const HEALTH_PERMS = [
   "android.permission.health.READ_EXERCISE",
   "android.permission.health.READ_HEART_RATE",
   "android.permission.health.READ_SLEEP",
+  // GRIM_HC_WRITE: Grim-pass skrivs till Health Connect (frivilligt, egen fråga i appen).
+  "android.permission.health.WRITE_EXERCISE",
+  "android.permission.health.WRITE_ACTIVE_CALORIES_BURNED",
+  "android.permission.health.WRITE_DISTANCE",
+  // GRIM_HC_BACKGROUND: vikt, vilopuls och frivillig bakgrundsläsning.
+  "android.permission.health.READ_WEIGHT",
+  "android.permission.health.READ_RESTING_HEART_RATE",
+  "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
 ];
 
 

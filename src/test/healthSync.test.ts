@@ -13,7 +13,7 @@ describe("parseHealthAccess", () => {
         READ_SLEEP: false,
       },
     });
-    expect(access).toEqual({ activity: true, workouts: true, heartRate: false, sleep: false });
+    expect(access).toEqual({ activity: true, workouts: true, heartRate: false, sleep: false, weight: false });
   });
 
   it("räcker med en av steg eller kalorier", () => {
@@ -35,6 +35,7 @@ describe("parseHealthAccess", () => {
       workouts: false,
       heartRate: false,
       sleep: false,
+      weight: false,
     });
   });
 

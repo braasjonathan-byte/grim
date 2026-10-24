@@ -6,14 +6,34 @@ export type HealthDay = {
   steps: number;
   activeCalories: number;
   sleepMinutes: number;
+  // GRIM_HC_EXTRAS: null = ingen data eller ingen behörighet.
+  totalCalories?: number | null;
+  distanceM?: number | null;
+  weightKg?: number | null;
+  avgHeartRate?: number | null;
+  minHeartRate?: number | null;
+  maxHeartRate?: number | null;
+  restingHeartRate?: number | null;
 };
+
+/** Extravärdena i samma ordning som kolumnerna i health_daily. */
+export const HEALTH_EXTRA_COLUMNS = {
+  totalCalories: "total_calories",
+  distanceM: "distance_m",
+  weightKg: "weight_kg",
+  avgHeartRate: "avg_heart_rate",
+  minHeartRate: "min_heart_rate",
+  maxHeartRate: "max_heart_rate",
+  restingHeartRate: "resting_heart_rate",
+} as const;
 
 /** Behörigheter grupperade efter vad Grim faktiskt gör med datan. */
 export const PERMISSION_GROUPS = {
-  activity: ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE"],
+  activity: ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE", "READ_TOTAL_CALORIES"],
   workouts: ["READ_WORKOUTS"],
-  heartRate: ["READ_HEART_RATE"],
+  heartRate: ["READ_HEART_RATE", "READ_RESTING_HEART_RATE"],
   sleep: ["READ_SLEEP"],
+  weight: ["READ_WEIGHT"],
 } as const;
 
 export type HealthFeature = keyof typeof PERMISSION_GROUPS;
@@ -23,6 +43,7 @@ export const FEATURE_LABELS: Record<HealthFeature, string> = {
   workouts: "Genomförda pass",
   heartRate: "Puls",
   sleep: "Sömn",
+  weight: "Vikt",
 };
 
 export type HealthAccess = Record<HealthFeature, boolean>;
@@ -30,7 +51,7 @@ export type HealthAccess = Record<HealthFeature, boolean>;
 const PERMISSIONS = Object.values(PERMISSION_GROUPS).flat() as string[];
 
 /** Minsta uppsättning som krävs för att kortet ska kunna visa något alls. */
-const CORE_PERMISSIONS = PERMISSION_GROUPS.activity;
+const CORE_PERMISSIONS = ["READ_STEPS", "READ_ACTIVE_CALORIES", "READ_DISTANCE"];
 
 
 type PermissionMap = Record<string, boolean>;
@@ -56,7 +77,95 @@ type HealthPluginLike = {
     includeRoute: boolean;
     includeSteps: boolean;
   }) => Promise<{ workouts: RawHealthWorkout[] }>;
+  // GRIM_HC_BACKGROUND: finns bara i APK:er byggda med scripts/patch-health-background.cjs.
+  readDailySummary?: (req: { days: number }) => Promise<NativeDailySummary>;
+  scheduleBackgroundSync?: (req: { intervalMinutes: number }) => Promise<{ scheduled: boolean }>;
+  cancelBackgroundSync?: () => Promise<void>;
+  getBackgroundSyncState?: () => Promise<BackgroundSyncState>;
+  enqueuePendingWrites?: (req: { workouts: HealthWriteInput[] }) => Promise<{ pending: number }>;
+  runBackgroundSyncNow?: () => Promise<Record<string, unknown>>;
+  // GRIM_HC_WRITE: finns bara i APK:er byggda med scripts/patch-health-write.cjs.
+  writeWorkout?: (req: HealthWriteInput) => Promise<{ recordIds: string[]; wroteCalories: boolean; wroteDistance: boolean }>;
+  deleteWorkouts?: (req: { clientRecordIds: string[] }) => Promise<{ deleted: number }>;
 };
+
+/** Ett Grim-pass i den form native-lagret skriver till Health Connect. */
+export type HealthWriteInput = {
+  clientRecordId: string;
+  version: number;
+  startTime: string;
+  endTime: string;
+  exerciseType: string;
+  title?: string;
+  notes?: string;
+  calories?: number | null;
+  distanceMeters?: number | null;
+};
+
+export type NativeDailyRow = {
+  day: string;
+  steps?: number;
+  activeCalories?: number;
+  totalCalories?: number;
+  distanceM?: number;
+  sleepMinutes?: number;
+  avgHr?: number;
+  minHr?: number;
+  maxHr?: number;
+  restingHr?: number;
+  weightKg?: number;
+};
+export type NativeDailySummary = { days: NativeDailyRow[]; granted?: string[]; readAt?: string };
+export type BackgroundSyncState = {
+  featureAvailable: boolean;
+  permissionGranted: boolean;
+  intervalMinutes: number;
+  pendingWrites: number;
+  sdkInt?: number;
+  cache?: { summary?: NativeDailySummary; lastRun?: { ranAt?: string; result?: string; written?: number } };
+};
+
+/** Native dygnsrader → HealthDay. Saknade värden blir null (inte 0) för extravärdena. */
+export function healthDaysFromSummary(summary: NativeDailySummary | undefined): HealthDay[] {
+  const r = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null);
+  return (summary?.days ?? [])
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.day))
+    .map((d) => ({
+      day: d.day,
+      steps: r(d.steps) ?? 0,
+      activeCalories: r(d.activeCalories) ?? 0,
+      sleepMinutes: r(d.sleepMinutes) ?? 0,
+      totalCalories: r(d.totalCalories),
+      distanceM: r(d.distanceM),
+      weightKg: typeof d.weightKg === "number" && Number.isFinite(d.weightKg) ? Math.round(d.weightKg * 10) / 10 : null,
+      avgHeartRate: r(d.avgHr),
+      minHeartRate: r(d.minHr),
+      maxHeartRate: r(d.maxHr),
+      restingHeartRate: r(d.restingHr),
+    }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+}
+
+/** Grims eget paket – pass som Grim själv skrivit får aldrig importeras tillbaka. */
+export const GRIM_PACKAGE = "se.grim.app";
+
+/**
+ * Skrivbehörigheter frågas separat och frivilligt. De ingår inte i PERMISSIONS,
+ * så läsflödet och "activity"-statusen påverkas inte om användaren nekar.
+ */
+export const WRITE_PERMISSIONS = ["WRITE_WORKOUTS", "WRITE_ACTIVE_CALORIES", "WRITE_DISTANCE"] as const;
+
+export type HealthWriteAccess = { workouts: boolean; calories: boolean; distance: boolean };
+export const EMPTY_WRITE_ACCESS: HealthWriteAccess = { workouts: false, calories: false, distance: false };
+
+export function parseHealthWriteAccess(res: PermissionResponse | undefined): HealthWriteAccess {
+  const granted = permissionMap(res);
+  return {
+    workouts: granted.WRITE_WORKOUTS === true,
+    calories: granted.WRITE_ACTIVE_CALORIES === true,
+    distance: granted.WRITE_DISTANCE === true,
+  };
+}
 
 
 export type RawHealthWorkout = {
@@ -352,7 +461,8 @@ function allGranted(res: PermissionResponse | undefined, required: readonly stri
   return required.every((permission) => granted[permission] === true);
 }
 
-const EMPTY_ACCESS: HealthAccess = { activity: false, workouts: false, heartRate: false, sleep: false };
+const EMPTY_ACCESS: HealthAccess = { activity: false, workouts: false, heartRate: false, sleep: false, weight: false };
+const ALL_ACCESS: HealthAccess = { activity: true, workouts: true, heartRate: true, sleep: true, weight: true };
 
 function accessFrom(res: PermissionResponse | undefined): HealthAccess {
   const granted = permissionMap(res);
@@ -362,8 +472,10 @@ function accessFrom(res: PermissionResponse | undefined): HealthAccess {
   return {
     activity: someActivity,
     workouts: has(PERMISSION_GROUPS.workouts),
-    heartRate: has(PERMISSION_GROUPS.heartRate),
+    // Puls räcker med vanlig puls ELLER vilopuls (delvis beviljat är ok).
+    heartRate: PERMISSION_GROUPS.heartRate.some((p) => granted[p] === true),
     sleep: has(PERMISSION_GROUPS.sleep),
+    weight: has(PERMISSION_GROUPS.weight),
   };
 }
 
@@ -378,7 +490,7 @@ export async function checkHealthAccess(throwOnError = false): Promise<HealthAcc
   if (!plugin) return EMPTY_ACCESS;
   // iOS svarar inte tillförlitligt på check – där avgörs det vid läsning.
   if (Capacitor.getPlatform() === "ios") {
-    return { activity: true, workouts: true, heartRate: true, sleep: true };
+    return ALL_ACCESS;
   }
   try {
     const res = await withTimeout(
@@ -399,7 +511,7 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err ?? "");
 }
 
-function classifyNativeHealthError(err: unknown): HealthError {
+export function classifyNativeHealthError(err: unknown): HealthError {
   if (err instanceof HealthError) return err;
   const message = errorMessage(err);
   if (message.includes("HC_NATIVE_03") || /register.*ActivityResult|launcher.*initial/i.test(message)) {
@@ -422,6 +534,12 @@ function classifyNativeHealthError(err: unknown): HealthError {
       "callback-invalid",
       "Health Connect svarade, men svaret gick inte att tolka. Försök igen och godkänn i rutan som visas.",
     );
+  }
+  if (message.includes("HC_NATIVE_09")) {
+    return new HealthError("unknown", "Health Connect gick inte att nå från Grim. Öppna Health Connect en gång och försök igen.");
+  }
+  if (message.includes("HC_WRITE_DENIED")) {
+    return new HealthError("denied", "Grim får inte spara pass i Health Connect.");
   }
   if (message.includes("HC_NATIVE_04")) {
     return new HealthError("dialog-timeout", "Inget svar kom från Health Connect, och det går inte att bekräfta att rutan visades.");
@@ -553,7 +671,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
 
   healthLog("permission response", res);
   if (Capacitor.getPlatform() === "ios") {
-    return { activity: true, workouts: true, heartRate: true, sleep: true };
+    return ALL_ACCESS;
   }
   // Läs alltid av det verkliga läget: reservbegäran frågar bara om grunddatan,
   // så svaret där saknar pass, puls och sömn även när de redan är beviljade.
@@ -576,7 +694,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
       "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på.",
     );
   }
-  if (!access.workouts || !access.heartRate || !access.sleep) {
+  if (!access.workouts || !access.heartRate || !access.sleep || !access.weight) {
     healthLog("partial access", access);
   }
 
@@ -621,7 +739,12 @@ export async function installHealthConnect(): Promise<void> {
  * en UTC-nyckel skulle flytta svensk data till fel datum (t.ex. midnatt 16:e
  * blir 22:00 den 15:e i UTC).
  */
-function dayKey(date: Date) {
+/** Midnatt lokal tid för dagen `daysBack` kalenderdagar före `from` (tål sommartidsbyte). */
+export function localDayStart(from: Date, daysBack: number): Date {
+  return new Date(from.getFullYear(), from.getMonth(), from.getDate() - daysBack);
+}
+
+export function dayKey(date: Date) {
   const y = date.getFullYear();
   const m = `${date.getMonth() + 1}`.padStart(2, "0");
   const d = `${date.getDate()}`.padStart(2, "0");
@@ -671,8 +794,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const end = new Date();
-  const start = new Date(end.getTime() - (days - 1) * 86400000);
-  start.setHours(0, 0, 0, 0);
+  const start = localDayStart(end, days - 1);
 
 
   const request = {
@@ -682,6 +804,21 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
   };
 
   healthLog("data request started", { days });
+  if (typeof plugin.readDailySummary === "function") {
+    try {
+      const summary = await withTimeout(
+        plugin.readDailySummary({ days }),
+        STEP_TIMEOUT_MS,
+        "Health Connect svarade inte när dygnsdata hämtades.",
+      );
+      const rows = healthDaysFromSummary(summary);
+      healthLog("daily summary received", { days: rows.length, granted: summary?.granted });
+      if (rows.length > 0) return rows;
+    } catch (err) {
+      // Faller tillbaka på de äldre anropen nedan – felet loggas.
+      healthLog("daily summary failed – using legacy queries", errorMessage(err));
+    }
+  }
   const empty = { aggregatedData: [] as { startDate: string; value: number }[] };
   const errors: unknown[] = [];
   const [steps, calories, sleep] = await Promise.all([
@@ -723,7 +860,8 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
 
   const map = new Map<string, HealthDay>();
   for (let i = 0; i < days; i += 1) {
-    const d = new Date(start.getTime() + i * 86400000);
+    // Kalenderdagar, inte 24 h-steg: vid sommartid/vintertid är ett dygn 23 eller 25 h.
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
     const key = dayKey(d);
     map.set(key, { day: key, steps: 0, activeCalories: 0, sleepMinutes: 0 });
   }
@@ -750,7 +888,7 @@ export async function readHealthDays(days = 7): Promise<HealthDay[]> {
 
 export async function saveHealthDays(userId: string, rows: HealthDay[]) {
   if (!rows.length) return;
-  const payload = rows.map((row) => ({
+  const basePayload = rows.map((row) => ({
     user_id: userId,
     day: row.day,
     steps: row.steps,
@@ -759,13 +897,23 @@ export async function saveHealthDays(userId: string, rows: HealthDay[]) {
     source: Capacitor.getPlatform() === "ios" ? "apple-health" : "health-connect",
     updated_at: new Date().toISOString(),
   }));
+  const payload = rows.map((row, i) => ({ ...basePayload[i], ...extraColumns(row) }));
   healthLog("database save started", { rows: payload.length });
   try {
-    const { error } = await withTimeout(
-      Promise.resolve(supabase.from("health_daily").upsert(payload, { onConflict: "user_id,day" })),
+    let { error } = await withTimeout(
+      Promise.resolve(supabase.from("health_daily").upsert(payload as never, { onConflict: "user_id,day" })),
       15000,
       "Datan hämtades men databasen svarade inte i tid.",
     );
+    if (error && isMissingColumnError(error)) {
+      // Migrationen med extrakolumnerna är inte körd än – spara grunddatan ändå.
+      healthLog("extra columns missing – saving base columns only", error.message);
+      ({ error } = await withTimeout(
+        Promise.resolve(supabase.from("health_daily").upsert(basePayload, { onConflict: "user_id,day" })),
+        15000,
+        "Datan hämtades men databasen svarade inte i tid.",
+      ));
+    }
     if (error) throw error;
     healthLog("database save completed", { rows: payload.length });
   } catch (err) {
@@ -774,27 +922,48 @@ export async function saveHealthDays(userId: string, rows: HealthDay[]) {
   }
 }
 
+/** Bara kolumner med värde skickas, så en saknad behörighet inte nollar gammal data. */
+export function extraColumns(row: HealthDay): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [key, column] of Object.entries(HEALTH_EXTRA_COLUMNS)) {
+    const v = row[key as keyof typeof HEALTH_EXTRA_COLUMNS];
+    if (typeof v === "number" && Number.isFinite(v)) out[column] = v;
+  }
+  return out;
+}
+
+export function isMissingColumnError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  return error.code === "PGRST204" || error.code === "42703" || /column .* (does not exist|could not find)|could not find the '.*' column/i.test(error.message ?? "");
+}
+
 export async function loadStoredHealthDays(userId: string, days = 7): Promise<HealthDay[]> {
-  const start = new Date(Date.now() - (days - 1) * 86400000);
-  start.setHours(0, 0, 0, 0);
-  const { data, error } = await withTimeout(
-    Promise.resolve(
-      supabase
-        .from("health_daily")
-        .select("day, steps, active_calories, sleep_minutes")
-        .eq("user_id", userId)
-        .gte("day", dayKey(start))
-        .order("day", { ascending: true }),
-    ),
-    15000,
-    "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.",
-  );
+  const start = localDayStart(new Date(), days - 1);
+  const select = (cols: string) =>
+    withTimeout(
+      Promise.resolve(
+        supabase
+          .from("health_daily")
+          .select(cols)
+          .eq("user_id", userId)
+          .gte("day", dayKey(start))
+          .order("day", { ascending: true }),
+      ),
+      15000,
+      "Kunde inte hämta sparad hälsodata – ingen kontakt med servern.",
+    );
+  const base = "day, steps, active_calories, sleep_minutes";
+  let { data, error } = await select(`${base}, ${Object.values(HEALTH_EXTRA_COLUMNS).join(", ")}`);
+  if (error && isMissingColumnError(error)) ({ data, error } = await select(base));
   if (error) throw new HealthError("save-failed", "Kunde inte hämta sparad hälsodata från Grim.");
-  return (data ?? []).map((row) => ({
+  return ((data ?? []) as unknown as Record<string, number | string | null>[]).map((row) => ({
     day: row.day as string,
-    steps: row.steps ?? 0,
-    activeCalories: row.active_calories ?? 0,
-    sleepMinutes: (row as { sleep_minutes?: number | null }).sleep_minutes ?? 0,
+    steps: (row.steps as number) ?? 0,
+    activeCalories: (row.active_calories as number) ?? 0,
+    sleepMinutes: (row.sleep_minutes as number) ?? 0,
+    ...Object.fromEntries(
+      Object.entries(HEALTH_EXTRA_COLUMNS).map(([key, column]) => [key, row[column] == null ? null : Number(row[column])]),
+    ),
 
   }));
 }
@@ -837,6 +1006,8 @@ export type HealthWorkout = {
   steps: number | null;
   avgHeartRate: number | null;
   maxHeartRate: number | null;
+  /** Paketnamn för appen som skrev passet till Health Connect. */
+  sourceBundleId?: string;
 };
 
 const WORKOUT_LABELS: Array<[RegExp, string]> = [
@@ -955,6 +1126,7 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
         type: w.workoutType,
         label: labelForWorkoutType(w.workoutType),
         source: w.sourceName || "Hälsoappen",
+        sourceBundleId: w.sourceBundleId,
         minutes: Math.max(0, Math.round(minutes * 100) / 100),
         distanceKm: w.distance ? Math.round((w.distance / 1000) * 100) / 100 : null,
         calories: w.calories ? Math.round(w.calories) : null,
@@ -963,7 +1135,10 @@ export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
         maxHeartRate: bpms.length ? Math.max(...bpms) : null,
       } satisfies HealthWorkout;
     });
-  const deduped = dedupeWorkouts(mapped).sort((a, b) => b.start.localeCompare(a.start));
+  // GRIM_HC_WRITE: pass som Grim själv skrivit ska inte importeras tillbaka (loop).
+  const foreign = mapped.filter((w) => w.sourceBundleId !== GRIM_PACKAGE);
+  if (foreign.length !== mapped.length) healthLog("own grim workouts skipped", mapped.length - foreign.length);
+  const deduped = dedupeWorkouts(foreign).sort((a, b) => b.start.localeCompare(a.start));
   if (deduped.length !== mapped.length) {
     healthLog("duplicate workouts merged", mapped.length - deduped.length);
   }
@@ -1008,4 +1183,199 @@ export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_
   );
   healthLog("native test result", res);
   return permissionMap(res);
+}
+
+
+/* ---------------- Skrivning av Grim-pass till Health Connect ---------------- */
+
+/** Har APK:n skrivstöd alls (byggd efter patch-health-write)? */
+export async function isHealthWriteSupported(): Promise<boolean> {
+  const plugin = await loadPlugin();
+  return !!plugin && Capacitor.getPlatform() === "android" && typeof plugin.writeWorkout === "function";
+}
+
+export async function checkHealthWriteAccess(): Promise<HealthWriteAccess> {
+  const plugin = await loadPlugin();
+  if (!plugin || Capacitor.getPlatform() !== "android") return EMPTY_WRITE_ACCESS;
+  try {
+    const res = await withTimeout(
+      plugin.checkHealthPermissions({ permissions: [...WRITE_PERMISSIONS] }),
+      STEP_TIMEOUT_MS,
+      "Health Connect svarade inte när skrivbehörigheterna lästes.",
+    );
+    return parseHealthWriteAccess(res);
+  } catch (err) {
+    healthLog("write permission check failed", errorMessage(err));
+    return EMPTY_WRITE_ACCESS;
+  }
+}
+
+/**
+ * Separat, frivillig fråga om att få skriva Grim-pass till Health Connect.
+ * Nekar användaren påverkas inte läsningen.
+ */
+export async function requestHealthWriteAccess(): Promise<HealthWriteAccess> {
+  const plugin = await loadPlugin();
+  if (!plugin || Capacitor.getPlatform() !== "android") throw new HealthError("unknown", "Skrivning till Health Connect finns bara i Android-appen.");
+  if (typeof plugin.writeWorkout !== "function") {
+    throw new HealthError("unknown", "Den installerade appen saknar skrivstöd – uppdatera Grim.");
+  }
+  healthLog("requesting write permissions", [...WRITE_PERMISSIONS]);
+  try {
+    const res = await withDialogTimeout(
+      plugin.requestHealthPermissions({ permissions: [...WRITE_PERMISSIONS] }),
+      "Health Connect svarade inte i tid på frågan om att spara pass.",
+      DIALOG_TIMEOUT_MS,
+      DIALOG_VISIBLE_TIMEOUT_MS,
+    );
+    healthLog("write permission response", res);
+  } catch (err) {
+    healthLog("write permission request failed", errorMessage(err));
+  }
+  // Läs alltid av verkligt läge – svaret kan saknas om aktiviteten återskapats.
+  const access = await checkHealthWriteAccess();
+  if (!access.workouts) {
+    throw new HealthError("denied", "Grim fick inte spara pass i Health Connect. Du kan ändra det under Health Connect → Appbehörigheter → Grim.");
+  }
+  return access;
+}
+
+export async function writeWorkoutToHealth(input: HealthWriteInput) {
+  const plugin = await loadPlugin();
+  if (!plugin?.writeWorkout) throw new HealthError("unknown", "Skrivstöd saknas i appen.");
+  return withTimeout(plugin.writeWorkout(input), 30000, "Health Connect svarade inte när passet skulle sparas.");
+}
+
+export async function deleteWorkoutsFromHealth(clientRecordIds: string[]) {
+  const plugin = await loadPlugin();
+  if (!plugin?.deleteWorkouts) throw new HealthError("unknown", "Skrivstöd saknas i appen.");
+  if (clientRecordIds.length === 0) return { deleted: 0 };
+  return withTimeout(plugin.deleteWorkouts({ clientRecordIds }), 30000, "Health Connect svarade inte när pass skulle tas bort.");
+}
+
+/* ---------------- Senaste synkfel (visas i kortet i stället för att sväljas) ---------------- */
+
+const LAST_ERROR_KEY = "grim_health_last_error";
+
+export function recordHealthSyncError(context: string, err: unknown) {
+  const { ref, message } = formatHealthError(err);
+  healthLog(`${context} failed`, { ref, message });
+  try {
+    localStorage.setItem(LAST_ERROR_KEY, JSON.stringify({ at: new Date().toISOString(), context, ref, message }));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearHealthSyncError() {
+  try {
+    localStorage.removeItem(LAST_ERROR_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getLastHealthSyncError(): { at: string; context: string; ref: string; message: string } | null {
+  try {
+    const raw = localStorage.getItem(LAST_ERROR_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+
+/* ---------------- Bakgrundssynk (GRIM_HC_BACKGROUND) ---------------- */
+
+export const BACKGROUND_PERMISSIONS = ["READ_BACKGROUND"] as const;
+export const BACKGROUND_INTERVAL_MINUTES = 120;
+const BG_ENABLED_KEY = "grim_health_bg_enabled";
+
+export function isBackgroundSyncEnabled(): boolean {
+  try {
+    return localStorage.getItem(BG_ENABLED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export async function getBackgroundSyncState(): Promise<BackgroundSyncState | null> {
+  const plugin = await loadPlugin();
+  if (!plugin?.getBackgroundSyncState || Capacitor.getPlatform() !== "android") return null;
+  try {
+    return await withTimeout(plugin.getBackgroundSyncState(), 10000, "Kunde inte läsa bakgrundssynkens status.");
+  } catch (err) {
+    healthLog("background state failed", errorMessage(err));
+    return null;
+  }
+}
+
+/**
+ * Slår på bakgrundssynk. Behörigheten för bakgrundsläsning är frivillig: nekas
+ * den, eller stöds den inte av telefonens Health Connect, schemaläggs jobbet
+ * ändå för att skriva väntande pass, och läsningen sker när appen öppnas.
+ */
+export async function enableBackgroundSync(): Promise<BackgroundSyncState | null> {
+  const plugin = await loadPlugin();
+  if (!plugin?.scheduleBackgroundSync || Capacitor.getPlatform() !== "android") {
+    throw new HealthError("unknown", "Bakgrundssynk kräver en nyare version av Grim-appen på Android.");
+  }
+  let state = await getBackgroundSyncState();
+  if (state?.featureAvailable && !state.permissionGranted) {
+    try {
+      await withDialogTimeout(
+        plugin.requestHealthPermissions({ permissions: [...BACKGROUND_PERMISSIONS] }),
+        "Health Connect svarade inte i tid på frågan om bakgrundsläsning.",
+        DIALOG_TIMEOUT_MS,
+        DIALOG_VISIBLE_TIMEOUT_MS,
+      );
+    } catch (err) {
+      healthLog("background permission request failed", errorMessage(err));
+    }
+  }
+  await withTimeout(plugin.scheduleBackgroundSync({ intervalMinutes: BACKGROUND_INTERVAL_MINUTES }), 10000, "Kunde inte schemalägga bakgrundssynken.");
+  try {
+    localStorage.setItem(BG_ENABLED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+  state = await getBackgroundSyncState();
+  healthLog("background sync enabled", state);
+  return state;
+}
+
+export async function disableBackgroundSync(): Promise<void> {
+  const plugin = await loadPlugin();
+  try {
+    localStorage.setItem(BG_ENABLED_KEY, "0");
+  } catch {
+    /* ignore */
+  }
+  if (plugin?.cancelBackgroundSync) await withTimeout(plugin.cancelBackgroundSync(), 10000, "Kunde inte stänga av bakgrundssynken.");
+}
+
+/** Lämnar pass till bakgrundsjobbet (t.ex. när Health Connect inte svarade). */
+export async function enqueuePendingHealthWrites(workouts: HealthWriteInput[]): Promise<boolean> {
+  const plugin = await loadPlugin();
+  if (!plugin?.enqueuePendingWrites || workouts.length === 0) return false;
+  try {
+    await withTimeout(plugin.enqueuePendingWrites({ workouts }), 10000, "Kunde inte köa pass för bakgrundssynk.");
+    return true;
+  } catch (err) {
+    healthLog("enqueue pending writes failed", errorMessage(err));
+    return false;
+  }
+}
+
+/**
+ * Data som bakgrundsjobbet läste medan appen var stängd sparas i Grim direkt vid
+ * start – även om Health Connect svarar långsamt just då.
+ */
+export async function importBackgroundCache(userId: string): Promise<number> {
+  const state = await getBackgroundSyncState();
+  const rows = healthDaysFromSummary(state?.cache?.summary);
+  if (rows.length === 0) return 0;
+  await saveHealthDays(userId, rows);
+  healthLog("background cache imported", { rows: rows.length, readAt: state?.cache?.summary?.readAt });
+  return rows.length;
 }

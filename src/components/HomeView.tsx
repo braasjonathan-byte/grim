@@ -22,10 +22,15 @@ import {
   formatSleep,
   loadStoredHealthDays,
   readHealthDays,
+  importBackgroundCache,
+  recordHealthSyncError,
+  clearHealthSyncError,
+  healthLog,
   saveHealthDays,
   type HealthDay,
 
 } from "@/lib/healthSync";
+import { syncGrimWorkoutsToHealth } from "@/lib/healthWriteSync";
 import { ACHIEVEMENTS, calculateAchievementMetrics, getAchievementById } from "@/lib/achievements";
 import { syncAchievements } from "@/lib/achievementSync";
 import { toLocalDateKey } from "@/lib/dateUtils";
@@ -141,19 +146,43 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
       }
     };
     void applyStored();
-    if (isHealthSupported()) {
+    // Läser vid kallstart och när appen kommer fram igen (max var 5:e minut).
+    // Fel sparas och visas i Health Connect-kortet i stället för att sväljas.
+    let lastRun = 0;
+    const runSync = () => {
+      if (!isHealthSupported() || Date.now() - lastRun < 5 * 60_000) return;
+      lastRun = Date.now();
       (async () => {
+        // Data som bakgrundsjobbet hämtat medan appen var stängd sparas först.
+        try {
+          if ((await importBackgroundCache(userId)) > 0 && !cancelled) await applyStored();
+        } catch (err) {
+          recordHealthSyncError("home background cache", err);
+        }
         try {
           const days = await readHealthDays(7);
           await saveHealthDays(userId, days);
+          clearHealthSyncError();
           if (!cancelled) await applyStored();
-        } catch {
-          /* behörighet saknas – visa sparad data */
+        } catch (err) {
+          recordHealthSyncError("home health read", err);
+        }
+        try {
+          const w = await syncGrimWorkoutsToHealth(userId);
+          if (w.written + w.deleted + w.failed > 0) healthLog("home write sync", w);
+        } catch (err) {
+          recordHealthSyncError("home health write", err);
         }
       })();
-    }
+    };
+    runSync();
+    const onVisible = () => {
+      if (typeof document !== "undefined" && !document.hidden) runSync();
+    };
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisible);
     };
   }, [userId, healthPreview]);
 
