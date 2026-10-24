@@ -102,6 +102,24 @@ if (!kt.includes("GRIM_READ_WITHOUT_CHECK")) {
   }
 }
 
+// GRIM_ENSURE_CLIENT: healthConnectClient är lateinit och sätts bara i
+// isHealthAvailable/ensureClient. HomeView och HealthWorkoutPrompt läser data
+// direkt vid kallstart, så utan detta avvisas varje läsning med
+// "lateinit property healthConnectClient has not been initialized".
+for (const fn of ["queryAggregated", "queryRecords", "queryWorkouts", "queryNutrition"]) {
+  const head = `fun ${fn}(call: PluginCall) {\n`;
+  const marker = `// GRIM_ENSURE_CLIENT ${fn}`;
+  if (kt.includes(marker)) continue;
+  if (!kt.includes(head)) {
+    console.error(`[patch-open-health-settings] hittade inte ${fn}.`);
+    process.exit(1);
+  }
+  kt = kt.replace(
+    head,
+    `${head}        ${marker}\n        if (!ensureClient()) {\n            android.util.Log.e("GRIM_HC", "GRIM_HC: ${fn} utan Health Connect-klient")\n            call.reject("HC_NATIVE_09: Health Connect client unavailable")\n            return\n        }\n`
+  );
+}
+
 if (kt.includes("GRIM_SETTINGS_CANDIDATES")) {
   fs.writeFileSync(PLUGIN_KT, kt, "utf8");
   console.log("[patch-open-health-settings] redan patchad.");
