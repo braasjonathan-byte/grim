@@ -182,6 +182,9 @@ if (fs.existsSync(healthPlugin)) {
   if (!source.includes("GRIM_SETTINGS_CANDIDATES") || !source.includes("HC_NATIVE_SETTINGS: could not open Health Connect")) {
     failures.push("capacitor-health: Health Connect settings fallback chain is missing");
   }
+  if (!source.includes("GRIM_SETTINGS_V2") || !source.includes("SETTINGS_BOUNCED") || !source.includes("fun grimSettingsDiagnostics(call: PluginCall)")) {
+    failures.push("capacitor-health: Health Connect settings V2 (bounce detection + diagnostics) is missing");
+  }
   if (!source.includes("SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED") || !source.includes('"update-required"')) {
     failures.push("capacitor-health: installed versus update-required availability diagnostics are missing");
   }

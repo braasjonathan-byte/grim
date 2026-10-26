@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, CheckCircle2, Download, Loader2, RefreshCw, Settings, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ import {
   isHealthSupported,
   loadStoredHealthDays,
   openHealthSettings,
+  openHealthPermissions,
   readHealthDays,
   readHealthWorkouts,
   saveHealthDays,
@@ -128,6 +129,7 @@ const HealthConnectCard = () => {
     return () => document.removeEventListener("visibilitychange", refresh);
   }, []);
 
+  const openPermissionsRef = useRef<() => Promise<void>>(async () => {});
   /** Ger varje feltillstånd ett eget, konkret besked – med felkod. */
   const reportError = useCallback((err: unknown, fallback: string) => {
     const { code, ref, message, label } = formatHealthError(err, fallback);
@@ -145,13 +147,32 @@ const HealthConnectCard = () => {
         description: label,
         action: {
           label: "Behörigheter",
-          onClick: () => void openHealthSettings().catch((settingsError) => reportError(settingsError, "Kunde inte öppna behörigheterna")),
+          onClick: () => void openPermissionsRef.current(),
         },
       });
       return;
     }
     toast.error(message, { description: label });
   }, []);
+
+  const openPermissions = useCallback(async () => {
+    toast.message("Öppnar Health Connect…");
+    try {
+      const res = await openHealthPermissions();
+      if (res.mode === "dialog") {
+        setAccess(res.access);
+        toast.success("Grim har nu åtkomst till Health Connect.");
+      } else {
+        setAccess(await checkHealthAccess().catch(() => null));
+        toast.success("Health Connect öppnades. Tillåt Grim och gå tillbaka till appen.", {
+          description: res.result.opened ? `Väg: ${res.result.opened}` : undefined,
+        });
+      }
+    } catch (err) {
+      reportError(err, "Kunde inte öppna behörigheterna");
+    }
+  }, [reportError]);
+  openPermissionsRef.current = openPermissions;
 
   const sync = useCallback(async () => {
     if (!userId) return;
@@ -523,10 +544,7 @@ const HealthConnectCard = () => {
             variant="outline"
             className="rounded-full"
             onClick={() => {
-              toast.message("Öppnar Health Connect…");
-              void openHealthSettings()
-                .then(() => toast.success("Health Connect öppnades. Tillåt Grim och gå tillbaka till appen."))
-                .catch((err) => reportError(err, "Kunde inte öppna behörigheterna"));
+              void openPermissions();
             }}
           >
             <Settings className="mr-2 h-4 w-4" />

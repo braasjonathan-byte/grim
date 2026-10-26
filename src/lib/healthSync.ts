@@ -61,8 +61,9 @@ type HealthPluginLike = {
   isHealthAvailable: () => Promise<{ available: boolean; status?: string }>;
   checkHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
   requestHealthPermissions: (req: { permissions: string[] }) => Promise<PermissionResponse>;
-  openHealthConnectSettings: () => Promise<void>;
+  openHealthConnectSettings: () => Promise<HealthSettingsResult | void>;
   grimHealthDiagnostics?: () => Promise<HealthDiagnostics>;
+  grimSettingsDiagnostics?: () => Promise<HealthDiagnostics>;
   showHealthConnectInPlayStore: () => Promise<void>;
   queryAggregated: (req: {
     startDate: string;
@@ -707,20 +708,59 @@ export async function hasHealthPermissions(): Promise<boolean> {
 }
 
 
-export async function openHealthSettings(): Promise<void> {
+/** Svar från native V2 (GRIM_SETTINGS_V2); äldre APK:er svarar utan innehåll. */
+export type HealthSettingsResult = { opened?: string; sdkInt?: number; tried?: string[] };
+
+export async function openHealthSettings(): Promise<HealthSettingsResult> {
   const plugin = await loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är inte tillgängligt i den här appen.");
   healthLog("opening app health permissions");
   try {
-    await withTimeout(
+    // V2 provar upp till fem vägar med 1,5 s kontroll per väg – ge den tid.
+    const res = await withTimeout(
       plugin.openHealthConnectSettings(),
-      8000,
+      15000,
       "Android svarade inte när Grims Health Connect-behörigheter skulle öppnas.",
     );
-    healthLog("app health permissions opened");
+    const result: HealthSettingsResult = res && typeof res === "object" ? res : {};
+    healthLog("app health permissions opened", result);
+    return result;
   } catch (err) {
     healthLog("app health permissions failed", err);
-    throw new HealthError("launcher-setup", "Kunde inte öppna Grims behörighetssida i Health Connect.");
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new HealthError("launcher-setup", `Kunde inte öppna Grims behörighetssida i Health Connect. (${detail})`);
+  }
+}
+
+/**
+ * "Behörigheter"-knappen. Utan beviljad grunddata visas Health Connects egen
+ * godkännanderuta (det är den som faktiskt ger Grim åtkomst); annars, eller om
+ * rutan inte gav något, öppnas Grims sida i Health Connect. Studsar den sidan
+ * prövas godkännanderutan som sista utväg.
+ */
+export async function openHealthPermissions(): Promise<
+  { mode: "dialog"; access: HealthAccess } | { mode: "settings"; result: HealthSettingsResult }
+> {
+  let connected = false;
+  try {
+    connected = (await checkHealthAccess()).activity;
+  } catch (err) {
+    healthLog("permissions: status check failed", err);
+  }
+  if (!connected) {
+    healthLog("permissions: not connected -> permission dialog");
+    try {
+      return { mode: "dialog", access: await requestHealthPermissions() };
+    } catch (dialogErr) {
+      healthLog("permissions: dialog failed, trying settings", dialogErr);
+      return { mode: "settings", result: await openHealthSettings() };
+    }
+  }
+  try {
+    return { mode: "settings", result: await openHealthSettings() };
+  } catch (settingsErr) {
+    healthLog("permissions: settings failed -> permission dialog", settingsErr);
+    return { mode: "dialog", access: await requestHealthPermissions() };
   }
 }
 
@@ -1155,8 +1195,17 @@ export async function runHealthDiagnostics(): Promise<HealthDiagnostics> {
   if (!plugin) throw new HealthError("unknown", "Hälsomodulen kunde inte laddas i appen.");
   if (typeof plugin.grimHealthDiagnostics !== "function") throw new HealthError("unknown", "Appens Android-del saknar diagnostik – installerad APK är troligen gammal.");
   const res = await withTimeout(plugin.grimHealthDiagnostics(), 8000, "Android-delen svarade inte på diagnostik inom 8 s (bryggan hänger eller gammal APK).");
-  healthLog("diagnostics", res);
-  return res;
+  let settings: HealthDiagnostics | undefined;
+  if (typeof plugin.grimSettingsDiagnostics === "function") {
+    try {
+      settings = await withTimeout(plugin.grimSettingsDiagnostics(), 8000, "Inställningsdiagnostiken svarade inte.");
+    } catch (err) {
+      settings = { error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+  const merged = settings ? { ...res, settings } : res;
+  healthLog("diagnostics", merged);
+  return merged;
 }
 
 /** Testuppsättningar: A = bara steg, B = steg + distans, C = allt. */
