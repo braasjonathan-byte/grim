@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Öppnar Grim…</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0b0b0b; color: #f5f5f5; text-align: center; padding: 24px; }
+    a.btn { display: inline-block; margin-top: 16px; padding: 12px 20px; border-radius: 999px; background: #fff; color: #000; text-decoration: none; font-weight: 600; }
+    p { opacity: 0.8; line-height: 1.4; max-width: 28rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Grim</h1>
+    <p id="msg">Öppnar appen…</p>
+    <a class="btn" id="open" href="https://grim.lovable.app">Öppna Grim</a>
+  </main>
+  <script>
+    (function () {
+      var TARGET = "https://grim.lovable.app";
+      var ua = navigator.userAgent || "";
+      var isIG = /Instagram/i.test(ua);
+      var isAndroid = /Android/i.test(ua);
+      var isIOS = /iPhone|iPad|iPod/i.test(ua);
+      var msg = document.getElementById("msg");
+      var open = document.getElementById("open");
+      open.href = TARGET;
+
+      if (!isIG) {
+        location.replace(TARGET);
+        return;
+      }
+
+      msg.textContent = "Instagrams webbläsare blockerar ofta appar. Öppnar i din vanliga webbläsare…";
+
+      if (isAndroid) {
+        // Chrome (fallback: default browser via intent)
+        var hostPath = TARGET.replace(/^https?:\/\//, "");
+        location.href =
+          "intent://" + hostPath +
+          "#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=" +
+          encodeURIComponent(TARGET) + ";end";
+        return;
+      }
+
+      if (isIOS) {
+        // Ask iOS to hand off to Safari
+        location.href = "x-safari-" + TARGET;
+        setTimeout(function () {
+          msg.textContent = "Tryck på knappen nedan, eller … → Öppna i Safari.";
+        }, 800);
+        return;
+      }
+
+      msg.textContent = "Tryck på knappen för att öppna Grim utanför Instagram.";
+    })();
+  </script>
+</body>
+</html>
