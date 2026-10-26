@@ -21,7 +21,8 @@ const path = require("path");
 // Alltid högre än vad som redan finns i Play Console, även vid runnummer 1.
 const AUTO_BASE = 10000;
 // Högsta kod som redan ligger uppe i Play Console — aldrig lägre än så här.
-const MIN_VERSION_CODE = 1095;
+// 10103 är den senast uppladdade versionen, så nästa bygge blir minst 10104.
+const MIN_VERSION_CODE = 10103;
 
 const gradlePath = path.join(__dirname, "..", "android", "app", "build.gradle");
 if (!fs.existsSync(gradlePath)) {
