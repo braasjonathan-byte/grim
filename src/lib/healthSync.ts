@@ -651,13 +651,7 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
       healthLog("fallback permission request failed", { code: fallbackError.code, message: fallbackError.message });
       const afterFallback = await checkHealthAccess();
       if (afterFallback.activity) return afterFallback;
-      if (Capacitor.getPlatform() === "android") {
-        try {
-          await plugin.openHealthConnectSettings();
-        } catch {
-          /* ignore */
-        }
-      }
+      // Inställningarna öppnas av openHealthPermissions() – en gång, med felkod.
       if (["launcher-setup", "launch-failed", "intent-unresolved", "dialog-closed"].includes(fallbackError.code)) throw fallbackError;
       if (firstError.code === "dialog-timeout" || fallbackError.code === "dialog-timeout") {
         throw new HealthError(
@@ -681,15 +675,8 @@ export async function requestHealthPermissions(): Promise<HealthAccess> {
 
 
   if (!access.activity) {
-    // Health Connect visar ingen dialog om användaren nekat två gånger –
-    // öppna inställningarna direkt så behörigheten kan ges manuellt.
-    if (Capacitor.getPlatform() === "android") {
-      try {
-        await plugin.openHealthConnectSettings();
-      } catch {
-        /* ignore */
-      }
-    }
+    // Health Connect visar ingen dialog om användaren nekat två gånger.
+    // openHealthPermissions() öppnar då Grims sida i Health Connect (en gång).
     throw new HealthError(
       "denied",
       "Grim har inte behörighet ännu. Välj Grim i Health Connect och tillåt Steg, Aktiva kalorier och Distans – i Samsung Health måste synk till Health Connect också vara på.",
@@ -753,7 +740,14 @@ export async function openHealthPermissions(): Promise<
       return { mode: "dialog", access: await requestHealthPermissions() };
     } catch (dialogErr) {
       healthLog("permissions: dialog failed, trying settings", dialogErr);
-      return { mode: "settings", result: await openHealthSettings() };
+      try {
+        return { mode: "settings", result: await openHealthSettings() };
+      } catch (settingsErr) {
+        // Båda vägarna misslyckades: visa båda felen så logcat inte behövs för att se vad som hände.
+        const d = dialogErr instanceof Error ? dialogErr.message : String(dialogErr);
+        const st = settingsErr instanceof Error ? settingsErr.message : String(settingsErr);
+        throw new HealthError("launcher-setup", `${d} | ${st}`);
+      }
     }
   }
   try {

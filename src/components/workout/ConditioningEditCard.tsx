@@ -112,6 +112,8 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const distIsMeters = distUnit === "m";
   const distToKm = (d: number): number => (distIsMeters ? d / 1000 : d);
   const kmToDist = (km: number): number => (distIsMeters ? km * 1000 : km);
+  // Meter visas som heltal (1500, inte 1499.99); km med två decimaler.
+  const fmtDist = (d: number): string => String(distIsMeters ? Math.round(d) : Math.round(d * 100) / 100);
   const distToTempoUnits = (d: number): number => distToKm(d) / kmPerTempoUnit;
   const tempoUnitsToDist = (u: number): number => kmToDist(u * kmPerTempoUnit);
 
@@ -142,7 +144,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
       if (isKmh) {
         // km/h: hastighet = distans (km) / tid (timmar)
         if (field === "distance" && t > 0 && p && p > 0) {
-          setDistance(String(Math.round(kmToDist(p * t / 60) * 100) / 100));
+          setDistance(fmtDist(kmToDist(p * t / 60)));
         } else if (field === "tempo" && t > 0 && dKm > 0) {
           setTempo((60 * dKm / t).toFixed(1));
         } else if (field === "time" && dKm > 0 && p && p > 0) {
@@ -160,7 +162,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
 
       if (field === "distance" && t > 0 && p && p > 0) {
         const units = t / p;
-        setDistance(String(Math.round(tempoUnitsToDist(units) * 100) / 100));
+        setDistance(fmtDist(tempoUnitsToDist(units)));
       } else if (field === "tempo" && t > 0 && d > 0) {
         setTempo(fmtTempo(t / dUnits));
       } else if (field === "time" && d > 0 && p && p > 0) {
@@ -288,7 +290,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5">
           {displayTime && <p className="text-xs">⏱ <span className="font-mono font-semibold">{displayTime} min</span></p>}
-          {displayTempo && <p className="text-xs">🏃 <span className="font-mono font-semibold">{formatPaceDisplay(displayTempo, bikeMode)}{tempoDisplayUnit}</span></p>}
+          {displayTempo && <p className="text-xs">{isSwim ? "🏊" : "🏃"} <span className="font-mono font-semibold">{formatPaceDisplay(displayTempo, bikeMode)}{tempoDisplayUnit}</span></p>}
           {displayDist && showDistance && <p className="text-xs">📏 <span className="font-mono font-semibold">{displayDist} {distUnit}</span></p>}
 
           {savedData?.elev && <p className="text-xs">⛰ <span className="font-mono font-semibold">{savedData.elev} m</span></p>}
@@ -343,7 +345,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
         </div>
 
       )}
-      <GpsTrackerControl
+      {!isSwim && <GpsTrackerControl
         onStop={(km, sec, gpsRoute) => {
           const totMin = sec / 60;
           const hh = Math.floor(totMin / 60);
@@ -360,7 +362,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           if (gpsRoute.length > 1) setRoute(gpsRoute);
           liveAutoCalc(totMin, tempo, distStr, "distance");
         }}
-      />
+      />}
       {isIntervalRun && (
         <button
           type="button"
@@ -385,7 +387,8 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
             setHours(hh > 0 ? String(hh) : "");
             setMinutes(String(mm));
             setSeconds(ss > 0 ? String(ss) : "");
-            const distStr = String(Math.round(km * 100) / 100);
+            // Distansfältet är i övningens enhet (meter för simning).
+            const distStr = fmtDist(kmToDist(km));
             setDistance(distStr);
             setTempo(res.tempo);
             if (res.route && res.route.length > 1) setRoute(res.route);

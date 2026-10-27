@@ -232,3 +232,56 @@ export const parseConditioningIntervalLabel = (text: string): ParsedConditioning
   }
   return { count, durationMin, restMin, mode, value };
 };
+
+/**
+ * Läser planens konditionsvärden ("30 min", "5 km", "1500m", "5:30/km",
+ * "1:55/100m", "150 bpm") och returnerar dem i övningens egna fältenheter:
+ * distans i meter och tempo i min/100m för simning, annars km och min/km.
+ * Tidigare tolkades bara "km" – "1500m" försvann och "1,5 km" hamnade som
+ * 1,5 i simningens meterfält.
+ */
+export const parsePlanCardioForExercise = (
+  exerciseName: string,
+  weightStr: string,
+  planTempo?: string | null,
+): { time: string; dist: string; tempo: string; pulse: string } => {
+  const s = weightStr || "";
+  const isSwim = /simning|simma|sim\b/i.test(exerciseName || "");
+  const timeM = s.match(/(\d+)\s*min/);
+  const pulseM = s.match(/(\d+)\s*bpm/);
+  const kmM = s.match(/([\d.,]+)\s*km(?!\/|h)/i);
+  const mM = s.match(/(\d+(?:[.,]\d+)?)\s*m(?![a-zåäö/])/i);
+  const per100M = s.match(/(\d+[:.]\d{1,2})\s*\/\s*100\s*m/i);
+  const perKmM = s.match(/([\d:.]+)\/km/);
+  const num = (v: string) => parseFloat(v.replace(",", "."));
+  const distKm = kmM ? num(kmM[1]) : mM ? num(mM[1]) / 1000 : NaN;
+  const toMin = (v: string) => {
+    const m = v.match(/^(\d+)[:.](\d{1,2})$/);
+    return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : NaN;
+  };
+  const clock = (min: number) => {
+    const mn = Math.floor(min);
+    const sc = Math.round((min - mn) * 60);
+    return sc === 60 ? `${mn + 1}:00` : `${mn}:${String(sc).padStart(2, "0")}`;
+  };
+  // derivePlanCardioValues räknar i km och min/km.
+  let tempoPerKm = perKmM ? perKmM[1] : "";
+  if (!tempoPerKm && per100M) {
+    const p = toMin(per100M[1]);
+    if (p > 0) tempoPerKm = clock(p * 10);
+  }
+  const derived = derivePlanCardioValues(
+    timeM ? timeM[1] : "",
+    isFinite(distKm) && distKm > 0 ? String(distKm) : "",
+    tempoPerKm,
+    isSwim ? null : planTempo,
+  );
+  let { dist, tempo } = derived;
+  if (isSwim) {
+    const d = parseFloat(dist);
+    dist = d > 0 ? String(Math.round(d * 1000)) : "";
+    const pk = toMin(tempo);
+    tempo = pk > 0 ? clock(pk / 10) : "";
+  }
+  return { time: derived.time, dist, tempo, pulse: pulseM ? pulseM[1] : "" };
+};

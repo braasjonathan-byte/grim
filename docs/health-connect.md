@@ -128,3 +128,13 @@ Saknas detta kan `resolveActivity` ge null och tillgänglighetskontrollen ge fal
 Native-patchen markerar dessutom `resolveActivity == null` som icke-fatalt
 (`GRIM_RESOLVE_NONFATAL`): det loggas som `dialog-intent-unresolved` men dialogen startas ändå.
 `scripts/verify-android-plugins.cjs` stoppar bygget om något av detta saknas.
+
+## Lokalt Android Studio-bygge (från 2026-10-27)
+
+`npx cap sync android` kör nu automatiskt `scripts/cap-sync-after.cjs`
+(npm-hook `capacitor:sync:after`): Firebase, Health Connect-manifestet
+(rationale-aktivitet + Android 14 `VIEW_PERMISSION_USAGE`-alias + `<queries>`),
+system-insets och `verify-android-plugins`. Tidigare gjordes detta bara i CI,
+så lokala AAB:er kunde sakna aliaset – då känner Health Connect inte igen Grim,
+behörighetsrutan stängs direkt och Grims inställningssida studsar.
+Kör: `npm i && npm run android:prepare`, sedan Clean + Build i Android Studio.

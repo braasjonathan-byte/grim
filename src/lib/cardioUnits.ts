@@ -100,7 +100,9 @@ export function getCardioModes(name: string): CardioMode[] {
   const custom = getCustomCardioConfig(name);
   if (custom?.modes?.length) return custom.modes;
   const n = name || "";
-  if (re.swim.test(n)) return ["min100m", "minkm", "kmh"];
+  // Simning loggas alltid i meter och min/100m – min/km och km/h säger inget
+  // för en simmare och gjorde kortet rörigt (tre enhetsknappar, tempo i fel skala).
+  if (re.swim.test(n)) return ["min100m"];
   if (re.row.test(n)) return ["min500m", "watt", "minkm", "kmh"];
   if (re.paddle.test(n)) return ["kmh", "minkm", "min500m"];
   if (re.airbike.test(n)) return ["watt", "kcal", "kmh"];

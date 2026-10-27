@@ -842,7 +842,11 @@ export const IntervalRunner = ({ open, onClose, exerciseName = "Löpning – Int
       try { await onComplete(result); } catch (e) { console.error(e); }
     }
     const km = result.gpsDistanceKm && result.gpsDistanceKm > 0 ? result.gpsDistanceKm : result.totalDistKm;
-    toast.success(`Intervallpass klart – ${km.toFixed(2)} km loggat`);
+    toast.success(
+      profile.paceUnit === "/100m"
+        ? `Simpass klart – ${Math.round(km * 1000)} m loggat`
+        : `Intervallpass klart – ${km.toFixed(2)} km loggat`,
+    );
     setPhase("idle");
     onClose();
   };

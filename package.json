@@ -12,7 +12,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "android:verify-plugins": "node scripts/verify-android-plugins.cjs"
+    "android:verify-plugins": "node scripts/verify-android-plugins.cjs",
+    "capacitor:sync:after": "node scripts/cap-sync-after.cjs",
+    "android:prepare": "npm run build && npx cap sync android"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^8.2.0",

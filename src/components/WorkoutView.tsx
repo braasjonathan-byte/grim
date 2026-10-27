@@ -76,7 +76,7 @@ import { pendingSharedActivity, subscribeSharedActivity, type ParsedActivity } f
 import { useReadyWorkouts } from "@/lib/liveContent";
 import { calculateAchievementMetrics, unlockEarnedAchievements, type AchievementDefinition } from "@/lib/achievements";
 import { type WorkoutViewProps, type PlanDay, type Completion, type FriendComment, type AchievementToastState, type CustomExercise, matchesPlanDay, matchesPlanLike } from "@/components/workout/types";
-import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, buildConditioningIntervalLabel, parseConditioningIntervalLabel, computeIntervalSessionTotals, formatMinutesAsClock } from "@/lib/workoutIntervalUtils";
+import { toTitleCase, normalizeTempoInput, toSavedIntervalRows, sanitizePaceInput, derivePlanCardioValues, parsePlanCardioForExercise, buildConditioningIntervalLabel, parseConditioningIntervalLabel, computeIntervalSessionTotals, formatMinutesAsClock } from "@/lib/workoutIntervalUtils";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
 import DayGpsRecorder from "@/components/workout/DayGpsRecorder";
 import { ConditioningEditCard, ConditioningHMSInput, condInputCls, condUnitCls } from "@/components/workout/ConditioningEditCard";
@@ -1515,16 +1515,8 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     for (const line of lines) {
       const { name, weight } = parseExerciseWeight(line);
       if (name.trim().toLowerCase() !== condName.trim().toLowerCase()) continue;
-      const weightStr = weight || "";
-      const condTimeM = weightStr.match(/(\d+)\s*min/);
-      const condTempoM = weightStr.match(/([\d:.]+)\/km/);
-      const condDistM = weightStr.match(/([\d.,]+)\s*km(?!\/)/);
-      return derivePlanCardioValues(
-        condTimeM ? condTimeM[1] : "",
-        condDistM ? condDistM[1] : "",
-        condTempoM ? condTempoM[1] : "",
-        plan.tempo,
-      );
+      const { time, dist, tempo } = parsePlanCardioForExercise(condName, weight || "", plan.tempo);
+      return { time, dist, tempo };
     }
     return null;
   };
@@ -4393,21 +4385,11 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                       const isCondFormat = (weight && (weight.includes("min") || weight.includes("/km") || /\d+\s*km/i.test(weight))) || isKonditionEx || hasCondLogged;
                       
                       if (isCondFormat) {
-                        const weightStr = weight || "";
-                        const condTimeM = weightStr.match(/(\d+)\s*min/);
-                        const condTempoM = weightStr.match(/([\d:.]+)\/km/);
-                        const condDistM = weightStr.match(/([\d.,]+)\s*km(?!\/)/);
-                        const condPulseM = weightStr.match(/(\d+)\s*bpm/);
-                        const derivedPlanCond = derivePlanCardioValues(
-                          condTimeM ? condTimeM[1] : "",
-                          condDistM ? condDistM[1] : "",
-                          condTempoM ? condTempoM[1] : "",
-                          plan.tempo,
-                        );
+                        const derivedPlanCond = parsePlanCardioForExercise(name, weight || "", plan.tempo);
                         const planCondTime = derivedPlanCond.time;
                         const planCondTempo = derivedPlanCond.tempo;
                         const planCondDist = derivedPlanCond.dist;
-                        const planCondPulse = condPulseM ? condPulseM[1] : "";
+                        const planCondPulse = derivedPlanCond.pulse;
 
 
                         // Read saved conditioning data from logged_weights
@@ -6647,16 +6629,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                                 const isCondLine = (condLineWeight && (condLineWeight.includes("min") || condLineWeight.includes("/km") || /\d+\s*km/i.test(condLineWeight))) || isBareKonditionEx || hasCondLineLogged;
 
                                 if (isCondLine) {
-                                  const cwStr = condLineWeight || "";
-                                  const cTimeM = cwStr.match(/(\d+)\s*min/);
-                                  const cTempoM = cwStr.match(/([\d:.]+)\/km/);
-                                  const cDistM = cwStr.match(/([\d.,]+)\s*km(?!\/)/);
-                                  const derivedLineCond = derivePlanCardioValues(
-                                    cTimeM ? cTimeM[1] : "",
-                                    cDistM ? cDistM[1] : "",
-                                    cTempoM ? cTempoM[1] : "",
-                                    plan.tempo,
-                                  );
+                                  const derivedLineCond = parsePlanCardioForExercise(condLineName, condLineWeight || "", plan.tempo);
                                   const pTime = derivedLineCond.time;
                                   const pDist = derivedLineCond.dist;
                                   const pTempo = derivedLineCond.tempo;
@@ -6765,16 +6738,7 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
                             const isSingleCond = (sCondWeight && (sCondWeight.includes("min") || sCondWeight.includes("/km") || /\d+\s*km/i.test(sCondWeight))) || sIsBareKonditionEx || sHasCondLogged;
 
                             if (isSingleCond) {
-                              const swStr = sCondWeight || "";
-                              const scTimeM = swStr.match(/(\d+)\s*min/);
-                              const scTempoM = swStr.match(/([\d:.]+)\/km/);
-                              const scDistM = swStr.match(/([\d.,]+)\s*km(?!\/)/);
-                              const derivedSingleCond = derivePlanCardioValues(
-                                scTimeM ? scTimeM[1] : "",
-                                scDistM ? scDistM[1] : "",
-                                scTempoM ? scTempoM[1] : "",
-                                plan.tempo,
-                              );
+                              const derivedSingleCond = parsePlanCardioForExercise(sCondName, sCondWeight || "", plan.tempo);
                               const spTime = derivedSingleCond.time;
                               const spDist = derivedSingleCond.dist;
                               const spTempo = derivedSingleCond.tempo;

@@ -87,6 +87,14 @@ if (fs.existsSync(manifestPath)) {
   if (!manifest.includes("HC_QUERIES_V2") || !manifest.includes("androidx.health.ACTION_REQUEST_PERMISSIONS")) {
     failures.push("android: AndroidManifest.xml saknar HC_QUERIES_V2 <queries> för Health Connect — kör `node scripts/patch-android-manifest.cjs`");
   }
+  // Android 14+: utan detta alias känner Health Connect inte igen Grim –
+  // behörighetsrutan stängs direkt och MANAGE_HEALTH_PERMISSIONS studsar.
+  const alias = manifest.match(/<activity-alias[\s\S]*?<\/activity-alias>/);
+  if (!alias || !alias[0].includes("android.intent.action.VIEW_PERMISSION_USAGE") ||
+      !alias[0].includes("android.intent.category.HEALTH_PERMISSIONS") ||
+      !alias[0].includes("android.permission.START_VIEW_PERMISSION_USAGE")) {
+    failures.push("AndroidManifest.xml: saknar Android 14 activity-alias VIEW_PERMISSION_USAGE/HEALTH_PERMISSIONS — kör `node scripts/patch-android-manifest.cjs`");
+  }
   if (!manifest.includes("com.google.android.apps.healthdata")) {
     failures.push("AndroidManifest.xml: missing Health Connect package visibility <queries> entry");
   }
