@@ -23,6 +23,7 @@ import {
   setLastHealthSync,
   syncWindowDays,
   withTimeout,
+  requestHealthPermissions,
   runHealthDiagnostics,
   subscribeHealthTrail,
   testHealthPermissionRequest,
@@ -180,17 +181,30 @@ const HealthConnectCard = () => {
     if (!userId) return;
     setSyncing(true);
     try {
-      await withTimeout((async () => {
-        healthLog("manual sync entry point started");
-        // Snabbt besked i stället för en snurra mot den hårda gränsen.
-        const current = await checkHealthAccess();
-        setAccess(current);
-        if (!current.activity) {
-          throw new HealthError(
-            "denied",
-            "Grim är inte kopplat till Health Connect. Tryck på Behörigheter, tillåt Grim (Steg, Aktiva kalorier) och synka igen.",
-          );
+      healthLog("manual sync entry point started");
+      // Förstagångskoppling: Grim syns ofta inte i Health Connect förrän en
+      // behörighetsbegäran gjorts. Utan grunddata frågar Synka därför EN gång via
+      // godkännanderutan (egna hårda gränser: 12 s om ingen ruta syns, längre bara
+      // medan rutan faktiskt visas). Blir det fortfarande nej ges ett tydligt fel
+      // direkt – ingen datahämtning mot den hårda synkgränsen.
+      let current = await checkHealthAccess();
+      if (!current.activity) {
+        healthLog("sync: not connected -> one permission request");
+        try {
+          current = await requestHealthPermissions();
+        } catch (err) {
+          healthLog("sync: permission request failed", err);
+          current = await checkHealthAccess();
         }
+      }
+      setAccess(current);
+      if (!current.activity) {
+        throw new HealthError(
+          "denied",
+          "Grim är inte kopplat till Health Connect. Tryck på Behörigheter, tillåt Grim (Steg, Aktiva kalorier) och tryck sedan på Synka hälsodata igen.",
+        );
+      }
+      await withTimeout((async () => {
         healthLog("reading health connect");
         const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
         const days = await readHealthDays(windowDays);
@@ -403,7 +417,7 @@ const HealthConnectCard = () => {
             <span>
               {connected
                 ? "Kopplingen är aktiv – Grim läser din hälsodata (t.ex. Samsung Health via Health Connect)."
-                : "Inte kopplad ännu. Tryck på Synka hälsodata och godkänn behörigheterna."}
+                : "Inte kopplad ännu. Tryck på Behörigheter, tillåt Grim i Health Connect och tryck sedan på Synka hälsodata."}
             </span>
           </div>
           {access && (
