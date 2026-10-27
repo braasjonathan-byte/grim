@@ -52,3 +52,11 @@ describe("formatSleep", () => {
     expect(formatSleep(0)).toBe("0 min");
   });
 });
+
+describe("parseHealthAccess – native checkHealthPermissions-format", () => {
+  it("objekt med enum-namn (som HealthPlugin.kt grantedPermissionResult skickar) ger kopplad", async () => {
+    const { parseHealthAccess } = await import("@/lib/healthSync");
+    const a = parseHealthAccess({ permissions: { READ_STEPS: true, READ_ACTIVE_CALORIES: true, READ_WORKOUTS: true, READ_SLEEP: true, READ_WEIGHT: true, READ_HEART_RATE: true } });
+    expect(a.activity && a.workouts && a.sleep && a.weight && a.heartRate).toBe(true);
+  });
+});

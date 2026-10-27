@@ -78,8 +78,29 @@ const HealthConnectCard = () => {
   const [bgState, setBgState] = useState<BackgroundSyncState | null>(null);
   const [bgEnabled, setBgEnabled] = useState(isBackgroundSyncEnabled());
   const [bgBusy, setBgBusy] = useState(false);
+  /** Satt när Health Connect inte gick att fråga – då vet vi INTE att Grim saknar åtkomst. */
+  const [accessError, setAccessError] = useState<string | null>(null);
   const connected = !!access?.activity;
   const available = availability === null ? null : availability === "available";
+
+  /**
+   * Läser behörigheterna och skiljer på "nekad" och "gick inte att läsa".
+   * Tidigare blev ett fel tyst EMPTY_ACCESS och kortet visade "Inte kopplad"
+   * trots att allt var tillåtet i Health Connect.
+   */
+  const refreshAccess = useCallback(async (): Promise<HealthAccess | null> => {
+    try {
+      const res = await checkHealthAccess(true);
+      setAccess(res);
+      setAccessError(null);
+      return res;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      healthLog("status check failed", msg);
+      setAccessError(msg);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -97,7 +118,7 @@ const HealthConnectCard = () => {
       }
       setAvailability(isHealthSupported() ? await healthAvailability() : "not-supported");
       if (isHealthSupported()) {
-        setAccess(await checkHealthAccess());
+        await refreshAccess();
         const ws = await isHealthWriteSupported();
         setWriteSupported(ws);
         if (ws) setWriteAccess(await checkHealthWriteAccess());
@@ -119,7 +140,7 @@ const HealthConnectCard = () => {
       if (document.hidden) return;
       void (async () => {
         try {
-          setAccess(await checkHealthAccess());
+          await refreshAccess();
           if (await isHealthWriteSupported()) setWriteAccess(await checkHealthWriteAccess());
         } catch (err) {
           healthLog("status refresh on resume failed", err);
@@ -187,22 +208,23 @@ const HealthConnectCard = () => {
       // godkännanderutan (egna hårda gränser: 12 s om ingen ruta syns, längre bara
       // medan rutan faktiskt visas). Blir det fortfarande nej ges ett tydligt fel
       // direkt – ingen datahämtning mot den hårda synkgränsen.
-      let current = await checkHealthAccess();
-      if (!current.activity) {
+      // null = statusen gick inte att läsa: försök hämta data ändå (läsningen är facit).
+      let current = await refreshAccess();
+      if (current && !current.activity) {
         healthLog("sync: not connected -> one permission request");
         try {
           current = await requestHealthPermissions();
+          setAccess(current);
         } catch (err) {
           healthLog("sync: permission request failed", err);
-          current = await checkHealthAccess();
+          current = await refreshAccess();
         }
-      }
-      setAccess(current);
-      if (!current.activity) {
-        throw new HealthError(
-          "denied",
-          "Grim är inte kopplat till Health Connect. Tryck på Behörigheter, tillåt Grim (Steg, Aktiva kalorier) och tryck sedan på Synka hälsodata igen.",
-        );
+        if (current && !current.activity) {
+          throw new HealthError(
+            "denied",
+            "Grim är inte kopplat till Health Connect. Tryck på Behörigheter, tillåt Grim (Steg, Aktiva kalorier) och tryck sedan på Synka hälsodata igen.",
+          );
+        }
       }
       await withTimeout((async () => {
         healthLog("reading health connect");
@@ -219,7 +241,10 @@ const HealthConnectCard = () => {
           healthLog("save failed", err);
           throw err;
         }
-        void checkHealthAccess().then(setAccess).catch((statusErr) => healthLog("status refresh failed", statusErr));
+        // Data lästes – då har Grim åtkomst även om statusfrågan krånglar.
+        void refreshAccess().then((a) => {
+          if (!a) setAccess((prev) => ({ ...(prev ?? { workouts: false, heartRate: false, sleep: false, weight: false }), activity: true }));
+        });
         toast.success("Hälsodata hämtad");
         if (isHealthWriteEnabled()) {
           void syncGrimWorkoutsToHealth(userId)
@@ -242,7 +267,7 @@ const HealthConnectCard = () => {
     } finally {
       setSyncing(false);
     }
-  }, [userId, reportError]);
+  }, [userId, reportError, refreshAccess]);
 
   const loadWorkouts = useCallback(async () => {
     if (!userId) return;
@@ -259,7 +284,7 @@ const HealthConnectCard = () => {
     } finally {
       setLoadingWorkouts(false);
     }
-  }, [userId, reportError]);
+  }, [userId, reportError, refreshAccess]);
 
 
 
@@ -415,7 +440,9 @@ const HealthConnectCard = () => {
           <div className={`flex items-center gap-2 ${connected ? "text-success" : "text-muted-foreground"}`}>
             {connected ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Activity className="h-4 w-4 shrink-0" />}
             <span>
-              {connected
+              {accessError && !connected
+                ? `Kunde inte läsa Grims behörigheter från Health Connect (${accessError}). Tryck på Synka hälsodata för att hämta ändå.`
+                : connected
                 ? "Kopplingen är aktiv – Grim läser din hälsodata (t.ex. Samsung Health via Health Connect)."
                 : "Inte kopplad ännu. Tryck på Behörigheter, tillåt Grim i Health Connect och tryck sedan på Synka hälsodata."}
             </span>
