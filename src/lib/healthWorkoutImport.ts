@@ -82,15 +82,26 @@ export async function findImportedHealthWorkouts(
     Promise.resolve(
       supabase
         .from("workout_plans")
-        .select("day")
+        .select("day,details")
         .eq("user_id", userId)
         .like("day", "%\\_hc%"),
     ),
     DB_TIMEOUT_MS,
     "Ingen kontakt med servern – försök igen.",
   );
+  return importedKeysFromRows((data ?? []) as any[], workouts);
+}
+
+/** Ett import räknas bara om raden fortfarande har en övning kvar i träningskortet. */
+export const hasRemainingExercise = (details: unknown): boolean =>
+  String(details ?? "").split(/\n|;/).some((l) => l.trim().length > 0);
+
+export function importedKeysFromRows(
+  rows: { day: string; details?: string | null }[],
+  workouts: HealthWorkout[],
+): Set<string> {
   const suffixes = new Set(
-    (data ?? []).map((row) => String((row as any).day).replace(/^.*_hc/, "")),
+    rows.filter((r) => hasRemainingExercise(r.details)).map((r) => String(r.day).replace(/^.*_hc/, "")),
   );
   return new Set(workouts.filter((w) => suffixes.has(w.key)).map(healthWorkoutDayKey));
 }
@@ -175,6 +186,10 @@ export async function importHealthWorkouts(
     if (meta) loggedWeights[HC_META_KEY] = meta;
 
     try {
+      // Tomma rester efter att övningen tagits bort i Träning – rensa så vi inte får dubbletter.
+      await Promise.resolve(
+        supabase.from("workout_plans").delete().eq("user_id", userId).like("day", `%\\_hc${w.key}`),
+      ).catch(() => null);
       const { error: planError } = await withTimeout(
         Promise.resolve(
           supabase.from("workout_plans").insert({

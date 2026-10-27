@@ -1,3 +1,4 @@
+import { WORKOUTS_CHANGED_EVENT } from "@/lib/workoutHistory";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, CheckCircle2, Download, Loader2, RefreshCw, Settings, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -333,6 +334,20 @@ const HealthConnectCard = () => {
   );
 
   const [trail, setTrail] = useState<string[]>([]);
+  // När ett pass ändras/tas bort i Träning: räkna om vilka HC-pass som är importerade.
+  useEffect(() => {
+    if (!userId || !workouts?.length) return;
+    const onChanged = () => {
+      findImportedHealthWorkouts(userId, workouts).then(setImportedKeys).catch(() => {});
+    };
+    window.addEventListener(WORKOUTS_CHANGED_EVENT, onChanged);
+    window.addEventListener("focus", onChanged);
+    return () => {
+      window.removeEventListener(WORKOUTS_CHANGED_EVENT, onChanged);
+      window.removeEventListener("focus", onChanged);
+    };
+  }, [userId, workouts]);
+
   useEffect(() => (diagOpen ? subscribeHealthTrail(setTrail) : undefined), [diagOpen]);
 
   const refreshDiag = useCallback(async () => {

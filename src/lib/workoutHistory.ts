@@ -171,11 +171,13 @@ export async function deleteSession(userId: string, s: HistorySession): Promise<
     const { error } = await supabase.from("workout_completions").delete().eq("id", s.completion.id);
     if (error) throw error;
     // Single workouts disappear entirely; plan days stay in the plan as not done.
-    if (s.week === 0) for (const id of s.source.planIds) await supabase.from("workout_plans").delete().eq("id", id);
+    // Health Connect-importer tas också bort helt, även i programvecka, så "Importera" kommer tillbaka.
+    const hcImport = /_hc[a-z0-9]+$/i.test(s.day);
+    if (s.week === 0 || hcImport) for (const id of s.source.planIds) await supabase.from("workout_plans").delete().eq("id", id);
     await removeSocialPost(userId, s);
     notifyWorkoutsChanged(userId);
     return async () => {
-      if (s.week === 0 && planRows?.length) await supabase.from("workout_plans").insert(planRows as any);
+      if ((s.week === 0 || /_hc[a-z0-9]+$/i.test(s.day)) && planRows?.length) await supabase.from("workout_plans").insert(planRows as any);
       await supabase.from("workout_completions").insert(s.completion as any);
       if (posts?.length) await supabase.from("social_posts").insert(posts as any);
       notifyWorkoutsChanged(userId);
