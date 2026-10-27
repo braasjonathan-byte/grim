@@ -13,6 +13,7 @@ vi.mock("@/lib/healthWorkoutImport", () => ({
   findImportedHealthWorkouts: async () => new Set<string>(),
   importHealthWorkouts: async () => ({ imported: 0 }),
   relocateHealthImports: async () => 0,
+  cleanupHealthImportDetails: async () => 0,
 }));
 
 const rows = [

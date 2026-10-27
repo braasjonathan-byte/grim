@@ -24,3 +24,19 @@ describe("healthWorkoutTarget", () => {
     expect(healthWorkoutDayKey(w(d.toISOString())).slice(0, 10)).toBe("2026-10-27");
   });
 });
+
+import { buildWorkoutFromAiExercises } from "@/lib/aiWorkoutImport";
+import { healthWorkoutMeta, stripLegacyHealthLines } from "@/lib/healthWorkoutImport";
+
+describe("HC-import format = manuell registrering", () => {
+  it("rensar gamla extrarader men behåller konditionsraden", () => {
+    const d = "Promenad — 12 min, 0.8 km, 95 bpm\nAktiva kalorier: 85 kcal\nMaxpuls: 102 bpm\nSteg: 51\nKälla: Hälsoappen";
+    expect(stripLegacyHealthLines(d)).toBe("Promenad — 12 min, 0.8 km, 95 bpm");
+  });
+  it("löpning ger samma details som manuell registrering", () => {
+    const manual = buildWorkoutFromAiExercises([{ type: "cardio", name: "Löpning", duration_min: 30, distance_km: 5, pulse: 150 }]);
+    expect(manual.details.split("\n")).toHaveLength(1);
+    expect(manual.loggedWeights["__cond__Löpning"]).toBeTruthy();
+    expect(healthWorkoutMeta({ calories: 85, maxHeartRate: 102, steps: 51, source: "x" } as any)).toContain("maxPulse");
+  });
+});

@@ -95,6 +95,46 @@ export async function findImportedHealthWorkouts(
   return new Set(workouts.filter((w) => suffixes.has(w.key)).map(healthWorkoutDayKey));
 }
 
+export const HC_META_KEY = "__hc_meta__";
+
+export function healthWorkoutMeta(w: HealthWorkout): string | null {
+  const m: Record<string, string | number> = {};
+  if (w.calories) m.kcal = w.calories;
+  if (w.maxHeartRate) m.maxPulse = w.maxHeartRate;
+  if (w.steps) m.steps = w.steps;
+  if (w.source) m.source = w.source;
+  return Object.keys(m).length ? JSON.stringify(m) : null;
+}
+
+/** Rader som äldre importer felaktigt lade i details (renderades som styrkeövningar). */
+const LEGACY_EXTRA_LINE = /^(Aktiva kalorier|Maxpuls|Steg|Källa):/i;
+export const stripLegacyHealthLines = (details: string): string =>
+  details.split("\n").filter((l) => !LEGACY_EXTRA_LINE.test(l.trim())).join("\n");
+
+/** Städa redan importerade pass så att de ser ut som manuellt registrerade (idempotent). */
+export async function cleanupHealthImportDetails(userId: string): Promise<number> {
+  let fixed = 0;
+  try {
+    const { data } = await withTimeout(
+      Promise.resolve(supabase.from("workout_plans").select("week,day,details").eq("user_id", userId).like("day", "%\\_hc%")),
+      DB_TIMEOUT_MS,
+      "Ingen kontakt med servern – försök igen.",
+    );
+    for (const r of (data ?? []) as any[]) {
+      const details = String(r.details ?? "");
+      const clean = stripLegacyHealthLines(details);
+      if (clean === details) continue;
+      const { error } = await supabase.from("workout_plans").update({ details: clean } as never)
+        .eq("user_id", userId).eq("week", r.week).eq("day", r.day);
+      if (!error) fixed += 1;
+    }
+  } catch (err: any) {
+    healthLog("cleanup failed", err?.message);
+  }
+  if (fixed > 0) notifyWorkoutsChanged(userId);
+  return fixed;
+}
+
 export type ImportResult = { imported: number; skipped: number; failed: number };
 
 export async function importHealthWorkouts(
@@ -128,11 +168,11 @@ export async function importHealthWorkouts(
       },
     ]);
 
-    const extraLines: string[] = [];
-    if (w.calories) extraLines.push(`Aktiva kalorier: ${w.calories} kcal`);
-    if (w.maxHeartRate) extraLines.push(`Maxpuls: ${w.maxHeartRate} bpm`);
-    if (w.steps) extraLines.push(`Steg: ${w.steps}`);
-    extraLines.push(`Källa: ${w.source}`);
+    // Samma format som manuell registrering av t.ex. Promenad/Löpning: en enda
+    // konditionsövning. Övriga värden sparas som dold metadata – aldrig som egna
+    // rader i details (varje rad tolkas annars som en styrkeövning).
+    const meta = healthWorkoutMeta(w);
+    if (meta) loggedWeights[HC_META_KEY] = meta;
 
     try {
       const { error: planError } = await withTimeout(
@@ -142,7 +182,7 @@ export async function importHealthWorkouts(
             week,
             day,
             session_name: w.label,
-            details: [details, ...extraLines].filter(Boolean).join("\n"),
+            details,
             is_circuit: false,
           } as never),
         ),
