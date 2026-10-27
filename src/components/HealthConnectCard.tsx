@@ -208,6 +208,8 @@ const HealthConnectCard = () => {
       // godkännanderutan (egna hårda gränser: 12 s om ingen ruta syns, längre bara
       // medan rutan faktiskt visas). Blir det fortfarande nej ges ett tydligt fel
       // direkt – ingen datahämtning mot den hårda synkgränsen.
+      await withTimeout((async () => {
+      // Hela synken – även behörighetsfrågan – ligger under den hårda gränsen.
       // null = statusen gick inte att läsa: försök hämta data ändå (läsningen är facit).
       let current = await refreshAccess();
       if (current && !current.activity) {
@@ -226,7 +228,6 @@ const HealthConnectCard = () => {
           );
         }
       }
-      await withTimeout((async () => {
         healthLog("reading health connect");
         const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
         const days = await readHealthDays(windowDays);
