@@ -172,3 +172,12 @@ describe("Behörigheter-knappen", () => {
     expect(fn).not.toContain("requestHealthPermissions");
   });
 });
+
+describe("Capacitor-pluginproxyn får aldrig awaitas", () => {
+  it("loadPlugin är synkron och awaitas inte (proxy svarar på `then` → evig väntan)", () => {
+    const src = read("src/lib/healthSync.ts");
+    expect(src).not.toMatch(/async function loadPlugin/);
+    expect(src).not.toMatch(/await\s+loadPlugin\(/);
+    expect(src).not.toMatch(/await\s+Health\b/);
+  });
+});

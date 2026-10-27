@@ -401,7 +401,7 @@ export function formatHealthError(err: unknown, fallback = "Kunde inte hämta h�
 export type HealthAvailability = "available" | "not-installed" | "update-required" | "not-supported";
 
 export async function healthAvailability(): Promise<HealthAvailability> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) return "not-supported";
   try {
     const res = await withTimeout(
@@ -422,10 +422,16 @@ export async function healthAvailability(): Promise<HealthAvailability> {
 }
 
 
-async function loadPlugin(): Promise<HealthPluginLike | null> {
+/**
+ * VIKTIGT: synkron och får aldrig awaitas. registerPlugin() ger en Proxy som
+ * svarar på ALLA egenskaper – även `then`. Returneras den från en async-funktion
+ * (eller awaitas) behandlar JS den som ett löfte och anropar native "then", som
+ * aldrig kallar tillbaka – då hänger varje Health Connect-anrop för evigt,
+ * innan någon timeout ens har startat (rotorsaken till "Inte kopplad" /
+ * evig synk / diagnostik som stannar efter "diagnostics start").
+ */
+function loadPlugin(): HealthPluginLike | null {
   if (!Capacitor.isNativePlatform()) return null;
-  // Paketets egen import() fastnar i WebView. Bryggan är redan registrerad
-  // som HealthPlugin, så anropet görs direkt utan att ladda JS-modulen.
   return Health;
 }
 
@@ -434,7 +440,7 @@ export function isHealthSupported() {
 }
 
 export async function isHealthAvailable(): Promise<boolean> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) return false;
   try {
     const res = await withTimeout(
@@ -487,7 +493,7 @@ export function parseHealthAccess(res: PermissionResponse | undefined): HealthAc
 
 /** Vilka datatyper Grim faktiskt får läsa just nu. */
 export async function checkHealthAccess(throwOnError = false): Promise<HealthAccess> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) return EMPTY_ACCESS;
   // iOS svarar inte tillförlitligt på check – där avgörs det vid läsning.
   if (Capacitor.getPlatform() === "ios") {
@@ -549,7 +555,7 @@ export function classifyNativeHealthError(err: unknown): HealthError {
 }
 
 export async function requestHealthPermissions(): Promise<HealthAccess> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const availability = await healthAvailability();
@@ -699,7 +705,7 @@ export async function hasHealthPermissions(): Promise<boolean> {
 export type HealthSettingsResult = { opened?: string; sdkInt?: number; tried?: string[] };
 
 export async function openHealthSettings(): Promise<HealthSettingsResult> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är inte tillgängligt i den här appen.");
   healthLog("opening app health permissions");
   try {
@@ -730,7 +736,7 @@ export async function openHealthPermissions(): Promise<{ mode: "settings"; resul
 }
 
 export async function installHealthConnect(): Promise<void> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) return;
   try {
     await plugin.showHealthConnectInPlayStore();
@@ -795,7 +801,7 @@ export function syncWindowDays(lastSyncIso: string | null, now = new Date()): nu
 
 /** Hämtar steg, aktiva kalorier och sömn per dag för de senaste `days` dagarna. */
 export async function readHealthDays(days = 7): Promise<HealthDay[]> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const end = new Date();
@@ -1093,7 +1099,7 @@ export function dedupeWorkouts(list: HealthWorkout[]): HealthWorkout[] {
 
 /** Läser genomförda pass från hälsoappen (inkl. Samsung Health via Health Connect). */
 export async function readHealthWorkouts(days = 30): Promise<HealthWorkout[]> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
 
   const end = new Date();
@@ -1156,7 +1162,7 @@ export type HealthDiagnostics = Record<string, unknown>;
 
 export async function runHealthDiagnostics(): Promise<HealthDiagnostics> {
   healthLog("diagnostics start", { pluginAvailable: Capacitor.isPluginAvailable("HealthPlugin"), platform: Capacitor.getPlatform() });
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsomodulen kunde inte laddas i appen.");
   if (typeof plugin.grimHealthDiagnostics !== "function") throw new HealthError("unknown", "Appens Android-del saknar diagnostik – installerad APK är troligen gammal.");
   const res = await withTimeout(plugin.grimHealthDiagnostics(), 8000, "Android-delen svarade inte på diagnostik inom 8 s (bryggan hänger eller gammal APK).");
@@ -1186,7 +1192,7 @@ export const HEALTH_TEST_SETS = {
  */
 export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_SETS) {
   healthLog("native test request", { set, permissions: [...HEALTH_TEST_SETS[set]] });
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin) throw new HealthError("unknown", "Hälsodata är bara tillgängligt i Grim-appen på mobilen.");
   const permissions = [...HEALTH_TEST_SETS[set]];
   healthLog("native check dispatched", { permissions });
@@ -1204,12 +1210,12 @@ export async function testHealthPermissionRequest(set: keyof typeof HEALTH_TEST_
 
 /** Har APK:n skrivstöd alls (byggd efter patch-health-write)? */
 export async function isHealthWriteSupported(): Promise<boolean> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   return !!plugin && Capacitor.getPlatform() === "android" && typeof plugin.writeWorkout === "function";
 }
 
 export async function checkHealthWriteAccess(): Promise<HealthWriteAccess> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin || Capacitor.getPlatform() !== "android") return EMPTY_WRITE_ACCESS;
   try {
     const res = await withTimeout(
@@ -1229,7 +1235,7 @@ export async function checkHealthWriteAccess(): Promise<HealthWriteAccess> {
  * Nekar användaren påverkas inte läsningen.
  */
 export async function requestHealthWriteAccess(): Promise<HealthWriteAccess> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin || Capacitor.getPlatform() !== "android") throw new HealthError("unknown", "Skrivning till Health Connect finns bara i Android-appen.");
   if (typeof plugin.writeWorkout !== "function") {
     throw new HealthError("unknown", "Den installerade appen saknar skrivstöd – uppdatera Grim.");
@@ -1255,13 +1261,13 @@ export async function requestHealthWriteAccess(): Promise<HealthWriteAccess> {
 }
 
 export async function writeWorkoutToHealth(input: HealthWriteInput) {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin?.writeWorkout) throw new HealthError("unknown", "Skrivstöd saknas i appen.");
   return withTimeout(plugin.writeWorkout(input), 30000, "Health Connect svarade inte när passet skulle sparas.");
 }
 
 export async function deleteWorkoutsFromHealth(clientRecordIds: string[]) {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin?.deleteWorkouts) throw new HealthError("unknown", "Skrivstöd saknas i appen.");
   if (clientRecordIds.length === 0) return { deleted: 0 };
   return withTimeout(plugin.deleteWorkouts({ clientRecordIds }), 30000, "Health Connect svarade inte när pass skulle tas bort.");
@@ -1314,7 +1320,7 @@ export function isBackgroundSyncEnabled(): boolean {
 }
 
 export async function getBackgroundSyncState(): Promise<BackgroundSyncState | null> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin?.getBackgroundSyncState || Capacitor.getPlatform() !== "android") return null;
   try {
     return await withTimeout(plugin.getBackgroundSyncState(), 10000, "Kunde inte läsa bakgrundssynkens status.");
@@ -1330,7 +1336,7 @@ export async function getBackgroundSyncState(): Promise<BackgroundSyncState | nu
  * ändå för att skriva väntande pass, och läsningen sker när appen öppnas.
  */
 export async function enableBackgroundSync(): Promise<BackgroundSyncState | null> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin?.scheduleBackgroundSync || Capacitor.getPlatform() !== "android") {
     throw new HealthError("unknown", "Bakgrundssynk kräver en nyare version av Grim-appen på Android.");
   }
@@ -1359,7 +1365,7 @@ export async function enableBackgroundSync(): Promise<BackgroundSyncState | null
 }
 
 export async function disableBackgroundSync(): Promise<void> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   try {
     localStorage.setItem(BG_ENABLED_KEY, "0");
   } catch {
@@ -1370,7 +1376,7 @@ export async function disableBackgroundSync(): Promise<void> {
 
 /** Lämnar pass till bakgrundsjobbet (t.ex. när Health Connect inte svarade). */
 export async function enqueuePendingHealthWrites(workouts: HealthWriteInput[]): Promise<boolean> {
-  const plugin = await loadPlugin();
+  const plugin = loadPlugin();
   if (!plugin?.enqueuePendingWrites || workouts.length === 0) return false;
   try {
     await withTimeout(plugin.enqueuePendingWrites({ workouts }), 10000, "Kunde inte köa pass för bakgrundssynk.");
