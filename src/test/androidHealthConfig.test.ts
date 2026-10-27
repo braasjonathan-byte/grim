@@ -116,7 +116,7 @@ describe("Android-konfiguration för Health Connect", () => {
   });
 
   it("låter native-lagret rapportera den specifika koden före det yttre skyddsnätet", () => {
-    expect(read("src/components/HealthConnectCard.tsx")).toContain("SYNC_HARD_TIMEOUT_MS = 180000");
+    expect(read("src/components/HealthConnectCard.tsx")).toContain("SYNC_HARD_TIMEOUT_MS = 60000");
   });
 
   it("har en native watchdog som aldrig pausas av tappat fönsterfokus", () => {
@@ -161,5 +161,14 @@ describe("Android-konfiguration för Health Connect", () => {
     expect(patch).toContain('healthTrace("dialog-launch-attempt", "route=proxy")');
     expect(patch).toContain("PermissionController.createRequestPermissionResultContract()");
     expect(patch).toContain("registerForActivityResult(contract)");
+  });
+});
+
+describe("Behörigheter-knappen", () => {
+  it("öppnar alltid Health Connect-inställningarna, aldrig godkännanderutan", () => {
+    const src = readFileSync(resolve(__dirname, "../lib/healthSync.ts"), "utf8");
+    const fn = src.slice(src.indexOf("export async function openHealthPermissions"), src.indexOf("export async function installHealthConnect"));
+    expect(fn).toContain("openHealthSettings()");
+    expect(fn).not.toContain("requestHealthPermissions");
   });
 });

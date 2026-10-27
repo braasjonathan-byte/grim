@@ -706,7 +706,7 @@ export async function openHealthSettings(): Promise<HealthSettingsResult> {
     // V2 provar upp till fem vägar med 1,5 s kontroll per väg – ge den tid.
     const res = await withTimeout(
       plugin.openHealthConnectSettings(),
-      15000,
+      12000,
       "Android svarade inte när Grims Health Connect-behörigheter skulle öppnas.",
     );
     const result: HealthSettingsResult = res && typeof res === "object" ? res : {};
@@ -720,42 +720,13 @@ export async function openHealthSettings(): Promise<HealthSettingsResult> {
 }
 
 /**
- * "Behörigheter"-knappen. Utan beviljad grunddata visas Health Connects egen
- * godkännanderuta (det är den som faktiskt ger Grim åtkomst); annars, eller om
- * rutan inte gav något, öppnas Grims sida i Health Connect. Studsar den sidan
- * prövas godkännanderutan som sista utväg.
+ * "Behörigheter"-knappen: öppnar alltid Grims sida i Health Connect
+ * (MANAGE_HEALTH_PERMISSIONS för paketet, med native fallback-kedja).
+ * Godkännanderutan (requestHealthPermissions) används inte härifrån – den
+ * kan på Android 14 utan rationale-alias tyst utebli och låta knappen hänga.
  */
-export async function openHealthPermissions(): Promise<
-  { mode: "dialog"; access: HealthAccess } | { mode: "settings"; result: HealthSettingsResult }
-> {
-  let connected = false;
-  try {
-    connected = (await checkHealthAccess()).activity;
-  } catch (err) {
-    healthLog("permissions: status check failed", err);
-  }
-  if (!connected) {
-    healthLog("permissions: not connected -> permission dialog");
-    try {
-      return { mode: "dialog", access: await requestHealthPermissions() };
-    } catch (dialogErr) {
-      healthLog("permissions: dialog failed, trying settings", dialogErr);
-      try {
-        return { mode: "settings", result: await openHealthSettings() };
-      } catch (settingsErr) {
-        // Båda vägarna misslyckades: visa båda felen så logcat inte behövs för att se vad som hände.
-        const d = dialogErr instanceof Error ? dialogErr.message : String(dialogErr);
-        const st = settingsErr instanceof Error ? settingsErr.message : String(settingsErr);
-        throw new HealthError("launcher-setup", `${d} | ${st}`);
-      }
-    }
-  }
-  try {
-    return { mode: "settings", result: await openHealthSettings() };
-  } catch (settingsErr) {
-    healthLog("permissions: settings failed -> permission dialog", settingsErr);
-    return { mode: "dialog", access: await requestHealthPermissions() };
-  }
+export async function openHealthPermissions(): Promise<{ mode: "settings"; result: HealthSettingsResult }> {
+  return { mode: "settings", result: await openHealthSettings() };
 }
 
 export async function installHealthConnect(): Promise<void> {

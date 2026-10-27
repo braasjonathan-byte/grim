@@ -53,7 +53,7 @@ const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep", "weight"];
 // Sista skyddsnätet måste ligga efter native-dialogens egen diagnostik så att
 // användaren får den verkliga HC-koden i stället för ett för tidigt HC-04.
-const SYNC_HARD_TIMEOUT_MS = 180000;
+const SYNC_HARD_TIMEOUT_MS = 60000;
 /** Kopplar appen mot Apple Health / Health Connect och visar veckans rörelse. */
 const HealthConnectCard = () => {
   const [userId, setUserId] = useState<string | null>(null);
@@ -155,21 +155,23 @@ const HealthConnectCard = () => {
     toast.error(message, { description: label });
   }, []);
 
+  const [openingPermissions, setOpeningPermissions] = useState(false);
+  const openingRef = useRef(false);
   const openPermissions = useCallback(async () => {
+    if (openingRef.current) return;
+    openingRef.current = true;
+    setOpeningPermissions(true);
     toast.message("Öppnar Health Connect…");
     try {
       const res = await openHealthPermissions();
-      if (res.mode === "dialog") {
-        setAccess(res.access);
-        toast.success("Grim har nu åtkomst till Health Connect.");
-      } else {
-        setAccess(await checkHealthAccess().catch(() => null));
-        toast.success("Health Connect öppnades. Tillåt Grim och gå tillbaka till appen.", {
-          description: res.result.opened ? `Väg: ${res.result.opened}` : undefined,
-        });
-      }
+      toast.success("Health Connect öppnades. Tillåt Grim och gå tillbaka till appen.", {
+        description: res.result.opened ? `Väg: ${res.result.opened}` : undefined,
+      });
     } catch (err) {
-      reportError(err, "Kunde inte öppna behörigheterna");
+      reportError(err, "Kunde inte öppna Health Connect-inställningarna");
+    } finally {
+      openingRef.current = false;
+      setOpeningPermissions(false);
     }
   }, [reportError]);
   openPermissionsRef.current = openPermissions;
@@ -180,6 +182,15 @@ const HealthConnectCard = () => {
     try {
       await withTimeout((async () => {
         healthLog("manual sync entry point started");
+        // Snabbt besked i stället för en snurra mot den hårda gränsen.
+        const current = await checkHealthAccess();
+        setAccess(current);
+        if (!current.activity) {
+          throw new HealthError(
+            "denied",
+            "Grim är inte kopplat till Health Connect. Tryck på Behörigheter, tillåt Grim (Steg, Aktiva kalorier) och synka igen.",
+          );
+        }
         healthLog("reading health connect");
         const windowDays = Math.max(7, syncWindowDays(getLastHealthSync()));
         const days = await readHealthDays(windowDays);
@@ -543,11 +554,12 @@ const HealthConnectCard = () => {
           <Button
             variant="outline"
             className="rounded-full"
+            disabled={openingPermissions}
             onClick={() => {
               void openPermissions();
             }}
           >
-            <Settings className="mr-2 h-4 w-4" />
+            {openingPermissions ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings className="mr-2 h-4 w-4" />}
             Behörigheter
           </Button>
         )}
