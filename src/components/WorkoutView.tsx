@@ -3864,6 +3864,14 @@ const WorkoutView = ({ userId, isAdmin = false, isHonorary = false, onBack }: Wo
     return () => window.removeEventListener("grim:open-exercise-picker", handler as EventListener);
   }, [plans, currentWeek, planStartDate]);
 
+  // Pass som läggs till utanför träningsfliken (t.ex. Health Connect-import)
+  // ska synas direkt i dagens träningskort.
+  useEffect(() => {
+    const onChanged = () => fetchDataRef.current?.();
+    window.addEventListener("grim:workouts-changed", onChanged);
+    return () => window.removeEventListener("grim:workouts-changed", onChanged);
+  }, []);
+
   // Drag & drop: flytta en övningsrad från ett index till ett annat.
   const reorderExercise = async (planId: string, fromIndex: number, toIndex: number) => {
     const plan = plans.find(p => p.id === planId);

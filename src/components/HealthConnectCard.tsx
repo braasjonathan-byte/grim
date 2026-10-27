@@ -48,7 +48,7 @@ import {
   type BackgroundSyncState,
 } from "@/lib/healthSync";
 import { isHealthWriteEnabled, setHealthWriteEnabled, syncGrimWorkoutsToHealth } from "@/lib/healthWriteSync";
-import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts } from "@/lib/healthWorkoutImport";
+import { findImportedHealthWorkouts, healthWorkoutDayKey, importHealthWorkouts, relocateHealthImports } from "@/lib/healthWorkoutImport";
 
 const WEEKDAYS = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
 const FEATURES: HealthFeature[] = ["activity", "workouts", "heartRate", "sleep", "weight"];
@@ -278,6 +278,7 @@ const HealthConnectCard = () => {
       const list = await readHealthWorkouts(30);
       setWorkouts(list);
       setImportedKeys(await findImportedHealthWorkouts(userId, list));
+      void relocateHealthImports(userId, list);
       if (list.length === 0) toast.info("Inga pass hittades de senaste 30 dagarna");
     } catch (err: any) {
       healthLog("workout fetch failed", err?.message);

@@ -5,12 +5,70 @@
 import { supabase } from "@/integrations/supabase/client";
 import { buildWorkoutFromAiExercises } from "@/lib/aiWorkoutImport";
 import { healthLog, withTimeout, type HealthWorkout } from "@/lib/healthSync";
+import { DAYS, daysBetweenCalendarDates, getMonday, parseDateKey, toLocalDateKey } from "@/lib/workoutDayUtils";
+import { notifyWorkoutsChanged } from "@/lib/workoutHistory";
 
 /** Ingen nätverksförfrågan får hänga och låsa knappen i laddningsläge. */
 const DB_TIMEOUT_MS = 15000;
 
+/** Lokalt datum (yyyy-MM-dd) då passet startade – inte UTC-datumet i ISO-strängen. */
+export const healthWorkoutLocalDate = (w: Pick<HealthWorkout, "start">): string => {
+  const d = new Date(w.start);
+  return Number.isNaN(d.getTime()) ? w.start.slice(0, 10) : toLocalDateKey(d);
+};
+
+/** Kanonisk nyckel för fristående pass (vecka 0) – används även som id i UI:t. */
 export const healthWorkoutDayKey = (w: HealthWorkout) =>
-  `${w.start.slice(0, 10)}_hc${w.key}`;
+  `${healthWorkoutLocalDate(w)}_hc${w.key}`;
+
+export type PlanContext = { planStartDate: string; maxWeek: number } | null;
+
+/**
+ * Var passet ska hamna. Följer användaren ett program (vecka > 0) visar
+ * träningsfliken bara programmets veckor – då måste passet läggas som ett extra
+ * pass på rätt programdag (samma format som "Lägg till pass" på en dag), annars
+ * syns det aldrig i dagens träningskort.
+ */
+export function healthWorkoutTarget(
+  w: HealthWorkout,
+  plan: PlanContext,
+): { week: number; day: string } {
+  if (plan) {
+    const start = parseDateKey(plan.planStartDate);
+    const target = parseDateKey(healthWorkoutLocalDate(w));
+    if (start && target) {
+      const diff = daysBetweenCalendarDates(getMonday(start), target);
+      const week = Math.floor(diff / 7) + 1;
+      if (diff >= 0 && week >= 1 && week <= plan.maxWeek) {
+        const dayName = DAYS[(target.getUTCDay() + 6) % 7];
+        return { week, day: `${dayName}_hc${w.key}` };
+      }
+    }
+  }
+  return { week: 0, day: healthWorkoutDayKey(w) };
+}
+
+async function loadPlanContext(userId: string): Promise<PlanContext> {
+  try {
+    const [{ data: profile }, { data: weeks }] = await withTimeout(
+      Promise.all([
+        Promise.resolve(supabase.from("profiles").select("plan_start_date").eq("user_id", userId).maybeSingle()),
+        Promise.resolve(
+          supabase.from("workout_plans").select("week").eq("user_id", userId).gt("week", 0)
+            .order("week", { ascending: false }).limit(1),
+        ),
+      ]),
+      DB_TIMEOUT_MS,
+      "Ingen kontakt med servern – försök igen.",
+    );
+    const planStartDate = (profile as any)?.plan_start_date as string | null | undefined;
+    const maxWeek = Number((weeks as any)?.[0]?.week ?? 0);
+    return planStartDate && maxWeek > 0 ? { planStartDate, maxWeek } : null;
+  } catch (err: any) {
+    healthLog("plan context failed", err?.message);
+    return null;
+  }
+}
 
 /** Vilka pass som redan finns i Grim (för att slippa dubbletter). */
 export async function findImportedHealthWorkouts(
@@ -18,21 +76,23 @@ export async function findImportedHealthWorkouts(
   workouts: HealthWorkout[],
 ): Promise<Set<string>> {
   if (workouts.length === 0) return new Set();
-  const keys = workouts.map(healthWorkoutDayKey);
-  healthLog("looking up imported workouts", keys.length);
+  healthLog("looking up imported workouts", workouts.length);
+  // Pass kan ligga i vecka 0 (fristående) eller i en programvecka – leta på suffixet.
   const { data } = await withTimeout(
     Promise.resolve(
       supabase
         .from("workout_plans")
         .select("day")
         .eq("user_id", userId)
-        .eq("week", 0)
-        .in("day", keys),
+        .like("day", "%\\_hc%"),
     ),
     DB_TIMEOUT_MS,
     "Ingen kontakt med servern – försök igen.",
   );
-  return new Set((data ?? []).map((row) => row.day as string));
+  const suffixes = new Set(
+    (data ?? []).map((row) => String((row as any).day).replace(/^.*_hc/, "")),
+  );
+  return new Set(workouts.filter((w) => suffixes.has(w.key)).map(healthWorkoutDayKey));
 }
 
 export type ImportResult = { imported: number; skipped: number; failed: number };
@@ -42,19 +102,21 @@ export async function importHealthWorkouts(
   workouts: HealthWorkout[],
 ): Promise<ImportResult> {
   const existing = await findImportedHealthWorkouts(userId, workouts);
+  const plan = await loadPlanContext(userId);
   const seen = new Set(existing);
   let imported = 0;
   let skipped = 0;
   let failed = 0;
 
   for (const w of workouts) {
-    const day = healthWorkoutDayKey(w);
+    const key = healthWorkoutDayKey(w);
+    const { week, day } = healthWorkoutTarget(w, plan);
     // seen fångar även dubbletter inom samma anrop (t.ex. dubbelklick på importera).
-    if (seen.has(day)) {
+    if (seen.has(key)) {
       skipped += 1;
       continue;
     }
-    seen.add(day);
+    seen.add(key);
 
     const { details, loggedWeights } = buildWorkoutFromAiExercises([
       {
@@ -77,7 +139,7 @@ export async function importHealthWorkouts(
         Promise.resolve(
           supabase.from("workout_plans").insert({
             user_id: userId,
-            week: 0,
+            week,
             day,
             session_name: w.label,
             details: [details, ...extraLines].filter(Boolean).join("\n"),
@@ -98,7 +160,7 @@ export async function importHealthWorkouts(
           supabase.from("workout_completions").upsert(
             {
               user_id: userId,
-              week: 0,
+              week,
               day,
               done: true,
               skipped: false,
@@ -125,6 +187,44 @@ export async function importHealthWorkouts(
     }
   }
 
+  if (imported > 0) notifyWorkoutsChanged(userId);
   return { imported, skipped, failed };
 }
 
+
+/**
+ * Pass som importerades innan programdags-mappningen fanns ligger i vecka 0 och
+ * syns inte i programvyn. Flytta dem till rätt programdag (engångsfix, idempotent).
+ */
+export async function relocateHealthImports(userId: string, workouts: HealthWorkout[]): Promise<number> {
+  if (workouts.length === 0) return 0;
+  const plan = await loadPlanContext(userId);
+  if (!plan) return 0;
+  let moved = 0;
+  try {
+    const { data } = await withTimeout(
+      Promise.resolve(
+        supabase.from("workout_plans").select("day").eq("user_id", userId).eq("week", 0).like("day", "%\\_hc%"),
+      ),
+      DB_TIMEOUT_MS,
+      "Ingen kontakt med servern – försök igen.",
+    );
+    const oldDays = new Map((data ?? []).map((r: any) => [String(r.day).replace(/^.*_hc/, ""), String(r.day)]));
+    for (const w of workouts) {
+      const oldDay = oldDays.get(w.key);
+      if (!oldDay) continue;
+      const target = healthWorkoutTarget(w, plan);
+      if (target.week === 0) continue;
+      const { error } = await supabase.from("workout_plans").update({ week: target.week, day: target.day } as never)
+        .eq("user_id", userId).eq("week", 0).eq("day", oldDay);
+      if (error) { healthLog("relocate failed", error.message); continue; }
+      await supabase.from("workout_completions").update({ week: target.week, day: target.day } as never)
+        .eq("user_id", userId).eq("week", 0).eq("day", oldDay);
+      moved += 1;
+    }
+  } catch (err: any) {
+    healthLog("relocate failed", err?.message);
+  }
+  if (moved > 0) notifyWorkoutsChanged(userId);
+  return moved;
+}
