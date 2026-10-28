@@ -707,6 +707,7 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
         open={!!picker}
         onOpenChange={(v) => !v && setPicker(null)}
         userId={userId}
+        meal={picker}
         onPick={(item, opts) => picker && addLog(picker, item, !!opts?.keepOpen)}
         onEditRecipe={(id) => { setPicker(null); setEditingRecipeId(id); setRecipeOpen(true); }}
       />

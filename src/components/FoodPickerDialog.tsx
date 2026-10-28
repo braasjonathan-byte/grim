@@ -5,9 +5,11 @@ import ConfirmValueDialog, { FieldError } from "@/components/ConfirmValueDialog"
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic, Trash2 } from "lucide-react";
+import { Search, Plus, Loader2, ScanBarcode, Utensils, PencilLine, Sparkles, Pencil, Mic, Trash2, Camera, BookOpen } from "lucide-react";
 import { toast as sonnerToast } from "sonner";
 import VoiceFoodDialog from "./VoiceFoodDialog";
+import DescribeMealDialog from "./DescribeMealDialog";
+import MealSuggestions from "./MealSuggestions";
 import { UNITS, gramsForFood, unitHint, pieceWeightFor, DEFAULT_PIECE_G, naturalUnitsFor } from "@/lib/nutritionCalc";
 
 const LAST_AMOUNT_KEY = "grim_food_last_amount";
@@ -80,6 +82,8 @@ interface FoodPickerDialogProps {
   hideRecipes?: boolean;
   /** Optional: called when the user taps the edit pencil on one of their own recipes */
   onEditRecipe?: (recipeId: string) => void;
+  /** Meal slot being logged (frukost/lunch/…); drives time-of-day suggestions */
+  meal?: string | null;
 }
 
 type FoodRow = { id: string; name: string; kcal: number; protein_g: number; fat_g: number; carbs_g: number; fiber_g?: number | null; piece_g?: number | null; group_name?: string | null; source: "food" | "custom_food" | "recipe" | "off"; servings?: number; brand?: string; owner_id?: string | null; [k: string]: any };
@@ -96,7 +100,7 @@ function recipeRow(r: any): FoodRow {
   };
 }
 
-export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes, onEditRecipe }: FoodPickerDialogProps) {
+export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, hideRecipes, onEditRecipe, meal }: FoodPickerDialogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodRow[]>([]);
   const [foodRevision, setFoodRevision] = useState(0);
@@ -114,6 +118,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [restaurantOpen, setRestaurantOpen] = useState(false);
+  const [describe, setDescribe] = useState<{ text: string; menu: boolean } | null>(null);
   const { isHonorary } = useAccessLevel();
   const [addedCount, setAddedCount] = useState(0);
   const [lastAdded, setLastAdded] = useState<string | null>(null);
@@ -470,12 +475,35 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök livsmedel eller recept…" className="pl-9 pr-11 rounded-xl bg-muted/50 border-transparent" autoFocus />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Sök, eller beskriv vad du åt…" className="pl-9 pr-20 rounded-xl bg-muted/50 border-transparent" autoFocus />
+              <button onClick={() => setDescribe({ text: query.trim(), menu: false })} aria-label="Beskriv måltiden med text eller foto" className="absolute right-10 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20">
+                <Camera className="w-4 h-4" />
+              </button>
               <button onClick={() => setVoiceOpen(true)} aria-label="Logga med rösten" className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20">
                 <Mic className="w-4 h-4" />
               </button>
             </div>
+            {!query.trim() && (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => setDescribe({ text: "", menu: false })} className="flex items-center justify-center gap-1.5 py-2 rounded-2xl bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20">
+                    <Sparkles className="w-3.5 h-3.5" /> Beskriv måltiden
+                  </button>
+                  <button onClick={() => setDescribe({ text: "", menu: true })} className="flex items-center justify-center gap-1.5 py-2 rounded-2xl bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20">
+                    <BookOpen className="w-3.5 h-3.5" /> Fota menyn
+                  </button>
+                </div>
+                <MealSuggestions userId={userId} meal={meal}
+                  onPick={(it) => { onPick(it, { keepOpen: true }); setAddedCount((c) => c + 1); setLastAdded(it.name); }}
+                  onPickMany={(items) => { items.forEach((it) => onPick(it, { keepOpen: true })); setAddedCount((c) => c + items.length); setLastAdded(`${items.length} livsmedel`); }} />
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
+              {query.trim().length >= 3 && (
+                <button onClick={() => setDescribe({ text: query.trim(), menu: false })} className="w-full flex items-center gap-2 py-2.5 text-left text-sm text-primary font-semibold border-b border-border">
+                  <Sparkles className="w-4 h-4 shrink-0" /> <span className="truncate">Tolka "{query.trim()}" med AI</span>
+                </button>
+              )}
               {showPersonal && (
                 <>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 pb-1">Senaste & dina vanliga</p>
@@ -606,6 +634,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         setVoiceOpen(false);
         onOpenChange(false);
       }} />
+      <DescribeMealDialog open={!!describe} onOpenChange={(v) => !v && setDescribe(null)} initialText={describe?.text} startWithMenu={describe?.menu} meal={meal || undefined}
+        onConfirm={(items) => {
+          items.forEach((it) => onPick(it, { keepOpen: true }));
+          setDescribe(null); setQuery("");
+          onOpenChange(false);
+        }} />
       <RestaurantSearchDialog open={restaurantOpen} onOpenChange={setRestaurantOpen} onPick={(item) => { setRestaurantOpen(false); onPick(item); }} />
     </Dialog>
   );
