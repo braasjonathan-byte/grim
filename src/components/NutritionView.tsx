@@ -118,20 +118,11 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
           <p className="text-sm font-bold first-letter:uppercase font-serif truncate">{meal}</p>
           <p className={`text-[10px] tabular-nums ${budget && mealKcal > budget * 1.1 ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
             {Math.round(mealKcal)}{budget ? ` / ${Math.round(budget)}` : ""} kcal
+            {logs.length > 0 && <span className="text-muted-foreground font-normal"> · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}P {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}K {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}F</span>}
           </p>
-          {logs.length > 0 && (
-            <p className="text-[10px] tabular-nums text-muted-foreground truncate">
-              {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.protein_g || 0), 0))}g P · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.carbs_g || 0), 0))}g K · {Math.round(logs.filter((l) => isPlausibleMealLog(l)).reduce((s, l) => s + Number(l.fat_g || 0), 0))}g F
-            </p>
-          )}
         </div>
         <div className="flex items-center gap-1.5">
-          {onCopyYesterday && (
-            <button onClick={onCopyYesterday} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label={`Kopiera till ${meal} från senaste veckan`} title="Kopiera från senaste veckan">
-              <CopyPlus className="w-4 h-4" />
-            </button>
-          )}
-          <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5">
+          <button onClick={onAdd} className="pill-btn-soft text-xs px-3 py-1.5" aria-label={`Lägg till i ${meal}`}>
             <Plus className="w-3.5 h-3.5" /> Lägg till
           </button>
           <DropdownMenu>
@@ -141,6 +132,11 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-xl">
+              {onCopyYesterday && (
+                <DropdownMenuItem onClick={onCopyYesterday}>
+                  <CopyPlus className="w-3.5 h-3.5 mr-2" /> Kopiera från senaste veckan
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onQuickLog}>
                 <Zap className="w-3.5 h-3.5 mr-2" /> Snabbpost (bara kcal)
               </DropdownMenuItem>
@@ -164,19 +160,18 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
         </div>
       </div>
       {logs.length > 0 && (
-        <div className="px-3 pt-2.5 flex items-start justify-between gap-2">
+        <div className="px-3 pt-2 flex items-center justify-between gap-2">
           <div className="flex -space-x-1.5 overflow-hidden pt-0.5">
             {uniqueMealIcons(logs.slice(0, 5)).map((emoji, i) => (
-              <span key={logs[i].id} className="w-9 h-9 rounded-full bg-muted border-2 border-card flex items-center justify-center text-lg" title={logs[i].item_name}>{emoji}</span>
+              <span key={logs[i].id} className="w-7 h-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-sm" title={logs[i].item_name}>{emoji}</span>
             ))}
-            {logs.length > 5 && <span className="w-9 h-9 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-bold">+{logs.length - 5}</span>}
+            {logs.length > 5 && <span className="w-7 h-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-bold">+{logs.length - 5}</span>}
           </div>
-          <div className="flex gap-2" role="group" aria-label="Hur kändes måltiden?">
+          <div className="flex gap-1" role="group" aria-label="Hur kändes måltiden?">
             {FEELINGS.map((f) => (
               <button key={f.key} onClick={() => onFeeling(feeling === f.key ? null : f.key)} title={`Måltiden kändes: ${f.label}`} aria-label={`Måltiden kändes: ${f.label}`} aria-pressed={feeling === f.key}
                 className="flex flex-col items-center gap-0.5">
-                <span className={`w-8 h-8 rounded-full text-base flex items-center justify-center transition-all ${feeling === f.key ? "bg-primary/20 ring-2 ring-primary scale-110" : feeling ? "opacity-40" : "bg-muted/40"}`}>{f.emoji}</span>
-                <span className={`text-[9px] leading-none ${feeling === f.key ? "font-semibold text-primary" : "text-muted-foreground"}`}>{f.label}</span>
+                <span className={`w-7 h-7 rounded-full text-sm flex items-center justify-center transition-all ${feeling === f.key ? "bg-primary/20 ring-2 ring-primary scale-110" : feeling ? "opacity-40" : "bg-muted/40"}`}>{f.emoji}</span>
               </button>
             ))}
           </div>
@@ -185,11 +180,11 @@ function SortableMeal({ meal, isCustom, logs, mealKcal, onAdd, onRename, onDelet
       {logs.length > 0 && (
         <ul className="divide-y divide-border/40">
           {logs.map((l) => (
-            <li key={l.id} className="flex items-center justify-between px-3 py-2.5">
+            <li key={l.id} className="flex items-center justify-between px-3 py-2">
               <div className="min-w-0">
                 <p className="text-sm truncate">{l.item_name}</p>
                 <p className="text-[10px] text-muted-foreground tabular-nums">
-                  {!isPlausibleMealLog(l) && <span className="text-destructive font-semibold">{IMPLAUSIBLE_LABEL} · </span>}{formatDecimal(l.amount)} {l.unit} · {Math.round(Number(l.kcal))} kcal · Protein {Number(l.protein_g).toFixed(0)} g · Fett {Number(l.fat_g).toFixed(0)} g · Kolhydrater {Number(l.carbs_g).toFixed(0)} g
+                  {!isPlausibleMealLog(l) && <span className="text-destructive font-semibold">{IMPLAUSIBLE_LABEL} · </span>}{formatDecimal(l.amount)} {l.unit} · {Math.round(Number(l.kcal))} kcal · {Number(l.protein_g).toFixed(0)}P {Number(l.carbs_g).toFixed(0)}K {Number(l.fat_g).toFixed(0)}F
                 </p>
               </div>
               <button onClick={() => onEditLog(l)} className="w-8 h-8 icon-round text-muted-foreground hover:bg-muted/60 transition-colors" aria-label="Redigera"><Pencil className="w-4 h-4" /></button>
@@ -573,19 +568,25 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
       </div>
 
       {/* Snabbvalen ligger precis under veckodagen, före energikortet. */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <button data-tour="nutrition-goals" onClick={() => setGoalsOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
           <Target className="w-3 h-3" /> Mål
         </button>
         <button data-tour="nutrition-recipes" onClick={() => { setCuratedTargetMeal(null); setCuratedOpen(true); }} className="pill-btn-ghost shadow-soft py-2 text-xs">
           <ChefHat className="w-3 h-3" /> Recept
         </button>
-        <button onClick={() => setTemplatesOpen(true)} className="pill-btn-ghost shadow-soft py-2 text-xs">
-          <Bookmark className="w-3 h-3" /> Mallar
-        </button>
-        <button onClick={() => { hapticLight(); setPastOpen(true); }} title="Kopiera från senaste veckan" className="pill-btn-ghost shadow-soft py-2 text-xs">
-          <CopyPlus className="w-3 h-3" /> Kopiera
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button data-tour="nutrition-add-meal" className="pill-btn-ghost shadow-soft py-2 text-xs">
+              <MoreHorizontal className="w-3 h-3" /> Mer
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="rounded-xl">
+            <DropdownMenuItem onClick={() => setTemplatesOpen(true)}><Bookmark className="w-3.5 h-3.5 mr-2" /> Mallar</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { hapticLight(); setPastOpen(true); }}><CopyPlus className="w-3.5 h-3.5 mr-2" /> Kopiera från senaste veckan</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAddNameOpen(true)}><Plus className="w-3.5 h-3.5 mr-2" /> Lägg till måltid</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <CopyFromPastDialog open={pastOpen} onOpenChange={setPastOpen} userId={userId} dateKey={dateKey} onCopied={load} />
 
@@ -653,9 +654,6 @@ export default function NutritionView({ userId, isHonorary: isHonoraryProp = fal
             <Sparkles className="w-3 h-3" /> Beskriv dagens kost med AI
           </button>
         )}
-        <button data-tour="nutrition-add-meal" onClick={() => setAddNameOpen(true)} className="w-full pill-btn bg-primary/10 text-primary py-2.5 text-xs hover:bg-primary/20">
-          <Plus className="w-3 h-3" /> Lägg till måltid
-        </button>
 
       </div>
 
