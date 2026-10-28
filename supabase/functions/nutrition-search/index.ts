@@ -59,12 +59,12 @@ Deno.serve(async (req) => {
         products.set(product.code!, product);
       }
     }
-    if (!succeeded) return respond({ error: "Märkesprodukterna kunde inte hämtas. Försök igen eller skanna streckkoden." }, 503);
+    if (!succeeded) return respond({ products: [], unavailable: true, error: "Märkesprodukterna kunde inte hämtas just nu. Försök igen eller skanna streckkoden." });
     return respond({ products: [...products.values()].map((product) => ({
       id: `off-${product.code}`, source: "off", ...offFood(product),
       nutriments: product.nutriments || {}, nova_group: product.nova_group || null,
     })) });
   } catch {
-    return respond({ error: "Märkesprodukterna kunde inte hämtas. Försök igen eller skanna streckkoden." }, 503);
+    return respond({ products: [], unavailable: true, error: "Märkesprodukterna kunde inte hämtas just nu. Försök igen eller skanna streckkoden." });
   }
 });
