@@ -4,13 +4,20 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2, Utensils, Plus } from "lucide-react";
 import type { PickedItem } from "./FoodPickerDialog";
 import { UNITS, gramsForFood } from "@/lib/nutritionCalc";
+import type { MenuItem } from "@/data/restaurantMenu";
 import { searchMenu, tokens, chainRank } from "@/lib/restaurantSearch";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onPick: (item: PickedItem) => void;
+  initial?: MenuItem | null;
 }
+
+const fromMenu = (m: MenuItem) => ({
+  code: `menu-${m.r}-${m.n}`, product_name: m.n, brands: m.r, serving_g: m.g,
+  kcal: (m.kcal / m.g) * 100, protein_g: (m.p / m.g) * 100, fat_g: (m.f / m.g) * 100, carbs_g: (m.c / m.g) * 100,
+});
 
 const POPULAR = [
   "McDonald's", "Subway", "Burger King", "Max", "KFC", "Sibylla", "Pizza Hut", "Domino's",
@@ -40,7 +47,7 @@ interface OFFItem {
   serving_g?: number;
 }
 
-export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: Props) {
+export default function RestaurantSearchDialog({ open, onOpenChange, onPick, initial }: Props) {
   const [item, setItem] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<OFFItem[]>([]);
@@ -53,13 +60,11 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
 
   useEffect(() => {
     if (!open) { setItem(""); setResults([]); setSelected(null); setLoading(false); }
-  }, [open]);
+    else if (initial) pick(fromMenu(initial));
+  }, [open, initial]);
 
 
-  const local: OFFItem[] = searchMenu(item).map(({ item: m }) => ({
-    code: `menu-${m.r}-${m.n}`, product_name: m.n, brands: m.r, serving_g: m.g,
-    kcal: (m.kcal / m.g) * 100, protein_g: (m.p / m.g) * 100, fat_g: (m.f / m.g) * 100, carbs_g: (m.c / m.g) * 100,
-  }));
+  const local: OFFItem[] = searchMenu(item).map(({ item: m }) => fromMenu(m));
 
   // Fler träffar från Open Food Facts (debounce), alla ord måste matcha, svenska kedjor först.
   useEffect(() => {
@@ -228,7 +233,7 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setSelected(null)} className="flex-1 py-2.5 border border-input text-sm font-medium">Tillbaka</button>
+              <button onClick={() => (initial ? onOpenChange(false) : setSelected(null))} className="flex-1 py-2.5 border border-input text-sm font-medium">Tillbaka</button>
               <button onClick={confirm} className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold">Lägg till</button>
             </div>
           </div>

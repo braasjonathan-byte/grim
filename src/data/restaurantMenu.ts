@@ -107,3 +107,33 @@ export const RESTAURANT_MENU: MenuItem[] = [
     ["Proteinshake", 400, 320, 25, 5, 45, ["shake"]],
   ]),
 ];
+
+// Hela menyer = huvudrätt + mellanpommes + mellanläsk (0,4 l Coca-Cola). Summeras från raderna ovan
+// så att menyn alltid stämmer med sina delar. Kedjor utan egen pommes-/läskrad får standardvärden.
+const COLA: MenuItem = { r: "", n: "Coca-Cola 0,4 l", g: 400, kcal: 168, p: 0, f: 0, c: 42 };
+const FRIES: MenuItem = { r: "", n: "Pommes frites mellan", g: 115, kcal: 335, p: 4, f: 16, c: 43 };
+const MENU_MAINS: Record<string, string[]> = {
+  "McDonald's": ["Big Mac", "Triple Cheeseburger", "Double Cheeseburger", "Cheeseburger", "Quarter Pounder with Cheese", "Double Quarter Pounder with Cheese", "McFeast", "McChicken", "Chicken McNuggets 6 st", "Chicken McNuggets 9 st", "Filet-O-Fish", "McWrap Chicken"],
+  Max: ["Originalburgare", "Grandiosa Burgare", "Big Deluxe", "Frisco", "Halloumi Burgare", "Max Cheeseburgare", "Dubbel Cheese", "Crispy Chicken", "Chicken Nuggets 6 st"],
+  "Burger King": ["Whopper", "Double Whopper", "Whopper Jr", "Cheeseburger", "Double Cheeseburger", "Bacon King", "Long Chicken", "Chicken Nuggets 6 st"],
+  KFC: ["Zinger Burger", "Fillet Burger", "Hot Wings 5 st", "Popcorn Chicken"],
+  Sibylla: ["Sibyllaburgare"],
+};
+export function buildMenuCombos(menu: MenuItem[]): MenuItem[] {
+  const out: MenuItem[] = [];
+  for (const [r, mains] of Object.entries(MENU_MAINS)) {
+    const own = (n: string) => menu.find((m) => m.r === r && m.n === n);
+    const fries = own("Pommes frites mellan") || own("Pommes frites") || FRIES;
+    const drink = own("Coca-Cola mellan 0,4 l") || COLA;
+    for (const n of mains) {
+      const main = own(n);
+      if (!main) continue;
+      const parts = [main, fries, drink];
+      const sum = (k: "g" | "kcal" | "p" | "f" | "c") => parts.reduce((s, x) => s + x[k], 0);
+      out.push({ r, n: `${n} meny`, g: sum("g"), kcal: sum("kcal"), p: sum("p"), f: sum("f"), c: sum("c"),
+        a: [...(main.a || []).map((x) => `${x} meny`), `${n} mål`, `${n} meal`] });
+    }
+  }
+  return out;
+}
+RESTAURANT_MENU.push(...buildMenuCombos(RESTAURANT_MENU));

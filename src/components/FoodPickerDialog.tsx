@@ -28,6 +28,8 @@ function saveLastAmount(key: string, amount: string, unit: string) {
 }
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import RestaurantSearchDialog from "./RestaurantSearchDialog";
+import type { MenuItem } from "@/data/restaurantMenu";
+import { searchMenu } from "@/lib/restaurantSearch";
 import ManualFoodDialog from "./ManualFoodDialog";
 import { MICRO_SELECT, microsFromOFF, pickMicros, scaleMicros, type Micros } from "@/lib/micronutrients";
 import { usageKey, type UsageMap } from "@/lib/foodRanking";
@@ -118,6 +120,8 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [restaurantOpen, setRestaurantOpen] = useState(false);
+  const [restaurantItem, setRestaurantItem] = useState<MenuItem | null>(null);
+  const restaurantHits = useMemo(() => (query.trim().length >= 2 ? searchMenu(query, undefined, 5).map((h) => h.item) : []), [query]);
   const [describe, setDescribe] = useState<{ text: string; menu: boolean } | null>(null);
   const { isHonorary } = useAccessLevel();
   const [addedCount, setAddedCount] = useState(0);
@@ -457,15 +461,12 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
         )}
         {!selected && (
           <>
-            <div className={`grid ${isHonorary ? "grid-cols-4" : "grid-cols-3"} gap-2`}>
+            <div className={`grid ${isHonorary ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
               <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <PencilLine className="w-4 h-4" /> Eget
               </button>
               <button onClick={() => setBarcodeOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
                 <ScanBarcode className="w-4 h-4" /> Streckkod
-              </button>
-              <button onClick={() => setRestaurantOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-secondary shadow-soft text-[11px] font-semibold transition-colors hover:bg-muted">
-                <Utensils className="w-4 h-4" /> Restaurang
               </button>
               {isHonorary && (
                 <button onClick={() => setManualOpen(true)} className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-2xl bg-primary/10 text-primary shadow-soft text-[11px] font-semibold transition-colors hover:bg-primary/20">
@@ -512,7 +513,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                 </>
               )}
               {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && !offLoading && !offError && combinedResults.length === 0 && brandResults.length === 0 && !showPersonal && (
+              {!loading && !offLoading && !offError && combinedResults.length === 0 && brandResults.length === 0 && restaurantHits.length === 0 && !showPersonal && (
                 <div className="py-6 text-center space-y-3">
                   <p className="text-sm text-muted-foreground">Inga träffar</p>
                   <button onClick={() => setManualOpen(true)} className="pill-btn-soft px-4 py-2.5 text-sm font-semibold inline-flex items-center gap-2">
@@ -525,6 +526,25 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" /> Söker…
                 </div>
+              )}
+              {restaurantHits.length > 0 && (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground pt-1 pb-1">Restauranger</p>
+                  <ul className="divide-y divide-border mb-2">
+                    {restaurantHits.map((m) => (
+                      <li key={`${m.r}-${m.n}`}>
+                        <button onClick={() => { setRestaurantItem(m); setRestaurantOpen(true); }} className="w-full flex items-center gap-2 py-2.5 text-left">
+                          <Utensils className="w-4 h-4 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm truncate">{m.n} <span className="text-muted-foreground">— {m.r}</span></span>
+                            <span className="block text-[11px] text-muted-foreground tabular-nums">{m.kcal} kcal / portion</span>
+                          </span>
+                          <Plus className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
               <ul className="divide-y divide-border">
                 {combinedResults.map(renderRow)}
@@ -640,7 +660,7 @@ export default function FoodPickerDialog({ open, onOpenChange, onPick, userId, h
           setDescribe(null); setQuery("");
           onOpenChange(false);
         }} />
-      <RestaurantSearchDialog open={restaurantOpen} onOpenChange={setRestaurantOpen} onPick={(item) => { setRestaurantOpen(false); onPick(item); }} />
+      <RestaurantSearchDialog open={restaurantOpen} initial={restaurantItem} onOpenChange={(v) => { setRestaurantOpen(v); if (!v) setRestaurantItem(null); }} onPick={(item) => { setRestaurantOpen(false); setRestaurantItem(null); onPick(item); }} />
     </Dialog>
   );
 }
