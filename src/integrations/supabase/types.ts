@@ -1078,33 +1078,54 @@ export type Database = {
       health_daily: {
         Row: {
           active_calories: number
+          avg_heart_rate: number | null
           day: string
+          distance_m: number | null
           id: string
+          max_heart_rate: number | null
+          min_heart_rate: number | null
+          resting_heart_rate: number | null
           sleep_minutes: number
           source: string
           steps: number
+          total_calories: number | null
           updated_at: string
           user_id: string
+          weight_kg: number | null
         }
         Insert: {
           active_calories?: number
+          avg_heart_rate?: number | null
           day: string
+          distance_m?: number | null
           id?: string
+          max_heart_rate?: number | null
+          min_heart_rate?: number | null
+          resting_heart_rate?: number | null
           sleep_minutes?: number
           source?: string
           steps?: number
+          total_calories?: number | null
           updated_at?: string
           user_id: string
+          weight_kg?: number | null
         }
         Update: {
           active_calories?: number
+          avg_heart_rate?: number | null
           day?: string
+          distance_m?: number | null
           id?: string
+          max_heart_rate?: number | null
+          min_heart_rate?: number | null
+          resting_heart_rate?: number | null
           sleep_minutes?: number
           source?: string
           steps?: number
+          total_calories?: number | null
           updated_at?: string
           user_id?: string
+          weight_kg?: number | null
         }
         Relationships: []
       }
