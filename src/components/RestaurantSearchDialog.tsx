@@ -202,12 +202,21 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
             <div className="border border-border p-3 bg-muted/40">
               <p className="font-bold text-sm">{selected.product_name}</p>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">{selected.brands.split(",")[0].trim()}</p>
-              <div className="grid grid-cols-4 gap-2 text-center mt-2">
-                <div><p className="text-[10px] text-muted-foreground">Kcal/100g</p><p className="font-bold tabular-nums">{Math.round(selected.kcal)}</p></div>
-                <div><p className="text-[10px] text-muted-foreground">Protein</p><p className="font-bold tabular-nums">{selected.protein_g.toFixed(1)}</p></div>
-                <div><p className="text-[10px] text-muted-foreground">Fett</p><p className="font-bold tabular-nums">{selected.fat_g.toFixed(1)}</p></div>
-                <div><p className="text-[10px] text-muted-foreground">Kolhydrater</p><p className="font-bold tabular-nums">{selected.carbs_g.toFixed(1)}</p></div>
-              </div>
+              {(() => {
+                const a = parseFloat(amount.replace(",", ".")) || 0;
+                const g = selected.serving_g && unit === "portion" ? a * selected.serving_g : gramsForFood(a, unit, selected.product_name);
+                const f = g / 100;
+                return (<>
+                  <p className="text-[10px] text-muted-foreground mt-2">För {amount || 0} {unit} (≈{Math.round(g)} g){selected.serving_g ? ` · 1 portion = ${selected.serving_g} g` : ""}</p>
+                  <div className="grid grid-cols-4 gap-2 text-center mt-1">
+                    <div><p className="text-[10px] text-muted-foreground">Kcal</p><p className="font-bold tabular-nums">{Math.round(selected.kcal * f)}</p></div>
+                    <div><p className="text-[10px] text-muted-foreground">Protein</p><p className="font-bold tabular-nums">{Math.round(selected.protein_g * f)} g</p></div>
+                    <div><p className="text-[10px] text-muted-foreground">Fett</p><p className="font-bold tabular-nums">{Math.round(selected.fat_g * f)} g</p></div>
+                    <div><p className="text-[10px] text-muted-foreground">Kolhydrater</p><p className="font-bold tabular-nums">{Math.round(selected.carbs_g * f)} g</p></div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 text-center">Per 100 g: {Math.round(selected.kcal)} kcal</p>
+                </>);
+              })()}
             </div>
             <div>
               <label className="text-xs font-medium">Mängd</label>
