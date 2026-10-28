@@ -39,6 +39,10 @@ const saveDismissed = (keys: Set<string>) => {
   }
 };
 
+/** Korta promenader (< 3 km) frågas inte om – de kan läggas till manuellt från hämtade pass. */
+export const isShortWalk = (w: HealthWorkout) =>
+  (/walk/i.test(w.type || "") || /promenad/i.test(w.label || "")) && (w.distanceKm ?? 0) < 3;
+
 const DEMO_WORKOUT: HealthWorkout = {
   key: "samsung-health-preview",
   start: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
@@ -76,7 +80,7 @@ const HealthWorkoutPrompt = ({ userId, preview = false }: { userId: string; prev
         const imported = await findImportedHealthWorkouts(userId, list);
         const dismissed = loadDismissed();
         const fresh = list.filter(
-          (w) => !imported.has(healthWorkoutDayKey(w)) && !dismissed.has(healthWorkoutDayKey(w)),
+          (w) => !isShortWalk(w) && !imported.has(healthWorkoutDayKey(w)) && !dismissed.has(healthWorkoutDayKey(w)),
         );
         if (cancelled || fresh.length === 0) return;
         setPending(fresh);
