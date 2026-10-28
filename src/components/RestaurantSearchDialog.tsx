@@ -217,7 +217,6 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
                   <p className="text-[10px] text-muted-foreground mt-1 text-center">Per 100 g: {Math.round(selected.kcal)} kcal</p>
                 </>);
               })()}
-              </div>
             </div>
             <div>
               <label className="text-xs font-medium">Mängd</label>
