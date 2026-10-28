@@ -20,3 +20,15 @@ describe("searchMenu", () => {
     expect(rs).toContain("Burger King");
   });
 });
+
+import { RESTAURANT_MENU as ALL } from "@/data/restaurantMenu";
+describe("hela menyer", () => {
+  it("Big Mac meny = Big Mac + mellanpommes + mellancola", () => {
+    const m = ALL.find((x) => x.r === "McDonald's" && x.n === "Big Mac meny")!;
+    expect(m.kcal).toBe(508 + 330 + 168);
+    expect(m.g).toBe(219 + 114 + 400);
+  });
+  it("menyer hittas i sökningen", () => {
+    expect(top("big mac meny")?.n).toBe("Big Mac meny");
+  });
+});
