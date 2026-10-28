@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2, Utensils, Plus } from "lucide-react";
 import type { PickedItem } from "./FoodPickerDialog";
 import { UNITS, gramsForFood } from "@/lib/nutritionCalc";
+import { searchMenu, tokens, chainRank } from "@/lib/restaurantSearch";
 
 interface Props {
   open: boolean;
@@ -36,10 +37,10 @@ interface OFFItem {
   fat_g: number;
   carbs_g: number;
   image?: string;
+  serving_g?: number;
 }
 
 export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: Props) {
-  const [brand, setBrand] = useState("");
   const [item, setItem] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<OFFItem[]>([]);
@@ -47,162 +48,74 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
   const [amount, setAmount] = useState("100");
   const [unit, setUnit] = useState("g");
   // Always read the latest field values — never a value captured in an older render.
-  const brandRef = useRef("");
-  const itemRef = useRef("");
   const reqRef = useRef(0);
 
-  useEffect(() => { brandRef.current = brand; }, [brand]);
-  useEffect(() => { itemRef.current = item; }, [item]);
 
   useEffect(() => {
-    if (!open) { setBrand(""); setItem(""); setResults([]); setSelected(null); setLoading(false); }
+    if (!open) { setItem(""); setResults([]); setSelected(null); setLoading(false); }
   }, [open]);
 
 
-  // Simple typo-tolerant Levenshtein for fuzzy ranking
-  function lev(a: string, b: string): number {
-    a = a.toLowerCase(); b = b.toLowerCase();
-    if (a === b) return 0;
-    if (!a.length) return b.length;
-    if (!b.length) return a.length;
-    const m: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
-    for (let i = 0; i <= a.length; i++) m[i][0] = i;
-    for (let j = 0; j <= b.length; j++) m[0][j] = j;
-    for (let i = 1; i <= a.length; i++) {
-      for (let j = 1; j <= b.length; j++) {
-        const c = a[i - 1] === b[j - 1] ? 0 : 1;
-        m[i][j] = Math.min(m[i - 1][j] + 1, m[i][j - 1] + 1, m[i - 1][j - 1] + c);
-      }
-    }
-    return m[a.length][b.length];
-  }
+  const local: OFFItem[] = searchMenu(item).map(({ item: m }) => ({
+    code: `menu-${m.r}-${m.n}`, product_name: m.n, brands: m.r, serving_g: m.g,
+    kcal: (m.kcal / m.g) * 100, protein_g: (m.p / m.g) * 100, fat_g: (m.f / m.g) * 100, carbs_g: (m.c / m.g) * 100,
+  }));
 
-  function fuzzyScore(needle: string, hay: string): number {
-    if (!needle) return 0;
-    const n = needle.toLowerCase().trim();
-    const h = hay.toLowerCase();
-    if (h.includes(n)) return 0;
-    // Best token-level distance
-    const tokens = h.split(/[^a-zåäö0-9]+/i).filter(Boolean);
-    let best = Infinity;
-    for (const t of tokens) {
-      const d = lev(n, t);
-      const ratio = d / Math.max(n.length, t.length);
-      if (ratio < best) best = ratio;
-    }
-    // Also try against whole string
-    const full = lev(n, h) / Math.max(n.length, h.length);
-    return Math.min(best, full);
-  }
-
-  async function search(brandQ?: string, itemQ?: string) {
-    const b = (brandQ ?? brandRef.current).trim();
-    const it = (itemQ ?? itemRef.current).trim();
-    if (!b && !it) return;
+  // Fler träffar från Open Food Facts (debounce), alla ord måste matcha, svenska kedjor först.
+  useEffect(() => {
+    const q = item.trim();
+    if (q.length < 3) { setResults([]); setLoading(false); return; }
     const reqId = ++reqRef.current;
     setLoading(true);
-    setSelected(null);
-    try {
-      const params = new URLSearchParams({
-        action: "process",
-        json: "1",
-        page_size: "60",
-        sort_by: "popularity_key",
-        fields: "code,product_name,product_name_sv,brands,nutriments,image_small_url",
-      });
-      if (b) {
-        params.set("tagtype_0", "brands");
-        params.set("tag_contains_0", "contains");
-        params.set("tag_0", b);
-      }
-      const terms = [b, it].filter(Boolean).join(" ");
-      if (terms) params.set("search_terms", terms);
-
-      const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params.toString()}`);
-      const data = await res.json();
-      let items: OFFItem[] = (data.products || [])
-        .map((p: any) => {
-          const n = p.nutriments || {};
-          const name = p.product_name_sv || p.product_name || "Okänd";
-          return {
-            code: p.code,
-            product_name: name,
-            brands: p.brands || b,
-            kcal: Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0),
-            protein_g: Number(n.proteins_100g) || 0,
-            fat_g: Number(n.fat_100g) || 0,
-            carbs_g: Number(n.carbohydrates_100g) || 0,
-            image: p.image_small_url,
-          };
-        })
-        .filter((p: OFFItem) => p.product_name && p.kcal > 0);
-
-      // Fuzzy rank: prioritize items matching item term, then brand
-      const needle = (it || b).toLowerCase();
-      if (needle) {
-        items = items
-          .map((p) => {
-            const haystack = `${p.product_name} ${p.brands}`;
-            return { p, score: fuzzyScore(needle, haystack) };
-          })
-          .filter((x) => x.score <= 0.5) // tolerate typos
-          .sort((a, b) => a.score - b.score)
-          .map((x) => x.p);
-      }
-
-      // Fallback: if no item matches after brand+item query, retry with item-only fuzzy search
-      if (items.length === 0 && it) {
-        const p2 = new URLSearchParams({
-          action: "process", json: "1", page_size: "60",
-          sort_by: "popularity_key",
-          fields: "code,product_name,product_name_sv,brands,nutriments,image_small_url",
-          search_terms: it,
+    const t = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          action: "process", json: "1", page_size: "50", sort_by: "popularity_key",
+          fields: "code,product_name,product_name_sv,brands,nutriments,image_small_url", search_terms: q,
         });
-        const r2 = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${p2.toString()}`);
-        const d2 = await r2.json();
-        items = (d2.products || [])
+        const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params.toString()}`);
+        const data = await res.json();
+        const qt = tokens(q);
+        const items: OFFItem[] = (data.products || [])
           .map((p: any) => {
             const n = p.nutriments || {};
-            const name = p.product_name_sv || p.product_name || "Okänd";
             return {
-              code: p.code, product_name: name, brands: p.brands || "",
+              code: p.code, product_name: p.product_name_sv || p.product_name || "", brands: p.brands || "",
               kcal: Number(n["energy-kcal_100g"]) || (Number(n["energy_100g"]) ? Number(n["energy_100g"]) / 4.184 : 0),
-              protein_g: Number(n.proteins_100g) || 0,
-              fat_g: Number(n.fat_100g) || 0,
-              carbs_g: Number(n.carbohydrates_100g) || 0,
-              image: p.image_small_url,
+              protein_g: Number(n.proteins_100g) || 0, fat_g: Number(n.fat_100g) || 0,
+              carbs_g: Number(n.carbohydrates_100g) || 0, image: p.image_small_url,
             };
           })
-          .filter((p: OFFItem) => p.product_name && p.kcal > 0)
-          .map((p: OFFItem) => ({ p, score: fuzzyScore(it, `${p.product_name} ${p.brands}`) }))
-          .filter((x: any) => x.score <= 0.6)
-          .sort((a: any, b: any) => a.score - b.score)
-          .map((x: any) => x.p);
+          .filter((p: OFFItem) => {
+            if (!p.product_name || p.kcal <= 0) return false;
+            const doc = tokens(`${p.product_name} ${p.brands}`);
+            return qt.every((t) => doc.some((d) => d.startsWith(t) || (t.length >= 4 && d.includes(t))));
+          })
+          .sort((a: OFFItem, b: OFFItem) => chainRank(a.brands.split(",")[0]) - chainRank(b.brands.split(",")[0]));
+        if (reqId === reqRef.current) setResults(items);
+      } catch {
+        if (reqId === reqRef.current) setResults([]);
+      } finally {
+        if (reqId === reqRef.current) setLoading(false);
       }
-
-      if (reqId === reqRef.current) setResults(items);
-    } catch {
-      // Nätverksfel ska inte lämna knappen i "Söker…"-läge
-      if (reqId === reqRef.current) setResults([]);
-    } finally {
-      if (reqId === reqRef.current) setLoading(false);
-    }
-  }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [item]);
 
   function pick(r: OFFItem) {
     setSelected(r);
-    setAmount("100");
-    setUnit("g");
+    setAmount(r.serving_g ? "1" : "100");
+    setUnit(r.serving_g ? "portion" : "g");
   }
 
   function confirm() {
     if (!selected) return;
     const a = parseFloat(amount.replace(",", ".")) || 0;
-    const grams = gramsForFood(a, unit, selected.product_name);
+    const grams = selected.serving_g && unit === "portion" ? a * selected.serving_g : gramsForFood(a, unit, selected.product_name);
     const factor = grams / 100;
     onPick({
       source: "custom_food",
-      id: "off-" + selected.code,
+      id: (selected.serving_g ? "" : "off-") + selected.code,
       name: `${selected.product_name} (${selected.brands.split(",")[0].trim()})`,
       amount: a, unit,
       kcal: selected.kcal * factor,
@@ -222,76 +135,64 @@ export default function RestaurantSearchDialog({ open, onOpenChange, onPick }: P
 
         {!selected && (
           <>
-            <div className="space-y-2">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={item}
-                  onChange={(e) => setItem(e.target.value)}
-                  placeholder="Sök maträtt (t.ex. Big Mac)"
-                  className="pl-9 rounded-none"
-                  autoFocus
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
-                />
-              </div>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder="Restaurang (valfritt)"
-                className="rounded-none"
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
+                value={item}
+                onChange={(e) => setItem(e.target.value)}
+                placeholder="Sök maträtt, t.ex. Big Mac eller Whopper"
+                className="pl-9 rounded-none"
+                autoFocus
               />
-              <button
-                type="button"
-                disabled={loading}
-                // pointerdown + preventDefault: på mobil skulle annars första tryckningen
-                // bara stänga tangentbordet (blur → layoutskifte) och klicket tappas bort.
-                onPointerDown={(e) => { e.preventDefault(); search(); }}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); search(); } }}
-                className="w-full py-2 bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-70"
-              >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {loading ? "Söker…" : "Sök"}
-              </button>
             </div>
 
-            {!brand && !item && (
+            {!item && (
               <div>
                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Populära</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {POPULAR.map((b) => (
-                    <button
-                      key={b}
-                      type="button"
-                      onPointerDown={(e) => { e.preventDefault(); setBrand(b); search(b); }}
-                      className="px-2 py-1 border border-input text-xs"
-                    >
-                      {b}
-                    </button>
+                  {POPULAR.slice(0, 12).map((b) => (
+                    <button key={b} type="button" onPointerDown={(e) => { e.preventDefault(); setItem(b + " "); }}
+                      className="px-2 py-1 border border-input text-xs">{b}</button>
                   ))}
                 </div>
               </div>
             )}
 
             <div className="flex-1 overflow-y-auto -mx-4 px-4">
-              {loading && <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
-              {!loading && results.length === 0 && reqRef.current > 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar. Pröva ett annat sökord.</p>}
+              {local.length > 0 && (
+                <ul className="divide-y divide-border border-b border-border">
+                  {local.map((r) => (
+                    <li key={r.code}>
+                      <button onClick={() => pick(r)} className="w-full text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{r.product_name} <span className="text-muted-foreground font-normal">— {r.brands}</span></p>
+                          <p className="text-[11px] text-muted-foreground truncate">{Math.round((r.kcal * (r.serving_g ?? 100)) / 100)} kcal / portion</p>
+                        </div>
+                        <Plus className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {item.trim().length >= 3 && (results.length > 0 || loading) && (
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-3 mb-1">Fler träffar</p>
+              )}
+              {loading && <div className="flex justify-center py-2"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>}
+              {!loading && item.trim().length >= 3 && local.length === 0 && results.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Inga träffar. Pröva ett annat sökord.</p>}
               <ul className="divide-y divide-border">
                 {results.map((r) => (
                   <li key={r.code}>
                     <button onClick={() => pick(r)} className="w-full text-left py-2.5 px-1 hover:bg-accent flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{r.product_name}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">
-                          {r.brands.split(",")[0].trim()} · {Math.round(r.kcal)} kcal / 100 g
-                        </p>
+                        <p className="text-sm font-medium truncate">{r.product_name}{r.brands && <span className="text-muted-foreground font-normal"> — {r.brands.split(",")[0].trim()}</span>}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{Math.round(r.kcal)} kcal / 100 g</p>
                       </div>
                       <Plus className="w-4 h-4 text-primary flex-shrink-0 mt-1" />
                     </button>
                   </li>
                 ))}
               </ul>
-              <p className="text-[10px] text-muted-foreground text-center mt-3">Data från Open Food Facts. Kontrollera värdena.</p>
+              <p className="text-[10px] text-muted-foreground text-center mt-3">Kedjemenyer: ungefärliga värden per portion. Övrigt från Open Food Facts.</p>
             </div>
           </>
         )}
