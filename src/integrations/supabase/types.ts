@@ -1786,6 +1786,7 @@ export type Database = {
           created_at: string
           fat_g_per_serving: number
           id: string
+          image_url: string | null
           ingredients: Json
           instructions: string | null
           kcal_per_serving: number
@@ -1802,6 +1803,7 @@ export type Database = {
           created_at?: string
           fat_g_per_serving?: number
           id?: string
+          image_url?: string | null
           ingredients?: Json
           instructions?: string | null
           kcal_per_serving?: number
@@ -1818,6 +1820,7 @@ export type Database = {
           created_at?: string
           fat_g_per_serving?: number
           id?: string
+          image_url?: string | null
           ingredients?: Json
           instructions?: string | null
           kcal_per_serving?: number

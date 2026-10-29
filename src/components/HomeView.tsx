@@ -37,6 +37,8 @@ import { toLocalDateKey } from "@/lib/dateUtils";
 import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
 import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
+import HomeTrainingStats from "@/components/HomeTrainingStats";
+import DailyRecipeCard from "@/components/DailyRecipeCard";
 import { getCardioModes, getStoredCardioMode } from "@/lib/cardioUnits";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tors", "Fre", "Lör", "Sön"];
@@ -109,9 +111,10 @@ interface HomeViewProps {
   userId: string;
   onNavigate: (tab: "workout" | "stats" | "social" | "nutrition" | "calc") => void;
   onOpenAchievements?: () => void;
+  isHonorary?: boolean;
 }
 
-const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
+const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => {
   // Visar en ofarlig Samsung Health-demonstration i Lovables förhandsvisning.
   const healthPreview = import.meta.env.DEV;
   const [loading, setLoading] = useState(true);
@@ -609,6 +612,12 @@ const HomeView = ({ userId, onNavigate }: HomeViewProps) => {
 
         </div>
       )}
+
+      {/* 1d. Träningsstatistik vecka/månad/år med grenval direkt i kortet */}
+      <HomeTrainingStats userId={userId} />
+
+      {/* 1e. Dagens recept utifrån målet */}
+      <DailyRecipeCard userId={userId} isHonorary={isHonorary} onOpen={() => onNavigate("nutrition")} />
 
       {/* 2. Streak + weekly progress */}
       <div className="grid grid-cols-2 gap-3">

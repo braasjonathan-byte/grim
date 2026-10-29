@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, Globe, Lock, Loader2, Link2, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Globe, Lock, Loader2, Link2, AlertTriangle, ImagePlus, X } from "lucide-react";
 import { aiItemToPicked, type AiFoodItem } from "@/lib/aiFood";
 import FoodPickerDialog, { PickedItem } from "./FoodPickerDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -33,6 +33,8 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
   const [ingredients, setIngredients] = useState<Ingredient[]>(EMPTY.ingredients);
   const [visibility, setVisibility] = useState<"private" | "public">(EMPTY.visibility);
   const [category, setCategory] = useState<string>(EMPTY.category);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -48,8 +50,20 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
   function reset() {
     setName(EMPTY.name); setServings(EMPTY.servings); setInstructions(EMPTY.instructions);
     setIngredients(EMPTY.ingredients); setVisibility(EMPTY.visibility); setCategory(EMPTY.category);
-    setImportUrl(""); setImported(false); setReviewed(false);
+    setImportUrl(""); setImported(false); setReviewed(false); setImageUrl(null);
   }
+
+  const uploadImage = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast({ title: "Välj en bildfil", variant: "destructive" }); return; }
+    if (file.size > 8 * 1024 * 1024) { toast({ title: "Bilden är för stor", description: "Max 8 MB", variant: "destructive" }); return; }
+    setUploadingImage(true);
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${userId}/recipes/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("social-images").upload(path, file, { contentType: file.type });
+    setUploadingImage(false);
+    if (error) { toast({ title: "Kunde inte ladda upp bilden", description: error.message, variant: "destructive" }); return; }
+    setImageUrl(supabase.storage.from("social-images").getPublicUrl(path).data.publicUrl);
+  };
 
   // Load existing recipe when editing
   useEffect(() => {
@@ -59,6 +73,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
       setServings(String(templateRecipe.servings || 1));
       setInstructions(templateRecipe.instructions || "");
       setVisibility("private");
+      setImageUrl((templateRecipe as any).image_url || null);
       const c = (templateRecipe.category || "").toLowerCase();
       setCategory((RECIPE_CATEGORIES as readonly string[]).includes(c) ? c : "middag");
       setIngredients(templateRecipe.ingredients.map((i) => ({ ...(i as any), source: (i as any).source || "egen" })) as Ingredient[]);
@@ -70,7 +85,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
     setLoading(true);
     supabase
       .from("recipes")
-      .select("name,servings,instructions,visibility,category,ingredients")
+      .select("name,servings,instructions,visibility,category,ingredients,image_url")
       .eq("id", initialRecipeId)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -85,6 +100,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
         setInstructions((data as any).instructions || "");
         setVisibility(((data as any).visibility as any) || "private");
         setCategory((data as any).category || "middag");
+        setImageUrl((data as any).image_url || null);
         setIngredients(Array.isArray((data as any).ingredients) ? ((data as any).ingredients as Ingredient[]) : []);
       });
     return () => { cancelled = true; };
@@ -201,6 +217,7 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
       protein_g_per_serving: totalProtein / portions,
       carbs_g_per_serving: totalCarbs / portions,
       ingredients: ingredients as any,
+      image_url: imageUrl,
     } as any;
     const { error } = isEditing && !asCopy
       ? await supabase.from("recipes").update(payload).eq("id", initialRecipeId!).eq("user_id", userId)
@@ -257,6 +274,23 @@ export default function RecipeEditor({ open, onOpenChange, userId, onSaved, init
               </label>
             </div>
           )}
+          <div>
+            <label className="text-xs font-medium">Bild</label>
+            {imageUrl ? (
+              <div className="relative mt-1">
+                <img src={imageUrl} alt="Receptbild" className="w-full h-40 object-cover rounded-xl" />
+                <button type="button" onClick={() => setImageUrl(null)} aria-label="Ta bort bild"
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 flex items-center justify-center"><X className="w-4 h-4" /></button>
+              </div>
+            ) : (
+              <label className="mt-1 flex items-center justify-center gap-2 h-20 rounded-xl border border-dashed border-border bg-muted/40 text-xs text-muted-foreground cursor-pointer">
+                {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+                {uploadingImage ? "Laddar upp…" : "Lägg till bild"}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingImage}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(f); e.target.value = ""; }} />
+              </label>
+            )}
+          </div>
           <div>
             <label className="text-xs font-medium">Namn</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} className="rounded-xl bg-muted/50 border-transparent" />

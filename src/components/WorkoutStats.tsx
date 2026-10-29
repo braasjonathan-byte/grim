@@ -225,7 +225,7 @@ const getUpdatedAtDate = (updatedAt: string | null | undefined): Date | null => 
   return date;
 };
 
-const getCompletionStatsDate = (
+export const getCompletionStatsDate = (
   completion: Pick<CompletionRecord, "week" | "day" | "done" | "skipped" | "updated_at" | "archived_plan_start_date">,
   planStartDate: Date | null
 ): Date | null => {

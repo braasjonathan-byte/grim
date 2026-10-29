@@ -57,7 +57,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
     (async () => {
       const { data, error } = await supabase
         .from("recipes")
-        .select("id,name,servings,instructions,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,ingredients,category")
+        .select("id,name,servings,instructions,kcal_per_serving,protein_g_per_serving,fat_g_per_serving,carbs_g_per_serving,ingredients,category,image_url")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (cancelled) return;
@@ -73,6 +73,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
         carbs_g_per_serving: Math.round(Number(r.carbs_g_per_serving) || 0),
         ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
         instructions: r.instructions || "",
+        image_url: r.image_url || null,
       })));
     })();
     return () => { cancelled = true; };
@@ -187,7 +188,8 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
               ) : filtered.map((r) => (
                 <li key={r.id}>
                   <button onClick={() => pick(r)} className="w-full text-left p-3 hover:bg-accent flex justify-between gap-2 items-center">
-                    <div className="min-w-0">
+                    {(r as any).image_url && <img src={(r as any).image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />}
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">{r.name}</p>
                       <p className="text-[10px] text-muted-foreground">{r.servings} port · {r.kcal_per_serving} kcal · {r.protein_g_per_serving}g protein</p>
                     </div>
@@ -212,6 +214,7 @@ export default function CuratedRecipesDialog({ open, onOpenChange, isHonorary, u
                 </button>
               </div>
             </div>
+            {(selected as any).image_url && <img src={(selected as any).image_url} alt={selected.name} className="w-full h-44 object-cover rounded-2xl" />}
             <div className="bg-muted/40 rounded-2xl p-2 grid grid-cols-4 gap-1 text-center">
               <div><p className="text-[9px] text-muted-foreground">Kcal/p</p><p className="text-sm font-bold tabular-nums">{selected.kcal_per_serving}</p></div>
               <div><p className="text-[9px] text-muted-foreground">Protein</p><p className="text-sm font-bold tabular-nums">{selected.protein_g_per_serving}g</p></div>

@@ -1005,7 +1005,7 @@ const Index = () => {
         <PageTransition tabKey={tab}>
           {tab === "home" && (
             <PullToRefresh onRefresh={() => setRefreshKeys((k) => ({ ...k, home: k.home + 1 }))}>
-              <HomeView key={`home-${refreshKeys.home}`} userId={user.id} onNavigate={(t) => setTab(t as Tab)} />
+              <HomeView key={`home-${refreshKeys.home}`} userId={user.id} isHonorary={isHonorary} onNavigate={(t) => setTab(t as Tab)} />
             </PullToRefresh>
           )}
           {tab === "workout" && <>
