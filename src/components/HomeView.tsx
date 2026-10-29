@@ -36,6 +36,7 @@ import { syncAchievements } from "@/lib/achievementSync";
 import { toLocalDateKey } from "@/lib/dateUtils";
 import { completionTrainingDate, currentStreakFromDates } from "@/lib/streak";
 import { loadUntrainedRegions, buildSuggestion } from "@/lib/untrainedMuscles";
+import { restingHrSignal } from "@/lib/restingHr";
 import HealthWorkoutPrompt from "@/components/HealthWorkoutPrompt";
 import HomeTrainingStats from "@/components/HomeTrainingStats";
 import DailyRecipeCard from "@/components/DailyRecipeCard";
@@ -127,6 +128,8 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
   const [untrainedRegions, setUntrainedRegions] = useState<string[] | null>(null);
   const [archivedDates, setArchivedDates] = useState<string[]>([]);
   const [healthToday, setHealthToday] = useState<HealthDay | null>(null);
+  const [healthHistory, setHealthHistory] = useState<HealthDay[]>([]);
+  const restingHr = useMemo(() => restingHrSignal(healthHistory, toLocalDateKey(new Date())), [healthHistory]);
 
   // Steg och aktiva kalorier från hälsoappen (sparad data visas även i webben).
   useEffect(() => {
@@ -140,8 +143,9 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
     const todayKeyLocal = toLocalDateKey(new Date());
     const applyStored = async () => {
       try {
-        const stored = await loadStoredHealthDays(userId, 7);
+        const stored = await loadStoredHealthDays(userId, 8);
         if (cancelled) return;
+        setHealthHistory(stored);
         const row = stored.find((r) => r.day === todayKeyLocal) ?? stored[stored.length - 1] ?? null;
         setHealthToday(row && (row.steps > 0 || row.activeCalories > 0) ? row : null);
       } catch {
@@ -604,6 +608,24 @@ const HomeView = ({ userId, onNavigate, isHonorary = false }: HomeViewProps) => 
               <p className="text-[11px] text-muted-foreground">totalt idag</p>
             </section>
           </div>
+          {restingHr && (
+            <div className="space-y-1 px-1" aria-label="Dagens form">
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                <span className="font-semibold uppercase tracking-wider">Dagens form</span>
+                <span className="rounded-full border border-border bg-card px-2 py-0.5">
+                  Vilopuls {restingHr.today}
+                  {restingHr.delta !== null && (
+                    <span className={restingHr.elevated ? " text-warning" : ""}>
+                      {" "}{restingHr.delta > 1 ? "↑" : restingHr.delta < -1 ? "↓" : "→"} {restingHr.delta > 0 ? "+" : ""}{restingHr.delta} vs 7 d
+                    </span>
+                  )}
+                </span>
+              </div>
+              {restingHr.elevated && (
+                <p className="text-[11px] text-muted-foreground">Vilopulsen är hög — lättare pass idag?</p>
+              )}
+            </div>
+          )}
           {healthToday.sleepMinutes > 0 && (
             <p className="px-1 text-[11px] text-muted-foreground">
               Sömn i natt: {formatSleep(healthToday.sleepMinutes)}
