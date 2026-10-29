@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { parseNum, validateCardioEntry, validateNumber } from "@/lib/inputValidation";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Check, ChevronDown, ChevronUp, Footprints, Info, Pencil, Play, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Footprints, Info, MapPin, Pencil, Play, X } from "lucide-react";
 import RouteMap from "@/components/RouteMap";
 import IntervalRunner from "@/components/IntervalRunner";
 import GpsTrackerControl from "@/components/workout/GpsTrackerControl";
@@ -51,6 +51,11 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const distUnit = distUnitRaw ?? "km";
 
   const [isEditing, setIsEditing] = useState(!hasSavedData);
+  // Flera konditionsrader: visa kompakta rader, expandera en i taget vid tryck.
+  const [expanded, setExpandedState] = useState(exerciseLinesCount <= 1);
+  const setExpanded = (v: boolean) => setExpandedState(v);
+  const [showGps, setShowGps] = useState(false);
+  const [showHourField, setShowHourField] = useState(false);
   // Planerade värden (planCondTime/Dist/Tempo) är endast mål/placeholders.
   // De ska ALDRIG räknas som ett loggat resultat förrän användaren själv
   // skrivit in dem eller uttryckligen bekräftat att de ska användas.
@@ -77,6 +82,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
   const [pulse, setPulse] = useState(initPulse);
   const showElevation = showCardioElevation(name);
   const [elevation, setElevation] = useState(savedData?.elev || "");
+  const [showMore, setShowMore] = useState(() => !!(initPulse || savedData?.elev));
   const [route, setRoute] = useState<[number, number][]>(() => {
     const r = savedData?.route;
     return Array.isArray(r) ? r as [number, number][] : [];
@@ -284,7 +290,7 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
             </span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setIsEditing(true)} className="p-1 text-primary hover:text-primary/80"><Pencil className="w-3.5 h-3.5" /></button>
+            <button onClick={() => { setIsEditing(true); setExpanded(true); }} className="p-1 text-primary hover:text-primary/80"><Pencil className="w-3.5 h-3.5" /></button>
             <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
           </div>
         </div>
@@ -303,71 +309,90 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
     );
   }
 
+  const planChips: string[] = [];
+  if (planCondTime) planChips.push(`${planCondTime} min`);
+  if (planCondDist && showDistance) planChips.push(`${planCondDist} ${distUnit}`);
+  if (planCondTempo) planChips.push(`${planCondTempo}`);
+  if (planCondPulse) planChips.push(`${planCondPulse} bpm`);
+
+  const completeBtn = onToggleCompleted && isIntervalRun ? (
+    <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-7 h-7 shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
+      {isCompleted ? <Check className="w-3.5 h-3.5" /> : null}
+    </button>
+  ) : null;
+
+  // Kompakt rad (Strava-lik segmentlista) när passet har flera konditionsrader.
+  if (!expanded) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setExpanded(true)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(true); } }}
+        className="bg-card border border-border rounded-2xl px-3 py-2.5 flex items-center gap-2 cursor-pointer hover:border-primary/40 transition-colors"
+      >
+        {completeBtn ?? <span className="w-7 h-7 shrink-0 rounded-full bg-primary/10 flex items-center justify-center"><Footprints className="w-3.5 h-3.5 text-primary" /></span>}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground truncate">{toTitleCase(name)}</p>
+          {planChips.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mt-0.5">
+              {planChips.map((c) => <span key={c} className="text-[10px] font-medium text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5 tabular-nums">{c}</span>)}
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">Tryck för att logga</p>
+          )}
+        </div>
+        {dragHandle && <div onClick={(e) => e.stopPropagation()}>{dragHandle}</div>}
+        <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+      </div>
+    );
+  }
+
+  const labelCls = "text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block";
+  const hmsCls = "w-full min-w-0 bg-transparent text-foreground text-lg font-bold tabular-nums text-center outline-none placeholder:text-muted-foreground/40 placeholder:font-normal";
+  const onH = (v: string) => { setHours(v); liveAutoCalc((parseInt(v) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60, tempo, distance, "time"); };
+  const onM = (v: string) => { setMinutes(v); liveAutoCalc((parseInt(hours) || 0) * 60 + (parseInt(v) || 0) + (parseInt(seconds) || 0) / 60, tempo, distance, "time"); };
+  const onS = (v: string) => { setSeconds(v); liveAutoCalc((parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(v) || 0) / 60, tempo, distance, "time"); };
+  const showHours = showHourField || !!hours;
+
   return (
-    <div className="bg-primary/10 border border-primary/20 rounded-2xl shadow-soft p-3.5 space-y-2.5">
+    <div className="bg-card border border-primary/30 rounded-2xl shadow-soft p-3 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {onToggleCompleted && isIntervalRun && (
-            <button onClick={(e) => { e.stopPropagation(); onToggleCompleted(); }} className={`w-8 h-8 shrink-0 border-2 flex items-center justify-center transition-all ${isCompleted ? "bg-success border-success text-success-foreground" : "border-primary/30 text-muted-foreground hover:border-primary"}`} title="Klarmarkera">
-              {isCompleted ? <Check className="w-4 h-4" /> : null}
-            </button>
-          )}
-          <span className="text-xs font-bold text-primary flex items-center gap-1 min-w-0"><span className="shrink-0">✏️</span> <span className="truncate">{toTitleCase(name)}</span></span>
+          {completeBtn}
+          <button
+            type="button"
+            onClick={() => { if (exerciseLinesCount > 1) setExpanded(false); }}
+            className="text-sm font-semibold text-foreground flex items-center gap-1 min-w-0 text-left"
+          >
+            <span className="truncate">{toTitleCase(name)}</span>
+            {exerciseLinesCount > 1 && <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />}
+          </button>
         </div>
         <div className="flex items-center gap-0.5">
-          {dragHandle ?? (
+          {dragHandle ?? (exerciseLinesCount > 1 && (
             <div className="flex flex-col">
               <button onClick={(e) => { e.stopPropagation(); onMoveUp?.(); }} disabled={lineIndex === 0} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronUp className="w-3.5 h-3.5" /></button>
               <button onClick={(e) => { e.stopPropagation(); onMoveDown?.(); }} disabled={lineIndex === exerciseLinesCount - 1} className="p-0.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-20"><ChevronDown className="w-3.5 h-3.5" /></button>
             </div>
-          )}
-          <button onClick={(e) => { e.stopPropagation(); onShowInfo(); }} className="p-0.5 text-muted-foreground hover:text-primary transition-colors"><Info className="w-3.5 h-3.5" /></button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
+          ))}
+          <button onClick={(e) => { e.stopPropagation(); onShowInfo(); }} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Info className="w-3.5 h-3.5" /></button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="min-w-[40px] min-h-[40px] flex items-center justify-center text-muted-foreground hover:text-destructive touch-manipulation"><X className="w-4 h-4" /></button>
         </div>
       </div>
-      {showModePicker && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Enhet</span>
-          <div className="flex items-center gap-1 rounded-full bg-muted/60 p-1">
-          {availableModes.map((m) => {
-            const label = modeLabel(m);
 
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setBikeMode(m); }}
-                className={`px-3 py-1.5 text-[10px] font-semibold rounded-full transition-all ${bikeMode === m ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:text-foreground"}`}
-              >{label}</button>
-            );
-          })}
-          </div>
+      {planChips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1 -mt-1">
+          <span className="text-[10px] text-muted-foreground">Mål:</span>
+          {planChips.map((c) => <span key={c} className="text-[10px] font-medium text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5 tabular-nums">{c}</span>)}
         </div>
-
       )}
-      {!isSwim && <GpsTrackerControl
-        onStop={(km, sec, gpsRoute) => {
-          const totMin = sec / 60;
-          const hh = Math.floor(totMin / 60);
-          const rem = totMin - hh * 60;
-          const mm = Math.floor(rem);
-          const ss = Math.round((rem - mm) * 60);
-          setHours(hh > 0 ? String(hh) : "");
-          setMinutes(String(mm));
-          setSeconds(ss > 0 ? String(ss) : "");
-          // Swim: convert km → m for the distance field; others use km
-          const distVal = isSwim ? Math.round(km * 1000) : Math.round(km * 100) / 100;
-          const distStr = String(distVal);
-          setDistance(distStr);
-          if (gpsRoute.length > 1) setRoute(gpsRoute);
-          liveAutoCalc(totMin, tempo, distStr, "distance");
-        }}
-      />}
+
       {isIntervalRun && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); setShowIntervalRunner(true); }}
-          className="w-full h-11 flex items-center justify-center gap-2 px-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-soft hover:bg-primary/90 transition-colors"
+          className="w-full h-10 flex items-center justify-center gap-2 px-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-soft hover:bg-primary/90 transition-colors"
         >
           <Play className="w-4 h-4" /> Starta intervallpass
         </button>
@@ -407,58 +432,95 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
         />
       )}
 
-      <div className="space-y-3">
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Tid</label>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="min-w-0">
-              <input type="text" inputMode="numeric" min="0" value={hours} onChange={(e) => { setHours(e.target.value); const tot = (parseInt(e.target.value) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
-              <span className={condUnitCls}>tim</span>
-            </div>
-            <div className="min-w-0">
-              <input type="text" inputMode="numeric" min="0" max="59" value={minutes} onChange={(e) => { setMinutes(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(e.target.value) || 0) + (parseInt(seconds) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
-              <span className={condUnitCls}>min</span>
-            </div>
-            <div className="min-w-0">
-              <input type="text" inputMode="numeric" min="0" max="59" value={seconds} onChange={(e) => { setSeconds(e.target.value); const tot = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0) + (parseInt(e.target.value) || 0) / 60; liveAutoCalc(tot, tempo, distance, "time"); }} placeholder="0" className={condInputCls} />
-              <span className={condUnitCls}>sek</span>
-            </div>
+      {!isSwim && showGps && <GpsTrackerControl
+        onStop={(km, sec, gpsRoute) => {
+          const totMin = sec / 60;
+          const hh = Math.floor(totMin / 60);
+          const rem = totMin - hh * 60;
+          const mm = Math.floor(rem);
+          const ss = Math.round((rem - mm) * 60);
+          setHours(hh > 0 ? String(hh) : "");
+          setMinutes(String(mm));
+          setSeconds(ss > 0 ? String(ss) : "");
+          const distVal = isSwim ? Math.round(km * 1000) : Math.round(km * 100) / 100;
+          const distStr = String(distVal);
+          setDistance(distStr);
+          if (gpsRoute.length > 1) setRoute(gpsRoute);
+          liveAutoCalc(totMin, tempo, distStr, "distance");
+        }}
+      />}
+
+      {/* Primärt: Tid + Distans */}
+      <div className={`grid gap-2 ${showDistance ? "grid-cols-[3fr_2fr]" : "grid-cols-1"}`}>
+        <div className="min-w-0">
+          <span className={labelCls}>Tid</span>
+          <div className="flex items-center rounded-xl border border-border bg-background px-2 h-11 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+            {showHours ? (
+              <>
+                <input aria-label="Timmar" type="text" inputMode="numeric" value={hours} onChange={(e) => onH(e.target.value)} placeholder="0" className={hmsCls} />
+                <span className="text-muted-foreground font-bold">:</span>
+              </>
+            ) : (
+              <button type="button" onClick={() => setShowHourField(true)} className="text-[10px] text-muted-foreground/70 px-1 shrink-0" title="Lägg till timmar">+h</button>
+            )}
+            <input aria-label="Minuter" type="text" inputMode="numeric" value={minutes} onChange={(e) => onM(e.target.value)} placeholder={showHours ? "00" : "min"} className={hmsCls} />
+            <span className="text-muted-foreground font-bold">:</span>
+            <input aria-label="Sekunder" type="text" inputMode="numeric" value={seconds} onChange={(e) => onS(e.target.value)} placeholder="sek" className={hmsCls} />
           </div>
         </div>
-        <div className={`grid gap-2 ${showDistance ? "grid-cols-2" : "grid-cols-1"}`}>
+        {showDistance && (
           <div className="min-w-0">
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">{modeFieldLabel(bikeMode, name)}</label>
-            <input
-              type="text"
-              inputMode={isPaceMode(bikeMode) ? "numeric" : "decimal"}
-              pattern={isPaceMode(bikeMode) ? "[0-9:]*" : "[0-9.,]*"}
-              value={tempo}
-              onChange={(e) => { const v = isPaceMode(bikeMode) ? sanitizePaceInput(e.target.value) : e.target.value; setTempo(v); liveAutoCalc(getTotalMin(), v, distance, "tempo"); }}
-              onBlur={() => { if (isPaceMode(bikeMode)) { const f = formatPaceDisplay(tempo, bikeMode); if (f && f !== tempo) setTempo(f); } }}
-              placeholder={modePlaceholder(bikeMode)}
-              className={condInputCls}
-            />
+            <span className={labelCls}>Distans ({distUnit})</span>
+            <input type="text" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || (distUnit === "m" ? "400" : "5.0")} className={`${condInputCls} h-11 text-lg`} />
           </div>
-          {showDistance && (
-            <div className="min-w-0">
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Distans ({distUnit})</label>
-              <input type="text" inputMode="decimal" value={distance} onChange={(e) => { setDistance(e.target.value); liveAutoCalc(getTotalMin(), tempo, e.target.value, "distance"); }} placeholder={planCondDist || (distUnit === "m" ? "400" : "5.0")} className={condInputCls} />
-            </div>
-          )}
+        )}
+      </div>
+
+      {/* Tempo/hastighet: räknas fram automatiskt, enheten väljs diskret */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0 flex items-center gap-2 rounded-xl bg-muted/40 px-3 h-10">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider shrink-0">{modeFieldLabel(bikeMode, name)}</span>
+          <input
+            type="text"
+            inputMode={isPaceMode(bikeMode) ? "numeric" : "decimal"}
+            pattern={isPaceMode(bikeMode) ? "[0-9:]*" : "[0-9.,]*"}
+            value={tempo}
+            onChange={(e) => { const v = isPaceMode(bikeMode) ? sanitizePaceInput(e.target.value) : e.target.value; setTempo(v); liveAutoCalc(getTotalMin(), v, distance, "tempo"); }}
+            onBlur={() => { if (isPaceMode(bikeMode)) { const f = formatPaceDisplay(tempo, bikeMode); if (f && f !== tempo) setTempo(f); } }}
+            placeholder={tempoIsLinked ? "auto" : modePlaceholder(bikeMode)}
+            className="flex-1 min-w-0 bg-transparent text-right text-sm font-bold tabular-nums outline-none placeholder:text-muted-foreground/50 placeholder:font-normal placeholder:italic"
+          />
         </div>
+        {showModePicker && (
+          <div className="flex items-center gap-0.5 rounded-full bg-muted/60 p-0.5 shrink-0">
+            {availableModes.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setBikeMode(m); }}
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full transition-all ${bikeMode === m ? "bg-background text-foreground shadow-soft" : "text-muted-foreground"}`}
+              >{modeLabel(m)}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sekundärt: puls/höjdmeter bakom disclosure */}
+      {showMore ? (
         <div className={`grid gap-2 ${showElevation ? "grid-cols-2" : "grid-cols-1"}`}>
           <div className="min-w-0">
-            <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Snittspuls (bpm)</label>
-            <input type="text" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="t.ex. 155" className={condInputCls} />
+            <span className={labelCls}>Snittpuls (bpm)</span>
+            <input type="text" inputMode="numeric" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder={planCondPulse || "t.ex. 155"} className={condInputCls} />
           </div>
           {showElevation && (
             <div className="min-w-0">
-              <label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">Höjdmeter (m)</label>
+              <span className={labelCls}>Höjdmeter (m)</span>
               <input type="text" inputMode="numeric" value={elevation} onChange={(e) => setElevation(e.target.value)} placeholder="t.ex. 211" className={condInputCls} />
             </div>
           )}
         </div>
-      </div>
+      ) : null}
+
       {showEmptyWarning && (
         <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 space-y-2">
           <p className="text-xs font-semibold text-foreground">Logga tid eller distans först</p>
@@ -469,11 +531,22 @@ export const ConditioningEditCard = ({ name, lineIndex, planId, planCondTime, pl
           </div>
         </div>
       )}
-      <div className="flex gap-2 pt-1">
-        <button onClick={() => handleSave(false)} className="flex-1 h-11 bg-primary text-primary-foreground rounded-full text-sm font-semibold shadow-soft hover:bg-primary/90 active:scale-[0.98] transition-all">Spara</button>
-        {hasSavedData && <button onClick={() => setIsEditing(false)} className="px-4 h-11 text-muted-foreground hover:text-foreground text-sm bg-secondary rounded-full transition-colors">Avbryt</button>}
-      </div>
 
+      <div className="flex items-center gap-1.5">
+        {!showMore && (
+          <button type="button" onClick={() => setShowMore(true)} className="h-9 px-3 rounded-full text-xs font-medium text-muted-foreground bg-muted/50 hover:text-foreground">+ Puls{showElevation ? " & höjd" : ""}</button>
+        )}
+        {!isSwim && (
+          <button type="button" onClick={() => setShowGps((v) => !v)} className={`h-9 px-3 rounded-full text-xs font-medium flex items-center gap-1 ${showGps ? "bg-primary/15 text-primary" : "text-muted-foreground bg-muted/50 hover:text-foreground"}`}>
+            <MapPin className="w-3.5 h-3.5" /> GPS
+          </button>
+        )}
+        <div className="flex-1" />
+        {hasSavedData && <button onClick={() => setIsEditing(false)} className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground">Avbryt</button>}
+        <button onClick={() => handleSave(false)} className="h-9 px-5 bg-primary text-primary-foreground rounded-full text-sm font-semibold hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center gap-1">
+          <Check className="w-4 h-4" /> Spara
+        </button>
+      </div>
     </div>
   );
 };
